@@ -69,10 +69,8 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 		payload = transformers.MarshalJavaScript(payload, schema, values)
 	case ".py":
 		executable = tr.settings.PythonExecutable
-		payload, err = json.Marshal(values)
-		if err != nil {
-			return nil, err
-		}
+		payload = make([]byte, 0, 1024)
+		payload = transformers.MarshalPython(payload, schema, values)
 	}
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -147,20 +145,24 @@ for ( let i = 0; i < event.length; i++ ) {
 process.stdout.write(JSON.stringify(results))`
 	case ".py":
 		source += `
-if __name__ == "__main__":
+def main():
 	import json
 	import sys
+	from decimal import Decimal
+	from datetime import datetime, date, time
 
-	results = []
-	events = json.loads(sys.argv[1])
-	for event in events:
+	results = [] 
+	for event in eval(sys.argv[1]):
 		try:
 			value = transform(event)
 		except Exception as ex:
 			results.append({"error": str(ex)})
 		else:
 			results.append({"value": value})
-	print(json.dumps(results))
+	print(json.dumps(results, default=str))
+
+if __name__ == "__main__":
+	main()
 `
 	}
 	filename := tr.absFilename(name, version, ext)

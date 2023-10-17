@@ -87,14 +87,10 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 		payload = transformers.MarshalJavaScript(payload, schema, values)
 		payload = append(payload, '"')
 	case ".py":
-		var b bytes.Buffer
-		enc := json.NewEncoder(&b)
-		enc.SetEscapeHTML(false)
-		err = enc.Encode(values)
-		if err != nil {
-			return nil, err
-		}
-		payload = b.Bytes()
+		payload = make([]byte, 0, 1024)
+		payload = append(payload, '"')
+		payload = transformers.MarshalPython(payload, schema, values)
+		payload = append(payload, '"')
 	}
 
 	// Invoke the function.
@@ -323,8 +319,11 @@ export const _handler = async (event) => {
 		filename = "index.py"
 		source += `
 def _handler(event, context):
+	from decimal import Decimal
+	from datetime import datetime, date, time
+    
 	results = []
-	for e in event:
+	for e in eval(event):
 		try:
 			value = transform(e)
 		except Exception as ex:
