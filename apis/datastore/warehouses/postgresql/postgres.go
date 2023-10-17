@@ -325,10 +325,14 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actionsIdentifiers specifies the identifiers for every action, ordered by
-// priority, and usersColumns are the columns of the 'users' table which will be
-// populated during the users synchronization.
-func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actionsIdentifiers []warehouses.ActionIdentifiers, usersColumns []types.Property) error {
+// actions provides information for the actions of the workspace and must always
+// contain at least one action; usersColumns are the columns of the 'users'
+// table which will be populated during the users synchronization.
+func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []warehouses.Action, usersColumns []types.Property) error {
+
+	if len(actions) == 0 {
+		panic("invalid empty actions")
+	}
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -340,11 +344,11 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actionsIdenti
 	// Delete the orphan user identities, which are the identities that belong
 	// to actions that no longer exist.
 	b.WriteString(`DELETE FROM "users_identities" WHERE "__action__" NOT IN (`)
-	for i, action := range actionsIdentifiers {
+	for i, action := range actions {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(strconv.Itoa(action.Action))
+		b.WriteString(strconv.Itoa(action.ID))
 	}
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())
@@ -381,9 +385,9 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actionsIdenti
 			RETURNS boolean
 			LANGUAGE SQL
 			RETURN CASE` + "\n")
-	for _, idents := range actionsIdentifiers {
+	for _, idents := range actions {
 		b.WriteString("WHEN ACTION = ")
-		b.WriteString(strconv.Itoa(idents.Action))
+		b.WriteString(strconv.Itoa(idents.ID))
 		b.WriteString("	THEN ")
 		if len(idents.IdentifiersColumns) > 0 {
 			b.WriteString("matching_func(")

@@ -152,10 +152,16 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		return nil
 	}
 
+	// Retrieve the workspace actions and simply return if there are none.
+	wsActions := store.ds.state.Actions()
+	if len(wsActions) == 0 {
+		return nil
+	}
+
 	// Retrieve the actions identifiers.
-	var actionsIdentifiers []warehouses.ActionIdentifiers
+	var actions []warehouses.Action
 	usersIdentities := ws.Schemas["users_identities"]
-	for _, action := range store.ds.state.Actions() {
+	for _, action := range wsActions {
 		var columns []types.Property
 		if action.Identifiers != nil {
 			count := len(action.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
@@ -168,15 +174,15 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 				}
 			}
 		}
-		actionsIdentifiers = append(actionsIdentifiers, warehouses.ActionIdentifiers{
-			Action:             action.ID,
+		actions = append(actions, warehouses.Action{
+			ID:                 action.ID,
 			IdentifiersColumns: columns,
 		})
 	}
 
 	usersColumns := PropertiesToColumns(ws.Schemas["users"].Properties())
 
-	return store.warehouse.ResolveSyncUsers(ctx, actionsIdentifiers, usersColumns)
+	return store.warehouse.ResolveSyncUsers(ctx, actions, usersColumns)
 }
 
 // Users returns the users that satisfy the where condition with only the given

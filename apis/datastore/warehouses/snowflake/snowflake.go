@@ -367,10 +367,10 @@ func (warehouse *Snowflake) QueryRow(ctx context.Context, query string, args ...
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actionsIdentifiers specifies the identifiers for every action, ordered by
-// priority, and columns are the columns of the 'users' table which will be
-// populated during the users synchronization.
-func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actionsIdentifiers []warehouses.ActionIdentifiers, usersColumns []types.Property) error {
+// actions provides information for the actions of the workspace and must always
+// contain at least one action; usersColumns are the columns of the 'users'
+// table which will be populated during the users synchronization.
+func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []warehouses.Action, usersColumns []types.Property) error {
 	panic("not implemented")
 }
 
