@@ -9,7 +9,6 @@ package datastore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -220,7 +219,7 @@ func (store *Store) UsersSlice(ctx context.Context, properties []types.Property,
 }
 
 // close closes the store.
-// It flushes the events and closes the Redis database and the data warehouse.
+// It flushes the events and closes the data warehouse.
 // It panics if it has already been called.
 func (store *Store) close() error {
 	if store.closed.Swap(true) {
@@ -232,16 +231,9 @@ func (store *Store) close() error {
 		store.events = nil
 	}
 	store.mu.Unlock()
-	err := store.ds.redis.Close()
+	err := store.warehouse.Close()
 	if err != nil {
-		err = fmt.Errorf("error occurred closing Redis database: %s", err)
-	}
-	err2 := store.warehouse.Close()
-	if err2 != nil {
-		err2 = fmt.Errorf("error occurred closing data warehouse: %s", err)
-		if err != nil {
-			err = errors.New(err.Error() + "\n\tand also " + err2.Error())
-		}
+		return fmt.Errorf("error occurred closing data warehouse: %s", err)
 	}
 	return err
 }

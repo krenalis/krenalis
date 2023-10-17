@@ -12,13 +12,6 @@ postgreSQL:
     database:
     schema:
 
-redis:
-    network:
-    addr: 127.0.0.1:6379
-    username: 
-    password:
-    db:
-
 transformer:
 
     # Configure just one between "lambda" and "local".

@@ -27,7 +27,6 @@ type Settings struct {
 		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
 	}
 	PostgreSQL  apis.PostgreSQLConfig `yaml:"postgreSQL"`
-	Redis       apis.RedisConfig
 	Transformer struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
@@ -72,7 +71,6 @@ func Run(ctx context.Context, settings *Settings) error {
 
 	config := apis.Config{
 		PostgreSQL: settings.PostgreSQL,
-		Redis:      settings.Redis,
 	}
 
 	// Choose the transformer setting.

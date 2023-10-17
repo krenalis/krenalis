@@ -20,8 +20,6 @@ import (
 	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/state"
 	"chichi/connector/types"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type (
@@ -29,8 +27,8 @@ type (
 	DataWarehouseError = warehouses.DataWarehouseError
 )
 
-// InvalidSettings is the error returned when the Redis database or data
-// warehouse settings are not valid.
+// InvalidSettings is the error returned when the data warehouse settings are
+// not valid.
 type InvalidSettings struct {
 	Err error
 }
@@ -39,8 +37,8 @@ func (err InvalidSettings) Error() string {
 	return err.Err.Error()
 }
 
-// ConnectionFailed is the error returned when a connection to a Redis database
-// or to a data warehouse cannot be established.
+// ConnectionFailed is the error returned when a connection to a data warehouse
+// cannot be established.
 type ConnectionFailed struct {
 	Err error
 }
@@ -49,35 +47,19 @@ func (err ConnectionFailed) Error() string {
 	return err.Err.Error()
 }
 
-type RedisConfig struct {
-	Network  string
-	Addr     string
-	Username string
-	Password string
-	DB       int
-}
-
 type Datastore struct {
 	state  *state.State
-	redis  *redis.Client
 	mu     sync.Mutex // for the store field
 	store  map[int]*Store
 	closed atomic.Bool
 }
 
 // New returns a *Datastore instance.
-func New(st *state.State, redisConfig RedisConfig) *Datastore {
+func New(st *state.State) *Datastore {
 	ds := &Datastore{
 		state: st,
 		store: map[int]*Store{},
 	}
-	ds.redis = redis.NewClient(&redis.Options{
-		Network:  redisConfig.Network,
-		Addr:     redisConfig.Addr,
-		Username: redisConfig.Username,
-		Password: redisConfig.Password,
-		DB:       redisConfig.DB,
-	})
 	ds.state.AddListener(ds.onSetWarehouse)
 	for _, account := range st.Accounts() {
 		for _, ws := range account.Workspaces() {

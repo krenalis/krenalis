@@ -62,7 +62,6 @@ var hasBeenCalled bool
 
 type Config struct {
 	PostgreSQL  PostgreSQLConfig
-	Redis       RedisConfig
 	Transformer any // must be a LambdaConfig or LocalConfig value
 }
 
@@ -73,14 +72,6 @@ type PostgreSQLConfig struct {
 	Password string
 	Database string
 	Schema   string
-}
-
-type RedisConfig struct {
-	Network  string
-	Addr     string
-	Username string
-	Password string
-	DB       int
 }
 
 type LambdaConfig struct {
@@ -167,15 +158,7 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	// Init the datastore.
-	rs := conf.Redis
-	redisConfig := datastore.RedisConfig{
-		Network:  rs.Network,
-		Addr:     rs.Addr,
-		Username: rs.Username,
-		Password: rs.Password,
-		DB:       rs.DB,
-	}
-	apis.datastore = datastore.New(apis.state, redisConfig)
+	apis.datastore = datastore.New(apis.state)
 
 	apis.events, err = events.New(db, apis.state, apis.datastore, apis.transformer, apis.http)
 	if err != nil {

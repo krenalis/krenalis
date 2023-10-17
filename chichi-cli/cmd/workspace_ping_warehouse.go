@@ -20,7 +20,7 @@ import (
 var workspacePingWarehouseCmd = &cobra.Command{
 	Use:   "ping-warehouse <type> <file>",
 	Short: "Ping a data warehouse",
-	Long: "Ping a Redis database to validate the settings and establish a connection.\n\n" +
+	Long: "Ping a database to validate the settings and establish a connection.\n\n" +
 		"<type> is the data warehouse type and can be ClickHouse, PostgreSQL or Snowflake,\n" +
 		"<file> is a JSON file containing the data warehouse settings",
 	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),

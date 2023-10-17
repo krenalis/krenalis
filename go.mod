@@ -72,7 +72,6 @@ require (
 	github.com/mssola/useragent v1.0.0
 	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.9.0
-	github.com/redis/go-redis/v9 v9.1.0
 	github.com/relvacode/iso8601 v1.3.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
@@ -117,9 +116,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.13 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.3 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fraugster/parquet-go v0.12.0 // indirect
