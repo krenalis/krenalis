@@ -2312,7 +2312,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		switch action.Transformation.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
-				return errors.Unprocessable(LanguageNotSupported, "Javascript transformation language  is not supported")
+				return errors.Unprocessable(LanguageNotSupported, "Javascript transformation language is not supported")
 			}
 		case "Python":
 			if tr == nil || !tr.SupportLanguage(state.Python) {
