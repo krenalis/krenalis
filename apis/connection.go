@@ -2325,10 +2325,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 	// Validate the identifiers.
-	if action.Identifiers != nil {
-		if len(action.Identifiers) == 0 {
-			return errors.BadRequest("identifiers, if provided, cannot be empty")
-		}
+	if len(action.Identifiers) > 0 {
 		if action.Mapping == nil {
 			return errors.BadRequest("mapping is required by identifiers")
 		}

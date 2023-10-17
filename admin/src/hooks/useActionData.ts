@@ -258,23 +258,18 @@ const useActionData = (
 		const flattenedInputSchema = flattenSchema(actionType.InputSchema);
 		const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
 		if (actionType.Fields.includes('Identifiers')) {
-			if (action.Identifiers!.length === 0) {
-				showError(`Please, ensure that at least one identifier is defined`);
-				return;
-			} else {
-				if (action.Mapping == null) {
-					action.Mapping = flattenedOutputSchema;
-				}
-				const errorMessage = validateIdentifiersMapping(action.Identifiers!);
-				if (errorMessage) {
-					showError(errorMessage);
-					return;
-				}
-				for (const [mapped, identifier] of action.Identifiers!) {
-					action.Mapping![identifier.value].value = mapped.value;
-				}
-				identifiers = untransformActionIdentifiers(action.Identifiers!);
+			if (action.Mapping == null) {
+				action.Mapping = flattenedOutputSchema;
 			}
+			const errorMessage = validateIdentifiersMapping(action.Identifiers!);
+			if (errorMessage) {
+				showError(errorMessage);
+				return;
+			}
+			for (const [mapped, identifier] of action.Identifiers!) {
+				action.Mapping![identifier.value].value = mapped.value;
+			}
+			identifiers = untransformActionIdentifiers(action.Identifiers!);
 		}
 
 		if (action.Mapping != null) {

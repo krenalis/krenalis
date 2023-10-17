@@ -86,6 +86,10 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 		}
 
 		// Retrieve the user identifier.
+		// See the issue https://github.com/open2b/chichi/issues/298.
+		if len(this.action.Identifiers) == 0 {
+			return actionExecutionError{errors.New("action must have at least one identifier")}
+		}
 		userID, ok := mappedUser[this.action.Identifiers[0]].(string)
 		if !ok {
 			return actionExecutionError{errors.New("invalid identifier")}

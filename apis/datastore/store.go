@@ -156,18 +156,17 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 	var actionsIdentifiers []warehouses.ActionIdentifiers
 	usersIdentities := ws.Schemas["users_identities"]
 	for _, action := range store.ds.state.Actions() {
-		if action.Identifiers == nil {
-			// Exclude actions with no identifiers, that are actions that do not
-			// influence and contribute to the identity resolution.
-			continue
-		}
-		columns := make([]types.Property, 0, len(action.Identifiers)+len(ws.AnonymousIdentifiers.Priority))
-		for _, ident := range append(action.Identifiers, ws.AnonymousIdentifiers.Priority...) {
-			column, err := PropertyPathToColumn(*usersIdentities, ident)
-			if err != nil {
-				return err
+		var columns []types.Property
+		if action.Identifiers != nil {
+			count := len(action.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
+			columns = make([]types.Property, count)
+			for i, ident := range append(action.Identifiers, ws.AnonymousIdentifiers.Priority...) {
+				var err error
+				columns[i], err = PropertyPathToColumn(*usersIdentities, ident)
+				if err != nil {
+					return err
+				}
 			}
-			columns = append(columns, column)
 		}
 		actionsIdentifiers = append(actionsIdentifiers, warehouses.ActionIdentifiers{
 			Action:             action.ID,

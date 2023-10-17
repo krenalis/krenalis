@@ -523,8 +523,9 @@ type ActionToSet struct {
 	OutSchema types.Type
 
 	// Identifiers represents the property paths upon which identity resolution
-	// is executed. All identifiers must be present as keys in the action's
-	// Mapping.
+	// is executed. If the action does not specify any identifier, Identifiers
+	// is an empty slice. All identifiers must be present as keys in the
+	// action's Mapping.
 	Identifiers []string
 
 	// Mapping is the mapping of the action, if it has one, otherwise is nil.

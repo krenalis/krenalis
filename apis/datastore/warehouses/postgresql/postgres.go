@@ -384,18 +384,23 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actionsIdenti
 	for _, idents := range actionsIdentifiers {
 		b.WriteString("WHEN ACTION = ")
 		b.WriteString(strconv.Itoa(idents.Action))
-		b.WriteString(" THEN matching_func(")
-		for i, ident := range idents.IdentifiersColumns {
-			if i > 0 {
-				b.WriteByte(',')
+		b.WriteString("	THEN ")
+		if len(idents.IdentifiersColumns) > 0 {
+			b.WriteString("matching_func(")
+			for i, ident := range idents.IdentifiersColumns {
+				if i > 0 {
+					b.WriteByte(',')
+				}
+				b.WriteString(`i1."`)
+				b.WriteString(ident.Name)
+				b.WriteString(`"::text,i2."`)
+				b.WriteString(ident.Name)
+				b.WriteString(`"::text`)
 			}
-			b.WriteString(`i1."`)
-			b.WriteString(ident.Name)
-			b.WriteString(`"::text,i2."`)
-			b.WriteString(ident.Name)
-			b.WriteString(`"::text`)
+			b.WriteString(")\n")
+		} else {
+			b.WriteString("false\n")
 		}
-		b.WriteString(")\n")
 	}
 	b.WriteString(("ELSE FALSE\nEND"))
 	_, err = db.Exec(ctx, b.String())

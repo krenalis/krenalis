@@ -19,7 +19,7 @@ const SUPPORTED_IDENTIFIERS_TYPES = [
 	'Array',
 ];
 
-const DEFAULT_IDENTIFIERS_MAPPING = [[{ value: '', error: '' }, { value: '' }]];
+const DEFAULT_IDENTIFIERS_MAPPING = [];
 
 interface Mapped {
 	value: string;
@@ -78,13 +78,9 @@ const untransformActionIdentifiers = (transformed: TransformedIdentifiers): Acti
 
 const transformAnonymousIdentifiers = (identifiers: AnonymousIdentifiers): TransformedIdentifiers => {
 	const transformed: TransformedIdentifiers = [];
-	if (identifiers.Priority == null || identifiers.Priority.length === 0) {
-		transformed.push([{ value: '', error: '' }, { value: '' }]);
-	} else {
-		for (const identifier of identifiers.Priority) {
-			const mapped = identifiers.Mapping[identifier];
-			transformed.push([{ value: mapped, error: '' }, { value: identifier }]);
-		}
+	for (const identifier of identifiers.Priority) {
+		const mapped = identifiers.Mapping[identifier];
+		transformed.push([{ value: mapped, error: '' }, { value: identifier }]);
 	}
 	return transformed;
 };
