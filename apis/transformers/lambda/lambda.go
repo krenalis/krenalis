@@ -21,13 +21,14 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/backoff"
+	"chichi/connector/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
+	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/aws/smithy-go"
 )
 
@@ -62,12 +63,13 @@ func New(settings Settings) transformers.Transformer {
 // execution, it returns an *ExecutionError error. If the function does not
 // exist, it returns the ErrNotExist error. If the function is in a pending
 // state, it returns the ErrPendingState error.
-func (tr *transformer) CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]transformers.Result, error) {
+func (tr *transformer) CallFunction(ctx context.Context, name, version string, schema types.Type, values []map[string]any) ([]transformers.Result, error) {
 
 	if !transformers.ValidFunctionName(name) {
 		return nil, errors.New("function name is not valid")
 	}
-	if !tr.supportLanguage(path.Ext(name)) {
+	ext := path.Ext(name)
+	if !tr.supportLanguage(ext) {
 		return nil, errors.New("language is not supported")
 	}
 
@@ -77,18 +79,27 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	}
 
 	// Marshal the values.
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	err = enc.Encode(values)
-	if err != nil {
-		return nil, err
+	var payload []byte
+	switch ext {
+	case ".js":
+		payload = make([]byte, 0, 1024)
+		payload = append(payload, '"')
+		payload = transformers.MarshalJavaScript(payload, schema, values)
+		payload = append(payload, '"')
+	case ".py":
+		var b bytes.Buffer
+		enc := json.NewEncoder(&b)
+		enc.SetEscapeHTML(false)
+		err = enc.Encode(values)
+		if err != nil {
+			return nil, err
+		}
+		payload = b.Bytes()
 	}
 
 	// Invoke the function.
 	var out *lambda.InvokeOutput
 	name = lambdaFunctionName(name)
-	payload := b.Bytes()
 	bo := backoff.New(10, 10, 1*time.Second)
 	for bo.Next(ctx) {
 		out, err = client.Invoke(ctx, &lambda.InvokeInput{
@@ -193,8 +204,8 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 		Handler:      aws.String("index._handler"),
 		Publish:      true,
 		Role:         aws.String(tr.settings.Role),
-		Runtime:      types.Runtime(runtime),
-		Code:         &types.FunctionCode{ZipFile: code},
+		Runtime:      lambdatypes.Runtime(runtime),
+		Code:         &lambdatypes.FunctionCode{ZipFile: code},
 		Layers:       layers,
 	})
 	if err != nil {
@@ -288,7 +299,9 @@ func (tr *transformer) code(source string, ext string) ([]byte, error) {
 	case ".js":
 		filename = "index.mjs"
 		source += `
+BigInt.prototype.toJSON = function() { return this.toString(); }
 export const _handler = async (event) => {
+	event = Function("return " + event)();
 	const results = [];
 	for ( let i = 0; i < event.length; i++ ) {
 		try {

@@ -161,7 +161,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 
 	// Transform values.
 	funcName := transformationFunctionName(m.action, m.transformation.Language)
-	results, err := m.transformer.CallFunction(ctx, funcName, m.transformation.Version, []map[string]any{values})
+	results, err := m.transformer.CallFunction(ctx, funcName, m.transformation.Version, m.inSchema, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(*transformers.ExecutionError); ok {
 			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)

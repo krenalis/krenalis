@@ -23,6 +23,7 @@ import (
 
 	"chichi/apis/state"
 	"chichi/apis/transformers"
+	"chichi/connector/types"
 )
 
 type transformer struct {
@@ -44,7 +45,7 @@ func New(settings Settings) transformers.Transformer {
 // execution, it returns an *ExecutionError error. If the function does not
 // exist, it returns the ErrNotExist error. If the function is in a pending
 // state, it returns the ErrPendingState error.
-func (tr *transformer) CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]transformers.Result, error) {
+func (tr *transformer) CallFunction(ctx context.Context, name, version string, schema types.Type, values []map[string]any) ([]transformers.Result, error) {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return nil, err
@@ -52,10 +53,7 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	if !tr.supportLanguage(ext) {
 		return nil, errors.New("language is not supported")
 	}
-	jsonValues, err := json.Marshal(values)
-	if err != nil {
-		return nil, err
-	}
+
 	versionInt, err := strconv.Atoi(version)
 	if err != nil {
 		return nil, fmt.Errorf("invalid version %q", version)
@@ -63,11 +61,18 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	var stdout, stderr bytes.Buffer
 	filename := tr.absFilename(name, versionInt, ext)
 	var executable string
+	var payload []byte
 	switch ext {
 	case ".js":
 		executable = tr.settings.NodeExecutable
+		payload = make([]byte, 0, 1024)
+		payload = transformers.MarshalJavaScript(payload, schema, values)
 	case ".py":
 		executable = tr.settings.PythonExecutable
+		payload, err = json.Marshal(values)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -75,7 +80,7 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 		}
 		return nil, err
 	}
-	cmd := exec.CommandContext(ctx, executable, filename, string(jsonValues))
+	cmd := exec.CommandContext(ctx, executable, filename, string(payload))
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
@@ -123,8 +128,9 @@ func (tr *transformer) createFunction(name string, version int, source string) e
 	switch ext {
 	case ".js":
 		source += `
+BigInt.prototype.toJSON = function() { return this.toString(); }
 const results = [];
-const event = JSON.parse(process.argv[2]);
+const event = Function("return " + process.argv[2])();
 for ( let i = 0; i < event.length; i++ ) {
 	try {
 		let value = transform(event[i]);

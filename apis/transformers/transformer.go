@@ -12,6 +12,7 @@ import (
 	"errors"
 
 	"chichi/apis/state"
+	"chichi/connector/types"
 )
 
 var (
@@ -60,7 +61,7 @@ type Transformer interface {
 	// execution, it returns an *ExecutionError error. If the function does not
 	// exist, it returns the ErrNotExist error. If the function is in a pending
 	// state, it returns the ErrPendingState error.
-	CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]Result, error)
+	CallFunction(ctx context.Context, name, version string, schema types.Type, values []map[string]any) ([]Result, error)
 
 	// Close the transformer.
 	Close(ctx context.Context) error
