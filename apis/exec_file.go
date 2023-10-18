@@ -303,7 +303,6 @@ type recordWriter struct {
 	setUserCalled   bool
 	textColumnsOnly bool
 	records         [][]any
-	err             error
 }
 
 // Columns sets the columns of the records as properties.
