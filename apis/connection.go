@@ -2511,7 +2511,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		return errors.BadRequest("action has a mapping with no mapped properties")
 	}
 
-	// Check if the mapping (or the transformation) is mandatory, and if the transformation is allowed.
+	// Check if the mapping (or the transformation) is mandatory, and if the
+	// transformation is allowed.
 	var mappingIsMandatory bool
 	var transformationIsAllowed bool
 	switch connector.Type {
