@@ -214,7 +214,7 @@ func Test_MarshalPython(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{'Boolean':True,'Int':1307298102,'Int8':-12,'Int16':8023,'Int24':-12671039,'Int64':927041163082605,'UInt':1307298102,'UInt8':12,'UInt16':8023,'UInt24':12671039,'UInt64':927041163082605,'Float':18372.36240184391,'Float32':57.16038,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':'550e8400-e29b-41d4-a716-446655440000','JSON':'{\"foo\":5,\"boo\":true}','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{'Boolean':True,'Int':1307298102,'Int8':-12,'Int16':8023,'Int24':-12671039,'Int64':927041163082605,'UInt':1307298102,'UInt8':12,'UInt16':8023,'UInt24':12671039,'UInt64':927041163082605,'Float':18372.36240184391,'Float32':57.16038,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':'{\"foo\":5,\"boo\":true}','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
 		},
 		{
 			name: "Text encoding",

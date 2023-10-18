@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strings"
 	"time"
 
 	"chichi/apis/state"
@@ -125,9 +126,8 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 	}
 
 	// Unmarshal the results.
-	dec := json.NewDecoder(bytes.NewReader(out.Payload))
-	dec.UseNumber()
 	if out.FunctionError != nil {
+		dec := json.NewDecoder(bytes.NewReader(out.Payload))
 		payload := struct {
 			ErrorMessage string
 		}{}
@@ -137,6 +137,20 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 		}
 		return nil, transformers.NewExecutionError(payload.ErrorMessage)
 	}
+	var r io.Reader
+	switch ext {
+	case ".js":
+		r = bytes.NewReader(out.Payload)
+	case ".py":
+		var s string
+		err = json.Unmarshal(out.Payload, &s)
+		if err != nil {
+			return nil, fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
+		}
+		r = strings.NewReader(s)
+	}
+	dec := json.NewDecoder(r)
+	dec.UseNumber()
 	results := make([]transformers.Result, 0, len(values))
 	err = dec.Decode(&results)
 	if err != nil {
@@ -319,6 +333,8 @@ export const _handler = async (event) => {
 		filename = "index.py"
 		source += `
 def _handler(event, context):
+	import json
+	from uuid import UUID
 	from decimal import Decimal
 	from datetime import datetime, date, time
     
@@ -330,7 +346,7 @@ def _handler(event, context):
 			results.append({"error": str(ex)})
 		else:
 			results.append({"value": value})
-	return results
+	return json.dumps(results, default=str)
 `
 	}
 	// Make a Zip file with the function code.

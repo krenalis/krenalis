@@ -186,9 +186,15 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 			b = fmt.Appendf(b, "time(%d,%d,%d,%d)", v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		}
 	case string:
-		b = append(b, '\'')
-		b = pyStringEscape(b, v)
-		b = append(b, '\'')
+		if t.PhysicalType() == types.PtUUID {
+			b = append(b, "UUID('"...)
+			b = append(b, v...)
+			b = append(b, '\'', ')')
+		} else {
+			b = append(b, '\'')
+			b = pyStringEscape(b, v)
+			b = append(b, '\'')
+		}
 	default:
 		rv := reflect.ValueOf(v)
 		switch t.PhysicalType() {

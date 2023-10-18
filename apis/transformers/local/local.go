@@ -148,6 +148,7 @@ process.stdout.write(JSON.stringify(results))`
 def main():
 	import json
 	import sys
+	from uuid import UUID
 	from decimal import Decimal
 	from datetime import datetime, date, time
 
