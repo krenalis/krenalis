@@ -2548,6 +2548,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 
 	// Check if the identifiers for the identity resolution are mandatory.
+	// Note that this does not imply that action.Identifiers cannot be empty:
+	// the check here is logical, action.Identifiers must be non nil under
+	// certain conditions, but may still not contain any identifier.
 	var needsIdentifiers bool
 	switch connector.Type {
 	case
