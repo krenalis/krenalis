@@ -238,7 +238,7 @@ type Event struct {
 			Height  int
 			Density float64
 		}
-		SessionId    int64
+		SessionId    int
 		SessionStart bool
 		Timezone     string
 		UserAgent    string

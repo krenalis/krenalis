@@ -135,7 +135,7 @@ type eventContext struct {
 		Height  int     `json:"height,omitempty"`
 		Density float64 `json:"density,omitempty"`
 	} `json:"screen,omitempty"`
-	SessionId    int64          `json:"sessionId,omitempty"`
+	SessionId    int            `json:"sessionId,omitempty"`
 	SessionStart bool           `json:"sessionStart,omitempty"`
 	GroupId      string         `json:"groupId,omitempty"`
 	Timezone     string         `json:"timezone,omitempty"`
