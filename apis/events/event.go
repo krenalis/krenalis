@@ -40,7 +40,7 @@ type collectedEvent struct {
 	header *EventHeader
 
 	id     ksuid.KSUID
-	source int32
+	source int
 
 	AnonymousId  string          `json:"anonymousId,omitempty"`
 	Category     string          `json:"category,omitempty"`
@@ -305,11 +305,11 @@ func (event *collectedEvent) MapEvent() map[string]any {
 		"name":       event.Name,
 		"properties": event.Properties,
 		"receivedAt": event.receivedAt,
-		"sendAt":     event.sentAt,
+		"sentAt":     event.sentAt,
 		"source":     event.source,
 		"timestamp":  event.timestamp,
 		"traits":     event.Traits,
-		"type":       event.Type,
+		"type":       *event.Type,
 		"userId":     event.UserId,
 		"version":    event.version,
 	}

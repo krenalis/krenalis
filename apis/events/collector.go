@@ -599,7 +599,7 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 func (c *collector) enrichEvent(event *collectedEvent) {
 
 	// Source.
-	event.source = int32(event.header.source)
+	event.source = event.header.source
 
 	// AnonymousId.
 	if event.AnonymousId == "" {
