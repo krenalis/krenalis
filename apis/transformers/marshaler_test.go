@@ -9,6 +9,7 @@ package transformers
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -95,7 +96,35 @@ var schema = types.Object([]types.Property{
 		Type: types.UUID(),
 	},
 	{
-		Name: "JSON",
+		Name: "JSON_RawMessage",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_bool",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_string",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_float64",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_Number",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_slice",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_map",
+		Type: types.JSON(),
+	},
+	{
+		Name: "JSON_nil",
 		Type: types.JSON(),
 	},
 	{
@@ -131,31 +160,38 @@ var schema = types.Object([]types.Property{
 
 var values = []map[string]any{
 	{
-		"Boolean":  true,
-		"Int":      1307298102,
-		"Int8":     -12,
-		"Int16":    8023,
-		"Int24":    -12671039,
-		"Int64":    927041163082605,
-		"UInt":     uint(1307298102),
-		"UInt8":    uint(12),
-		"UInt16":   uint(8023),
-		"UInt24":   uint(12671039),
-		"UInt64":   uint(927041163082605),
-		"Float":    18372.36240184391,
-		"Float32":  57.16038,
-		"Decimal":  decimal.RequireFromString("1752.064"),
-		"DateTime": time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
-		"Date":     time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
-		"Time":     time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
-		"Year":     2023,
-		"UUID":     "550e8400-e29b-41d4-a716-446655440000",
-		"JSON":     `{"foo":5,"boo":true}`,
-		"Inet":     "192.158.1.38",
-		"Text":     "some text",
-		"Array":    []any{"foo", "boo"},
-		"Object":   map[string]any{"a": 9, "b": false},
-		"Map":      map[string]any{"a": 1, "b": 2, "c": 3},
+		"Boolean":         true,
+		"Int":             1307298102,
+		"Int8":            -12,
+		"Int16":           8023,
+		"Int24":           -12671039,
+		"Int64":           927041163082605,
+		"UInt":            uint(1307298102),
+		"UInt8":           uint(12),
+		"UInt16":          uint(8023),
+		"UInt24":          uint(12671039),
+		"UInt64":          uint(927041163082605),
+		"Float":           18372.36240184391,
+		"Float32":         57.16038,
+		"Decimal":         decimal.RequireFromString("1752.064"),
+		"DateTime":        time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
+		"Date":            time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
+		"Time":            time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
+		"Year":            2023,
+		"UUID":            "550e8400-e29b-41d4-a716-446655440000",
+		"JSON_RawMessage": json.RawMessage(`{"foo":5,"boo":true}`),
+		"JSON_bool":       true,
+		"JSON_string":     `foo & boo \u`,
+		"JSON_float64":    23.871,
+		"JSON_Number":     json.Number("85802.7305"),
+		"JSON_slice":      []any{"foo", 3, true},
+		"JSON_map":        map[string]any{"a": 1, "b": 2},
+		"JSON_nil":        nil,
+		"Inet":            "192.158.1.38",
+		"Text":            "some text",
+		"Array":           []any{"foo", "boo"},
+		"Object":          map[string]any{"a": 9, "b": false},
+		"Map":             map[string]any{"a": 1, "b": 2, "c": 3},
 	},
 }
 
@@ -170,7 +206,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{Boolean:true,Int:1307298102,Int8:-12,Int16:8023,Int24:-12671039,Int64:927041163082605n,UInt:1307298102,UInt8:12,UInt16:8023,UInt24:12671039,UInt64:927041163082605n,Float:18372.36240184391,Float32:57.16038,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:'{\"foo\":5,\"boo\":true}',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{Boolean:true,Int:1307298102,Int8:-12,Int16:8023,Int24:-12671039,Int64:927041163082605n,UInt:1307298102,UInt8:12,UInt16:8023,UInt24:12671039,UInt64:927041163082605n,Float:18372.36240184391,Float32:57.16038,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_nil:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
 		},
 		{
 			name: "Text encoding",
@@ -214,7 +250,7 @@ func Test_MarshalPython(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{'Boolean':True,'Int':1307298102,'Int8':-12,'Int16':8023,'Int24':-12671039,'Int64':927041163082605,'UInt':1307298102,'UInt8':12,'UInt16':8023,'UInt24':12671039,'UInt64':927041163082605,'Float':18372.36240184391,'Float32':57.16038,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':'{\"foo\":5,\"boo\":true}','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{'Boolean':True,'Int':1307298102,'Int8':-12,'Int16':8023,'Int24':-12671039,'Int64':927041163082605,'UInt':1307298102,'UInt8':12,'UInt16':8023,'UInt24':12671039,'UInt64':927041163082605,'Float':18372.36240184391,'Float32':57.16038,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_nil':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
 		},
 		{
 			name: "Text encoding",

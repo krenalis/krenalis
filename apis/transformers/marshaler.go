@@ -8,6 +8,7 @@
 package transformers
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"slices"
@@ -51,6 +52,22 @@ func MarshalPython(b []byte, schema types.Type, values []map[string]any) []byte 
 }
 
 func marshalJavaScript(b []byte, t types.Type, v any) []byte {
+	pt := t.PhysicalType()
+	if pt == types.PtJSON {
+		var buf strings.Builder
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		err := enc.Encode(v)
+		if err != nil {
+			panic("unexpected value")
+		}
+		s := buf.String()
+		s = s[:len(s)-1]
+		b = append(b, '\'')
+		b = jsStringEscape(b, s)
+		b = append(b, '\'')
+		return b
+	}
 	switch v := v.(type) {
 	case nil:
 		b = append(b, "null"...)
@@ -62,17 +79,17 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 		}
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
-		if t.PhysicalType() == types.PtInt64 {
+		if pt == types.PtInt64 {
 			b = append(b, 'n')
 		}
 	case uint:
 		b = strconv.AppendUint(b, uint64(v), 10)
-		if t.PhysicalType() == types.PtUInt64 {
+		if pt == types.PtUInt64 {
 			b = append(b, 'n')
 		}
 	case float64:
 		bs := 64
-		if t.PhysicalType() == types.PtFloat32 {
+		if pt == types.PtFloat32 {
 			bs = 32
 		}
 		b = strconv.AppendFloat(b, v, 'g', -1, bs)
@@ -90,7 +107,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 		b = append(b, '\'')
 	default:
 		rv := reflect.ValueOf(v)
-		switch t.PhysicalType() {
+		switch pt {
 		case types.PtArray:
 			b = append(b, '[')
 			n := rv.Len()
@@ -146,13 +163,29 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 			}
 			b = append(b, '}')
 		default:
-			panic(fmt.Sprintf("unexpected type %s", t.PhysicalType()))
+			panic(fmt.Sprintf("unexpected type %s", pt))
 		}
 	}
 	return b
 }
 
 func marshalPython(b []byte, t types.Type, v any) []byte {
+	pt := t.PhysicalType()
+	if pt == types.PtJSON {
+		var buf strings.Builder
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		err := enc.Encode(v)
+		if err != nil {
+			panic("unexpected value")
+		}
+		s := buf.String()
+		s = s[:len(s)-1]
+		b = append(b, '\'')
+		b = pyStringEscape(b, s)
+		b = append(b, '\'')
+		return b
+	}
 	switch v := v.(type) {
 	case nil:
 		b = append(b, "None"...)
@@ -168,7 +201,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 		b = strconv.AppendUint(b, uint64(v), 10)
 	case float64:
 		bs := 64
-		if t.PhysicalType() == types.PtFloat32 {
+		if pt == types.PtFloat32 {
 			bs = 32
 		}
 		b = strconv.AppendFloat(b, v, 'g', -1, bs)
@@ -177,7 +210,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 		b = append(b, v.String()...)
 		b = append(b, '\'', ')')
 	case time.Time:
-		switch t.PhysicalType() {
+		switch pt {
 		case types.PtDateTime:
 			b = fmt.Appendf(b, "datetime(%d,%d,%d,%d,%d,%d,%d)", v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		case types.PtDate:
@@ -186,7 +219,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 			b = fmt.Appendf(b, "time(%d,%d,%d,%d)", v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		}
 	case string:
-		if t.PhysicalType() == types.PtUUID {
+		if pt == types.PtUUID {
 			b = append(b, "UUID('"...)
 			b = append(b, v...)
 			b = append(b, '\'', ')')
@@ -197,7 +230,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 		}
 	default:
 		rv := reflect.ValueOf(v)
-		switch t.PhysicalType() {
+		switch pt {
 		case types.PtArray:
 			b = append(b, '[')
 			n := rv.Len()
@@ -254,7 +287,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 			}
 			b = append(b, '}')
 		default:
-			panic(fmt.Sprintf("unexpected type %s", t.PhysicalType()))
+			panic(fmt.Sprintf("unexpected type %s", pt))
 		}
 	}
 	return b
