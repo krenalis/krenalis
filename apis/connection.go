@@ -663,7 +663,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the execution of the query fails, it returns an errors.UnprocessableError
 // with code QueryExecutionFailed.
-func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([][]string, types.Type, error) {
+func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]map[string]any, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -732,17 +732,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
 
-	stringRows := make([][]string, len(rows))
-	for i, row := range rows {
-		stringRows[i] = make([]string, len(properties))
-		for j, n := range properties {
-			if row[n.Name] != nil {
-				stringRows[i][j] = fmt.Sprintf("%v", row[n.Name])
-			}
-		}
-	}
-
-	return stringRows, schema, nil
+	return rows, schema, nil
 }
 
 // An Execution describes an action execution as returned by Executions.
@@ -856,7 +846,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 //
 //   - NoStorage, if the connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([][]any, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([]map[string]any, types.Type, error) {
 
 	this.apis.mustBeOpen()
 

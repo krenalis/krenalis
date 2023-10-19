@@ -1,5 +1,4 @@
 import {
-	ActionFilter,
 	ActionTarget,
 	ActionType,
 	ExportMode,
@@ -8,6 +7,7 @@ import {
 	SchedulePeriod,
 	Transformation,
 } from '../../types/external/action';
+import { Filter } from '../../types/external/api';
 import { ActionSchemasResponse } from '../../types/external/api';
 import Type, { ObjectType, Property } from '../../types/external/types';
 import TransformedConnection from './transformedConnection';
@@ -71,7 +71,7 @@ interface TransformedAction {
 	SchedulePeriod?: SchedulePeriod | null;
 	InSchema: Type | null;
 	OutSchema: Type | null;
-	Filter: ActionFilter | null;
+	Filter: Filter | null;
 	Mapping: TransformedMapping | null;
 	Transformation: Transformation | null;
 	Identifiers?: TransformedIdentifiers | null;

@@ -1,121 +1,41 @@
-import React, { useEffect, useState, useContext, ReactNode } from 'react';
+import React, { useState, useContext, ReactNode } from 'react';
 import './ConnectionEvents.css';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
-import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
-import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import statuses from '../../../constants/statuses';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import { AddEventListenerResponse, EventListenerEventsResponse } from '../../../types/external/api';
+import SyntaxHighlight from '../../shared/SyntaxHighlight/SyntaxHighlight';
+import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../types/internal/app';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const ConnectionEvents = () => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
-	const [selectedEvent, setSelectedEvent] = useState<number>();
+	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
 	const [discarded, setDiscarded] = useState<number>(0);
-	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
-	const [eventID, setEventID] = useState<number>(1);
 
-	const { api, showError, showStatus, redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
-	useEffect(() => {
-		if (isListenerNotFound) {
-			setIsListenerNotFound(false);
-			return;
-		}
-		let listenerID: string;
-		let interval: number;
-		let id = eventID;
-		const startListener = async () => {
-			let listener: AddEventListenerResponse;
-			try {
-				listener = await api.workspaces.eventlisteners.add(3, c.id);
-			} catch (err) {
-				if (err instanceof UnprocessableError) {
-					if ( err.code === 'ConnectionNotExist' ) {
-						redirect('connections');
-						showStatus(statuses.connectionDoesNotExistAnymore);
-					}
-					if (err.code === 'TooManyListeners') {
-						showStatus(statuses.tooManyListeners);
-					}
-					return;
-				}
-				showError(err);
-				return;
-			}
-			listenerID = listener.id;
-			interval = window.setInterval(async () => {
-				let res: EventListenerEventsResponse;
-				try {
-					res = await api.workspaces.eventlisteners.events(listenerID);
-				} catch (err) {
-					if (err instanceof NotFoundError) {
-						setIsListenerNotFound(true);
-						return;
-					}
-					showError(err);
-					return;
-				}
-				const newly: EventListenerEvent[] = [];
-				for (const e of res.events) {
-					const dec = JSON.parse(atob(e.Data));
-					newly.push({
-						id: id,
-						err: e.Err,
-						type: dec.event,
-						path: dec.url,
-						time: e.Header.receivedAt,
-						full: JSON.stringify(dec, null, 4),
-					});
-					const newID = id + 1;
-					id = newID;
-					setEventID(newID);
-				}
-				setEvents((prevEvents) => [...prevEvents, ...newly]);
-				setDiscarded((prevDiscarded) => prevDiscarded + res.discarded);
-			}, 2500);
-		};
-		startListener();
-		return () => {
-			clearInterval(interval);
-			const removeListener = async () => {
-				try {
-					await api.workspaces.eventlisteners.remove(listenerID);
-				} catch (err) {
-					showError(err);
-					return;
-				}
-			};
-			removeListener();
-		};
-	}, [isListenerNotFound]);
+	const collectEvents = (newly: EventListenerEvent[]) => {
+		setEvents((prevEvents) => [...prevEvents, ...newly]);
+	};
 
-	const onSelectEvent = (id: number) => {
-		setSelectedEvent(0);
+	useEventListener(c.id, true, collectEvents, setDiscarded);
+
+	const onEventClick = (event: EventListenerEvent) => {
+		setSelectedEvent(null);
 		setTimeout(() => {
-			setSelectedEvent(id);
+			setSelectedEvent(event);
 		}, 100);
 	};
 
 	let rightPanel: ReactNode;
 	if (selectedEvent !== null) {
-		if (selectedEvent === 0) {
-			// empty panel
-		} else {
-			const fullEventMessage = events.find((e) => e.id === selectedEvent)?.full!;
-			rightPanel = (
-				<div className='fullEvent'>
-					<SyntaxHighlighter language='javascript' style={github}>
-						{fullEventMessage}{' '}
-					</SyntaxHighlighter>
-				</div>
-			);
-		}
+		const fullEventMessage = selectedEvent.source!;
+		rightPanel = (
+			<div className='fullEvent'>
+				<SyntaxHighlight>{fullEventMessage}</SyntaxHighlight>
+			</div>
+		);
 	} else {
 		rightPanel = (
 			<div className='selectEventMessage'>
@@ -131,51 +51,59 @@ const ConnectionEvents = () => {
 	return (
 		<div className='connectionEvents'>
 			<div className='events'>
-				<div className='eventList'>
-					<div className='heading'>
-						<div className='title'>
-							<IconWrapper name='activity' moat />
-							<div className='text'>Live events</div>
-						</div>
+				<div className='heading'>
+					<div className='title'>
+						<IconWrapper name='activity' moat />
+						<div className='text'>Live events</div>
+					</div>
+				</div>
+				<div className='eventListener'>
+					{discarded > 0 && (
 						<div className='discarded'>
 							<span className='count'>{discarded}</span>
 							<span className='text'>discarded</span>
 						</div>
-					</div>
-					<div className='body'>
-						{events.length === 0 && (
-							<div className='noEvents'>
-								Listening for new events{' '}
-								<span className='loadingEllipsis'>
-									<span className='ellipsis1'>.</span>
-									<span className='ellipsis2'>.</span>
-									<span className='ellipsis3'>.</span>
-								</span>
-							</div>
-						)}
-						{reversedEvents.map((e) => {
-							return (
-								<div
-									className={`event${selectedEvent === e.id ? ' selected' : ''}`}
-									onClick={() => onSelectEvent(e.id)}
-								>
-									<div className='name'>{e.type}</div>
-									<div className='path'>{e.path}</div>
-									<div className='time'>{e.time}</div>
-									<div className='error'>
-										{e.err !== '' ? (
-											<SlTooltip content={e.err} placement='top'>
-												<SlIcon className='iconError' name='exclamation-circle-fill'></SlIcon>
-											</SlTooltip>
-										) : (
-											<SlTooltip content='No error' placement='top'>
-												<SlIcon className='iconSuccess' name='check-circle-fill'></SlIcon>
-											</SlTooltip>
-										)}
-									</div>
+					)}
+					<div className='eventList'>
+						<div className='body'>
+							{events.length === 0 && (
+								<div className='noEvents'>
+									Listening for new events{' '}
+									<span className='loadingEllipsis'>
+										<span className='ellipsis1'>.</span>
+										<span className='ellipsis2'>.</span>
+										<span className='ellipsis3'>.</span>
+									</span>
 								</div>
-							);
-						})}
+							)}
+							{reversedEvents.map((e) => {
+								return (
+									<div
+										className={`event${
+											selectedEvent && selectedEvent.id === e.id ? ' selected' : ''
+										}`}
+										onClick={() => onEventClick(e)}
+									>
+										<div className='error'>
+											{e.err !== '' ? (
+												<SlTooltip content={e.err} placement='top' hoist>
+													<SlIcon
+														className='iconError'
+														name='exclamation-circle-fill'
+													></SlIcon>
+												</SlTooltip>
+											) : (
+												<SlTooltip content='No error' placement='top' hoist>
+													<SlIcon className='iconSuccess' name='check-circle-fill'></SlIcon>
+												</SlTooltip>
+											)}
+										</div>
+										<div className='name'>{e.type}</div>
+										<div className='time'>{new Date(e.time).toLocaleString()}</div>
+									</div>
+								);
+							})}
+						</div>
 					</div>
 				</div>
 			</div>

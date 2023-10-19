@@ -15,6 +15,8 @@ interface Connector {
 	SampleQuery: string;
 	WebhooksPer: WebhooksPer;
 	OAuth: boolean;
+	TermForUsers: string;
+	TermForGroups: string;
 }
 
 export type { Connector, ConnectorType, WebhooksPer };

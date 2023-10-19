@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ReactNode } from 'react';
 import './EditorWrapper.css';
 import Editor from '@monaco-editor/react';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -13,69 +13,69 @@ interface EditorWrapperProps {
 	language: string;
 	languageChoices?: string[];
 	onLanguageChange?: (language: string) => void;
+	actions?: ReactNode;
 	width?: number;
-	height: number;
+	height?: number;
+	name: string;
 	value: string;
 	onChange: (value: string | undefined) => void | Promise<void>;
+	onClick?: () => void;
+	onMount?: (editor: any) => void;
+	isReadOnly?: boolean;
 }
 
 const EditorWrapper = ({
 	language,
 	languageChoices,
 	onLanguageChange,
+	actions,
 	width,
 	height,
+	name,
 	value,
 	onChange,
+	isReadOnly,
+	onClick,
+	onMount,
 	...delegated
 }: EditorWrapperProps) => {
-	const [key, setKey] = useState('');
+	const [key, setKey] = useState(name);
 
 	useEffect(() => {
-		setKey(language);
+		setKey(`${name}-${language}`);
 	}, [language]);
 
 	const onEditorDidMount = (editor) => {
-		let source = value;
-		const div = editor._domElement;
-		const height = div.offsetHeight;
-		const lineCount = height / 25; // 25 is the height of a line.
-		if (source == null) {
-			source = '';
+		if (onMount) {
+			onMount(editor);
 		}
-		const sourceLines = (source.match(/\n/g) || []).length + 1; // +1 is needed for the first line
-		const neededNewLines = lineCount - sourceLines - 1; // -1 is needed to prevent vertical overflow
-		if (neededNewLines === 0) {
-			return;
-		}
-		for (let i = 0; i < neededNewLines; i++) {
-			source += '\n';
-		}
-		onChange(source);
 	};
 
 	const languageLogo = getLanguageLogo(language);
 
 	return (
-		<div className='editorWrapper'>
+		<div className='editorWrapper' onClick={onClick}>
 			<div className='heading'>
-				<span className='languageLogo'>{languageLogo}</span>
-				{languageChoices ? (
-					<SlDropdown className='switchEditorLanguageDropdown'>
-						<SlButton slot='trigger' variant='text' size='small' caret>
-							{language}
-						</SlButton>
-						<SlMenu onSlSelect={onLanguageChange}>
-							{languageChoices.map((language) => (
-								<SlMenuItem value={language}>{language}</SlMenuItem>
-							))}
-						</SlMenu>
-					</SlDropdown>
-				) : (
-					<span className='language'>{language}</span>
-				)}
+				<div className='logoAndLanguage'>
+					<span className='languageLogo'>{languageLogo}</span>
+					{languageChoices ? (
+						<SlDropdown className='switchEditorLanguageDropdown'>
+							<SlButton slot='trigger' variant='text' size='small' caret>
+								{language}
+							</SlButton>
+							<SlMenu onSlSelect={onLanguageChange}>
+								{languageChoices.map((language) => (
+									<SlMenuItem value={language}>{language}</SlMenuItem>
+								))}
+							</SlMenu>
+						</SlDropdown>
+					) : (
+						<span className='language'>{language}</span>
+					)}
+				</div>
+				<div className='actions'>{actions}</div>
 			</div>
-			<div className='editor' style={{ width: `${width}px`, height: `${height}px` }}>
+			<div className='editor' style={{ width: width ? `${width}px` : '', height: height ? `${height}px` : '' }}>
 				<Editor
 					key={key}
 					value={value}
@@ -101,6 +101,7 @@ const EditorWrapper = ({
 						renderLineHighlight: 'none',
 						scrollBeyondLastLine: false,
 						renderWhitespace: 'none',
+						readOnly: isReadOnly,
 					}}
 					loading={<SlSpinner style={{ fontSize: '30px' }}></SlSpinner>}
 					{...delegated}

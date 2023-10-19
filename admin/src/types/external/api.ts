@@ -1,5 +1,6 @@
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorAction, ConnectorAlert } from './ui';
+import { User } from './user';
 
 interface authCodeURLResponse {
 	url: string;
@@ -27,7 +28,7 @@ interface Import {
 }
 
 interface EventListenerEventsResponse {
-	events: Record<string, any>[];
+	events: ObservedEvent[];
 	discarded: number;
 }
 
@@ -62,6 +63,54 @@ interface TransformationLanguagesResponse {
 	languages: string[];
 }
 
+interface TransformationPreviewResponse {
+	data: Record<string, any>;
+}
+
+type FilterLogical = 'all' | 'any';
+
+interface FilterCondition {
+	Property: string;
+	Operator: string;
+	Value: string;
+}
+
+interface Filter {
+	Logical: FilterLogical;
+	Conditions: FilterCondition[];
+}
+
+interface FindUsersResponse {
+	count: number;
+	schema: ObjectType;
+	users: User[];
+}
+
+interface AppUsersResponse {
+	users: User[];
+	cursor: string;
+}
+
+interface EventPreviewResponse {
+	preview: string;
+}
+
+interface ObservedEventHeader {
+	receivedAt: string;
+	remoteAddr: string;
+	method: string;
+	proto: string;
+	url: string;
+	headers: Record<string, string>;
+}
+
+interface ObservedEvent {
+	Source: number;
+	Header: ObservedEventHeader;
+	Data: string;
+	Err: string;
+}
+
 export type {
 	authCodeURLResponse,
 	UIResponse,
@@ -75,4 +124,12 @@ export type {
 	CompletePathResponse,
 	SheetsResponse,
 	TransformationLanguagesResponse,
+	TransformationPreviewResponse,
+	FilterLogical,
+	FilterCondition,
+	Filter,
+	FindUsersResponse,
+	AppUsersResponse,
+	EventPreviewResponse,
+	ObservedEvent,
 };

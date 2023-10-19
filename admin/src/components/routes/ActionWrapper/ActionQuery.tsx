@@ -51,7 +51,7 @@ const ActionQuery = () => {
 		}
 		const rows: GridRow[] = [];
 		for (const row of res.Rows) {
-			rows.push({ cells: row });
+			rows.push({ cells: Object.values(row) });
 		}
 		setQueryPreviewColumns(columns);
 		setQueryPreviewRows(rows);
@@ -143,6 +143,7 @@ const ActionQuery = () => {
 				<EditorWrapper
 					language='sql'
 					height={400}
+					name='actionQueryEditor'
 					value={action.Query!}
 					onChange={onUpdateQuery}
 				></EditorWrapper>

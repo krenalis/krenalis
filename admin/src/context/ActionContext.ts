@@ -21,6 +21,8 @@ interface ActionContext {
 	isSaveButtonLoading: boolean;
 	setIsQueryChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsFileChanged: React.Dispatch<React.SetStateAction<boolean>>;
+	isSaveHidden: boolean;
+	setIsSaveHidden: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const actionContext = createContext<ActionContext>({} as ActionContext);

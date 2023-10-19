@@ -42,6 +42,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setActionType,
 		setAction,
 		saveAction,
+		isSaveHidden,
+		setIsSaveHidden,
 	} = useActionData(onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
 
 	if (isLoading) {
@@ -103,6 +105,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				isSaveButtonLoading,
 				setIsQueryChanged,
 				setIsFileChanged,
+				isSaveHidden,
+				setIsSaveHidden,
 			}}
 		>
 			<div className='action'>

@@ -292,7 +292,7 @@ func newRecordWriter(connector int, limit int) *recordWriter {
 		connector:       connector,
 		limit:           limit,
 		textColumnsOnly: true,
-		records:         [][]any{},
+		records:         []map[string]any{},
 	}
 	return &rw
 }
@@ -307,7 +307,8 @@ type recordWriter struct {
 	columnByName    map[string]types.Property
 	setUserCalled   bool
 	textColumnsOnly bool
-	records         [][]any
+	records         []map[string]any
+	err             error
 }
 
 // Columns sets the columns of the records as properties.
@@ -360,9 +361,9 @@ func (rw *recordWriter) Record(record []any) error {
 	var err error
 	if rw.write == nil {
 		// Store the record in the records field.
-		rd := make([]any, len(rw.columns))
+		rd := make(map[string]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
+			rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
 			if err != nil {
 				return err
 			}
@@ -403,9 +404,10 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	}
 	if rw.write == nil {
 		// Store the record in the records field.
-		rd := make([]any, len(rw.columns))
-		for i, c := range rw.columns {
-			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
+
+		rd := make(map[string]any, len(rw.columns))
+		for _, c := range rw.columns {
+			rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
 			if err != nil {
 				return err
 			}
@@ -446,13 +448,13 @@ func (rw *recordWriter) RecordString(record []string) error {
 	var err error
 	if rw.write == nil {
 		// Store the record in the records field.
-		rd := make([]any, len(rw.columns))
+		rd := make(map[string]any, len(rw.columns))
 		for i, c := range rw.columns {
 			err = normalization.ValidateStringProperty(c, record[i])
 			if err != nil {
 				return err
 			}
-			rd[i] = record[i]
+			rd[c.Name] = record[i]
 		}
 		rw.records = append(rw.records, rd)
 	} else {

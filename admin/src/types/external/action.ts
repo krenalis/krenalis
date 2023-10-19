@@ -1,3 +1,4 @@
+import { Filter } from './api';
 import Type from './types';
 
 type ActionTarget = 'Events' | 'Users' | 'Groups';
@@ -5,8 +6,6 @@ type ActionTarget = 'Events' | 'Users' | 'Groups';
 type SchedulePeriod = '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' | '8h' | '12h' | '24h';
 
 type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
-
-type ActionFilterLogical = 'all' | 'any';
 
 type Mapping = Record<string, string>;
 
@@ -26,17 +25,6 @@ interface MatchingProperties {
 	External: string;
 }
 
-interface ActionFilterCondition {
-	Property: string;
-	Operator: string;
-	Value: string;
-}
-
-interface ActionFilter {
-	Logical: ActionFilterLogical;
-	Conditions: ActionFilterCondition[];
-}
-
 interface Action {
 	ID: number;
 	Connection: number;
@@ -49,7 +37,7 @@ interface Action {
 	SchedulePeriod: SchedulePeriod | null;
 	InSchema: Type | null;
 	OutSchema: Type | null;
-	Filter: ActionFilter | null;
+	Filter: Filter | null;
 	Mapping: Mapping | null;
 	Transformation: Transformation | null;
 	Identifiers: string[] | null;
@@ -72,7 +60,7 @@ interface ActionType {
 interface ActionToSet {
 	name: string;
 	enabled?: boolean;
-	filter?: ActionFilter | null;
+	filter?: Filter | null;
 	inSchema?: Type;
 	outSchema?: Type;
 	identifiers?: string[];
@@ -88,7 +76,6 @@ interface ActionToSet {
 
 export type {
 	ActionTarget,
-	ActionFilter,
 	Transformation,
 	ExportMode,
 	MatchingProperties,

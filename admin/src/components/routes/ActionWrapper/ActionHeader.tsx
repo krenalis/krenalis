@@ -19,6 +19,7 @@ const ActionHeader = () => {
 		mode,
 		isEditing,
 		isSaveButtonLoading,
+		isSaveHidden,
 	} = useContext(ActionContext);
 
 	const onUpdateName = (e) => {
@@ -60,7 +61,7 @@ const ActionHeader = () => {
 					{!isNameEditable && <div className='actionTypeDescription'>{actionType.Description}</div>}
 				</div>
 			</div>
-			<div className='headerButtons'>
+			<div className={`headerButtons${isSaveHidden ? ' hidden' : ''}`}>
 				<SlButton variant='default' onClick={onClose}>
 					Cancel
 				</SlButton>

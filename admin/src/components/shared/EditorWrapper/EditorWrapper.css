@@ -7,6 +7,7 @@
 
 .editorWrapper * {
     font-family: 'Source Code Pro', monospace !important;
+    font-size: 15px!important;
 }
 
 .editorWrapper .heading {
@@ -18,8 +19,15 @@
     color: var(--sl-color-neutral-500);
     text-transform: capitalize;
     font-size: 13px;
-    display: flex;
     border-bottom: 1px solid var(--sl-color-neutral-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.editorWrapper .heading .logoAndLanguage {
+    display: flex;
     align-items: center;
     gap: 10px;
 }
@@ -53,6 +61,7 @@
     color: var(--sl-color-neutral-800)!important;
     opacity: .8;
     user-select: none;
+    font-size: 16px!important;
 }
 
 .editorWrapper .line-numbers.active-line-number {

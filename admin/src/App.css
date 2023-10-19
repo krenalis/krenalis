@@ -287,6 +287,26 @@ sl-tab-group::part(body) {
 	overflow: visible;
 }
 
+/* || Split panels */
+
+sl-split-panel {
+	--divider-width: 2px;
+}
+
+sl-split-panel::part(divider) {
+	background-color: var(--border-primary);;
+	z-index: 20;
+}
+
+sl-split-panel sl-icon[slot=divider]  {
+    position: absolute;
+    border-radius: 5px;
+    background: var(--bg-primary);
+    color: var(--sl-color-neutral-500);
+    padding: 0.5rem 0.125rem;
+    border: 1px solid var(--border-primary);
+}
+
 /* || Global spinner */
 
 .globalSpinner {

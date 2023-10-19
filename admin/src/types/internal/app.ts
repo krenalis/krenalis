@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 import { WarehouseSettings, WarehouseType } from '../external/warehouse';
+import { Property } from '../external/types';
+import { ObservedEvent } from '../external/api';
 
 type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
@@ -28,7 +30,8 @@ interface EventListenerEvent {
 	type: string;
 	path: string;
 	time: string;
-	full: string;
+	source: string;
+	full: ObservedEvent;
 }
 
 interface ComboboxItem {
@@ -41,4 +44,29 @@ interface Warehouse {
 	settings: WarehouseSettings;
 }
 
-export type { Status, ShoelaceEventTarget, ArrowAnchor, EventListenerEvent, ComboboxItem, Size, Variant, Warehouse };
+interface SpecialProperties {
+	firstNameID: string;
+	lastNameID: string;
+	emailID: string;
+	idID: string;
+}
+
+interface SampleProperty {
+	value: any;
+	property: Property;
+}
+
+type Sample = Record<string, SampleProperty>;
+
+export type {
+	Status,
+	ShoelaceEventTarget,
+	ArrowAnchor,
+	EventListenerEvent,
+	ComboboxItem,
+	Size,
+	Variant,
+	Warehouse,
+	SpecialProperties,
+	Sample,
+};

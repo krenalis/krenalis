@@ -13,6 +13,8 @@ class TransformedConnector {
 	sampleQuery: string;
 	webhooksPer: WebhooksPer;
 	oAuth: boolean;
+	termForUsers: string;
+	termForGroups: string;
 
 	constructor(
 		id: number,
@@ -26,6 +28,8 @@ class TransformedConnector {
 		oAuth: boolean,
 		sourceDescription: string,
 		destinationDescription: string,
+		termForUsers: string,
+		termForGroups: string,
 	) {
 		this.id = id;
 		this.name = name;
@@ -38,6 +42,8 @@ class TransformedConnector {
 		this.oAuth = oAuth;
 		this.sourceDescription = sourceDescription;
 		this.destinationDescription = destinationDescription;
+		this.termForUsers = termForUsers;
+		this.termForGroups = termForGroups;
 	}
 
 	get isApp() {

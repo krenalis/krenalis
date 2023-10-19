@@ -81,6 +81,8 @@ const AppProvider = ({
 						c.OAuth,
 						c.SourceDescription,
 						c.DestinationDescription,
+						c.TermForUsers,
+						c.TermForGroups,
 					),
 				);
 			}

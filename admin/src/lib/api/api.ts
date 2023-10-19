@@ -9,7 +9,14 @@ import {
 	ConnectionStats,
 } from '../../types/external/connection';
 import { AnonymousIdentifiers } from '../../types/external/identifiers';
-import { ActionTarget, SchedulePeriod, ActionToSet, MappingExpression } from '../../types/external/action';
+import {
+	ActionTarget,
+	SchedulePeriod,
+	ActionToSet,
+	MappingExpression,
+	Mapping,
+	Transformation,
+} from '../../types/external/action';
 import { User, UserEvent, UserTraits } from '../../types/external/user';
 import { adminBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
@@ -28,6 +35,12 @@ import {
 	SheetsResponse,
 	RecordsResponse,
 	TransformationLanguagesResponse,
+	TransformationPreviewResponse,
+	Filter,
+	FindUsersResponse,
+	AppUsersResponse,
+	EventPreviewResponse,
+	ObservedEvent,
 } from '../../types/external/api';
 
 class API {
@@ -73,6 +86,22 @@ class API {
 
 	transformationLanguages = async (): Promise<TransformationLanguagesResponse> => {
 		return await call(`${this.apiURL}/transformation-languages`, http.GET);
+	};
+
+	transformationPreview = async (
+		data: Record<string, any>,
+		inSchema: ObjectType,
+		outSchema: ObjectType,
+		mapping: Mapping,
+		transformation: Transformation,
+	): Promise<TransformationPreviewResponse> => {
+		return await call(`${this.apiURL}/transformation-preview`, http.POST, {
+			data,
+			inSchema,
+			outSchema,
+			mapping,
+			transformation,
+		});
 	};
 }
 
@@ -267,6 +296,28 @@ class Connections {
 			http.GET,
 		);
 	};
+
+	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/app-users`, http.POST, {
+			Schema: schema,
+			Cursor: cursor,
+		});
+	};
+
+	eventPreview = async (
+		connection: number,
+		eventType: string,
+		event: ObservedEvent,
+		mapping?: Mapping,
+		transformation?: Transformation,
+	): Promise<EventPreviewResponse> => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-preview`, http.POST, {
+			eventType: eventType,
+			event: event,
+			mapping: mapping,
+			transformation: transformation,
+		});
+	};
 }
 
 class Eventlisteners {
@@ -276,10 +327,11 @@ class Eventlisteners {
 		this.apiURL = url;
 	}
 
-	add = async (size: number, source: number): Promise<AddEventListenerResponse> => {
+	add = async (size: number, source: number, onlyValid: boolean): Promise<AddEventListenerResponse> => {
 		return await call(`${this.apiURL}/event-listeners`, http.PUT, {
 			size: size,
 			source: source,
+			onlyValid: onlyValid,
 		});
 	};
 
@@ -299,8 +351,9 @@ class Users {
 		this.apiURL = url;
 	}
 
-	find = async (properties: string[], start: number, end: number): Promise<User[]> => {
+	find = async (filter: Filter, properties: string[], start: number, end: number): Promise<FindUsersResponse> => {
 		return await call(`${this.apiURL}/users`, http.POST, {
+			filter: filter,
 			properties: properties,
 			start: start,
 			end: end,

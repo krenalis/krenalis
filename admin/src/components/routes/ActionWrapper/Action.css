@@ -76,6 +76,12 @@
     align-items: center;
     justify-content: end;
     gap: 20px;
+    transition: visibility .5s, opacity .5s;
+}
+
+.action .header .headerButtons.hidden {
+    visibility: hidden;
+    opacity: 0;
 }
 
 .action .header .headerButtons .saveAction::part(base) {
@@ -252,54 +258,6 @@ inherit the disabled style */
     width: 100%;
 }
 
-.action .transformation .inputProperties, .action .transformation .outputProperties {
-    display: flex;
-    flex-flow: column;
-    justify-content: start;
-    gap: 10px;
-}
-
-.action .transformation .property {
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius);
-    padding: 10px;
-    position: relative;
-}
-
-.action .transformation .property .name {
-    font-weight: 600;
-}
-
-.action .transformation .property .type {
-    opacity: .7;
-    font-size: 14px;
-}
-
-.action .transformation .property .removeProperty {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translate(50%, -50%);
-    background-color: var(--bg-gray);
-}
-
-.action .transformation .property .removeProperty::part(base) {
-    border: 0;
-    padding: 0;
-}
-
-.action .transformation .property .removeProperty::part(base):hover { 
-    background-color: transparent!important;
-}
-
-.action .transformation .property .removeProperty::part(label) { 
-    padding: 0;
-}
-
-.action .transformation .property .removeProperty sl-icon {
-    color: var(--sl-color-danger-600);
-}
-
 .action .transformation .languageDeprecatedAlert {
     margin-top: 15px;
 }
@@ -323,6 +281,451 @@ inherit the disabled style */
     color: var(--sl-color-danger-600);
 }
 
+.action .fullscreenTransformation {
+    position: fixed;
+    left: 0;
+    top: 90px;
+    width: 100%;
+    height: calc(100% - 90px);
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0);
+    margin: 0;
+    transition: visibility .5s, opacity .5s;
+    background-color: var(--bg-primary);
+}
+
+.action .fullscreenTransformation.isOpen {
+    transition: visibility .5s, opacity .5s, transform .5s;
+    visibility: visible;
+    opacity: 1;
+    transform-origin: bottom center;
+    transform: scale(1);
+}
+
+.action .fullscreenTransformation sl-split-panel {
+    height: 100%;
+}
+
+.action .fullscreenTransformation .panelTitleWrapper {
+    background-color: var(--bg-gray);
+    height: 60px;
+    border-top: 1px solid var(--border-primary);
+    border-bottom: 2px solid var(--border-primary);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    gap: 10px;
+}
+
+.action .fullscreenTransformation .property {
+    border-bottom: 1px solid var(--border-primary);
+    padding: 12px 20px;
+    position: relative;
+    user-select: none;
+}
+
+.action .fullscreenTransformation .property:last-child {
+    border-bottom: 0;
+}
+
+.action .fullscreenTransformation .property .requiredIcon {
+    color: var(--sl-color-danger-500);
+    font-size: 9px;
+    margin-right: 5px;
+}
+
+.action .fullscreenTransformation .property .name {
+    font-family: monospace;
+    width: fit-content;
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    gap: 3px;
+}
+
+.action .fullscreenTransformation .property .name .label {
+    margin-left: 3px;
+    font-size: 13px;
+    opacity: .7;
+    font-family: monospace;
+}
+
+.action .fullscreenTransformation .property .type {
+    opacity: .7;
+    font-size: 13px;
+    font-family: monospace;
+}
+
+.action .fullscreenTransformation .property sl-icon {
+    cursor: pointer;
+    transition: transform .3s;
+    color: var(--sl-color-neutral-400);
+    font-size: 13px;
+}
+
+.action .fullscreenTransformation .property.expand > .parentProperty > sl-icon {
+    transform: rotate(90deg)
+}
+
+.action .fullscreenTransformation .property .parentProperty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.action .fullscreenTransformation .property .parentProperty > .property {
+    padding: 0;
+    width: 100%;
+}
+
+.action .fullscreenTransformation .property .subProperties .property {
+    border: 0;
+    padding: 10px 20px 5px 45px;
+}
+
+.action .fullscreenTransformation .property .copyProperty {
+    position: relative;
+    left: 2px;
+    color: var(--sl-color-neutral-500);
+    font-size: 14px;
+}
+
+.action .fullscreenTransformation .property .copyProperty::part(copy-icon),
+.action .fullscreenTransformation .property.expand:hover > .parentProperty > .property > .name > .copyProperty::part(copy-icon) {
+    visibility: hidden;
+}
+
+.action .fullscreenTransformation .property:hover > .name > .copyProperty::part(copy-icon) {
+    visibility: visible!important;
+}
+
+.action .fullscreenTransformation .property:hover > .parentProperty > .property > .name > .copyProperty::part(copy-icon)
+.action .fullscreenTransformation .property > .parentProperty:hover > .property > .name > .copyProperty::part(copy-icon) {
+    visibility: visible;
+}
+
+.action .fullscreenTransformation .leftPanel {
+    position: relative;
+    max-height: 100%;
+    overflow: auto;
+}
+
+.action .fullscreenTransformation .inputPanel,
+.action .fullscreenTransformation .outputPanel {
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.action .fullscreenTransformation .inputPanel .panelContent,
+.action .fullscreenTransformation .outputPanel .panelContent {
+    height: 100%;
+    overflow: scroll;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sampleWrapper::part(base) {
+    border: 0!important;
+    border-radius: 0!important;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sampleWrapper::part(header) {
+    padding: 0;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sampleWrapper::part(summary-icon) {
+    display: none;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background-color 500ms;
+    width: 100%;
+    user-select: none;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample .sampleName {
+    display: flex;
+    align-items: start;
+    gap: 15px;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample .sampleID {
+    font-size: 13px;
+    font-weight: 600;
+    position: relative;
+    top: 2px;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample .sampleEmail {
+    font-size: 13px;
+    opacity: .7;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample .executeButton {
+    visibility: hidden;
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .executeButton,
+.action .fullscreenTransformation .inputPanel .samples .sample:hover .executeButton {
+    visibility: visible;
+}
+
+
+.action .fullscreenTransformation .inputPanel .samples .sample .executeButton sl-icon-button {
+    font-size: 21px;
+    color: var(--sl-color-primary-700);
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted,
+.action .fullscreenTransformation .inputPanel .samples .sample:hover {
+    background-color: var(--sl-color-primary-50);
+    color: var(--sl-color-primary-950)
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .sampleFullName,
+.action .fullscreenTransformation .inputPanel .samples .sample:hover .sampleFullName,
+.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .sampleID,
+.action .fullscreenTransformation .inputPanel .samples .sample:hover .sampleID,
+.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .sampleEmail,
+.action .fullscreenTransformation .inputPanel .samples .sample:hover .sampleEmail {
+    color: var(--sl-color-primary-950);
+}
+
+.action .fullscreenTransformation .inputPanel .samples .sampleSource {
+    padding: 20px;
+}
+
+.action .fullscreenTransformation .inputPanel .noSample,
+.action .fullscreenTransformation .inputPanel .queryExecution {
+    color: var(--sl-color-neutral-200);
+    padding: 20px;
+    text-align: center;
+}
+
+.action .fullscreenTransformation .inputPanel .noSample sl-icon,
+.action .fullscreenTransformation .inputPanel .queryExecution sl-icon {
+    font-size: 40px;
+    color: var(--sl-color-neutral-400);
+}
+
+.action .fullscreenTransformation .inputPanel .noSample .noSampleText,
+.action .fullscreenTransformation .inputPanel .queryExecution .queryExecutionText {
+    display: block;
+    max-width: 280px;
+    margin: 10px auto 0 auto;
+    color: var(--sl-color-neutral-500);
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .body {
+    margin-top: 0;
+}
+
+.action .fullscreenTransformation .inputPanel .queryExecution .queryExecutionButton {
+    margin-top: 15px;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList {
+    min-height: 100%;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .noEvents {
+    padding: 30px;
+    text-align: center;
+    font-size: 14px;
+    opacity: .7;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .loadingEllipsis > span {
+    animation: loading-ellipsis 1000ms infinite;
+    animation-fill-mode: both;
+}   
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .loadingEllipsis .ellipsis2 {
+    animation-delay: 200ms;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .loadingEllipsis .ellipsis3 {
+    animation-delay: 400ms;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .discarded .count {
+    padding-right: 5px;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .body {
+    overflow: auto;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event:first-child {
+    border-top: 0;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event {
+    padding: 18px 20px;
+    border-top: 1px solid var(--border-primary);
+    font-size: 13px;
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+    animation: events-fade-in 500ms;
+    animation-fill-mode: both;
+    transition: background-color 500ms;
+    user-select: none;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected {
+    background-color: var(--sl-color-primary-50);
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover .name,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover .time,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected .name,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected .time {
+    color: var(--sl-color-primary-950);
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected:last-child {
+    border-bottom-left-radius: var(--radius);
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event .name {
+    font-weight: 600;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event .time {
+    width: 100%;
+    text-align: right;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event .runButton {
+    font-size: 21px;
+    color: var(--sl-color-primary-700);
+    visibility: hidden;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover .runButton,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected .runButton {
+    visibility: visible;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event .runButton::part(base) {
+    padding: 0;
+    padding-left: 5px;
+}
+
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .eventSource {
+    padding: 20px;
+}
+
+.action .fullscreenTransformation .outputPanel sl-spinner {
+    display: block;
+    margin: 15px auto;
+}
+
+.action .fullscreenTransformation .outputPanel .outputCode {
+    padding: 40px 20px 20px 20px;
+    position: relative;
+    height: 100%;
+}
+
+.action .fullscreenTransformation .outputPanel .outputCode .clearButton {
+    position: absolute;
+    right: 10px;
+    top: 5px;
+}
+
+.action .fullscreenTransformation .outputPanel .outputCode .outputSuccess {
+    white-space: pre;
+    font-family: monospace;
+}
+
+.action .fullscreenTransformation .outputPanel .outputCode .outputError {
+    white-space: pre-wrap;
+    font-family: monospace;
+    color: var(--sl-color-danger-600);
+}
+
+.action .fullscreenTransformation .outputPanel .outputPlaceholder {
+    color: var(--sl-color-neutral-200);
+    padding: 20px;
+    text-align: center;
+}
+
+.action .fullscreenTransformation .outputPanel .outputPlaceholder sl-icon {
+    font-size: 40px;
+    color: var(--sl-color-neutral-400);
+}
+
+.action .fullscreenTransformation .outputPanel .outputPlaceholder .outputPlaceholderText {
+    display: block;
+    max-width: 280px;
+    margin: 10px auto 0 auto;
+    color: var(--sl-color-neutral-500);
+}
+
+.action .fullscreenTransformation .rightPanel {
+    position: relative;
+    overflow: auto;
+    max-height: 100%;
+}
+
+.action .fullscreenTransformation .editorPanel {
+    position: relative;
+    height: 100%;
+}
+
+.action .fullscreenTransformation .editorPanel .closeButtonWrapper {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    width: 100%;
+    background: var(--bg-gray);
+    height: 60px;
+    border-top: 1px solid var(--border-primary);
+    border-bottom: 2px solid var(--border-primary);
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    padding-right: 15px;
+}
+
+.action .fullscreenTransformation .editorPanel .closeButtonWrapper sl-button {
+    min-width: 200px;
+}
+
+.action .fullscreenTransformation .editorPanel .editorWrapper {
+    border-radius: 0;
+    border: 0!important;
+    height: 90%;
+    position: relative;
+    box-shadow: none!important;
+}
+
+.action .fullscreenTransformation .editorPanel .editorWrapper .editor {
+    height: 100%;
+}
+
+.action .fullscreenTransformation .editorPanel .editorWrapper .heading {
+    background-color: var(--bg-gray);
+    border: 0;
+    border-radius: 0;
+    height: 60px;
+    border-top: 1px solid var(--border-primary);
+    border-bottom: 2px solid var(--border-primary);
+}
+
 .action .matchingProperties {
     display: grid;
     grid-template-columns: 1fr 100px 1fr;
@@ -343,47 +746,6 @@ inherit the disabled style */
     font-size: 30px;
     position: relative;
     right: 1px;
-}
-
-.inputSchemaDialog::part(panel),
-.outputSchemaDialog::part(panel) {
-    max-height: 600px;
-	padding: 5px 0px 30px 10px;
-}
-
-.inputSchemaDialog .property,
-.outputSchemaDialog .property {
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.inputSchemaDialog .property:last-child,
-.outputSchemaDialog .property:last-child {
-    margin-bottom: 0;
-}
-
-.inputSchemaDialog .property .label,
-.outputSchemaDialog .property .label,
-.inputSchemaDialog .property .name,
-.outputSchemaDialog .property .name {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.inputSchemaDialog .property.used .name,
-.outputSchemaDialog .property.used .name {
-    text-decoration: line-through;
-}
-
-.inputSchemaDialog .property .type,
-.outputSchemaDialog .property .type,
-.inputSchemaDialog .property.hasLabel .name,
-.outputSchemaDialog .property.hasLabel .name {
-    font-weight: 400;
-    opacity: .7;
-    font-size: 14px;
 }
 
 .action .queryButtons,

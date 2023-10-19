@@ -18,70 +18,90 @@
 .connectionEvents {
     display: grid;
     align-items: start;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 45% 50%;
     gap: 50px;
 }
 
-.connectionEvents .eventList {
+.connectionEvents .events {
     background-color: var(--bg-primary);
-    box-shadow: var(--sl-shadow-large);
     border-radius: var(--radius);
-    min-height: 100%;
+    box-shadow: var(--sl-shadow-large);
 }
 
-.connectionEvents .eventList .noEvents {
-    padding: 30px;
-    text-align: center;
-    font-size: 14px;
-    opacity: .7;
-    border-top: 1px solid var(--border-primary);
-}
-
-.connectionEvents .eventList .loadingEllipsis > span {
-    animation: loading-ellipsis 1000ms infinite;
-    animation-fill-mode: both;
-}   
-
-.connectionEvents .eventList .loadingEllipsis .ellipsis2 {
-    animation-delay: 200ms;
-}
-
-.connectionEvents .eventList .loadingEllipsis .ellipsis3 {
-    animation-delay: 400ms;
-}
-
-.connectionEvents .eventList .heading {
+.connectionEvents .heading {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     padding: 20px 30px;
+    border-bottom: 1px solid var(--border-primary);
 }
 
-.connectionEvents .eventList .title {
-    background-color: var(--bg-primary);
-    border-radius: var(--radius);
+.connectionEvents .heading .title {
     min-height: 100%;
     display: flex;
     gap: 10px;
     align-items: baseline;
 }
 
-.connectionEvents .eventList .discarded {
-    color: var(--sl-color-neutral-400);
-    font-size: 14px;
+.connectionEvents .eventListener .eventList .body {
+    max-height: 500px;
 }
 
-.connectionEvents .eventList .discarded .count {
+.connectionEvents .eventListener .eventList .event {
+    border-left: 5px solid transparent;
+}
+
+.connectionEvents .eventListener .discarded {
+    padding: 5px;
+    text-align: center;
+    opacity: .8;
+    font-size: 13px;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    background-color: var(--bg-gray);
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--sl-color-neutral-400);
+}
+
+.connectionEvents .eventListener .eventList {
+    min-height: 100%;
+}
+
+.connectionEvents .eventListener .eventList .noEvents {
+    padding: 30px;
+    text-align: center;
+    font-size: 14px;
+    opacity: .7;
+}
+
+.connectionEvents .eventListener .eventList .loadingEllipsis > span {
+    animation: loading-ellipsis 1000ms infinite;
+    animation-fill-mode: both;
+}   
+
+.connectionEvents .eventListener .eventList .loadingEllipsis .ellipsis2 {
+    animation-delay: 200ms;
+}
+
+.connectionEvents .eventListener .eventList .loadingEllipsis .ellipsis3 {
+    animation-delay: 400ms;
+}
+
+.connectionEvents .eventListener .eventList .discarded .count {
     padding-right: 5px;
 }
 
-.connectionEvents .eventList .body {
-    max-height: 500px;
+.connectionEvents .eventListener .eventList .body {
     overflow: auto;
 }
 
-.connectionEvents .eventList .event {
-    padding: 17px 30px;
+.connectionEvents .eventListener .eventList .event:first-child {
+    border-top: 0;
+}
+
+.connectionEvents .eventListener .eventList .event {
+    padding: 18px 20px;
     border-top: 1px solid var(--border-primary);
     font-size: 13px;
     display: flex;
@@ -89,47 +109,67 @@
     cursor: pointer;
     animation: events-fade-in 500ms;
     animation-fill-mode: both;
-    will-change: border-left;
-    transition: border-left 200ms;
+    transition: background-color 500ms;
 }
 
-.connectionEvents .eventList .event.selected {
-    border-left: 5px solid var(--color-primary-600)
+.connectionEvents .eventListener .eventList .event:hover,
+.connectionEvents .eventListener .eventList .event.selected {
+    background-color: var(--sl-color-primary-50);
 }
 
-.connectionEvents .eventList .event.selected:last-child {
+.connectionEvents .eventListener .eventList .event:hover,
+.connectionEvents .eventListener .eventList .event:hover .name,
+.connectionEvents .eventListener .eventList .event:hover .time,
+.connectionEvents .eventListener .eventList .event.selected,
+.connectionEvents .eventListener .eventList .event.selected .name,
+.connectionEvents .eventListener .eventList .event.selected .time {
+    color: var(--sl-color-primary-950);
+}
+
+.connectionEvents .eventListener .eventList .event.selected:last-child {
     border-bottom-left-radius: var(--radius);
 }
 
-.connectionEvents .eventList .event .name {
-    min-width: 150px;
+.connectionEvents .eventListener .eventList .event .name {
     font-weight: 600;
 }
 
-.connectionEvents .eventList .event .path {
-    min-width: 250px;
-}
-
-.connectionEvents .eventList .event .time {
+.connectionEvents .eventListener .eventList .event .time {
     width: 100%;
     text-align: right;
 }
 
-.connectionEvents .eventList .event .error {
+.connectionEvents .eventListener .eventList .event .runButton {
+    font-size: 21px;
+    color: var(--sl-color-primary-700);
+    visibility: hidden;
+}
+
+.connectionEvents .eventListener .eventList .event:hover .runButton,
+.connectionEvents .eventListener .eventList .event.selected .runButton {
+    visibility: visible;
+}
+
+.connectionEvents .eventListener .eventList .event .runButton::part(base) {
+    padding: 0;
+    padding-left: 5px;
+}
+
+.connectionEvents .eventListener .eventList .event .error {
     min-width: 17px;
+    display: flex;
+    align-items: center;
 }
 
-.connectionEvents .eventList .event .error sl-icon {
+.connectionEvents .eventListener .eventList .event .error sl-icon {
     font-size: 17px;
-    position: relative;
-    top: .5px;
 }
 
-.connectionEvents .eventList .event .error sl-icon.iconError {
+.connectionEvents .eventListener .eventList .event .error sl-icon.iconError {
     color: var(--sl-color-danger-600);
 }
 
-.connectionEvents .eventList .event .error sl-icon.iconSuccess {
+.connectionEvents .eventListener .eventList .event .error sl-icon.iconSuccess {
     color: var(--sl-color-success-600);
 }
 
@@ -164,7 +204,4 @@
 
 .connectionEvents .panel .fullEvent {
     animation: events-fade-in 500ms;
-}
-.connectionEvents .panel .fullEvent {
-    font-size: 14px;
 }

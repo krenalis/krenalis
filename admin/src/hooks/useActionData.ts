@@ -36,6 +36,7 @@ const useActionData = (
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
 	const [actionType, setActionType] = useState<TransformedActionType>();
+	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
 
 	const { api, showError, showStatus, redirect } = useContext(AppContext);
 
@@ -393,6 +394,8 @@ const useActionData = (
 		setActionType,
 		setAction,
 		saveAction,
+		isSaveHidden,
+		setIsSaveHidden,
 	};
 };
 
