@@ -991,6 +991,12 @@ func (this *Workspace) SetAnonymousIdentifiers(ctx context.Context, ids Anonymou
 		slices.Sort(keys)
 		return errors.BadRequest("anonymous identifier %q does not exist in mapping", keys[0])
 	}
+	if ids.Mapping == nil {
+		ids.Mapping = map[string]string{}
+	}
+	if ids.Priority == nil {
+		ids.Priority = []string{}
+	}
 	ws := this.workspace
 	n := state.SetWorkspaceAnonymousIdentifiers{
 		Workspace:            ws.ID,
