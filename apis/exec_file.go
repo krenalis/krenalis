@@ -174,7 +174,24 @@ func (this *Action) importFromFile(ctx context.Context) error {
 
 	// Read the records.
 	c := this.connection
-	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
+	rw := newRecordWriter(c.ID, math.MaxInt)
+	rw.SetWriteFunc(func(record map[string]any) error {
+
+		// Determine the external ID by taking the value for the first column of
+		// the record.
+		var externalID string
+		{
+			idColumn := rw.columns[0].Name
+			rawID, ok := record[idColumn]
+			if !ok {
+				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idColumn)}
+			}
+			id, err := normalization.NormalizeDatabaseFileProperty(idColumn, types.Text(), rawID, false)
+			if err != nil {
+				return actionExecutionError{err}
+			}
+			externalID = id.(string)
+		}
 
 		// Take only the necessary properties.
 		props := make(map[string]any, len(inSchemaProps))
@@ -203,18 +220,8 @@ func (this *Action) importFromFile(ctx context.Context) error {
 			return err
 		}
 
-		// Retrieve the user identifier.
-		// See the issue https://github.com/open2b/chichi/issues/298.
-		if len(this.action.Identifiers) == 0 {
-			return actionExecutionError{errors.New("action must have at least one identifier")}
-		}
-		userID, ok := mappedUser[this.action.Identifiers[0]].(string)
-		if !ok {
-			return actionExecutionError{errors.New("invalid identifier")}
-		}
-
 		// Set the identity into the data warehouse.
-		err = c.store.SetIdentity(ctx, mappedUser, userID, "", this.action.ID, false)
+		err = c.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false)
 		if err != nil {
 			return actionExecutionError{err}
 		}
@@ -277,17 +284,15 @@ func (rr *recordReader) Record() ([]any, error) {
 }
 
 // newRecordWriter returns a new record writer that writes at most limit
-// records. If write is not nil, it calls the write function for each record
-// written, otherwise it stores the records in the records field.
-func newRecordWriter(connector int, limit int, write func(record map[string]any) error) *recordWriter {
+// records. If the write function is set with SetWriteFunc, the recordWriter
+// calls the write function for each record written, otherwise it stores the
+// records in the records field.
+func newRecordWriter(connector int, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		limit:           limit,
-		write:           write,
 		textColumnsOnly: true,
-	}
-	if write == nil {
-		rw.records = [][]any{}
+		records:         [][]any{},
 	}
 	return &rw
 }
@@ -470,6 +475,11 @@ func (rw *recordWriter) RecordString(record []string) error {
 		return errRecordStop
 	}
 	return nil
+}
+
+// SetWriteFunc sets the write function for the recordWriter.
+func (rw *recordWriter) SetWriteFunc(write func(record map[string]any) error) {
+	rw.write = write
 }
 
 // Timestamp sets the last modified time for all records.

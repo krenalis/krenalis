@@ -134,7 +134,21 @@ func TestIdentityResolution(t *testing.T) {
 
 		// Create a JSON file with the user.
 		t.Logf("importing user %v", props)
-		content, err := json.Marshal([]any{props})
+		var s struct {
+			DummyID      *string `json:"dummy_id,omitempty"`
+			Email        *string `json:"Email,omitempty"`
+			PhoneNumbers *[]any  `json:"PhoneNumbers,omitempty"`
+		}
+		if dummyID, ok := props["dummy_id"].(string); ok {
+			s.DummyID = &dummyID
+		}
+		if email, ok := props["Email"].(string); ok {
+			s.Email = &email
+		}
+		if phoneNumbers, ok := props["PhoneNumbers"].([]any); ok {
+			s.PhoneNumbers = &phoneNumbers
+		}
+		content, err := json.Marshal([]any{s})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -61,6 +61,21 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
+		// Determine the external ID by taking the value for the column with
+		// name "id" and normalizing it to a Text.
+		var externalID string
+		{
+			rawID, ok := row["id"]
+			if !ok {
+				return actionExecutionError{errors.New("column 'id' not returned by the query")}
+			}
+			id, err := normalization.NormalizeDatabaseFileProperty("id", types.Text(), rawID, false)
+			if err != nil {
+				return actionExecutionError{err}
+			}
+			externalID = id.(string)
+		}
+
 		// Take only the necessary properties.
 		props := make(map[string]any, len(inSchemaProps))
 		for _, name := range inSchemaProps {
@@ -85,18 +100,8 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return err
 		}
 
-		// Retrieve the user identifier.
-		// See the issue https://github.com/open2b/chichi/issues/298.
-		if len(this.action.Identifiers) == 0 {
-			return actionExecutionError{errors.New("action must have at least one identifier")}
-		}
-		userID, ok := mappedUser[this.action.Identifiers[0]].(string)
-		if !ok {
-			return actionExecutionError{errors.New("invalid identifier")}
-		}
-
 		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, mappedUser, userID, "", this.action.ID, false)
+		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false)
 		if err != nil {
 			return err
 		}

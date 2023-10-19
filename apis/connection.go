@@ -923,7 +923,7 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	}
 
 	// Read the records.
-	rw := newRecordWriter(c.ID, limit, nil)
+	rw := newRecordWriter(c.ID, limit)
 	err = file.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
