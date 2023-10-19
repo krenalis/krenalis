@@ -61,7 +61,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
 					}
 					p.path[j] = ":" + name
-					t = t.ValueType()
+					t = t.Elem()
 				default:
 					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", stringifyPath(p.path[:j+1]), stringifyPath(p.path[:j]), t)
 				}

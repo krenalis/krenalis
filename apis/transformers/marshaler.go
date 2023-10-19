@@ -99,7 +99,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 					b = append(b, ',')
 				}
 				item := rv.Index(i).Interface()
-				b = marshalJavaScript(b, t.ItemType(), item)
+				b = marshalJavaScript(b, t.Elem(), item)
 			}
 			b = append(b, ']')
 		case types.PtObject:
@@ -133,7 +133,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 			slices.SortFunc(s, func(a, b entry) int {
 				return strings.Compare(a.k, b.k)
 			})
-			vt := t.ValueType()
+			vt := t.Elem()
 			b = append(b, '{')
 			for i, e := range s {
 				if i > 0 {
@@ -206,7 +206,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 					b = append(b, ',')
 				}
 				item := rv.Index(i).Interface()
-				b = marshalPython(b, t.ItemType(), item)
+				b = marshalPython(b, t.Elem(), item)
 			}
 			b = append(b, ']')
 		case types.PtObject:
@@ -241,7 +241,7 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 			slices.SortFunc(s, func(a, b entry) int {
 				return strings.Compare(a.k, b.k)
 			})
-			vt := t.ValueType()
+			vt := t.Elem()
 			b = append(b, '{')
 			for i, e := range s {
 				if i > 0 {

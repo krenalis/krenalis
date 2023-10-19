@@ -2345,7 +2345,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 			t := property.Type
 			if t.PhysicalType() == types.PtArray {
-				t = t.ItemType()
+				t = t.Elem()
 			}
 			switch t.PhysicalType() {
 			case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:

@@ -489,8 +489,8 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
 				return nil, errInvalidConversion
 			}
-			it1 := st.ItemType()
-			it2 := dt.ItemType()
+			it1 := st.Elem()
+			it2 := dt.Elem()
 			if it1.EqualTo(it2) {
 				return s, nil
 			}
@@ -510,7 +510,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
 				return nil, errInvalidConversion
 			}
-			it2 := dt.ItemType()
+			it2 := dt.Elem()
 			for i, item := range s {
 				s[i], err = convert(item, types.JSON(), it2, false, formatTime)
 				if err != nil {
@@ -577,8 +577,8 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 	case types.PtMap:
 		switch spt {
 		case types.PtMap:
-			vt1 := st.ValueType()
-			vt2 := dt.ValueType()
+			vt1 := st.Elem()
+			vt2 := dt.Elem()
 			m := v.(map[string]any)
 			if vt1.EqualTo(vt2) {
 				return m, nil
@@ -596,7 +596,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			vt2 := dt.ValueType()
+			vt2 := dt.Elem()
 			for key, value := range s {
 				s[key], err = convert(value, types.JSON(), vt2, false, formatTime)
 				if err != nil {

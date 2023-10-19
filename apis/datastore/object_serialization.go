@@ -230,12 +230,12 @@ func serialize(v any, t types.Type) {
 			continue
 		}
 	case types.PtArray:
-		itemType := t.ItemType()
+		itemType := t.Elem()
 		for _, value := range v.([]any) {
 			serialize(value, itemType)
 		}
 	case types.PtMap:
-		valueType := t.ValueType()
+		valueType := t.Elem()
 		for _, value := range v.(map[string]any) {
 			serialize(value, valueType)
 		}

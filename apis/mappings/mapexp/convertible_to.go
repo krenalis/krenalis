@@ -62,8 +62,8 @@ func convertibleTo(st, dt types.Type) bool {
 		return true
 	}
 	switch dpt {
-	case types.PtArray:
-		return convertibleTo(st.ItemType(), dt.ItemType())
+	case types.PtArray, types.PtMap:
+		return convertibleTo(st.Elem(), dt.Elem())
 	case types.PtObject:
 		var hasSameNameProperty bool
 		for _, sp := range st.Properties() {
@@ -75,8 +75,6 @@ func convertibleTo(st, dt types.Type) bool {
 			}
 		}
 		return hasSameNameProperty
-	case types.PtMap:
-		return convertibleTo(st.ValueType(), dt.ValueType())
 	}
 	return true
 }

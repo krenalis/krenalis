@@ -294,7 +294,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 					n, name, typ.MinItems(), typ.MaxItems())
 			}
 			a := make([]any, n)
-			t := typ.ItemType()
+			t := typ.Elem()
 			for i := 0; i < n; i++ {
 				v := rv.Index(i).Interface()
 				a[i], err = NormalizeAppProperty(name, t, v, false)
@@ -338,7 +338,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			var err error
 			n := rv.Len()
 			m := make(map[string]any, n)
-			t := typ.ValueType()
+			t := typ.Elem()
 			iter := rv.MapRange()
 			for iter.Next() {
 				k := iter.Key().String()
@@ -598,7 +598,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	case types.PtArray:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the item type. The driver returns the value as a JSON array.
-			if s != "" && s[0] == '[' && typ.ItemType().PhysicalType() == types.PtJSON {
+			if s != "" && s[0] == '[' && typ.Elem().PhysicalType() == types.PtJSON {
 				dec := json.NewDecoder(strings.NewReader(s))
 				dec.UseNumber()
 				err := dec.Decode(&value)
@@ -614,7 +614,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 						n, name, typ.MinItems(), typ.MaxItems())
 				}
 				a := make([]any, n)
-				t := typ.ItemType()
+				t := typ.Elem()
 				for i := 0; i < n; i++ {
 					v := rv.Index(i).Interface()
 					a[i], err = NormalizeDatabaseFileProperty(name, t, v, false)
@@ -629,7 +629,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	case types.PtMap:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the value type. The driver returns the value as a JSON object.
-			if s != "" && s[0] == '{' && typ.ValueType().PhysicalType() == types.PtJSON {
+			if s != "" && s[0] == '{' && typ.Elem().PhysicalType() == types.PtJSON {
 				dec := json.NewDecoder(strings.NewReader(s))
 				dec.UseNumber()
 				err := dec.Decode(&value)
@@ -641,7 +641,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 				var err error
 				n := rv.Len()
 				m := make(map[string]any, n)
-				t := typ.ValueType()
+				t := typ.Elem()
 				iter := rv.MapRange()
 				for iter.Next() {
 					k := iter.Key().String()

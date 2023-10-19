@@ -125,7 +125,7 @@ func (enc *jsonEncoder) Append(b []byte, t types.Type, v any) []byte {
 		if len(v) == 0 {
 			return append(b, ']')
 		}
-		itemType := t.ItemType()
+		itemType := t.Elem()
 		enc.Depth++
 		for i, v := range v {
 			if i > 0 {
@@ -189,7 +189,7 @@ func (enc *jsonEncoder) Append(b []byte, t types.Type, v any) []byte {
 		if len(v) == 0 {
 			return append(b, '}')
 		}
-		vType := t.ValueType()
+		vType := t.Elem()
 		enc.Depth++
 		for i, key := range enc.sortKeys(v) {
 			if i > 0 {

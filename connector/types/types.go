@@ -965,15 +965,6 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 	return t
 }
 
-// ItemType returns the type of the item of an Array type.
-// Panics if t is not an Array type.
-func (t Type) ItemType() Type {
-	if t.pt != PtArray {
-		panic("cannot get the item type of a non-Array type")
-	}
-	return t.vl.(Type)
-}
-
 // Enum returns the enum values of t. Returns nil if t has no enum.
 // Panics if t is not a Text type.
 func (t Type) Enum() []string {
@@ -1081,10 +1072,8 @@ func (t Type) Unflatten() Type {
 			pp[i].Flat = false
 		}
 		t.vl = pp
-	case PtArray:
-		t.vl = t.ItemType().Unflatten()
-	case PtMap:
-		t.vl = t.ValueType().Unflatten()
+	case PtArray, PtMap:
+		t.vl = t.Elem().Unflatten()
 	}
 	t.flat = false
 	return t
@@ -1192,11 +1181,11 @@ func (t Type) PropertiesNames() []string {
 	return names
 }
 
-// ValueType returns the type of the value of a Map type.
-// Panics if t is not a Map type.
-func (t Type) ValueType() Type {
-	if t.pt != PtMap {
-		panic("cannot get the value type of a non-Map type")
+// Elem returns a type's element type.
+// Panics if t is not an Array or Map type.
+func (t Type) Elem() Type {
+	if t.pt != PtArray && t.pt != PtMap {
+		panic("cannot get the element type for a non-Array and non-Map type")
 	}
 	return t.vl.(Type)
 }
