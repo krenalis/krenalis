@@ -999,7 +999,13 @@ const FullscreenTransformation = ({
 											<div className='outputError'>{outputError}</div>
 										) : (
 											<div className='outputSuccess'>
-												<SyntaxHighlight>{output}</SyntaxHighlight>
+												{connection.isApp &&
+												connection.isDestination &&
+												actionType.Target === 'Events' ? (
+													output
+												) : (
+													<SyntaxHighlight>{output}</SyntaxHighlight>
+												)}
 											</div>
 										)}
 									</div>
