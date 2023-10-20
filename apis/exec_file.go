@@ -177,20 +177,21 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	rw := newRecordWriter(c.ID, math.MaxInt)
 	rw.SetWriteFunc(func(record map[string]any) error {
 
-		// Determine the external ID by taking the value for the first column of
-		// the record.
+		// Determine and validate the external id, reading from the first column
+		// of each record of the file.
+		idColumn := rw.columns[0]
 		var externalID string
 		{
-			idColumn := rw.columns[0].Name
-			rawID, ok := record[idColumn]
+			rawID, ok := record[idColumn.Name]
 			if !ok {
-				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idColumn)}
+				return actionExecutionError{errors.New("column '%s' not present in file record")}
 			}
-			id, err := normalization.NormalizeDatabaseFileProperty(idColumn, types.Text(), rawID, false)
-			if err != nil {
-				return actionExecutionError{err}
+			switch pt := idColumn.Type.PhysicalType(); {
+			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
+				externalID = fmt.Sprint(rawID)
+			default:
+				return actionExecutionError{fmt.Errorf("column 'id' with type %s cannot be used as identifier", pt)}
 			}
-			externalID = id.(string)
 		}
 
 		// Take only the necessary properties.

@@ -61,19 +61,30 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
-		// Determine the external ID by taking the value for the column with
-		// name "id" and normalizing it to a Text.
+		// Determine and validate the external id, reading it from the SQL
+		// expression named "id" returned by the query.
+		var idExpr types.Property
+		for _, p := range properties {
+			if p.Name == "id" {
+				idExpr = p
+				break
+			}
+		}
+		if idExpr.Name == "" {
+			return actionExecutionError{errors.New("expression with name 'id' not returned by the query")}
+		}
 		var externalID string
 		{
 			rawID, ok := row["id"]
 			if !ok {
-				return actionExecutionError{errors.New("column 'id' not returned by the query")}
+				return actionExecutionError{errors.New("no values for expression 'id' returned by the query")}
 			}
-			id, err := normalization.NormalizeDatabaseFileProperty("id", types.Text(), rawID, false)
-			if err != nil {
-				return actionExecutionError{err}
+			switch pt := idExpr.Type.PhysicalType(); {
+			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
+				externalID = fmt.Sprint(rawID)
+			default:
+				return actionExecutionError{fmt.Errorf("expression 'id' with type %s cannot be used as identifier", pt)}
 			}
-			externalID = id.(string)
 		}
 
 		// Take only the necessary properties.
