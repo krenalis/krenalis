@@ -139,7 +139,7 @@ const ActionQuery = () => {
 
 	return (
 		<>
-			<Section title='Query' description='The query used to import the data'>
+			<Section title='Query' description='The query used to import the data. It must contain the string {{ LIMIT $limit }}.'>
 				<EditorWrapper
 					language='sql'
 					height={400}
