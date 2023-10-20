@@ -895,7 +895,7 @@ func (t Type) ByteLen() (int, bool) {
 // WithByteLen returns t with a maximum length of l of a Text type. l must be in
 // range [1, MaxTextLen].
 // Panics if t is not a Text type, or if l is not in range, or if t has already
-// a byte length.
+// a byte length, or if t already has an enum.
 func (t Type) WithByteLen(l int) Type {
 	if t.pt != PtText {
 		panic("cannot set byte length of a non-Text type")
@@ -905,6 +905,9 @@ func (t Type) WithByteLen(l int) Type {
 	}
 	if l < 1 || MaxTextLen < l {
 		panic("invalid text length")
+	}
+	if _, ok := t.vl.([]string); ok {
+		panic("t already has an enum")
 	}
 	t.p = int32(uint32(l))
 	return t
@@ -923,7 +926,7 @@ func (t Type) CharLen() (int, bool) {
 // WithCharLen returns t with a maximum length of l of a JSON and Text type. l
 // must be in range [1, MaxTextLen].
 // Panics if t is not a JSON or Text type, or if l is not in range, or if t has
-// already a char length.
+// already a char length, or if t already has an enum.
 func (t Type) WithCharLen(l int) Type {
 	if t.pt != PtJSON && t.pt != PtText {
 		panic("cannot set character length of non-JSON and non-Text types")
@@ -933,6 +936,9 @@ func (t Type) WithCharLen(l int) Type {
 	}
 	if l < 1 || MaxTextLen < l {
 		panic("invalid text length")
+	}
+	if _, ok := t.vl.([]string); ok {
+		panic("t already has an enum")
 	}
 	t.s = int32(uint32(l))
 	return t
@@ -980,8 +986,9 @@ func (t Type) Enum() []string {
 }
 
 // WithEnum returns t but with an enum. t must be a Text type.
-// Panics if t is not a Text type, or enum is empty or contains an invalid
-// UTF-8 string, or t already has an enum or a regular expression.
+// It panics if t is not of Text type, if the enum is empty or contains an
+// invalid UTF-8 string, or if t already has an enum, a regular expression, or
+// if it is already restricted by byte or character length.
 func (t Type) WithEnum(enum []string) Type {
 	if t.pt != PtText {
 		panic("cannot set enum for a non-Text type")
@@ -993,7 +1000,13 @@ func (t Type) WithEnum(enum []string) Type {
 	case []string:
 		panic("t already has an enum")
 	case *regexp.Regexp:
-		panic("cannot set enum when t has a regular expression")
+		panic("t already has a regular expression")
+	}
+	if t.p != 0 {
+		panic("t already has a maximum byte length")
+	}
+	if t.s != 0 {
+		panic("t already has a maximum character length")
 	}
 	vl := make([]string, len(enum))
 	for i, s := range enum {
