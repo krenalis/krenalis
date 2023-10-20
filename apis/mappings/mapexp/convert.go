@@ -460,25 +460,25 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 				return s, nil
 			}
 			return nil, errInvalidConversion
-		}
-		if re := dt.Regexp(); re != nil {
+		} else if re := dt.Regexp(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
 					return nil, nil
 				}
 				return nil, errInvalidConversion
 			}
-		}
-		if l, ok := dt.ByteLen(); ok && l < len(s) {
-			return nil, errInvalidConversion
-		}
-		if l, ok := dt.CharLen(); ok {
-			runes := len(s)
-			if spt == types.PtJSON || spt == types.PtText {
-				runes = utf8.RuneCountInString(s)
-			}
-			if runes > l {
+		} else {
+			if l, ok := dt.ByteLen(); ok && l < len(s) {
 				return nil, errInvalidConversion
+			}
+			if l, ok := dt.CharLen(); ok {
+				runes := len(s)
+				if spt == types.PtJSON || spt == types.PtText {
+					runes = utf8.RuneCountInString(s)
+				}
+				if runes > l {
+					return nil, errInvalidConversion
+				}
 			}
 		}
 		return s, nil
