@@ -423,8 +423,8 @@ inherit the disabled style */
 
 .action .fullscreenTransformation .inputPanel .panelContent,
 .action .fullscreenTransformation .outputPanel .panelContent {
-    height: 100%;
-    overflow: scroll;
+    height: calc(100% - 60px);
+    overflow-y: scroll;
 }
 
 .action .fullscreenTransformation .inputPanel .samples .sampleWrapper::part(base) {
