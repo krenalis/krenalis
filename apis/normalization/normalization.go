@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/netip"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -274,13 +275,23 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 				return nil, fmt.Errorf("app returned a value of %q for property %s, which does not contain valid UTF-8 characters",
 					abbreviate(v, 20), name)
 			}
-			if l, ok := typ.ByteLen(); ok && len(v) > l {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d bytes",
-					abbreviate(v, 20), name, l)
-			}
-			if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
-					abbreviate(v, 20), name, l)
+			if enum := typ.Enum(); enum != nil {
+				if !slices.Contains(enum, v) {
+					return nil, fmt.Errorf("app returned a value of %q for property %s, which is not valid", v, name)
+				}
+			} else if rx := typ.Regexp(); rx != nil {
+				if !rx.MatchString(v) {
+					return nil, fmt.Errorf("app returned a value of %q for property %s, which is not valid", v, name)
+				}
+			} else {
+				if l, ok := typ.ByteLen(); ok && len(v) > l {
+					return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d bytes",
+						abbreviate(v, 20), name, l)
+				}
+				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
+					return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
+						abbreviate(v, 20), name, l)
+				}
 			}
 			value = v
 		}
@@ -585,13 +596,23 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 				return nil, fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
 					abbreviate(v, 20), name)
 			}
-			if l, ok := typ.ByteLen(); ok && len(v) > l {
-				return nil, fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
-					abbreviate(v, 20), name, l)
-			}
-			if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-				return nil, fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
-					abbreviate(v, 20), name, l)
+			if enum := typ.Enum(); enum != nil {
+				if !slices.Contains(enum, v) {
+					return nil, fmt.Errorf("database returned a value of %q for property %s, which is not valid", v, name)
+				}
+			} else if rx := typ.Regexp(); rx != nil {
+				if !rx.MatchString(v) {
+					return nil, fmt.Errorf("database returned a value of %q for property %s, which is not valid", v, name)
+				}
+			} else {
+				if l, ok := typ.ByteLen(); ok && len(v) > l {
+					return nil, fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
+						abbreviate(v, 20), name, l)
+				}
+				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
+					return nil, fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
+						abbreviate(v, 20), name, l)
+				}
 			}
 			value = v
 		}
