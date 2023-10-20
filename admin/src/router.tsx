@@ -19,7 +19,7 @@ import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEve
 import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
 import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
-import AnonymousIdentity from './components/routes/AnonymousIdentity/AnonymousIdentity';
+import Identifiers from './components/routes/Identifiers/Identifiers';
 import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
 import GeneralSettings from './components/routes/GeneralSettings/GeneralSettings';
@@ -81,8 +81,8 @@ const router = createBrowserRouter([
 						element: <GeneralSettings />,
 					},
 					{
-						path: 'anonymous-identity',
-						element: <AnonymousIdentity />,
+						path: 'identifiers',
+						element: <Identifiers />,
 					},
 					{
 						path: 'data-warehouse',

@@ -325,10 +325,12 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actions provides information for the actions of the workspace and must always
-// contain at least one action; usersColumns are the columns of the 'users'
-// table which will be populated during the users synchronization.
-func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []warehouses.Action, usersColumns []types.Property) error {
+// actions holds the identifiers of the actions of the workspace and must
+// always contain at least one action; identifiers are the columns of the
+// 'users_identities' table which are identifiers, ordered by priority;
+// usersColumns are the columns of the 'users' table which will be populated
+// during the users synchronization.
+func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error {
 
 	if len(actions) == 0 {
 		panic("invalid empty actions")
@@ -348,7 +350,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []war
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(strconv.Itoa(action.ID))
+		b.WriteString(strconv.Itoa(action))
 	}
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())
@@ -378,83 +380,70 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []war
 		return warehouses.Error(err)
 	}
 
-	// Create - or replace - the matching function 'matches_for_action', which
-	// depends on the actual actions identifiers.
-	b.Reset()
-	b.WriteString(`CREATE OR REPLACE FUNCTION matches_for_action(action int, i1 users_identities, i2 users_identities) 
-			RETURNS boolean
-			LANGUAGE SQL
-			RETURN CASE` + "\n")
-	for _, idents := range actions {
-		b.WriteString("WHEN ACTION = ")
-		b.WriteString(strconv.Itoa(idents.ID))
-		b.WriteString("	THEN ")
-		if len(idents.IdentifiersColumns) > 0 {
-			b.WriteString("matching_func(")
-			for i, ident := range idents.IdentifiersColumns {
-				if i > 0 {
-					b.WriteByte(',')
-				}
-				b.WriteString(`i1."`)
-				b.WriteString(ident.Name)
-				b.WriteString(`"::text,i2."`)
-				b.WriteString(ident.Name)
-				b.WriteString(`"::text`)
+	// Generate the SQL matching expression.
+	var matchingExpr strings.Builder
+	if len(identifiersColumns) > 0 {
+		matchingExpr.WriteString("coalesce(matching_func(")
+		for i, ident := range identifiersColumns {
+			if i > 0 {
+				matchingExpr.WriteByte(',')
 			}
-			b.WriteString(")\n")
-		} else {
-			b.WriteString("false\n")
+			matchingExpr.WriteString(`i1."`)
+			matchingExpr.WriteString(ident.Name)
+			matchingExpr.WriteString(`"::text,i2."`)
+			matchingExpr.WriteString(ident.Name)
+			matchingExpr.WriteString(`"::text`)
 		}
-	}
-	b.WriteString(("ELSE FALSE\nEND"))
-	_, err = db.Exec(ctx, b.String())
-	if err != nil {
-		return warehouses.Error(err)
+		matchingExpr.WriteString("), false)")
+	} else {
+		matchingExpr.WriteString("false")
 	}
 
-	// Create - or replace - the functions and the tables necessary for the
-	// stored procedure that performs the identity resolution.
-	b.Reset()
-	b.WriteString(`TRUNCATE users; INSERT INTO users (`)
+	// Generate the SQL queries that will perform the users synchronization.
+	var usersSyncQueries strings.Builder
+	usersSyncQueries.WriteString(`TRUNCATE users; INSERT INTO users (`)
 	comma := false
 	for _, c := range usersColumns {
 		if c.Name == "id" {
 			continue
 		}
 		if comma {
-			b.WriteByte(',')
+			usersSyncQueries.WriteByte(',')
 		}
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteByte('"')
+		usersSyncQueries.WriteByte('"')
+		usersSyncQueries.WriteString(c.Name)
+		usersSyncQueries.WriteByte('"')
 		comma = true
 	}
-	b.WriteString(") SELECT\n")
+	usersSyncQueries.WriteString(") SELECT\n")
 	comma = false
 	for _, c := range usersColumns {
 		if c.Name == "id" {
 			continue
 		}
 		if comma {
-			b.WriteByte(',')
+			usersSyncQueries.WriteByte(',')
 		}
 		if c.Type.PhysicalType() == types.PtObject {
-			b.WriteString(`(ARRAY_AGG(DISTINCT "`)
-			b.WriteString(c.Name)
-			b.WriteString(`"))[1] AS "`)
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			usersSyncQueries.WriteString(`(ARRAY_AGG(DISTINCT "`)
+			usersSyncQueries.WriteString(c.Name)
+			usersSyncQueries.WriteString(`"))[1] AS "`)
+			usersSyncQueries.WriteString(c.Name)
+			usersSyncQueries.WriteByte('"')
 		} else {
-			b.WriteString(`MAX(DISTINCT "`)
-			b.WriteString(c.Name)
-			b.WriteString(`") AS "`)
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			usersSyncQueries.WriteString(`MAX(DISTINCT "`)
+			usersSyncQueries.WriteString(c.Name)
+			usersSyncQueries.WriteString(`") AS "`)
+			usersSyncQueries.WriteString(c.Name)
+			usersSyncQueries.WriteByte('"')
 		}
 		comma = true
 	}
-	b.WriteString(" FROM users_identities GROUP BY __cluster__")
-	query := strings.Replace(storeProcedureQueries, "-- {{ user_synchronization_query }}", b.String(), 1)
+	usersSyncQueries.WriteString(" FROM users_identities GROUP BY __cluster__")
+
+	// Replace the placeholders in the stored procedure query and run it.
+	query := strings.Replace(storeProcedureQueries, "{{ matching_expr }}", matchingExpr.String(), 1)
+	query = strings.Replace(query, "{{ users_sync_queries }}", usersSyncQueries.String(), 1)
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)

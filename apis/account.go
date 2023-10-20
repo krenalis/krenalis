@@ -104,6 +104,7 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 		workspace:            ws,
 		ID:                   ws.ID,
 		Name:                 ws.Name,
+		Identifiers:          ws.Identifiers,
 		AnonymousIdentifiers: AnonymousIdentifiers(ws.AnonymousIdentifiers),
 		PrivacyRegion:        PrivacyRegion(ws.PrivacyRegion),
 	}
@@ -123,6 +124,7 @@ func (this *Account) Workspaces() []*Workspace {
 			workspace:            ws,
 			ID:                   ws.ID,
 			Name:                 ws.Name,
+			Identifiers:          ws.Identifiers,
 			AnonymousIdentifiers: AnonymousIdentifiers(ws.AnonymousIdentifiers),
 			PrivacyRegion:        PrivacyRegion(ws.PrivacyRegion),
 		}

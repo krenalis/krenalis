@@ -157,32 +157,26 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 	if len(wsActions) == 0 {
 		return nil
 	}
-
-	// Retrieve the actions identifiers.
-	var actions []warehouses.Action
-	usersIdentities := ws.Schemas["users_identities"]
+	var actions []int
 	for _, action := range wsActions {
-		var columns []types.Property
-		if action.Identifiers != nil {
-			count := len(action.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
-			columns = make([]types.Property, count)
-			for i, ident := range append(action.Identifiers, ws.AnonymousIdentifiers.Priority...) {
-				var err error
-				columns[i], err = PropertyPathToColumn(*usersIdentities, ident)
-				if err != nil {
-					return err
-				}
-			}
+		actions = append(actions, action.ID)
+	}
+
+	// Determine the columns for the identifiers.
+	var identifiersColumns []types.Property
+	usersIdentities := ws.Schemas["users_identities"]
+	count := len(ws.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
+	identifiersColumns = make([]types.Property, count)
+	for i, ident := range append(ws.Identifiers, ws.AnonymousIdentifiers.Priority...) {
+		var err error
+		identifiersColumns[i], err = PropertyPathToColumn(*usersIdentities, ident)
+		if err != nil {
+			return err
 		}
-		actions = append(actions, warehouses.Action{
-			ID:                 action.ID,
-			IdentifiersColumns: columns,
-		})
 	}
 
 	usersColumns := PropertiesToColumns(ws.Schemas["users"].Properties())
-
-	return store.warehouse.ResolveSyncUsers(ctx, actions, usersColumns)
+	return store.warehouse.ResolveSyncUsers(ctx, actions, identifiersColumns, usersColumns)
 }
 
 // Users returns the users that satisfy the where condition with only the given

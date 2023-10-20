@@ -1,10 +1,11 @@
-import { AnonymousIdentifiers } from './identifiers';
+import { AnonymousIdentifiers, Identifiers } from './identifiers';
 
 type PrivacyRegion = 'Europe' | '';
 
 interface Workspace {
 	ID: number;
 	Name: string;
+	Identifiers: Identifiers;
 	AnonymousIdentifiers: AnonymousIdentifiers;
 	PrivacyRegion: PrivacyRegion;
 }

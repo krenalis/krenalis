@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"testing"
 
+	"chichi/apis"
 	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
@@ -28,6 +29,8 @@ func TestImportWithTransformation(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummyID := c.AddDummy("Dummy (source)", connector.SourceRole)
 
+	c.SetWorkspaceIdentifiers([]string{"Email"}, apis.AnonymousIdentifiers{})
+
 	// Add an action with a transformation function which imports users, then
 	// execute it.
 	importUsersID := c.AddAction(dummyID, map[string]any{
@@ -43,7 +46,6 @@ func TestImportWithTransformation(t *testing.T) {
 				{Name: "FirstName", Type: types.Text()},
 				{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
 			}),
-			"Identifiers": []string{"Email"},
 			"Mapping": map[string]string{
 				"Email": "email",
 			},

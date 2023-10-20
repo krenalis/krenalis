@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"testing"
 
+	"chichi/apis"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -74,6 +75,8 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "PhoneNumbers", Type: types.Array(types.Text())},
 	}
 
+	c.SetWorkspaceIdentifiers(identifiers, apis.AnonymousIdentifiers{})
+
 	// Generate and add an action to the JSON for importing the users.
 	mapping := map[string]string{}
 	for _, p := range allProps {
@@ -84,12 +87,11 @@ func TestIdentityResolution(t *testing.T) {
 	actionA := c.AddAction(jsonID, map[string]any{
 		"Target": "Users",
 		"Action": map[string]any{
-			"Name":        "Action A",
-			"Path":        "users.json",
-			"InSchema":    types.Object(inSchemaProps),
-			"OutSchema":   types.Object(outSchemaProps),
-			"Identifiers": identifiers,
-			"Mapping":     mapping,
+			"Name":      "Action A",
+			"Path":      "users.json",
+			"InSchema":  types.Object(inSchemaProps),
+			"OutSchema": types.Object(outSchemaProps),
+			"Mapping":   mapping,
 		},
 	})
 
@@ -97,12 +99,11 @@ func TestIdentityResolution(t *testing.T) {
 	actionB := c.AddAction(jsonID, map[string]any{
 		"Target": "Users",
 		"Action": map[string]any{
-			"Name":        "Action B",
-			"Path":        "users.json",
-			"InSchema":    types.Object(inSchemaProps),
-			"OutSchema":   types.Object(outSchemaProps),
-			"Identifiers": identifiers,
-			"Mapping":     mapping,
+			"Name":      "Action B",
+			"Path":      "users.json",
+			"InSchema":  types.Object(inSchemaProps),
+			"OutSchema": types.Object(outSchemaProps),
+			"Mapping":   mapping,
 		},
 	})
 

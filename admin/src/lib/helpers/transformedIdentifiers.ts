@@ -1,4 +1,4 @@
-import { ActionIdentifiers, AnonymousIdentifiers } from '../../types/external/identifiers';
+import { Identifiers, AnonymousIdentifiers } from '../../types/external/identifiers';
 import { TransformedMapping } from './transformedAction';
 
 const SUPPORTED_IDENTIFIERS_TYPES = [
@@ -62,17 +62,11 @@ const validateIdentifiersMapping = (identifiersMapping: TransformedIdentifiers) 
 	}
 };
 
-const transformActionIdentifiers = (
-	actionIdentifiers: ActionIdentifiers,
-	mapping: TransformedMapping,
-): TransformedIdentifiers => {
-	return actionIdentifiers.map((identifier) => [
-		{ value: mapping[identifier].value, error: '' },
-		{ value: identifier },
-	]);
+const transformIdentifiers = (identifiers: Identifiers, mapping: TransformedMapping): TransformedIdentifiers => {
+	return identifiers.map((identifier) => [{ value: mapping[identifier].value, error: '' }, { value: identifier }]);
 };
 
-const untransformActionIdentifiers = (transformed: TransformedIdentifiers): ActionIdentifiers => {
+const untransformIdentifiers = (transformed: TransformedIdentifiers): Identifiers => {
 	return transformed.map(([, identifier]) => identifier.value);
 };
 
@@ -98,8 +92,8 @@ export {
 	DEFAULT_IDENTIFIERS_MAPPING,
 	isTypeSupportedAsIdentifier,
 	validateIdentifiersMapping,
-	transformActionIdentifiers,
-	untransformActionIdentifiers,
+	transformIdentifiers,
+	untransformIdentifiers,
 	transformAnonymousIdentifiers,
 	untransformAnonymousIdentifiers,
 };

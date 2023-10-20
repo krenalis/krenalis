@@ -227,10 +227,12 @@ func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ..
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actions provides information for the actions of the workspace and must always
-// contain at least one action; usersColumns are the columns of the 'users'
-// table which will be populated during the users synchronization.
-func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actions []warehouses.Action, usersColumns []types.Property) error {
+// actions holds the identifiers of the actions of the workspace and must
+// always contain at least one action; identifiers are the columns of the
+// 'users_identities' table which are identifiers, ordered by priority;
+// usersColumns are the columns of the 'users' table which will be populated
+// during the users synchronization.
+func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error {
 	panic("TODO: not implemented")
 }
 

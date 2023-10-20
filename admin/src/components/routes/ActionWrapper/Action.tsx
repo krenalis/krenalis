@@ -7,7 +7,6 @@ import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
 import ActionMatchingProperties from './ActionMatchingProperties';
-import ActionIdentifiers from './ActionIdentifiers';
 import useActionData from '../../../hooks/useActionData';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { FullscreenContext } from '../../../context/FullscreenContext';
@@ -117,7 +116,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.Fields.includes('Path') && <ActionPath />}
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
-					{actionType!.Fields.includes('Identifiers') && <ActionIdentifiers />}
 					{actionType!.Fields.includes('Mapping') && !mustComputeSchema && (
 						<ActionMapping ref={mappingSectionRef} />
 					)}

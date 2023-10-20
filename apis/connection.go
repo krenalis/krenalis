@@ -381,7 +381,6 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 		InSchema:       action.InSchema,
 		OutSchema:      action.OutSchema,
 		Mapping:        action.Mapping,
-		Identifiers:    action.Identifiers,
 		Query:          action.Query,
 		Path:           action.Path,
 		TableName:      action.TableName,
@@ -495,13 +494,13 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source, " +
-			"transformation_language, transformation_version, identifiers, query, path, table_name, sheet, " +
+			"transformation_language, transformation_version, query, path, table_name, sheet, " +
 			"export_mode, matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)"
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
-			transformation.Source, transformation.Language, transformation.Version, n.Identifiers, n.Query, n.Path,
-			n.TableName, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
+			transformation.Source, transformation.Language, transformation.Version, n.Query, n.Path, n.TableName,
+			n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
@@ -2314,35 +2313,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Language)
 		}
 	}
-	// Validate the identifiers.
-	if len(action.Identifiers) > 0 {
-		if action.Mapping == nil {
-			return errors.BadRequest("mapping is required by identifiers")
-		}
-		for i, identifier := range action.Identifiers {
-			if !types.IsValidPropertyPath(identifier) {
-				return errors.BadRequest("identifier %q is not a valid path", identifier)
-			}
-			if slices.Contains(action.Identifiers[i+1:], identifier) {
-				return errors.BadRequest("identifier %s is repeated", identifier)
-			}
-			if _, ok := action.Mapping[identifier]; !ok {
-				return errors.BadRequest("identifier %s does not exist in mapping", identifier)
-			}
-			property, err := action.OutSchema.PropertyByPath(strings.Split(identifier, "."))
-			if err != nil {
-				return fmt.Errorf("unexpected error validating action identifier %s: %s", identifier, err)
-			}
-			t := property.Type
-			if t.PhysicalType() == types.PtArray {
-				t = t.Elem()
-			}
-			switch t.PhysicalType() {
-			case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
-				return errors.BadRequest("%s cannot be used as identifier because an identifier cannot have type %s", identifier, property.Type)
-			}
-		}
-	}
 	// Ensure that every property in the input and output schemas have been
 	// mapped, unless the action has a transformation; in that case, we do not
 	// know which properties have been mapped, so this check cannot be done.
@@ -2535,28 +2505,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 	if !transformationIsAllowed && action.Transformation != nil {
 		return errors.BadRequest("transformation is not allowed")
-	}
-
-	// Check if the identifiers for the identity resolution are mandatory.
-	// Note that this does not imply that action.Identifiers cannot be empty:
-	// the check here is logical, action.Identifiers must be non nil under
-	// certain conditions, but may still not contain any identifier.
-	var needsIdentifiers bool
-	switch connector.Type {
-	case
-		state.AppType,
-		state.DatabaseType,
-		state.FileType,
-		state.MobileType,
-		state.ServerType,
-		state.WebsiteType:
-		needsIdentifiers = c.Role == state.SourceRole && targetUsersOrGroups
-	}
-	if needsIdentifiers && action.Identifiers == nil {
-		return errors.BadRequest("identifiers are required")
-	}
-	if !needsIdentifiers && action.Identifiers != nil {
-		return errors.BadRequest("unexpected identifiers")
 	}
 
 	return nil

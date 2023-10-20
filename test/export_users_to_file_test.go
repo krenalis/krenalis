@@ -35,6 +35,8 @@ func TestExportUsersToFile(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
+	c.SetWorkspaceIdentifiers([]string{"Email"}, apis.AnonymousIdentifiers{})
+
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.AddDummy("Dummy (source)", connector.SourceRole)
@@ -53,7 +55,6 @@ func TestExportUsersToFile(t *testing.T) {
 					{Name: "LastName", Type: types.Text()},
 					{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
 				}),
-				"Identifiers": []string{"Email"},
 				"Mapping": map[string]string{
 					"Email":     "coalesce(email, 'default.email@example.com')",
 					"FirstName": "first_name",

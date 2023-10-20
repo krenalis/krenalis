@@ -181,7 +181,7 @@ func (state *State) Load() error {
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings,\n"+
-			"anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region, schemas\n"+
+			"identifiers, anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region, schemas\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var accountID int
@@ -194,7 +194,8 @@ func (state *State) Load() error {
 						resources:   map[int]*Resource{},
 					}
 					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings,
-						&ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion, &schemas); err != nil {
+						&ws.Identifiers, &ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion,
+						&schemas); err != nil {
 						return err
 					}
 					ws.account = state.accounts[accountID]
@@ -317,7 +318,7 @@ func (state *State) Load() error {
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, mapping, transformation_source, transformation_language\n,"+
-			"transformation_version, identifiers, query, path, table_name, sheet, (user_cursor).id,\n"+
+			"transformation_version, query, path, table_name, sheet, (user_cursor).id,\n"+
 			"(user_cursor).timestamp, (user_cursor).next, health, export_mode, matching_properties_internal,\n"+
 			"matching_properties_external\nFROM actions",
 			func(rows *postgres.Rows) error {
@@ -331,9 +332,9 @@ func (state *State) Load() error {
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
 						&filter, &mapping, &transformation.Source, &transformation.Language, &transformation.Version,
-						&action.Identifiers, &action.Query, &action.Path, &action.TableName, &action.Sheet,
-						&action.UserCursor.ID, &action.UserCursor.Timestamp, &action.UserCursor.Next, &action.Health,
-						&action.ExportMode, &matchPropInternal, &matchPropExternal)
+						&action.Query, &action.Path, &action.TableName, &action.Sheet, &action.UserCursor.ID,
+						&action.UserCursor.Timestamp, &action.UserCursor.Next, &action.Health, &action.ExportMode,
+						&matchPropInternal, &matchPropExternal)
 					if err != nil {
 						return err
 					}

@@ -636,6 +636,7 @@ type Workspace struct {
 	workspace            *state.Workspace
 	ID                   int
 	Name                 string
+	Identifiers          []string
 	AnonymousIdentifiers AnonymousIdentifiers
 	PrivacyRegion        PrivacyRegion
 }

@@ -109,9 +109,10 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					err := workspace.Delete(ctx)
 					respond(w, err)
 				})
-				router.Route("/anonymous-identifiers", func(router chi.Router) {
+				router.Route("/identifiers", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						req := struct {
+							Identifiers          []string
 							AnonymousIdentifiers apis.AnonymousIdentifiers
 						}{}
 						err := json.NewDecoder(r.Body).Decode(&req)
@@ -119,7 +120,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						err = workspace.SetAnonymousIdentifiers(ctx, req.AnonymousIdentifiers)
+						err = workspace.SetIdentifiers(ctx, req.Identifiers, req.AnonymousIdentifiers)
 						respond(w, err)
 					})
 				})

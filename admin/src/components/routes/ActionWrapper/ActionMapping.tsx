@@ -1,5 +1,4 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { updateMappingProperty, autocompleteExpression } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import { flattenSchema, isIdentifierProperty } from '../../../lib/helpers/transformedAction';
@@ -14,11 +13,11 @@ import { AppContext } from '../../../context/providers/AppProvider';
 import ActionContext from '../../../context/ActionContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
+import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
+import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
@@ -249,19 +248,6 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			if (isIdentifier) {
 				continue;
 			}
-
-			// hide properties already mapped in the identifiers section.
-			let isAlreadyMappedInIdentity = false;
-			if (actionType.Fields.includes('Identifiers')) {
-				for (const [, identifier] of action.Identifiers!) {
-					if (identifier.value === k) {
-						isAlreadyMappedInIdentity = true;
-						break;
-					}
-				}
-			}
-			if (isAlreadyMappedInIdentity) continue;
-
 			mappings.push(
 				<div
 					className='mapping'
@@ -282,7 +268,20 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 						size='small'
 						error={action.Mapping[k].error}
 					>
-						{action.Mapping[k].required && <SlIcon name='asterisk' slot='prefix'></SlIcon>}
+						{action.Mapping[k].required && (
+							<div className='propertyIcon' slot='prefix'>
+								<SlTooltip content='Required' hoist>
+									<SlIcon name='asterisk' className='isRequiredIcon' />
+								</SlTooltip>
+							</div>
+						)}
+						{workspace.Identifiers.includes(k) && (
+							<div className='propertyIcon' slot='prefix'>
+								<SlTooltip content='Used as identifier' hoist>
+									<SlIcon name='person-check' className='isIdentifierIcon' />
+								</SlTooltip>
+							</div>
+						)}
 					</ComboBoxInput>
 					<div className='arrow'>
 						<SlIcon name='arrow-right' />
@@ -400,39 +399,36 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			>
 				{content}
 			</Section>
-			{createPortal(
-				<AlertDialog
-					variant='danger'
-					isOpen={isAlertOpen}
-					onClose={() => setIsAlertOpen(false)}
-					title={'You will lose your work'}
-					actions={
-						<>
-							<SlButton variant='neutral' onClick={() => setIsAlertOpen(false)}>
-								Cancel
-							</SlButton>
-							<SlButton variant='danger' onClick={onSwitchPropertiesMode}>
-								Continue
-							</SlButton>
-						</>
-					}
-				>
-					<div style={{ textAlign: 'center' }}>
-						{mode === 'mappings' ? (
-							<p>
-								If you switch to the transformation function you will <b>PERMANENTLY</b> lose the
-								mappings you have currently created
-							</p>
-						) : (
-							<p>
-								If you switch to the mappings you will <b>PERMANENTLY</b> lose the transformation code
-								you have currently written
-							</p>
-						)}
-					</div>
-				</AlertDialog>,
-				document.body,
-			)}
+			<AlertDialog
+				variant='danger'
+				isOpen={isAlertOpen}
+				onClose={() => setIsAlertOpen(false)}
+				title={'You will lose your work'}
+				actions={
+					<>
+						<SlButton variant='neutral' onClick={() => setIsAlertOpen(false)}>
+							Cancel
+						</SlButton>
+						<SlButton variant='danger' onClick={onSwitchPropertiesMode}>
+							Continue
+						</SlButton>
+					</>
+				}
+			>
+				<div style={{ textAlign: 'center' }}>
+					{mode === 'mappings' ? (
+						<p>
+							If you switch to the transformation function you will <b>PERMANENTLY</b> lose the mappings
+							you have currently created
+						</p>
+					) : (
+						<p>
+							If you switch to the mappings you will <b>PERMANENTLY</b> lose the transformation code you
+							have currently written
+						</p>
+					)}
+				</div>
+			</AlertDialog>
 		</>
 	);
 });
@@ -1147,9 +1143,15 @@ interface TransformationNestedPropertiesProps {
 	property: Property;
 	language: string;
 	nesting: number;
+	parentName?: string;
 }
 
-const TransformationNestedProperties = ({ property, language, nesting }: TransformationNestedPropertiesProps) => {
+const TransformationNestedProperties = ({
+	property,
+	language,
+	nesting,
+	parentName,
+}: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
 	const typ = property.type as ObjectType;
@@ -1177,10 +1179,17 @@ const TransformationNestedProperties = ({ property, language, nesting }: Transfo
 									property={p}
 									language={language}
 									nesting={nesting + 1}
+									parentName={parentName ? parentName + '.' + property.name : property.name}
 								/>
 							);
 						} else {
-							return <TransformationProperty property={p} language={language} />;
+							return (
+								<TransformationProperty
+									property={p}
+									language={language}
+									parentName={parentName ? parentName + '.' + property.name : property.name}
+								/>
+							);
 						}
 					})}
 			</div>
@@ -1192,13 +1201,33 @@ interface TransformationPropertyProps {
 	property: Property;
 	language: string;
 	isParent?: boolean;
+	parentName?: string;
 }
 
-const TransformationProperty = ({ property, language, isParent }: TransformationPropertyProps) => {
+const TransformationProperty = ({ property, language, isParent, parentName }: TransformationPropertyProps) => {
+	const { workspaces, selectedWorkspace } = useContext(AppContext);
+
+	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+	let isIdentifier = false;
+	if (parentName) {
+		isIdentifier = workspace.Identifiers.includes(parentName + '.' + property.name);
+	} else {
+		isIdentifier = workspace.Identifiers.includes(property.name);
+	}
+
 	return (
 		<div className={isParent ? '' : 'property'}>
 			<div className='name'>
-				{property.required && <SlIcon className='requiredIcon' name='asterisk' slot='prefix' />}
+				{isIdentifier && (
+					<SlTooltip content='Used as identifier'>
+						<SlIcon className='identifierIcon' name='person-check' />
+					</SlTooltip>
+				)}
+				{property.required && (
+					<SlTooltip content='Required'>
+						<SlIcon className='requiredIcon' name='asterisk' />
+					</SlTooltip>
+				)}
 				{property.name}
 				{property.label != null && property.label !== '' && <span className='label'>({property.label})</span>}
 				<SlCopyButton

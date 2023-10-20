@@ -40,7 +40,6 @@ interface Action {
 	Filter: Filter | null;
 	Mapping: Mapping | null;
 	Transformation: Transformation | null;
-	Identifiers: string[] | null;
 	Query: string | null;
 	Path: string | null;
 	Table: string | null;
@@ -63,7 +62,6 @@ interface ActionToSet {
 	filter?: Filter | null;
 	inSchema?: Type;
 	outSchema?: Type;
-	identifiers?: string[];
 	mapping?: Mapping;
 	transformation?: Transformation | null;
 	query?: string;

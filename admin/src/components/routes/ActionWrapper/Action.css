@@ -204,9 +204,25 @@
     font-family: monospace!important;
 } 
 
-.action .mappings .mapping .inputProperty sl-icon {
+.action .mappings .mapping .inputProperty .propertyIcon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.action .mappings .mapping .inputProperty > sl-icon {
     color: var(--sl-color-danger-500);
     font-size: 9px;
+}
+
+.action .mappings .mapping .inputProperty .propertyIcon sl-icon.isRequiredIcon {
+    color: var(--sl-color-danger-500);
+    font-size: 9px;
+}
+
+.action .mappings .mapping .inputProperty .propertyIcon sl-icon.isIdentifierIcon {
+    color: var(--sl-color-neutral-500);
+    font-size: 19px;
 }
 
 .action .mappings .mapping .outputProperty {
@@ -333,12 +349,6 @@ inherit the disabled style */
     border-bottom: 0;
 }
 
-.action .fullscreenTransformation .property .requiredIcon {
-    color: var(--sl-color-danger-500);
-    font-size: 9px;
-    margin-right: 5px;
-}
-
 .action .fullscreenTransformation .property .name {
     font-family: monospace;
     width: fit-content;
@@ -366,6 +376,17 @@ inherit the disabled style */
     transition: transform .3s;
     color: var(--sl-color-neutral-400);
     font-size: 13px;
+}
+
+.action .fullscreenTransformation .property .requiredIcon {
+    color: var(--sl-color-danger-500);
+    font-size: 9px;
+    margin-right: 5px;
+}
+
+.action .fullscreenTransformation .property .identifierIcon  {
+    color: var(--sl-color-neutral-500);
+    font-size: 19px;
 }
 
 .action .fullscreenTransformation .property.expand > .parentProperty > sl-icon {

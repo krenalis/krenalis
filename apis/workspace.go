@@ -964,17 +964,31 @@ func (this *Workspace) Schema(name string) types.Type {
 	return schema.Unflatten()
 }
 
-// SetAnonymousIdentifiers sets the anonymous identifiers of the workspace.
-func (this *Workspace) SetAnonymousIdentifiers(ctx context.Context, ids AnonymousIdentifiers) error {
+// SetIdentifiers sets the identifiers and the anonymous identifiers of the
+// workspace.
+func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string, anonIdentifiers AnonymousIdentifiers) error {
+
 	this.apis.mustBeOpen()
-	for i, id := range ids.Priority {
+
+	// Validate the identifiers.
+	for i, id := range identifiers {
+		if !types.IsValidPropertyPath(id) {
+			return errors.BadRequest("identifier %q is not a valid property path", id)
+		}
+		if slices.Contains(identifiers[i+1:], id) {
+			return errors.BadRequest("identifier %s is repeated", id)
+		}
+	}
+
+	// Validate the anonymous identifiers.
+	for i, id := range anonIdentifiers.Priority {
 		if !types.IsValidPropertyPath(id) {
 			return errors.BadRequest("anonymous identifier %q is not a valid property path", id)
 		}
-		if slices.Contains(ids.Priority[i+1:], id) {
+		if slices.Contains(anonIdentifiers.Priority[i+1:], id) {
 			return errors.BadRequest("anonymous identifier %s is repeated", id)
 		}
-		expr, ok := ids.Mapping[id]
+		expr, ok := anonIdentifiers.Mapping[id]
 		if !ok {
 			return errors.BadRequest("anonymous identifier %s does not have a mapped expression", id)
 		}
@@ -983,38 +997,45 @@ func (this *Workspace) SetAnonymousIdentifiers(ctx context.Context, ids Anonymou
 			return errors.BadRequest("expression of anonymous identifier %s is not valid: %w", id, err)
 		}
 	}
-	if len(ids.Priority) != len(ids.Mapping) {
-		for _, id := range ids.Priority {
-			delete(ids.Mapping, id)
+	if len(anonIdentifiers.Priority) != len(anonIdentifiers.Mapping) {
+		for _, id := range anonIdentifiers.Priority {
+			delete(anonIdentifiers.Mapping, id)
 		}
-		keys := maps.Keys(ids.Mapping)
+		keys := maps.Keys(anonIdentifiers.Mapping)
 		slices.Sort(keys)
 		return errors.BadRequest("anonymous identifier %q does not exist in mapping", keys[0])
 	}
-	if ids.Mapping == nil {
-		ids.Mapping = map[string]string{}
+
+	// Update the database and send the notification.
+	if identifiers == nil {
+		identifiers = []string{}
 	}
-	if ids.Priority == nil {
-		ids.Priority = []string{}
+	if anonIdentifiers.Mapping == nil {
+		anonIdentifiers.Mapping = map[string]string{}
+	}
+	if anonIdentifiers.Priority == nil {
+		anonIdentifiers.Priority = []string{}
 	}
 	ws := this.workspace
-	n := state.SetWorkspaceAnonymousIdentifiers{
+	n := state.SetWorkspaceIdentifiers{
 		Workspace:            ws.ID,
-		AnonymousIdentifiers: state.AnonymousIdentifiers(ids),
+		Identifiers:          identifiers,
+		AnonymousIdentifiers: state.AnonymousIdentifiers(anonIdentifiers),
 	}
-	mapping, err := json.Marshal(ids.Mapping)
+	mapping, err := json.Marshal(anonIdentifiers.Mapping)
 	if err != nil {
 		return err
 	}
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE workspaces\n"+
-			"SET anonymous_identifiers_priority = $1, anonymous_identifiers_mapping = $2\n"+
-			"WHERE id = $3", n.AnonymousIdentifiers.Priority, mapping, n.Workspace)
+			"SET identifiers = $1, anonymous_identifiers_priority = $2, anonymous_identifiers_mapping = $3\n"+
+			"WHERE id = $4", n.Identifiers, n.AnonymousIdentifiers.Priority, mapping, n.Workspace)
 		if err != nil {
 			return err
 		}
 		return tx.Notify(ctx, n)
 	})
+
 	return err
 }
 

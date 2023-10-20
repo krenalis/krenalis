@@ -19,14 +19,9 @@ CREATE OR REPLACE PROCEDURE resolve_sync_users()
         SELECT
             i1.__identity_id__,
             i2.__identity_id__,
-            coalesce(
-                (matches_for_action(i1.__action__, i1, i2) AND matches_for_action(i2.__action__, i1, i2)) -- match for both action
-                    OR
-                (matches_for_action(i1.__action__, i1, i2) AND matches_for_action(i2.__action__, i1, i2) IS NULL) -- match for the first action, the second doesn't know
-                    OR
-                (matches_for_action(i1.__action__, i1, i2) IS NULL AND matches_for_action(i2.__action__, i1, i2)), -- match for the second action, the first doesn't know
-                false
-            ) as match
+            
+            -- This placeholder will be replaced by Chichi:
+            {{ matching_expr }} as match
         FROM
             users_identities i1
                 CROSS JOIN
@@ -91,6 +86,6 @@ CREATE OR REPLACE PROCEDURE resolve_sync_users()
         END $clustering$;
 
         -- This placeholder will be replaced by Chichi:
-        -- {{ user_synchronization_query }}
+        {{ users_sync_queries }}
 
     $$;

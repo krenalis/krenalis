@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strconv"
 
 	"chichi/apis/datastore"
@@ -50,7 +49,6 @@ type Action struct {
 	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
-	Identifiers        []string
 	Query              *string
 	Path               *string
 	Table              *string
@@ -123,7 +121,6 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 			Language: Language(action.Transformation.Language.String()),
 		}
 	}
-	this.Identifiers = slices.Clone(action.Identifiers)
 	if action.Query != "" {
 		query := action.Query
 		this.Query = &query
@@ -267,18 +264,17 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 	span.Log("action validated successfully")
 	n := state.SetAction{
-		ID:          this.action.ID,
-		Name:        action.Name,
-		Enabled:     action.Enabled,
-		InSchema:    action.InSchema,
-		OutSchema:   action.OutSchema,
-		Mapping:     action.Mapping,
-		Identifiers: action.Identifiers,
-		Query:       action.Query,
-		Path:        action.Path,
-		TableName:   action.TableName,
-		Sheet:       action.Sheet,
-		ExportMode:  (*state.ExportMode)(action.ExportMode),
+		ID:         this.action.ID,
+		Name:       action.Name,
+		Enabled:    action.Enabled,
+		InSchema:   action.InSchema,
+		OutSchema:  action.OutSchema,
+		Mapping:    action.Mapping,
+		Query:      action.Query,
+		Path:       action.Path,
+		TableName:  action.TableName,
+		Sheet:      action.Sheet,
+		ExportMode: (*state.ExportMode)(action.ExportMode),
 	}
 	if action.Transformation != nil {
 		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
@@ -388,11 +384,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6, "+
-			"transformation_source = $7, transformation_language = $8, transformation_version = $9, identifiers = $10, "+
-			"query = $11, path = $12, table_name = $13, sheet = $14, export_mode = $15, "+
-			"matching_properties_internal = $16, matching_properties_external = $17\nWHERE id = $18",
+			"transformation_source = $7, transformation_language = $8, transformation_version = $9, "+
+			"query = $10, path = $11, table_name = $12, sheet = $13, export_mode = $14, "+
+			"matching_properties_internal = $15, matching_properties_external = $16\nWHERE id = $17",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
-			transformation.Language, transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
+			transformation.Language, transformation.Version, n.Query, n.Path, n.TableName, n.Sheet,
 			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
@@ -521,12 +517,6 @@ type ActionToSet struct {
 
 	// OutSchema is the output schema of the mappings (of the transformation).
 	OutSchema types.Type
-
-	// Identifiers represents the property paths upon which identity resolution
-	// is executed. If the action does not specify any identifier, Identifiers
-	// is an empty slice. All identifiers must be present as keys in the
-	// action's Mapping.
-	Identifiers []string
 
 	// Mapping is the mapping of the action, if it has one, otherwise is nil.
 	//

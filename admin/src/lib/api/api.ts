@@ -8,7 +8,7 @@ import {
 	ConnectionOptions,
 	ConnectionStats,
 } from '../../types/external/connection';
-import { AnonymousIdentifiers } from '../../types/external/identifiers';
+import { AnonymousIdentifiers, Identifiers } from '../../types/external/identifiers';
 import {
 	ActionTarget,
 	SchedulePeriod,
@@ -17,7 +17,7 @@ import {
 	Mapping,
 	Transformation,
 } from '../../types/external/action';
-import { User, UserEvent, UserTraits } from '../../types/external/user';
+import { UserEvent, UserTraits } from '../../types/external/user';
 import { adminBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
 import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
@@ -444,9 +444,10 @@ class Workspaces {
 		});
 	};
 
-	anonymousIdentifiers = async (identifiers: AnonymousIdentifiers): Promise<void> => {
-		return await call(`${this.apiURL}/anonymous-identifiers`, http.POST, {
-			AnonymousIdentifiers: identifiers,
+	setIdentifiers = async (identifiers: Identifiers, anonymousIdentifiers: AnonymousIdentifiers): Promise<void> => {
+		return await call(`${this.apiURL}/identifiers`, http.POST, {
+			identifiers: identifiers,
+			anonymousIdentifiers: anonymousIdentifiers,
 		});
 	};
 

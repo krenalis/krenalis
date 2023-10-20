@@ -272,6 +272,7 @@ type Workspace struct {
 	account              *Account
 	Name                 string
 	resources            map[int]*Resource
+	Identifiers          []string
 	AnonymousIdentifiers AnonymousIdentifiers
 	PrivacyRegion        PrivacyRegion
 }
@@ -877,7 +878,6 @@ type Action struct {
 	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
-	Identifiers        []string
 	Query              string
 	Path               string
 	TableName          string

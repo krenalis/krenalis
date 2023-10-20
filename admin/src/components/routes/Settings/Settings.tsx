@@ -20,8 +20,8 @@ const Settings = () => {
 		redirect('settings/data-warehouse');
 	};
 
-	const onAnonymousIdentifiersClick = () => {
-		redirect('settings/anonymous-identity');
+	const onIdentifiersClick = () => {
+		redirect('settings/identifiers');
 	};
 
 	let content: ReactNode;
@@ -46,10 +46,10 @@ const Settings = () => {
 				/>
 				<ListTile
 					className='settings__setting'
-					icon={<SlIcon name='incognito' />}
-					name={'Anonymous IDs'}
-					description='Modify the anonymous identifiers used to resolve the identity of anonymous users'
-					onClick={onAnonymousIdentifiersClick}
+					icon={<SlIcon name='person-check' />}
+					name={'Identifiers'}
+					description='Modify the identifiers used to resolve the identity of the users'
+					onClick={onIdentifiersClick}
 				/>
 			</div>
 		);

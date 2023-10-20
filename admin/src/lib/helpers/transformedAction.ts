@@ -11,7 +11,6 @@ import { Filter } from '../../types/external/api';
 import { ActionSchemasResponse } from '../../types/external/api';
 import Type, { ObjectType, Property } from '../../types/external/types';
 import TransformedConnection from './transformedConnection';
-import { DEFAULT_IDENTIFIERS_MAPPING, TransformedIdentifiers } from './transformedIdentifiers';
 
 const SCHEDULE_PERIODS = {
 	5: '5m',
@@ -74,7 +73,6 @@ interface TransformedAction {
 	Filter: Filter | null;
 	Mapping: TransformedMapping | null;
 	Transformation: Transformation | null;
-	Identifiers?: TransformedIdentifiers | null;
 	Query?: string | null;
 	Path?: string | null;
 	Table?: string | null;
@@ -186,9 +184,6 @@ const computeDefaultAction = (
 	if (fields.includes('MatchingProperties')) {
 		action.MatchingProperties = { Internal: '', External: '' };
 	}
-	if (fields.includes('Identifiers')) {
-		action.Identifiers = JSON.parse(JSON.stringify(DEFAULT_IDENTIFIERS_MAPPING));
-	}
 	return action;
 };
 
@@ -232,18 +227,6 @@ const computeActionTypeFields = (
 		if (connection.connector.hasSheets) {
 			fields.push('Sheet');
 		}
-	}
-	if (
-		connection.role === 'Source' &&
-		(connection.type === 'App' ||
-			connection.type === 'Database' ||
-			connection.type === 'File' ||
-			connection.type === 'Mobile' ||
-			connection.type === 'Server' ||
-			connection.type === 'Website') &&
-		(actionType.Target === 'Users' || actionType.Target === 'Groups')
-	) {
-		fields.push('Identifiers');
 	}
 	return fields;
 };

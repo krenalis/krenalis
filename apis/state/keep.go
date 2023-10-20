@@ -135,8 +135,8 @@ func (state *State) keepState() {
 			state.setWarehouse(n)
 		case "SetWorkspace":
 			state.setWorkspace(n)
-		case "SetWorkspaceAnonymousIdentifiers":
-			state.setWorkspaceAnonymousIdentifiers(n)
+		case "SetWorkspaceIdentifiers":
+			state.setWorkspaceIdentifiers(n)
 		case "SetWorkspaceSchemas":
 			state.setWorkspaceSchemas(n)
 		default:
@@ -297,7 +297,6 @@ type AddAction struct {
 	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
-	Identifiers        []string
 	Query              string
 	Path               string
 	TableName          string
@@ -328,7 +327,6 @@ func (state *State) addAction(n postgres.Notification) {
 		Filter:             e.Filter,
 		Mapping:            e.Mapping,
 		Transformation:     e.Transformation,
-		Identifiers:        e.Identifiers,
 		Query:              e.Query,
 		Path:               e.Path,
 		TableName:          e.TableName,
@@ -801,7 +799,6 @@ type SetAction struct {
 	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
-	Identifiers        []string
 	Query              string
 	Path               string
 	TableName          string
@@ -824,7 +821,6 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Filter = e.Filter
 		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation
-		a.Identifiers = e.Identifiers
 		a.Query = e.Query
 		a.Path = e.Path
 		a.TableName = e.TableName
@@ -1023,21 +1019,23 @@ func (state *State) setWorkspace(n postgres.Notification) {
 	}
 }
 
-// SetWorkspaceAnonymousIdentifiers is the event sent when the anonymous
-// identifiers of a workspace are changed.
-type SetWorkspaceAnonymousIdentifiers struct {
+// SetWorkspaceIdentifiers is the event sent when the identifiers and the
+// anonymous identifiers of a workspace are changed.
+type SetWorkspaceIdentifiers struct {
 	Workspace            int
+	Identifiers          []string
 	AnonymousIdentifiers AnonymousIdentifiers
 }
 
-// setWorkspaceAnonymousIdentifiers sets the anonymous identifier of a
-// workspace.
-func (state *State) setWorkspaceAnonymousIdentifiers(n postgres.Notification) {
-	e := SetWorkspaceAnonymousIdentifiers{}
+// setWorkspaceIdentifiers sets the identifiers and the anonymous identifier of
+// a workspace.
+func (state *State) setWorkspaceIdentifiers(n postgres.Notification) {
+	e := SetWorkspaceIdentifiers{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.Identifiers = e.Identifiers
 		w.AnonymousIdentifiers = e.AnonymousIdentifiers
 	})
 }

@@ -1,0 +1,83 @@
+.identifiers {
+    max-width: 1200px;
+    margin: auto;
+    padding: 30px;
+}
+
+.identifiers > sl-spinner {
+    display: block;
+    margin: auto;
+}
+
+.identifiers__no-schema {
+    max-width: 900px;
+    margin: auto;
+}
+
+.identifiers__no-schema-title {
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.identifiers__connect-warehouse-button {
+    margin: auto;
+    margin-top: 15px;
+}
+
+.identifiers__save-button {
+    max-width: 200px;
+    display: block;
+    margin: 50px auto 0 auto;
+}
+
+.identifiers .comboBoxInput sl-input sl-icon {
+    color: var(--sl-color-danger-500);
+    font-size: 9px;
+}
+
+.identifiers .propertiesItemName {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.identifiers .propertiesItemName .name {
+    font-weight: 400;
+    font-size: 13px;
+    opacity: .7;
+}
+
+.identifiers .propertiesItemType {
+    font-size: 13px;
+    opacity: .7;
+}
+
+.identifiers .identifiers__identifier {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    align-items: center;
+}
+
+.identifiers .identifiers__identifier .comboBoxInput {
+    width: 100%;
+}
+
+.identifiers .identifiers__add {
+    display: block;
+    width: max-content;
+    margin: auto;
+    margin-bottom: 20px;
+}
+
+.identifiers .identifiers__identifier-position {
+    background-color: var(--sl-color-neutral-400);
+    color: var(--text-onaccent);
+    width: 25px;
+    height: 25px;
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+}

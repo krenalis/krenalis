@@ -76,25 +76,18 @@ type Warehouse interface {
 	QueryRow(ctx context.Context, query string, args ...any) Row
 
 	// ResolveSyncUsers resolves and sync the users.
-	// actions provides information for the actions of the workspace and must always
-	// contain at least one action; usersColumns are the columns of the 'users'
-	// table which will be populated during the users synchronization.
-	ResolveSyncUsers(ctx context.Context, actions []Action, usersColumns []types.Property) error
+	// actions holds the identifiers of the actions of the workspace and must always
+	// contain at least one action; identifiers are the columns of the
+	// 'users_identities' table which are identifiers, ordered by priority;
+	// usersColumns are the columns of the 'users' table which will be populated
+	// during the users synchronization.
+	ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error
 
 	// Select returns the rows from the given table that satisfies the where
 	// condition with only the given columns, ordered by order if order is not the
 	// zero Property, and in range [first,first+limit] with first >= 0 and
 	// 0 < limit <= 1000.
 	Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error)
-}
-
-// Action holds information for the action.
-type Action struct {
-	ID int
-	// IdentifiersColumns are the columns corresponding to the identifiers of
-	// the action, sorted by descending priority. Empty when the action does not
-	// have any identifier.
-	IdentifiersColumns []types.Property
 }
 
 // Table represents a table.

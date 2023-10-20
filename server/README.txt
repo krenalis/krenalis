@@ -46,7 +46,7 @@ DELETE  /api/workspaces/{id}                                                    
 GET     /api/workspaces                                                          List the workspaces.
 POST    /api/workspaces                                                          Add a new workspace.
 PUT     /api/workspaces/{id}                                                     Set the name and the privacy region of the workspace.
-POST    /api/workspaces/{id}/anonymous-identifiers                               Set the anonymous identifiers of the workspace.
+POST    /api/workspaces/{id}/identifiers                                         Set the identifiers of the workspace.
 POST    /api/workspaces/{id}/connect-warehouse                                   Connect the workspace to a data warehouse.
 GET     /api/workspaces/{id}/warehouse-settings                                  Get the settings of the data warehouse for the workspace.
 PUT     /api/workspaces/{id}/warehouse-settings                                  Change the settings of the data warehouse for the workspace.

@@ -47,9 +47,9 @@ const sidebarItems: sidebarItem[] = [
 			{ name: 'settings/general', label: 'General', link: 'settings/general' },
 			{ name: 'settings/dataWarehouse', label: 'Data Warehouse', link: 'settings/data-warehouse' },
 			{
-				name: 'settings/anonymousIdentity',
-				label: 'Anonymous IDs',
-				link: 'settings/anonymous-identity',
+				name: 'settings/identifiers',
+				label: 'Identifiers',
+				link: 'settings/identifiers',
 			},
 		],
 	},

@@ -139,3 +139,11 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 		return
 	}
 }
+
+func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers apis.AnonymousIdentifiers) {
+	body := map[string]any{
+		"Identifiers":          identifiers,
+		"AnonymousIdentifiers": anonymousIdentifiers,
+	}
+	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body)
+}

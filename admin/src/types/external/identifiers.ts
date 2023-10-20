@@ -1,10 +1,10 @@
 import { Mapping } from './action';
 
-type ActionIdentifiers = string[];
+type Identifiers = string[];
 
 interface AnonymousIdentifiers {
 	Priority: string[];
 	Mapping: Mapping;
 }
 
-export type { ActionIdentifiers, AnonymousIdentifiers };
+export type { Identifiers, AnonymousIdentifiers };

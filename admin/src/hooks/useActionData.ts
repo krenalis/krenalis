@@ -13,12 +13,6 @@ import { AppContext } from '../context/providers/AppProvider';
 import * as variants from '../constants/variants';
 import * as icons from '../constants/icons';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
-import {
-	TransformedIdentifiers,
-	transformActionIdentifiers,
-	untransformActionIdentifiers,
-	validateIdentifiersMapping,
-} from '../lib/helpers/transformedIdentifiers';
 import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType, Mapping, MappingExpression, Transformation } from '../types/external/action';
 import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
@@ -195,15 +189,8 @@ const useActionData = (
 				// TODO: merge this conversions inside a single transformation
 				// function.
 				let transformedMapping: TransformedMapping | null = null;
-				let transformedIdentifiers: TransformedIdentifiers | null = null;
 				if (providedAction.Mapping != null) {
 					transformedMapping = transformActionMapping(providedAction.Mapping, schemas.Out);
-					if (providedAction.Identifiers != null) {
-						transformedIdentifiers = transformActionIdentifiers(
-							providedAction.Identifiers,
-							transformedMapping!,
-						);
-					}
 				}
 				transformedAction = {
 					ID: providedAction.ID,
@@ -220,7 +207,6 @@ const useActionData = (
 					Filter: providedAction.Filter,
 					Mapping: transformedMapping,
 					Transformation: providedAction.Transformation,
-					Identifiers: transformedIdentifiers,
 					Query: providedAction.Query,
 					Path: providedAction.Path,
 					Table: providedAction.Table,
@@ -247,7 +233,6 @@ const useActionData = (
 			return;
 		}
 
-		let identifiers: string[];
 		let mapping: Mapping;
 		let inSchema: ObjectType;
 		let outSchema: ObjectType;
@@ -258,20 +243,6 @@ const useActionData = (
 		// lib/action.js.
 		const flattenedInputSchema = flattenSchema(actionType.InputSchema);
 		const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
-		if (actionType.Fields.includes('Identifiers')) {
-			if (action.Mapping == null) {
-				action.Mapping = flattenedOutputSchema;
-			}
-			const errorMessage = validateIdentifiersMapping(action.Identifiers!);
-			if (errorMessage) {
-				showError(errorMessage);
-				return;
-			}
-			for (const [mapped, identifier] of action.Identifiers!) {
-				action.Mapping![identifier.value].value = mapped.value;
-			}
-			identifiers = untransformActionIdentifiers(action.Identifiers!);
-		}
 
 		if (action.Mapping != null) {
 			const inputSchema: ObjectType = { name: 'Object', properties: [] };
@@ -348,7 +319,6 @@ const useActionData = (
 			filter: action.Filter,
 			inSchema: inSchema!,
 			outSchema: outSchema!,
-			identifiers: identifiers!,
 			mapping: mapping!,
 			transformation: transformation!,
 			query: query!,
