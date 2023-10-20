@@ -346,7 +346,7 @@ def _handler(event, context):
 			results.append({"error": str(ex)})
 		else:
 			results.append({"value": value})
-	return json.dumps(results, default=str)
+	return json.dumps(results, separators=(",", ":"), default=str)
 `
 	}
 	// Make a Zip file with the function code.

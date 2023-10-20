@@ -160,7 +160,7 @@ def main():
 			results.append({"error": str(ex)})
 		else:
 			results.append({"value": value})
-	print(json.dumps(results, default=str))
+	print(json.dumps(results, separators=(",", ":"), default=str))
 
 if __name__ == "__main__":
 	main()
