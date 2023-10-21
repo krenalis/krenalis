@@ -32,8 +32,8 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Text","byteLen":80,"charLen":100}`,
 			Type: Text().WithByteLen(80).WithCharLen(100),
 		}, {
-			Data: `{"name":"Text","enum":["a","b"]}`,
-			Type: Text().WithEnum([]string{"a", "b"}),
+			Data: `{"name":"Text","values":["a","b"]}`,
+			Type: Text().WithValues("a", "b"),
 		}, {
 			Data: `{"name":"Text","charLen":10000}`,
 			Type: Text().WithCharLen(10000),

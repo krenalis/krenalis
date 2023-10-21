@@ -275,8 +275,8 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 				return nil, fmt.Errorf("app returned a value of %q for property %s, which does not contain valid UTF-8 characters",
 					abbreviate(v, 20), name)
 			}
-			if enum := typ.Enum(); enum != nil {
-				if !slices.Contains(enum, v) {
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
 					return nil, fmt.Errorf("app returned a value of %q for property %s, which is not valid", v, name)
 				}
 			} else if rx := typ.Regexp(); rx != nil {
@@ -596,8 +596,8 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 				return nil, fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
 					abbreviate(v, 20), name)
 			}
-			if enum := typ.Enum(); enum != nil {
-				if !slices.Contains(enum, v) {
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
 					return nil, fmt.Errorf("database returned a value of %q for property %s, which is not valid", v, name)
 				}
 			} else if rx := typ.Regexp(); rx != nil {

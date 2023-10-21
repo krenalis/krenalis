@@ -777,7 +777,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		rows.Close()
 		enums := map[string]types.Type{}
 		for name, values := range rawEnums {
-			enums[name] = types.Text().WithEnum(values)
+			enums[name] = types.Text().WithValues(values...)
 		}
 		if err := rows.Err(); err != nil {
 			return warehouses.Error(err)

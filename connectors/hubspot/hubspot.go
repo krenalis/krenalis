@@ -291,7 +291,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 					values = append(values, option.Value)
 				}
 
-				property.Type = property.Type.WithEnum(values)
+				property.Type = property.Type.WithValues(values...)
 			}
 		}
 		properties = append(properties, property)

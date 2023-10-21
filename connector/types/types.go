@@ -254,7 +254,7 @@ type Type struct {
 	//   - decimalRange value for Decimal
 	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
-	//   - []string with the enum values for Text
+	//   - []string with the values for Text
 	//   - []Property for Object
 	//   - Type of the item for Array
 	//   - Type of the value for Map
@@ -895,7 +895,7 @@ func (t Type) ByteLen() (int, bool) {
 // WithByteLen returns t with a maximum length of l of a Text type. l must be in
 // range [1, MaxTextLen].
 // Panics if t is not a Text type, or if l is not in range, or if t has already
-// a byte length, or if t already has an enum.
+// a byte length, or if t already has values.
 func (t Type) WithByteLen(l int) Type {
 	if t.pt != PtText {
 		panic("cannot set byte length of a non-Text type")
@@ -907,7 +907,7 @@ func (t Type) WithByteLen(l int) Type {
 		panic("invalid text length")
 	}
 	if _, ok := t.vl.([]string); ok {
-		panic("t already has an enum")
+		panic("t already has values")
 	}
 	t.p = int32(uint32(l))
 	return t
@@ -926,7 +926,7 @@ func (t Type) CharLen() (int, bool) {
 // WithCharLen returns t with a maximum length of l of a JSON and Text type. l
 // must be in range [1, MaxTextLen].
 // Panics if t is not a JSON or Text type, or if l is not in range, or if t has
-// already a char length, or if t already has an enum.
+// already a char length, or if t already has values.
 func (t Type) WithCharLen(l int) Type {
 	if t.pt != PtJSON && t.pt != PtText {
 		panic("cannot set character length of non-JSON and non-Text types")
@@ -938,7 +938,7 @@ func (t Type) WithCharLen(l int) Type {
 		panic("invalid text length")
 	}
 	if _, ok := t.vl.([]string); ok {
-		panic("t already has an enum")
+		panic("t already has values")
 	}
 	t.s = int32(uint32(l))
 	return t
@@ -955,15 +955,15 @@ func (t Type) Regexp() *regexp.Regexp {
 }
 
 // WithRegexp returns t with the regular expression re.
-// Panics if t is not a Text type, or t has already a regular expression or
-// has enum.
+// Panics if t is not a Text type, or t has already a regular expression or has
+// values.
 func (t Type) WithRegexp(re *regexp.Regexp) Type {
 	if t.pt != PtText {
 		panic("cannot set regular expression for a non-Text type")
 	}
 	switch t.vl.(type) {
 	case []string:
-		panic("cannot set regular expression when t has an enum")
+		panic("cannot set regular expression when t has values")
 	case *regexp.Regexp:
 		panic("t already has a regular expression")
 	}
@@ -971,34 +971,34 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 	return t
 }
 
-// Enum returns the enum values of t. Returns nil if t has no enum.
+// Values returns the values of t. Returns nil if t has no values.
 // Panics if t is not a Text type.
-func (t Type) Enum() []string {
+func (t Type) Values() []string {
 	if t.pt != PtText {
-		panic("cannot get enum for a non-Text type")
+		panic("cannot get values for a non-Text type")
 	}
 	if vl, ok := t.vl.([]string); ok {
-		enum := make([]string, len(vl))
-		copy(enum, vl)
-		return enum
+		values := make([]string, len(vl))
+		copy(values, vl)
+		return values
 	}
 	return nil
 }
 
-// WithEnum returns t but with an enum. t must be a Text type.
-// It panics if t is not of Text type, if the enum is empty or contains an
-// invalid UTF-8 string, or if t already has an enum, a regular expression, or
+// WithValues returns t but restricted to some values. t must be a Text type.
+// It panics if t is not of Text type, if the values is empty or contains an
+// invalid UTF-8 string, or if t already has values, a regular expression, or
 // if it is already restricted by byte or character length.
-func (t Type) WithEnum(enum []string) Type {
+func (t Type) WithValues(values ...string) Type {
 	if t.pt != PtText {
-		panic("cannot set enum for a non-Text type")
+		panic("cannot set values for a non-Text type")
 	}
-	if len(enum) == 0 {
-		panic("enum is empty")
+	if len(values) == 0 {
+		panic("values is empty")
 	}
 	switch t.vl.(type) {
 	case []string:
-		panic("t already has an enum")
+		panic("t already has values")
 	case *regexp.Regexp:
 		panic("t already has a regular expression")
 	}
@@ -1008,8 +1008,8 @@ func (t Type) WithEnum(enum []string) Type {
 	if t.s != 0 {
 		panic("t already has a maximum character length")
 	}
-	vl := make([]string, len(enum))
-	for i, s := range enum {
+	vl := make([]string, len(values))
+	for i, s := range values {
 		v, err := normalizedUTF8(s)
 		if err != nil {
 			panic(err)

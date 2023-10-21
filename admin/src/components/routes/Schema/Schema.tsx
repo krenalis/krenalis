@@ -95,9 +95,9 @@ const Schema = () => {
 						const typ = p.type as ArrayType;
 						name = 'Array(' + typ.itemType?.name + ')';
 					}
-					if ('enum' in pr.type) {
+					if ('values' in pr.type) {
 						const typ = p.type as TextType;
-						name += ' (' + typ.enum?.map((e) => '"' + e + '"').join(', ') + ')';
+						name += ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
 					}
 					nestedRows.push({ cells: [pr.name, name] });
 				}
@@ -117,9 +117,9 @@ const Schema = () => {
 					const typ = p.type as ArrayType;
 					name = 'Array(' + typ.itemType?.name + ')';
 				}
-				if ('enum' in p.type) {
+				if ('values' in p.type) {
 					const typ = p.type as TextType;
-					name += ' (' + typ.enum?.map((e: string) => '"' + e + '"').join(', ') + ')';
+					name += ' (' + typ.values?.map((e: string) => '"' + e + '"').join(', ') + ')';
 				}
 				const row = { cells: [p.name, name] };
 				rows.push(row);

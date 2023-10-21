@@ -165,7 +165,7 @@ interface TextType {
 	byteLen?: number;
 	charLen?: number;
 	regexp?: string;
-	enum?: string[];
+	values?: string[];
 }
 
 interface ArrayType {

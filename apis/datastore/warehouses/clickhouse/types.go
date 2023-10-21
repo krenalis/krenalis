@@ -134,7 +134,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		return types.DateTime().WithLayout(layout[:len(time.DateTime)+n]), false, s[1:]
 	case "Enum8", "Enum16":
 		s = s[i+1:]
-		var enum []string
+		var values []string
 		var item string
 		for {
 			var ok bool
@@ -148,7 +148,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 					return types.Type{}, false, ""
 				}
 			}
-			enum = append(enum, item)
+			values = append(values, item)
 			if s, ok = trimComma(s); !ok {
 				break
 			}
@@ -156,7 +156,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.Text().WithEnum(enum), false, s[1:]
+		return types.Text().WithValues(values...), false, s[1:]
 	case "LowCardinality":
 		t, _, s := parseType(s[i+1:], false)
 		if s == "" {

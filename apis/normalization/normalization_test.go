@@ -109,7 +109,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329"},
 		// Text.
 		{types.Text(), "foo", "foo"},
-		{types.Text().WithEnum([]string{"foo", "boo"}), "boo", "boo"},
+		{types.Text().WithValues("foo", "boo"), "boo", "boo"},
 		{types.Text().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo"},
 		{types.Text().WithByteLen(3), "boo", "boo"},
 		{types.Text().WithCharLen(3), "bòò", "bòò"},

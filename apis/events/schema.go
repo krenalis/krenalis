@@ -31,7 +31,7 @@ var Schema = types.Object([]types.Property{
 			{
 				Name: "browser",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithEnum([]string{"Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"})},
+					{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
 					{Name: "other", Type: types.Text()},
 					{Name: "version", Type: types.Text()},
 				}),
@@ -90,7 +90,7 @@ var Schema = types.Object([]types.Property{
 			{
 				Name: "os",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithEnum([]string{"Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"})},
+					{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 					{Name: "version", Type: types.Text()},
 				}),
 			},
@@ -137,7 +137,7 @@ var Schema = types.Object([]types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text().WithEnum([]string{"alias", "identify", "group", "page", "screen", "track"})},
+	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	{Name: "userId", Type: types.Text()},
 	{Name: "version", Type: types.Int()},
 })

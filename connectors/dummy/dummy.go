@@ -248,7 +248,7 @@ var userSchema = types.Object([]types.Property{
 	{Name: "first_name", Type: types.Text()},
 	{Name: "full_name", Type: types.Text()},
 	{Name: "last_name", Type: types.Text()},
-	{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
+	{Name: "favourite_drink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
 })
 
 // UserSchema returns the user schema.

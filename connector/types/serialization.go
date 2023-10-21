@@ -175,7 +175,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(vl.String())
 			b.WriteString(`"`)
 		case []string:
-			b.WriteString(`,"enum":[`)
+			b.WriteString(`,"values":[`)
 			for i, v := range vl {
 				if i > 0 {
 					b.WriteByte(',')
@@ -279,7 +279,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var real bool
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
-	var enum []string
+	var values []string
 	var layout string
 	var itemType Type
 	var minItems, maxItems = 0, MaxItems
@@ -361,8 +361,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if re != nil {
 				return Type{}, errors.New("repeated 'regexp' key")
 			}
-			if enum != nil {
-				return Type{}, errors.New("regular expression cannot be provided if enum is provided")
+			if values != nil {
+				return Type{}, errors.New("regular expression cannot be provided if values are provided")
 			}
 			if expr, ok := tok.(string); ok {
 				re, err = regexp.Compile(expr)
@@ -370,17 +370,17 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if re == nil {
 				return Type{}, errors.New("invalid regular expression")
 			}
-		case "enum":
-			if enum != nil {
-				return Type{}, errors.New(`repeated "enum" key`)
+		case "values":
+			if values != nil {
+				return Type{}, errors.New(`repeated value`)
 			}
 			if re != nil {
-				return Type{}, errors.New("enum cannot be provided if regular expression is provided")
+				return Type{}, errors.New("values cannot be provided if regular expression is provided")
 			}
 			if tok != json.Delim('[') {
-				return Type{}, errors.New("invalid enum")
+				return Type{}, errors.New("invalid values")
 			}
-		Enum:
+		Values:
 			for {
 				tok, err = dec.Token()
 				if err != nil {
@@ -388,15 +388,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 				switch v := tok.(type) {
 				case string:
-					enum = append(enum, v)
+					values = append(values, v)
 				case json.Delim:
-					break Enum
+					break Values
 				default:
-					return Type{}, errors.New("invalid value in enum")
+					return Type{}, errors.New("invalid value")
 				}
 			}
-			if len(enum) == 0 {
-				return Type{}, errors.New("invalid empty enum")
+			if len(values) == 0 {
+				return Type{}, errors.New("invalid empty values")
 			}
 		case "precision":
 			if precision > 0 {
@@ -751,11 +751,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.vl = re
 	}
-	if enum != nil {
+	if values != nil {
 		if pt != PtText {
-			return Type{}, errors.New("unexpected enum for non-Text type")
+			return Type{}, errors.New("unexpected values for non-Text type")
 		}
-		t.vl = enum
+		t.vl = values
 	}
 	if hasLayout {
 		if pt != PtDateTime && pt != PtDate {

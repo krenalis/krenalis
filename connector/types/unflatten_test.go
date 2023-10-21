@@ -24,8 +24,8 @@ func TestUnflatten(t *testing.T) {
 			Flatten:   Text().WithCharLen(10),
 			Unflatten: Text().WithCharLen(10),
 		}, {
-			Flatten:   Text().WithEnum([]string{"a", "b"}),
-			Unflatten: Text().WithEnum([]string{"a", "b"}),
+			Flatten:   Text().WithValues("a", "b"),
+			Unflatten: Text().WithValues("a", "b"),
 		}, {
 			Flatten:   Object([]Property{{Name: "email", Type: Text(), Nullable: true}}),
 			Unflatten: Object([]Property{{Name: "email", Type: Text(), Nullable: true}}),

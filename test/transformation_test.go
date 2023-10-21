@@ -44,7 +44,7 @@ func TestImportWithTransformation(t *testing.T) {
 			"OutSchema": types.Object([]types.Property{
 				{Name: "Email", Type: types.Text()},
 				{Name: "FirstName", Type: types.Text()},
-				{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
+				{Name: "Gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
 			"Transformation": map[string]any{
 				"Source": `

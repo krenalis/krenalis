@@ -564,21 +564,21 @@ func sameType(t1, t2 Type) error {
 			}
 		case []string:
 			if t2.vl == nil {
-				return errors.New("expected enum, got nil")
+				return errors.New("expected values, got nil")
 			}
 			vl2, ok := t2.vl.([]string)
 			if !ok {
-				return fmt.Errorf("expected enum, got %T value", t2.vl)
+				return fmt.Errorf("expected values, got %T value", t2.vl)
 			}
 			if vl2 == nil {
 				return fmt.Errorf("unexpected []string(nil)")
 			}
 			if len(vl1) != len(vl2) {
-				return fmt.Errorf("expected %d enum values, got %d", len(vl1), len(vl2))
+				return fmt.Errorf("expected %d values values, got %d", len(vl1), len(vl2))
 			}
 			for i, v1 := range vl1 {
 				if v2 := (vl2)[i]; v1 != v2 {
-					return fmt.Errorf("expected enum value %q, got %q", v1, v2)
+					return fmt.Errorf("expected value %q, got %q", v1, v2)
 				}
 			}
 		}

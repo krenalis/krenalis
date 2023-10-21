@@ -1041,8 +1041,8 @@ const FullscreenTransformation = ({
 };
 
 function fromPhysicalTypeToJavascriptType(typeName: string) {
-	// TODO: add additional informations (property is nullable, property is
-	// enum, property length). This needs the full type definition and not the
+	// TODO: add additional information (property is nullable, property values,
+	//  property length). This needs the full type definition and not the
 	// type name only.
 	switch (typeName) {
 		case 'Boolean':
@@ -1089,8 +1089,8 @@ function fromPhysicalTypeToJavascriptType(typeName: string) {
 }
 
 function fromPhysicalTypeToPythonType(typeName: string) {
-	// TODO: add additional informations (property is nullable, property is
-	// enum, property length). This needs the full type definition and not the
+	// TODO: add additional information (property is nullable, property values,
+	// property length). This needs the full type definition and not the
 	// type name only.
 	switch (typeName) {
 		case 'Boolean':

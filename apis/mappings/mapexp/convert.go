@@ -452,11 +452,11 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		default:
 			return nil, errInvalidConversion
 		}
-		if enum := dt.Enum(); enum != nil {
+		if values := dt.Values(); values != nil {
 			if s == "" && nullable {
 				return nil, nil
 			}
-			if slices.Contains(enum, s) {
+			if slices.Contains(values, s) {
 				return s, nil
 			}
 			return nil, errInvalidConversion

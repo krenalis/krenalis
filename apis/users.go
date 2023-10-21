@@ -182,7 +182,7 @@ var eventColumns = []types.Property{
 	{Name: "network_carrier", Type: types.Text()},
 	{Name: "network_cellular", Type: types.Boolean()},
 	{Name: "network_wifi", Type: types.Boolean()},
-	{Name: "os_name", Type: types.Text().WithEnum([]string{"Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"})},
+	{Name: "os_name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 	{Name: "os_version", Type: types.Text()},
 	{Name: "page_path", Type: types.Text()},
 	{Name: "page_referrer", Type: types.Text()},
@@ -208,7 +208,7 @@ var eventColumns = []types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text().WithEnum([]string{"alias", "identify", "group", "page", "screen", "track"})},
+	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	{Name: "user_id", Type: types.Text()},
 }
 

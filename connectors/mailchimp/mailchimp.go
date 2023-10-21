@@ -274,7 +274,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		case "address":
 			field.Type = types.JSON()
 		case "radio", "dropdown":
-			field.Type = types.Text().WithEnum(mf.Options.Choices)
+			field.Type = types.Text().WithValues(mf.Options.Choices...)
 		default:
 			field.Type = types.Text()
 		}

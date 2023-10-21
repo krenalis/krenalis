@@ -53,7 +53,7 @@ func TestExportUsersToFile(t *testing.T) {
 					{Name: "Email", Type: types.Text()},
 					{Name: "FirstName", Type: types.Text()},
 					{Name: "LastName", Type: types.Text()},
-					{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
+					{Name: "Gender", Type: types.Text().WithValues("male", "female", "other")},
 				}),
 				"Mapping": map[string]string{
 					"Email":     "coalesce(email, 'default.email@example.com')",
