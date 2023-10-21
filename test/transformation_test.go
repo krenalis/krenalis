@@ -46,9 +46,6 @@ func TestImportWithTransformation(t *testing.T) {
 				{Name: "FirstName", Type: types.Text()},
 				{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
 			}),
-			"Mapping": map[string]string{
-				"Email": "email",
-			},
 			"Transformation": map[string]any{
 				"Source": `
 def transform(user: dict) -> dict:
@@ -57,6 +54,7 @@ def transform(user: dict) -> dict:
 	else:
 		gender = "female"
 	return {
+		"Email": user["email"],
 		"FirstName": user["first_name"],
 		"Gender": gender,
 	}`,

@@ -133,10 +133,9 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 // if values cannot be mapped.
 func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]any, error) {
 
-	out := map[string]any{}
-
 	// Map using properties mapping.
 	if m.properties != nil {
+		out := map[string]any{}
 		for _, property := range m.properties {
 			v, err := property.expression.Eval(values, m.formatTime)
 			if err != nil {
@@ -151,9 +150,6 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 			}
 			writePropertyTo(out, property.outPath, v)
 		}
-	}
-
-	if m.transformation == nil {
 		return out, nil
 	}
 
@@ -174,6 +170,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	}
 
 	// Validate and normalize the transformed values.
+	out := map[string]any{}
 	missingRequired := m.required
 	for name, value := range values {
 		if _, ok := out[name]; ok {
