@@ -684,12 +684,6 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	return value, nil
 }
 
-// TODO(Gianluca): correctly implement this function; currently it just calls
-// 'NormalizeAppProperty'.
-func NormalizeTransformationProperty(name string, typ types.Type, src any, nullable, formatTime bool) (any, error) {
-	return NormalizeAppProperty(name, typ, src, nullable)
-}
-
 // ValidateStringProperty validates a string property like
 // NormalizeDatabaseFileProperty does.
 func ValidateStringProperty(p types.Property, s string) error {

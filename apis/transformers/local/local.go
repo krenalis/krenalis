@@ -10,7 +10,6 @@ package local
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -41,11 +40,13 @@ func New(settings Settings) transformers.Transformer {
 }
 
 // CallFunction calls the function with the given name and version, with the
-// given values to transform, and returns the results. If an error occurs during
-// execution, it returns an *ExecutionError error. If the function does not
-// exist, it returns the ErrNotExist error. If the function is in a pending
-// state, it returns the ErrPendingState error.
-func (tr *transformer) CallFunction(ctx context.Context, name, version string, schema types.Type, values []map[string]any) ([]transformers.Result, error) {
+// given values to transform, and returns the results. inSchema and outSchema
+// are the input and output schemas.
+//
+// If an error occurs during execution, it returns an *ExecutionError error. If
+// the function does not exist, it returns the ErrNotExist error. If the
+// function is in a pending state, it returns the ErrPendingState error.
+func (tr *transformer) CallFunction(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return nil, err
@@ -61,16 +62,19 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 	var stdout, stderr bytes.Buffer
 	filename := tr.absFilename(name, versionInt, ext)
 	var executable string
+	var language state.Language
 	var payload []byte
 	switch ext {
 	case ".js":
+		language = state.JavaScript
 		executable = tr.settings.NodeExecutable
 		payload = make([]byte, 0, 1024)
-		payload = transformers.MarshalJavaScript(payload, schema, values)
+		payload = transformers.MarshalJavaScript(payload, inSchema, values)
 	case ".py":
+		language = state.Python
 		executable = tr.settings.PythonExecutable
 		payload = make([]byte, 0, 1024)
-		payload = transformers.MarshalPython(payload, schema, values)
+		payload = transformers.MarshalPython(payload, inSchema, values)
 	}
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -85,10 +89,12 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 	if err != nil {
 		return nil, transformers.NewExecutionError(stderr.String())
 	}
-	var results []transformers.Result
-	err = json.Unmarshal(stdout.Bytes(), &results)
+	results, err := transformers.Unmarshal(&stdout, outSchema, language)
 	if err != nil {
 		return nil, err
+	}
+	if len(results) != len(values) {
+		return nil, fmt.Errorf("transformers/local: expected %d results from function %q, got %d", len(values), name, len(results))
 	}
 	return results, nil
 }

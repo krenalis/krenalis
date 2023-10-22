@@ -60,11 +60,13 @@ func New(settings Settings) transformers.Transformer {
 }
 
 // CallFunction calls the function with the given name and version, with the
-// given values to transform, and returns the results. If an error occurs during
-// execution, it returns an *ExecutionError error. If the function does not
-// exist, it returns the ErrNotExist error. If the function is in a pending
-// state, it returns the ErrPendingState error.
-func (tr *transformer) CallFunction(ctx context.Context, name, version string, schema types.Type, values []map[string]any) ([]transformers.Result, error) {
+// given values to transform, and returns the results. inSchema and outSchema
+// are the input and output schemas.
+//
+// If an error occurs during execution, it returns an *ExecutionError error. If
+// the function does not exist, it returns the ErrNotExist error. If the
+// function is in a pending state, it returns the ErrPendingState error.
+func (tr *transformer) CallFunction(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 
 	if !transformers.ValidFunctionName(name) {
 		return nil, errors.New("function name is not valid")
@@ -80,17 +82,20 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 	}
 
 	// Marshal the values.
+	var language state.Language
 	var payload []byte
 	switch ext {
 	case ".js":
+		language = state.JavaScript
 		payload = make([]byte, 0, 1024)
 		payload = append(payload, '"')
-		payload = transformers.MarshalJavaScript(payload, schema, values)
+		payload = transformers.MarshalJavaScript(payload, inSchema, values)
 		payload = append(payload, '"')
 	case ".py":
+		language = state.Python
 		payload = make([]byte, 0, 1024)
 		payload = append(payload, '"')
-		payload = transformers.MarshalPython(payload, schema, values)
+		payload = transformers.MarshalPython(payload, inSchema, values)
 		payload = append(payload, '"')
 	}
 
@@ -149,22 +154,13 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, s
 		}
 		r = strings.NewReader(s)
 	}
-	dec := json.NewDecoder(r)
-	dec.UseNumber()
-	results := make([]transformers.Result, 0, len(values))
-	err = dec.Decode(&results)
+	results, err := transformers.Unmarshal(r, outSchema, language)
 	if err != nil {
-		return nil, fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
+		return nil, err
 	}
 	if len(results) != len(values) {
 		return nil, fmt.Errorf("transformers/lambda: expected %d results from function %q, got %d", len(values), name, len(results))
 	}
-	for _, r := range results {
-		if (r.Value == nil) == (r.Error == "") {
-			return nil, fmt.Errorf("transformers/lambda: invalid results from function %q", name)
-		}
-	}
-
 	return results, nil
 }
 

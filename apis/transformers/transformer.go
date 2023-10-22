@@ -38,13 +38,7 @@ func (err *ExecutionError) Error() string {
 
 type Result struct {
 	Value map[string]any
-	Error ValueError
-}
-
-type ValueError string
-
-func (err ValueError) Error() string {
-	return string(err)
+	Error error
 }
 
 // A Transformer represents a transformer.
@@ -57,11 +51,13 @@ func (err ValueError) Error() string {
 type Transformer interface {
 
 	// CallFunction calls the function with the given name and version, with the
-	// given values to transform, and returns the results. If an error occurs during
-	// execution, it returns an *ExecutionError error. If the function does not
-	// exist, it returns the ErrNotExist error. If the function is in a pending
-	// state, it returns the ErrPendingState error.
-	CallFunction(ctx context.Context, name, version string, schema types.Type, values []map[string]any) ([]Result, error)
+	// given values to transform, and returns the results. inSchema and outSchema
+	// are the input and output schemas.
+	//
+	// If an error occurs during execution, it returns an *ExecutionError error. If
+	// the function does not exist, it returns the ErrNotExist error. If the
+	// function is in a pending state, it returns the ErrPendingState error.
+	CallFunction(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]Result, error)
 
 	// Close the transformer.
 	Close(ctx context.Context) error

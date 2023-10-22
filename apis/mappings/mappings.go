@@ -16,15 +16,14 @@ import (
 	"strings"
 
 	"chichi/apis/mappings/mapexp"
-	"chichi/apis/normalization"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
 )
 
 // Error represents an error resulting from a mapping or transformation
-// function, such as a syntax error in the function, the use of a non-existent
-// property, or a property being used as an identifier.
+// function, such as a syntax error in the function, or the use of a
+// non-existent property.
 type Error string
 
 func (err Error) Error() string { return string(err) }
@@ -76,7 +75,6 @@ type propertyMapping struct {
 type Mapping struct {
 	inSchema, outSchema types.Type
 	properties          []propertyMapping
-	required            int
 	transformation      *state.Transformation
 	transformer         transformers.Transformer
 	action              int
@@ -118,14 +116,6 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 		}
 	}
 
-	if transformation != nil {
-		for _, p := range m.outSchema.Properties() {
-			if p.Required {
-				m.required++
-			}
-		}
-	}
-
 	return &m, nil
 }
 
@@ -154,51 +144,21 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	}
 
 	// Map using the transformation.
-
-	// Transform values.
 	funcName := transformationFunctionName(m.action, m.transformation.Language)
-	results, err := m.transformer.CallFunction(ctx, funcName, m.transformation.Version, m.inSchema, []map[string]any{values})
+	results, err := m.transformer.CallFunction(ctx, funcName, m.transformation.Version, m.inSchema, m.outSchema, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(*transformers.ExecutionError); ok {
 			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)
 		}
 		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
-	values = results[0].Value
-	if values == nil {
-		return nil, errorf("%s: %s ", m.transformation.Language.String(), results[0].Error)
+	if err := results[0].Error; err != nil {
+		if err, ok := err.(*transformers.ExecutionError); ok {
+			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)
+		}
+		return nil, errorf("%s", err)
 	}
-
-	// Validate and normalize the transformed values.
-	out := map[string]any{}
-	missingRequired := m.required
-	for name, value := range values {
-		if _, ok := out[name]; ok {
-			return nil, errorf("property %q is already used as identifier", name)
-		}
-		prop, ok := m.outSchema.Property(name)
-		if !ok {
-			return nil, errorf("property %q does not exist", name)
-		}
-		if prop.Required {
-			missingRequired--
-		}
-		v, err := normalization.NormalizeTransformationProperty(name, prop.Type, value, prop.Nullable, m.formatTime)
-		if err != nil {
-			return nil, err
-		}
-		out[name] = v
-	}
-	if missingRequired > 0 {
-		for _, p := range m.outSchema.Properties() {
-			if p.Required {
-				if _, ok := out[p.Name]; !ok {
-					return nil, errorf("required property %q is missing", p.Name)
-				}
-			}
-		}
-		panic("unreachable code")
-	}
+	out := results[0].Value
 
 	return out, nil
 }

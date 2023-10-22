@@ -2701,7 +2701,7 @@ func newTemporaryTransformer(name, source string, transformer transformers.Trans
 	return &temporaryTransformer{name, source, transformer}
 }
 
-func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, schema types.Type, values []map[string]any) ([]transformers.Result, error) {
+func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 	version, err := tp.transformer.CreateFunction(ctx, tp.name, tp.source)
 	if err != nil {
 		return nil, nil
@@ -2714,7 +2714,7 @@ func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, s
 			}
 		}()
 	}()
-	return tp.transformer.CallFunction(ctx, tp.name, version, schema, values)
+	return tp.transformer.CallFunction(ctx, tp.name, version, inSchema, outSchema, values)
 }
 
 func (tp *temporaryTransformer) Close(_ context.Context) error { panic("not supported") }
