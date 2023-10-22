@@ -9,6 +9,7 @@ package transformers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -17,42 +18,48 @@ import (
 	"strings"
 	"time"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/shopspring/decimal"
 )
 
-// MarshalJavaScript marshals values, according to the schema of a single value,
-// to a JavaScript array and appends it into b. The encoded value can be put in
-// a JSON string without escape.
-func MarshalJavaScript(b []byte, schema types.Type, values []map[string]any) []byte {
+// Marshal encodes values, based on the schema of their elements, which must be
+// an Object, into a JavaScript array or a Python list, and appends it to b. The
+// resulting value can be included in a JSON string without escaping.
+func Marshal(b []byte, schema types.Type, values []map[string]any, language state.Language) ([]byte, error) {
+	if !schema.Valid() {
+		return nil, errors.New("apis/transformers: schema is not valid")
+	}
+	if schema.PhysicalType() != types.PtObject {
+		return nil, errors.New("apis/transformers: schema is not an object")
+	}
+	var marshal func([]byte, types.Type, any) ([]byte, error)
+	switch language {
+	case state.JavaScript:
+		marshal = marshalJavaScript
+	case state.Python:
+		marshal = marshalPython
+	default:
+		return nil, errors.New("apis/transformers: language is not valid")
+	}
+	var err error
 	b = append(b, '[')
 	for i, v := range values {
 		if i > 0 {
 			b = append(b, ',')
 		}
-		b = marshalJavaScript(b, schema, v)
-		i++
-	}
-	return append(b, ']')
-}
-
-// MarshalPython marshals values, according to the schema of a single value,
-// to a Python array and appends it into b. The encoded value can be put in a
-// JSON string without escape.
-func MarshalPython(b []byte, schema types.Type, values []map[string]any) []byte {
-	b = append(b, '[')
-	for i, v := range values {
-		if i > 0 {
-			b = append(b, ',')
+		b, err = marshal(b, schema, v)
+		if err != nil {
+			return nil, err
 		}
-		b = marshalPython(b, schema, v)
 		i++
 	}
-	return append(b, ']')
+	return append(b, ']'), nil
 }
 
-func marshalJavaScript(b []byte, t types.Type, v any) []byte {
+// marshalJavaScript marshals v as a JavaScript value.
+func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 	pt := t.PhysicalType()
 	if pt == types.PtJSON {
 		var buf strings.Builder
@@ -60,14 +67,14 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 		enc.SetEscapeHTML(false)
 		err := enc.Encode(v)
 		if err != nil {
-			panic("unexpected value")
+			return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
 		}
 		s := buf.String()
 		s = s[:len(s)-1]
 		b = append(b, '\'')
 		b = jsStringEscape(b, s)
 		b = append(b, '\'')
-		return b
+		return b, nil
 	}
 	switch v := v.(type) {
 	case nil:
@@ -127,7 +134,11 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 					b = append(b, ',')
 				}
 				item := rv.Index(i).Interface()
-				b = marshalJavaScript(b, t.Elem(), item)
+				var err error
+				b, err = marshalJavaScript(b, t.Elem(), item)
+				if err != nil {
+					return nil, err
+				}
 			}
 			b = append(b, ']')
 		case types.PtObject:
@@ -140,7 +151,11 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 				if rv.IsValid() {
 					b = append(b, p.Name...)
 					b = append(b, ':')
-					b = marshalJavaScript(b, p.Type, rv.Interface())
+					var err error
+					b, err = marshalJavaScript(b, p.Type, rv.Interface())
+					if err != nil {
+						return nil, err
+					}
 					i++
 				}
 			}
@@ -170,17 +185,22 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 				b = append(b, '\'')
 				b = jsStringEscape(b, e.k)
 				b = append(b, '\'', ':')
-				b = marshalJavaScript(b, vt, e.v)
+				var err error
+				b, err = marshalJavaScript(b, vt, e.v)
+				if err != nil {
+					return nil, err
+				}
 			}
 			b = append(b, '}')
 		default:
-			panic(fmt.Sprintf("unexpected type %s", pt))
+			return nil, fmt.Errorf("apis/transformers: unexpected type %s", pt)
 		}
 	}
-	return b
+	return b, nil
 }
 
-func marshalPython(b []byte, t types.Type, v any) []byte {
+// marshalPython marshals v as a Python value.
+func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 	pt := t.PhysicalType()
 	if pt == types.PtJSON {
 		var buf strings.Builder
@@ -188,14 +208,14 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 		enc.SetEscapeHTML(false)
 		err := enc.Encode(v)
 		if err != nil {
-			panic("unexpected value")
+			return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
 		}
 		s := buf.String()
 		s = s[:len(s)-1]
 		b = append(b, '\'')
 		b = pyStringEscape(b, s)
 		b = append(b, '\'')
-		return b
+		return b, nil
 	}
 	switch v := v.(type) {
 	case nil:
@@ -260,7 +280,11 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 					b = append(b, ',')
 				}
 				item := rv.Index(i).Interface()
-				b = marshalPython(b, t.Elem(), item)
+				var err error
+				b, err = marshalPython(b, t.Elem(), item)
+				if err != nil {
+					return nil, err
+				}
 			}
 			b = append(b, ']')
 		case types.PtObject:
@@ -274,7 +298,11 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 					b = append(b, '\'')
 					b = append(b, p.Name...)
 					b = append(b, '\'', ':')
-					b = marshalPython(b, p.Type, rv.Interface())
+					var err error
+					b, err = marshalPython(b, p.Type, rv.Interface())
+					if err != nil {
+						return nil, err
+					}
 					i++
 				}
 			}
@@ -304,14 +332,18 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 				b = append(b, '\'')
 				b = pyStringEscape(b, e.k)
 				b = append(b, '\'', ':')
-				b = marshalPython(b, vt, e.v)
+				var err error
+				b, err = marshalPython(b, vt, e.v)
+				if err != nil {
+					return nil, err
+				}
 			}
 			b = append(b, '}')
 		default:
-			panic(fmt.Sprintf("unexpected type %s", pt))
+			return nil, fmt.Errorf("apis/transformers: unexpected type %s", pt)
 		}
 	}
-	return b
+	return b, nil
 }
 
 // jsStringEscapes contains the runes that must be escaped when placed within

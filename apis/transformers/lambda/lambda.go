@@ -72,7 +72,13 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 		return nil, errors.New("function name is not valid")
 	}
 	ext := path.Ext(name)
-	if !tr.supportLanguage(ext) {
+	var language state.Language
+	switch ext {
+	case ".js":
+		language = state.JavaScript
+	case ".py":
+		language = state.Python
+	default:
 		return nil, errors.New("language is not supported")
 	}
 
@@ -82,22 +88,13 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	}
 
 	// Marshal the values.
-	var language state.Language
-	var payload []byte
-	switch ext {
-	case ".js":
-		language = state.JavaScript
-		payload = make([]byte, 0, 1024)
-		payload = append(payload, '"')
-		payload = transformers.MarshalJavaScript(payload, inSchema, values)
-		payload = append(payload, '"')
-	case ".py":
-		language = state.Python
-		payload = make([]byte, 0, 1024)
-		payload = append(payload, '"')
-		payload = transformers.MarshalPython(payload, inSchema, values)
-		payload = append(payload, '"')
+	payload := make([]byte, 0, 1024)
+	payload = append(payload, '"')
+	payload, err = transformers.Marshal(payload, inSchema, values, language)
+	if err != nil {
+		return nil, err
 	}
+	payload = append(payload, '"')
 
 	// Invoke the function.
 	var out *lambda.InvokeOutput

@@ -144,7 +144,7 @@ var pythonDecoderOptions = decoderOptions{
 	timeFormat:     "15:04:05.999999",
 }
 
-// Unmarshal unmarshals a JSON array of objects read from r, validating it
+// Unmarshal decodes a JSON array of objects read from r, validating it
 // according to the schema of its elements, which must be an Object.
 //
 // It returns the error ErrSyntaxInvalid if the data being unmarshaled is not

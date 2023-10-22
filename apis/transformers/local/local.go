@@ -51,6 +51,18 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	if err != nil {
 		return nil, err
 	}
+	var language state.Language
+	var executable string
+	switch ext {
+	case ".js":
+		language = state.JavaScript
+		executable = tr.settings.NodeExecutable
+	case ".py":
+		language = state.Python
+		executable = tr.settings.PythonExecutable
+	default:
+		return nil, errors.New("language is not supported")
+	}
 	if !tr.supportLanguage(ext) {
 		return nil, errors.New("language is not supported")
 	}
@@ -59,29 +71,19 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	if err != nil {
 		return nil, fmt.Errorf("invalid version %q", version)
 	}
-	var stdout, stderr bytes.Buffer
 	filename := tr.absFilename(name, versionInt, ext)
-	var executable string
-	var language state.Language
-	var payload []byte
-	switch ext {
-	case ".js":
-		language = state.JavaScript
-		executable = tr.settings.NodeExecutable
-		payload = make([]byte, 0, 1024)
-		payload = transformers.MarshalJavaScript(payload, inSchema, values)
-	case ".py":
-		language = state.Python
-		executable = tr.settings.PythonExecutable
-		payload = make([]byte, 0, 1024)
-		payload = transformers.MarshalPython(payload, inSchema, values)
-	}
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, transformers.ErrNotExist
 		}
 		return nil, err
 	}
+	payload := make([]byte, 0, 1024)
+	payload, err = transformers.Marshal(payload, inSchema, values, language)
+	if err != nil {
+		return nil, err
+	}
+	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, executable, filename, string(payload))
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

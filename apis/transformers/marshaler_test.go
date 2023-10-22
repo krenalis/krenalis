@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/shopspring/decimal"
@@ -231,7 +232,10 @@ func Test_MarshalJavaScript(t *testing.T) {
 	var b []byte
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := MarshalJavaScript(b, test.schema, test.values)
+			got, err := Marshal(b, test.schema, test.values, state.JavaScript)
+			if err != nil {
+				t.Fatalf("Marshal JavaScript: unexpected error: %s", err)
+			}
 			if !bytes.Equal(test.result, got) {
 				t.Fatalf("MarshalJavaScript: expected %s, got %s", string(test.result), string(got))
 			}
@@ -275,9 +279,12 @@ func Test_MarshalPython(t *testing.T) {
 	var b []byte
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := MarshalPython(b, test.schema, test.values)
+			got, err := Marshal(b, test.schema, test.values, state.Python)
+			if err != nil {
+				t.Fatalf("Marshal Python: unexpected error: %s", err)
+			}
 			if !bytes.Equal(test.result, got) {
-				t.Fatalf("MarshalJavaScript: expected %s, got %s", string(test.result), string(got))
+				t.Fatalf("Marshal Python: expected %s, got %s", string(test.result), string(got))
 			}
 		})
 	}
