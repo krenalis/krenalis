@@ -10,6 +10,7 @@ package transformers
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"strconv"
@@ -88,11 +89,21 @@ func marshalJavaScript(b []byte, t types.Type, v any) []byte {
 			b = append(b, 'n')
 		}
 	case float64:
-		bs := 64
-		if pt == types.PtFloat32 {
-			bs = 32
+		if math.IsNaN(v) {
+			b = append(b, "NaN"...)
+		} else if math.IsInf(v, 0) {
+			if v > 0 {
+				b = append(b, "Infinity"...)
+			} else {
+				b = append(b, "-Infinity"...)
+			}
+		} else {
+			bs := 64
+			if pt == types.PtFloat32 {
+				bs = 32
+			}
+			b = strconv.AppendFloat(b, v, 'g', -1, bs)
 		}
-		b = strconv.AppendFloat(b, v, 'g', -1, bs)
 	case decimal.Decimal:
 		b = append(b, '\'')
 		b = append(b, v.String()...)
@@ -200,11 +211,21 @@ func marshalPython(b []byte, t types.Type, v any) []byte {
 	case uint:
 		b = strconv.AppendUint(b, uint64(v), 10)
 	case float64:
-		bs := 64
-		if pt == types.PtFloat32 {
-			bs = 32
+		if math.IsNaN(v) {
+			b = append(b, "float('nan')"...)
+		} else if math.IsInf(v, 0) {
+			if v > 0 {
+				b = append(b, "float('inf')"...)
+			} else {
+				b = append(b, "float('-inf')"...)
+			}
+		} else {
+			bs := 64
+			if pt == types.PtFloat32 {
+				bs = 32
+			}
+			b = strconv.AppendFloat(b, v, 'g', -1, bs)
 		}
-		b = strconv.AppendFloat(b, v, 'g', -1, bs)
 	case decimal.Decimal:
 		b = append(b, "Decimal('"...)
 		b = append(b, v.String()...)
