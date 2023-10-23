@@ -111,9 +111,14 @@ func (store *Store) SetDestinationUser(ctx context.Context, connection int, exte
 // SetIdentity sets the identity id (which may have an anonymous ID) imported
 // from the action. fromEvents indicates if the identity has been imported from
 // an event or not.
-func (store *Store) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error {
+// timestamp, when not zero, is the timestamp that will be associated to the
+// imported identity, otherwise the current local timestamp is used.
+func (store *Store) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
 	store.mustBeOpen()
-	return store.warehouse.SetIdentity(ctx, identity, id, anonID, action, fromEvent)
+	if timestamp.IsZero() {
+		timestamp = time.Now().Local()
+	}
+	return store.warehouse.SetIdentity(ctx, identity, id, anonID, action, fromEvent, timestamp)
 }
 
 // Schemas returns the schemas of users, groups, and events for the relative

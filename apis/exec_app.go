@@ -283,7 +283,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 			}
 
 			// Set the identity into the data warehouse.
-			err = this.connection.store.SetIdentity(ctx, identity, user.ID, "", this.action.ID, false)
+			err = this.connection.store.SetIdentity(ctx, identity, user.ID, "", this.action.ID, false, user.Timestamp)
 			if err != nil {
 				return actionExecutionError{err}
 			}

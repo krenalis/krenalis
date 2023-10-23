@@ -222,7 +222,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		}
 
 		// Set the identity into the data warehouse.
-		err = c.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false)
+		err = c.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, time.Time{})
 		if err != nil {
 			return actionExecutionError{err}
 		}

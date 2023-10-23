@@ -566,7 +566,8 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 // SetIdentity sets the identity id (which may have an anonymous ID) imported from
 // the action. fromEvents indicates if the identity has been imported from an
 // event or not.
-func (warehouse *PostgreSQL) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error {
+// timestamp is the timestamp that will be associated to the imported identity.
+func (warehouse *PostgreSQL) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
 
 	// Retrieve the database connection.
 	db, err := warehouse.connection()
@@ -616,11 +617,7 @@ func (warehouse *PostgreSQL) SetIdentity(ctx context.Context, identity map[strin
 	var newIdentityID int
 	identity["__action__"] = action
 	identity["__external_id__"] = id
-	// TODO: review the usage of timestamps.
-	// See the issue https://github.com/open2b/chichi/issues/299.
-	if _, ok := identity["__timestamp__"]; !ok {
-		identity["__timestamp__"] = time.Now().Format(time.DateTime)
-	}
+	identity["__timestamp__"] = timestamp.Format(time.DateTime)
 	if anonID != "" {
 		identity["__anonymous_ids__"] = []string{anonID}
 	}

@@ -148,7 +148,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			}
 			// Set the user into the data warehouse.
 			store := c.datastore.Store(ws.ID)
-			err = store.SetIdentity(ctx, mappedUser, event.UserId, event.AnonymousId, action.ID, true)
+			err = store.SetIdentity(ctx, mappedUser, event.UserId, event.AnonymousId, action.ID, true, event.timestamp)
 			if err != nil {
 				return err
 			}

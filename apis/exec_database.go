@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
@@ -112,7 +113,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 		}
 
 		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false)
+		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, time.Time{})
 		if err != nil {
 			return err
 		}

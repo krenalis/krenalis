@@ -148,7 +148,8 @@ func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, connection 
 // SetIdentity sets the identity id (which may have an anonymous ID) imported
 // from the action. fromEvents indicates if the identity has been imported from
 // an event or not.
-func (warehouse *ClickHouse) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error {
+// timestamp is the timestamp that will be associated to the imported identity.
+func (warehouse *ClickHouse) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
 	panic("TODO: not implemented")
 }
 
