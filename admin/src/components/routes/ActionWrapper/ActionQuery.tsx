@@ -21,7 +21,7 @@ const queryMaxSize = 16777215;
 const ActionQuery = () => {
 	const [queryPreviewColumns, setQueryPreviewColumns] = useState<GridColumn[] | null>(null);
 	const [queryPreviewRows, setQueryPreviewRows] = useState<GridRow[] | null>(null);
-	const [showQueryPreviewContent, setShowQueryPreviewContent] = useState<boolean>(false);
+	const [showPreview, setShowPreview] = useState<boolean>(false);
 
 	const { redirect, showError, showStatus, api } = useContext(AppContext);
 	const { connection, action, setAction, actionType, setActionType, mappingSectionRef, setIsQueryChanged } =
@@ -35,7 +35,7 @@ const ActionQuery = () => {
 	}, []);
 
 	const onQueryPreview = async () => {
-		const res = await query(20);
+		const res = await query(20, false);
 		if (res == null) {
 			return;
 		}
@@ -51,7 +51,12 @@ const ActionQuery = () => {
 		}
 		const rows: GridRow[] = [];
 		for (const row of res.Rows) {
-			rows.push({ cells: Object.values(row) });
+			const cells: any[] = [];
+			for (const prop of res.Schema.properties!) {
+				const key = prop.name;
+				cells.push(row[key]);
+			}
+			rows.push({ cells: cells });
 		}
 		setQueryPreviewColumns(columns);
 		setQueryPreviewRows(rows);
@@ -92,20 +97,19 @@ const ActionQuery = () => {
 		}, CONFIRM_ANIMATION_DURATION);
 	};
 
-	const query = async (limit: number, isConfirmation?: boolean) => {
-		const a = { ...action };
-		const trimmed = a.Query!.trim();
-		if (trimmed.length > queryMaxSize) {
+	const query = async (limit: number, isConfirmation: boolean) => {
+		const q = action.Query!.trim();
+		if (q.length > queryMaxSize) {
 			showError('The query is too long');
 			return;
 		}
-		if (!trimmed.includes('$limit')) {
+		if (!q.includes('$limit')) {
 			showError(`The query does not contain the $limit variable`);
 			return;
 		}
 		let res: ExecQueryResponse;
 		try {
-			res = await api.workspaces.connections.query(connection.id, trimmed, limit);
+			res = await api.workspaces.connections.query(connection.id, q, limit);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -114,32 +118,30 @@ const ActionQuery = () => {
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'QueryExecutionFailed') {
-					let statusMessage: string;
-					if (err.cause && err.cause !== '') {
-						statusMessage = err.cause;
-					} else {
-						statusMessage = err.message;
-					}
-					showStatus({ variant: variants.DANGER, icon: icons.CODE_ERROR, text: statusMessage });
+					showStatus({ variant: variants.DANGER, icon: icons.CODE_ERROR, text: err.cause });
 				}
 				return;
 			}
 			showError(err);
 			return;
 		}
-		if (Object.keys(res.Schema.properties!).length === 0) {
+		if (res.Schema.properties!.length === 0) {
 			showError('The query execution did not yield any columns');
 			return;
 		}
 		if (isConfirmation) {
-			lastQueryConfirmation.current = trimmed;
+			lastQueryConfirmation.current = q;
+			setIsQueryChanged(false);
 		}
 		return res;
 	};
 
 	return (
 		<>
-			<Section title='Query' description='The query used to import the data. It must contain the string {{ LIMIT $limit }}.'>
+			<Section
+				title='Query'
+				description='The query used to import the data. It must contain the string {{ LIMIT $limit }}.'
+			>
 				<EditorWrapper
 					language='sql'
 					height={400}
@@ -166,16 +168,16 @@ const ActionQuery = () => {
 				className='previewDrawer'
 				label='Query Preview'
 				open={queryPreviewColumns != null && queryPreviewRows != null}
-				onSlAfterShow={() => setShowQueryPreviewContent(true)}
+				onSlAfterShow={() => setShowPreview(true)}
 				onSlAfterHide={() => {
 					setQueryPreviewColumns(null);
 					setQueryPreviewRows(null);
-					setShowQueryPreviewContent(false);
+					setShowPreview(false);
 				}}
 				placement='bottom'
 				style={{ '--size': '600px' } as React.CSSProperties}
 			>
-				{showQueryPreviewContent ? (
+				{showPreview ? (
 					<Grid
 						columns={queryPreviewColumns!}
 						rows={queryPreviewRows!}

@@ -17,16 +17,22 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 			value = JSON.stringify(cell.value);
 			break;
 		case 'DateTime':
-			date = new Date(toJSDateString(cell.value as string));
-			value = date.toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+			if (cell.value != null) {
+				date = new Date(toJSDateString(cell.value as string));
+				value = date.toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+			}
 			break;
 		case 'Date':
-			date = new Date(toJSDateString(cell.value as string));
-			value = date.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' });
+			if (cell.value != null) {
+				date = new Date(toJSDateString(cell.value as string));
+				value = date.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' });
+			}
 			break;
 		case 'Time':
-			date = new Date(toJSDateString(cell.value as string));
-			value = date.toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome' });
+			if (cell.value != null) {
+				date = new Date(toJSDateString(cell.value as string));
+				value = date.toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome' });
+			}
 			break;
 		default:
 			value = cell.value;
