@@ -2468,13 +2468,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 
-	// Validate empty mappings; they are allowed only when sending events,
-	// because the user may want to leave every property of the output schema
-	// unmapped.
-	if action.Mapping != nil && len(action.Mapping) == 0 && target != state.EventsTarget {
-		return errors.BadRequest("action has a mapping with no mapped properties")
-	}
-
 	// Check if the mapping (or the transformation) is mandatory, and if the
 	// transformation is allowed.
 	var mappingIsMandatory bool
