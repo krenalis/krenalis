@@ -827,15 +827,19 @@ func validJSON(src any) bool {
 		return !math.IsNaN(src) && !math.IsInf(src, 0)
 	case []any:
 		for _, v := range src {
-			if ok := validJSON(v); !ok {
-				return false
+			if v != nil {
+				if ok := validJSON(v); !ok {
+					return false
+				}
 			}
 		}
 		return true
 	case map[string]any:
 		for _, v := range src {
-			if ok := validJSON(v); !ok {
-				return false
+			if v != nil {
+				if ok := validJSON(v); !ok {
+					return false
+				}
 			}
 		}
 		return true
