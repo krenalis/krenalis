@@ -62,13 +62,16 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
-		// Determine and validate the external id, reading it from the SQL
-		// expression named "id" returned by the query.
-		var idExpr types.Property
+		// Determine and validate the external id and the timestamp, reading
+		// them from the SQL expression named "id" and "timestamp" returned by
+		// the query.
+		var idExpr, timestampExpr types.Property
 		for _, p := range properties {
-			if p.Name == "id" {
+			switch p.Name {
+			case "id":
 				idExpr = p
-				break
+			case "timestamp":
+				timestampExpr = p
 			}
 		}
 		if idExpr.Name == "" {
@@ -86,6 +89,18 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			default:
 				return actionExecutionError{fmt.Errorf("expression 'id' with type %s cannot be used as identifier", pt)}
 			}
+		}
+		var timestamp time.Time
+		if timestampExpr.Name != "" {
+			rawTimestamp, ok := row["timestamp"]
+			if !ok {
+				return actionExecutionError{errors.New("no values for expression 'timestamp' returned by the query")}
+			}
+			ts, err := normalization.NormalizeDatabaseFileProperty("timestamp", types.DateTime(), rawTimestamp, false)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("expression 'timestamp' cannot be used as identifier: %s", err)}
+			}
+			timestamp = ts.(time.Time)
 		}
 
 		// Take only the necessary properties.
@@ -113,7 +128,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 		}
 
 		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, time.Time{})
+		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, timestamp)
 		if err != nil {
 			return err
 		}
