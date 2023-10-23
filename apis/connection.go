@@ -2259,6 +2259,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
 	}
+	// An action cannot have both mappings and transformations.
+	if action.Mapping != nil && action.Transformation != nil {
+		return errors.BadRequest("action cannot have both mappings and transformation")
+	}
 	// Validate the mapping.
 	var outPaths []types.Path
 	if action.Mapping != nil && len(action.Mapping) > 0 {
