@@ -95,6 +95,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 	}
 
 	// Read the records.
+	nameOfKey := map[string]string{}
 	columns := make([]types.Property, 0, 10)
 	record := map[string]any{}
 Records:
@@ -105,20 +106,40 @@ Records:
 		}
 		switch tok := tok.(type) {
 		case string:
-			var name = tok
+			var key = tok
 			var value any
 			err = dec.Decode(&value)
 			if err != nil {
 				break Records
 			}
-			record[name] = value
-			if columns != nil {
+			var name string
+			if columns == nil {
+				var ok bool
+				name, ok = nameOfKey[key]
+				if !ok {
+					return fmt.Errorf("key %q does not exist for the first object", key)
+				}
+			} else {
+				name = connector.SuggestPropertyName(key)
+				if name == "" {
+					return fmt.Errorf("key %q cannot be converted to a valid property name", key)
+				}
+				for n, k := range nameOfKey {
+					if name == n {
+						if key == k {
+							return fmt.Errorf("key %q is repeated", key)
+						}
+						return fmt.Errorf("keys %q and %q cannot be converted into two different property names", key, k)
+					}
+				}
 				columns = append(columns, types.Property{
 					Name:     name,
 					Type:     types.JSON(),
 					Nullable: true,
 				})
+				nameOfKey[key] = name
 			}
+			record[name] = value
 		case json.Delim:
 			switch tok {
 			case '}':

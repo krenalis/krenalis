@@ -50,6 +50,16 @@ func (err NotSupportedTypeError) Error() string {
 	return fmt.Sprintf("type %s of the column %q is not supported", err.Type, err.Column)
 }
 
+// SuggestPropertyName suggests a valid property name based on s.
+// If no valid property name can be determined, it returns an empty string.
+func SuggestPropertyName(s string) string {
+	if types.IsValidPropertyName(s) {
+		return s
+	}
+	// TODO(marco): implement the logic
+	return ""
+}
+
 // Type represents a connector type.
 type Type int
 
