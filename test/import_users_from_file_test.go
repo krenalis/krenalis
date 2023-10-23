@@ -55,16 +55,16 @@ func TestImportUsersFromFile(t *testing.T) {
 			"Name": "Import users from CSV on Filesystem",
 			"Path": "users.csv",
 			"InSchema": types.Object([]types.Property{
-				{Name: "column4", Type: types.Text()},
-				{Name: "column5", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
+				{Name: "timestamp", Type: types.Text()},
 			}),
 			"OutSchema": types.Object([]types.Property{
 				{Name: "Email", Type: types.Text()},
 				{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
 			}),
 			"Mapping": map[string]string{
-				"Email":     "column4",
-				"timestamp": "column5",
+				"Email":     "email",
+				"timestamp": "timestamp",
 			},
 		},
 	})

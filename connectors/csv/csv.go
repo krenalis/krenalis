@@ -67,6 +67,7 @@ type settings struct {
 	LazyQuotes       bool
 	TrimLeadingSpace bool
 	UseCRLF          bool
+	HasColumnNames   bool
 }
 
 // ContentType returns the content type of the file.
@@ -87,6 +88,8 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
 
+	var nameOfHeader map[string]string
+
 	first := true
 	for {
 		// Read a record.
@@ -101,8 +104,32 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 		if first {
 			columns := make([]types.Property, len(record))
 			for i := range columns {
-				columns[i].Name = "column" + strconv.Itoa(i+1)
-				columns[i].Label = record[i]
+				if c.settings.HasColumnNames {
+					header := record[i]
+					name := connector.SuggestPropertyName(header)
+					if name == "" {
+						return fmt.Errorf("column name %q cannot be converted to a valid property name", header)
+					}
+					if nameOfHeader == nil {
+						nameOfHeader = make(map[string]string, len(record))
+					}
+					for n, h := range nameOfHeader {
+						if name == n {
+							if header == h {
+								return fmt.Errorf("column name %q is repeated", header)
+							}
+							return fmt.Errorf("column name %q and %q cannot be converted into two different property names", header, h)
+						}
+					}
+					columns[i].Name = name
+					if name != record[i] {
+						columns[i].Label = header
+					}
+					nameOfHeader[header] = name
+				} else {
+					name := columnIndexToPropertyName(i + 1)
+					columns[i].Name = name
+				}
 				columns[i].Type = types.Text()
 			}
 			err = records.Columns(columns)
@@ -110,7 +137,9 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 				return err
 			}
 			first = false
-			continue
+			if c.settings.HasColumnNames {
+				continue
+			}
 		}
 		// Write the record.
 		err = records.RecordString(record)
@@ -157,6 +186,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", Role: ui.SourceRole},
 			&ui.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: ui.SourceRole},
 			&ui.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
+			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.SourceRole},
 		},
 		Values: values,
 		Actions: []ui.Action{
@@ -203,6 +233,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		s.Comment = ""
 		s.FieldsPerRecord = 0
 		s.TrimLeadingSpace = false
+		s.HasColumnNames = false
 	}
 	return json.Marshal(&s)
 }
@@ -286,4 +317,17 @@ func toString(v any, t types.Type) string {
 	default:
 		panic(fmt.Sprintf("unexpected physical type %s", pt))
 	}
+}
+
+// columnIndexToPropertyName returns a property name from a column index.
+// Column indexes starts from 1.
+func columnIndexToPropertyName(i int) string {
+	// The code of this function has the following license:
+	// https://github.com/qax-os/excelize/blob/master/LICENSE
+	var c string
+	for i > 0 {
+		c = string(rune((i-1)%26+'A')) + c
+		i = (i - 1) / 26
+	}
+	return c
 }

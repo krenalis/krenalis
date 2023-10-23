@@ -48,7 +48,8 @@ func (c *Chichi) AddSourceCSV(filesystem int) int {
 			"Storage": filesystem,
 		},
 		"Settings": map[string]any{
-			"Comma": ",",
+			"Comma":          ",",
+			"HasColumnNames": true,
 		},
 	})
 }
