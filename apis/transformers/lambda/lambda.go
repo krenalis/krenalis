@@ -336,7 +336,8 @@ def _handler(event, context):
 		try:
 			value = transform(e)
 		except Exception as ex:
-			results.append({"error": str(ex)})
+			name = type(ex).__name__
+			results.append({"error": f"{name}: {ex}"})
 		else:
 			results.append({"value": value})
 	return json.dumps(results, separators=(",", ":"), default=str)
