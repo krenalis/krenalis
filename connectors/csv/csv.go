@@ -127,7 +127,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 					}
 					nameOfHeader[header] = name
 				} else {
-					name := columnIndexToPropertyName(i + 1)
+					name := columnNumberToName(i + 1)
 					columns[i].Name = name
 				}
 				columns[i].Type = types.Text()
@@ -319,15 +319,15 @@ func toString(v any, t types.Type) string {
 	}
 }
 
-// columnIndexToPropertyName returns a property name from a column index.
-// Column indexes starts from 1.
-func columnIndexToPropertyName(i int) string {
+// columnNumberToName returns a column name from a column number.
+// Column numbers starts from 1.
+func columnNumberToName(n int) string {
 	// The code of this function has the following license:
 	// https://github.com/qax-os/excelize/blob/master/LICENSE
 	var c string
-	for i > 0 {
-		c = string(rune((i-1)%26+'A')) + c
-		i = (i - 1) / 26
+	for n > 0 {
+		c = string(rune((n-1)%26+'A')) + c
+		n = (n - 1) / 26
 	}
 	return c
 }
