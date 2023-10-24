@@ -2212,7 +2212,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
-		connection, statsTimeSlot(time.Now()))
+		connection, statsTimeSlot(time.Now().UTC()))
 	return err
 }
 
