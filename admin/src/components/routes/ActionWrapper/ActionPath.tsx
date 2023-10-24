@@ -191,8 +191,13 @@ const ActionPath = () => {
 		}
 		setFilePreviewColumns(columns);
 		const rows: GridRow[] = [];
-		for (const row of res.records) {
-			rows.push({ cells: Object.values(row) });
+		for (const record of res.records) {
+			const row = [];
+			for (const property of res.schema.properties) {
+				const value = record[property.name];
+				row.push(value);
+			}
+			rows.push({ cells: row });
 		}
 		setFilePreviewRows(rows);
 	};
