@@ -190,7 +190,7 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
 				externalID = fmt.Sprint(rawID)
 			default:
-				return actionExecutionError{fmt.Errorf("column 'id' with type %s cannot be used as identifier", pt)}
+				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as identifier", idColumn.Name, pt)}
 			}
 		}
 
