@@ -60,7 +60,7 @@ const ConnectionOverview = () => {
 			const userStats: any[] = [];
 			// compute the last 24 hours.
 			var ts = Math.round(new Date().getTime());
-			for (const [i, userCount] of stats.Users.entries()) {
+			for (const [i, userCount] of stats.UserIdentities.entries()) {
 				const relativeTs = ts + (i + 1) * 3600 * 1000;
 				const d = new Date(relativeTs);
 				const hour = d.getHours();
@@ -120,7 +120,7 @@ const ConnectionOverview = () => {
 				<>
 					<div className='chart'>
 						<Flex className='chartHead' justifyContent='space-between' alignItems='baseline'>
-							<div className='title'>Users ingested by {c.name} in the last 24 hours</div>
+							<div className='title'>User identities ingested by {c.name} in the last 24 hours</div>
 						</Flex>
 						<BarChart width={1400} height={350} data={userStats}>
 							<CartesianGrid strokeDasharray='3 3' />

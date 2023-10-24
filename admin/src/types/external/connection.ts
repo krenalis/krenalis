@@ -34,7 +34,7 @@ interface ConnectionOptions {
 }
 
 interface ConnectionStats {
-	Users: number[];
+	UserIdentities: number[];
 }
 
 export type { Connection, ConnectionRole, Compression, ConnectionOptions, ConnectorType, Health, ConnectionStats };

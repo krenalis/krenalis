@@ -1393,7 +1393,7 @@ func (this *Connection) Sheets(ctx context.Context, path string) ([]string, erro
 // ConnectionsStats represents the statistics on a connection for the last 24
 // hours.
 type ConnectionsStats struct {
-	Users [24]int // ingested or loaded users per hour
+	UserIdentities [24]int // ingested or loaded user identities per hour
 }
 
 // Stats returns statistics on the connection for the last 24 hours.
@@ -1406,17 +1406,17 @@ func (this *Connection) Stats(ctx context.Context) (*ConnectionsStats, error) {
 	toSlot := statsTimeSlot(now)
 	fromSlot := toSlot - 23
 	stats := &ConnectionsStats{
-		Users: [24]int{},
+		UserIdentities: [24]int{},
 	}
-	query := "SELECT time_slot, users\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
+	query := "SELECT time_slot, user_identities\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
 	err := this.apis.db.QueryScan(ctx, query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
-		var slot, users int
+		var slot, userIdentities int
 		for rows.Next() {
-			if err = rows.Scan(&slot, &users); err != nil {
+			if err = rows.Scan(&slot, &userIdentities); err != nil {
 				return err
 			}
-			stats.Users[slot-fromSlot] = users
+			stats.UserIdentities[slot-fromSlot] = userIdentities
 		}
 		return nil
 	})
@@ -2209,9 +2209,9 @@ func (this *Connection) setSettingsFunc() _connector.SetSettingsFunc {
 // updateConnectionsStats updates the statistics about the connection.
 func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 	connection := this.connection.ID
-	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
+	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, user_identities)\n"+
 		"VALUES ($1, $2, 1)\n"+
-		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET user_identities = cs.user_identities + 1",
 		connection, statsTimeSlot(time.Now().UTC()))
 	return err
 }

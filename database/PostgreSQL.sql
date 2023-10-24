@@ -155,7 +155,7 @@ CREATE TABLE connections_keys (
 CREATE TABLE connections_stats (
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     time_slot integer NOT NULL,
-    users integer NOT NULL,
+    user_identities integer NOT NULL,
     PRIMARY KEY (connection, time_slot)
 );
 
