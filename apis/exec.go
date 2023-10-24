@@ -85,19 +85,19 @@ func (this *Action) exec(ctx context.Context) {
 		switch c.Type {
 		case state.AppType:
 			if connection.Role == state.SourceRole {
-				err = this.importFromApp(ctx)
+				err = this.importUsersFromApp(ctx)
 			} else {
 				err = this.exportUsersToApp(ctx)
 			}
 		case state.DatabaseType:
 			if connection.Role == state.SourceRole {
-				err = this.importFromDatabase(ctx)
+				err = this.importUsersFromDatabase(ctx)
 			} else {
 				err = this.exportUsersToDatabase(ctx)
 			}
 		case state.FileType:
 			if connection.Role == state.SourceRole {
-				err = this.importFromFile(ctx)
+				err = this.importUsersFromFile(ctx)
 			} else {
 				err = this.exportUsersToFile(ctx)
 			}

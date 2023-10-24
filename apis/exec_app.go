@@ -206,8 +206,8 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	return nil
 }
 
-// importFromApp imports the users from an app.
-func (this *Action) importFromApp(ctx context.Context) error {
+// importUsersFromApp imports the users from an app.
+func (this *Action) importUsersFromApp(ctx context.Context) error {
 
 	app, err := this.connection.openAppUsers()
 	if err != nil {

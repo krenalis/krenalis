@@ -20,8 +20,8 @@ import (
 	"chichi/connector/types"
 )
 
-// importFromDatabase imports the users from a database.
-func (this *Action) importFromDatabase(ctx context.Context) error {
+// importUsersFromDatabase imports the users from a database.
+func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 
 	// Compile the query.
 	query, err := compileActionQuery(this.action.Query, noQueryLimit)

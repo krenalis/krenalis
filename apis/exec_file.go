@@ -140,8 +140,8 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	return nil
 }
 
-// importFromFile imports the users from a file.
-func (this *Action) importFromFile(ctx context.Context) error {
+// importUsersFromFile imports the users from a file.
+func (this *Action) importUsersFromFile(ctx context.Context) error {
 
 	// Connect to the file connector.
 	file, err := this.connection.openFile()
