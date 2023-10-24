@@ -287,16 +287,14 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12)", n.ID, n.Workspace, n.Name, c.Type,
 			n.Role, n.Enabled, n.Connector, n.Storage, n.Compression, n.Resource.ID, n.WebsiteHost, string(n.Settings))
 		if err != nil {
-			if err != nil {
-				if postgres.IsForeignKeyViolation(err) {
-					switch postgres.ErrConstraintName(err) {
-					case "connections_workspace_fkey":
-						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
-					case "connections_connector_fkey":
-						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
-					case "connections_storage_fkey":
-						err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
-					}
+			if postgres.IsForeignKeyViolation(err) {
+				switch postgres.ErrConstraintName(err) {
+				case "connections_workspace_fkey":
+					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+				case "connections_connector_fkey":
+					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+				case "connections_storage_fkey":
+					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
 				}
 			}
 			return err
