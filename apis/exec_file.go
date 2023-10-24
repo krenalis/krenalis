@@ -184,7 +184,7 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 		{
 			rawID, ok := record[idColumn.Name]
 			if !ok {
-				return actionExecutionError{errors.New("column '%s' not present in file record")}
+				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idColumn.Name)}
 			}
 			switch pt := idColumn.Type.PhysicalType(); {
 			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
