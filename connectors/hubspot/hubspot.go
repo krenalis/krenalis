@@ -276,13 +276,18 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 			property.Role = types.SourceRole
 		}
 		if typ.PhysicalType() == types.PtText {
-			var n int
-			for _, option := range r.Options {
-				if !option.Hidden {
-					n++
+			if len(r.Options) == 0 {
+				property.Type.WithCharLen(65536)
+			} else {
+				var n int
+				for _, option := range r.Options {
+					if !option.Hidden {
+						n++
+					}
 				}
-			}
-			if n > 0 {
+				if n == 0 {
+					continue // all options are hidden, skip the property
+				}
 				values := make([]string, 0, n)
 				for _, option := range r.Options {
 					if option.Hidden {
@@ -290,8 +295,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 					}
 					values = append(values, option.Value)
 				}
-
-				property.Type = property.Type.WithValues(values...)
+				property.Type = typ.WithValues(values...)
 			}
 		}
 		properties = append(properties, property)
@@ -518,7 +522,7 @@ func propertyType(c, t string) (types.Type, error) {
 	case "number":
 		return types.Decimal(types.MaxDecimalPrecision-1, 1), nil
 	case "string", "phone_number":
-		return types.Text().WithCharLen(65536), nil
+		return types.Text(), nil
 	}
 	return types.Type{}, connector.NewNotSupportedTypeError(c, t)
 }
