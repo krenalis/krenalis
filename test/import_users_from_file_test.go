@@ -46,7 +46,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Create the CSV connection.
 	csvID := c.AddSourceCSV(fsID)
 
-	c.SetWorkspaceIdentifiers([]string{"Email"}, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
 
 	// Add an action to the CSV for importing the users.
 	importUsersActionID := c.AddAction(csvID, map[string]any{
@@ -59,11 +59,11 @@ func TestImportUsersFromFile(t *testing.T) {
 				{Name: "timestamp", Type: types.Text()},
 			}),
 			"OutSchema": types.Object([]types.Property{
-				{Name: "Email", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
 				{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
 			}),
 			"Mapping": map[string]string{
-				"Email":     "email",
+				"email":     "email",
 				"timestamp": "timestamp",
 			},
 		},
@@ -76,7 +76,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.WaitActionsToFinish(csvID)
 
 	// Retrieve the users.
-	ret := c.Users([]string{"Email"}, 0, 100)
+	ret := c.Users([]string{"email"}, 0, 100)
 	count := int(ret["count"].(float64))
 	if count != 2 {
 		t.Fatalf("expecting %d users, got %d", 2, count)

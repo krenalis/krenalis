@@ -32,7 +32,7 @@ const User = () => {
 				<div className='userTitleText'>
 					<SlIcon name='person-circle' />
 					<span className='text'>
-						{user.traits.FirstName} {user.traits.LastName}
+						{user.traits.first_name} {user.traits.last_name}
 					</span>
 				</div>,
 			);
@@ -248,12 +248,12 @@ const User = () => {
 							nameSkeleton
 						) : (
 							<div className='nameText'>
-								{user.traits.FirstName} {user.traits.LastName}
+								{user.traits.first_name} {user.traits.last_name}
 							</div>
 						)}
 					</div>
 					<div className='email'>
-						{user == null ? emailSkeleton : <div className='emailText'>{user.traits.Email}</div>}
+						{user == null ? emailSkeleton : <div className='emailText'>{user.traits.email}</div>}
 					</div>
 				</div>
 				{user == null ? (

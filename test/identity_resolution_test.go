@@ -62,17 +62,17 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the JSON connection.
 	jsonID := c.AddSourceJSON(fsID)
 
-	allProps := []string{"dummy_id", "Email", "PhoneNumbers"}
-	identifiers := []string{"dummy_id", "Email", "PhoneNumbers"}
+	allProps := []string{"dummy_id", "email", "phone_numbers"}
+	identifiers := []string{"dummy_id", "email", "phone_numbers"}
 	inSchemaProps := []types.Property{
 		{Name: "dummy_id", Type: types.JSON()},
-		{Name: "Email", Type: types.JSON()},
-		{Name: "PhoneNumbers", Type: types.JSON()},
+		{Name: "email", Type: types.JSON()},
+		{Name: "phone_numbers", Type: types.JSON()},
 	}
 	outSchemaProps := []types.Property{
 		{Name: "dummy_id", Type: types.Text()},
-		{Name: "Email", Type: types.Text()},
-		{Name: "PhoneNumbers", Type: types.Array(types.Text())},
+		{Name: "email", Type: types.Text()},
+		{Name: "phone_numbers", Type: types.Array(types.Text())},
 	}
 
 	c.SetWorkspaceIdentifiers(identifiers, apis.AnonymousIdentifiers{})
@@ -137,16 +137,16 @@ func TestIdentityResolution(t *testing.T) {
 		t.Logf("importing user %v", props)
 		var s struct {
 			DummyID      *string `json:"dummy_id,omitempty"`
-			Email        *string `json:"Email,omitempty"`
-			PhoneNumbers *[]any  `json:"PhoneNumbers,omitempty"`
+			Email        *string `json:"email,omitempty"`
+			PhoneNumbers *[]any  `json:"phone_numbers,omitempty"`
 		}
 		if dummyID, ok := props["dummy_id"].(string); ok {
 			s.DummyID = &dummyID
 		}
-		if email, ok := props["Email"].(string); ok {
+		if email, ok := props["email"].(string); ok {
 			s.Email = &email
 		}
-		if phoneNumbers, ok := props["PhoneNumbers"].([]any); ok {
+		if phoneNumbers, ok := props["phone_numbers"].([]any); ok {
 			s.PhoneNumbers = &phoneNumbers
 		}
 		content, err := json.Marshal([]any{s})
@@ -171,32 +171,32 @@ func TestIdentityResolution(t *testing.T) {
 	expectUsers([]map[string]any{})
 
 	expectUsers([]map[string]any{})
-	importUser(actionA, map[string]any{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{}})
+	importUser(actionA, map[string]any{"dummy_id": "AAA", "email": "", "phone_numbers": []any{}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{}},
 	})
 
-	importUser(actionA, map[string]any{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}})
+	importUser(actionA, map[string]any{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionA, map[string]any{"dummy_id": "BBB", "Email": "", "PhoneNumbers": []any{"333"}})
+	importUser(actionA, map[string]any{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
-		{"dummy_id": "BBB", "Email": "", "PhoneNumbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionB, map[string]any{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"333"}})
+	importUser(actionB, map[string]any{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
-		{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionB, map[string]any{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444"}})
+	importUser(actionB, map[string]any{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"444"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
-		{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"444"}},
 	})
 
 	// -------------------------------------------------------------------------

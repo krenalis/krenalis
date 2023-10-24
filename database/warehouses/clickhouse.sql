@@ -15,13 +15,13 @@ CREATE TABLE users
     "ios_id" String,
     "ios_idfa" String,
     "ios_push_token" String,
-    `FirstName` String,
-    `LastName` String,
-    `Email` String,
-    `Gender` Enum8('male' = 1, 'female' = 2, 'other' = 3),
-    `FoodPreferences_Drink` Enum8('water' = 1, 'wine' = 2, 'beer' = 3, 'tea' = 4),
-    `FoodPreferences_Fruit` Enum8('apple' = 1, 'orange' = 2, 'mango' = 3, 'peach' = 4, 'lime' = 5),
-    `PhoneNumbers` Array(String)
+    `first_name` String,
+    `last_name` String,
+    `email` String,
+    `gender` Enum8('male' = 1, 'female' = 2, 'other' = 3),
+    `food_preferences_drink` Enum8('water' = 1, 'wine' = 2, 'beer' = 3, 'tea' = 4),
+    `food_preferences_fruit` Enum8('apple' = 1, 'orange' = 2, 'mango' = 3, 'peach' = 4, 'lime' = 5),
+    `phone_numbers` Array(String)
 )
 ENGINE = MergeTree
 PRIMARY KEY id

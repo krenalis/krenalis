@@ -29,7 +29,7 @@ func TestImportWithTransformation(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummyID := c.AddDummy("Dummy (source)", connector.SourceRole)
 
-	c.SetWorkspaceIdentifiers([]string{"Email"}, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
 
 	// Add an action with a transformation function which imports users, then
 	// execute it.
@@ -42,9 +42,9 @@ func TestImportWithTransformation(t *testing.T) {
 				{Name: "first_name", Type: types.Text()},
 			}),
 			"OutSchema": types.Object([]types.Property{
-				{Name: "Email", Type: types.Text()},
-				{Name: "FirstName", Type: types.Text()},
-				{Name: "Gender", Type: types.Text().WithValues("male", "female", "other")},
+				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.Text()},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
 			"Transformation": map[string]any{
 				"Source": `
@@ -54,9 +54,9 @@ def transform(user: dict) -> dict:
 	else:
 		gender = "female"
 	return {
-		"Email": user["email"],
-		"FirstName": user["first_name"],
-		"Gender": gender,
+		"email": user["email"],
+		"first_name": user["first_name"],
+		"gender": gender,
 	}`,
 				"Language": "Python",
 			},
@@ -66,7 +66,7 @@ def transform(user: dict) -> dict:
 	c.WaitActionsToFinish(dummyID)
 
 	// Retrieve the users.
-	ret := c.Users([]string{"Email", "FirstName", "Gender"}, 0, 2)
+	ret := c.Users([]string{"email", "first_name", "gender"}, 0, 2)
 
 	// Validate the total count of the users.
 	totalCount := int(ret["count"].(float64))

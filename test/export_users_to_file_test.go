@@ -35,7 +35,7 @@ func TestExportUsersToFile(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"Email"}, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
 
 	// Load some users in the data warehouse.
 	{
@@ -50,16 +50,16 @@ func TestExportUsersToFile(t *testing.T) {
 					{Name: "last_name", Type: types.Text()},
 				}),
 				"OutSchema": types.Object([]types.Property{
-					{Name: "Email", Type: types.Text()},
-					{Name: "FirstName", Type: types.Text()},
-					{Name: "LastName", Type: types.Text()},
-					{Name: "Gender", Type: types.Text().WithValues("male", "female", "other")},
+					{Name: "email", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+					{Name: "last_name", Type: types.Text()},
+					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 				}),
 				"Mapping": map[string]string{
-					"Email":     "coalesce(email, 'default.email@example.com')",
-					"FirstName": "first_name",
-					"LastName":  "last_name",
-					"Gender":    "'male'",
+					"email":      "coalesce(email, 'default.email@example.com')",
+					"first_name": "first_name",
+					"last_name":  "last_name",
+					"gender":     "'male'",
 				},
 			},
 		})
@@ -202,8 +202,8 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 
 		expectedStrings := []string{
-			"id,dummy_id,anonymous_id,android,ios,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
-			`Janifer,Sharpin,jsharpin8@example.com,male,"{""Drink"":null,""Fruit"":null}",,`,
+			"id,dummy_id,anonymous_id,android,ios,first_name,last_name,email,gender,food_preferences,phone_numbers,favorite_movie",
+			`Janifer,Sharpin,jsharpin8@example.com,male,"{""drink"":null,""fruit"":null}",,`,
 		}
 		for _, expected := range expectedStrings {
 			if !bytes.Contains(content, []byte(expected)) {
