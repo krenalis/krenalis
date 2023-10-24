@@ -12,6 +12,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSkeleton from '@shoelace-style/shoelace/dist/react/skeleton/index.js';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import { User as UserInterface, UserEvent } from '../../../types/external/user';
+import { UserEventsResponse, userTraitsResponse } from '../../../types/external/api';
 
 const MAX_FETCH_TIME = 200;
 
@@ -58,11 +59,10 @@ const User = () => {
 			setUser(null);
 		}, MAX_FETCH_TIME + 1);
 
-		let res;
-
 		// Fetch the user's events.
+		let eventsResponse: UserEventsResponse;
 		try {
-			res = await api.workspaces.users.events(userID);
+			eventsResponse = await api.workspaces.users.events(userID);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				showStatus(statuses.usersNotFound);
@@ -84,7 +84,7 @@ const User = () => {
 		}
 
 		const enrichedEvents: UserEvent[] = [];
-		for (const event of res.events) {
+		for (const event of eventsResponse.events) {
 			const e = { ...event };
 			const conn = connections.find((c) => c.id === event.source);
 			if (conn != null) {
@@ -96,8 +96,9 @@ const User = () => {
 		}
 
 		// Fetch the user's traits.
+		let traitsResponse: userTraitsResponse;
 		try {
-			res = await api.workspaces.users.traits(userID);
+			traitsResponse = await api.workspaces.users.traits(userID);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				showStatus(statuses.usersNotFound);
@@ -125,7 +126,7 @@ const User = () => {
 		const u: UserInterface = {
 			id: userID,
 			events: enrichedEvents,
-			traits: { ...res.traits },
+			traits: { ...traitsResponse.traits },
 		};
 
 		clearTimeout(fetchTimeoutID.current);

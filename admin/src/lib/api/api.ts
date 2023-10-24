@@ -17,7 +17,6 @@ import {
 	Mapping,
 	Transformation,
 } from '../../types/external/action';
-import { UserEvent, UserTraits } from '../../types/external/user';
 import { adminBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
 import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
@@ -41,6 +40,8 @@ import {
 	AppUsersResponse,
 	EventPreviewResponse,
 	ObservedEvent,
+	UserEventsResponse,
+	userTraitsResponse,
 } from '../../types/external/api';
 
 class API {
@@ -360,11 +361,11 @@ class Users {
 		});
 	};
 
-	events = async (user: number): Promise<UserEvent[]> => {
+	events = async (user: number): Promise<UserEventsResponse> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/events`, http.GET);
 	};
 
-	traits = async (user: number): Promise<UserTraits> => {
+	traits = async (user: number): Promise<userTraitsResponse> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/traits`, http.GET);
 	};
 }

@@ -27,15 +27,8 @@ const UsersList = () => {
 	const onToggleColumn = (name: string) => {
 		const props = [...properties];
 		for (const p of props) {
-			if (p.name === name) p.isUsed = !p.isUsed;
-		}
-		const columnDefs: GridColumn[] = [];
-		for (const p of props) {
-			if (p.isUsed) {
-				columnDefs.push({
-					name: p.name,
-					type: p.type,
-				});
+			if (p.name === name) {
+				p.isUsed = !p.isUsed;
 			}
 		}
 		localStorage.setItem('usersProperties', JSON.stringify(props));

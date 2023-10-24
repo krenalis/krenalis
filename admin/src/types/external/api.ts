@@ -1,6 +1,6 @@
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorAction, ConnectorAlert } from './ui';
-import { User } from './user';
+import { AppUser, UserEvent, UserTraits } from './user';
 
 interface authCodeURLResponse {
 	url: string;
@@ -83,12 +83,20 @@ interface Filter {
 interface FindUsersResponse {
 	count: number;
 	schema: ObjectType;
-	users: User[];
+	users: any[][];
 }
 
 interface AppUsersResponse {
-	users: User[];
+	users: AppUser[];
 	cursor: string;
+}
+
+interface UserEventsResponse {
+	events: UserEvent[];
+}
+
+interface userTraitsResponse {
+	traits: UserTraits;
 }
 
 interface EventPreviewResponse {
@@ -130,6 +138,8 @@ export type {
 	Filter,
 	FindUsersResponse,
 	AppUsersResponse,
+	UserEventsResponse,
+	userTraitsResponse,
 	EventPreviewResponse,
 	ObservedEvent,
 };

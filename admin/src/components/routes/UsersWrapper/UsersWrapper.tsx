@@ -8,6 +8,8 @@ import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserProperty, UserPagination } from '../../../types/internal/user';
 import { Outlet } from 'react-router-dom';
+import { ObjectType } from '../../../types/external/types';
+import { FindUsersResponse } from '../../../types/external/api';
 
 const DEFAULT_USER_LIMIT = 15;
 
@@ -42,26 +44,35 @@ const UsersWrapper = () => {
 		}
 		setLimit(lim);
 
+		let schema: ObjectType;
+		try {
+			schema = await api.workspaces.userSchema();
+		} catch (err) {
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 300);
+			showError(err);
+			return;
+		}
+
 		let properties: UserProperty[] = [];
 		const storageProperties = localStorage.getItem('usersProperties');
 		if (storageProperties != null) {
-			properties = JSON.parse(storageProperties);
-		} else {
-			let schema;
-			try {
-				schema = await api.workspaces.userSchema();
-			} catch (err) {
-				setTimeout(() => {
-					setIsLoading(false);
-				}, 300);
-				showError(err);
-				return;
+			const decoded = JSON.parse(storageProperties);
+			for (const p of schema.properties) {
+				const storageProperty = decoded.find((column) => column.name === p.name);
+				if (storageProperty != null) {
+					properties.push({ name: p.name, isUsed: storageProperty.isUsed, type: p.type.name });
+				} else {
+					properties.push({ name: p.name, isUsed: true, type: p.type.name });
+				}
 			}
+		} else {
 			for (const p of schema.properties) {
 				properties.push({ name: p.name, isUsed: true, type: p.type.name });
 			}
-			localStorage.setItem('usersProperties', JSON.stringify(properties));
 		}
+		localStorage.setItem('usersProperties', JSON.stringify(properties));
 		setProperties(properties);
 
 		const propertiesNames: string[] = [];
@@ -75,7 +86,7 @@ const UsersWrapper = () => {
 		}
 
 		const start = page * lim - lim;
-		let res;
+		let res: FindUsersResponse;
 		try {
 			res = await api.workspaces.users.find(null, propertiesNames, start, start + lim);
 		} catch (err) {
@@ -113,7 +124,7 @@ const UsersWrapper = () => {
 		// find the index of the id property. We should use it for the
 		// navigation but also remove it from the rows if the user has manually
 		// hidden it in the UI.
-		let idIndex, isIDHidden;
+		let idIndex: number, isIDHidden: boolean;
 		for (const [i, p] of properties.entries()) {
 			if (p.name === 'id') {
 				idIndex = i;

@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 interface UserEventContextApp {
 	name: string;
 	version: string;
@@ -111,6 +113,7 @@ interface UserEvent {
 	traits?: any;
 	type?: string;
 	userId?: string;
+	logo?: ReactNode; // inserted by UI. TODO: define transformation logic in separate file.
 }
 
 type UserTraits = Record<string, any>;
@@ -121,4 +124,6 @@ interface User {
 	traits: UserTraits;
 }
 
-export type { User, UserEvent, UserTraits };
+type AppUser = Record<string, any>;
+
+export type { User, UserEvent, UserTraits, AppUser };
