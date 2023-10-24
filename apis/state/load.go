@@ -250,14 +250,14 @@ func (state *State) Load() error {
 		// Read all connections.
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
-			" COALESCE(storage, 0), compression::TEXT, resource, website_host, identity_column,"+
-			" timestamp_column, settings, health FROM connections", func(rows *postgres.Rows) error {
+			" COALESCE(storage, 0), compression::TEXT, resource, website_host,"+
+			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, storage, resource int
 				c := Connection{}
-				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage,
-					&c.Compression, &resource, &c.WebsiteHost, &c.IdentityColumn, &c.TimestampColumn,
-					&c.Settings, &c.Health); err != nil {
+				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector,
+					&storage, &c.Compression, &resource, &c.WebsiteHost, &c.Settings, &c.Health,
+				); err != nil {
 					return err
 				}
 				workspace := state.workspaces[workspaceID]

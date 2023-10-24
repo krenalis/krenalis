@@ -92,8 +92,6 @@ CREATE TABLE connections (
     compression compression NOT NULL DEFAULT '',
     resource integer NOT NULL DEFAULT 0,
     website_host varchar(261) NOT NULL DEFAULT '',
-    identity_column varchar(100) NOT NULL DEFAULT '',
-    timestamp_column varchar(100) NOT NULL DEFAULT '',
     settings varchar(65535),
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)

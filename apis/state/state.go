@@ -560,25 +560,23 @@ func (resource *Resource) Connector() *Connector {
 
 // Connection represents a connection.
 type Connection struct {
-	mu              *sync.Mutex
-	account         *Account
-	workspace       *Workspace
-	ID              int
-	Name            string
-	Role            ConnectionRole
-	Enabled         bool
-	connector       *Connector
-	storage         *Connection
-	Compression     Compression
-	resource        *Resource
-	WebsiteHost     string
-	Keys            []string
-	IdentityColumn  string
-	TimestampColumn string
-	Settings        []byte
-	UsersQuery      string
-	actions         map[int]*Action
-	Health          Health
+	mu          *sync.Mutex
+	account     *Account
+	workspace   *Workspace
+	ID          int
+	Name        string
+	Role        ConnectionRole
+	Enabled     bool
+	connector   *Connector
+	storage     *Connection
+	Compression Compression
+	resource    *Resource
+	WebsiteHost string
+	Keys        []string
+	Settings    []byte
+	UsersQuery  string
+	actions     map[int]*Action
+	Health      Health
 }
 
 // Account returns the account of the connection.
