@@ -353,7 +353,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 			return 0, errors.BadRequest("users and groups actions cannot have an event type")
 		}
 	default:
-		return 0, errors.BadRequest("target %q is not valid", target)
+		return 0, errors.BadRequest("target %d is not valid", int(target))
 	}
 
 	// Check if the connection, with its connector type and role, allows the

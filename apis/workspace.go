@@ -100,7 +100,7 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 	this.apis.mustBeOpen()
 
 	if role != SourceRole && role != DestinationRole {
-		return 0, errors.BadRequest("role %q is not valid", role)
+		return 0, errors.BadRequest("role %d is not valid", int(role))
 	}
 	if connector < 1 || connector > maxInt32 {
 		return 0, errors.BadRequest("connector identifier %d is not valid", connector)
