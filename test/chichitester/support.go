@@ -22,6 +22,15 @@ func (c *Chichi) AddAction(connection int, data map[string]any) int {
 	return int(id)
 }
 
+// AddActionErr is like AddAction but returns an error instead of panicking.
+func (c *Chichi) AddActionErr(connection int, data map[string]any) (int, error) {
+	id, err := c.Call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data)
+	if err != nil {
+		return 0, err
+	}
+	return int(id.(float64)), nil
+}
+
 func (c *Chichi) AddConnection(data map[string]any) int {
 	id := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/add-connection", data).(float64)
 	return int(id)

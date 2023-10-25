@@ -880,6 +880,9 @@ type Action struct {
 	Path               string
 	TableName          string
 	Sheet              string
+	IdentityProperty   string
+	TimestampProperty  string
+	TimestampFormat    string
 	UserCursor         connector.Cursor
 	Health             Health
 	ExportMode         *ExportMode

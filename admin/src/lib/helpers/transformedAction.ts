@@ -77,6 +77,9 @@ interface TransformedAction {
 	Path?: string | null;
 	Table?: string | null;
 	Sheet?: string | null;
+	IdentityProperty?: string | null;
+	TimestampProperty?: string | null;
+	TimestampFormat?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: MatchingProperties | null;
 }
@@ -174,6 +177,9 @@ const computeDefaultAction = (
 	}
 	if (fields.includes('Path')) {
 		action.Path = '';
+		action.IdentityProperty = '';
+		action.TimestampProperty = '';
+		action.TimestampFormat = '';
 	}
 	if (fields.includes('Sheet')) {
 		action.Sheet = '';

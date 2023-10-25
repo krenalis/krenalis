@@ -44,6 +44,9 @@ interface Action {
 	Path: string | null;
 	Table: string | null;
 	Sheet: string | null;
+	IdentityProperty: string | null;
+	TimestampProperty: string | null;
+	TimestampFormat: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
 }
@@ -68,6 +71,9 @@ interface ActionToSet {
 	path?: string | null;
 	tableName?: string | null;
 	sheet?: string | null;
+	IdentityProperty?: string | null;
+	TimestampProperty?: string | null;
+	TimestampFormat?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
 }

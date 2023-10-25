@@ -17,6 +17,8 @@ import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
@@ -40,11 +42,18 @@ import actionContext from '../../../context/ActionContext';
 import extractSpecialProperties from '../../../lib/utils/extractSpecialProperties';
 import { EventListenerEvent, Sample } from '../../../types/internal/app';
 import { UnprocessableError } from '../../../lib/api/errors';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
 	Groups: 'group',
 	Events: 'event',
+};
+
+const timestampFormats = {
+	standard: '2006-01-02 15:04:05',
+	rfc3339: '2006-01-02T15:04:05Z07:00',
+	rfc3339WithNanoseconds: '2006-01-02T15:04:05.999999999Z07:00',
 };
 
 const ActionMapping = forwardRef<any>((props, ref) => {
@@ -54,6 +63,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 
 	const { api, showError, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { connection } = useContext(ConnectionContext);
 	const {
 		isMappingSectionDisabled,
 		disabledReason,
@@ -93,6 +103,28 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			setMode('transformation');
 		} else {
 			setMode('mappings');
+		}
+	}, []);
+
+	useEffect(() => {
+		if (connection.isFile && connection.isSource) {
+			// precompile the 'IdentityProperty' and 'TimestampProperty' fields,
+			// if possible.
+			const a = { ...action };
+			if (action.IdentityProperty === '') {
+				const hasIdProperty = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
+				if (hasIdProperty) {
+					a.IdentityProperty = 'id';
+				}
+			}
+			if (action.TimestampProperty === '') {
+				const hasTimestampProperty =
+					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
+				if (hasTimestampProperty) {
+					a.TimestampProperty = 'timestamp';
+				}
+			}
+			setAction(a);
 		}
 	}, []);
 
@@ -222,7 +254,46 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 	};
 
 	const onSelectProperty = async (input, value) => {
+		if (input.name === 'identityProperty') {
+			const a = { ...action };
+			a.IdentityProperty = value;
+			setAction(a);
+			return;
+		} else if (input.name === 'timestampProperty') {
+			const a = { ...action };
+			a.TimestampProperty = value;
+			if (value === '') {
+				a.TimestampFormat = '';
+			}
+			setAction(a);
+			return;
+		}
 		await updateProperty(input.name, value);
+	};
+
+	const onUpdateIdentityProperty = async (e) => {
+		const target = e.target;
+		let { value } = target;
+		const a = { ...action };
+		a.IdentityProperty = value;
+		setAction(a);
+	};
+
+	const onUpdateTimestampProperty = async (e) => {
+		const target = e.target;
+		let { value } = target;
+		const a = { ...action };
+		a.TimestampProperty = value;
+		if (value === '') {
+			a.TimestampFormat = '';
+		}
+		setAction(a);
+	};
+
+	const onChangeTimestampFormat = (e) => {
+		const a = { ...action };
+		a.TimestampFormat = timestampFormats[e.target.value];
+		setAction(a);
 	};
 
 	const onOpenFullscreenTransformation = () => {
@@ -311,11 +382,6 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 					</SlAlert>
 				)}
 				<div>{mappings}</div>
-				<ComboBoxList
-					ref={propertiesListRef}
-					items={getSchemaComboboxItems(actionType.InputSchema)}
-					onSelect={onSelectProperty}
-				/>
 			</div>
 		);
 	} else if (mode === 'transformation') {
@@ -400,8 +466,68 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 				description='The relation between the event properties and the action type properties'
 				actions={actionButton}
 				padded={false}
+				className={mode}
 			>
+				{connection.isFile && connection.isSource && (
+					<div className='specialProperties'>
+						<div className='identityProperty'>
+							<div className='label'>
+								Identity<span className='asterisk'>*</span>:
+							</div>
+							<ComboBoxInput
+								comboBoxListRef={propertiesListRef}
+								onInput={onUpdateIdentityProperty}
+								value={action.IdentityProperty!}
+								name='identityProperty'
+								disabled={isMappingSectionDisabled}
+								className='inputProperty'
+								size='small'
+							/>
+						</div>
+						<div className='timestampProperty'>
+							<div className='timestamp'>
+								<div className='label'>Timestamp:</div>
+								<ComboBoxInput
+									comboBoxListRef={propertiesListRef}
+									onInput={onUpdateTimestampProperty}
+									value={action.TimestampProperty!}
+									name='timestampProperty'
+									disabled={isMappingSectionDisabled}
+									className='inputProperty'
+									size='small'
+								/>
+							</div>
+							<div className='format'>
+								<div className='label'>with format:</div>
+								<SlSelect
+									onSlChange={onChangeTimestampFormat}
+									value={
+										action.TimestampProperty
+											? Object.keys(timestampFormats).find(
+													(key) => timestampFormats[key] === action.TimestampFormat,
+											  )
+											: ''
+									}
+									name='timestampFormat'
+									disabled={action.TimestampProperty == null || action.TimestampProperty === ''}
+									size='small'
+								>
+									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>
+									<SlOption value='rfc3339'>2006-01-02T15:04:05Z07:00</SlOption>
+									<SlOption value='rfc3339WithNanoseconds'>
+										2006-01-02T15:04:05.999999999Z07:00
+									</SlOption>
+								</SlSelect>
+							</div>
+						</div>
+					</div>
+				)}
 				{content}
+				<ComboBoxList
+					ref={propertiesListRef}
+					items={getSchemaComboboxItems(actionType.InputSchema)}
+					onSelect={onSelectProperty}
+				/>
 			</Section>
 			<AlertDialog
 				variant='danger'

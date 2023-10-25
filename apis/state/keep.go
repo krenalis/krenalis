@@ -301,6 +301,9 @@ type AddAction struct {
 	Path               string
 	TableName          string
 	Sheet              string
+	IdentityProperty   string
+	TimestampProperty  string
+	TimestampFormat    string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
 }
@@ -331,6 +334,9 @@ func (state *State) addAction(n postgres.Notification) {
 		Path:               e.Path,
 		TableName:          e.TableName,
 		Sheet:              e.Sheet,
+		IdentityProperty:   e.IdentityProperty,
+		TimestampProperty:  e.TimestampProperty,
+		TimestampFormat:    e.TimestampFormat,
 		ExportMode:         e.ExportMode,
 		MatchingProperties: e.MatchingProperties,
 	}
@@ -803,6 +809,9 @@ type SetAction struct {
 	Path               string
 	TableName          string
 	Sheet              string
+	IdentityProperty   string
+	TimestampProperty  string
+	TimestampFormat    string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
 }
@@ -825,6 +834,9 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Path = e.Path
 		a.TableName = e.TableName
 		a.Sheet = e.Sheet
+		a.IdentityProperty = e.IdentityProperty
+		a.TimestampProperty = e.TimestampProperty
+		a.TimestampFormat = e.TimestampFormat
 		a.ExportMode = e.ExportMode
 		a.MatchingProperties = e.MatchingProperties
 	})

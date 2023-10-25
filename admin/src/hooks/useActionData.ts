@@ -211,6 +211,9 @@ const useActionData = (
 					Path: providedAction.Path,
 					Table: providedAction.Table,
 					Sheet: providedAction.Sheet,
+					IdentityProperty: providedAction.IdentityProperty,
+					TimestampProperty: providedAction.TimestampProperty,
+					TimestampFormat: providedAction.TimestampFormat,
 					ExportMode: providedAction.ExportMode,
 					MatchingProperties: providedAction.MatchingProperties,
 				};
@@ -326,6 +329,9 @@ const useActionData = (
 			tableName: action.Table,
 			sheet: action.Sheet,
 			exportMode: action.ExportMode,
+			IdentityProperty: action.IdentityProperty,
+			TimestampProperty: action.TimestampProperty,
+			TimestampFormat: action.TimestampFormat,
 			matchingProperties: action.MatchingProperties,
 		};
 

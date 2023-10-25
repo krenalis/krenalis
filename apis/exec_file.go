@@ -177,21 +177,66 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 	rw := newRecordWriter(c.ID, math.MaxInt)
 	rw.SetWriteFunc(func(record map[string]any) error {
 
-		// Determine and validate the external id, reading from the first column
-		// of each record of the file.
-		idColumn := rw.columns[0]
+		// Determine and validate the external ID and the timestamp.
+		var idCol, timestampCol types.Property
+		for _, c := range rw.columns {
+			switch c.Name {
+			case this.action.IdentityProperty:
+				idCol = c
+			case this.action.TimestampProperty:
+				timestampCol = c
+			}
+		}
+		if idCol.Name == "" {
+			return actionExecutionError{fmt.Errorf("identity column '%s' does not exist in file", this.action.IdentityProperty)}
+		}
 		var externalID string
 		{
-			rawID, ok := record[idColumn.Name]
+			rawID, ok := record[idCol.Name]
 			if !ok {
-				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idColumn.Name)}
+				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idCol.Name)}
 			}
-			switch pt := idColumn.Type.PhysicalType(); {
+			switch pt := idCol.Type.PhysicalType(); {
 			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
 				externalID = fmt.Sprint(rawID)
 			default:
-				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as identifier", idColumn.Name, pt)}
+				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as identifier", idCol.Name, pt)}
 			}
+		}
+
+		var timestamp time.Time
+		if timestampCol.Name != "" {
+
+			// Validate the physical type.
+			switch pt := timestampCol.Type.PhysicalType(); pt {
+			case types.PtText, types.PtJSON, types.PtDateTime:
+				// Ok.
+			default:
+				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as timestamp", timestampCol.Name, pt)}
+			}
+
+			// Retrieve the value for the timestamp.
+			rawTimestamp, ok := record[timestampCol.Name]
+			if !ok {
+				return actionExecutionError{fmt.Errorf("no values for '%s' returned in file record", timestampCol.Name)}
+			}
+
+			// Normalize the value.
+			rawTimestamp, err = normalization.NormalizeDatabaseFileProperty(timestampCol.Name, timestampCol.Type, rawTimestamp, false)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("column '%s' cannot be used as timestamp: %s", timestampCol.Name, err)}
+			}
+
+			// Determine the timestamp.
+			switch ts := rawTimestamp.(type) {
+			case string:
+				timestamp, err = time.Parse(this.action.TimestampFormat, ts)
+			case time.Time:
+				timestamp, err = ts, nil
+			default:
+				return actionExecutionError{fmt.Errorf("invalid value for column '%s', cannot be used as timestamp", timestampCol.Name)}
+			}
+
 		}
 
 		// Take only the necessary properties.
@@ -222,7 +267,7 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 		}
 
 		// Set the identity into the data warehouse.
-		err = c.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, time.Time{})
+		err = c.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, timestamp)
 		if err != nil {
 			return actionExecutionError{err}
 		}

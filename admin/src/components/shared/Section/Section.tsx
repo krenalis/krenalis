@@ -8,12 +8,13 @@ interface SectionProps {
 	actions?: ReactNode[] | ReactNode;
 	children: ReactNode;
 	padded?: boolean;
+	className?: string;
 }
 
 const Section = forwardRef<any, SectionProps>(
-	({ title, description, actions, children, padded }: SectionProps, ref) => {
+	({ title, description, actions, children, padded, className }: SectionProps, ref) => {
 		return (
-			<div className='section' ref={ref}>
+			<div className={`section${className ? ' ' + className : ''}`} ref={ref}>
 				<Flex justifyContent='space-between' alignItems='center'>
 					<div className='sectionText'>
 						<div className='sectionTitle'>{title}</div>
