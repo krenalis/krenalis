@@ -74,6 +74,10 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 		RawCellValue: true,
 	})
 	if err != nil {
+		// Don't return a Zip error because it might be misleading.
+		if err.Error() == "zip: not a valid zip file" {
+			err = errors.New("not a valid Excel '.xlsx' file")
+		}
 		return err
 	}
 	defer f.Close()
@@ -186,6 +190,10 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 func (c *connection) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 	f, err := excelize.OpenReader(r)
 	if err != nil {
+		// Don't return a Zip error because it might be misleading.
+		if err.Error() == "zip: not a valid zip file" {
+			err = errors.New("not a valid Excel '.xlsx' file")
+		}
 		return nil, err
 	}
 	defer f.Close()
