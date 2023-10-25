@@ -10,9 +10,14 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"chichi/admin"
 	"chichi/apis"
@@ -99,6 +104,27 @@ func Run(ctx context.Context, settings *Settings) error {
 		addr = "127.0.0.1:9090"
 	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Handle panics.
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("a panic occurred, Chichi will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r)
+				f, err := os.OpenFile("panics.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+				if err != nil {
+					slog.Error("cannot open panic file", "err", err)
+					return
+				}
+				defer f.Close()
+				_, err = fmt.Fprintf(f, "\n----- %s -----\nPanic reason: %v\nStack trace:\n%s",
+					time.Now().Format("2006-01-02 15:04:05.000"), r, debug.Stack())
+				if err != nil {
+					slog.Error("cannot write on panic file", "err", err)
+					return
+				}
+				os.Exit(1)
+			}
+		}()
+
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
@@ -118,6 +144,7 @@ func Run(ctx context.Context, settings *Settings) error {
 			http.NotFound(w, r)
 			return
 		}
+
 	})
 
 	httpServer := http.Server{
