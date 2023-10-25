@@ -54,6 +54,7 @@ const timestampFormats = {
 	standard: '2006-01-02 15:04:05',
 	rfc3339: '2006-01-02T15:04:05Z07:00',
 	rfc3339WithNanoseconds: '2006-01-02T15:04:05.999999999Z07:00',
+	dateOnly: '2006-01-02',
 };
 
 const ActionMapping = forwardRef<any>((_, ref) => {
@@ -517,6 +518,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									<SlOption value='rfc3339WithNanoseconds'>
 										2006-01-02T15:04:05.999999999Z07:00
 									</SlOption>
+									<SlOption value='dateOnly'>2006-01-02</SlOption>
 								</SlSelect>
 							</div>
 						</div>
