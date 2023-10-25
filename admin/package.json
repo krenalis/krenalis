@@ -18,7 +18,8 @@
     "web-vitals": "3.4.0"
   },
   "scripts": {
-    "typecheck": "npx -p typescript@5.2.2 tsc"
+    "typecheck": "npx -p typescript@5.2.2 tsc",
+    "prettier": "npx prettier@3.0.3 --log-level warn --write ./src/*"
   },
   "eslintConfig": {
     "extends": [
