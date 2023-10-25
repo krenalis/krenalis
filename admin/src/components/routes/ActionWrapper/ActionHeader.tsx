@@ -68,7 +68,7 @@ const ActionHeader = () => {
 				<SlButton
 					className='saveAction'
 					variant='primary'
-					disabled={(actionType.InputSchema != null && mode === '') || isMappingSectionDisabled}
+					disabled={isMappingSectionDisabled}
 					onClick={onSave}
 					loading={isSaveButtonLoading}
 				>
