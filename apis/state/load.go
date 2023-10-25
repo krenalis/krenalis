@@ -317,7 +317,7 @@ func (state *State) Load() error {
 
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-			"schedule_period, in_schema, out_schema, filter, mapping, transformation_source, transformation_language\n,"+
+			"schedule_period, in_schema, out_schema, filter, mapping, transformation_source, transformation_language,\n"+
 			"transformation_version, query, path, table_name, sheet, (user_cursor).id,\n"+
 			"(user_cursor).timestamp, (user_cursor).next, health, export_mode, matching_properties_internal,\n"+
 			"matching_properties_external\nFROM actions",
