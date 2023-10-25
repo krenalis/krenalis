@@ -4,6 +4,8 @@
     "module": "esnext",
     "moduleResolution": "node",
     "jsx": "react",
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
