@@ -13,7 +13,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { Compression, ConnectionRole } from '../../../types/external/connection';
+import {Compression, ConnectionRole, ConnectionToAdd, ConnectionToSet} from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
@@ -131,14 +131,17 @@ const ConnectorSettings = () => {
 		if (eventName === 'save') {
 			let id: number;
 			try {
-				id = await api.workspaces.addConnection(connectorID, connectionRole, values, {
+				const connection: ConnectionToAdd = {
 					name: name,
+					role:  connectionRole,
 					enabled: true,
+					connector: connectorID,
 					storage: storage,
 					compression: compression,
 					websiteHost: websiteHost,
-					oAuth: OAuthToken,
-				});
+					settings: values,
+				}
+				id = await api.workspaces.addConnection(connection, OAuthToken);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
@@ -219,14 +222,17 @@ const ConnectorSettings = () => {
 	const onSave = async () => {
 		let id: number;
 		try {
-			id = await api.workspaces.addConnection(connectorID, connectionRole, values, {
+			const connection : ConnectionToAdd = {
 				name: name,
+				role: connectionRole,
 				enabled: true,
+				connector: connectorID,
 				storage: storage,
 				compression: compression,
 				websiteHost: websiteHost,
-				oAuth: OAuthToken,
-			});
+				settings: values,
+			}
+			id = await api.workspaces.addConnection(connection, OAuthToken);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {

@@ -93,28 +93,28 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Create the Filesystem connection.
 	fsID := c.AddConnection(map[string]any{
-		"Connector": 19, // Filesystem.
-		"Role":      "Destination",
-		"Options": map[string]any{
-			"Name":    "Filesystem",
-			"Enabled": true,
-		},
-		"Settings": map[string]any{
-			"Root": storageDir,
+		"Connection": map[string]any{
+			"Name":      "Filesystem",
+			"Role":      "Destination",
+			"Enabled":   true,
+			"Connector": 19, // Filesystem.
+			"Settings": map[string]any{
+				"Root": storageDir,
+			},
 		},
 	})
 
 	// Create the CSV connection.
 	csvID := c.AddConnection(map[string]any{
-		"Connector": 5, // CSV.
-		"Role":      "Destination",
-		"Options": map[string]any{
-			"Name":    "CSV",
-			"Enabled": true,
-			"Storage": fsID,
-		},
-		"Settings": map[string]any{
-			"Comma": ",",
+		"Connection": map[string]any{
+			"Name":      "CSV",
+			"Role":      "Destination",
+			"Enabled":   true,
+			"Connector": 5, // CSV.
+			"Storage":   fsID,
+			"Settings": map[string]any{
+				"Comma": ",",
+			},
 		},
 	})
 

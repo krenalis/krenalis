@@ -230,27 +230,15 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				router.Route("/add-connection", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						var req struct {
-							Connector int
-							Role      string
-							Settings  json.RawMessage
-							Options   apis.ConnectionOptions
+							Connection apis.ConnectionToAdd
+							OAuthToken string
 						}
-						err := json.NewDecoder(r.Body).Decode(&req)
+						err = json.NewDecoder(r.Body).Decode(&req)
 						if err != nil {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						var role apis.ConnectionRole
-						switch req.Role {
-						case "Source":
-							role = apis.SourceRole
-						case "Destination":
-							role = apis.DestinationRole
-						default:
-							respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
-							return
-						}
-						id, err := workspace.AddConnection(ctx, role, req.Connector, req.Settings, req.Options)
+						id, err := workspace.AddConnection(ctx, req.Connection, req.OAuthToken)
 						if err != nil {
 							respond(w, err)
 							return

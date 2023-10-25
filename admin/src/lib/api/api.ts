@@ -5,7 +5,7 @@ import {
 	Connection,
 	ConnectionRole,
 	Compression,
-	ConnectionOptions,
+	ConnectionToAdd,
 	ConnectionStats,
 } from '../../types/external/connection';
 import { AnonymousIdentifiers, Identifiers } from '../../types/external/identifiers';
@@ -422,17 +422,10 @@ class Workspaces {
 		return await call(`${this.apiURL}/reload-schemas`, http.POST);
 	};
 
-	addConnection = async (
-		connector: number,
-		role: ConnectionRole,
-		settings: UIValues,
-		options: ConnectionOptions,
-	): Promise<number> => {
+	addConnection = async (connection: ConnectionToAdd, oAuthToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/add-connection`, http.POST, {
-			connector: connector,
-			role: role,
-			settings: settings,
-			options: options,
+			connection: connection,
+			oAuthToken: oAuthToken,
 		});
 	};
 

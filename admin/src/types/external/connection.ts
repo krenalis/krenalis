@@ -1,5 +1,6 @@
 import Type from './types';
 import { Action, ActionType } from './action';
+import { UIValues } from './api';
 
 type ConnectorType = 'App' | 'Database' | 'File' | 'Mobile' | 'Server' | 'Storage' | 'Stream' | 'Website';
 
@@ -24,17 +25,27 @@ interface Connection {
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
 
-interface ConnectionOptions {
+interface ConnectionToAdd {
+	name: string;
+	role: string;
+	enabled: boolean;
+	connector: number;
+	storage: number;
+	compression: Compression;
+	websiteHost: string;
+	settings: UIValues;
+}
+
+interface ConnectionToSet {
 	name: string;
 	enabled: boolean;
 	storage: number;
 	compression: Compression;
 	websiteHost: string;
-	oAuth: string;
 }
 
 interface ConnectionStats {
 	UserIdentities: number[];
 }
 
-export type { Connection, ConnectionRole, Compression, ConnectionOptions, ConnectorType, Health, ConnectionStats };
+export type { Connection, ConnectionRole, Compression, ConnectionToAdd, ConnectionToSet, ConnectorType, Health, ConnectionStats };

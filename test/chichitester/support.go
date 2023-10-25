@@ -29,55 +29,55 @@ func (c *Chichi) AddConnection(data map[string]any) int {
 
 func (c *Chichi) AddDummy(name string, role connector.Role) int {
 	return c.AddConnection(map[string]any{
-		"Connector": 3, // Dummy.
-		"Role":      role.String(),
-		"Options": map[string]any{
-			"Name":    name,
-			"Enabled": true,
+		"Connection": map[string]any{
+			"Name":      name,
+			"Role":      role.String(),
+			"Enabled":   true,
+			"Connector": 3, // Dummy.
 		},
 	})
 }
 
 func (c *Chichi) AddSourceCSV(filesystem int) int {
 	return c.AddConnection(map[string]any{
-		"Connector": 5, // CSV.
-		"Role":      "Source",
-		"Options": map[string]any{
-			"Name":    "CSV",
-			"Enabled": true,
-			"Storage": filesystem,
-		},
-		"Settings": map[string]any{
-			"Comma":          ",",
-			"HasColumnNames": true,
+		"Connection": map[string]any{
+			"Name":      "CSV",
+			"Role":      "Source",
+			"Enabled":   true,
+			"Connector": 5, // CSV.
+			"Storage":   filesystem,
+			"Settings": map[string]any{
+				"Comma":          ",",
+				"HasColumnNames": true,
+			},
 		},
 	})
 }
 
 func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 	return c.AddConnection(map[string]any{
-		"Connector": 19, // Filesystem.
-		"Role":      "Source",
-		"Options": map[string]any{
-			"Name":    "Filesystem",
-			"Enabled": true,
-		},
-		"Settings": map[string]any{
-			"Root": storageDir,
+		"Connection": map[string]any{
+			"Name":      "Filesystem",
+			"Role":      "Source",
+			"Enabled":   true,
+			"Connector": 19, // Filesystem.
+			"Settings": map[string]any{
+				"Root": storageDir,
+			},
 		},
 	})
 }
 
 func (c *Chichi) AddSourceJSON(filesystem int) int {
 	return c.AddConnection(map[string]any{
-		"Connector": 21, // JSON.
-		"Role":      "Source",
-		"Options": map[string]any{
-			"Name":    "JSON",
-			"Enabled": true,
-			"Storage": filesystem,
+		"Connection": map[string]any{
+			"Name":      "JSON",
+			"Role":      "Source",
+			"Enabled":   true,
+			"Storage":   filesystem,
+			"Connector": 21, // JSON.
+			"Settings":  map[string]any{},
 		},
-		"Settings": map[string]any{},
 	})
 }
 

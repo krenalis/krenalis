@@ -59,133 +59,105 @@ var (
 	TooManyListeners     errors.Code = "TooManyListeners"
 )
 
-// ConnectionOptions values are passed to the AddConnection method with options
-// relative to the connection.
-type ConnectionOptions struct {
-
-	// Name is the name of the connection. It cannot be longer than 100 runes.
-	// If empty, the connection name will be the name of its connector.
-	Name string
-
-	// Enable reports whether the connection is enabled or disabled when added.
-	Enabled bool
-
-	// Storage is the storage of a file connection. It must be 0 if the
-	// connection is not a file or has no storage.
-	Storage int
-
-	// Compression is the compression for file connections. It must be
-	// NoCompression if there is no storage.
-	Compression Compression
-
-	// WebsiteHost is the host, in the form "host:port", of a website
-	// connection. It must be empty if the connection is not a website. It
-	// cannot be longer than 261 runes.
-	WebsiteHost string
-
-	// OAuth is an OAuth token returned by OAuthToken. It must be empty if the
-	// connector does not support OAuth.
-	OAuth string
-}
-
-// AddConnection adds a connection given its role, connector, settings, and
-// options to the workspace, and returns its identifier.
+// AddConnection adds a new connection. oAuthToken is an OAuth token returned by
+// the OAuthToken method and must be empty if the connector does not support
+// OAuth authentication.
 //
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - StorageNotExist, if the storage does not exist.
-func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
+func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
 	this.apis.mustBeOpen()
 
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.BadRequest("role %d is not valid", int(role))
+	if connection.Role != SourceRole && connection.Role != DestinationRole {
+		return 0, errors.BadRequest("role %d is not valid", int(connection.Role))
 	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.BadRequest("connector identifier %d is not valid", connector)
+	if connection.Connector < 1 || connection.Connector > maxInt32 {
+		return 0, errors.BadRequest("connector identifier %d is not valid", connection.Connector)
 	}
-	if utf8.RuneCountInString(opts.Name) > 100 {
-		return 0, errors.BadRequest("name %q is not valid", opts.Name)
+	if utf8.RuneCountInString(connection.Name) > 100 {
+		return 0, errors.BadRequest("name %q is not valid", connection.Name)
 	}
-	if opts.Storage < 0 || opts.Storage > maxInt32 {
-		return 0, errors.BadRequest("storage identifier %d is not valid", opts.Storage)
+	if connection.Storage < 0 || connection.Storage > maxInt32 {
+		return 0, errors.BadRequest("storage identifier %d is not valid", connection.Storage)
 	}
-	switch opts.Compression {
+	switch connection.Compression {
 	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
 	default:
-		return 0, errors.BadRequest("compression %q is not valid", opts.Compression)
+		return 0, errors.BadRequest("compression %q is not valid", connection.Compression)
 	}
-	if opts.Storage == 0 && opts.Compression != NoCompression {
+	if connection.Storage == 0 && connection.Compression != NoCompression {
 		return 0, errors.BadRequest("compression requires a storage")
 	}
 
-	c, ok := this.apis.state.Connector(connector)
+	c, ok := this.apis.state.Connector(connection.Connector)
 	if !ok {
-		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connection.Connector)
 	}
 
 	n := state.AddConnection{
-		Workspace: this.workspace.ID,
-		Name:      opts.Name,
-		Role:      state.ConnectionRole(role),
-		Enabled:   opts.Enabled,
-		Connector: connector,
+		Workspace:   this.workspace.ID,
+		Name:        connection.Name,
+		Role:        state.ConnectionRole(connection.Role),
+		Enabled:     connection.Enabled,
+		Connector:   connection.Connector,
+		Storage:     connection.Storage,
+		Compression: state.Compression(connection.Compression),
+		WebsiteHost: connection.WebsiteHost,
 	}
-	if opts.Name == "" {
+	if n.Name == "" {
 		n.Name = c.Name
 	}
 
 	// Validate the storage.
-	if opts.Storage > 0 {
+	if n.Storage > 0 {
 		if c.Type != state.FileType {
 			return 0, errors.BadRequest("connector %d cannot have a storage, it's a %s",
 				c.ID, strings.ToLower(c.Type.String()))
 		}
-		s, ok := this.workspace.Connection(opts.Storage)
+		s, ok := this.workspace.Connection(n.Storage)
 		if !ok {
-			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", opts.Storage)
+			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
 		}
 		if s.Connector().Type != state.StorageType {
-			return 0, errors.BadRequest("connection %d is not a storage", opts.Storage)
+			return 0, errors.BadRequest("connection %d is not a storage", n.Storage)
 		}
-		if ConnectionRole(s.Role) != role {
-			if role == SourceRole {
-				return 0, errors.BadRequest("storage %d is not a source", opts.Storage)
+		if ConnectionRole(s.Role) != connection.Role {
+			if connection.Role == SourceRole {
+				return 0, errors.BadRequest("storage %d is not a source", n.Storage)
 			}
-			return 0, errors.BadRequest("storage %d is not a destination", opts.Storage)
+			return 0, errors.BadRequest("storage %d is not a destination", n.Storage)
 		}
-		n.Storage = opts.Storage
-		n.Compression = state.Compression(opts.Compression)
 	}
 
 	// Validate the website host.
-	if opts.WebsiteHost != "" {
+	if n.WebsiteHost != "" {
 		if c.Type != state.WebsiteType {
 			return 0, errors.BadRequest("connector %d cannot have a website host, it's a %s",
 				c.ID, strings.ToLower(c.Type.String()))
 		}
-		if h, p, found := strings.Cut(opts.WebsiteHost, ":"); h == "" || len(opts.WebsiteHost) > 255 {
-			return 0, errors.BadRequest("website host %q is not valid", opts.WebsiteHost)
+		if h, p, found := strings.Cut(n.WebsiteHost, ":"); h == "" || len(n.WebsiteHost) > 255 {
+			return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
 		} else if found {
 			if port, _ := strconv.Atoi(p); port < 1 || port > 65535 {
-				return 0, errors.BadRequest("website host %q is not valid", opts.WebsiteHost)
+				return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
 			}
 		}
-		n.WebsiteHost = opts.WebsiteHost
 	}
 
 	// Validate OAuth.
-	if (opts.OAuth == "") != (c.OAuth == nil) {
-		if opts.OAuth == "" {
-			return 0, errors.BadRequest("OAuth is required by connector %d", connector)
+	if (oAuthToken == "") != (c.OAuth == nil) {
+		if oAuthToken == "" {
+			return 0, errors.BadRequest("OAuth is required by connector %d", n.Connector)
 		}
-		return 0, errors.BadRequest("connector %d does not support OAuth", connector)
+		return 0, errors.BadRequest("connector %d does not support OAuth", n.Connector)
 	}
 
 	// Set the resource. It can be an existing resource or a resource that needs to be created.
-	if opts.OAuth != "" {
-		data, err := base62.DecodeString(opts.OAuth)
+	if oAuthToken != "" {
+		data, err := base62.DecodeString(oAuthToken)
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
@@ -217,14 +189,14 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 			clientSecret = c.OAuth.ClientSecret
 		}
 		connector := &Connector{apis: this.apis, connector: c}
-		connectionUI, err := connector.openUI(role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
+		connectionUI, err := connector.openUI(connection.Role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
 		if err != nil {
 			return 0, err
 		}
 		if connectionUI == nil {
 			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
 		}
-		n.Settings, err = connectionUI.ValidateSettings(ctx, settings)
+		n.Settings, err = connectionUI.ValidateSettings(ctx, connection.Settings)
 		if c, ok := connectionUI.(io.Closer); ok {
 			_ = c.Close()
 		}
@@ -261,7 +233,7 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 				// Insert a new resource.
 				err = tx.QueryRow(ctx, "INSERT INTO resources (workspace, connector, code, access_token,"+
 					" refresh_token, expires_in) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-					n.Workspace, connector, n.Resource.Code, n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn).
+					n.Workspace, n.Connector, n.Resource.Code, n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn).
 					Scan(&n.Resource.ID)
 			} else if n.Resource.AccessToken != "" {
 				// Update the current resource.
@@ -1277,6 +1249,39 @@ func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
 		return 0, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
 	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
+}
+
+// ConnectionToAdd represents a connection to add to a workspace.
+type ConnectionToAdd struct {
+
+	// Name is the name of the connection. It cannot be longer than 100 runes.
+	// If empty, the connection name will be the name of its connector.
+	Name string
+
+	// Role is the role.
+	Role ConnectionRole
+
+	// Enable reports whether the connection is enabled or disabled when added.
+	Enabled bool
+
+	// Connector is the identifier of the connector.
+	Connector int
+
+	// Storage is the identifier of the storage of a file connection.
+	// It must be 0 if the connection is not a file or has no storage.
+	Storage int
+
+	// Compression is the compression for file connections. It must be
+	// NoCompression if there is no storage.
+	Compression Compression
+
+	// WebsiteHost is the host, in the form "host:port", of a website
+	// connection. It must be empty if the connection is not a website. It
+	// cannot be longer than 261 runes.
+	WebsiteHost string
+
+	// Settings represents the settings.
+	Settings json.RawMessage
 }
 
 // openWarehouse opens a data store with the given type and settings.
