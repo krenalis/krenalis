@@ -13,7 +13,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import {Compression, ConnectionRole, ConnectionToAdd, ConnectionToSet} from '../../../types/external/connection';
+import {Compression, ConnectionRole, ConnectionToAdd} from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
