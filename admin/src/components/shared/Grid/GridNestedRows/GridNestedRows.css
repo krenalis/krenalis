@@ -1,125 +1,125 @@
 .gridNestedRows {
-    position: relative;
+	position: relative;
 }
 
 .gridNestedRows .expand {
-    position: absolute;
-    top: 25px;
-    left: var(--parent-indentation); /* set in the component */
-    transform: translateY(-50%) translate(-31px);
-    cursor: pointer;
-    transition: transform .3s;
-    color: var(--sl-color-neutral-400);
+	position: absolute;
+	top: 25px;
+	left: var(--parent-indentation); /* set in the component */
+	transform: translateY(-50%) translate(-31px);
+	cursor: pointer;
+	transition: transform 0.3s;
+	color: var(--sl-color-neutral-400);
 }
 
 .gridNestedRows.expanded > .expand {
-    transform: translateY(-50%) translateX(-30px) rotate(90deg);
+	transform: translateY(-50%) translateX(-30px) rotate(90deg);
 }
 
 .gridNestedRows .gridRow.parent .gridCell.first .cellContent {
-    padding-left: var(--parent-indentation); /* set in the component */
+	padding-left: var(--parent-indentation); /* set in the component */
 }
 
 .gridNestedRows .gridRow.children,
 .gridNestedRows .gridNestedRows.children {
-    display: none;
-    position: relative;
+	display: none;
+	position: relative;
 }
 
 .gridNestedRows .gridRow.children::before {
-    content: "";
-    width: 15px;
-    height: 15px;
-    position: absolute;
-    border-left: 3px solid var(--sl-color-neutral-400);
-    border-bottom: 3px solid var(--sl-color-neutral-400);
-    left: var(--children-indentation); /* set in the component */
-    top: 0;
-    transform: translateY(100%) translate(-30px);
-    border-bottom-left-radius: 5px;
+	content: '';
+	width: 15px;
+	height: 15px;
+	position: absolute;
+	border-left: 3px solid var(--sl-color-neutral-400);
+	border-bottom: 3px solid var(--sl-color-neutral-400);
+	left: var(--children-indentation); /* set in the component */
+	top: 0;
+	transform: translateY(100%) translate(-30px);
+	border-bottom-left-radius: 5px;
 }
 
 .gridNestedRows.expanded > .gridRow.parent {
-    border-top: 1px solid var(--border-primary);
-    border-bottom: 1px solid var(--border-primary);
+	border-top: 1px solid var(--border-primary);
+	border-bottom: 1px solid var(--border-primary);
 }
 
 .gridNestedRows.expanded > .gridRow.children,
 .gridNestedRows.expanded > .gridNestedRows.children {
-    display: grid;
+	display: grid;
 }
 
 .gridNestedRows .gridRow.children,
 .gridNestedRows .gridNestedRows .gridRow {
-    background-color: var(--bg-gray)!important;
+	background-color: var(--bg-gray) !important;
 }
 
 .gridNestedRows .gridRow.children .gridCell,
 .gridNestedRows .gridNestedRows .gridRow .gridCell {
-    background-color: var(--bg-gray)!important;
+	background-color: var(--bg-gray) !important;
 }
 
 .gridNestedRows .gridRow.children .gridCell.first .cellContent,
 .gridNestedRows .gridNestedRows.children .gridRow.children .gridCell.first .cellContent {
-    padding-left: var(--children-indentation); /* set in the component */
+	padding-left: var(--children-indentation); /* set in the component */
 }
 
 .gridNestedRows .gridRow.parent ~ .gridNestedRows.expanded > .gridRow.parent {
-    border-top: 0;
+	border-top: 0;
 }
 
 .gridNestedRows.last {
-    border-radius: var(--radius);
+	border-radius: var(--radius);
 }
 
 .gridNestedRows.last .gridRow.parent .gridCell.first {
-    border-bottom-left-radius: var(--radius);
+	border-bottom-left-radius: var(--radius);
 }
 
 .gridNestedRows.last.expanded .gridRow.parent .gridCell.first {
-    border-bottom-left-radius: 0;
+	border-bottom-left-radius: 0;
 }
 
 .gridNestedRows.last .gridRow.parent .gridCell.last {
-    border-bottom-right-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
 }
 
 .gridNestedRows.last.expanded .gridRow.parent .gridCell.last {
-    border-bottom-right-radius: 0;
+	border-bottom-right-radius: 0;
 }
 
 .gridNestedRows .gridRow.children:last-child .gridCell.first {
-    border-bottom-left-radius: var(--radius);
+	border-bottom-left-radius: var(--radius);
 }
 
 .gridNestedRows .gridRow.children:last-child .gridCell.last {
-    border-bottom-right-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
 }
 
 .gridNestedRows .gridNestedRows.children:last-child .gridRow.parent .gridCell.first {
-    border-bottom-left-radius: var(--radius);
+	border-bottom-left-radius: var(--radius);
 }
 
 .gridNestedRows .gridNestedRows.children.expanded:last-child > .gridRow.parent .gridCell.first {
-    border-bottom-left-radius: 0;
+	border-bottom-left-radius: 0;
 }
 
 .gridNestedRows .gridNestedRows.children:last-child .gridRow.parent .gridCell.last {
-    border-bottom-right-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
 }
 
 .gridNestedRows .gridNestedRows.children.expanded:last-child > .gridRow.parent .gridCell.last {
-    border-bottom-right-radius: 0;
+	border-bottom-right-radius: 0;
 }
 
-.gridNestedRows > .children:last-child  {
-    border-bottom: 1px solid var(--border-primary)!important;
+.gridNestedRows > .children:last-child {
+	border-bottom: 1px solid var(--border-primary) !important;
 }
 
 .gridNestedRows.last > .children:last-child {
-    border-bottom: 0!important;
+	border-bottom: 0 !important;
 }
 
 .gridNestedRows.last .gridNestedRows:last-child > .children:last-child {
-    border-bottom: 0!important;
+	border-bottom: 0 !important;
 }

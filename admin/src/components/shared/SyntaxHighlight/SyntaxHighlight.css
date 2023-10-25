@@ -1,10 +1,10 @@
 .syntax-highlight pre {
-    background-color: transparent!important;
-    padding: 0!important;
-    margin: 0!important;
+	background-color: transparent !important;
+	padding: 0 !important;
+	margin: 0 !important;
 }
 
 .syntax-highlight * {
-    font-family: monospace!important;
-    font-size: 13px!important;
+	font-family: monospace !important;
+	font-size: 13px !important;
 }

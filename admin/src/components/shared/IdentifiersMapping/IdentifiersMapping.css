@@ -1,73 +1,73 @@
 .identifiers-mapping__association {
-    display: grid;
-    grid-template-columns: 35px 1fr 70px 1fr 35px;
-    margin-bottom: 20px;
-    align-items: center;
+	display: grid;
+	grid-template-columns: 35px 1fr 70px 1fr 35px;
+	margin-bottom: 20px;
+	align-items: center;
 }
 
 .identifiers-mapping__position {
-    background-color: var(--sl-color-neutral-400);
-    color: var(--text-onaccent);
-    width: 25px;
-    height: 25px;
-    border-radius: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 12px;
+	background-color: var(--sl-color-neutral-400);
+	color: var(--text-onaccent);
+	width: 25px;
+	height: 25px;
+	border-radius: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 12px;
 }
 
 .identifiers-mapping__mapped-property::part(base) {
-    font-family: monospace!important;
+	font-family: monospace !important;
 }
 
 .identifiers-mapping__mapped-property sl-icon,
 .identifiers-mapping__identifier sl-icon {
-    color: var(--sl-color-danger-500);
-    font-size: 9px;
+	color: var(--sl-color-danger-500);
+	font-size: 9px;
 }
 
 .identifiers-mapping__arrow {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .identifiers-mapping__association sl-dropdown {
-    text-align: right;
+	text-align: right;
 }
 
 .identifiers-mapping__association sl-dropdown sl-menu sl-menu-item::part(label) {
-    text-align: left;
+	text-align: left;
 }
 
 .identifiers-mapping__remove::part(label) {
-    color: var(--sl-color-danger-600)
+	color: var(--sl-color-danger-600);
 }
 
 .identifiers-mapping__remove sl-icon {
-    color: var(--sl-color-danger-600)
+	color: var(--sl-color-danger-600);
 }
 
 .identifiers-mapping__add {
-    display: block;
-    width: max-content;
-    margin: auto;
-    margin-bottom: 20px;
+	display: block;
+	width: max-content;
+	margin: auto;
+	margin-bottom: 20px;
 }
 
 .identifiers-mapping .propertiesItemName {
-    font-size: 14px;
-    font-weight: 600;
+	font-size: 14px;
+	font-weight: 600;
 }
 
 .identifiers-mapping .propertiesItemName .name {
-    font-weight: 400;
-    font-size: 13px;
-    opacity: .7;
+	font-weight: 400;
+	font-size: 13px;
+	opacity: 0.7;
 }
 
 .identifiers-mapping .propertiesItemType {
-    font-size: 13px;
-    opacity: .7;
+	font-size: 13px;
+	opacity: 0.7;
 }

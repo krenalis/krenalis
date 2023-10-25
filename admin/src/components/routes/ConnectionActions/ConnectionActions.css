@@ -1,75 +1,75 @@
 .connectionActions.loading {
-    text-align: center;
+	text-align: center;
 }
 
 .connectionActions .noAction {
-    text-align: center;
-    margin-top: 30px;
+	text-align: center;
+	margin-top: 30px;
 }
 
 .connectionActions .noAction .iconWrapper {
-    color: var(--sl-color-primary-600);
-    margin-bottom: 10px;
+	color: var(--sl-color-primary-600);
+	margin-bottom: 10px;
 }
 
 .connectionActions .noAction .description {
-    max-width: 500px;
-    margin: auto;
-    margin-bottom: 15px;
+	max-width: 500px;
+	margin: auto;
+	margin-bottom: 15px;
 }
 
 .connectionActions .grid {
-    margin-top: 10px;
+	margin-top: 10px;
 }
 
 .connectionActions .grid .actionName .description {
-    font-size: 13px;
-    opacity: .7;
+	font-size: 13px;
+	opacity: 0.7;
 }
 
 .connectionActions .title {
-    padding-left: 12px;
-    font-weight: 600;
-    font-size: 14px;
+	padding-left: 12px;
+	font-weight: 600;
+	font-size: 14px;
 }
 
 .connectionActions .actionButtons {
-    display: flex;
-    gap: 10px;
-    justify-content: end;
+	display: flex;
+	gap: 10px;
+	justify-content: end;
 }
 
 .connectionActions .schedulerOptions {
-    padding-left: 20px;
-    padding-right: 20px;
+	padding-left: 20px;
+	padding-right: 20px;
 }
 
 .connectionActions .runButton > sl-icon {
-    font-size: 16px;
+	font-size: 16px;
 }
 
 .connectionActions .runButton > sl-spinner {
-    font-size: 16px;
+	font-size: 16px;
 }
 
 .connectionActions .runButton::part(label) {
-    padding-left: 5px;
+	padding-left: 5px;
 }
 
 .actionDialog::part(body) {
-    padding-bottom: 30px;
+	padding-bottom: 30px;
 }
 
 .actionDialog .listTile {
-    margin-bottom: 15px;
+	margin-bottom: 15px;
 }
 
 .actionDialog .listTile:last-child {
-    margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 .actionDialog .eventActionTypesTitle {
-    font-weight: 600;
-    margin-top: 25px;
-    margin-bottom: 10px;
+	font-weight: 600;
+	margin-top: 25px;
+	margin-bottom: 10px;
 }

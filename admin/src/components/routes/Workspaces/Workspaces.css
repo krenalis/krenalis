@@ -1,71 +1,71 @@
 .workspace-list__content {
-    height: 100%;
-    background-color: var(--bg-gray);
+	height: 100%;
+	background-color: var(--bg-gray);
 }
 
 .workspace-list {
-    max-width: 700px;
-    margin: auto;
-    padding: 30px;
-    animation: fade-in-entrance 1s;
+	max-width: 700px;
+	margin: auto;
+	padding: 30px;
+	animation: fade-in-entrance 1s;
 }
 
 .workspace-list__title-and-button {
-    display: flex;
-    justify-content: space-between;
+	display: flex;
+	justify-content: space-between;
 }
 
 .workspace-list__title {
-    font-size: 23px;
-    font-weight: 600;
+	font-size: 23px;
+	font-weight: 600;
 }
 
 .workspace-list__no-workspace-action {
-    margin-top: 5px;
-    width: 100%;
+	margin-top: 5px;
+	width: 100%;
 }
 
 .workspace-list__workspace:first-child {
-    margin-top: 15px;
+	margin-top: 15px;
 }
 
 .workspace-list__workspace {
-    margin-bottom: 15px;
+	margin-bottom: 15px;
 }
 
 .workspace-list__add-button {
-    display: block;
-    margin-left: auto;
+	display: block;
+	margin-left: auto;
 }
 
 .workspace-list__add-dialog::part(base) {
-    padding-left: 0;
+	padding-left: 0;
 }
 
 .workspace-list__new-workspace-use-europe-region {
-    margin-top: 15px;
-    margin-bottom: 30px;
+	margin-top: 15px;
+	margin-bottom: 30px;
 }
 
 .workspace-list__new-workspace-use-europe-region > span {
-    font-size: 13px;
-    opacity: .8;
+	font-size: 13px;
+	opacity: 0.8;
 }
 
 .workspace-list__new-workspace-add-workspace-button {
-    display: block;
-    margin: auto;
+	display: block;
+	margin: auto;
 }
 
 .workspace-list__skeleton:first-of-type {
-    margin-top: 15px;
+	margin-top: 15px;
 }
 
 .workspace-list__skeleton {
-    margin-bottom: 15px;
+	margin-bottom: 15px;
 }
 
 .workspace-list__skeleton::part(indicator) {
-    height: 40px;
-    border-radius: 15px;
+	height: 40px;
+	border-radius: 15px;
 }

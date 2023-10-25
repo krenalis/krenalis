@@ -1,167 +1,167 @@
 .userTitleSkeleton {
-    width: 210px;
+	width: 210px;
 }
 
-.userTitleText  {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.userTitleText {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .user {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-        "navigation navigation"
-        "traits events";
-    padding: 30px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-areas:
+		'navigation navigation'
+		'traits events';
+	padding: 30px;
 }
 
 .user sl-skeleton::part(indicator) {
-    min-height: 25px;
-    border-radius: 10px;
+	min-height: 25px;
+	border-radius: 10px;
 }
 
 .user .navigation {
-    grid-area: navigation;
-    display: flex;
-    justify-content: start;
-    align-items: center;
-    gap: 25px;
+	grid-area: navigation;
+	display: flex;
+	justify-content: start;
+	align-items: center;
+	gap: 25px;
 }
 
 .user .navigation sl-icon {
-    color: var(--sl-color-neutral-600);
-    font-size: 19px;
+	color: var(--sl-color-neutral-600);
+	font-size: 19px;
 }
 
 .user .navigation sl-button::part(base),
 .user .navigation sl-button::part(label) {
-    padding: 0;
+	padding: 0;
 }
 
 .user .traits {
-    grid-area: traits;
+	grid-area: traits;
 }
 
 .user .events {
-    grid-area: events;
+	grid-area: events;
 }
 
 .user .events .eventsList {
-    font-size: 13px;
-    display: grid;
-    grid-template-columns: 30px auto 1fr;
-    column-gap: 20px;
-    row-gap: 15px;
-    align-items: center;
+	font-size: 13px;
+	display: grid;
+	grid-template-columns: 30px auto 1fr;
+	column-gap: 20px;
+	row-gap: 15px;
+	align-items: center;
 }
 
 .user .events .eventsList .eventLogo .littleLogo svg {
-    height: 22px;
+	height: 22px;
 }
 
 .user .events .eventsList .eventLogo .littleLogo .unknownLogo {
-    width: 22px;
-    height: 22px;
-    border: 1px solid var(--border-primary);
-    border-radius: 5px;
-    font-weight: 600;
+	width: 22px;
+	height: 22px;
+	border: 1px solid var(--border-primary);
+	border-radius: 5px;
+	font-weight: 600;
 }
 
 .user .events .eventsList .eventType {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 .user .traits .head {
-    display: grid;
-    grid-template-columns: 70px 1fr;
-    grid-template-areas:
-        "avatar name"
-        "avatar email";
-    column-gap: 20px;
-    row-gap: 5px;
-    margin-bottom: 30px;
-    align-items: end;
+	display: grid;
+	grid-template-columns: 70px 1fr;
+	grid-template-areas:
+		'avatar name'
+		'avatar email';
+	column-gap: 20px;
+	row-gap: 5px;
+	margin-bottom: 30px;
+	align-items: end;
 }
 
 .user .traits .head .avatar {
-    grid-area: avatar;
+	grid-area: avatar;
 }
 
 .user .traits .avatarSkeleton,
 .user .traits .avatarImage {
-    width: 70px;
-    height: 70px;
+	width: 70px;
+	height: 70px;
 }
 
 .user .traits .avatarSkeleton::part(indicator) {
-    border-radius: 10px;
+	border-radius: 10px;
 }
 
 .user .traits .avatarImage {
-    background-color: var(--sl-color-neutral-50);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 10px;
-    font-weight: 600;
-    border: 1px solid var(--sl-color-neutral-200);
-    font-size: 30px;
+	background-color: var(--sl-color-neutral-50);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 10px;
+	font-weight: 600;
+	border: 1px solid var(--sl-color-neutral-200);
+	font-size: 30px;
 }
 
 .user .traits .head .name {
-    grid-area: name;
+	grid-area: name;
 }
 
 .user .traits .head .name .nameText {
-    font-size: 18px;
-    font-weight: 600;
+	font-size: 18px;
+	font-weight: 600;
 }
 
 .user .traits .head .nameSkeleton {
-    max-width: 30%;
+	max-width: 30%;
 }
 
 .user .traits .head .emailSkeleton {
-    max-width: 50%;
+	max-width: 50%;
 }
 
 .user .traits .head .email {
-    grid-area: email;
+	grid-area: email;
 }
 
-.user .traits .otherTraitsSkeleton > sl-skeleton  {
-    margin-bottom: 10px;
-    width: 70%;
+.user .traits .otherTraitsSkeleton > sl-skeleton {
+	margin-bottom: 10px;
+	width: 70%;
 }
 
 .user .traits .otherTraitsSkeleton > sl-skeleton:nth-last-child(2) {
-    width: 50%;
+	width: 50%;
 }
 
-.user .traits .otherTraitsSkeleton > sl-skeleton:last-child  {
-    margin-bottom: 10px;
-    width: 40%;
+.user .traits .otherTraitsSkeleton > sl-skeleton:last-child {
+	margin-bottom: 10px;
+	width: 40%;
 }
 
 .user .traits .otherTraits {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    column-gap: 50px;
-    row-gap: 10px;
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	column-gap: 50px;
+	row-gap: 10px;
 }
 
 .user .traits .otherTraits .label {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 .user .traits .otherTraits .label,
 .user .traits .otherTraits .value {
-    font-size: 13px;   
+	font-size: 13px;
 }
 
 .user .events .eventsSkeleton > sl-skeleton {
-    margin-bottom: 10px;
-    width: 50%;
+	margin-bottom: 10px;
+	width: 50%;
 }

@@ -1,42 +1,42 @@
 .connectionOverview.loading {
-    text-align: center;
-    padding-top: 50px;
+	text-align: center;
+	padding-top: 50px;
 }
 
 .connectionOverview .chart .chartHead {
-    max-width: 1350px;
-    margin: auto;
-    margin-bottom: 20px;
+	max-width: 1350px;
+	margin: auto;
+	margin-bottom: 20px;
 }
 
 .connectionOverview .chart .title {
-    font-size: 17px;
+	font-size: 17px;
 }
 
 .connectionOverview .chart .recharts-wrapper {
-    margin: auto;
-    position: relative;
-    left: -20px;
+	margin: auto;
+	position: relative;
+	left: -20px;
 }
 
 .connectionOverview .importsWrapper {
-    margin: 100px auto 20px auto;
+	margin: 100px auto 20px auto;
 }
 
 .connectionOverview .importsWrapper .title {
-    max-width: 1400px;
-    margin: auto;
-    margin-bottom: 20px;
-    padding-left: 40px;
-    font-size: 17px;
+	max-width: 1400px;
+	margin: auto;
+	margin-bottom: 20px;
+	padding-left: 40px;
+	font-size: 17px;
 }
 
 .connectionOverview .grid {
-    max-width: 1350px;
-    margin: auto;
+	max-width: 1350px;
+	margin: auto;
 }
 
 .connectionOverview .nothingToShow {
-    text-align: center;
-    font-size: 17px;
+	text-align: center;
+	font-size: 17px;
 }

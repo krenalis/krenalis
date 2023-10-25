@@ -13,7 +13,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import {Compression, ConnectionRole, ConnectionToAdd} from '../../../types/external/connection';
+import { Compression, ConnectionRole, ConnectionToAdd } from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
@@ -93,7 +93,9 @@ const ConnectorSettings = () => {
 						console.error(
 							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`,
 						);
-						showError('An unexpected error has occurred. Please contact the administrator for more information.');
+						showError(
+							'An unexpected error has occurred. Please contact the administrator for more information.',
+						);
 					}
 					return;
 				}
@@ -133,14 +135,14 @@ const ConnectorSettings = () => {
 			try {
 				const connection: ConnectionToAdd = {
 					name: name,
-					role:  connectionRole,
+					role: connectionRole,
 					enabled: true,
 					connector: connectorID,
 					storage: storage,
 					compression: compression,
 					websiteHost: websiteHost,
 					settings: values,
-				}
+				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
@@ -182,7 +184,9 @@ const ConnectorSettings = () => {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
-					showError('An unexpected error has occurred. Please contact the administrator for more information.');
+					showError(
+						'An unexpected error has occurred. Please contact the administrator for more information.',
+					);
 				}
 				return;
 			}
@@ -222,7 +226,7 @@ const ConnectorSettings = () => {
 	const onSave = async () => {
 		let id: number;
 		try {
-			const connection : ConnectionToAdd = {
+			const connection: ConnectionToAdd = {
 				name: name,
 				role: connectionRole,
 				enabled: true,
@@ -231,7 +235,7 @@ const ConnectorSettings = () => {
 				compression: compression,
 				websiteHost: websiteHost,
 				settings: values,
-			}
+			};
 			id = await api.workspaces.addConnection(connection, OAuthToken);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {

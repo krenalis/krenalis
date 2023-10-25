@@ -1,12 +1,12 @@
 .toolbar {
-    position: sticky;
-    top: 0;
-    display: flex;
-    gap: 30px;
-    padding: 10px 30px;
-    border-bottom: 1px solid var(--sl-color-neutral-200);
-    height: 70px;
-    align-items: center;
-    background-color: var(--bg-primary);
-    z-index: 10;
+	position: sticky;
+	top: 0;
+	display: flex;
+	gap: 30px;
+	padding: 10px 30px;
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+	height: 70px;
+	align-items: center;
+	background-color: var(--bg-primary);
+	z-index: 10;
 }

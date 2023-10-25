@@ -1,20 +1,20 @@
 .sectionTitle {
-    font-size: 17px;
-    font-weight: 600;
+	font-size: 17px;
+	font-weight: 600;
 }
 
 .sectionDescription {
-    font-size: 14px;
+	font-size: 14px;
 }
 
 .sectionContent {
-    margin-top: 22px;
-    padding: 0 0 30px 0;
+	margin-top: 22px;
+	padding: 0 0 30px 0;
 }
 
 .sectionContent.padded {
-    background-color: var(--bg-primary);
-    padding: 30px 50px;
-    box-shadow: var(--sl-shadow-small);
-    border-radius: 10px;
+	background-color: var(--bg-primary);
+	padding: 30px 50px;
+	box-shadow: var(--sl-shadow-small);
+	border-radius: 10px;
 }

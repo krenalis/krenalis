@@ -1,70 +1,70 @@
 .editorWrapper {
-    border-radius: 20px;
-    background-color: var(--bg-primary);
-    box-shadow: var(--sl-shadow-small);
-    border: 1px solid var(--sl-color-neutral-200);
+	border-radius: 20px;
+	background-color: var(--bg-primary);
+	box-shadow: var(--sl-shadow-small);
+	border: 1px solid var(--sl-color-neutral-200);
 }
 
 .editorWrapper * {
-    font-family: 'Source Code Pro', monospace !important;
-    font-size: 15px!important;
+	font-family: 'Source Code Pro', monospace !important;
+	font-size: 15px !important;
 }
 
 .editorWrapper .heading {
-    background-color: var(--bg-gray);
-    border-radius: 20px;
-    padding: 18px 30px 15px 30px;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    color: var(--sl-color-neutral-500);
-    text-transform: capitalize;
-    font-size: 13px;
-    border-bottom: 1px solid var(--sl-color-neutral-200);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
+	background-color: var(--bg-gray);
+	border-radius: 20px;
+	padding: 18px 30px 15px 30px;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	color: var(--sl-color-neutral-500);
+	text-transform: capitalize;
+	font-size: 13px;
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
 }
 
 .editorWrapper .heading .logoAndLanguage {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .editorWrapper .heading .languageLogo > img {
-    max-width: 25px;
+	max-width: 25px;
 }
 
 .editorWrapper .heading .language {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 .editorWrapper .switchEditorLanguageDropdown sl-button::part(label),
 .editorWrapper .switchEditorLanguageDropdown sl-button::part(caret) {
-    color: var(--sl-color-neutral-600);
+	color: var(--sl-color-neutral-600);
 }
 
 .editorWrapper .editor {
-    padding: 20px 20px 20px 10px;
+	padding: 20px 20px 20px 10px;
 }
 
 .editorWrapper .decorationsOverviewRuler {
-    border-radius: 5px;
+	border-radius: 5px;
 }
 
 .editorWrapper .scrollbar .slider {
-    border-radius: 5px;
+	border-radius: 5px;
 }
 
 .editorWrapper .line-numbers {
-    color: var(--sl-color-neutral-800)!important;
-    opacity: .8;
-    user-select: none;
-    font-size: 16px!important;
+	color: var(--sl-color-neutral-800) !important;
+	opacity: 0.8;
+	user-select: none;
+	font-size: 16px !important;
 }
 
 .editorWrapper .line-numbers.active-line-number {
-    color: var(--sl-color-primary-600)!important;
-    opacity: 1;
+	color: var(--sl-color-primary-600) !important;
+	opacity: 1;
 }

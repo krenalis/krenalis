@@ -13,25 +13,25 @@
 }
 
 .usersList .grid::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+	width: 10px;
+	height: 10px;
 }
 
 .usersList .grid::-webkit-scrollbar-thumb {
-    background: var(--sl-color-neutral-300);
-    border-radius: 5px;
+	background: var(--sl-color-neutral-300);
+	border-radius: 5px;
 }
 
 .usersList .grid::-webkit-scrollbar-track {
-    background: transparent;
+	background: transparent;
 }
 
 .usersList .grid .gridHeaderRow {
-    border-radius: 0;
+	border-radius: 0;
 }
 
 .usersList .grid .grid .gridRow.last {
-    border-radius: 0;
+	border-radius: 0;
 }
 
 .usersList .Toolbar .toggleColumns sl-menu sl-menu-item sl-switch::part(base) {
@@ -40,12 +40,12 @@
 }
 
 .usersList .toggleColumns::part(panel) {
-	max-height: calc(100vh - 220px)!important;
+	max-height: calc(100vh - 220px) !important;
 	overflow: auto;
 }
 
 .usersList .toggleColumns sl-menu {
-	overflow: hidden;	
+	overflow: hidden;
 }
 
 .usersList .gridContainer {
@@ -58,7 +58,8 @@
 	overflow-y: auto;
 }
 
-.usersList .gridContainer .grid .noRows, .usersList .gridContainer .grid .loading {
+.usersList .gridContainer .grid .noRows,
+.usersList .gridContainer .grid .loading {
 	background-color: var(--bg-gray);
 }
 
@@ -69,16 +70,16 @@
 }
 
 .usersList .gridContainer .footer {
-    padding: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
+	padding: 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
 	height: 80px;
-    background-color: var(--bg-primary);
+	background-color: var(--bg-primary);
 	border-top: 1px solid var(--sl-color-neutral-200);
 	z-index: 10;
 }
@@ -94,13 +95,13 @@
 }
 
 .usersList .gridContainer .footer .total .found::after {
-    content: "";
-    width: 2px;
-    height: 15px;
-    position: absolute;
-    background-color: var(--border-primary);
-    top: 50%;
-    transform: translate(15px, -50%);
+	content: '';
+	width: 2px;
+	height: 15px;
+	position: absolute;
+	background-color: var(--border-primary);
+	top: 50%;
+	transform: translate(15px, -50%);
 }
 
 .usersList .gridContainer .footer .total .gridLimit {
@@ -111,8 +112,8 @@
 }
 
 .usersList .gridContainer .footer .total .gridLimit sl-select::part(control) {
-    padding: 10px 0;
-    min-width: 150px;
+	padding: 10px 0;
+	min-width: 150px;
 }
 
 .usersList .gridContainer .footer .pagination {
@@ -120,8 +121,8 @@
 	align-items: center;
 	gap: 10px;
 	-webkit-user-select: none; /* Safari */
-  	-ms-user-select: none; /* IE 10 and IE 11 */
-  	user-select: none; /* Standard syntax */
+	-ms-user-select: none; /* IE 10 and IE 11 */
+	user-select: none; /* Standard syntax */
 	background-color: var(--bg-gray);
 	padding: 10px 25px;
 	border-radius: 10px;

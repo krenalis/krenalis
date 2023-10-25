@@ -1,75 +1,80 @@
 .data-warehouse > sl-spinner {
-        display: block;
-        margin: auto;
+	display: block;
+	margin: auto;
 }
 
-.warehouse-list, .warehouse-settings, .warehouse-info {
-    max-width: 900px;
-    margin: auto;
-    padding: 30px;
+.warehouse-list,
+.warehouse-settings,
+.warehouse-info {
+	max-width: 900px;
+	margin: auto;
+	padding: 30px;
 }
 
-.warehouse-list__title, .warehouse-settings__name, .warehouse-info__name {
-    font-size: 23px;
-    font-weight: 600;
+.warehouse-list__title,
+.warehouse-settings__name,
+.warehouse-info__name {
+	font-size: 23px;
+	font-weight: 600;
 }
 
 .warehouse-list__description {
-    font-size: 15px;
+	font-size: 15px;
 }
 
 .warehouse-list__warehouse:first-of-type {
-    margin-top: 15px;
+	margin-top: 15px;
 }
 
 .warehouse-list__warehouse {
-    margin-bottom: 15px;    
+	margin-bottom: 15px;
 }
 
 .warehouse-info__buttons {
-    display: flex;
-    margin-top: 30px;
-    justify-content: end;
-    gap: 15px;
+	display: flex;
+	margin-top: 30px;
+	justify-content: end;
+	gap: 15px;
 }
 
 .warehouse-info__confirmation-text {
-    text-align: center;
+	text-align: center;
 }
 
 .warehouse-info__confirmation-buttons {
-    margin-top: 30px;
-    display: flex;
-    justify-content: center;
-    gap: 15px;
+	margin-top: 30px;
+	display: flex;
+	justify-content: center;
+	gap: 15px;
 }
 
-.warehouse-settings__info, .warehouse-info__info {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 30px;
+.warehouse-settings__info,
+.warehouse-info__info {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	margin-bottom: 30px;
 }
 
 .warehouse-settings__back-button {
-    font-size: 23px;
+	font-size: 23px;
 }
 
 .warehouse-settings__back-button::part(base) {
-    padding-left: 0;
+	padding-left: 0;
 }
 
 .warehouse-settings__settings > * {
-    margin-bottom: 30px;
+	margin-bottom: 30px;
 }
 
 .warehouse-settings__buttons {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
+	display: flex;
+	justify-content: center;
+	gap: 30px;
 }
 
 .warehouse-settings__buttons > sl-button {
-    margin-top: 30px;
-    min-width: 150px;
+	margin-top: 30px;
+	min-width: 150px;
 }

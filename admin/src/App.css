@@ -45,7 +45,7 @@ html,
 body,
 #root,
 .app {
-	height: 100%!important;
+	height: 100% !important;
 }
 
 *,
@@ -55,11 +55,11 @@ body,
 	box-sizing: border-box;
 	line-height: 1.5;
 	outline-color: var(--color-primary-500);
-	color: var(--sl-color-neutral-700);	
+	color: var(--sl-color-neutral-700);
 }
 
 *::part(base) {
-	font-family: Inter,sans-serif;
+	font-family: Inter, sans-serif;
 }
 
 h1,
@@ -197,11 +197,11 @@ sl-menu-item::part(base) {
 }
 
 sl-menu-item:focus-visible::part(base) {
-	color: var(--text-onaccent)!important;
+	color: var(--text-onaccent) !important;
 }
 
 sl-menu-item:focus-visible * {
-	color: var(--text-onaccent)!important;
+	color: var(--text-onaccent) !important;
 }
 
 sl-menu-item:hover::part(base) {
@@ -209,31 +209,31 @@ sl-menu-item:hover::part(base) {
 }
 
 sl-switch[checked]::part(control) {
-	background-color: var(--sl-color-success-600)!important;
-	border-color: var(--sl-color-success-600)!important;
+	background-color: var(--sl-color-success-600) !important;
+	border-color: var(--sl-color-success-600) !important;
 }
 
 sl-switch[checked]::part(thumb) {
-	border-color: var(--sl-color-success-600)!important;
+	border-color: var(--sl-color-success-600) !important;
 }
 
-sl-drawer[placement="bottom"]::part(panel) {
+sl-drawer[placement='bottom']::part(panel) {
 	padding: 20px 30px 10px 30px;
 }
 
 /* TODO: why this doesn't work? */
 
 sl-drawer::part(body)::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+	width: 10px;
+	height: 10px;
 }
 
 sl-drawer::part(body)::-webkit-scrollbar-thumb {
-    background: var(--sl-color-neutral-300);
+	background: var(--sl-color-neutral-300);
 }
 
 sl-drawer::part(body)::-webkit-scrollbar-track {
-    background: transparent;
+	background: transparent;
 }
 
 /* || Forms */
@@ -273,11 +273,11 @@ sl-dialog::part(body) {
 	min-height: calc(100vh - 70px);
 }
 
-.app .routeContent.connection { 
+.app .routeContent.connection {
 	min-height: calc(100vh - 140px);
 }
 
-.app .routeContent.schema { 
+.app .routeContent.schema {
 	min-height: calc(100vh - 140px);
 }
 
@@ -294,35 +294,35 @@ sl-split-panel {
 }
 
 sl-split-panel::part(divider) {
-	background-color: var(--border-primary);;
+	background-color: var(--border-primary);
 	z-index: 20;
 }
 
-sl-split-panel sl-icon[slot=divider]  {
-    position: absolute;
-    border-radius: 5px;
-    background: var(--bg-primary);
-    color: var(--sl-color-neutral-500);
-    padding: 0.5rem 0.125rem;
-    border: 1px solid var(--border-primary);
+sl-split-panel sl-icon[slot='divider'] {
+	position: absolute;
+	border-radius: 5px;
+	background: var(--bg-primary);
+	color: var(--sl-color-neutral-500);
+	padding: 0.5rem 0.125rem;
+	border: 1px solid var(--border-primary);
 }
 
 /* || Global spinner */
 
 .globalSpinner {
 	position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, calc(-50% - 100px));
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, calc(-50% - 100px));
 }
 
 /* || Animations */
 
 @keyframes fade-in-entrance {
-    0% {
-        opacity: 0;
-    }
-    100% {
-        opacity: 1;
-    }
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
 }

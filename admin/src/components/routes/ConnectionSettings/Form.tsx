@@ -40,7 +40,9 @@ const Form = ({ connection: c }: FormProps) => {
 						console.error(
 							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`,
 						);
-						showError('An unexpected error has occurred. Please contact the administrator for more information.');
+						showError(
+							'An unexpected error has occurred. Please contact the administrator for more information.',
+						);
 					}
 					return;
 				}
@@ -89,7 +91,9 @@ const Form = ({ connection: c }: FormProps) => {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
-					showError('An unexpected error has occurred. Please contact the administrator for more information');
+					showError(
+						'An unexpected error has occurred. Please contact the administrator for more information',
+					);
 				}
 				return;
 			}

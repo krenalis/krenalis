@@ -48,4 +48,13 @@ interface ConnectionStats {
 	UserIdentities: number[];
 }
 
-export type { Connection, ConnectionRole, Compression, ConnectionToAdd, ConnectionToSet, ConnectorType, Health, ConnectionStats };
+export type {
+	Connection,
+	ConnectionRole,
+	Compression,
+	ConnectionToAdd,
+	ConnectionToSet,
+	ConnectorType,
+	Health,
+	ConnectionStats,
+};

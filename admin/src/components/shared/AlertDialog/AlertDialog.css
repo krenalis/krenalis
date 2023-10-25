@@ -1,40 +1,40 @@
 .alertDialog::part(body) {
-    padding: 0;
-    overflow: visible;
+	padding: 0;
+	overflow: visible;
 }
 
 .alertDialog::part(title) {
-    padding: 0;
+	padding: 0;
 }
 
 .alertDialog::part(close-button) {
-    padding: 10px;
+	padding: 10px;
 }
 
 .alertDialog .alertIcon {
-    font-size: 30px;
-    text-align: center;
+	font-size: 30px;
+	text-align: center;
 }
 
 .alertDialog .alertIcon sl-icon {
-    color: var(--alert-color);
+	color: var(--alert-color);
 }
 
 .alertDialog .alertTitle {
-    text-align: center;
-    padding: 0 20px;
-    font-weight: 600;
-    font-size: 18px;
+	text-align: center;
+	padding: 0 20px;
+	font-weight: 600;
+	font-size: 18px;
 }
 
 .alertDialog .alertContent {
-    padding: 15px 30px 30px 30px;
+	padding: 15px 30px 30px 30px;
 }
 
 .alertDialog .alertActions {
-    display: flex;
-    justify-content: end;
-    gap: 15px;
-    padding: 15px 25px;
-    border-top: 1px solid var(--border-primary);
+	display: flex;
+	justify-content: end;
+	gap: 15px;
+	padding: 15px 25px;
+	border-top: 1px solid var(--border-primary);
 }

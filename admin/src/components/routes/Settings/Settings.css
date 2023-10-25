@@ -1,24 +1,24 @@
 .settings__content {
-    height: calc(100% - 70px);
-    background-color: var(--bg-gray);
+	height: calc(100% - 70px);
+	background-color: var(--bg-gray);
 }
 
 .settings {
-    max-width: 900px;
-    margin: 0px auto;
-    padding: 30px;
-    animation: fade-in-entrance .5s;
+	max-width: 900px;
+	margin: 0px auto;
+	padding: 30px;
+	animation: fade-in-entrance 0.5s;
 }
 
 .settings__title {
-    font-size: 23px;
-    font-weight: 600;
+	font-size: 23px;
+	font-weight: 600;
 }
 
 .settings__setting:first-of-type {
-    margin-top: 15px;
+	margin-top: 15px;
 }
 
 .settings__setting {
-    margin-bottom: 15px;    
+	margin-bottom: 15px;
 }

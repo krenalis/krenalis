@@ -1,23 +1,21 @@
 .connectorFieldSet {
-    background-color: var(--bg-gray);
-    padding: 25px 35px 32px 35px;
-    border-bottom-left-radius: 5px;
-    border-bottom-right-radius: 5px;
-    margin: 10px 7px;
-    border-radius: 5px;
+	background-color: var(--bg-gray);
+	padding: 25px 35px 32px 35px;
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
+	margin: 10px 7px;
+	border-radius: 5px;
 }
 
 .connectorFieldSet > * {
-    margin-bottom: 20px;
+	margin-bottom: 20px;
 }
 
 .connectorFieldSet .connectorCheckbox {
-    margin-top: 0!important;
-    margin-bottom: 20px!important;
+	margin-top: 0 !important;
+	margin-bottom: 20px !important;
 }
 
 .connectorFieldSet > *:last-child {
-    margin-bottom: 0!important;
+	margin-bottom: 0 !important;
 }
-
-

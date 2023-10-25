@@ -1,28 +1,28 @@
 .root-error {
-    min-height: 100vh;
-    background-color: var(--bg-gray);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	min-height: 100vh;
+	background-color: var(--bg-gray);
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .root-error__message {
-    position: relative;
-    top: -100px;
-    text-align: center;
+	position: relative;
+	top: -100px;
+	text-align: center;
 }
 
 .root-error__title {
-    font-size: 23px;
+	font-size: 23px;
 	font-weight: 600;
-    margin-top: 10px;
-    margin-bottom: 5px;
+	margin-top: 10px;
+	margin-bottom: 5px;
 }
 
 .root-error__instructions {
-    font-size: 18px;
+	font-size: 18px;
 }
 
 .root-error .iconWrapper sl-icon {
-    color: var(--sl-color-primary-500);
+	color: var(--sl-color-primary-500);
 }

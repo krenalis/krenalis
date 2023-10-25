@@ -1,14 +1,14 @@
 .confirmationButton {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .confirmationButton::part(label) {
-    transition: transform var(--scale-animation-duration);
-    will-change: transform;
+	transition: transform var(--scale-animation-duration);
+	will-change: transform;
 }
 
 .confirmationButton.confirm::part(label) {
-    transform: scale(2);
+	transform: scale(2);
 }

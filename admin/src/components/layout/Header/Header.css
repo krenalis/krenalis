@@ -1,7 +1,7 @@
 .header {
 	padding: 15px 30px;
 	display: grid;
-	grid-template-areas: "title account";
+	grid-template-areas: 'title account';
 	border-bottom: 1px solid var(--sl-color-neutral-200);
 	justify-content: space-between;
 	align-items: baseline;

@@ -10,7 +10,7 @@
 
 .connectionsMap .map {
 	display: grid;
-	grid-template-columns: .7fr 1fr .7fr;
+	grid-template-columns: 0.7fr 1fr 0.7fr;
 	grid-template-areas: 'sources main destinations';
 	gap: 80px;
 	align-items: start;
@@ -26,21 +26,21 @@
 }
 
 .connectionsMap .map .main .centralLogo {
-    width: 130px;
-    height: 130px;
-    margin: auto;
-    background-color: var(--color-primary-600);
-    border-radius: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: var(--text-onaccent);
-    font-size: 21px;
-    box-shadow: 0 0 #4f46e5;
-    animation: pulse 2s infinite;
-    border: 12px solid var(--color-primary-400);
-    font-weight: 600;
-    font-family: monospace;
+	width: 130px;
+	height: 130px;
+	margin: auto;
+	background-color: var(--color-primary-600);
+	border-radius: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	color: var(--text-onaccent);
+	font-size: 21px;
+	box-shadow: 0 0 #4f46e5;
+	animation: pulse 2s infinite;
+	border: 12px solid var(--color-primary-400);
+	font-weight: 600;
+	font-family: monospace;
 }
 
 @keyframes pulse {
@@ -66,18 +66,18 @@
 }
 
 .connectionsMap .map .main .databases .database {
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-flow: column;
-    background-color: transparent;
+	text-align: center;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-flow: column;
+	background-color: transparent;
 	padding-top: 5px;
 	position: relative;
 }
 
 .connectionsMap .map .main .databases .database.users {
-    cursor: pointer;
+	cursor: pointer;
 }
 
 .connectionsMap .map .main .databases .database sl-icon {
@@ -99,64 +99,68 @@
 }
 
 .connectionsMap .connectionBlock {
-    background-color: var(--bg-primary);
-    padding: 20px;
-    border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-small);
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    position: relative;
-    min-height: 60px;
-    position: relative;
-    z-index: 1;
-    font-size: 14px;
-    border: 1px solid var(--sl-color-neutral-200);
-    cursor: pointer;
-    will-change: transform;
+	background-color: var(--bg-primary);
+	padding: 20px;
+	border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-small);
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	position: relative;
+	min-height: 60px;
+	position: relative;
+	z-index: 1;
+	font-size: 14px;
+	border: 1px solid var(--sl-color-neutral-200);
+	cursor: pointer;
+	will-change: transform;
 }
 
-.connectionsMap .connectionBlock[data-is-hovered="true"] {
-    border: 1px dashed var(--sl-color-primary-600);
-    background-color: var(--sl-color-primary-50);
+.connectionsMap .connectionBlock[data-is-hovered='true'] {
+	border: 1px dashed var(--sl-color-primary-600);
+	background-color: var(--sl-color-primary-50);
 }
 
 @keyframes connection-block-fade-in {
-    0% {  opacity: 0 }
-    100% {  opacity: 1 }
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
 }
 
 .connectionsMap .connectionBlock.new {
-    animation: connection-block-fade-in 1000ms;
-    animation-fill-mode: both;
+	animation: connection-block-fade-in 1000ms;
+	animation-fill-mode: both;
 }
 
 .connectionsMap .connectionBlock > .flex {
-    width: 100%;
+	width: 100%;
 }
 
 .connectionsMap .connectionBlock .name {
-    transform: translateY(1px);
+	transform: translateY(1px);
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections {
-    display: grid;
-    grid-template-columns: 1fr .5fr 1fr;
-    align-items: center;
+	display: grid;
+	grid-template-columns: 1fr 0.5fr 1fr;
+	align-items: center;
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections.left {
-    grid-template-areas: "primary arrow secondary"    
+	grid-template-areas: 'primary arrow secondary';
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections.right {
-    grid-template-areas: "secondary arrow primary";
+	grid-template-areas: 'secondary arrow primary';
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections .primaryConnection {
-    grid-area: primary
+	grid-area: primary;
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections .secondaryConnections {
-    grid-area: secondary;
+	grid-area: secondary;
 }

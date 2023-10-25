@@ -1,7 +1,7 @@
 .sl-toast-stack {
 	left: 50%;
-    transform: translateX(-50%);
-    overflow: visible!important;
+	transform: translateX(-50%);
+	overflow: visible !important;
 }
 
 .sl-toast-stack sl-alert::part(base) {
@@ -27,16 +27,16 @@
 }
 
 .statusAction {
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    border: 2px solid var(--text-onaccent);
-    border-radius: 5px;
-    text-align: center;
-    padding: 5px 15px;
-    width: max-content;
-    margin-left: auto;
-    margin-top: 10px;
-    background-color: transparent;
-    display: block;
+	font-weight: 600;
+	font-size: 13px;
+	cursor: pointer;
+	border: 2px solid var(--text-onaccent);
+	border-radius: 5px;
+	text-align: center;
+	padding: 5px 15px;
+	width: max-content;
+	margin-left: auto;
+	margin-top: 10px;
+	background-color: transparent;
+	display: block;
 }

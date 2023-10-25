@@ -1,24 +1,24 @@
 .gridRow {
-    display: grid;
-    grid-template-columns: var(--grid-columns);
-    align-items: center;
+	display: grid;
+	grid-template-columns: var(--grid-columns);
+	align-items: center;
 }
 
 .gridRow.clickable {
-    cursor: pointer;
+	cursor: pointer;
 }
 
 @keyframes rowFadeIn {
-    from {
-        max-height: 0;
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-        max-height: 200px;
-    }
+	from {
+		max-height: 0;
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+		max-height: 200px;
+	}
 }
 
 .gridRow[data-animation='fade-in'] {
-    animation: rowFadeIn 1s;
+	animation: rowFadeIn 1s;
 }

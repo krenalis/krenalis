@@ -1,49 +1,49 @@
 @keyframes fullscreenFadeIn {
-    0% {
-        opacity: 0;
-        transform: scale(.98);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
+	0% {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 
 @keyframes fullscreenFadeOut {
-    0% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(.98);
-    }
+	0% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: scale(0.98);
+	}
 }
 
 .fullscreen {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--bg-gray);
-    z-index: 20;
-    overflow: auto;
-    animation-fill-mode: both;
-    opacity: 0;
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: var(--bg-gray);
+	z-index: 20;
+	overflow: auto;
+	animation-fill-mode: both;
+	opacity: 0;
 }
 
 .fullscreen.isOpen {
-    opacity: 1;
+	opacity: 1;
 }
 
 .fullscreen.isLoading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .fullscreen.isLoading sl-spinner {
-    position: relative;
-    top: -50px;
+	position: relative;
+	top: -50px;
 }
