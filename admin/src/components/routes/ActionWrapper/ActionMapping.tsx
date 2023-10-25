@@ -113,14 +113,18 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			return;
 		}
 		const a = { ...action };
-		a.Transformation = {
-			Source: rawTransformationFunctions[selectedLanguage].replace(
-				'$parameterName',
-				defaultTransformationParameterByTarget[actionType.Target],
-			),
-			Language: selectedLanguage,
-		};
-		setAction(a);
+		const isTransformationUndefined = a.Transformation == null;
+		const isLanguageChanged = a.Transformation != null && a.Transformation.Language !== selectedLanguage;
+		if (isTransformationUndefined || isLanguageChanged) {
+			a.Transformation = {
+				Source: rawTransformationFunctions[selectedLanguage].replace(
+					'$parameterName',
+					defaultTransformationParameterByTarget[actionType.Target],
+				),
+				Language: selectedLanguage,
+			};
+			setAction(a);
+		}
 	}, [selectedLanguage]);
 
 	const onMinimizedEditorMount = (editor) => {
