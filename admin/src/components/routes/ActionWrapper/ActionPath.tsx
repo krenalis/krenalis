@@ -60,6 +60,29 @@ const ActionPath = () => {
 		};
 	}, []);
 
+	useEffect(() => {
+		const fetchSheets = async () => {
+			pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
+			let res: SheetsResponse;
+			try {
+				res = await api.workspaces.connections.sheets(connection.id, action.Path!);
+			} catch (err) {
+				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
+					showError(err.message);
+				} else {
+					showError(err);
+				}
+				setHasSheetsError(true);
+				return;
+			}
+			setSheets(res.sheets);
+		};
+		if (action.Path == null || action.Path === '') {
+			return;
+		}
+		fetchSheets();
+	}, []);
+
 	const onUpdatePath = async (e) => {
 		clearTimeout(getCompletePathTimeoutID.current);
 		const a = { ...action };
