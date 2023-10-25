@@ -16,7 +16,6 @@ const ActionHeader = () => {
 		saveAction,
 		onClose,
 		isMappingSectionDisabled,
-		mode,
 		isEditing,
 		isSaveButtonLoading,
 		isSaveHidden,
