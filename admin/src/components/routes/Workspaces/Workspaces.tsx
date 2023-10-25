@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import './Workspaces.css';
 import ListTile from '../../shared/ListTile/ListTile';
 import API from '../../../lib/api/api';

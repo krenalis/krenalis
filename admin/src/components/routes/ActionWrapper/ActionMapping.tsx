@@ -56,7 +56,7 @@ const timestampFormats = {
 	rfc3339WithNanoseconds: '2006-01-02T15:04:05.999999999Z07:00',
 };
 
-const ActionMapping = forwardRef<any>((props, ref) => {
+const ActionMapping = forwardRef<any>((_, ref) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>();

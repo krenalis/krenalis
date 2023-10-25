@@ -1,4 +1,3 @@
-import Type from './types';
 import { Action, ActionType } from './action';
 import { UIValues } from './api';
 

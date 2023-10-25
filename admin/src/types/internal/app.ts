@@ -7,11 +7,6 @@ type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
 type Size = 'small' | 'medium' | 'large';
 
-interface StatusAction {
-	name: string;
-	onClick: () => void;
-}
-
 interface Status {
 	variant: Variant;
 	icon: string;

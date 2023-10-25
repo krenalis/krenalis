@@ -69,7 +69,7 @@ const ConnectorKeyValue = ({
 		onChange(name, formatRows(filtered));
 	};
 
-	const onKeyChange = async (n, key, e) => {
+	const onKeyChange = async (_, key, e) => {
 		const id = Number(e.currentTarget.closest('.row').dataset.id);
 		const updated = rows.map((r) => {
 			if (r.id === id) return { ...r, key: key };
@@ -79,7 +79,7 @@ const ConnectorKeyValue = ({
 		onChange(name, formatRows(updated));
 	};
 
-	const onValueChange = (n, value, e) => {
+	const onValueChange = (_, value, e) => {
 		const id = Number(e.currentTarget.closest('.row').dataset.id);
 		const updated = rows.map((r) => {
 			if (r.id === id) return { ...r, value: value };

@@ -1,4 +1,4 @@
-import React, { forwardRef, useRef, useEffect, ButtonHTMLAttributes } from 'react';
+import React, { forwardRef } from 'react';
 import './Toast.css';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -13,11 +13,6 @@ const Toast = forwardRef<any, ToastProps>(({ status, isFullscreen }, ref) => {
 	if (status == null) {
 		return <SlAlert ref={ref} variant='neutral' closable></SlAlert>;
 	}
-
-	// need to add the event listener with a ref because `onClick` is prevented
-	// when used inside the SlAlert.
-	const buttonRef = useRef<HTMLButtonElement>();
-
 	return (
 		<SlAlert className={isFullscreen ? 'isFullscreen' : ''} ref={ref} variant={status.variant} closable>
 			<SlIcon slot='icon' name={status.icon} />

@@ -1,4 +1,4 @@
-import { RefObject, createContext, ReactNode } from 'react';
+import { createContext } from 'react';
 import TransformedConnection from '../lib/helpers/transformedConnection';
 import { TransformedAction, TransformedActionType } from '../lib/helpers/transformedAction';
 

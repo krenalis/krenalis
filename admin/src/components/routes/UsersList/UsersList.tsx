@@ -11,7 +11,6 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import { GridColumn } from '../../../types/componentTypes/Grid.types';
 
 const UsersList = () => {
 	const { setTitle } = useContext(AppContext);
