@@ -236,6 +236,9 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 			default:
 				return actionExecutionError{fmt.Errorf("invalid value for column '%s', cannot be used as timestamp", timestampCol.Name)}
 			}
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("invalid value for column '%s': %s", timestampCol.Name, err)}
+			}
 
 		}
 
