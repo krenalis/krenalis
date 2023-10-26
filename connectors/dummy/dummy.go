@@ -13,6 +13,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,6 +26,7 @@ import (
 	"chichi/apis/normalization"
 	"chichi/connector"
 	"chichi/connector/types"
+	"chichi/connector/ui"
 )
 
 // Connector icon.
@@ -36,10 +38,6 @@ var (
 	usersLock       sync.Mutex
 )
 
-// loadOnly10Users, when true, makes Dummy to load only 10 users instead of the
-// entire data set.
-const loadOnly10Users = true
-
 //go:embed users.json
 var jsonUsers []byte
 
@@ -48,6 +46,7 @@ var jsonUsers []byte
 var _ interface {
 	connector.AppEventsConnection
 	connector.AppUsersConnection
+	connector.UI
 } = (*connection)(nil)
 
 func init() {
@@ -63,11 +62,18 @@ func init() {
 // open opens a Dummy connection.
 func open(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of CSV connection")
+		}
+	}
 	return &c, nil
 }
 
 type connection struct {
-	conf *connector.AppConfig
+	conf     *connector.AppConfig
+	settings *settings
 }
 
 var randGenerator = rand.New(rand.NewSource(time.Now().Unix()))
@@ -180,6 +186,47 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
+type settings struct {
+	LargeDataset bool
+}
+
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+
+	switch event {
+	case "load":
+		// Load the Form.
+		var s settings
+		if c.settings != nil {
+			s = *c.settings
+		}
+		values, _ = json.Marshal(s)
+	case "save":
+		// Save the settings.
+		s, err := c.ValidateSettings(ctx, values)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = c.conf.SetSettings(ctx, s)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, ui.SuccessAlert("Settings for Dummy saved"), nil
+	default:
+		return nil, nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: ui.SourceRole},
+		},
+		Values:  values,
+		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+	}
+
+	return form, nil, nil
+}
+
 // SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
 func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
@@ -201,6 +248,17 @@ func (c *connection) SendEventPreview(ctx context.Context, eventType string, eve
 	}
 	b.Write(body)
 	return b.Bytes(), nil
+}
+
+// ValidateSettings validates the settings received from the UI and returns them
+// in a format suitable for storage.
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+	var settings settings
+	err := json.Unmarshal(values, &settings)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&settings)
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
@@ -274,6 +332,9 @@ func (c *connection) Users(ctx context.Context, properties []types.Path, cursor 
 		})
 	}
 	sort.Slice(objects, func(i, j int) bool { return objects[i].ID < objects[j].ID })
+	if !c.settings.LargeDataset {
+		objects = objects[:10]
+	}
 	return objects, "", io.EOF
 }
 
@@ -285,9 +346,6 @@ func init() {
 	err := json.Unmarshal(jsonUsers, &rawUsers)
 	if err != nil {
 		panic(err)
-	}
-	if loadOnly10Users {
-		rawUsers = rawUsers[:10]
 	}
 	usersLock.Lock()
 	users = make(map[string]connector.Properties, len(rawUsers))

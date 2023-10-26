@@ -42,7 +42,8 @@ func (c *Chichi) AddDummy(name string, role connector.Role) int {
 			"Name":      name,
 			"Role":      role.String(),
 			"Enabled":   true,
-			"Connector": 3, // Dummy.
+			"Connector": 3,                // Dummy.
+			"Settings":  map[string]any{}, // TODO(Gianluca): see https://github.com/open2b/chichi/issues/355.
 		},
 	})
 }

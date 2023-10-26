@@ -203,7 +203,7 @@ func TestExportUsersToFile(t *testing.T) {
 
 		expectedStrings := []string{
 			"id,dummy_id,anonymous_id,android,ios,first_name,last_name,email,gender,food_preferences,phone_numbers,favorite_movie",
-			`Janifer,Sharpin,jsharpin8@example.com,male,"{""drink"":null,""fruit"":null}",,`,
+			`Kinsley,Buessen,kbuessen0@example.com,male,"{""drink"":null,""fruit"":null}",,`,
 		}
 		for _, expected := range expectedStrings {
 			if !bytes.Contains(content, []byte(expected)) {
