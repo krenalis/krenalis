@@ -71,7 +71,7 @@ AS $$
             SELECT count(*) > 0 INTO has_clusters_to_merge FROM clusters_to_merge;
             EXIT WHEN NOT has_clusters_to_merge;
 
-            -- Make the "clusters_to_merge" table simmetric.
+            -- Make the "clusters_to_merge" table symmetric.
             -- TODO(Gianluca): is this necessary?
             INSERT INTO clusters_to_merge
                 SELECT c2, c1
