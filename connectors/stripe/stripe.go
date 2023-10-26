@@ -10,9 +10,6 @@ package stripe
 
 import (
 	"bytes"
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -27,6 +24,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"chichi/connector"
+	"chichi/connector/types"
+	"chichi/connector/ui"
 )
 
 const maxEventPayload = 1024 * 1024
@@ -231,7 +232,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties conne
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	var body io.Reader
 	if cursor.ID != "" {

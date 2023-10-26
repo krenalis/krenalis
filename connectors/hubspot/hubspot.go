@@ -97,7 +97,7 @@ func (c *connection) GroupSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Groups(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 	objects, after, err := c.objects(ctx, "Company", properties, cursor)
 	for _, object := range objects {
 		contacts, err := c.companyContacts(ctx, object.ID)
@@ -310,13 +310,13 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 	return c.objects(ctx, "Contact", properties, cursor)
 }
 
 // objects returns the contacts, if typ is "Contact", or the companies, if typ
 // is "Company", starting from the given cursor.
-func (c *connection) objects(ctx context.Context, typ string, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) objects(ctx context.Context, typ string, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
@@ -342,7 +342,7 @@ func (c *connection) objects(ctx context.Context, typ string, properties []types
 			c.buf.WriteByte(',')
 		}
 		c.buf.WriteByte('"')
-		c.buf.WriteString(p[0])
+		c.buf.WriteString(p)
 		c.buf.WriteByte('"')
 	}
 	c.buf.WriteString(`]}`)

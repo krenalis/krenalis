@@ -315,7 +315,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()

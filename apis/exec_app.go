@@ -13,12 +13,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 
 	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/connector"
-	"chichi/connector/types"
 )
 
 // downloadUsersForIdentityMatch downloads the users of the external app for
@@ -31,9 +29,7 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 	}
 
 	// Read the users from the app.
-	properties := []types.Path{
-		{this.action.MatchingProperties.External},
-	}
+	properties := []string{this.action.MatchingProperties.External}
 
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
@@ -225,16 +221,16 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 	}
 
 	// Determine the properties to import.
-	var properties []types.Path
+	var properties []string
 	for _, path := range this.action.Mapping {
-		properties = append(properties, strings.Split(path, "."))
+		properties = append(properties, path)
 	}
 	// In case of transformation, also import every property declared in the
 	// input schema of the action.
 	if this.action.Transformation != nil {
 		for _, name := range this.action.InSchema.PropertiesNames() {
 			if _, ok := this.action.Mapping[name]; !ok {
-				properties = append(properties, types.Path{name})
+				properties = append(properties, name)
 			}
 		}
 	}

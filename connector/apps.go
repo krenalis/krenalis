@@ -138,7 +138,7 @@ type AppUsersConnection interface {
 	UpdateUser(ctx context.Context, id string, properties Properties) error
 
 	// Users returns the users starting from the given cursor.
-	Users(ctx context.Context, properties []types.Path, cursor Cursor) (users []Object, next string, err error)
+	Users(ctx context.Context, properties []string, cursor Cursor) (users []Object, next string, err error)
 }
 
 // AppGroupsConnection is the interface implemented by app connections that
@@ -150,7 +150,7 @@ type AppGroupsConnection interface {
 	GroupSchema(ctx context.Context) (types.Type, error)
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, properties []types.Path, after Cursor) (groups []Object, cursor string, err error)
+	Groups(ctx context.Context, properties []string, after Cursor) (groups []Object, cursor string, err error)
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not

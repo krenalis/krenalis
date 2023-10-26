@@ -318,7 +318,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	var hasUpdatedProperty bool
 
@@ -330,8 +330,8 @@ func (c *connection) Users(ctx context.Context, properties []types.Path, cursor 
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteString(p[0])
-			if p[0] == "updated" {
+			b.WriteString(p)
+			if p == "updated" {
 				hasUpdatedProperty = true
 			}
 		}

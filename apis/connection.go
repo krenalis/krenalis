@@ -548,12 +548,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	names := schema.PropertiesNames()
-	properties := make([]types.Path, len(names))
-	for i, name := range names {
-		properties[i] = types.Path{name}
-	}
-	objects, next, err := app.Users(ctx, properties, cur)
+	objects, next, err := app.Users(ctx, schema.PropertiesNames(), cur)
 	eof := err == io.EOF
 	if err != nil && !eof {
 		return nil, "", err

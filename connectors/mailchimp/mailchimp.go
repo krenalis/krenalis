@@ -472,7 +472,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/lists/" + c.settings.List + "/members"
 	values := url.Values{
@@ -609,11 +609,11 @@ type settings struct {
 
 // serializeProperties serializes the properties in the Mailchimp "fields"
 // parameter format
-func serializeProperties(properties []types.Path) string {
+func serializeProperties(properties []string) string {
 	var hasID, hasLastChange bool
-	for _, p := range properties {
+	for i, p := range properties {
 		var realName string
-		switch p[0] {
+		switch p {
 		case "ConsentsToOneToOneMessaging":
 			realName = "consents_to_one_to_one_messaging"
 		case "ContactID":
@@ -675,7 +675,7 @@ func serializeProperties(properties []types.Path) string {
 		case "Vip":
 			realName = "vip"
 		}
-		p[0] = "members." + realName
+		properties[i] = "members." + realName
 	}
 	var plist []string
 	if !hasID {
@@ -685,7 +685,7 @@ func serializeProperties(properties []types.Path) string {
 		plist = append(plist, "members.last_changed")
 	}
 	for _, p := range properties {
-		plist = append(plist, p.String())
+		plist = append(plist, p)
 	}
 	return strings.Join(plist, ",")
 }
