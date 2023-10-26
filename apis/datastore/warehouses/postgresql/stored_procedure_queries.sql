@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION matching_func(VARIADIC identifiers text[])
-RETURNS boolean -- may return "null" to indicate "i don't know"
+RETURNS boolean
 AS $$
     DECLARE
         i INT;
@@ -9,7 +9,7 @@ AS $$
                 RETURN identifiers[i] = identifiers[i+1];
             END IF;
         END loop;
-        RETURN null;
+        RETURN false;
     END;
 $$ LANGUAGE plpgsql;
 

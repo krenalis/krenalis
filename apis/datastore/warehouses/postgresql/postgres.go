@@ -361,7 +361,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	// Generate the SQL matching expression.
 	var matchingExpr strings.Builder
 	if len(identifiersColumns) > 0 {
-		matchingExpr.WriteString("coalesce(matching_func(")
+		matchingExpr.WriteString("matching_func(")
 		for i, ident := range identifiersColumns {
 			if i > 0 {
 				matchingExpr.WriteByte(',')
@@ -372,7 +372,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 			matchingExpr.WriteString(ident.Name)
 			matchingExpr.WriteString(`"::text`)
 		}
-		matchingExpr.WriteString("), false)")
+		matchingExpr.WriteString(")")
 	} else {
 		matchingExpr.WriteString("false")
 	}
