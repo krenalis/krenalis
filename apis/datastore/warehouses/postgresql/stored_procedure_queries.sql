@@ -1,3 +1,18 @@
+CREATE OR REPLACE FUNCTION matching_func(VARIADIC identifiers text[])
+    RETURNS boolean -- may return "null" to indicate "i don't know"
+    AS $$
+        DECLARE
+            i INT;
+        BEGIN
+            FOR i IN 1..array_length(identifiers, 1) BY 2 LOOP
+                IF identifiers[i] IS NOT NULL AND identifiers[i+1] IS NOT NULL THEN
+                    RETURN identifiers[i] = identifiers[i+1];
+                END IF;
+            END loop;
+            RETURN null;
+        END;
+    $$ LANGUAGE plpgsql;
+
 DROP TABLE IF EXISTS "matchings";
 CREATE TABLE matchings (
     i1 int,

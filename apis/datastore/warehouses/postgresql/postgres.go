@@ -358,28 +358,6 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 		return warehouses.Error(err)
 	}
 
-	// Create - or replace - the generic matching function 'matching_func', that
-	// will be used by 'matches_for_action'.
-	const matchingFuncQuery = `
-		CREATE OR REPLACE FUNCTION matching_func(VARIADIC identifiers text[])
-		RETURNS boolean -- may return "null" to indicate "i don't know"
-		AS $$
-			DECLARE
-				i INT;
-			BEGIN
-				FOR i IN 1..array_length(identifiers, 1) BY 2 LOOP
-					IF identifiers[i] IS NOT NULL AND identifiers[i+1] IS NOT NULL THEN
-						RETURN identifiers[i] = identifiers[i+1];
-					END IF;
-				END loop;
-				RETURN null;
-			END;
-		$$ LANGUAGE plpgsql`
-	_, err = db.Exec(ctx, matchingFuncQuery)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-
 	// Generate the SQL matching expression.
 	var matchingExpr strings.Builder
 	if len(identifiersColumns) > 0 {
