@@ -2,6 +2,7 @@ This file contains the documentation for the REST APIs of Chichi.
 
 GET     /api/workspaces/{id}/connections                                         List the connections.
 GET     /api/workspaces/{id}/connections/{id}                                    Get a connection.
+POST    /api/workspaces/{id}/connections/{id}                                    Set a connection.
 DELETE  /api/workspaces/{id}/connections/{id}                                    Delete a connection.
 POST    /api/workspaces/{id}/connections/{id}/actions                            Add an action to a connection.
 GET     /api/workspaces/{id}/connections/{id}/actions/{id}                       Get the action of a connection.
@@ -21,13 +22,11 @@ POST    /api/workspaces/{id}/connections/{id}/exec-query                        
 GET     /api/workspaces/{id}/connections/{id}/imports                            Return the executions of a connection.
 GET     /api/workspaces/{id}/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection.
 GET     /api/workspaces/{id}/connections/{id}/sheets                             List the sheets of a multiple sheets file connection.
-POST    /api/workspaces/{id}/connections/{id}/status                             Set the status of a connection.
 GET     /api/workspaces/{id}/connections/{id}/stats                              Get the stats of a connection.
 GET     /api/workspaces/{id}/connections/{id}/tables/{table}/schema              Return the schema of the given table of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/keys                               Get the write keys of a connection.
 POST    /api/workspaces/{id}/connections/{id}/keys                               Generate a new write key for a connection.
 DELETE  /api/workspaces/{id}/connections/{id}/keys/{key}                         Delete a write key of a connection.
-POST    /api/workspaces/{id}/connections/{id}/storage                            Set the storage and the compression of a connection.
 GET     /api/workspaces/{id}/connections/{id}/ui                                 Get the user interface of a connection.
 POST    /api/workspaces/{id}/connections/{id}/ui-event                           Execute the user interface event of a connection.
 GET     /api/connectors                                                          List the connectors.

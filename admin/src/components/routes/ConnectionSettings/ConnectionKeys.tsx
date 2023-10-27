@@ -4,13 +4,15 @@ import { AppContext } from '../../../context/providers/AppProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 interface KeysProps {
 	connection: TransformedConnection;
 }
 
-const Keys = ({ connection: c }: KeysProps) => {
+const ConnectionKeys = ({ connection: c }: KeysProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
 
 	const { api, showStatus, showError, redirect } = useContext(AppContext);
@@ -93,7 +95,10 @@ const Keys = ({ connection: c }: KeysProps) => {
 				{keys.map((key) => {
 					return (
 						<Flex alignItems='center' gap={30}>
-							<div className='key'>{key}</div>
+							<div className='keyCopy'>
+								<SlInput readonly value={key} />
+								<SlCopyButton value={key} />
+							</div>
 							<SlButton variant='danger' onClick={() => onRevokeKey(key)}>
 								Revoke
 							</SlButton>
@@ -102,10 +107,10 @@ const Keys = ({ connection: c }: KeysProps) => {
 				})}
 			</div>
 			<SlButton variant='neutral' onClick={onAddKey}>
-				Generate new Key
+				Generate new key
 			</SlButton>
 		</>
 	);
 };
 
-export default Keys;
+export default ConnectionKeys;

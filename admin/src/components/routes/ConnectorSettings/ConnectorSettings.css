@@ -1,6 +1,9 @@
 .connectorSettings .settings {
-	max-width: 1200px;
+	max-width: 900px;
 	margin: auto;
+	padding: 0;
+	padding-left: 30px;
+	padding-right: 30px;
 }
 
 .connectorSettings .basic .inputWrapper {
@@ -18,12 +21,18 @@
 	margin: 50px 0;
 }
 
-.connectorSettings .settings {
-	background-color: var(--bg-primary);
-	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-small);
-	padding: 50px 80px;
-	border: 1px solid var(--sl-color-neutral-200);
+.connectorSettings sl-input.name {
+    max-width: 280px;
+}
+
+.connectorSettings sl-select.storage,
+.connectorSettings sl-select.compression {
+    max-width: fit-content;
+    min-width: 280px;
+}
+
+.connectorSettings sl-input.host {
+    max-width: 350px;
 }
 
 .connectorSettings .saveWrapper {

@@ -117,6 +117,8 @@ const AppProvider = ({
 					c.ActionsCount,
 					c.Health,
 					c.Storage,
+					c.Compression,
+					c.WebsiteHost,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);

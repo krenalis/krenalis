@@ -119,7 +119,7 @@ const GeneralSettings = () => {
 				Use the European Privacy Region
 			</SlCheckbox>
 			<SlButton className='general-settings__update-workspace-button' variant='primary' onClick={onUpdate}>
-				Update
+				Save
 			</SlButton>
 			<SlDivider />
 			<DangerZone>

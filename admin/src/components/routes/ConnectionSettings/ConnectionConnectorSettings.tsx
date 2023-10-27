@@ -15,7 +15,7 @@ interface FormProps {
 	connection: TransformedConnection;
 }
 
-const Form = ({ connection: c }: FormProps) => {
+const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [actions, setActions] = useState<ConnectorAction[]>([]);
 	const [values, setValues] = useState<UIValues>({});
@@ -168,4 +168,4 @@ const Form = ({ connection: c }: FormProps) => {
 	return <SettingsForm fields={fieldsToRender} actions={actionsToRender} values={values} onChange={onFieldChange} />;
 };
 
-export default Form;
+export default ConnectionConnectorSettings;

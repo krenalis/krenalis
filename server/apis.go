@@ -270,6 +270,24 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							_ = json.NewEncoder(w).Encode(connection)
 						})
+						router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							connection, err := workspace.Connection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							var req struct {
+								Connection apis.ConnectionToSet
+							}
+							err = json.NewDecoder(r.Body).Decode(&req)
+							if err != nil {
+								respond(w, errors.BadRequest("invalid JSON"))
+								return
+							}
+							err = connection.Set(ctx, req.Connection)
+							respond(w, err)
+						})
 						router.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)
@@ -584,24 +602,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							_ = json.NewEncoder(w).Encode(map[string]any{"sheets": sheets})
 						})
-						router.Post("/status", func(w http.ResponseWriter, r *http.Request) {
-							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-							connection, err := workspace.Connection(ctx, id)
-							if err != nil {
-								respond(w, err)
-								return
-							}
-							var req struct {
-								Enabled bool
-							}
-							err = json.NewDecoder(r.Body).Decode(&req)
-							if err != nil {
-								respond(w, errors.BadRequest("invalid JSON"))
-								return
-							}
-							err = connection.SetStatus(ctx, req.Enabled)
-							respond(w, err)
-						})
 						router.Get("/imports", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)
@@ -786,25 +786,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							}
 							key := chi.URLParam(r, "key")
 							err = connection.RevokeKey(ctx, key)
-							respond(w, err)
-						})
-						router.Post("/storage", func(w http.ResponseWriter, r *http.Request) {
-							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-							connection, err := workspace.Connection(ctx, id)
-							if err != nil {
-								respond(w, err)
-								return
-							}
-							var req struct {
-								Storage     int
-								Compression string
-							}
-							err = json.NewDecoder(r.Body).Decode(&req)
-							if err != nil {
-								respond(w, err)
-								return
-							}
-							err = connection.SetStorage(ctx, req.Storage, apis.Compression(req.Compression))
 							respond(w, err)
 						})
 					})

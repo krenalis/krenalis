@@ -59,8 +59,8 @@ type State struct {
 		ExecuteAction           []func(ExecuteAction)
 		SetAction               []func(SetAction)
 		SetActionSchedulePeriod []func(SetActionSchedulePeriod)
+		SetConnection           []func(SetConnection)
 		SetConnectionSettings   []func(SetConnectionSettings)
-		SetConnectionStatus     []func(SetConnectionStatus)
 		SetWarehouse            []func(SetWarehouse)
 		SetWorkspace            []func(SetWorkspace)
 	}

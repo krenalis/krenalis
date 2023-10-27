@@ -55,8 +55,8 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 	st.AddListener(eventSt.onAddConnection)
 	st.AddListener(eventSt.onDeleteConnection)
 	st.AddListener(eventSt.onDeleteWorkspace)
+	st.AddListener(eventSt.onSetConnection)
 	st.AddListener(eventSt.onSetConnectionSettings)
-	st.AddListener(eventSt.onSetConnectionStatus)
 	st.AddListener(eventSt.onSetWarehouse)
 	st.AddListener(eventSt.onSetWorkspace)
 	return eventSt
@@ -159,22 +159,8 @@ func (st *eventsState) onDeleteWorkspace(n state.DeleteWorkspace) {
 	st.Unlock()
 }
 
-// onSetConnectionSettings is called when the settings of a connections are
-// changed.
-func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettings) {
-	c, _ := st.state.Connection(n.Connection)
-	if !isDestination(c) {
-		return
-	}
-	err := st.openDestination(c)
-	if err != nil {
-		slog.Error("cannot open destination", "id", c.ID, "err", err)
-		return
-	}
-}
-
-// onSetConnectionStatus is called when the status of a connection changes.
-func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatus) {
+// onSetConnection is called when a connection changes.
+func (st *eventsState) onSetConnection(n state.SetConnection) {
 	if n.Enabled {
 		c, _ := st.state.Connection(n.Connection)
 		if !isDestination(c) {
@@ -189,6 +175,20 @@ func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatus) {
 	}
 	// Disabling a connection.
 	st.deleteDestination(n.Connection)
+}
+
+// onSetConnectionSettings is called when the settings of a connections are
+// changed.
+func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettings) {
+	c, _ := st.state.Connection(n.Connection)
+	if !isDestination(c) {
+		return
+	}
+	err := st.openDestination(c)
+	if err != nil {
+		slog.Error("cannot open destination", "id", c.ID, "err", err)
+		return
+	}
 }
 
 // onSetWarehouse is called when the warehouse settings of a workspace are

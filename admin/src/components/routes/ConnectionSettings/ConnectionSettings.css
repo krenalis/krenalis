@@ -2,16 +2,44 @@
 	max-width: 1200px;
 }
 
-.connectionSettings .settings::part(nav) {
-	flex-basis: 300px;
+.connectionSettings sl-tab-group::part(nav) {
+	flex-basis: 250px;
 }
 
-.connectionSettings .settings::part(body) {
+.connectionSettings sl-tab-group::part(body) {
 	overflow: visible;
 }
 
-.connectionSettings .settings > sl-tab-panel::part(base) {
-	padding-left: 60px;
+.connectionSettings sl-tab-group > sl-tab-panel::part(base) {
+    padding-left: 90px;
+}
+
+.connectionSettings .generalSettings .nameField,
+.connectionSettings .generalSettings .enablingField,
+.connectionSettings .generalSettings .storageField,
+.connectionSettings .generalSettings .compressionField,
+.connectionSettings .generalSettings .websiteHostField {
+    margin-bottom: 30px;
+}
+
+.connectionSettings .generalSettings .nameField {
+    max-width: 280px;
+}
+
+.connectionSettings .generalSettings .storageField,
+.connectionSettings .generalSettings .compressionField {
+    max-width: fit-content;
+    min-width: 280px;
+}
+
+.connectionSettings .generalSettings .websiteHostField {
+    max-width: 350px;
+}
+
+.connectionSettings .generalSettings .updateButton {
+    display: block;
+    max-width: 200px;
+    margin-left: auto;
 }
 
 .connectionSettings .panelTitle {
@@ -29,7 +57,7 @@
 }
 
 .connectionSettings .keys .flex {
-	margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .connectionSettings .keys .key {
@@ -44,48 +72,43 @@
 	min-width: 320px;
 }
 
+.connectionSettings .keyCopy {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.connectionSettings .keyCopy > sl-input {
+    width: 400px;
+}
+
+.connectionSettings .keyCopy > sl-input::part(base) {
+    font-size: 14px;
+}
+
 .connectionSettings .clipboardInput {
 	margin-top: 10px;
 }
 
-.connectionSettings .storage {
-	border: 1px solid var(--border-primary);
-	height: 40px;
-	display: flex;
-	align-items: center;
-	justify-content: left;
-	padding: 0 20px;
-	font-size: 14px;
-	border-radius: 5px;
-	min-width: 320px;
-	margin-bottom: 30px;
+.connectionSettings .storageWrapper {
+    display: flex;
+    justify-content: left;
+    gap: 15px;
 }
 
-.connectionSettings sl-button.deleteConnectionButton {
-	margin-right: 20px;
+.connectionSettings .snippetCopy {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
 }
 
-.connectionSettings .storageDialog::part(body) {
-	padding: 10px 30px 20px;
+.connectionSettings .snippetCopy > sl-input {
+    width: 400px;
 }
 
-.connectionSettings .storageDialog .noStorage {
-	text-align: center;
-	font-weight: 600;
-	margin-bottom: 15px;
-}
-
-.connectionSettings .storageDialog .storage {
-	margin-bottom: 15px;
-}
-
-.connectionSettings .storageDialog .changeStorageButton::part(base) {
-	border-radius: 100%;
-	width: 35px;
-	height: 35px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+.connectionSettings .snippetCopy > sl-input::part(base) {
+    font-size: 14px;
 }
 
 .connectionSettings .dangerZone .label {
@@ -96,13 +119,10 @@
 	font-size: 14px;
 }
 
-.connectionSettings .deletionDialog::part(body) {
-	padding-bottom: 40px;
-}
-
 .connectionSettings .deletionDialog .buttons {
-	display: flex;
-	justify-content: center;
-	gap: 30px;
-	align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 15px 0;
 }

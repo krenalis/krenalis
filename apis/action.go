@@ -260,7 +260,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	return this.addExecution(ctx, reimport)
 }
 
-// Set sets action.
+// Set sets the action.
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
@@ -513,7 +513,7 @@ func (a *Action) isLanguageSupported() bool {
 	return false
 }
 
-// ActionToSet represents an action to set to a connection, by adding a new
+// ActionToSet represents an action to set in a connection, by adding a new
 // action (using the method Connection.AddAction) or updating an existing one
 // (using the method Action.Set).
 //

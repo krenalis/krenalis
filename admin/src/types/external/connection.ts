@@ -14,6 +14,8 @@ interface Connection {
 	Role: ConnectionRole;
 	Connector: number;
 	Storage: number;
+	Compression: Compression;
+	WebsiteHost: string;
 	HasSettings: boolean;
 	Enabled: boolean;
 	ActionsCount: number;

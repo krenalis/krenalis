@@ -1,11 +1,9 @@
 import React, { useState, useContext } from 'react';
 import './ConnectionSettings.css';
-import Form from './Form';
-import Deletion from './Deletion';
-import Enabling from './Enabling';
-import Keys from './Keys';
-import Storage from './Storage';
-import Snippet from './Snippet';
+import ConnectionGeneralSettings from './ConnectionGeneralSettings';
+import ConnectionConnectorSettings from './ConnectionConnectorSettings';
+import ConnectionKeys from './ConnectionKeys';
+import ConnectionSnippet from './ConnectionSnippet';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
@@ -25,7 +23,15 @@ const ConnectionSettings = () => {
 
 	return (
 		<div className='connectionSettings'>
-			<SlTabGroup className='settings' placement='start'>
+			<SlTabGroup placement='start'>
+				<SlTab slot='nav' panel='general'>
+					General
+				</SlTab>
+				<SlTabPanel name='general'>
+					<div className='panelTitle'>General</div>
+					<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
+				</SlTabPanel>
+
 				{(c.type === 'Website' || c.type === 'Mobile') && c.role === 'Source' && (
 					<>
 						<SlTab slot='nav' panel='snippet'>
@@ -33,7 +39,7 @@ const ConnectionSettings = () => {
 						</SlTab>
 						<SlTabPanel name='snippet'>
 							<div className='panelTitle'>Snippet</div>
-							<Snippet />
+							<ConnectionSnippet />
 						</SlTabPanel>
 					</>
 				)}
@@ -41,11 +47,11 @@ const ConnectionSettings = () => {
 				{c.hasSettings && (
 					<>
 						<SlTab slot='nav' panel='connection'>
-							Connection
+							{c.type} Settings
 						</SlTab>
 						<SlTabPanel name='connection'>
-							<div className='panelTitle'>Connection</div>
-							<Form connection={c} />
+							<div className='panelTitle'>{c.type} Settings</div>
+							<ConnectionConnectorSettings connection={c} />
 						</SlTabPanel>
 					</>
 				)}
@@ -56,39 +62,11 @@ const ConnectionSettings = () => {
 							API Keys
 						</SlTab>
 						<SlTabPanel name='keys'>
-							<div className='panelTitle'>Write keys</div>
-							<Keys connection={c} />
+							<div className='panelTitle'>API keys</div>
+							<ConnectionKeys connection={c} />
 						</SlTabPanel>
 					</>
 				)}
-
-				{c.type === 'File' && (
-					<>
-						<SlTab slot='nav' panel='storage'>
-							Storage
-						</SlTab>
-						<SlTabPanel name='storage'>
-							<div className='panelTitle'>Storage</div>
-							<Storage connection={c} />
-						</SlTabPanel>
-					</>
-				)}
-
-				<SlTab slot='nav' panel='enabling'>
-					Enabling
-				</SlTab>
-				<SlTabPanel name='enabling'>
-					<div className='panelTitle'>Enabling</div>
-					<Enabling connection={c} />
-				</SlTabPanel>
-
-				<SlTab slot='nav' panel='deletion'>
-					Deletion
-				</SlTab>
-				<SlTabPanel name='deletion'>
-					<div className='panelTitle'>Deletion</div>
-					<Deletion connection={c} onDelete={() => setIsDeleted(true)} />
-				</SlTabPanel>
 			</SlTabGroup>
 		</div>
 	);

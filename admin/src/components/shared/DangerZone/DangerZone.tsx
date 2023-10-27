@@ -7,12 +7,7 @@ interface DangerZoneProps {
 }
 
 const DangerZone = ({ className, children }: DangerZoneProps) => {
-	return (
-		<div className={`danger-zone${className ? ' ' + className : ''}`}>
-			<p className='danger-zone__title'>Destructive operations</p>
-			{children}
-		</div>
-	);
+	return <div className={`danger-zone${className ? ' ' + className : ''}`}>{children}</div>;
 };
 
 export default DangerZone;

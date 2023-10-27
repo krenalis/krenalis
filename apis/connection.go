@@ -86,10 +86,12 @@ type Connection struct {
 	Name         string
 	Type         ConnectorType
 	Role         ConnectionRole
+	Enabled      bool
 	Connector    int
 	Storage      int // zero if the connection is not a file or does not have a storage.
+	Compression  Compression
+	WebsiteHost  string
 	HasSettings  bool
-	Enabled      bool
 	ActionsCount int
 	Health       Health
 
@@ -1179,18 +1181,82 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	return app.SendEventPreview(ctx, eventType, ev.ConnectorEvent(), data)
 }
 
-// SetStatus sets the status of the connection.
-func (this *Connection) SetStatus(ctx context.Context, enabled bool) error {
+// Set sets the connection.
+//
+// It returns an errors.UnprocessableError error with code StorageNotExist, if
+// the storage does not exist.
+func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) error {
+
 	this.apis.mustBeOpen()
-	if enabled == this.Enabled {
-		return nil
+
+	ctx, span := telemetry.TraceSpan(ctx, "Connection.Set", "connection", this.connection.ID)
+	defer span.End()
+
+	if connection.Name == "" || utf8.RuneCountInString(connection.Name) > 100 {
+		return errors.BadRequest("name %q is not valid", connection.Name)
 	}
-	n := state.SetConnectionStatus{
-		Connection: this.connection.ID,
-		Enabled:    enabled,
+	if connection.Storage < 0 || connection.Storage > maxInt32 {
+		return errors.BadRequest("storage identifier %d is not valid", connection.Storage)
 	}
+	switch connection.Compression {
+	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
+	default:
+		return errors.BadRequest("compression %q is not valid", connection.Compression)
+	}
+	if connection.Storage == 0 && connection.Compression != NoCompression {
+		return errors.BadRequest("compression requires a storage")
+	}
+
+	n := state.SetConnection{
+		Connection:  this.connection.ID,
+		Name:        connection.Name,
+		Enabled:     connection.Enabled,
+		Storage:     connection.Storage,
+		Compression: state.Compression(connection.Compression),
+		WebsiteHost: connection.WebsiteHost,
+	}
+
+	c := this.connection.Connector()
+
+	// Validate the storage.
+	if n.Storage > 0 {
+		if c.Type != state.FileType {
+			return errors.BadRequest("connector %d cannot have a storage, it's a %s",
+				c.ID, strings.ToLower(c.Type.String()))
+		}
+		s, ok := this.connection.Workspace().Connection(n.Storage)
+		if !ok {
+			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
+		}
+		if s.Connector().Type != state.StorageType {
+			return errors.BadRequest("connection %d is not a storage", n.Storage)
+		}
+		if s.Role != this.connection.Role {
+			if this.connection.Role == state.SourceRole {
+				return errors.BadRequest("storage %d is not a source", n.Storage)
+			}
+			return errors.BadRequest("storage %d is not a destination", n.Storage)
+		}
+	}
+
+	// Validate the website host.
+	if n.WebsiteHost != "" {
+		if c.Type != state.WebsiteType {
+			return errors.BadRequest("connector %d cannot have a website host, it's a %s",
+				c.ID, strings.ToLower(c.Type.String()))
+		}
+		if h, p, found := strings.Cut(n.WebsiteHost, ":"); h == "" || len(n.WebsiteHost) > 255 {
+			return errors.BadRequest("website host %q is not valid", n.WebsiteHost)
+		} else if found {
+			if port, _ := strconv.Atoi(p); port < 1 || port > 65535 {
+				return errors.BadRequest("website host %q is not valid", n.WebsiteHost)
+			}
+		}
+	}
+
 	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.Connection)
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2, storage = NULLIF($3, 0), compression = $4, website_host = $5 WHERE id = $6",
+			n.Name, n.Enabled, n.Storage, n.Compression, n.WebsiteHost, n.Connection)
 		if err != nil {
 			return err
 		}
@@ -1199,6 +1265,7 @@ func (this *Connection) SetStatus(ctx context.Context, enabled bool) error {
 		}
 		return tx.Notify(ctx, n)
 	})
+
 	return err
 }
 
@@ -1260,82 +1327,6 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	}
 
 	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
-}
-
-// SetStorage sets the storage and the compression of the connection. The
-// connection must be a file connection. storage is the storage connection. The
-// connection and the storage must have the same role. As a special case, if the
-// storage argument is 0, compression can only be NoCompression and the current
-// storage of the file, if there is one, will be removed.
-//
-// If the connection does not exist anymore, it returns an errors.NotFoundError
-// error.
-// If the storage does not exist, it returns an errors.UnprocessableError error
-// with code StorageNotExist.
-func (this *Connection) SetStorage(ctx context.Context, storage int, compression Compression) error {
-
-	this.apis.mustBeOpen()
-
-	if storage < 0 || storage > maxInt32 {
-		return errors.BadRequest("storage identifier %d is not valid", storage)
-	}
-	switch compression {
-	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
-	default:
-		return errors.BadRequest("compression %q is not valid", compression)
-	}
-	if storage == 0 && compression != NoCompression {
-		return errors.BadRequest("compression requires a storage")
-	}
-
-	c := this.connection
-	if c.Connector().Type != state.FileType {
-		return errors.BadRequest("file is not a file connector")
-	}
-	var s *state.Connection
-	if storage > 0 {
-		var ok bool
-		s, ok = c.Workspace().Connection(storage)
-		if !ok {
-			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
-		}
-		if s.Connector().Type != state.StorageType {
-			return errors.BadRequest("connection %d is not a storage", storage)
-		}
-		if s.Role != c.Role {
-			if c.Role == state.SourceRole {
-				return errors.BadRequest("storage %d is not a source", storage)
-			}
-			return errors.BadRequest("storage %d is not a destination", storage)
-		}
-	} else if compression != NoCompression {
-		return errors.BadRequest("file cannot be compressed without a storage")
-	}
-
-	n := state.SetConnectionStorage{
-		Connection:  c.ID,
-		Storage:     storage,
-		Compression: state.Compression(compression),
-	}
-
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET storage = NULLIF($1, 0), compression = $2\n"+
-			"WHERE id = $3", n.Storage, n.Compression, n.Connection)
-		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
-					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
-				}
-			}
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.Connection)
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
 }
 
 // Sheets returns the sheets of the file at the given path. The connection must
@@ -2548,6 +2539,32 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 
 	return nil
+}
+
+// ConnectionToSet represents a connection to set in a workspace, by adding a
+// new connection (using the method Workspace.AddConnection) or updating an
+// existing one (using the method Connection.Set).
+type ConnectionToSet struct {
+
+	// Name is the name of the connection. It cannot be longer than 100 runes.
+	// If empty, the connection name will be the name of its connector.
+	Name string
+
+	// Enable reports whether the connection is enabled or disabled when added.
+	Enabled bool
+
+	// Storage is the storage of a file connection. It must be 0 if the
+	// connection is not a file or has no storage.
+	Storage int
+
+	// Compression is the compression for file connections. It must be
+	// NoCompression if there is no storage.
+	Compression Compression
+
+	// WebsiteHost is the host, in the form "host:port", of a website
+	// connection. It must be empty if the connection is not a website. It
+	// cannot be longer than 261 runes.
+	WebsiteHost string
 }
 
 // allowsActionTarget reports whether a connection with the given connector type

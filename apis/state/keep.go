@@ -48,10 +48,10 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetAction = append(state.listeners.SetAction, l)
 	case func(SetActionSchedulePeriod):
 		state.listeners.SetActionSchedulePeriod = append(state.listeners.SetActionSchedulePeriod, l)
+	case func(SetConnection):
+		state.listeners.SetConnection = append(state.listeners.SetConnection, l)
 	case func(SetConnectionSettings):
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
-	case func(SetConnectionStatus):
-		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
 	case func(SetWarehouse):
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
 	case func(SetWorkspace):
@@ -123,12 +123,10 @@ func (state *State) keepState() {
 			state.setActionStatus(n)
 		case "SetActionUserCursor":
 			state.setActionUserCursor(n)
+		case "SetConnection":
+			state.setConnection(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
-		case "SetConnectionStorage":
-			state.setConnectionStorage(n)
-		case "SetConnectionStatus":
-			state.setConnectionStatus(n)
 		case "SetResource":
 			state.setResource(n)
 		case "SetWarehouse":
@@ -901,6 +899,34 @@ func (state *State) setActionUserCursor(n postgres.Notification) {
 	})
 }
 
+// SetConnection is the event sent when a connection is changed.
+type SetConnection struct {
+	Connection  int
+	Name        string
+	Enabled     bool
+	Storage     int
+	Compression Compression
+	WebsiteHost string
+}
+
+// setConnection sets a connection.
+func (state *State) setConnection(n postgres.Notification) {
+	e := SetConnection{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		c.Name = e.Name
+		c.Enabled = e.Enabled
+		c.storage = state.connections[e.Storage]
+		c.Compression = e.Compression
+		c.WebsiteHost = e.WebsiteHost
+	})
+	for _, listener := range state.listeners.SetConnection {
+		listener(e)
+	}
+}
+
 // SetConnectionSettings is the event sent when the settings of a connection is
 // changed.
 type SetConnectionSettings struct {
@@ -920,46 +946,6 @@ func (state *State) setConnectionSettings(n postgres.Notification) {
 	for _, listener := range state.listeners.SetConnectionSettings {
 		listener(e)
 	}
-}
-
-// SetConnectionStatus is the event sent when a connection status is changed.
-type SetConnectionStatus struct {
-	Connection int
-	Enabled    bool
-}
-
-// setConnectionStatus changes a connection status.
-func (state *State) setConnectionStatus(n postgres.Notification) {
-	e := SetConnectionStatus{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		c.Enabled = e.Enabled
-	})
-	for _, listener := range state.listeners.SetConnectionStatus {
-		listener(e)
-	}
-}
-
-// SetConnectionStorage is the event sent when the storage of a connection is
-// changed.
-type SetConnectionStorage struct {
-	Connection  int
-	Storage     int
-	Compression Compression
-}
-
-// setConnectionStorage sets the storage and the compression of a connection.
-func (state *State) setConnectionStorage(n postgres.Notification) {
-	e := SetConnectionStorage{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		c.storage = state.connections[e.Storage]
-		c.Compression = e.Compression
-	})
 }
 
 // SetResource is the event sent when a resource is changed.

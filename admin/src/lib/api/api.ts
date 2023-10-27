@@ -4,9 +4,9 @@ import Type, { ObjectType } from '../../types/external/types';
 import {
 	Connection,
 	ConnectionRole,
-	Compression,
 	ConnectionToAdd,
 	ConnectionStats,
+	ConnectionToSet,
 } from '../../types/external/connection';
 import { AnonymousIdentifiers, Identifiers } from '../../types/external/identifiers';
 import {
@@ -123,6 +123,12 @@ class Connections {
 		return c as Connection;
 	};
 
+	set = async (connection: number, connectionToSet: ConnectionToSet) => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.POST, {
+			connection: connectionToSet,
+		});
+	};
+
 	delete = async (connection: number): Promise<void> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.DELETE);
 	};
@@ -166,19 +172,6 @@ class Connections {
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets?path=${encodeURIComponent(path)}`,
 			http.GET,
 		);
-	};
-
-	setStorage = async (connection: number, storage: number, compression: Compression): Promise<void> => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/storage`, http.POST, {
-			storage: storage,
-			compression: compression,
-		});
-	};
-
-	setStatus = async (connection: number, enabled: boolean): Promise<void> => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/status`, http.POST, {
-			enabled: enabled,
-		});
 	};
 
 	ui = async (connection: number): Promise<UIResponse> => {

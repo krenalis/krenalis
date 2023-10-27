@@ -318,6 +318,7 @@ const ConnectorSettings = () => {
 					<div className='basic'>
 						<div className='inputWrapper'>
 							<SlInput
+								className='name'
 								name='name'
 								value={name}
 								label='Name'
@@ -341,6 +342,7 @@ const ConnectorSettings = () => {
 									</div>
 								) : (
 									<SlSelect
+										className='storage'
 										name='storage'
 										value={String(storage)}
 										label='Storage'
@@ -359,6 +361,7 @@ const ConnectorSettings = () => {
 						{c!.type === 'File' && (
 							<div className='inputWrapper'>
 								<SlSelect
+									className='compression'
 									name='compression'
 									value={compression}
 									label='Compression'
@@ -380,6 +383,7 @@ const ConnectorSettings = () => {
 							<>
 								<div className='inputWrapper'>
 									<SlInput
+										className='host'
 										name='host'
 										value={websiteHost}
 										placeholder='www.example.com:443'
