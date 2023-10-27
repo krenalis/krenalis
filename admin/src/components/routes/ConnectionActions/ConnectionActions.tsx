@@ -39,7 +39,7 @@ const ConnectionActions = () => {
 		if (!isActionOpen) {
 			refreshConnectionIntervalID.current = window.setInterval(async () => {
 				setAreConnectionsStale(true);
-			}, 1500);
+			}, 1000);
 
 			return () => {
 				clearInterval(refreshConnectionIntervalID.current);
