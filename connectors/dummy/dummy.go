@@ -95,12 +95,6 @@ func (c *connection) CreateUser(ctx context.Context, properties connector.Proper
 	default:
 	}
 
-	// Normalize and validate the properties.
-	properties, err := normalize(properties, userSchema)
-	if err != nil {
-		return err
-	}
-
 	// Write the user on the log.
 	propsDump, err := json.Marshal(properties)
 	if err != nil {
@@ -268,12 +262,6 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties conne
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-	}
-
-	// Normalize and validate the properties.
-	properties, err := normalize(properties, userSchema)
-	if err != nil {
-		return err
 	}
 
 	// Write the user on the log.
