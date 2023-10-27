@@ -1042,10 +1042,8 @@ const FullscreenTransformation = ({
 	return (
 		<div className={`fullscreenTransformation${isFullscreenTransformationOpen ? ' isOpen' : ''}`}>
 			<SlSplitPanel style={{ '--min': '0%', '--max': '800px' } as React.CSSProperties}>
-				<SlIcon slot='divider' name='grip-vertical' />
 				<div className='leftPanel' slot='start'>
 					<SlSplitPanel>
-						<SlIcon slot='divider' name='grip-vertical' />
 						<div className='inputPanel' slot='start'>
 							<div className='panelTitleWrapper'>
 								<div className='panelTitle'>{InputPanelTitle}</div>
