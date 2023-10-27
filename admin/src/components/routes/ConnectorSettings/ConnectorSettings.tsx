@@ -303,7 +303,7 @@ const ConnectorSettings = () => {
 	}
 
 	if (newConnectionID > 0) {
-		redirect(`connections?newConnection=${newConnectionID}`);
+		redirect(`connections/${newConnectionID}/actions?new=true`);
 	}
 
 	const c = connector;

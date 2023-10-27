@@ -10,18 +10,30 @@ import { ConnectionContext } from '../../../context/providers/ConnectionProvider
 import { Outlet } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { Action, ActionType } from '../../../types/external/action';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 
 const ConnectionActions = () => {
 	const [isActionTypesDialogOpen, setIsActionTypesDialogOpen] = useState<boolean>(false);
 	const [isActionOpen, setIsActionOpen] = useState<boolean>(false);
+	const [isLoading, setIsLoading] = useState<boolean>(false);
 
 	const { setAreConnectionsStale, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const refreshConnectionIntervalID = useRef<number>(0);
 	const newActionID = useRef<number>(0);
+
+	useLayoutEffect(() => {
+		const isNew = window.location.search.indexOf('new=true') !== -1;
+		if (isNew) {
+			setIsLoading(true);
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 1000);
+		}
+	}, []);
 
 	useEffect(() => {
 		if (!isActionOpen) {
@@ -67,6 +79,23 @@ const ConnectionActions = () => {
 		const newLocation = `connections/${connection.id}/actions/edit/${action.ID}`;
 		redirect(newLocation);
 	};
+
+	if (isLoading) {
+		return (
+			<SlSpinner
+				style={
+					{
+						display: 'block',
+						position: 'relative',
+						top: '50px',
+						margin: 'auto',
+						fontSize: '3rem',
+						'--track-width': '6px',
+					} as React.CSSProperties
+				}
+			></SlSpinner>
+		);
+	}
 
 	return (
 		<>
