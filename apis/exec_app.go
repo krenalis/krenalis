@@ -220,20 +220,7 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	// Determine the properties to import.
-	var properties []string
-	for _, path := range this.action.Mapping {
-		properties = append(properties, path)
-	}
-	// In case of transformation, also import every property declared in the
-	// input schema of the action.
-	if this.action.Transformation != nil {
-		for _, name := range this.action.InSchema.PropertiesNames() {
-			if _, ok := this.action.Mapping[name]; !ok {
-				properties = append(properties, name)
-			}
-		}
-	}
+	var properties = mapping.PropertiesNames()
 
 	var eof bool
 

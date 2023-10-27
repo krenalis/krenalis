@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -117,6 +118,26 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 	}
 
 	return &m, nil
+}
+
+// PropertiesNames returns all the properties used in the mapping. It returns
+// only the first name of each property path, deduplicated.
+func (m *Mapping) PropertiesNames() []string {
+	if m.properties == nil {
+		return m.inSchema.PropertiesNames()
+	}
+	var properties []string
+	for _, property := range m.properties {
+		for _, p := range property.expression.Properties() {
+			if !slices.Contains(properties, p[0]) {
+				properties = append(properties, p[0])
+			}
+		}
+	}
+	if properties == nil {
+		properties = []string{}
+	}
+	return properties
 }
 
 // Apply applies the mapping to values and returns the mapped values or an error
