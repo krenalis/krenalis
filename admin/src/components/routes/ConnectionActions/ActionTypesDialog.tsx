@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import ListTile from '../../shared/ListTile/ListTile';
 import { ActionType } from '../../../types/external/action';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface ActionTypesDialogProps {
 	isOpen: boolean;
@@ -31,6 +32,7 @@ const ActionTypesDialog = ({
 				onClick={() => {
 					onSelectActionType(type);
 				}}
+				action={<SlIcon name='chevron-right' />}
 			/>
 		);
 		if (type.Target === 'Users' || type.Target === 'Groups') {

@@ -1,6 +1,5 @@
 import React, { MouseEventHandler, ReactNode } from 'react';
 import './ListTile.css';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface ListTileProps {
 	icon: ReactNode;
@@ -8,23 +7,38 @@ interface ListTileProps {
 	description?: string;
 	disabled?: boolean;
 	disablingReason?: string;
-	onClick: MouseEventHandler;
+	action: ReactNode;
+	onClick?: MouseEventHandler;
 	className?: string;
 }
 
-const ListTile = ({ icon, name, description, disabled, disablingReason, onClick, className }: ListTileProps) => {
+const ListTile = ({
+	icon,
+	name,
+	description,
+	disabled,
+	disablingReason,
+	action,
+	onClick,
+	className,
+}: ListTileProps) => {
 	return (
 		<div
 			className={`listTile${className ? ' ' + className : ''}${disabled ? ' disabled' : ''}`}
-			onClick={disabled ? undefined : onClick}
+			onClick={disabled ? null : onClick}
+			style={
+				onClick && !disabled ? { cursor: 'pointer' } : onClick && disabled ? { cursor: 'not-allowed' } : null
+			}
 		>
-			<div className='tileIcon'>{icon}</div>
-			<div className='tileName'>{name}</div>
-			<div className='tileDescription'>
-				{description}
-				{disablingReason && <div className='disablingReason'>{disablingReason}</div>}
+			<div className='tileContent'>
+				<div className='tileIcon'>{icon}</div>
+				<div className='tileName'>{name}</div>
+				<div className='tileDescription'>
+					{description}
+					{disablingReason && <div className='disablingReason'>{disablingReason}</div>}
+				</div>
 			</div>
-			{!disabled && <SlIcon className='tileChevron' name='chevron-right' />}
+			{!disabled && action}
 		</div>
 	);
 };

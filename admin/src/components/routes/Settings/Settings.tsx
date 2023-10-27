@@ -36,6 +36,7 @@ const Settings = () => {
 					name={'General'}
 					description='Update your workspace name and privacy region or delete it'
 					onClick={onGeneralClick}
+					action={<SlIcon name='chevron-right' />}
 				/>
 				<ListTile
 					className='settings__setting'
@@ -43,6 +44,7 @@ const Settings = () => {
 					name={'Data Warehouse'}
 					description='Connect a data warehouse to store the users and events or update its current configuration'
 					onClick={onDataWarehouseClick}
+					action={<SlIcon name='chevron-right' />}
 				/>
 				<ListTile
 					className='settings__setting'
@@ -50,6 +52,7 @@ const Settings = () => {
 					name={'Identifiers'}
 					description='Modify the identifiers used to resolve the identity of the users'
 					onClick={onIdentifiersClick}
+					action={<SlIcon name='chevron-right' />}
 				/>
 			</div>
 		);

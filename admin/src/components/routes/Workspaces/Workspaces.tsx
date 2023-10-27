@@ -85,6 +85,7 @@ const Workspaces = ({
 									name={workspace.Name}
 									description={workspace.PrivacyRegion}
 									onClick={() => onWorkspaceClick(workspace.ID)}
+									action={<SlIcon name='chevron-right' />}
 								/>
 							);
 						})

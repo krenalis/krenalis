@@ -1,25 +1,25 @@
 .listTile {
-	display: grid;
-	grid-template-columns: 50px 1fr 20px;
-	grid-template-areas:
-		'icon name chevron'
-		'icon description chevron';
-	align-items: center;
 	border: 1px solid var(--sl-color-neutral-200);
 	padding: 18px 25px;
 	border-radius: var(--radius);
-	cursor: pointer;
 	background-color: var(--bg-primary);
-	transition: background-color 0.3s;
-}
-
-.listTile:hover {
-	background-color: #fbfbfb;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
 .listTile.disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.listTile .tileContent {
+	display: grid;
+	grid-template-columns: 50px 1fr;
+	grid-template-areas:
+		'icon name'
+		'icon description';
+	align-items: center;
 }
 
 .listTile.disabled:hover {
@@ -47,8 +47,4 @@
 
 .listTile .tileDescription .disablingReason {
 	color: var(--sl-color-danger-600);
-}
-
-.listTile .tileChevron {
-	grid-area: chevron;
 }

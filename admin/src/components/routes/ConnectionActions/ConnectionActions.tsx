@@ -3,6 +3,7 @@ import './ConnectionActions.css';
 import Flex from '../../shared/Flex/Flex';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import ActionsGrid from './ActionsGrid';
+import ListTile from '../../shared/ListTile/ListTile';
 import ActionTypesDialog from './ActionTypesDialog';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
@@ -74,14 +75,29 @@ const ConnectionActions = () => {
 					<div className='noAction'>
 						<IconWrapper name='send-exclamation' size={40} />
 						<div className='description'>Add an action to {connection.description}</div>
-						<SlButton
-							variant='primary'
-							onClick={() => {
-								setIsActionTypesDialogOpen(true);
-							}}
-						>
-							Add action...
-						</SlButton>
+						<div className='actionTypes'>
+							{connection.actionTypes.map((actionType) => (
+								<ListTile
+									icon={getConnectorLogo(connection.connector.icon)}
+									name={actionType.Name}
+									description={actionType.Description}
+									disabled={actionType.MissingSchema}
+									className='actionType'
+									disablingReason={actionType.MissingSchema ? 'Missing schema' : ''}
+									action={
+										<SlButton
+											size='small'
+											variant='primary'
+											onClick={() => {
+												onSelectActionType(actionType);
+											}}
+										>
+											Add
+										</SlButton>
+									}
+								/>
+							))}
+						</div>
 					</div>
 				) : (
 					<>

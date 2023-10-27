@@ -3,8 +3,11 @@
 }
 
 .connectionActions .noAction {
-	text-align: center;
 	margin-top: 30px;
+}
+
+.connectionActions .noAction .description {
+	text-align: center;
 }
 
 .connectionActions .noAction .iconWrapper {
@@ -16,6 +19,25 @@
 	max-width: 500px;
 	margin: auto;
 	margin-bottom: 15px;
+}
+
+.connectionActions .noAction .actionType {
+    max-width: 600px;
+    margin: auto;
+	border-bottom: 0;
+	border-radius: 0;
+}
+
+.connectionActions .noAction .actionType:first-child {
+	border-top-left-radius: var(--radius);
+	border-top-right-radius: var(--radius);
+}
+
+.connectionActions .noAction .actionType:last-child {
+	margin-bottom: 0;
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+	border-bottom-left-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
 }
 
 .connectionActions .grid {

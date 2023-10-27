@@ -11,6 +11,7 @@ import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<WarehouseType>();
@@ -198,6 +199,7 @@ const WarehouseList = ({ setSelectedWarehouse }: WarehouseListProps) => {
 						icon={<LittleLogo icon={warehouse.icon} />}
 						name={warehouse.label}
 						onClick={() => onWarehouseClick(warehouse.name)}
+						action={<SlIcon name='chevron-right' />}
 					/>
 				);
 			})}
