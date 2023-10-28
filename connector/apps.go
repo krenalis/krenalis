@@ -150,7 +150,7 @@ type AppGroupsConnection interface {
 	GroupSchema(ctx context.Context) (types.Type, error)
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, properties []string, after Cursor) (groups []Object, cursor string, err error)
+	Groups(ctx context.Context, properties []string, cursor Cursor) (groups []Object, next string, err error)
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not
