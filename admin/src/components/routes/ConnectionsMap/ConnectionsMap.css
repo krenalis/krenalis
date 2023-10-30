@@ -10,11 +10,51 @@
 
 .connectionsMap .map {
 	display: grid;
-	grid-template-columns: 0.7fr 1fr 0.7fr;
+	grid-template-columns: 450px 1fr 450px;
 	grid-template-areas: 'sources main destinations';
 	gap: 80px;
 	align-items: start;
 	margin-top: 30px;
+}
+
+@media (max-width: 1580px) {
+	
+	.connectionsMap .map {
+		grid-template-columns: 400px 1fr 400px;
+	}
+
+}
+
+@media (max-width: 1480px) {
+	
+	.connectionsMap .map {
+		grid-template-columns: 350px 1fr 350px;
+	}
+
+}
+
+@media (max-width: 1380px) {
+	
+	.connectionsMap .map {
+		grid-template-columns: 300px 1fr 300px;
+	}
+
+}
+
+@media (max-width: 1280px) {
+	
+	.connectionsMap .map {
+		grid-template-columns: 250px 1fr 250px;
+	}
+
+}
+
+@media (max-width: 1180px) {
+	
+	.connectionsMap .map {
+		grid-template-columns: 200px 1fr 200px;
+	}
+
 }
 
 .connectionsMap .map .sources {
@@ -130,22 +170,28 @@
 	}
 }
 
+.connectionsMap .connectionBlockContent {
+	width: 100%;
+	display: grid;
+	align-items: center;
+	grid-template-columns: 90% 10%;
+}
+
 .connectionsMap .connectionBlock.new {
 	animation: connection-block-fade-in 1000ms;
 	animation-fill-mode: both;
 }
 
-.connectionsMap .connectionBlock > .flex {
-	width: 100%;
-}
-
 .connectionsMap .connectionBlock .name {
 	transform: translateY(1px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-wrap: nowrap;
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections {
 	display: grid;
-	grid-template-columns: 1fr 0.5fr 1fr;
+	grid-template-columns: 45% 10% 45%;
 	align-items: center;
 }
 

@@ -10,6 +10,7 @@
 	flex-flow: column;
 	justify-content: flex-start;
 	align-items: center;
+	background-color: var(--bg-primary);
 }
 
 .sidebar .items {

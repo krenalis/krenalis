@@ -73,7 +73,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				onMouseLeave={onMouseLeave}
 				data-is-hovered={isHovered}
 			>
-				<Flex alignItems='center' justifyContent='space-between' gap={20}>
+				<div className='connectionBlockContent'>
 					<Flex alignItems='center' gap={10}>
 						{getConnectorLogo(c.connector.icon)}
 						<div className='name'>{c.name}</div>
@@ -81,7 +81,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 					<SlTooltip content={c.status.text}>
 						<StatusDot status={c.status} />
 					</SlTooltip>
-				</Flex>
+				</div>
 			</div>
 			{arrow}
 		</>
