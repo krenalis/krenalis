@@ -99,19 +99,12 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
 
-	// Determine the columns.
-	var columns []types.Property
-	if len(users) > 0 {
-		userSchema, ok := connection.Workspace().Schemas["users"]
-		if !ok {
-			return actionExecutionError{errors.New("'users' schema not found")}
-		}
-		for _, p := range userSchema.Properties() {
-			if _, ok := users[0].Properties[p.Name]; ok {
-				columns = append(columns, p)
-			}
-		}
+	// Determine the columns of the exported file from the "users" schema.
+	usersSchema, ok := connection.Workspace().Schemas["users"]
+	if !ok {
+		return actionExecutionError{errors.New("'users' schema not found")}
 	}
+	columns := usersSchema.Properties()
 
 	// Prepare the users and the record reader.
 	usersSlices := make([][]any, len(users))
