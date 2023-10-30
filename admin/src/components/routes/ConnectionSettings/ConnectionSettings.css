@@ -11,7 +11,7 @@
 }
 
 .connectionSettings sl-tab-group > sl-tab-panel::part(base) {
-    padding-left: 90px;
+	padding-left: 90px;
 }
 
 .connectionSettings .generalSettings .nameField,
@@ -19,27 +19,27 @@
 .connectionSettings .generalSettings .storageField,
 .connectionSettings .generalSettings .compressionField,
 .connectionSettings .generalSettings .websiteHostField {
-    margin-bottom: 30px;
+	margin-bottom: 30px;
 }
 
 .connectionSettings .generalSettings .nameField {
-    max-width: 280px;
+	max-width: 280px;
 }
 
 .connectionSettings .generalSettings .storageField,
 .connectionSettings .generalSettings .compressionField {
-    max-width: fit-content;
-    min-width: 280px;
+	max-width: fit-content;
+	min-width: 280px;
 }
 
 .connectionSettings .generalSettings .websiteHostField {
-    max-width: 350px;
+	max-width: 350px;
 }
 
 .connectionSettings .generalSettings .updateButton {
-    display: block;
-    max-width: 200px;
-    margin-left: auto;
+	display: block;
+	max-width: 200px;
+	margin-left: auto;
 }
 
 .connectionSettings .panelTitle {
@@ -57,7 +57,7 @@
 }
 
 .connectionSettings .keys .flex {
-    margin-bottom: 15px;
+	margin-bottom: 15px;
 }
 
 .connectionSettings .keys .key {
@@ -73,17 +73,17 @@
 }
 
 .connectionSettings .keyCopy {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
 }
 
 .connectionSettings .keyCopy > sl-input {
-    width: 400px;
+	width: 400px;
 }
 
 .connectionSettings .keyCopy > sl-input::part(base) {
-    font-size: 14px;
+	font-size: 14px;
 }
 
 .connectionSettings .clipboardInput {
@@ -91,24 +91,24 @@
 }
 
 .connectionSettings .storageWrapper {
-    display: flex;
-    justify-content: left;
-    gap: 15px;
+	display: flex;
+	justify-content: left;
+	gap: 15px;
 }
 
 .connectionSettings .snippetCopy {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 10px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	margin-top: 10px;
 }
 
 .connectionSettings .snippetCopy > sl-input {
-    width: 400px;
+	width: 400px;
 }
 
 .connectionSettings .snippetCopy > sl-input::part(base) {
-    font-size: 14px;
+	font-size: 14px;
 }
 
 .connectionSettings .dangerZone .label {
@@ -120,9 +120,9 @@
 }
 
 .connectionSettings .deletionDialog .buttons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin: 15px 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 15px;
+	margin: 15px 0;
 }

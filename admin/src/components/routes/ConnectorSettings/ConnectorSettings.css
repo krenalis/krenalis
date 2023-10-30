@@ -22,17 +22,17 @@
 }
 
 .connectorSettings sl-input.name {
-    max-width: 280px;
+	max-width: 280px;
 }
 
 .connectorSettings sl-select.storage,
 .connectorSettings sl-select.compression {
-    max-width: fit-content;
-    min-width: 280px;
+	max-width: fit-content;
+	min-width: 280px;
 }
 
 .connectorSettings sl-input.host {
-    max-width: 350px;
+	max-width: 350px;
 }
 
 .connectorSettings .saveWrapper {

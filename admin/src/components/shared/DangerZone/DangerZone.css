@@ -1,6 +1,6 @@
 .danger-zone {
-    border: 1\px solid var(--sl-color-danger-500);
-    border-radius: 5px;
-    padding: 30px;
-    position: relative;
+	border: 1\pxsolidvar(--sl-color-danger-500);
+	border-radius: 5px;
+	padding: 30px;
+	position: relative;
 }

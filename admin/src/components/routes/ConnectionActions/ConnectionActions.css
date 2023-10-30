@@ -22,8 +22,8 @@
 }
 
 .connectionActions .noAction .actionType {
-    max-width: 600px;
-    margin: auto;
+	max-width: 600px;
+	margin: auto;
 	border-bottom: 0;
 	border-radius: 0;
 }
