@@ -18,43 +18,33 @@
 }
 
 @media (max-width: 1580px) {
-	
 	.connectionsMap .map {
 		grid-template-columns: 400px 1fr 400px;
 	}
-
 }
 
 @media (max-width: 1480px) {
-	
 	.connectionsMap .map {
 		grid-template-columns: 350px 1fr 350px;
 	}
-
 }
 
 @media (max-width: 1380px) {
-	
 	.connectionsMap .map {
 		grid-template-columns: 300px 1fr 300px;
 	}
-
 }
 
 @media (max-width: 1280px) {
-	
 	.connectionsMap .map {
 		grid-template-columns: 250px 1fr 250px;
 	}
-
 }
 
 @media (max-width: 1180px) {
-	
 	.connectionsMap .map {
 		grid-template-columns: 200px 1fr 200px;
 	}
-
 }
 
 .connectionsMap .map .sources {
