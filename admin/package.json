@@ -19,7 +19,7 @@
   },
   "scripts": {
     "typecheck": "npx -p typescript@5.2.2 tsc",
-    "prettier": "npx prettier@3.0.3 --log-level warn --write ./src/*"
+    "prettier": "npx prettier@3.0.3 --log-level warn --write \"src/**/*\""
   },
   "eslintConfig": {
     "extends": [
