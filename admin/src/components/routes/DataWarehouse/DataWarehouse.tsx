@@ -195,6 +195,7 @@ const WarehouseList = ({ setSelectedWarehouse }: WarehouseListProps) => {
 			{warehouses.map((warehouse) => {
 				return (
 					<ListTile
+						key={warehouse.name}
 						className='warehouse-list__warehouse'
 						icon={<LittleLogo icon={warehouse.icon} />}
 						name={warehouse.label}

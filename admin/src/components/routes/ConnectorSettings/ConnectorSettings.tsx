@@ -55,6 +55,12 @@ const ConnectorSettings = () => {
 	}
 
 	useEffect(() => {
+		if (newConnectionID > 0) {
+			redirect(`connections/${newConnectionID}/actions?new=true`);
+		}
+	}, [newConnectionID]);
+
+	useEffect(() => {
 		const fetchData = async () => {
 			const connector = connectors.find((c) => c.id === connectorID);
 			if (connector == null) {
@@ -265,7 +271,7 @@ const ConnectorSettings = () => {
 
 	const fieldsToRender: ReactNode[] = [];
 	for (const f of fields) {
-		fieldsToRender.push(<ConnectorField field={f} />);
+		fieldsToRender.push(<ConnectorField key={f.Label} field={f} />);
 	}
 
 	const actionsToRender: ReactNode[] = [];
@@ -273,6 +279,7 @@ const ConnectorSettings = () => {
 		if (a.Confirm) {
 			actionsToRender.push(
 				<ConfirmationButton
+					key={a.Event}
 					variant={a.Variant}
 					onClick={async () => {
 						await onActionClick(a.Event, i);
@@ -287,6 +294,7 @@ const ConnectorSettings = () => {
 		} else {
 			actionsToRender.push(
 				<SlButton
+					key={a.Event}
 					variant={a.Variant}
 					onClick={async () => {
 						await onActionClick(a.Event);
@@ -300,10 +308,6 @@ const ConnectorSettings = () => {
 
 	if (notFound) {
 		return <NotFound />;
-	}
-
-	if (newConnectionID > 0) {
-		redirect(`connections/${newConnectionID}/actions?new=true`);
 	}
 
 	const c = connector;
@@ -352,7 +356,11 @@ const ConnectorSettings = () => {
 										}}
 									>
 										{storages.map((s) => {
-											return <SlOption value={String(s.id)}>{s.name}</SlOption>;
+											return (
+												<SlOption key={s.id} value={String(s.id)}>
+													{s.name}
+												</SlOption>
+											);
 										})}
 									</SlSelect>
 								)}

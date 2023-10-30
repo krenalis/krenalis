@@ -14,6 +14,7 @@ const GridHeaderRow = ({ columns }: GridHeaderRowProps) => {
 		const className = getChildIndexClassname(i, columns.length);
 		gridHeaderCells.push(
 			<GridHeaderCell
+				key={column.name}
 				className={`gridHeaderCell ${className}`}
 				value={column.name}
 				alignment={column.alignment}

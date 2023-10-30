@@ -65,12 +65,18 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }: GridProps) => {
 		if (Array.isArray(row)) {
 			const r = row as NestedGridRows;
 			rowComponents.push(
-				<GridNestedRows rows={r} columns={columns} className={`gridNestedRows ${className}`} nesting={1} />,
+				<GridNestedRows
+					key={i}
+					rows={r}
+					columns={columns}
+					className={`gridNestedRows ${className}`}
+					nesting={1}
+				/>,
 			);
 			continue;
 		}
 		const r = row as StandardGridRow;
-		rowComponents.push(<GridRow row={r} columns={columns} className={`gridRow ${className}`} />);
+		rowComponents.push(<GridRow key={i} row={r} columns={columns} className={`gridRow ${className}`} />);
 	}
 
 	return (

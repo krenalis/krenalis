@@ -17,7 +17,7 @@ const GridRow = ({ row, columns, className }: GridRowProps) => {
 		const alignment = columns[i].alignment;
 		const typedCell = { value: cell, type: type, alignment: alignment };
 		const className = getChildIndexClassname(i, row.cells.length);
-		cellComponents.push(<GridCell cell={typedCell} className={`gridCell ${className}`} />);
+		cellComponents.push(<GridCell key={i} cell={typedCell} className={`gridCell ${className}`} />);
 	}
 
 	return (

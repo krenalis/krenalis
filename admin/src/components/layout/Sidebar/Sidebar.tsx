@@ -219,6 +219,7 @@ const WorkspaceSelector = ({ setSelectedWorkspace, selectedWorkspace, workspaces
 	for (const s of searched) {
 		options.push(
 			<div
+				key={s.ID}
 				className={`workspaceDialogOption${s.ID === selectedWorkspace ? ' selected' : ''}`}
 				onClick={() => onWorkspaceChange(s.ID)}
 			>

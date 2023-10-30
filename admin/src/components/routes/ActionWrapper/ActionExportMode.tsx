@@ -18,7 +18,9 @@ const ActionExportMode = () => {
 		<Section title='Export Mode' description='The mode used to export the data' padded={true}>
 			<SlSelect size='medium' value={action.ExportMode!} onSlChange={onChangeExportMode}>
 				{Object.keys(EXPORT_MODE_OPTIONS).map((k) => (
-					<SlOption value={k}>{EXPORT_MODE_OPTIONS[k]}</SlOption>
+					<SlOption key={k} value={k}>
+						{EXPORT_MODE_OPTIONS[k]}
+					</SlOption>
 				))}
 			</SlSelect>
 		</Section>

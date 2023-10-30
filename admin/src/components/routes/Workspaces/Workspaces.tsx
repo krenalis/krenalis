@@ -80,6 +80,7 @@ const Workspaces = ({
 						workspaces.map((workspace) => {
 							return (
 								<ListTile
+									key={workspace.ID}
 									className='workspace-list__workspace'
 									icon={<SlIcon name='person-workspace' />}
 									name={workspace.Name}

@@ -65,7 +65,9 @@ const EditorWrapper = ({
 							</SlButton>
 							<SlMenu onSlSelect={onLanguageChange}>
 								{languageChoices.map((language) => (
-									<SlMenuItem value={language}>{language}</SlMenuItem>
+									<SlMenuItem key={language} value={language}>
+										{language}
+									</SlMenuItem>
 								))}
 							</SlMenu>
 						</SlDropdown>

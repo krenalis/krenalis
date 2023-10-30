@@ -131,8 +131,8 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	};
 
 	const fieldsToRender: ReactNode[] = [];
-	for (const f of fields) {
-		fieldsToRender.push(<ConnectorField field={f} />);
+	for (const [i, f] of fields.entries()) {
+		fieldsToRender.push(<ConnectorField key={i} field={f} />);
 	}
 
 	const actionsToRender: ReactNode[] = [];
@@ -140,6 +140,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		if (a.Confirm) {
 			actionsToRender.push(
 				<ConfirmationButton
+					key={a.Event}
 					variant={a.Variant}
 					onClick={async () => {
 						await onActionClick(a.Event, i);
@@ -154,6 +155,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		} else {
 			actionsToRender.push(
 				<SlButton
+					key={a.Event}
 					variant={a.Variant}
 					onClick={async () => {
 						await onActionClick(a.Event);

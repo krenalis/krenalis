@@ -35,7 +35,7 @@ const LinkedConnectionBlocks = ({
 				<>
 					<div className='secondaryConnections'>
 						{secondaryConnections.map((c) => (
-							<ConnectionBlock connection={c} isNew={c.id === newConnection}></ConnectionBlock>
+							<ConnectionBlock key={c.id} connection={c} isNew={c.id === newConnection}></ConnectionBlock>
 						))}
 					</div>
 				</>

@@ -13,6 +13,7 @@ const getConnectionsBlocks = (connections: TransformedConnection[], newConnectio
 			const linkedFiles = getStorageFileConnections(c.id, connections);
 			blocks.push(
 				<LinkedConnectionBlocks
+					key={c.id}
 					primaryConnection={c}
 					primaryColumn={c.isSource ? 'right' : 'left'}
 					secondaryConnections={linkedFiles}
@@ -21,7 +22,7 @@ const getConnectionsBlocks = (connections: TransformedConnection[], newConnectio
 			);
 			continue;
 		}
-		blocks.push(<ConnectionBlock connection={c} isNew={c.id === newConnectionID}></ConnectionBlock>);
+		blocks.push(<ConnectionBlock key={c.id} connection={c} isNew={c.id === newConnectionID}></ConnectionBlock>);
 	}
 	return blocks;
 };

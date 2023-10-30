@@ -48,7 +48,11 @@ const ConnectorSelect = ({
 				onSlChange={onSelectChange}
 			>
 				{options.map((opt) => {
-					return <SlOption value={opt.Value}>{opt.Text}</SlOption>;
+					return (
+						<SlOption key={opt.Value} value={opt.Value}>
+							{opt.Text}
+						</SlOption>
+					);
 				})}
 			</SlSelect>
 			{error !== '' && <div className='error'>{error}</div>}

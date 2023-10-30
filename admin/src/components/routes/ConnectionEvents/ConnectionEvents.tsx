@@ -79,6 +79,7 @@ const ConnectionEvents = () => {
 							{reversedEvents.map((e) => {
 								return (
 									<div
+										key={e.id}
 										className={`event${
 											selectedEvent && selectedEvent.id === e.id ? ' selected' : ''
 										}`}

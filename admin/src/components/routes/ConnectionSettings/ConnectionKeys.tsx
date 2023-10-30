@@ -94,7 +94,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			<div className='keys'>
 				{keys.map((key) => {
 					return (
-						<Flex alignItems='center' gap={30}>
+						<Flex key={key} alignItems='center' gap={30}>
 							<div className='keyCopy'>
 								<SlInput readonly value={key} />
 								<SlCopyButton value={key} />

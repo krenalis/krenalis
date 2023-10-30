@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-import React, { useContext, useEffect, useState, useRef, ReactNode } from 'react';
+import React, { useContext, useEffect, useState, useRef, ReactNode, Fragment } from 'react';
 import './User.css';
 import { adminBasePath } from '../../../constants/path';
 import UsersContext from '../../../context/UsersContext';
@@ -173,9 +173,9 @@ const User = () => {
 				value = JSON.stringify(value);
 			}
 			traits.push(
-				<>
+				<Fragment key={trait}>
 					<span className='label'>{trait}</span> <span className='value'>{value}</span>
-				</>,
+				</Fragment>,
 			);
 		}
 	}
@@ -191,11 +191,11 @@ const User = () => {
 				logo = <LittleLogo icon='' />;
 			}
 			events.push(
-				<>
+				<Fragment key={event.receivedAt}>
 					<div className='eventLogo'>{logo}</div>
 					<div className='eventType'>{event.type}</div>
 					<div className='eventSentAt'>{event.sentAt}</div>
-				</>,
+				</Fragment>,
 			);
 		}
 	}

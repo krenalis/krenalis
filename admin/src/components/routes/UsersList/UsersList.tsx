@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useLayoutEffect } from 'react';
 import './UsersList.css';
 import Toolbar from '../../layout/Toolbar/Toolbar';
 import Grid from '../../shared/Grid/Grid';
@@ -14,10 +14,13 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 
 const UsersList = () => {
 	const { setTitle } = useContext(AppContext);
-	setTitle('Users');
 
 	const { usersRows, usersCount, limit, properties, pagination, columnDefs, isLoading, fetchUsers } =
 		useContext(UsersContext);
+
+	useLayoutEffect(() => {
+		setTitle('Users');
+	}, []);
 
 	const onPageChange = async (page: number) => {
 		fetchUsers(page);
@@ -52,7 +55,7 @@ const UsersList = () => {
 					<SlMenu>
 						{properties.map((p) => {
 							return (
-								<SlOption>
+								<SlOption key={p.name}>
 									<SlSwitch size='small' onSlChange={() => onToggleColumn(p.name)} checked={p.isUsed}>
 										{p.name}
 									</SlSwitch>

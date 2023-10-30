@@ -68,7 +68,7 @@ const IdentifiersMapping = ({
 			{mapping.map(([mapped, identifier]: IdentifierAssociation, i) => {
 				const position = i + 1;
 				return (
-					<div className='identifiers-mapping__association'>
+					<div key={position} className='identifiers-mapping__association'>
 						<div className='identifiers-mapping__position'>{position}</div>
 						<ComboBoxInput
 							comboBoxListRef={inputPropertiesListRef}

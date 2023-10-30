@@ -123,9 +123,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		);
 		const conditionsCell: ReactNode[] = [];
 		if (a.Filter != null) {
-			for (const c of a.Filter.Conditions) {
+			for (const [i, c] of a.Filter.Conditions.entries()) {
 				conditionsCell.push(
-					<div>
+					<div key={i}>
 						{c.Property} {c.Operator} {c.Value}
 					</div>,
 				);
@@ -152,7 +152,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 									)}
 								>
 									{Object.entries(SCHEDULE_PERIODS).map(([value, time]) => (
-										<SlRadio value={value}>{time}</SlRadio>
+										<SlRadio key={value} value={value}>
+											{time}
+										</SlRadio>
 									))}
 								</SlRadioGroup>
 							</SlMenu>

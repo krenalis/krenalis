@@ -24,6 +24,7 @@ const ActionTypesDialog = ({
 	for (const type of actionTypes) {
 		const tile = (
 			<ListTile
+				key={type.Name}
 				icon={connectionLogo}
 				name={type.Name}
 				description={type.Description}

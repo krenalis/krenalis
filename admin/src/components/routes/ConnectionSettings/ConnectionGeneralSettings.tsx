@@ -129,7 +129,9 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				>
 					<SlOption value='0'>No storage</SlOption>
 					{storages.map((s) => (
-						<SlOption value={String(s.id)}>{s.name}</SlOption>
+						<SlOption key={s.id} value={String(s.id)}>
+							{s.name}
+						</SlOption>
 					))}
 				</SlSelect>
 			)}

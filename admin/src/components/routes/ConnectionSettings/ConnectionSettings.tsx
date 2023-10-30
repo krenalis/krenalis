@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import './ConnectionSettings.css';
 import ConnectionGeneralSettings from './ConnectionGeneralSettings';
 import ConnectionConnectorSettings from './ConnectionConnectorSettings';
@@ -16,10 +16,11 @@ const ConnectionSettings = () => {
 	const { redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
-	if (isDeleted) {
-		redirect('connections');
-		return null;
-	}
+	useEffect(() => {
+		if (isDeleted) {
+			redirect('connections');
+		}
+	}, [isDeleted]);
 
 	return (
 		<div className='connectionSettings'>

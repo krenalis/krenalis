@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useLayoutEffect, useMemo } from 'react';
 import './ConnectorsList.css';
 import Card from '../../shared/Card/Card';
 import { AppContext } from '../../../context/providers/AppProvider';
@@ -12,15 +12,24 @@ const ConnectorsList = () => {
 
 	const { redirect, api, showError, connectors, setTitle } = useContext(AppContext);
 
-	let connectionRole: string;
-	const roleParam = new URL(document.location.href).searchParams.get('role');
-	if (roleParam == null || roleParam === '') {
-		connectionRole = 'Source';
-	} else {
-		connectionRole = roleParam;
-	}
+	const connectionRole = useMemo(() => {
+		const roleParam = new URL(document.location.href).searchParams.get('role');
+		if (roleParam == null || roleParam === '') {
+			return 'Source';
+		} else {
+			return roleParam;
+		}
+	}, [document.location.href]);
 
-	setTitle(`Add a ${connectionRole.toLocaleLowerCase()} connection`);
+	useLayoutEffect(() => {
+		setTitle(`Add a ${connectionRole.toLocaleLowerCase()} connection`);
+	}, [connectionRole]);
+
+	useEffect(() => {
+		if (goToConnectorSettings !== 0) {
+			redirect(`connectors/${goToConnectorSettings}?role=${connectionRole}`);
+		}
+	}, [goToConnectorSettings]);
 
 	const authorizeWithOAuth = async (connectorID: number) => {
 		localStorage.setItem('addConnectionID', String(connectorID));
@@ -36,11 +45,6 @@ const ConnectorsList = () => {
 		return;
 	};
 
-	if (goToConnectorSettings !== 0) {
-		redirect(`connectors/${goToConnectorSettings}?role=${connectionRole}`);
-		return null;
-	}
-
 	return (
 		<div className='connectorsList'>
 			<div className='routeContent'>
@@ -48,6 +52,7 @@ const ConnectorsList = () => {
 					{connectors.map((c) => {
 						return (
 							<Card
+								key={c.id}
 								name={c.name}
 								icon={c.icon}
 								type={c.type}

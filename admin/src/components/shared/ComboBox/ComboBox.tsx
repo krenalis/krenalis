@@ -93,6 +93,7 @@ const ComboBoxList = forwardRef<ComboBoxListRef, ComboBoxListProps>(({ items, on
 			{searchResults.map((item) => {
 				return (
 					<SlMenuItem
+						key={item.term}
 						onClick={() => {
 							setSearchTerm(item.term);
 							onSelect(currentComboboxInput, item.term);

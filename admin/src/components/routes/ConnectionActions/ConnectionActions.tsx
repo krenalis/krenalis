@@ -107,6 +107,7 @@ const ConnectionActions = () => {
 						<div className='actionTypes'>
 							{connection.actionTypes.map((actionType) => (
 								<ListTile
+									key={actionType.Name}
 									icon={getConnectorLogo(connection.connector.icon)}
 									name={actionType.Name}
 									description={actionType.Description}

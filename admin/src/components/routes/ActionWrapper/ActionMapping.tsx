@@ -326,6 +326,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			}
 			mappings.push(
 				<div
+					key={k}
 					className='mapping'
 					data-key={k}
 					style={
@@ -448,7 +449,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					</SlButton>
 					<SlMenu onSlSelect={onTransformationLanguageSelect}>
 						{transformationLanguages.map((language) => (
-							<SlMenuItem value={language}>
+							<SlMenuItem key={language} value={language}>
 								{getLanguageLogo(language)}
 								{language}
 							</SlMenuItem>
@@ -898,9 +899,16 @@ const FullscreenTransformation = ({
 			<div className='panelSchema'>
 				{inputSchema.properties.map((p) => {
 					if (p.type.name === 'Object') {
-						return <TransformationNestedProperties property={p} language={selectedLanguage} nesting={0} />;
+						return (
+							<TransformationNestedProperties
+								key={p.name}
+								property={p}
+								language={selectedLanguage}
+								nesting={0}
+							/>
+						);
 					} else {
-						return <TransformationProperty language={selectedLanguage} property={p} />;
+						return <TransformationProperty key={p.name} language={selectedLanguage} property={p} />;
 					}
 				})}
 			</div>
@@ -911,6 +919,7 @@ const FullscreenTransformation = ({
 				{Array.from(samples.entries()).map(([i, s]) => {
 					return (
 						<Accordion
+							key={i}
 							isOpen={JSON.stringify(s) === JSON.stringify(selectedSample)}
 							summary={
 								<div
@@ -998,6 +1007,7 @@ const FullscreenTransformation = ({
 						{reversedEvents.map((e) => {
 							return (
 								<Accordion
+									key={e.id}
 									isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
 									summary={
 										<div
@@ -1095,6 +1105,7 @@ const FullscreenTransformation = ({
 											if (p.type.name === 'Object') {
 												return (
 													<TransformationNestedProperties
+														key={p.name}
 														property={p}
 														language={selectedLanguage}
 														nesting={0}
@@ -1102,7 +1113,11 @@ const FullscreenTransformation = ({
 												);
 											} else {
 												return (
-													<TransformationProperty property={p} language={selectedLanguage} />
+													<TransformationProperty
+														key={p.name}
+														property={p}
+														language={selectedLanguage}
+													/>
 												);
 											}
 										})}
@@ -1306,6 +1321,7 @@ const TransformationNestedProperties = ({
 						if (p.type.name === 'Object') {
 							return (
 								<TransformationNestedProperties
+									key={p.name}
 									property={p}
 									language={language}
 									nesting={nesting + 1}
@@ -1315,6 +1331,7 @@ const TransformationNestedProperties = ({
 						} else {
 							return (
 								<TransformationProperty
+									key={p.name}
 									property={p}
 									language={language}
 									parentName={parentName ? parentName + '.' + property.name : property.name}

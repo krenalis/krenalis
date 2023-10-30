@@ -30,7 +30,11 @@ const ConnectorRadios = ({ name, label, options, error, val, onChange }: Connect
 		<div className='connectorRadios'>
 			<SlRadioGroup value={value} label={label} name={name} onSlChange={onRadioGroupChange}>
 				{options.map((opt, _) => {
-					return <SlRadio value={opt.Value}>{opt.Text}</SlRadio>;
+					return (
+						<SlRadio key={opt.Value} value={opt.Value}>
+							{opt.Text}
+						</SlRadio>
+					);
 				})}
 			</SlRadioGroup>
 			{error !== '' && <div className='error'>{error}</div>}

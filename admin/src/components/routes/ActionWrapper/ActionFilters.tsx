@@ -92,7 +92,9 @@ const ActionFilters = () => {
 					onSlChange={onUpdateConditionFragment}
 				>
 					{Object.keys(operatorOptions).map((k) => (
-						<SlOption value={k}>{operatorOptions[k]}</SlOption>
+						<SlOption key={k} value={k}>
+							{operatorOptions[k]}
+						</SlOption>
 					))}
 				</SlSelect>
 			);
@@ -106,7 +108,7 @@ const ActionFilters = () => {
 				/>
 			);
 			conditions.push(
-				<div className='condition' data-id={i}>
+				<div key={i} className='condition' data-id={i}>
 					{conditionInput}
 					{operatorSelect}
 					{valueInput}

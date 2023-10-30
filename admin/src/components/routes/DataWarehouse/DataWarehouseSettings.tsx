@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useLayoutEffect } from 'react';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
@@ -26,7 +26,9 @@ const DataWarehouseSettings = ({
 
 	const { setTitle, api, showError, showStatus, setIsWorkspaceStale } = useContext(appContext);
 
-	setTitle(`${selectedWarehouse.label} settings`);
+	useLayoutEffect(() => {
+		setTitle(`${selectedWarehouse.label} settings`);
+	}, []);
 
 	const onCancelClick = () => setSelectedWarehouse(undefined);
 

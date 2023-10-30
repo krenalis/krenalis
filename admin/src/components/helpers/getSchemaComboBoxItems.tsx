@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Fragment } from 'react';
 import { flattenSchema } from '../../lib/helpers/transformedAction';
 import { ObjectType } from '../../types/external/types';
 import { ComboboxItem } from '../../types/internal/app';
@@ -13,7 +13,7 @@ const getSchemaComboboxItems = (schema: ObjectType, nonSelectableProperties?: st
 		if (nonSelectableProperties && nonSelectableProperties.includes(propertyName)) continue;
 		items.push({
 			content: (
-				<>
+				<Fragment key={propertyName}>
 					<div className='propertiesItemName'>
 						{flatSchema[propertyName].label != null && flatSchema[propertyName].label !== '' ? (
 							<>
@@ -25,7 +25,7 @@ const getSchemaComboboxItems = (schema: ObjectType, nonSelectableProperties?: st
 						)}
 					</div>
 					<div className='propertiesItemType'>{flatSchema[propertyName].type}</div>
-				</>
+				</Fragment>
 			),
 			term: propertyName,
 		});

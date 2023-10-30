@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useLayoutEffect } from 'react';
 import './Schema.css';
 import Grid from '../../shared/Grid/Grid';
 import Toolbar from '../../layout/Toolbar/Toolbar';
@@ -16,7 +16,9 @@ const Schema = () => {
 
 	const { api, redirect, showError, showStatus, setTitle, selectedWorkspace, warehouse } = useContext(AppContext);
 
-	setTitle('Schema');
+	useLayoutEffect(() => {
+		setTitle('Schema');
+	}, []);
 
 	useEffect(() => {
 		const fetchSchema = async () => {

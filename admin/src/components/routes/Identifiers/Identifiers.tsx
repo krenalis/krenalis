@@ -195,7 +195,7 @@ const Identifiers = () => {
 						{identifiers.map((identifier, i) => {
 							const position = i + 1;
 							return (
-								<div className='identifiers__identifier'>
+								<div key={position} className='identifiers__identifier'>
 									<div className='identifiers__identifier-position'>{position}</div>
 									<ComboBoxInput
 										className='identifiers__identifier-input'

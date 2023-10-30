@@ -77,14 +77,15 @@ const OAuth = () => {
 		fetchOAuthToken();
 	}, []);
 
+	useEffect(() => {
+		if (redirectURL !== '') {
+			redirect(redirectURL);
+		}
+	}, [redirectURL]);
+
 	const onGoToConnectionsMapClick = () => {
 		redirect(`connections`);
 	};
-
-	if (redirectURL !== '') {
-		redirect(redirectURL);
-		return null;
-	}
 
 	return (
 		<div className='oauth'>
