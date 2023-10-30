@@ -65,29 +65,9 @@ func TestExportZeroUsers(t *testing.T) {
 
 	// Test the export of zero users to file (CSV).
 	func() {
-		// Create the temporary directory for the storage.
-		storageDir, err := os.MkdirTemp("", "chichi-test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		removeTempDirectory := false
-		defer func() {
-			if removeTempDirectory {
-				err := os.RemoveAll(storageDir)
-				if err != nil {
-					t.Logf("cannot remove the temporary directory used by the storage: %s", err)
-				}
-			} else {
-				t.Logf("the temporary directory for the storage %q has been kept for troubleshooting the test", storageDir)
-			}
-		}()
-		stat, err := os.Stat(storageDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !stat.IsDir() {
-			t.Fatalf("%q is not a dir", storageDir)
-		}
+
+		// Create the temporary storage.
+		storage := chichitester.NewTempStorage(t)
 
 		// Create the Filesystem connection.
 		fsID := c.AddConnection(map[string]any{
@@ -97,7 +77,7 @@ func TestExportZeroUsers(t *testing.T) {
 				"Enabled":   true,
 				"Connector": 19, // Filesystem.
 				"Settings": map[string]any{
-					"Root": storageDir,
+					"Root": storage.Root(),
 				},
 			},
 		})
@@ -117,7 +97,7 @@ func TestExportZeroUsers(t *testing.T) {
 		})
 
 		exportedFilename := "exported-users.tmp.csv"
-		exportFilePath := filepath.Join(storageDir, exportedFilename)
+		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 		// Add an action to the CSV for exporting the users.
 		exportUsersActionID := c.AddAction(csvID, map[string]any{
@@ -129,7 +109,7 @@ func TestExportZeroUsers(t *testing.T) {
 		})
 
 		// Remove the export file, if exists.
-		err = os.Remove(exportFilePath)
+		err := os.Remove(exportFilePath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			t.Fatal(err)
 		}
@@ -167,9 +147,8 @@ func TestExportZeroUsers(t *testing.T) {
 			t.Fatalf("file content not matching expected content. Expected %q, got %q", expected, string(content))
 		}
 
-		// The test completed successfully, so the temporary directory for the
-		// storage can be removed.
-		removeTempDirectory = true
+		// The test completed successfully, so the storage can be removed.
+		storage.Remove()
 	}()
 
 }
