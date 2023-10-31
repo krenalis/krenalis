@@ -493,7 +493,12 @@ class Connectors {
 		return await call(`${this.apiURL}/connectors/${connector}`, http.GET);
 	};
 
-	ui = async (workspace: number, connector: number, role: ConnectionRole, oauthToken: string): Promise<UIResponse> => {
+	ui = async (
+		workspace: number,
+		connector: number,
+		role: ConnectionRole,
+		oauthToken: string,
+	): Promise<UIResponse> => {
 		return await call(`${this.apiURL}/workspaces/${workspace}/ui`, http.POST, {
 			connector: connector,
 			role: role,
