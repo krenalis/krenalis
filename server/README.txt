@@ -31,8 +31,8 @@ GET     /api/workspaces/{id}/connections/{id}/ui                                
 POST    /api/workspaces/{id}/connections/{id}/ui-event                           Execute the user interface event of a connection.
 GET     /api/connectors                                                          List the connectors.
 GET     /api/connectors/{id}                                                     Get a connector.
-POST    /api/connectors/{id}/ui                                                  Get the user interface of a connector.
-POST    /api/connectors/{id}/ui-event                                            Execute the user interface event of a connector.
+POST    /api/workspaces/{id}/ui                                                  Get the user interface of a connector.
+POST    /api/workspaces/{id}/ui-event                                            Execute the user interface event of a connector.
 GET     /api/connectors/{id}/auth-code-url                                       Return the URL that directs to the consent page of an OAuth 2.0 provider.
 PUT     /api/workspaces/{id}/event-listeners/                                    Add a new event listener.
 DELETE  /api/workspaces/{id}/event-listeners/{id}                                Remove an event listener.

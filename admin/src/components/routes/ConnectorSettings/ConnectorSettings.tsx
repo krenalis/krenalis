@@ -33,7 +33,7 @@ const ConnectorSettings = () => {
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
-	const { api, showError, showStatus, redirect, connectors, connections, setAreConnectionsStale, setTitle } =
+	const { api, showError, showStatus, redirect, connectors, connections, setAreConnectionsStale, setTitle, selectedWorkspace } =
 		useContext(AppContext);
 
 	const confirmationButtonsRef = useRef<ConfirmationButtonRef[]>([]);
@@ -87,7 +87,7 @@ const ConnectorSettings = () => {
 			if (connector.hasSettings === false) return;
 			let ui: UIResponse;
 			try {
-				ui = await api.connectors.ui(connectorID, connectionRole, OAuthToken);
+				ui = await api.connectors.ui(selectedWorkspace, connectorID, connectionRole, OAuthToken);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
@@ -183,7 +183,7 @@ const ConnectorSettings = () => {
 		}
 		let ui: UIResponse;
 		try {
-			ui = await api.connectors.uiEvent(connectorID, eventName, values, connectionRole, OAuthToken);
+			ui = await api.connectors.uiEvent(selectedWorkspace, connectorID, eventName, values, connectionRole, OAuthToken);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'EventNotExist') {

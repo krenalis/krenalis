@@ -206,6 +206,66 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						_ = json.NewEncoder(w).Encode(schema)
 					})
 				})
+				router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
+					var req struct {
+						Connector  int
+						Role       string
+						OAuthToken string
+					}
+					err = json.NewDecoder(r.Body).Decode(&req)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					var role apis.ConnectionRole
+					switch req.Role {
+					case "Source":
+						role = apis.SourceRole
+					case "Destination":
+						role = apis.DestinationRole
+					default:
+						respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
+						return
+					}
+					form, err := workspace.ServeUI(ctx, "load", nil, req.Connector, role, req.OAuthToken)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Add("Content-Type", "application/json")
+					_, _ = w.Write(form)
+				})
+				router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
+					var req struct {
+						Connector  int
+						Event      string
+						Values     json.RawMessage
+						Role       string
+						OAuthToken string
+					}
+					err = json.NewDecoder(r.Body).Decode(&req)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					var role apis.ConnectionRole
+					switch req.Role {
+					case "Source":
+						role = apis.SourceRole
+					case "Destination":
+						role = apis.DestinationRole
+					default:
+						respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
+						return
+					}
+					form, err := workspace.ServeUI(ctx, req.Event, req.Values, req.Connector, role, req.OAuthToken)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Add("Content-Type", "application/json")
+					_, _ = w.Write(form)
+				})
 				router.Route("/oauth-token", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						var req struct {
@@ -919,40 +979,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(connector)
 			})
-			router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := s.apis.Connector(ctx, id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var req struct {
-					Role       string
-					OAuthToken string
-				}
-				err = json.NewDecoder(r.Body).Decode(&req)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var role apis.ConnectionRole
-				switch req.Role {
-				case "Source":
-					role = apis.SourceRole
-				case "Destination":
-					role = apis.DestinationRole
-				default:
-					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
-					return
-				}
-				form, err := connector.ServeUI(ctx, "load", nil, role, req.OAuthToken)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Add("Content-Type", "application/json")
-				_, _ = w.Write(form)
-			})
 			router.Get("/auth-code-url", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
 				connector, err := s.apis.Connector(ctx, id)
@@ -968,42 +994,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				w.Header().Add("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(map[string]any{"url": url})
-			})
-			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := s.apis.Connector(ctx, id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var req struct {
-					Event      string
-					Values     json.RawMessage
-					Role       string
-					OAuthToken string
-				}
-				err = json.NewDecoder(r.Body).Decode(&req)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var role apis.ConnectionRole
-				switch req.Role {
-				case "Source":
-					role = apis.SourceRole
-				case "Destination":
-					role = apis.DestinationRole
-				default:
-					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
-					return
-				}
-				form, err := connector.ServeUI(ctx, req.Event, req.Values, role, req.OAuthToken)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Add("Content-Type", "application/json")
-				_, _ = w.Write(form)
 			})
 		})
 	})

@@ -9,7 +9,6 @@ package apis
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,9 +16,6 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/state"
 	_connector "chichi/connector"
-	"chichi/connector/ui"
-
-	"github.com/jxskiss/base62"
 )
 
 // Connector represents a connector.
@@ -156,73 +152,12 @@ func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 	return this.apis.http.AuthCodeURL(this.connector.OAuth, redirectURI)
 }
 
-// ServeUI serves the user interface for the connector with the given role.
-// event is the event and values contains the form values in JSON format.
-// oAuth is the OAuth token returned by the (*Workspace).OAuth method, it is
-// required if the connector requires OAuth.
-//
-// If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExist.
-func (this *Connector) ServeUI(ctx context.Context, event string, values []byte, role ConnectionRole, oAuth string) ([]byte, error) {
-
-	this.apis.mustBeOpen()
-
-	c := this.connector
-
-	if (oAuth == "") != (c.OAuth == nil) {
-		if oAuth == "" {
-			return nil, errors.BadRequest("OAuth is required by connector %d", c.ID)
-		}
-		return nil, errors.BadRequest("connector %d does not support OAuth", c.ID)
-	}
-
-	// Decode oAuth.
-	var r authorizedResource
-	if oAuth != "" {
-		data, err := base62.DecodeString(oAuth)
-		if err != nil {
-			return nil, errors.BadRequest("oAuth is not valid")
-		}
-		err = json.Unmarshal(data, &r)
-		if err != nil {
-			return nil, errors.BadRequest("oAuth is not valid")
-		}
-	}
-
-	var clientSecret string
-	if oAuth != "" {
-		clientSecret = c.OAuth.ClientSecret
-	}
-	connectionUI, err := this.openUI(role, r.Code, clientSecret, r.AccessToken)
-	if err != nil {
-		return nil, err
-	}
-	if connectionUI == nil {
-		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
-	}
-
-	// TODO: check and delete alternative fieldsets keys that have 'null' value
-	// before saving to database
-	form, alert, err := connectionUI.ServeUI(ctx, event, values)
-	if c, ok := connectionUI.(io.Closer); ok {
-		_ = c.Close()
-	}
-	if err != nil {
-		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
-		}
-		return nil, err
-	}
-
-	return marshalUIFormAlert(form, alert, ui.Role(role))
-}
-
 // openUI opens the UI of the connector, and returns the UI or nil if the
 // connector does not have the UI.
 //
 // If the returned value implements the io.Close interface, it is the caller's
 // responsibility to call the Close method
-func (this *Connector) openUI(role ConnectionRole, resource, clientSecret, accessToken string) (_connector.UI, error) {
+func (this *Connector) openUI(role ConnectionRole, resource, clientSecret, accessToken string, region state.PrivacyRegion) (_connector.UI, error) {
 	var err error
 	var connection any
 	switch c := this.connector; c.Type {
@@ -231,6 +166,7 @@ func (this *Connector) openUI(role ConnectionRole, resource, clientSecret, acces
 			Role:       _connector.Role(role),
 			Resource:   resource,
 			HTTPClient: this.apis.http.Client(clientSecret, accessToken),
+			Region:     _connector.PrivacyRegion(region),
 		})
 	case state.DatabaseType:
 		var database _connector.DatabaseConnection

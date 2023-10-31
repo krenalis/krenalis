@@ -36,6 +36,7 @@ import (
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
+	"chichi/connector/ui"
 
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/maps"
@@ -189,7 +190,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			clientSecret = c.OAuth.ClientSecret
 		}
 		connector := &Connector{apis: this.apis, connector: c}
-		connectionUI, err := connector.openUI(connection.Role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
+		connectionUI, err := connector.openUI(connection.Role, n.Resource.Code, clientSecret,
+			n.Resource.AccessToken, state.PrivacyRegion(this.PrivacyRegion))
 		if err != nil {
 			return 0, err
 		}
@@ -936,6 +938,75 @@ func (this *Workspace) Schema(name string) types.Type {
 		return types.Type{}
 	}
 	return schema.Unflatten()
+}
+
+// ServeUI serves the user interface for the given connector, with the given
+// role. event is the event and values contains the form values in JSON format.
+// oAuth is the OAuth token returned by the (*Workspace).OAuth method, it is
+// required if the connector requires OAuth.
+//
+// It returns an errors.UnprocessableError error with code:
+// - ConnectorNotExist, if the connector does not exist.
+// - EventNotExist, if the event does not exist.
+func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector int, role ConnectionRole, oAuth string) ([]byte, error) {
+
+	this.apis.mustBeOpen()
+
+	if connector < 1 || connector > maxInt32 {
+		return nil, errors.BadRequest("connector identifier %d is not valid", connector)
+	}
+	c, ok := this.apis.state.Connector(connector)
+	if !ok {
+		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+	}
+
+	if (oAuth == "") != (c.OAuth == nil) {
+		if oAuth == "" {
+			return nil, errors.BadRequest("OAuth is required by connector %d", c.ID)
+		}
+		return nil, errors.BadRequest("connector %d does not support OAuth", c.ID)
+	}
+
+	// Decode oAuth.
+	var r authorizedResource
+	if oAuth != "" {
+		data, err := base62.DecodeString(oAuth)
+		if err != nil {
+			return nil, errors.BadRequest("oAuth is not valid")
+		}
+		err = json.Unmarshal(data, &r)
+		if err != nil {
+			return nil, errors.BadRequest("oAuth is not valid")
+		}
+	}
+
+	var clientSecret string
+	if oAuth != "" {
+		clientSecret = c.OAuth.ClientSecret
+	}
+	conn := &Connector{apis: this.apis, connector: c}
+	connectionUI, err := conn.openUI(role, r.Code, clientSecret, r.AccessToken, this.workspace.PrivacyRegion)
+	if err != nil {
+		return nil, err
+	}
+	if connectionUI == nil {
+		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
+	}
+
+	// TODO: check and delete alternative fieldsets keys that have 'null' value
+	// before saving to database
+	form, alert, err := connectionUI.ServeUI(ctx, event, values)
+	if c, ok := connectionUI.(io.Closer); ok {
+		_ = c.Close()
+	}
+	if err != nil {
+		if err == ui.ErrEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
+		}
+		return nil, err
+	}
+
+	return marshalUIFormAlert(form, alert, ui.Role(role))
 }
 
 // SetIdentifiers sets the identifiers and the anonymous identifiers of the
