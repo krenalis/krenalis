@@ -17,6 +17,8 @@ import (
 	"math"
 	"os"
 	pkgPath "path"
+	"regexp"
+	"strconv"
 	"time"
 
 	"chichi/apis/errors"
@@ -118,7 +120,11 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	records := newRecordReader(columns, usersSlices)
 
 	// Write the file to the storage.
-	w, err := storage.Writer(ctx, this.action.Path, file.ContentType(ctx))
+	path, err := replacePathPlaceholders(this.action.Path, time.Now())
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("invalid path: %s", err)}
+	}
+	w, err := storage.Writer(ctx, path, file.ContentType(ctx))
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
 	}
@@ -747,4 +753,37 @@ type zipWriter struct {
 
 func (zw zipWriter) Close() error {
 	return zw.z.Close()
+}
+
+var (
+	todayPlaceholder = regexp.MustCompile(`(?i){{\ *today\ *}}`)
+	nowPlaceholder   = regexp.MustCompile(`(?i){{\ *now\ *}}`)
+	unixPlaceholder  = regexp.MustCompile(`(?i){{\ *unix\ *}}`)
+	placeholder      = regexp.MustCompile(`{{.*?}}`)
+)
+
+// replacePathPlaceholders replaces the placeholders in the file export path
+// using now as current time. The timezone of now is ignored, since UTC is
+// always used.
+//
+// Supported placeholders are:
+//
+//	{{ today }}  which renders to something like:  2035-10-30
+//	{{ now }}    which renders to something like:  2035-10-30-16-33-25
+//	{{ unix }}   which renders to something like:  2077374805
+//
+// Note that placeholders replacements is case-insensitive and
+// space-insensitive, so {{TODAY}} is handled like {{   today   }}.
+//
+// Any character-sequence enclosed between "{{" and "}}" and not recognized,
+// makes this function return error.
+func replacePathPlaceholders(path string, now time.Time) (string, error) {
+	path = todayPlaceholder.ReplaceAllLiteralString(path, now.UTC().Format(time.DateOnly))
+	path = nowPlaceholder.ReplaceAllLiteralString(path, now.UTC().Format("2006-01-02-15-04-05"))
+	path = unixPlaceholder.ReplaceAllLiteralString(path, strconv.FormatInt(now.Unix(), 10))
+	remaining := placeholder.FindString(path)
+	if remaining != "" {
+		return "", fmt.Errorf("invalid placeholder: %s", remaining)
+	}
+	return path, nil
 }
