@@ -367,7 +367,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	}
 
 	// Validate the arguments.
-	err := this.validateActionToSet(action, state.ActionTarget(target), eventType)
+	err := this.validateActionToSet(ctx, action, state.ActionTarget(target), eventType)
 	if err != nil {
 		return 0, err
 	}
@@ -2225,7 +2225,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
-func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) error {
+func (this *Connection) validateActionToSet(ctx context.Context, action ActionToSet, target state.ActionTarget, eventType string) error {
 
 	// First, do formal validations.
 
@@ -2518,7 +2518,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	switch connector.Type {
 	case state.AppType:
 		if c.Role == state.DestinationRole && target == state.EventsTarget {
-			schema, err := this.fetchAppSchema(context.Background(), target, eventType)
+			schema, err := this.fetchAppSchema(ctx, target, eventType)
 			if err != nil {
 				return err
 			}

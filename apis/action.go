@@ -273,7 +273,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
-	err := this.connection.validateActionToSet(action, this.action.Target, this.action.EventType)
+	err := this.connection.validateActionToSet(ctx, action, this.action.Target, this.action.EventType)
 	if err != nil {
 		return err
 	}
