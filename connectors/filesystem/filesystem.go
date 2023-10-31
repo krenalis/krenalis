@@ -15,6 +15,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -166,14 +167,26 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 // contentType is the file's content type.
 func (c *connection) Write(ctx context.Context, r io.Reader, name, contentType string) error {
 	path, _ := c.CompletePath(ctx, name)
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	tmpPath := path + ".tmp"
+	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err := os.Remove(tmpPath)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			slog.Warn("cannot remove temporary file created by filesystem", "err", err)
+			return
+		}
+	}()
 	_, err = io.Copy(f, r)
 	err2 := f.Close()
 	if err != nil {
 		return err
 	}
-	return err2
+	if err2 != nil {
+		return err2
+	}
+	err = os.Rename(tmpPath, path)
+	return err
 }
