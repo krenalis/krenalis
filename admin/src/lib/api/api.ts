@@ -291,6 +291,15 @@ class Connections {
 		);
 	};
 
+	tableSchema = async (connection: number, tableName: string): Promise<ObjectType> => {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables/${encodeURIComponent(
+				tableName,
+			)}/schema`,
+			http.GET,
+		);
+	};
+
 	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/app-users`, http.POST, {
 			Schema: schema,

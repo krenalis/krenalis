@@ -2531,9 +2531,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	case state.MobileType, state.ServerType, state.WebsiteType:
 		mappingIsMandatory = targetUsersOrGroups
 		transformationIsAllowed = false
-	case
-		state.DatabaseType,
-		state.FileType:
+	case state.DatabaseType:
+		mappingIsMandatory = targetUsersOrGroups
+		transformationIsAllowed = mappingIsMandatory
+	case state.FileType:
 		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
 		transformationIsAllowed = mappingIsMandatory
 	}

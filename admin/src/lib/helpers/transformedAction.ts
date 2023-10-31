@@ -184,6 +184,9 @@ const computeDefaultAction = (
 	if (fields.includes('Sheet')) {
 		action.Sheet = '';
 	}
+	if (fields.includes('Table')) {
+		action.Table = '';
+	}
 	if (fields.includes('ExportMode')) {
 		action.ExportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
 	}
@@ -199,12 +202,15 @@ const computeActionTypeFields = (
 	schemas: ActionSchemasResponse,
 ) => {
 	const fields: string[] = [];
-	if (connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') {
+	if (
+		(connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') ||
+		(connection.type === 'Database' && connection.role === 'Destination')
+	) {
 		fields.push('Filter');
 	}
 	if (
 		(connection.type === 'App' && schemas.In != null && schemas.Out != null) ||
-		(connection.type === 'Database' && connection.role === 'Source') ||
+		connection.type === 'Database' ||
 		(connection.type === 'File' && connection.role === 'Source') ||
 		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
 			connection.role === 'Source' &&
@@ -233,6 +239,9 @@ const computeActionTypeFields = (
 		if (connection.connector.hasSheets) {
 			fields.push('Sheet');
 		}
+	}
+	if (connection.type === 'Database' && connection.role === 'Destination') {
+		fields.push('Table');
 	}
 	return fields;
 };

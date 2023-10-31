@@ -93,7 +93,7 @@ const ActionQuery = () => {
 					left: 0,
 					behavior: 'smooth',
 				});
-			});
+			}, 100);
 		}, CONFIRM_ANIMATION_DURATION);
 	};
 

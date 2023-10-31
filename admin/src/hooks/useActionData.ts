@@ -171,6 +171,19 @@ const useActionData = (
 				inputSchema = res.schema;
 			}
 
+			// If the action type is an exrpot to a database destination, the
+			// output schema is the schema of the database table itself.
+			if (fields.includes('Table') && isEditing) {
+				let schema: ObjectType;
+				try {
+					schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
+				} catch (err) {
+					showError(err);
+					return;
+				}
+				outputSchema = schema;
+			}
+
 			const transformedActionType: TransformedActionType = {
 				Name: actionType.Name,
 				Description: actionType.Description,
@@ -190,7 +203,7 @@ const useActionData = (
 				// function.
 				let transformedMapping: TransformedMapping | null = null;
 				if (providedAction.Mapping != null) {
-					transformedMapping = transformActionMapping(providedAction.Mapping, schemas.Out);
+					transformedMapping = transformActionMapping(providedAction.Mapping, outputSchema);
 				}
 				transformedAction = {
 					ID: providedAction.ID,
@@ -218,7 +231,7 @@ const useActionData = (
 					MatchingProperties: providedAction.MatchingProperties,
 				};
 			} else {
-				transformedAction = computeDefaultAction(actionType, schemas.Out, fields);
+				transformedAction = computeDefaultAction(actionType, outputSchema, fields);
 			}
 			setAction(transformedAction);
 			setIsLoading(false);

@@ -7,6 +7,7 @@ import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
 import ActionMatchingProperties from './ActionMatchingProperties';
+import ActionTable from './ActionTable';
 import useActionData from '../../../hooks/useActionData';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { FullscreenContext } from '../../../context/FullscreenContext';
@@ -18,6 +19,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [mode, setMode] = useState<string>('');
 	const [isSaveButtonLoading, setIsSaveButtonLoading] = useState<boolean>(false);
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
+	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 
 	const { workspaces, selectedWorkspace } = useContext(appContext);
@@ -61,10 +63,25 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	}
 
 	const mustComputeSchema =
-		(connection.type === 'Database' || connection.type === 'File') && actionType!.InputSchema == null && !isEditing;
-	const hasQueryError = connection.type === 'Database' && actionType!.InputSchema == null && isEditing;
-	const hasRecordsError = connection.type === 'File' && actionType!.InputSchema == null && isEditing;
-	const isMappingSectionDisabled = hasQueryError || isQueryChanged || hasRecordsError || (isFileChanged && isImport);
+		((connection.type === 'Database' || connection.type === 'File') &&
+			actionType!.InputSchema == null &&
+			!isEditing) ||
+		(connection.type === 'Database' &&
+			connection.role === 'Destination' &&
+			actionType!.OutputSchema == null &&
+			!isEditing);
+	const hasQueryError =
+		connection.type === 'Database' && connection.role === 'Source' && actionType!.InputSchema == null && isEditing;
+	const hasRecordsError =
+		connection.type === 'File' && connection.role === 'Destination' && actionType!.InputSchema == null && isEditing;
+	const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
+	const isMappingSectionDisabled =
+		hasQueryError ||
+		isQueryChanged ||
+		hasRecordsError ||
+		(isFileChanged && isImport) ||
+		hasTableError ||
+		isTableChanged;
 
 	let disabledReason = '';
 	if (hasQueryError) {
@@ -73,9 +90,14 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	} else if (hasRecordsError) {
 		disabledReason =
 			'Mappings are disabled due to an error in the file fetch. Please resolve the file information issue before proceeding with the mappings.';
-	} else if (connection.type === 'Database') {
+	} else if (hasTableError) {
+		disabledReason = `Mappings are disabled because the table couldn't be retrieved. Please resolve this issue before proceeding with the mappings.`;
+	} else if (connection.type === 'Database' && connection.role === 'Source') {
 		disabledReason =
 			'Mappings are disabled since the query has been modified. Please confirm the query or revert the changes before proceeding with mappings.';
+	} else if (connection.type === 'Database' && connection.role === 'Destination') {
+		disabledReason =
+			'Mappings are disabled since the table name has been modified. Please confirm the table name or revert the changes before proceeding with mappings.';
 	} else {
 		disabledReason =
 			'Mappings are disabled since the file information has been modified . Please confirm the new information or revert the changes before proceeding with mappings.';
@@ -104,6 +126,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				isSaveButtonLoading,
 				setIsQueryChanged,
 				setIsFileChanged,
+				setIsTableChanged,
 				isSaveHidden,
 				setIsSaveHidden,
 			}}
@@ -114,6 +137,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.Fields.includes('Filter') && <ActionFilters />}
 					{actionType!.Fields.includes('Query') && <ActionQuery />}
 					{actionType!.Fields.includes('Path') && <ActionPath />}
+					{actionType!.Fields.includes('Table') && <ActionTable />}
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
 					{actionType!.Fields.includes('Mapping') && !mustComputeSchema && (

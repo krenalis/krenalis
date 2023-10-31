@@ -703,7 +703,7 @@ const FullscreenTransformation = ({
 						smpls.push(sample);
 					}
 					samples = smpls;
-				} else if (connection.isApp && connection.isDestination) {
+				} else if ((connection.isApp || connection.isDatabase) && connection.isDestination) {
 					const properties: string[] = [];
 					for (const prop of inputSchema.properties) {
 						properties.push(prop.name);

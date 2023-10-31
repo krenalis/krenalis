@@ -145,6 +145,12 @@
 	align-items: baseline;
 }
 
+.action .actionTable {
+	display: flex;
+	align-items: center;
+	gap: 30px;
+}
+
 .action .mappings .mappingsDisabledAlert {
 	margin-bottom: 20px;
 }

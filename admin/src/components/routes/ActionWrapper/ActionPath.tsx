@@ -252,7 +252,7 @@ const ActionPath = () => {
 					left: 0,
 					behavior: 'smooth',
 				});
-			}, 10);
+			}, 100);
 		}, CONFIRM_ANIMATION_DURATION);
 	};
 
