@@ -354,6 +354,10 @@ inherit the disabled style */
 	color: var(--sl-color-danger-600);
 }
 
+.action .minimizedTransformation .switchEditorLanguageDropdown > sl-menu {
+	display: none;
+}
+
 .action .fullscreenTransformation {
 	position: fixed;
 	left: 0;

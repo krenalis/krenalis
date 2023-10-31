@@ -13,6 +13,7 @@ interface EditorWrapperProps {
 	language: string;
 	languageChoices?: string[];
 	onLanguageChange?: (language: string) => void;
+	languageDropdownRef?: any;
 	actions?: ReactNode;
 	width?: number;
 	height?: number;
@@ -22,12 +23,14 @@ interface EditorWrapperProps {
 	onClick?: () => void;
 	onMount?: (editor: any) => void;
 	isReadOnly?: boolean;
+	className?: string;
 }
 
 const EditorWrapper = ({
 	language,
 	languageChoices,
 	onLanguageChange,
+	languageDropdownRef,
 	actions,
 	width,
 	height,
@@ -37,6 +40,7 @@ const EditorWrapper = ({
 	isReadOnly,
 	onClick,
 	onMount,
+	className,
 	...delegated
 }: EditorWrapperProps) => {
 	const [key, setKey] = useState(name);
@@ -54,12 +58,12 @@ const EditorWrapper = ({
 	const languageLogo = getLanguageLogo(language);
 
 	return (
-		<div className='editorWrapper' onClick={onClick}>
+		<div className={`editorWrapper${className ? ' ' + className : ''}`} onClick={onClick}>
 			<div className='heading'>
 				<div className='logoAndLanguage'>
 					<span className='languageLogo'>{languageLogo}</span>
 					{languageChoices ? (
-						<SlDropdown className='switchEditorLanguageDropdown'>
+						<SlDropdown className='switchEditorLanguageDropdown' ref={languageDropdownRef}>
 							<SlButton slot='trigger' variant='text' size='small' caret>
 								{language}
 							</SlButton>

@@ -80,6 +80,22 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const propertiesListRef = useRef(null);
 	const minimizedEditorRef = useRef(null);
 	const fullscreenEditorRef = useRef(null);
+	const minimizedLanguageDropdownRef = useRef(null);
+	const fullscreenLanguageDropdownRef = useRef(null);
+
+	useEffect(() => {
+		if (minimizedLanguageDropdownRef.current == null) {
+			return;
+		}
+		// When the user clicks on the language dropdown of the minimized editor
+		// (whose submenu is hidden via CSS), wait for the fullscreen editor to
+		// display before opening its language dropdown submenu.
+		minimizedLanguageDropdownRef.current.addEventListener('sl-show', () => {
+			setTimeout(() => {
+				fullscreenLanguageDropdownRef.current.show();
+			}, 500);
+		});
+	}, [minimizedLanguageDropdownRef.current, fullscreenLanguageDropdownRef.current]);
 
 	useEffect(() => {
 		const fetchTransformationLanguages = async () => {
@@ -398,8 +414,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				<EditorWrapper
 					language={selectedLanguage}
 					languageChoices={transformationLanguages}
+					languageDropdownRef={minimizedLanguageDropdownRef}
 					actions={fullscreenButton}
-					onLanguageChange={onLanguageChange}
 					height={400}
 					name='actionTransformationEditor'
 					value={action.Transformation!.Source}
@@ -407,6 +423,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					isReadOnly={true}
 					onClick={onOpenFullscreenTransformation}
 					onMount={onMinimizedEditorMount}
+					className='minimizedTransformation'
 				/>
 				{isTransformationLanguageDeprecated && (
 					<SlAlert variant='danger' className='languageDeprecatedAlert' open>
@@ -420,6 +437,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					selectedLanguage={selectedLanguage}
 					transformationLanguages={transformationLanguages}
 					onLanguageChange={onLanguageChange}
+					languageDropdownRef={fullscreenLanguageDropdownRef}
 					value={action.Transformation!.Source}
 					onChangeTransformationFunction={onChangeTransformationFunction}
 					inputSchema={actionType.InputSchema}
@@ -588,6 +606,7 @@ interface FullscreenTransformationProps {
 	transformationLanguages: string[];
 	value: string;
 	onLanguageChange: (e: any) => void;
+	languageDropdownRef: any;
 	onChangeTransformationFunction: (source: string) => void;
 	inputSchema: ObjectType;
 	outputSchema: ObjectType;
@@ -600,6 +619,7 @@ const FullscreenTransformation = ({
 	selectedLanguage,
 	transformationLanguages,
 	onLanguageChange,
+	languageDropdownRef,
 	value,
 	onChangeTransformationFunction,
 	inputSchema,
@@ -1167,6 +1187,7 @@ const FullscreenTransformation = ({
 						<EditorWrapper
 							language={selectedLanguage}
 							languageChoices={transformationLanguages}
+							languageDropdownRef={languageDropdownRef}
 							onLanguageChange={onLanguageChange}
 							name='fullscreenActionTransformationEditor'
 							value={value}
