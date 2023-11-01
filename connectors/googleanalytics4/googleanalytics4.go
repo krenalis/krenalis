@@ -101,20 +101,9 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-// Resource returns the resource from a client token.
-func (c *connection) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
-// SendEvent sends the event, along with the given mapped data.
-// eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
-	return c.collect(eventBody(eventType, event, data))
-}
-
-// SendEventPreview returns a preview of the event that would be sent when
+// PreviewSendEvent returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
-func (c *connection) SendEventPreview(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
+func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString("POST https://www.google-analytics.com/mp/collect?api_secret=REDACTED&measurement_id=" + _url.QueryEscape(c.settings.MeasurementID) + "\n")
 	b.WriteString("Content-Type: application/json\n\n")
@@ -124,6 +113,17 @@ func (c *connection) SendEventPreview(ctx context.Context, eventType string, eve
 	}
 	b.Write(body)
 	return b.Bytes(), nil
+}
+
+// Resource returns the resource from a client token.
+func (c *connection) Resource(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+// SendEvent sends the event, along with the given mapped data.
+// eventType specifies the event type corresponding to the event.
+func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
+	return c.collect(eventBody(eventType, event, data))
 }
 
 // ServeUI serves the connector's user interface.

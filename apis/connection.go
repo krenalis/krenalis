@@ -1187,7 +1187,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	return app.SendEventPreview(ctx, eventType, ev.ConnectorEvent(), data)
+	return app.PreviewSendEvent(ctx, eventType, ev.ConnectorEvent(), data)
 }
 
 // Set sets the connection.

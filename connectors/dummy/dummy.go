@@ -172,6 +172,21 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
+// PreviewSendEvent returns a preview of the event that would be sent when
+// calling SendEvent with the same arguments.
+func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
+	var b bytes.Buffer
+	b.WriteString("POST https://example.com/api\n")
+	b.WriteString("Accept: application/json\n")
+	b.WriteString("Content-Type: application/json\n\n")
+	body, err := json.MarshalIndent(data, "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	b.Write(body)
+	return b.Bytes(), nil
+}
+
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 	panic("not implemented")
 }
@@ -227,21 +242,6 @@ func (c *connection) SendEvent(ctx context.Context, eventType string, event *con
 	log.Printf("dummy: sending event %#v, %#v", event, data)
 	time.Sleep(50 * time.Millisecond)
 	return nil
-}
-
-// SendEventPreview returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments.
-func (c *connection) SendEventPreview(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
-	var b bytes.Buffer
-	b.WriteString("POST https://example.com/api\n")
-	b.WriteString("Accept: application/json\n")
-	b.WriteString("Content-Type: application/json\n\n")
-	body, err := json.MarshalIndent(data, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	b.Write(body)
-	return b.Bytes(), nil
 }
 
 // ValidateSettings validates the settings received from the UI and returns them

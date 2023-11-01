@@ -103,24 +103,9 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-// Resource returns the resource.
-func (c *connection) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
-// SendEvent sends the event, along with the given mapped data.
-// eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
-	b, err := json.Marshal(eventBody(eventType, event, data))
-	if err != nil {
-		return err
-	}
-	return c.call(ctx, "POST", "/import", bytes.NewReader(b), 200, nil)
-}
-
-// SendEventPreview returns a preview of the event that would be sent when
+// PreviewSendEvent returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
-func (c *connection) SendEventPreview(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
+func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
 	var b bytes.Buffer
 	if c.conf.Region == connector.PrivacyRegionEurope {
 		b.WriteString("POST https://api-eu.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
@@ -135,6 +120,21 @@ func (c *connection) SendEventPreview(ctx context.Context, eventType string, eve
 	}
 	b.Write(body)
 	return b.Bytes(), nil
+}
+
+// Resource returns the resource.
+func (c *connection) Resource(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+// SendEvent sends the event, along with the given mapped data.
+// eventType specifies the event type corresponding to the event.
+func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
+	b, err := json.Marshal(eventBody(eventType, event, data))
+	if err != nil {
+		return err
+	}
+	return c.call(ctx, "POST", "/import", bytes.NewReader(b), 200, nil)
 }
 
 // ServeUI serves the connector's user interface.
