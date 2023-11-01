@@ -37,7 +37,7 @@ type Action struct {
 	connection         *Connection
 	ID                 int
 	Connection         int
-	Target             ActionTarget
+	Target             Target
 	Name               string
 	Enabled            bool
 	EventType          *string
@@ -87,7 +87,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	this.connection = &Connection{apis: apis, store: store, connection: c}
 	this.ID = action.ID
 	this.Connection = c.ID
-	this.Target = ActionTarget(action.Target)
+	this.Target = Target(action.Target)
 	this.Name = action.Name
 	this.Enabled = action.Enabled
 	if action.EventType != "" {
@@ -95,7 +95,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.EventType = &et
 	}
 	_, this.Running = this.action.Execution()
-	if action.Target == state.UsersTarget || action.Target == state.GroupsTarget {
+	if action.Target == state.Users || action.Target == state.Groups {
 		start := int(action.ScheduleStart)
 		period := SchedulePeriod(action.SchedulePeriod)
 		this.ScheduleStart = &start
@@ -161,53 +161,53 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	}
 }
 
-// ActionTarget represents the target of an action.
-type ActionTarget int
+// Target represents a target.
+type Target int
 
 const (
-	EventsTarget ActionTarget = iota + 1
-	UsersTarget
-	GroupsTarget
+	Events Target = iota + 1
+	Users
+	Groups
 )
 
 // MarshalJSON implements the json.Marshaler interface.
-func (at ActionTarget) MarshalJSON() ([]byte, error) {
+func (at Target) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + at.String() + `"`), nil
 }
 
-func (at ActionTarget) String() string {
+func (at Target) String() string {
 	switch at {
-	case EventsTarget:
+	case Events:
 		return "Events"
-	case UsersTarget:
+	case Users:
 		return "Users"
-	case GroupsTarget:
+	case Groups:
 		return "Groups"
 	default:
-		panic("invalid action target")
+		panic("invalid target")
 	}
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (at *ActionTarget) UnmarshalJSON(data []byte) error {
+func (at *Target) UnmarshalJSON(data []byte) error {
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.ActionTarget value: %s", err)
+		return fmt.Errorf("json: cannot unmarshal into a apis.Target value: %s", err)
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.ActionTarget value", v)
+		return fmt.Errorf("cannot scan a %T value into an api.Target value", v)
 	}
 	switch s {
 	case "Events":
-		*at = EventsTarget
+		*at = Events
 	case "Users":
-		*at = UsersTarget
+		*at = Users
 	case "Groups":
-		*at = GroupsTarget
+		*at = Groups
 	default:
-		return fmt.Errorf("invalid apis.ActionTarget: %s", s)
+		return fmt.Errorf("invalid apis.Target: %s", s)
 	}
 	return nil
 }
@@ -248,7 +248,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	if _, ok := this.action.Execution(); ok {
 		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
-	if t := this.action.Target; t != state.UsersTarget && t != state.GroupsTarget {
+	if t := this.action.Target; t != state.Users && t != state.Groups {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
 	c := this.action.Connection()
@@ -451,7 +451,7 @@ func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor)
 func (this *Action) SetSchedulePeriod(ctx context.Context, period SchedulePeriod) error {
 	this.apis.mustBeOpen()
 	switch this.action.Target {
-	case state.UsersTarget, state.GroupsTarget:
+	case state.Users, state.Groups:
 	default:
 		return errors.BadRequest("cannot set schedule period of a %s action", this.action.Target)
 	}

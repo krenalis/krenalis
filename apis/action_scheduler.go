@@ -221,7 +221,7 @@ func (sc *scheduler) toExecute(action *state.Action) bool {
 
 // toSchedule reports whether action can be scheduled.
 func (sc *scheduler) toSchedule(action *state.Action) bool {
-	return action.Target == state.UsersTarget || action.Target == state.GroupsTarget
+	return action.Target == state.Users || action.Target == state.Groups
 }
 
 // _addAction adds action to the scheduler.

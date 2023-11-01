@@ -284,7 +284,7 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 type AddAction struct {
 	ID                 int
 	Connection         int
-	Target             ActionTarget
+	Target             Target
 	EventType          string
 	Name               string
 	Enabled            bool

@@ -122,7 +122,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 		if !action.Enabled {
 			continue
 		}
-		if action.Target != state.UsersTarget {
+		if action.Target != state.Users {
 			continue
 		}
 		ws := action.Connection().Workspace()

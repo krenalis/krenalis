@@ -100,7 +100,7 @@ func (st *eventsState) ConnectionByKey(key string) (*state.Connection, bool) {
 func (st *eventsState) Actions() []*state.Action {
 	var actions []*state.Action
 	for _, action := range st.state.Actions() {
-		if !action.Enabled || action.Target != state.EventsTarget {
+		if !action.Enabled || action.Target != state.Events {
 			continue
 		}
 		c := action.Connection()
@@ -275,7 +275,7 @@ func isDestination(c *state.Connection) bool {
 	ws := c.Workspace()
 	return c.Enabled && c.Role == state.DestinationRole &&
 		conn.Type == state.AppType && ws.Warehouse != nil &&
-		conn.Targets.Contains(state.EventsTarget)
+		conn.Targets.Contains(state.Events)
 }
 
 // setSettings sets the given settings of the given connection.

@@ -77,7 +77,7 @@ func (this *Action) exec(ctx context.Context) {
 	c := connection.Connector()
 
 	var err error
-	if this.Target == GroupsTarget {
+	if this.Target == Groups {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else if !this.isLanguageSupported() {
 		err = actionExecutionError{fmt.Errorf("%s transformation language is not supported", this.Transformation.Language)}

@@ -125,7 +125,7 @@ type ActionSchemas struct {
 
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
-func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, eventType string) (*ActionSchemas, error) {
+func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
 
 	this.apis.mustBeOpen()
 
@@ -137,20 +137,20 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 
 	// Validate the target.
 	switch target {
-	case UsersTarget, GroupsTarget, EventsTarget:
-		ok := allowsActionTarget(connector.Type, role, state.ActionTarget(target))
+	case Users, Groups, Events:
+		ok := allowsActionTarget(connector.Type, role, state.Target(target))
 		if !ok {
 			return nil, errors.NotFound("target not supported")
 		}
 	default:
 		return nil, errors.BadRequest("invalid target")
 	}
-	if !connector.Targets.Contains(state.ActionTarget(target)) {
+	if !connector.Targets.Contains(state.Target(target)) {
 		return nil, errors.NotFound("connection does not support %s", target)
 	}
 
 	// Validate the event type.
-	if target != EventsTarget && eventType != "" {
+	if target != Events && eventType != "" {
 		return nil, errors.NotFound("%s target does not support event types", target)
 	}
 
@@ -158,9 +158,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 
 	case state.AppType:
 		switch target {
-		case UsersTarget:
+		case Users:
 			var err error
-			appSchema, err := this.fetchAppSchema(ctx, state.UsersTarget, "")
+			appSchema, err := this.fetchAppSchema(ctx, state.Users, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -174,9 +174,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			} else {
 				return &ActionSchemas{In: usersIdentities.Unflatten(), Out: appSchema}, nil
 			}
-		case GroupsTarget:
+		case Groups:
 			var err error
-			appSchema, err := this.fetchAppSchema(ctx, state.GroupsTarget, "")
+			appSchema, err := this.fetchAppSchema(ctx, state.Groups, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -190,7 +190,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			} else {
 				return &ActionSchemas{In: grSchema.Unflatten(), Out: appSchema}, nil
 			}
-		case EventsTarget:
+		case Events:
 			if eventType == "" {
 				return nil, errors.NotFound("an event type is required")
 			}
@@ -208,7 +208,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			if et == nil {
 				return nil, errors.Unprocessable(EventTypeNotExist, "event type %q not found", eventType)
 			}
-			etSchema, err := this.fetchAppSchema(ctx, state.EventsTarget, eventType)
+			etSchema, err := this.fetchAppSchema(ctx, state.Events, eventType)
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -220,7 +220,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 
 	case state.DatabaseType:
 		switch target {
-		case UsersTarget:
+		case Users:
 			if this.connection.Role == state.SourceRole {
 				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 				if !ok {
@@ -236,7 +236,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 				in := users.Unflatten()
 				return &ActionSchemas{In: in}, nil
 			}
-		case GroupsTarget:
+		case Groups:
 			if this.connection.Role == state.SourceRole {
 				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
 				if !ok {
@@ -258,7 +258,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 
 	case state.FileType:
 		switch target {
-		case UsersTarget:
+		case Users:
 			if this.connection.Role == state.SourceRole {
 				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 				if !ok {
@@ -274,7 +274,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 				in := users.Unflatten()
 				return &ActionSchemas{In: in}, nil
 			}
-		case GroupsTarget:
+		case Groups:
 			if this.connection.Role == state.SourceRole {
 				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
 				if !ok {
@@ -299,14 +299,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			return nil, errors.NotFound("event type not expected")
 		}
 		switch target {
-		case UsersTarget:
+		case Users:
 			usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			out := usersIdentities.Unflatten()
 			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
-		case GroupsTarget:
+		case Groups:
 			groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
@@ -338,7 +338,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 //     identifier.
 //   - TargetAlreadyExist, if an action already exists for a target for the
 //     connection.
-func (this *Connection) AddAction(ctx context.Context, target ActionTarget, eventType string, action ActionToSet) (int, error) {
+func (this *Connection) AddAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
 
 	this.apis.mustBeOpen()
 
@@ -350,8 +350,8 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 
 	// Validate the target and the event type.
 	switch target {
-	case EventsTarget:
-	case UsersTarget, GroupsTarget:
+	case Events:
+	case Users, Groups:
 		if eventType != "" {
 			return 0, errors.BadRequest("users and groups actions cannot have an event type")
 		}
@@ -361,13 +361,13 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 
 	// Check if the connection, with its connector type and role, allows the
 	// given target.
-	ok := allowsActionTarget(connector.Type, _connector.Role(c.Role), state.ActionTarget(target))
+	ok := allowsActionTarget(connector.Type, _connector.Role(c.Role), state.Target(target))
 	if !ok {
 		return 0, errors.BadRequest("target %q is not supported", target)
 	}
 
 	// Validate the arguments.
-	err := this.validateActionToSet(ctx, action, state.ActionTarget(target), eventType)
+	err := this.validateActionToSet(ctx, action, state.Target(target), eventType)
 	if err != nil {
 		return 0, err
 	}
@@ -375,7 +375,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 
 	n := state.AddAction{
 		Connection:        c.ID,
-		Target:            state.ActionTarget(target),
+		Target:            state.Target(target),
 		Name:              action.Name,
 		Enabled:           action.Enabled,
 		EventType:         eventType,
@@ -473,7 +473,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	// Add the action.
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		switch n.Target {
-		case state.EventsTarget:
+		case state.Events:
 			switch typ := c.Connector().Type; typ {
 			case state.MobileType, state.ServerType, state.WebsiteType:
 				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
@@ -485,7 +485,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 					return err
 				}
 			}
-		case state.UsersTarget, state.GroupsTarget:
+		case state.Users, state.Groups:
 			// Make sure that users and groups actions have the same schedule start.
 			err = tx.QueryRow(ctx, "SELECT schedule_start FROM actions WHERE connection = $1\n"+
 				" AND target IN ('Users', 'Groups') LIMIT 1", n.Connection).Scan(&n.ScheduleStart)
@@ -1039,7 +1039,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if c.Role != state.DestinationRole {
 		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
 	}
-	if !c.Connector().Targets.Contains(state.EventsTarget) {
+	if !c.Connector().Targets.Contains(state.Events) {
 		return nil, errors.BadRequest("connection %d does not support events", c.ID)
 	}
 	if eventType == "" {
@@ -1486,7 +1486,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 type ActionType struct {
 	Name          string
 	Description   string
-	Target        ActionTarget
+	Target        Target
 	EventType     *string
 	MissingSchema bool
 }
@@ -1521,7 +1521,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 	connector := c.Connector()
 	wsSchemas := c.Workspace().Schemas
 	targets := connector.Targets
-	if targets.Contains(state.UsersTarget) {
+	if targets.Contains(state.Users) {
 		switch typ := c.Connector().Type; typ {
 		case
 			state.AppType,
@@ -1549,7 +1549,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			at := ActionType{
 				Name:          name,
 				Description:   description,
-				Target:        UsersTarget,
+				Target:        Users,
 				MissingSchema: missingSchema,
 			}
 			actionTypes = append(actionTypes, at)
@@ -1561,14 +1561,14 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 				at := ActionType{
 					Name:          "Import users",
 					Description:   "Import users from the events of the " + connector.Name,
-					Target:        UsersTarget,
+					Target:        Users,
 					MissingSchema: wsSchemas["users_identities"] == nil,
 				}
 				actionTypes = append(actionTypes, at)
 			}
 		}
 	}
-	if targets.Contains(state.GroupsTarget) {
+	if targets.Contains(state.Groups) {
 		switch typ := c.Connector().Type; typ {
 		case
 			state.AppType,
@@ -1596,7 +1596,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			at := ActionType{
 				Name:          name,
 				Description:   description,
-				Target:        GroupsTarget,
+				Target:        Groups,
 				MissingSchema: missingSchema,
 			}
 			actionTypes = append(actionTypes, at)
@@ -1608,14 +1608,14 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 				at := ActionType{
 					Name:          "Import groups",
 					Description:   "Import groups from the events of the " + connector.Name,
-					Target:        GroupsTarget,
+					Target:        Groups,
 					MissingSchema: wsSchemas["groups"] == nil,
 				}
 				actionTypes = append(actionTypes, at)
 			}
 		}
 	}
-	if targets.Contains(state.EventsTarget) {
+	if targets.Contains(state.Events) {
 		switch typ := c.Connector().Type; typ {
 		case state.MobileType, state.ServerType, state.WebsiteType:
 			if c.Role == state.SourceRole {
@@ -1631,7 +1631,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 				at := ActionType{
 					Name:        "Collect events",
 					Description: description,
-					Target:      EventsTarget,
+					Target:      Events,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -1645,7 +1645,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 				actionTypes = append(actionTypes, ActionType{
 					Name:        et.Name,
 					Description: et.Description,
-					Target:      EventsTarget,
+					Target:      Events,
 					EventType:   &id,
 				})
 			}
@@ -2130,7 +2130,7 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist.
-func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionTarget, eventType string) (types.Type, error) {
+func (this *Connection) fetchAppSchema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
 
 	app, err := this.openApp()
 	if err != nil {
@@ -2142,7 +2142,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 	var schema types.Type
 
 	switch target {
-	case state.EventsTarget:
+	case state.Events:
 		if eventType != "" {
 			eventTypes, err := app.(_connector.AppEventsConnection).EventTypes(ctx)
 			if err != nil {
@@ -2160,7 +2160,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 			}
 		}
-	case state.UsersTarget:
+	case state.Users:
 		schema, err = app.(_connector.AppUsersConnection).UserSchema(ctx)
 		if err != nil {
 			return types.Type{}, err
@@ -2172,7 +2172,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 		if !schema.Valid() {
 			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(c.Role.String()))
 		}
-	case state.GroupsTarget:
+	case state.Groups:
 		schema, err = app.(_connector.AppGroupsConnection).GroupSchema(ctx)
 		if err != nil {
 			return types.Type{}, err
@@ -2225,7 +2225,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
-func (this *Connection) validateActionToSet(ctx context.Context, action ActionToSet, target state.ActionTarget, eventType string) error {
+func (this *Connection) validateActionToSet(ctx context.Context, action ActionToSet, target state.Target, eventType string) error {
 
 	// First, do formal validations.
 
@@ -2380,7 +2380,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 
 	// When importing users, ensure that there are no mappings over the
 	// anonymous identifiers of the workspace.
-	if importingUsers := c.Role == state.SourceRole && target == state.UsersTarget; importingUsers {
+	if importingUsers := c.Role == state.SourceRole && target == state.Users; importingUsers {
 		var tOutProps []string
 		if action.Transformation != nil {
 			tOutProps = action.OutSchema.PropertiesNames()
@@ -2405,7 +2405,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	}
 
 	// Check if the filters are allowed.
-	targetUsersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
+	targetUsersOrGroups := target == state.Users || target == state.Groups
 	var filtersAllowed bool
 	switch connector.Type {
 	case state.AppType:
@@ -2517,7 +2517,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	var transformationIsAllowed bool
 	switch connector.Type {
 	case state.AppType:
-		if c.Role == state.DestinationRole && target == state.EventsTarget {
+		if c.Role == state.DestinationRole && target == state.Events {
 			schema, err := this.fetchAppSchema(ctx, target, eventType)
 			if err != nil {
 				return err
@@ -2582,9 +2582,9 @@ type ConnectionToSet struct {
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
-func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target state.ActionTarget) bool {
+func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target state.Target) bool {
 	isSource := role == _connector.SourceRole
-	usersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
+	usersOrGroups := target == state.Users || target == state.Groups
 	switch typ {
 	case state.AppType:
 		return !isSource || (isSource && usersOrGroups)

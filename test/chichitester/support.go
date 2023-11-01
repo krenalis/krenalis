@@ -91,7 +91,7 @@ func (c *Chichi) AddSourceJSON(filesystem int) int {
 	})
 }
 
-func (c *Chichi) ActionSchemas(conn int, target apis.ActionTarget, eventType string) map[string]any {
+func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
 	if eventType != "" {
 		url += "/" + eventType

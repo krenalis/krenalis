@@ -366,7 +366,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 							var req struct {
-								Target    apis.ActionTarget
+								Target    apis.Target
 								EventType string
 								Action    apis.ActionToSet
 							}
@@ -517,7 +517,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									respond(w, err)
 									return
 								}
-								schemas, err := connection.ActionSchemas(ctx, apis.UsersTarget, "")
+								schemas, err := connection.ActionSchemas(ctx, apis.Users, "")
 								if err != nil {
 									respond(w, err)
 									return
@@ -532,7 +532,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									respond(w, err)
 									return
 								}
-								schemas, err := connection.ActionSchemas(ctx, apis.GroupsTarget, "")
+								schemas, err := connection.ActionSchemas(ctx, apis.Groups, "")
 								if err != nil {
 									respond(w, err)
 									return
@@ -547,7 +547,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									respond(w, err)
 									return
 								}
-								schemas, err := connection.ActionSchemas(ctx, apis.EventsTarget, "")
+								schemas, err := connection.ActionSchemas(ctx, apis.Events, "")
 								if err != nil {
 									respond(w, err)
 									return
@@ -569,7 +569,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									respond(w, err)
 									return
 								}
-								schemas, err := connection.ActionSchemas(ctx, apis.EventsTarget, eventType)
+								schemas, err := connection.ActionSchemas(ctx, apis.Events, eventType)
 								if err != nil {
 									respond(w, err)
 									return

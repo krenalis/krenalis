@@ -373,17 +373,17 @@ const (
 	GroupsFlag
 )
 
-// Contains reports whether t contains the given action target.
-func (t ConnectorTargets) Contains(target ActionTarget) bool {
+// Contains reports whether t contains the given target.
+func (t ConnectorTargets) Contains(target Target) bool {
 	switch target {
-	case EventsTarget:
+	case Events:
 		return t&EventsFlag != 0
-	case UsersTarget:
+	case Users:
 		return t&UsersFlag != 0
-	case GroupsTarget:
+	case Groups:
 		return t&GroupsFlag != 0
 	}
-	panic("invalid action target")
+	panic("invalid target")
 }
 
 // ConnectorType represents a connector type.
@@ -804,60 +804,60 @@ func (c Compression) Ext() string {
 	panic(fmt.Sprintf("invalid state.Compression: %s", c))
 }
 
-// ActionTarget represents the action target of a connection.
-type ActionTarget int
+// Target represents a target.
+type Target int
 
 const (
-	EventsTarget ActionTarget = iota + 1
-	UsersTarget
-	GroupsTarget
+	Events Target = iota + 1
+	Users
+	Groups
 )
 
 // Scan implements the sql.Scanner interface.
-func (target *ActionTarget) Scan(src any) error {
+func (target *Target) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an state.ActionTarget value", src)
+		return fmt.Errorf("cannot scan a %T value into an state.Target value", src)
 	}
 	switch s {
 	case "Events":
-		*target = EventsTarget
+		*target = Events
 	case "Users":
-		*target = UsersTarget
+		*target = Users
 	case "Groups":
-		*target = GroupsTarget
+		*target = Groups
 	default:
-		return fmt.Errorf("invalid state.ActionTarget: %s", s)
+		return fmt.Errorf("invalid state.Target: %s", s)
 	}
 	return nil
 }
 
 // String returns the string representation of target.
-// It panics if target is not a valid ActionTarget value.
-func (target ActionTarget) String() string {
+// It panics if target is not a valid Target value.
+func (target Target) String() string {
 	switch target {
-	case EventsTarget:
+	case Events:
 		return "Events"
-	case UsersTarget:
+	case Users:
 		return "Users"
-	case GroupsTarget:
+	case Groups:
 		return "Groups"
 	}
-	panic("invalid action target")
+	panic("invalid target")
 }
 
 // Value implements driver.Valuer interface.
-// It returns an error if target is not a valid ActionTarget.
-func (target ActionTarget) Value() (driver.Value, error) {
+// It returns an error if target is not a valid Target.
+func (target Target) Value() (driver.Value, error) {
 	switch target {
-	case EventsTarget:
+	case Events:
 		return "Events", nil
-	case UsersTarget:
+	case Users:
 		return "Users", nil
-	case GroupsTarget:
+	case Groups:
 		return "Groups", nil
 	}
-	return nil, fmt.Errorf("not a valid ActionTarget: %d", target)
+	return nil, fmt.Errorf("not a valid Target: %d", target)
 }
 
 type Action struct {
@@ -865,7 +865,7 @@ type Action struct {
 	ID                 int
 	connection         *Connection
 	execution          *ActionExecution
-	Target             ActionTarget
+	Target             Target
 	Name               string
 	Enabled            bool
 	EventType          string
