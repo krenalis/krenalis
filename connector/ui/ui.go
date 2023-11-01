@@ -16,13 +16,13 @@ import (
 // does not exist.
 var ErrEventNotExist = errors.New("event does not exist")
 
-// Role represents the role of a connection.
+// Role represents a role.
 type Role int
 
 const (
-	BothRole        Role = iota // both
-	SourceRole                  // source
-	DestinationRole             // destination
+	Both        Role = iota // both
+	Source                  // source
+	Destination             // destination
 )
 
 type Form struct {

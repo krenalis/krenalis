@@ -86,7 +86,7 @@ type Connection struct {
 	ID           int
 	Name         string
 	Type         ConnectorType
-	Role         ConnectionRole
+	Role         Role
 	Enabled      bool
 	Connector    int
 	Storage      int // zero if the connection is not a file or does not have a storage.
@@ -169,7 +169,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				return &ActionSchemas{In: appSchema, Out: *usersIdentities}, nil
 			} else {
 				return &ActionSchemas{In: usersIdentities.Unflatten(), Out: appSchema}, nil
@@ -185,7 +185,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 			}
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				return &ActionSchemas{In: appSchema, Out: grSchema.Unflatten()}, nil
 			} else {
 				return &ActionSchemas{In: grSchema.Unflatten(), Out: appSchema}, nil
@@ -221,7 +221,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	case state.DatabaseType:
 		switch target {
 		case Users:
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
@@ -237,7 +237,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return &ActionSchemas{In: in}, nil
 			}
 		case Groups:
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
@@ -259,7 +259,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	case state.FileType:
 		switch target {
 		case Users:
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
@@ -275,7 +275,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return &ActionSchemas{In: in}, nil
 			}
 		case Groups:
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
@@ -613,7 +613,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if err != nil {
 		return "", err
 	}
-	if c.Role == state.DestinationRole {
+	if c.Role == state.Destination {
 		path, err = replacePathPlaceholders(path, time.Now())
 		if err != nil {
 			return "", errors.Unprocessable(InvalidPlaceholders, "%s", err)
@@ -691,7 +691,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	if connector.Type != state.DatabaseType {
 		return nil, types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
 	}
-	if c.Role != state.SourceRole {
+	if c.Role != state.Source {
 		return nil, types.Type{}, errors.BadRequest("database %d is not a source", c.ID)
 	}
 
@@ -804,7 +804,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 	default:
 		return "", errors.NotFound("connection %d is not a mobile, server or website", c.ID)
 	}
-	if c.Role != state.SourceRole {
+	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
 	}
 	value, err := generateWriteKey()
@@ -987,7 +987,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	default:
 		return errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
 	}
-	if c.Role != state.SourceRole {
+	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
 	}
 	n := state.RevokeConnectionKey{
@@ -1036,7 +1036,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if c.Connector().Type != state.AppType {
 		return nil, errors.BadRequest("connection %d is not an app connection", c.ID)
 	}
-	if c.Role != state.DestinationRole {
+	if c.Role != state.Destination {
 		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
 	}
 	if !c.Connector().Targets.Contains(state.Events) {
@@ -1241,7 +1241,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 			return errors.BadRequest("connection %d is not a storage", n.Storage)
 		}
 		if s.Role != this.connection.Role {
-			if this.connection.Role == state.SourceRole {
+			if this.connection.Role == state.Source {
 				return errors.BadRequest("storage %d is not a source", n.Storage)
 			}
 			return errors.BadRequest("storage %d is not a destination", n.Storage)
@@ -1439,7 +1439,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if connector.Type != state.DatabaseType {
 		return types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
 	}
-	if c.Role != state.DestinationRole {
+	if c.Role != state.Destination {
 		return types.Type{}, errors.BadRequest("database %d is not a destination", c.ID)
 	}
 	if table == "" || utf8.RuneCountInString(table) > 1024 {
@@ -1501,7 +1501,7 @@ func (this *Connection) Keys() ([]string, error) {
 	default:
 		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
 	}
-	if c.Role != state.SourceRole {
+	if c.Role != state.Source {
 		return nil, errors.BadRequest("connection %d is not a source", c.ID)
 	}
 	return slices.Clone(c.Keys), nil
@@ -1529,7 +1529,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.FileType:
 			var name, description string
 			var missingSchema bool
-			if c.Role == state.SourceRole {
+			if c.Role == state.Source {
 				name = "Import " + connector.TermForUsers
 				description = "Import the " + connector.TermForUsers
 				if connector.TermForUsers != "users" {
@@ -1557,7 +1557,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.MobileType,
 			state.ServerType,
 			state.WebsiteType:
-			if c.Role == state.SourceRole {
+			if c.Role == state.Source {
 				at := ActionType{
 					Name:          "Import users",
 					Description:   "Import users from the events of the " + connector.Name,
@@ -1576,7 +1576,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.FileType:
 			var name, description string
 			var missingSchema bool
-			if c.Role == state.SourceRole {
+			if c.Role == state.Source {
 				name = "Import " + connector.TermForGroups
 				description = "Import the " + connector.TermForGroups
 				if connector.TermForGroups != "groups" {
@@ -1604,7 +1604,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.MobileType,
 			state.ServerType,
 			state.WebsiteType:
-			if c.Role == state.SourceRole {
+			if c.Role == state.Source {
 				at := ActionType{
 					Name:          "Import groups",
 					Description:   "Import groups from the events of the " + connector.Name,
@@ -1618,7 +1618,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 	if targets.Contains(state.Events) {
 		switch typ := c.Connector().Type; typ {
 		case state.MobileType, state.ServerType, state.WebsiteType:
-			if c.Role == state.SourceRole {
+			if c.Role == state.Source {
 				description := "Collect events from the "
 				switch typ {
 				case state.MobileType:
@@ -1901,8 +1901,8 @@ func adjustValuesCase(key string, values map[string]any) {
 func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
-	if role != ui.BothRole {
-		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && r != role {
+	if role != ui.Both {
+		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.Both && r != role {
 			return false, nil
 		}
 	}
@@ -1953,8 +1953,8 @@ func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, v
 // marshalUIFieldSet marshals fieldSet with the given role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marhalled.
 func marshalUIFieldSet(b *bytes.Buffer, fieldSet ui.FieldSet, role ui.Role, values map[string]any, comma bool) (bool, error) {
-	if role != ui.BothRole {
-		if fieldSet.Role != ui.BothRole && fieldSet.Role != role {
+	if role != ui.Both {
+		if fieldSet.Role != ui.Both && fieldSet.Role != role {
 			return false, nil
 		}
 	}
@@ -2070,27 +2070,27 @@ func (health Health) String() string {
 	panic("invalid connection health")
 }
 
-// ConnectionRole represents a connection role.
-type ConnectionRole int
+// Role represents a role.
+type Role int
 
 const (
-	SourceRole      ConnectionRole = iota + 1 // source
-	DestinationRole                           // destination
+	Source      Role = iota + 1 // source
+	Destination                 // destination
 )
 
 // MarshalJSON implements the json.Marshaler interface.
-// It panics if role is not a valid ConnectionRole value.
-func (role ConnectionRole) MarshalJSON() ([]byte, error) {
+// It panics if role is not a valid Role value.
+func (role Role) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + role.String() + `"`), nil
 }
 
 // String returns the string representation of role.
-// It panics if role is not a valid ConnectionRole value.
-func (role ConnectionRole) String() string {
+// It panics if role is not a valid Role value.
+func (role Role) String() string {
 	switch role {
-	case SourceRole:
+	case Source:
 		return "Source"
-	case DestinationRole:
+	case Destination:
 		return "Destination"
 	}
 	panic("invalid connection role")
@@ -2099,27 +2099,27 @@ func (role ConnectionRole) String() string {
 var null = []byte("null")
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
+func (role *Role) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, null) {
 		return nil
 	}
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.ConnectionRole value: %s", err)
+		return fmt.Errorf("json: cannot unmarshal into a apis.Role value: %s", err)
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.ConnectionRole value", v)
+		return fmt.Errorf("cannot scan a %T value into an api.Role value", v)
 	}
-	var r ConnectionRole
+	var r Role
 	switch s {
 	case "Source":
-		r = SourceRole
+		r = Source
 	case "Destination":
-		r = DestinationRole
+		r = Destination
 	default:
-		return fmt.Errorf("invalid apis.ConnectionRole: %s", s)
+		return fmt.Errorf("invalid apis.Role: %s", s)
 	}
 	*role = r
 	return nil
@@ -2380,7 +2380,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 
 	// When importing users, ensure that there are no mappings over the
 	// anonymous identifiers of the workspace.
-	if importingUsers := c.Role == state.SourceRole && target == state.Users; importingUsers {
+	if importingUsers := c.Role == state.Source && target == state.Users; importingUsers {
 		var tOutProps []string
 		if action.Transformation != nil {
 			tOutProps = action.OutSchema.PropertiesNames()
@@ -2394,7 +2394,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	}
 
 	// Check if the query is allowed.
-	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.SourceRole; needsQuery {
+	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.Source; needsQuery {
 		if action.Query == "" {
 			return errors.BadRequest("query cannot be empty for database actions")
 		}
@@ -2409,11 +2409,11 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	var filtersAllowed bool
 	switch connector.Type {
 	case state.AppType:
-		filtersAllowed = c.Role == state.DestinationRole
+		filtersAllowed = c.Role == state.Destination
 	case state.DatabaseType:
-		filtersAllowed = c.Role == state.DestinationRole
+		filtersAllowed = c.Role == state.Destination
 	case state.FileType:
-		filtersAllowed = targetUsersOrGroups && c.Role == state.DestinationRole
+		filtersAllowed = targetUsersOrGroups && c.Role == state.Destination
 	}
 	if action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
@@ -2440,7 +2440,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	}
 
 	// Check the property for the identity and for the timestamp.
-	if connector.Type == state.FileType && c.Role == state.SourceRole {
+	if connector.Type == state.FileType && c.Role == state.Source {
 		if action.IdentityProperty == "" {
 			return errors.BadRequest("property for the identity is mandatory")
 		}
@@ -2484,7 +2484,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	}
 
 	// Check if the table name is allowed.
-	needsTableName := connector.Type == state.DatabaseType && c.Role == state.DestinationRole
+	needsTableName := connector.Type == state.DatabaseType && c.Role == state.Destination
 	if needsTableName && action.TableName == "" {
 		return errors.BadRequest("table name cannot be empty for destination database actions")
 	} else if !needsTableName && action.TableName != "" {
@@ -2493,7 +2493,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 
 	// Check if the export options are needed.
 	needsExportOptions := connector.Type == state.AppType &&
-		c.Role == state.DestinationRole &&
+		c.Role == state.Destination &&
 		targetUsersOrGroups
 	if needsExportOptions {
 		if action.ExportMode == nil {
@@ -2517,7 +2517,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	var transformationIsAllowed bool
 	switch connector.Type {
 	case state.AppType:
-		if c.Role == state.DestinationRole && target == state.Events {
+		if c.Role == state.Destination && target == state.Events {
 			schema, err := this.fetchAppSchema(ctx, target, eventType)
 			if err != nil {
 				return err
@@ -2535,7 +2535,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 		mappingIsMandatory = targetUsersOrGroups
 		transformationIsAllowed = mappingIsMandatory
 	case state.FileType:
-		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
+		mappingIsMandatory = c.Role == state.Source && targetUsersOrGroups
 		transformationIsAllowed = mappingIsMandatory
 	}
 	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
@@ -2583,7 +2583,7 @@ type ConnectionToSet struct {
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target state.Target) bool {
-	isSource := role == _connector.SourceRole
+	isSource := role == _connector.Source
 	usersOrGroups := target == state.Users || target == state.Groups
 	switch typ {
 	case state.AppType:

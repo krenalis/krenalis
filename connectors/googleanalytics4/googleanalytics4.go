@@ -76,7 +76,7 @@ type settings struct {
 
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role == connector.SourceRole {
+	if c.conf.Role == connector.Source {
 		return nil, nil
 	}
 	eventTypes := []*connector.EventType{

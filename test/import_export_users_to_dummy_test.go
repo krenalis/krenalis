@@ -29,7 +29,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", connector.SourceRole)
+		dummySrc := c.AddDummy("Dummy (source)", connector.Source)
 		importUsersID := c.AddAction(dummySrc, map[string]any{
 			"Target": "Users",
 			"Action": map[string]any{
@@ -54,7 +54,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Export the users to Dummy.
 	{
-		dummyDest := c.AddDummy("Dummy (destination)", connector.DestinationRole)
+		dummyDest := c.AddDummy("Dummy (destination)", connector.Destination)
 		exportUsersActionID := c.AddAction(dummyDest, map[string]any{
 			"Target": "Users",
 			"Action": map[string]any{
@@ -84,7 +84,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.AddDummy("Dummy (source 2)", connector.SourceRole)
+		dummySrc := c.AddDummy("Dummy (source 2)", connector.Source)
 		importUsersID := c.AddAction(dummySrc, map[string]any{
 			"Target": "Users",
 			"Action": map[string]any{

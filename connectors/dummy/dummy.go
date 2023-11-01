@@ -119,7 +119,7 @@ func (c *connection) CreateUser(ctx context.Context, properties connector.Proper
 
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role == connector.SourceRole {
+	if c.conf.Role == connector.Source {
 		return nil, nil
 	}
 	eventTypes := []*connector.EventType{
@@ -212,7 +212,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: ui.SourceRole},
+			&ui.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: ui.Source},
 		},
 		Values:  values,
 		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},

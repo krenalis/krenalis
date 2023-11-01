@@ -175,7 +175,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.SourceRole},
+			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.Source},
 		},
 		Values: values,
 		Actions: []ui.Action{
@@ -208,7 +208,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	if c.conf.Role != connector.SourceRole {
+	if c.conf.Role != connector.Source {
 		s.HasColumnNames = false
 	}
 	return json.Marshal(&s)

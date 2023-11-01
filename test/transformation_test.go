@@ -27,7 +27,7 @@ func TestImportWithTransformation(t *testing.T) {
 	defer c.Stop()
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", connector.SourceRole)
+	dummyID := c.AddDummy("Dummy (source)", connector.Source)
 
 	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
 

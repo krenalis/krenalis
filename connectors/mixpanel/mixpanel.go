@@ -71,7 +71,7 @@ func open(conf *connector.AppConfig) (*connection, error) {
 
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role != connector.DestinationRole {
+	if c.conf.Role != connector.Destination {
 		return nil, nil
 	}
 	schema := func(placeholder string) types.Type {

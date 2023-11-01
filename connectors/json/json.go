@@ -203,9 +203,9 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Switch{Name: "indent", Label: "Indent the generated output", Role: ui.DestinationRole},
-			&ui.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: ui.DestinationRole},
-			&ui.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: ui.DestinationRole},
+			&ui.Switch{Name: "indent", Label: "Indent the generated output", Role: ui.Destination},
+			&ui.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: ui.Destination},
+			&ui.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: ui.Destination},
 		},
 		Values: values,
 		Actions: []ui.Action{

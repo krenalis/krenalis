@@ -157,7 +157,7 @@ func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 //
 // If the returned value implements the io.Close interface, it is the caller's
 // responsibility to call the Close method
-func (this *Connector) openUI(role ConnectionRole, resource, clientSecret, accessToken string, region state.PrivacyRegion) (_connector.UI, error) {
+func (this *Connector) openUI(role Role, resource, clientSecret, accessToken string, region state.PrivacyRegion) (_connector.UI, error) {
 	var err error
 	var connection any
 	switch c := this.connector; c.Type {

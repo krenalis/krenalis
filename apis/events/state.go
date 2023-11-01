@@ -66,7 +66,7 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 // if it exists, otherwise returns nil and false.
 func (st *eventsState) Source(id int) (*state.Connection, bool) {
 	source, ok := st.state.Connection(id)
-	if ok && source.Enabled && source.Role == state.SourceRole {
+	if ok && source.Enabled && source.Role == state.Source {
 		return source, true
 	}
 	return nil, false
@@ -86,7 +86,7 @@ func (st *eventsState) Destination(id int) (connector.AppEventsConnection, bool)
 // given its key and true, if exists, otherwise returns nil and false.
 func (st *eventsState) ConnectionByKey(key string) (*state.Connection, bool) {
 	c, ok := st.state.ConnectionByKey(key)
-	if ok && c.Enabled && c.Role == state.SourceRole {
+	if ok && c.Enabled && c.Role == state.Source {
 		switch c.Connector().Type {
 		case state.MobileType, state.ServerType, state.WebsiteType:
 			return c, true
@@ -104,7 +104,7 @@ func (st *eventsState) Actions() []*state.Action {
 			continue
 		}
 		c := action.Connection()
-		if !c.Enabled || c.Role != state.DestinationRole || c.Connector().Type != state.AppType {
+		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.AppType {
 			continue
 		}
 		actions = append(actions, action)
@@ -196,7 +196,7 @@ func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettings) {
 func (st *eventsState) onSetWarehouse(n state.SetWarehouse) {
 	ws, _ := st.state.Workspace(n.Workspace)
 	for _, c := range ws.Connections() {
-		if c.Enabled && c.Role == state.DestinationRole {
+		if c.Enabled && c.Role == state.Destination {
 			if ws.Warehouse == nil {
 				st.deleteDestination(c.ID)
 				continue
@@ -273,7 +273,7 @@ func (st *eventsState) deleteDestination(id int) {
 func isDestination(c *state.Connection) bool {
 	conn := c.Connector()
 	ws := c.Workspace()
-	return c.Enabled && c.Role == state.DestinationRole &&
+	return c.Enabled && c.Role == state.Destination &&
 		conn.Type == state.AppType && ws.Warehouse != nil &&
 		conn.Targets.Contains(state.Events)
 }

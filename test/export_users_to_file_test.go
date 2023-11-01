@@ -39,7 +39,7 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", connector.SourceRole)
+		dummySrc := c.AddDummy("Dummy (source)", connector.Source)
 		importUsersID := c.AddAction(dummySrc, map[string]any{
 			"Target": "Users",
 			"Action": map[string]any{

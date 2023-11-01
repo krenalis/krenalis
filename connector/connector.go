@@ -116,21 +116,21 @@ const (
 	WebhooksPerSource
 )
 
-// Role represents the role of a connection.
+// Role represents a role.
 type Role int
 
 const (
-	SourceRole      Role = iota + 1 // source
-	DestinationRole                 // destination
+	Source      Role = iota + 1 // source
+	Destination                 // destination
 )
 
 // String returns the string representation of role.
 // It panics if role is not a valid Role value.
 func (role Role) String() string {
 	switch role {
-	case SourceRole:
+	case Source:
 		return "Source"
-	case DestinationRole:
+	case Destination:
 		return "Destination"
 	}
 	panic("invalid role")

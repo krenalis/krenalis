@@ -126,7 +126,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	}
 	var connector *state.Connector
 	conf := _connector.AppConfig{
-		Role: _connector.SourceRole,
+		Role: _connector.Source,
 	}
 	switch m[1] {
 	case "c":

@@ -508,7 +508,7 @@ func (per WebhooksPer) String() string {
 }
 
 // Value implements driver.Valuer interface.
-// It returns an error if typ is not a valid ConnectionRole.
+// It returns an error if typ is not a valid Role.
 func (per WebhooksPer) Value() (driver.Value, error) {
 	switch per {
 	case WebhooksPerNone:
@@ -565,7 +565,7 @@ type Connection struct {
 	workspace   *Workspace
 	ID          int
 	Name        string
-	Role        ConnectionRole
+	Role        Role
 	Enabled     bool
 	connector   *Connector
 	storage     *Connection
@@ -711,55 +711,55 @@ func (health Health) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Health: %d", health)
 }
 
-// ConnectionRole represents a connection role.
-type ConnectionRole int
+// Role represents a role.
+type Role int
 
 const (
-	SourceRole      ConnectionRole = iota + 1 // source
-	DestinationRole                           // destination
+	Source      Role = iota + 1 // source
+	Destination                 // destination
 )
 
 // Scan implements the sql.Scanner interface.
-func (role *ConnectionRole) Scan(src any) error {
+func (role *Role) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an state.ConnectionRole value", src)
+		return fmt.Errorf("cannot scan a %T value into an state.Role value", src)
 	}
-	var r ConnectionRole
+	var r Role
 	switch s {
 	case "Source":
-		r = SourceRole
+		r = Source
 	case "Destination":
-		r = DestinationRole
+		r = Destination
 	default:
-		return fmt.Errorf("invalid state.ConnectionRole: %s", s)
+		return fmt.Errorf("invalid state.Role: %s", s)
 	}
 	*role = r
 	return nil
 }
 
 // String returns the string representation of role.
-// It panics if role is not a valid ConnectionRole value.
-func (role ConnectionRole) String() string {
+// It panics if role is not a valid Role value.
+func (role Role) String() string {
 	switch role {
-	case SourceRole:
+	case Source:
 		return "Source"
-	case DestinationRole:
+	case Destination:
 		return "Destination"
 	}
 	panic("invalid connection role")
 }
 
 // Value implements driver.Valuer interface.
-// It returns an error if role is not a valid ConnectionRole.
-func (role ConnectionRole) Value() (driver.Value, error) {
+// It returns an error if role is not a valid Role.
+func (role Role) Value() (driver.Value, error) {
 	switch role {
-	case SourceRole:
+	case Source:
 		return "Source", nil
-	case DestinationRole:
+	case Destination:
 		return "Destination", nil
 	}
-	return nil, fmt.Errorf("not a valid ConnectionRole: %d", role)
+	return nil, fmt.Errorf("not a valid Role: %d", role)
 }
 
 // Compression represents the compression of a file connection.

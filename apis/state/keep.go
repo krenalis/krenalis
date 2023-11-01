@@ -351,15 +351,15 @@ func (state *State) addAction(n postgres.Notification) {
 
 // AddConnection is the event sent when a new connection is added.
 type AddConnection struct {
-	Workspace   int            // workspace identifier
-	ID          int            // identifier
-	Name        string         // name
-	Role        ConnectionRole // role
-	Enabled     bool           // enabled or disabled
-	Connector   int            // connector identifier
-	Storage     int            // storage identifier, can be zero
-	Compression Compression    // compression
-	Resource    struct {       // resource.
+	Workspace   int         // workspace identifier
+	ID          int         // identifier
+	Name        string      // name
+	Role        Role        // role
+	Enabled     bool        // enabled or disabled
+	Connector   int         // connector identifier
+	Storage     int         // storage identifier, can be zero
+	Compression Compression // compression
+	Resource    struct {    // resource.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
 		AccessToken  string    // access token, can be empty.

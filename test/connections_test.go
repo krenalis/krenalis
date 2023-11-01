@@ -32,7 +32,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", connector.SourceRole)
+	dummyID := c.AddDummy("Dummy (source)", connector.Source)
 
 	// Check if the Dummy connection has been created successfully.
 	connections = c.MustCall("GET", "/api/workspaces/1/connections", nil).([]any)

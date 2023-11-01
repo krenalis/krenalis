@@ -217,12 +217,12 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					var role apis.ConnectionRole
+					var role apis.Role
 					switch req.Role {
 					case "Source":
-						role = apis.SourceRole
+						role = apis.Source
 					case "Destination":
-						role = apis.DestinationRole
+						role = apis.Destination
 					default:
 						respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 						return
@@ -248,12 +248,12 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					var role apis.ConnectionRole
+					var role apis.Role
 					switch req.Role {
 					case "Source":
-						role = apis.SourceRole
+						role = apis.Source
 					case "Destination":
-						role = apis.DestinationRole
+						role = apis.Destination
 					default:
 						respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 						return

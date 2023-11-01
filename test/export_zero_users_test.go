@@ -35,7 +35,7 @@ func TestExportZeroUsers(t *testing.T) {
 
 	// Test the export of zero users to an app (Dummy).
 	func() {
-		dummyDest := c.AddDummy("Dummy (destination)", connector.DestinationRole)
+		dummyDest := c.AddDummy("Dummy (destination)", connector.Destination)
 		exportUsersActionID := c.AddAction(dummyDest, map[string]any{
 			"Target": "Users",
 			"Action": map[string]any{

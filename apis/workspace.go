@@ -72,7 +72,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 
 	this.apis.mustBeOpen()
 
-	if connection.Role != SourceRole && connection.Role != DestinationRole {
+	if connection.Role != Source && connection.Role != Destination {
 		return 0, errors.BadRequest("role %d is not valid", int(connection.Role))
 	}
 	if connection.Connector < 1 || connection.Connector > maxInt32 {
@@ -101,7 +101,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	n := state.AddConnection{
 		Workspace:   this.workspace.ID,
 		Name:        connection.Name,
-		Role:        state.ConnectionRole(connection.Role),
+		Role:        state.Role(connection.Role),
 		Enabled:     connection.Enabled,
 		Connector:   connection.Connector,
 		Storage:     connection.Storage,
@@ -125,8 +125,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		if s.Connector().Type != state.StorageType {
 			return 0, errors.BadRequest("connection %d is not a storage", n.Storage)
 		}
-		if ConnectionRole(s.Role) != connection.Role {
-			if connection.Role == SourceRole {
+		if Role(s.Role) != connection.Role {
+			if connection.Role == Source {
 				return 0, errors.BadRequest("storage %d is not a source", n.Storage)
 			}
 			return 0, errors.BadRequest("storage %d is not a destination", n.Storage)
@@ -318,7 +318,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 
 	if source > 0 {
 		var typ state.ConnectorType
-		var role state.ConnectionRole
+		var role state.Role
 		err := this.apis.db.QueryRow(ctx, "SELECT type, role FROM connections\n"+
 			"WHERE id = $1 AND workspace = $2", source, this.workspace.ID).Scan(&typ, &role)
 		if err != nil {
@@ -332,7 +332,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 		default:
 			return "", errors.BadRequest("connection %d is not a mobile, server or website", source)
 		}
-		if role != state.SourceRole {
+		if role != state.Source {
 			return "", errors.BadRequest("connection %d is not a source", source)
 		}
 	}
@@ -442,7 +442,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		ID:           c.ID,
 		Name:         c.Name,
 		Type:         ConnectorType(conn.Type),
-		Role:         ConnectionRole(c.Role),
+		Role:         Role(c.Role),
 		Enabled:      c.Enabled,
 		Connector:    conn.ID,
 		Compression:  Compression(c.Compression),
@@ -485,7 +485,7 @@ func (this *Workspace) Connections() []*Connection {
 			ID:           c.ID,
 			Name:         c.Name,
 			Type:         ConnectorType(conn.Type),
-			Role:         ConnectionRole(c.Role),
+			Role:         Role(c.Role),
 			Enabled:      c.Enabled,
 			Connector:    conn.ID,
 			Compression:  Compression(c.Compression),
@@ -948,7 +948,7 @@ func (this *Workspace) Schema(name string) types.Type {
 // It returns an errors.UnprocessableError error with code:
 // - ConnectorNotExist, if the connector does not exist.
 // - EventNotExist, if the event does not exist.
-func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector int, role ConnectionRole, oAuth string) ([]byte, error) {
+func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector int, role Role, oAuth string) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1334,7 +1334,7 @@ type ConnectionToAdd struct {
 	Name string
 
 	// Role is the role.
-	Role ConnectionRole
+	Role Role
 
 	// Enable reports whether the connection is enabled or disabled when added.
 	Enabled bool

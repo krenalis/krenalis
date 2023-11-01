@@ -182,11 +182,11 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 	form := &ui.Form{
 		Fields: []ui.Component{
 			&ui.Input{Name: "comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&ui.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: ui.SourceRole},
-			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", Role: ui.SourceRole},
-			&ui.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: ui.SourceRole},
+			&ui.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: ui.Source},
+			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", Role: ui.Source},
+			&ui.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: ui.Source},
 			&ui.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
-			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.SourceRole},
+			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.Source},
 		},
 		Values: values,
 		Actions: []ui.Action{
@@ -212,7 +212,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
 		return nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
-	if c.conf.Role == connector.SourceRole {
+	if c.conf.Role == connector.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {
