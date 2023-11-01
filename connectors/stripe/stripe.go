@@ -104,7 +104,7 @@ func (c *connection) CreateUser(ctx context.Context, properties connector.Proper
 // ReceiveWebhook receives a webhook request and returns its events. It returns
 // the ErrWebhookUnauthorized error is the request was not authorized. The
 // context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 
 	// Extract signature from Stripe-Signature header.
 	var timestamp time.Time
@@ -174,7 +174,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 		return nil, errors.New("webhook message is malformed")
 	}
 
-	var events []connector.WebhookEvent
+	var events []connector.WebhookPayload
 	tmp := time.UnixMilli(message.Created).UTC()
 	switch message.Type {
 	case "customer.created":

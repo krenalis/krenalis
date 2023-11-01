@@ -113,7 +113,7 @@ func (c *connection) Groups(ctx context.Context, properties []string, cursor con
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 
 	// Check if the webhook is valid.
 	clientSecret, err := c.httpClient.ClientSecret()
@@ -124,7 +124,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 		return nil, connector.ErrWebhookUnauthorized
 	}
 
-	var events []connector.WebhookEvent
+	var events []connector.WebhookPayload
 
 	// Read the requests.
 	var requests []struct {
@@ -140,7 +140,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 		return nil, err
 	}
 	for _, req := range requests {
-		var event connector.WebhookEvent
+		var event connector.WebhookPayload
 		timestamp := time.UnixMilli(req.OccurredAt).UTC()
 		resource := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {

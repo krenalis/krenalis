@@ -94,7 +94,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 	return nil, connector.ErrWebhookUnauthorized
 }
 

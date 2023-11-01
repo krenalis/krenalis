@@ -172,7 +172,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 	panic("not implemented")
 }
 

@@ -88,7 +88,7 @@ func (c *connection) CreateUser(ctx context.Context, properties connector.Proper
 
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 
 	if c.settings.WebhookSecret == "" {
 		// Webhooks are not set up.
@@ -116,7 +116,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 	user := r.Form.Get("data[id]")
 
 	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]connector.WebhookEvent, 1)
+	var events = make([]connector.WebhookPayload, 1)
 	switch r.Form.Get("type") {
 	case "subscribe":
 		// User subscribed.

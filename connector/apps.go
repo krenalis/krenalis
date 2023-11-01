@@ -128,7 +128,7 @@ type AppUsersConnection interface {
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not
 	// authorized. The context is the request's context.
-	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
+	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
 
 	// UserSchema returns the user schema.
 	UserSchema(ctx context.Context) (types.Type, error)
@@ -155,7 +155,7 @@ type AppGroupsConnection interface {
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not
 	// authorized. The context is the request's context.
-	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
+	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
 
 	// SetGroup sets the given group.
 	SetGroup(ctx context.Context, group Group) error

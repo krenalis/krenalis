@@ -147,8 +147,8 @@ type UI interface {
 	ValidateSettings(ctx context.Context, values []byte) ([]byte, error)
 }
 
-type WebhookEvent interface {
-	event()
+type WebhookPayload interface {
+	webhookPayload()
 }
 
 type UserChangeEvent struct {
@@ -157,7 +157,7 @@ type UserChangeEvent struct {
 	User      string
 }
 
-func (ev UserChangeEvent) event() {}
+func (ev UserChangeEvent) webhookPayload() {}
 
 type UserCreateEvent struct {
 	Timestamp  time.Time
@@ -166,7 +166,7 @@ type UserCreateEvent struct {
 	Properties Properties
 }
 
-func (ev UserCreateEvent) event() {}
+func (ev UserCreateEvent) webhookPayload() {}
 
 type UserDeleteEvent struct {
 	Timestamp time.Time
@@ -174,7 +174,7 @@ type UserDeleteEvent struct {
 	User      string
 }
 
-func (ev UserDeleteEvent) event() {}
+func (ev UserDeleteEvent) webhookPayload() {}
 
 type UserPropertyChangeEvent struct {
 	Timestamp time.Time
@@ -184,7 +184,7 @@ type UserPropertyChangeEvent struct {
 	Value     any
 }
 
-func (ev UserPropertyChangeEvent) event() {}
+func (ev UserPropertyChangeEvent) webhookPayload() {}
 
 type GroupChangeEvent struct {
 	Timestamp time.Time
@@ -192,7 +192,7 @@ type GroupChangeEvent struct {
 	Group     string
 }
 
-func (ev GroupChangeEvent) event() {}
+func (ev GroupChangeEvent) webhookPayload() {}
 
 type GroupCreateEvent struct {
 	Timestamp  time.Time
@@ -201,7 +201,7 @@ type GroupCreateEvent struct {
 	Properties Properties
 }
 
-func (ev GroupCreateEvent) event() {}
+func (ev GroupCreateEvent) webhookPayload() {}
 
 type GroupDeleteEvent struct {
 	Timestamp time.Time
@@ -209,7 +209,7 @@ type GroupDeleteEvent struct {
 	Group     string
 }
 
-func (ev GroupDeleteEvent) event() {}
+func (ev GroupDeleteEvent) webhookPayload() {}
 
 type GroupPropertyChangeEvent struct {
 	Timestamp time.Time
@@ -219,7 +219,7 @@ type GroupPropertyChangeEvent struct {
 	Value     any
 }
 
-func (ev GroupPropertyChangeEvent) event() {}
+func (ev GroupPropertyChangeEvent) webhookPayload() {}
 
 type Properties map[string]any
 
