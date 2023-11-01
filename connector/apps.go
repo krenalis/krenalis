@@ -129,7 +129,7 @@ type AppUsersConnection interface {
 	AppConnection
 
 	// CreateUser creates a user with the given properties.
-	CreateUser(ctx context.Context, properties map[string]any) error
+	CreateUser(ctx context.Context, user map[string]any) error
 
 	// ReceiveWebhook receives a webhook request and returns its payloads.
 	// It returns the ErrWebhookUnauthorized error is the request was not
@@ -138,7 +138,7 @@ type AppUsersConnection interface {
 
 	// UpdateUser updates the user with identifier id setting the given
 	// properties.
-	UpdateUser(ctx context.Context, id string, properties map[string]any) error
+	UpdateUser(ctx context.Context, id string, user map[string]any) error
 
 	// UserSchema returns the user schema.
 	UserSchema(ctx context.Context) (types.Type, error)
@@ -153,7 +153,7 @@ type AppGroupsConnection interface {
 	AppConnection
 
 	// CreateGroup creates a group with the given properties.
-	CreateGroup(ctx context.Context, properties map[string]any) error
+	CreateGroup(ctx context.Context, group map[string]any) error
 
 	// GroupSchema returns the group schema.
 	GroupSchema(ctx context.Context) (types.Type, error)
@@ -168,7 +168,7 @@ type AppGroupsConnection interface {
 
 	// UpdateGroup updates the group with identifier id setting the given
 	// properties.
-	UpdateGroup(ctx context.Context, id string, properties map[string]any) error
+	UpdateGroup(ctx context.Context, id string, group map[string]any) error
 }
 
 // Event represents an event.

@@ -72,17 +72,17 @@ type connection struct {
 }
 
 // CreateGroup creates a group with the given properties.
-func (c *connection) CreateGroup(ctx context.Context, properties map[string]any) error {
+func (c *connection) CreateGroup(ctx context.Context, group map[string]any) error {
 	// TODO(marco): implement
 	return nil
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
+func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"properties":`)
-	err := json.NewEncoder(&body).Encode(properties)
+	err := json.NewEncoder(&body).Encode(user)
 	if err != nil {
 		return err
 	}
@@ -217,14 +217,14 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 
 // UpdateGroup updates the group with identifier id setting the given
 // properties.
-func (c *connection) UpdateGroup(ctx context.Context, id string, properties map[string]any) error {
+func (c *connection) UpdateGroup(ctx context.Context, id string, group map[string]any) error {
 	// TODO(marco): implement
 	return nil
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -232,7 +232,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties map[s
 	body.WriteString(`{"id":`)
 	body.Write(idJSON)
 	body.WriteString(`,"properties":`)
-	err := json.NewEncoder(&body).Encode(properties)
+	err := json.NewEncoder(&body).Encode(user)
 	if err != nil {
 		return err
 	}

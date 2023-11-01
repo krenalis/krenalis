@@ -87,7 +87,7 @@ func newUserID() string {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
+func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -96,7 +96,7 @@ func (c *connection) CreateUser(ctx context.Context, properties map[string]any) 
 	}
 
 	// Write the user on the log.
-	propsDump, err := json.Marshal(properties)
+	propsDump, err := json.Marshal(user)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (c *connection) CreateUser(ctx context.Context, properties map[string]any) 
 	u := map[string]any{}
 	id := newUserID()
 	u["dummy_id"] = id
-	for name, value := range properties {
+	for name, value := range user {
 		u[name] = value
 	}
 	users[id] = u
@@ -259,7 +259,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -268,7 +268,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties map[s
 	}
 
 	// Write the user on the log.
-	propsDump, err := json.Marshal(properties)
+	propsDump, err := json.Marshal(user)
 	if err != nil {
 		return err
 	}
@@ -282,7 +282,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties map[s
 		u = map[string]any{}
 	}
 	u["dummy_id"] = id
-	for name, value := range properties {
+	for name, value := range user {
 		u[name] = value
 	}
 	users[id] = u

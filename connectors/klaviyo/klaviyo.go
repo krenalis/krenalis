@@ -69,7 +69,7 @@ type settings struct {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
+func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -132,7 +132,7 @@ func (c *connection) SendEvent(ctx context.Context, eventType string, event *con
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 	panic("TODO: not implemented")
 }
 

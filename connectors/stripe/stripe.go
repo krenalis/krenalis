@@ -90,10 +90,10 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
+func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
 
 	var body bytes.Buffer
-	err := encodeRequest(&body, properties, nil)
+	err := encodeRequest(&body, user, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
@@ -220,10 +220,10 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	var body bytes.Buffer
-	err := encodeRequest(&body, properties, nil)
+	err := encodeRequest(&body, user, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
