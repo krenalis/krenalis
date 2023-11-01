@@ -71,6 +71,12 @@ type connection struct {
 	buf         bytes.Buffer
 }
 
+// CreateGroup creates a group with the given properties.
+func (c *connection) CreateGroup(ctx context.Context, properties map[string]any) error {
+	// TODO(marco): implement
+	return nil
+}
+
 // CreateUser creates a user with the given properties.
 func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
 
@@ -209,8 +215,9 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// SetGroup sets the given groups.
-func (c *connection) SetGroup(ctx context.Context, group connector.Group) error {
+// UpdateGroup updates the group with identifier id setting the given
+// properties.
+func (c *connection) UpdateGroup(ctx context.Context, id string, properties map[string]any) error {
 	// TODO(marco): implement
 	return nil
 }

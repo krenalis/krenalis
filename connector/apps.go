@@ -130,12 +130,12 @@ type AppUsersConnection interface {
 	// authorized. The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
 
-	// UserSchema returns the user schema.
-	UserSchema(ctx context.Context) (types.Type, error)
-
 	// UpdateUser updates the user with identifier id setting the given
 	// properties.
 	UpdateUser(ctx context.Context, id string, properties map[string]any) error
+
+	// UserSchema returns the user schema.
+	UserSchema(ctx context.Context) (types.Type, error)
 
 	// Users returns the users starting from the given cursor.
 	Users(ctx context.Context, properties []string, cursor Cursor) (users []Object, next string, err error)
@@ -145,6 +145,9 @@ type AppUsersConnection interface {
 // manage groups.
 type AppGroupsConnection interface {
 	AppConnection
+
+	// CreateGroup creates a group with the given properties.
+	CreateGroup(ctx context.Context, properties map[string]any) error
 
 	// GroupSchema returns the group schema.
 	GroupSchema(ctx context.Context) (types.Type, error)
@@ -157,8 +160,9 @@ type AppGroupsConnection interface {
 	// authorized. The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
 
-	// SetGroup sets the given group.
-	SetGroup(ctx context.Context, group Group) error
+	// UpdateGroup updates the group with identifier id setting the given
+	// properties.
+	UpdateGroup(ctx context.Context, id string, properties map[string]any) error
 }
 
 // Event represents an event.
