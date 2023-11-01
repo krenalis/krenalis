@@ -115,11 +115,11 @@ func (c *connection) Groups(ctx context.Context, properties []string, cursor con
 	return objects, after, err
 }
 
-// ReceiveWebhook receives a webhook request and returns its events.
+// ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
-// authorized.
-// See https://developers.hubspot.com/docs/api/webhooks.
+// authorized. The context is the request's context.
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
+	// See https://developers.hubspot.com/docs/api/webhooks.
 
 	// Check if the webhook is valid.
 	clientSecret, err := c.httpClient.ClientSecret()

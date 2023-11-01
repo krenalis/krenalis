@@ -131,7 +131,7 @@ type AppUsersConnection interface {
 	// CreateUser creates a user with the given properties.
 	CreateUser(ctx context.Context, properties map[string]any) error
 
-	// ReceiveWebhook receives a webhook request and returns its events.
+	// ReceiveWebhook receives a webhook request and returns its payloads.
 	// It returns the ErrWebhookUnauthorized error is the request was not
 	// authorized. The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
@@ -161,7 +161,7 @@ type AppGroupsConnection interface {
 	// Groups returns the groups starting from the given cursor.
 	Groups(ctx context.Context, properties []string, cursor Cursor) (groups []Group, next string, err error)
 
-	// ReceiveWebhook receives a webhook request and returns its events.
+	// ReceiveWebhook receives a webhook request and returns its payloads.
 	// It returns the ErrWebhookUnauthorized error is the request was not
 	// authorized. The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)

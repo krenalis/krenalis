@@ -86,8 +86,9 @@ func (c *connection) CreateUser(ctx context.Context, properties map[string]any) 
 	panic("TODO: not implemented")
 }
 
-// ReceiveWebhook receives a webhook request and returns its events.
-// It returns the ErrWebhookUnauthorized error is the request was not authorized.
+// ReceiveWebhook receives a webhook request and returns its payloads.
+// It returns the ErrWebhookUnauthorized error is the request was not
+// authorized. The context is the request's context.
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
 
 	if c.settings.WebhookSecret == "" {
