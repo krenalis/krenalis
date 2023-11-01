@@ -163,7 +163,7 @@ type UserCreateEvent struct {
 	Timestamp  time.Time
 	Resource   string
 	User       string
-	Properties Properties
+	Properties map[string]any
 }
 
 func (ev UserCreateEvent) webhookPayload() {}
@@ -198,7 +198,7 @@ type GroupCreateEvent struct {
 	Timestamp  time.Time
 	Resource   string
 	Group      string
-	Properties Properties
+	Properties map[string]any
 }
 
 func (ev GroupCreateEvent) webhookPayload() {}
@@ -221,24 +221,9 @@ type GroupPropertyChangeEvent struct {
 
 func (ev GroupPropertyChangeEvent) webhookPayload() {}
 
-type Properties map[string]any
-
-type Property struct {
-	Name       string           `json:"name,omitempty"`
-	Options    []PropertyOption `json:"options,omitempty"`
-	Label      string           `json:"label,omitempty"`
-	Type       types.Type       `json:"type,omitempty"`
-	Properties []Property       `json:"properties,omitempty"`
-}
-
-type PropertyOption struct {
-	Label string
-	Value string
-}
-
 type Group struct {
 	ID         string
-	Properties Properties
+	Properties map[string]any
 }
 
 type EventType struct {

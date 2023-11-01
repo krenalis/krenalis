@@ -82,7 +82,7 @@ type connection struct {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties connector.Properties) error {
+func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -193,7 +193,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties connector.Properties) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`

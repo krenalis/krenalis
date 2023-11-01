@@ -123,7 +123,7 @@ type AppUsersConnection interface {
 	AppConnection
 
 	// CreateUser creates a user with the given properties.
-	CreateUser(ctx context.Context, properties Properties) error
+	CreateUser(ctx context.Context, properties map[string]any) error
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not
@@ -135,7 +135,7 @@ type AppUsersConnection interface {
 
 	// UpdateUser updates the user with identifier id setting the given
 	// properties.
-	UpdateUser(ctx context.Context, id string, properties Properties) error
+	UpdateUser(ctx context.Context, id string, properties map[string]any) error
 
 	// Users returns the users starting from the given cursor.
 	Users(ctx context.Context, properties []string, cursor Cursor) (users []Object, next string, err error)

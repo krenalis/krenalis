@@ -33,7 +33,7 @@ import (
 var icon = "<svg></svg>"
 
 var (
-	users           map[string]connector.Properties
+	users           map[string]map[string]any
 	usersTimestamps map[string]time.Time
 	usersLock       sync.Mutex
 )
@@ -87,7 +87,7 @@ func newUserID() string {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties connector.Properties) error {
+func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -105,7 +105,7 @@ func (c *connection) CreateUser(ctx context.Context, properties connector.Proper
 	// Update the in-memory users.
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	u := connector.Properties{}
+	u := map[string]any{}
 	id := newUserID()
 	u["dummy_id"] = id
 	for name, value := range properties {
@@ -256,7 +256,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties connector.Properties) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -276,7 +276,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties conne
 	defer usersLock.Unlock()
 	u, ok := users[id]
 	if !ok {
-		u = connector.Properties{}
+		u = map[string]any{}
 	}
 	u["dummy_id"] = id
 	for name, value := range properties {
@@ -336,7 +336,7 @@ func init() {
 		panic(err)
 	}
 	usersLock.Lock()
-	users = make(map[string]connector.Properties, len(rawUsers))
+	users = make(map[string]map[string]any, len(rawUsers))
 	usersTimestamps = make(map[string]time.Time, len(rawUsers))
 	for _, u := range rawUsers {
 		u.Properties["dummy_id"] = u.ID

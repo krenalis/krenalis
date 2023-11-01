@@ -72,7 +72,7 @@ type connection struct {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, properties connector.Properties) error {
+func (c *connection) CreateUser(ctx context.Context, properties map[string]any) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"properties":`)
@@ -171,7 +171,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
-				Properties: connector.Properties{
+				Properties: map[string]any{
 					req.PropertyName: req.PropertyValue,
 				},
 			}
@@ -217,7 +217,7 @@ func (c *connection) SetGroup(ctx context.Context, group connector.Group) error 
 
 // UpdateUser updates the user with identifier id setting the given properties.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) UpdateUser(ctx context.Context, id string, properties connector.Properties) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, properties map[string]any) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
