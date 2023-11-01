@@ -221,11 +221,6 @@ type GroupPropertyChangeEvent struct {
 
 func (ev GroupPropertyChangeEvent) webhookPayload() {}
 
-type Group struct {
-	ID         string
-	Properties map[string]any
-}
-
 type EventType struct {
 	ID          string
 	Name        string

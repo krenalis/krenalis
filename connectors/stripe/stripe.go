@@ -232,7 +232,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, properties map[s
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.User, string, error) {
 
 	var body io.Reader
 	if cursor.ID != "" {
@@ -255,9 +255,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	objects := make([]connector.Object, len(response.Data))
+	objects := make([]connector.User, len(response.Data))
 	for i, customer := range response.Data {
-		objects[i] = connector.Object{
+		objects[i] = connector.User{
 			ID:         customer["id"].(string),
 			Properties: customer,
 			Timestamp:  time.Now(),

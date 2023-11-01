@@ -303,7 +303,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.User, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -311,9 +311,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 	}
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	objects := make([]connector.Object, 0, len(users))
+	objects := make([]connector.User, 0, len(users))
 	for id, props := range users {
-		objects = append(objects, connector.Object{
+		objects = append(objects, connector.User{
 			ID:         id,
 			Properties: props,
 			Timestamp:  usersTimestamps[id],
