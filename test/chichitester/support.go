@@ -17,6 +17,14 @@ import (
 
 // This file contains support methods which reduce verbosity of tests.
 
+func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
+	if eventType != "" {
+		url += "/" + eventType
+	}
+	return c.MustCall("GET", url, nil).(map[string]any)
+}
+
 func (c *Chichi) AddAction(connection int, data map[string]any) int {
 	id := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data).(float64)
 	return int(id)
@@ -91,14 +99,6 @@ func (c *Chichi) AddSourceJSON(filesystem int) int {
 	})
 }
 
-func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
-	if eventType != "" {
-		url += "/" + eventType
-	}
-	return c.MustCall("GET", url, nil).(map[string]any)
-}
-
 func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
 	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/actions/" + strconv.Itoa(action) + "/execute"
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport})
@@ -109,6 +109,18 @@ func (c *Chichi) Imports(connection int) []any {
 	return c.MustCall("GET", method, nil).([]any)
 }
 
+func (c *Chichi) SetAction(connection, action int, data map[string]any) {
+	c.MustCall("PUT", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions/"+strconv.Itoa(action), data)
+}
+
+func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers apis.AnonymousIdentifiers) {
+	body := map[string]any{
+		"Identifiers":          identifiers,
+		"AnonymousIdentifiers": anonymousIdentifiers,
+	}
+	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body)
+}
+
 func (c *Chichi) Users(properties []string, start, end int) map[string]any {
 	req := map[string]any{
 		"Properties": properties,
@@ -116,10 +128,6 @@ func (c *Chichi) Users(properties []string, start, end int) map[string]any {
 		"End":        end,
 	}
 	return c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/users", req).(map[string]any)
-}
-
-func (c *Chichi) SetAction(connection, action int, data map[string]any) {
-	c.MustCall("PUT", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions/"+strconv.Itoa(action), data)
 }
 
 func (c *Chichi) WaitActionsToFinish(conn int) {
@@ -149,12 +157,4 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 		}
 		return
 	}
-}
-
-func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers apis.AnonymousIdentifiers) {
-	body := map[string]any{
-		"Identifiers":          identifiers,
-		"AnonymousIdentifiers": anonymousIdentifiers,
-	}
-	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body)
 }
