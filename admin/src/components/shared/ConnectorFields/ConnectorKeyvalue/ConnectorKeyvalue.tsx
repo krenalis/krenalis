@@ -6,6 +6,29 @@ import { ValueContext } from '../../../../context/ValueContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import ConnectorFieldInterface from '../../../../types/external/ui';
 
+type KeyValueValue = '' | Record<string, any>;
+
+interface KeyValueRow {
+	id: number;
+	key: string;
+	value: any;
+}
+
+const initRows = (value: KeyValueValue): KeyValueRow[] => {
+	const keys = Object.keys(value);
+	if (keys.length > 0) {
+		const rows: any[] = [];
+		let counter = 1;
+		for (const key of keys) {
+			rows.push({ id: counter, key: key, value: value[key] });
+			counter++;
+		}
+		return rows;
+	} else {
+		return [{ id: 1, key: '', value: '' }];
+	}
+};
+
 interface ConnectorKeyValueProps {
 	name: string;
 	label: string;
@@ -14,7 +37,7 @@ interface ConnectorKeyValueProps {
 	valueComponent: ConnectorFieldInterface;
 	valueLabel: string;
 	error: string;
-	val: any;
+	val: KeyValueValue;
 	onChange: (...args: any) => void;
 }
 
@@ -29,31 +52,17 @@ const ConnectorKeyValue = ({
 	val,
 	onChange,
 }: ConnectorKeyValueProps) => {
-	const initRows = (val: any) => {
-		let keyValues: any[] = [];
-		if (val !== '') keyValues = Object.entries(val);
-		const rws: any[] = [];
-		if (keyValues.length > 0) {
-			let counter = 1;
-			for (const [key, value] of keyValues) {
-				rws.push({ id: counter, key: key, value: value });
-				counter = counter + 1;
-			}
-		} else {
-			rws.push({ id: 1, key: '', value: '' });
-		}
-		return rws;
-	};
-
-	const [rows, setRows] = useState(initRows(val));
+	const [rows, setRows] = useState<KeyValueRow[]>(initRows(val));
 
 	useEffect(() => {
 		setRows(initRows(val));
 	}, [val]);
 
-	const formatRows = (rws) => {
+	const formatRows = (rows: KeyValueRow[]): KeyValueValue => {
 		const formatted = {};
-		for (const r of rws) formatted[r.key] = r.value;
+		for (const row of rows) {
+			formatted[row.key] = row.value;
+		}
 		return formatted;
 	};
 
@@ -62,30 +71,31 @@ const ConnectorKeyValue = ({
 		setRows(rws);
 	};
 
-	const onRemoveRowClick = (id) => {
+	const onRemoveRowClick = (id: number) => {
 		const rws = [...rows];
 		const filtered = rws.filter((r) => r.id !== id);
-		setRows(filtered);
 		onChange(name, formatRows(filtered));
 	};
 
-	const onKeyChange = async (_, key, e) => {
-		const id = Number(e.currentTarget.closest('.row').dataset.id);
+	const onKeyChange = (_, key, e) => {
+		const id = Number(e.currentTarget.closest('.keyValueRow').dataset.id);
 		const updated = rows.map((r) => {
-			if (r.id === id) return { ...r, key: key };
+			if (r.id === id) {
+				return { ...r, key: key };
+			}
 			return r;
 		});
-		setRows(updated);
 		onChange(name, formatRows(updated));
 	};
 
 	const onValueChange = (_, value, e) => {
-		const id = Number(e.currentTarget.closest('.row').dataset.id);
+		const id = Number(e.currentTarget.closest('.keyValueRow').dataset.id);
 		const updated = rows.map((r) => {
-			if (r.id === id) return { ...r, value: value };
+			if (r.id === id) {
+				return { ...r, value: value };
+			}
 			return r;
 		});
-		setRows(updated);
 		onChange(name, formatRows(updated));
 	};
 
