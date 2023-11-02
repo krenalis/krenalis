@@ -117,7 +117,7 @@ const App = () => {
 				redirect('');
 			}
 		}
-	}, [isLoggedIn, selectedWorkspace]);
+	}, [isLoggedIn, selectedWorkspace, location]);
 
 	useEffect(() => {
 		for (const pattern of FULLSCREEN_PATTERNS) {
