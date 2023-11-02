@@ -25,13 +25,43 @@
 	flex-flow: column;
 }
 
-.login .container #emailInput::part(base) {
+.login .container .loginForm input {
+	flex: 1 1 auto;
+	font-family: inherit;
+	font-weight: inherit;
+	min-width: 0px;
+	color: var(--sl-input-color);
+	border: medium;
+	background: inherit;
+	box-shadow: none;
+	margin: 0px;
+	cursor: inherit;
+	appearance: none;
+	height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
+	padding: 0 var(--sl-input-spacing-medium);
+	background-color: var(--sl-input-background-color);
+	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	border-radius: var(--sl-input-border-radius-medium);
+	font-size: var(--sl-input-font-size-medium);
+	transition:
+		var(--sl-transition-fast) color,
+		var(--sl-transition-fast) border,
+		var(--sl-transition-fast) box-shadow,
+		var(--sl-transition-fast) background-color;
+}
+
+.login .container .loginForm input:hover {
+	background-color: var(--sl-input-background-color-hover);
+	border-color: var(--sl-input-border-color-hover);
+}
+
+.login .container #emailInput {
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0;
 	border-bottom: 0;
 }
 
-.login .container #passwordInput::part(base) {
+.login .container #passwordInput {
 	border-top-left-radius: 0;
 	border-top-right-radius: 0;
 }

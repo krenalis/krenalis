@@ -1,6 +1,6 @@
 import React, { FormEvent, useState } from 'react';
 import './Login.css';
-import { SlButton, SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 import API from '../../../lib/api/api';
 import { Status } from '../../../types/internal/app';
 
@@ -55,25 +55,25 @@ const Login = ({ setIsLoggedIn, api, showStatus, showError, setAccount }: LoginP
 					<h1>Sign-in to your account</h1>
 				</div>
 				<form className='loginForm' onSubmit={onLogin}>
-					<SlInput
+					{/* Using standard inputs instead of Shoelace inputs as a workaround for Shoelace issue #269 */}
+					<input
 						type='email'
 						id='emailInput'
 						inputMode='email'
-						onSlInput={onEmailChange}
+						onInput={onEmailChange}
 						name='email'
 						value={email}
 						placeholder='Your email'
 						required
 					/>
-					<SlInput
+					<input
 						type='password'
 						id='passwordInput'
-						onSlInput={onPaswordChange}
+						onInput={onPaswordChange}
 						name='password'
 						value={password}
 						placeholder='Your password'
-						minlength={8}
-						passwordToggle={true}
+						minLength={8}
 						required
 					/>
 					<div className='note'>
