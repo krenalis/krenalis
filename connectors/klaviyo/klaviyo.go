@@ -364,7 +364,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	objects := make([]connector.User, len(response.Data))
+	users := make([]connector.User, len(response.Data))
 	for i, data := range response.Data {
 		updated, _ := data.Attributes["updated"].(string)
 		timestamp, err := time.Parse(time.RFC3339, updated)
@@ -374,7 +374,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		if !hasUpdatedProperty {
 			delete(data.Attributes, "updated")
 		}
-		objects[i] = connector.User{
+		users[i] = connector.User{
 			ID:         data.ID,
 			Properties: data.Attributes,
 			Timestamp:  timestamp,
@@ -382,10 +382,10 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 	}
 
 	if response.Links.Next == "" {
-		return objects, "", io.EOF
+		return users, "", io.EOF
 	}
 
-	return objects, response.Links.Next, nil
+	return users, response.Links.Next, nil
 }
 
 // ValidateSettings validates the settings received from the UI and returns them

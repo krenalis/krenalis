@@ -323,7 +323,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 
 // objects returns the contacts, if typ is "Contact", or the companies, if typ
 // is "Company", starting from the given cursor.
-func (c *connection) objects(ctx context.Context, typ string, properties []string, cursor connector.Cursor) ([]connector.User, string, error) {
+func (c *connection) objects(ctx context.Context, typ string, properties []string, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
@@ -375,13 +375,13 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 		return nil, "", io.EOF
 	}
 
-	objects := make([]connector.User, len(response.Results))
+	objects := make([]connector.Object, len(response.Results))
 	for i, result := range response.Results {
 		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid updatedAt returned by HubSpot: %q", updatedAt)
 		}
-		objects[i] = connector.User{
+		objects[i] = connector.Object{
 			ID:         result.ID,
 			Properties: result.Properties,
 			Timestamp:  updatedAt,

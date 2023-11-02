@@ -255,16 +255,16 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	objects := make([]connector.User, len(response.Data))
+	users := make([]connector.User, len(response.Data))
 	for i, customer := range response.Data {
-		objects[i] = connector.User{
+		users[i] = connector.User{
 			ID:         customer["id"].(string),
 			Properties: customer,
 			Timestamp:  time.Now(),
 		}
 	}
 
-	return objects, "", nil
+	return users, "", nil
 }
 
 // ServeUI serves the connector's user interface.

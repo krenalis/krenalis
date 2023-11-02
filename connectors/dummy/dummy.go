@@ -33,7 +33,7 @@ import (
 var icon = "<svg></svg>"
 
 var (
-	users           map[string]map[string]any
+	allUsers        map[string]map[string]any
 	usersTimestamps map[string]time.Time
 	usersLock       sync.Mutex
 )
@@ -111,7 +111,7 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 	for name, value := range user {
 		u[name] = value
 	}
-	users[id] = u
+	allUsers[id] = u
 	usersTimestamps[id] = time.Now().UTC()
 
 	return nil
@@ -277,7 +277,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 	// Update the in-memory users.
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	u, ok := users[id]
+	u, ok := allUsers[id]
 	if !ok {
 		u = map[string]any{}
 	}
@@ -285,7 +285,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 	for name, value := range user {
 		u[name] = value
 	}
-	users[id] = u
+	allUsers[id] = u
 	usersTimestamps[id] = time.Now().UTC()
 
 	return nil
@@ -314,19 +314,19 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 	}
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	objects := make([]connector.User, 0, len(users))
-	for id, props := range users {
-		objects = append(objects, connector.User{
+	users := make([]connector.User, 0, len(allUsers))
+	for id, props := range allUsers {
+		users = append(users, connector.User{
 			ID:         id,
 			Properties: props,
 			Timestamp:  usersTimestamps[id],
 		})
 	}
-	sort.Slice(objects, func(i, j int) bool { return objects[i].ID < objects[j].ID })
+	sort.Slice(users, func(i, j int) bool { return users[i].ID < users[j].ID })
 	if !c.settings.LargeDataset {
-		objects = objects[:10]
+		users = users[:10]
 	}
-	return objects, "", io.EOF
+	return users, "", io.EOF
 }
 
 func init() {
@@ -339,11 +339,11 @@ func init() {
 		panic(err)
 	}
 	usersLock.Lock()
-	users = make(map[string]map[string]any, len(rawUsers))
+	allUsers = make(map[string]map[string]any, len(rawUsers))
 	usersTimestamps = make(map[string]time.Time, len(rawUsers))
 	for _, u := range rawUsers {
 		u.Properties["dummy_id"] = u.ID
-		users[u.ID] = u.Properties
+		allUsers[u.ID] = u.Properties
 		usersTimestamps[u.ID] = time.Now().UTC()
 	}
 	usersLock.Unlock()

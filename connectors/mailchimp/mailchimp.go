@@ -502,9 +502,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	objects := make([]connector.User, len(response.Members))
+	users := make([]connector.User, len(response.Members))
 	for i, member := range response.Members {
-		objects[i] = connector.User{
+		users[i] = connector.User{
 			ID:         member.ID,
 			Properties: member.Properties(),
 			Timestamp:  member.LastChanged,
@@ -513,16 +513,16 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 
 	offset, _ := strconv.Atoi(cursor.Next)
 	eof := offset+len(response.Members) >= response.TotalItems
-	if last := objects[len(objects)-1]; last.Timestamp.Equal(cursor.Timestamp) {
+	if last := users[len(users)-1]; last.Timestamp.Equal(cursor.Timestamp) {
 		offset += len(response.Members)
 	} else {
 		offset = 0
 	}
 	if eof {
-		return objects, strconv.Itoa(offset), io.EOF
+		return users, strconv.Itoa(offset), io.EOF
 	}
 
-	return objects, strconv.Itoa(offset), nil
+	return users, strconv.Itoa(offset), nil
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
