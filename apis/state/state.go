@@ -469,9 +469,9 @@ type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerConnection
 	WebhooksPerConnector
 	WebhooksPerResource
-	WebhooksPerSource
 )
 
 // Scan implements the sql.Scanner interface.
@@ -484,12 +484,12 @@ func (per *WebhooksPer) Scan(src any) error {
 	switch s {
 	case "None":
 		p = WebhooksPerNone
+	case "Connection":
+		p = WebhooksPerConnection
 	case "Connector":
 		p = WebhooksPerConnector
 	case "Resource":
 		p = WebhooksPerResource
-	case "Source":
-		p = WebhooksPerSource
 	default:
 		return fmt.Errorf("invalid state.WebhooksPer: %s", s)
 	}
@@ -513,12 +513,12 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 	switch per {
 	case WebhooksPerNone:
 		return "None", nil
+	case WebhooksPerConnection:
+		return "Connection", nil
 	case WebhooksPerConnector:
 		return "Connector", nil
 	case WebhooksPerResource:
 		return "Resource", nil
-	case WebhooksPerSource:
-		return "Source", nil
 	}
 	return nil, fmt.Errorf("not a valid WebhooksPer: %d", per)
 }

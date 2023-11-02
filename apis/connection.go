@@ -2722,7 +2722,7 @@ func webhookURL(connection *state.Connection, resource int) string {
 		return u + "c/" + strconv.Itoa(connector.ID) + "/"
 	case state.WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(resource) + "/"
-	case state.WebhooksPerSource:
+	case state.WebhooksPerConnection:
 		return u + "s/" + strconv.Itoa(connection.ID) + "/"
 	}
 	panic("unexpected webhooksPer value")

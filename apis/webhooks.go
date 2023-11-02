@@ -182,7 +182,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errNotFound
 		}
 		connector = connection.Connector()
-		if connector.WebhooksPer != state.WebhooksPerSource {
+		if connector.WebhooksPer != state.WebhooksPerConnection {
 			return errNotFound
 		}
 		conf.Settings = connection.Settings
