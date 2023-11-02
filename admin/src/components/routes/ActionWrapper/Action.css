@@ -610,6 +610,7 @@ inherit the disabled style */
 }
 
 .action .fullscreenTransformation .inputPanel .samples .sampleSource {
+	background: #fafbff;
 	padding: 20px;
 }
 
