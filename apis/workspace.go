@@ -785,7 +785,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 		return "", err
 	}
 
-	connection, err := _connector.RegisteredApp(c.Name).Open(&_connector.AppConfig{
+	connection, err := _connector.RegisteredApp(c.Name).New(&_connector.AppConfig{
 		HTTPClient: this.apis.http.Client(c.OAuth.ClientSecret, accessToken),
 		Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})

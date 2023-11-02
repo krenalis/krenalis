@@ -18,8 +18,8 @@ type Mobile struct {
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the mobile
@@ -28,9 +28,9 @@ func (mobile Mobile) ConnectionReflectType() reflect.Type {
 	return mobile.ct
 }
 
-// Open opens a mobile connection.
-func (mobile Mobile) Open(conf *MobileConfig) (MobileConnection, error) {
-	out := mobile.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new mobile connection.
+func (mobile Mobile) New(conf *MobileConfig) (MobileConnection, error) {
+	out := mobile.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(MobileConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -43,8 +43,8 @@ type MobileConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenMobileFunc represents functions that open mobile connections.
-type OpenMobileFunc[T MobileConnection] func(*MobileConfig) (T, error)
+// MobileNewFunc represents functions that create new mobile connections.
+type MobileNewFunc[T MobileConnection] func(*MobileConfig) (T, error)
 
 // MobileConnection is the interface implemented by mobile connections.
 type MobileConnection interface{}

@@ -56,11 +56,11 @@ func init() {
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
 		Icon:                   icon,
-	}, open)
+	}, new)
 }
 
-// open opens a Dummy connection.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new Dummy connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

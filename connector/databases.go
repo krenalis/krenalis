@@ -22,8 +22,8 @@ type Database struct {
 	SampleQuery            string // sample query
 	Icon                   string // icon in SVG format
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the database
@@ -32,9 +32,9 @@ func (database Database) ConnectionReflectType() reflect.Type {
 	return database.ct
 }
 
-// Open opens a database connection.
-func (database Database) Open(conf *DatabaseConfig) (DatabaseConnection, error) {
-	out := database.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new database connection.
+func (database Database) New(conf *DatabaseConfig) (DatabaseConnection, error) {
+	out := database.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(DatabaseConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -47,8 +47,8 @@ type DatabaseConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenDatabaseFunc represents functions that open database connections.
-type OpenDatabaseFunc[T DatabaseConnection] func(*DatabaseConfig) (T, error)
+// DatabaseNewFunc represents functions that create new database connections.
+type DatabaseNewFunc[T DatabaseConnection] func(*DatabaseConfig) (T, error)
 
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {

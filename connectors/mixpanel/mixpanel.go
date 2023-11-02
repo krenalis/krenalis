@@ -43,7 +43,7 @@ func init() {
 		Name:                   "Mixpanel",
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
-	}, open)
+	}, new)
 }
 
 type connection struct {
@@ -57,8 +57,8 @@ type settings struct {
 	Secret    string
 }
 
-// open opens a Mixpanel connection and returns it.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new Mixpanel connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

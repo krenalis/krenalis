@@ -41,11 +41,11 @@ func init() {
 	connector.RegisterStorage(connector.Storage{
 		Name: "S3",
 		Icon: icon,
-	}, open)
+	}, new)
 }
 
-// open opens a S3 connection and returns it.
-func open(conf *connector.StorageConfig) (*connection, error) {
+// new returns a new S3 connection.
+func new(conf *connector.StorageConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

@@ -53,11 +53,11 @@ func init() {
 			TokenURL: "https://api.hubapi.com/oauth/v1/token",
 			Scopes:   []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-	}, open)
+	}, new)
 }
 
-// open opens a HubSpot connection and returns it.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new HubSpot connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{
 		setSettings: conf.SetSettings,
 		httpClient:  conf.HTTPClient,

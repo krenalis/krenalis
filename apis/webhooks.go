@@ -195,7 +195,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		conf.HTTPClient = apis.http.ConnectionClient(connection.ID)
 		conf.Region = _connector.PrivacyRegion(connection.Workspace().PrivacyRegion)
 	}
-	connection, err := _connector.RegisteredApp(connector.Name).Open(&conf)
+	connection, err := _connector.RegisteredApp(connector.Name).New(&conf)
 	if err != nil {
 		return err
 	}

@@ -162,7 +162,7 @@ func (this *Connector) openUI(role Role, resource, clientSecret, accessToken str
 	var connection any
 	switch c := this.connector; c.Type {
 	case state.AppType:
-		connection, err = _connector.RegisteredApp(c.Name).Open(&_connector.AppConfig{
+		connection, err = _connector.RegisteredApp(c.Name).New(&_connector.AppConfig{
 			Role:       _connector.Role(role),
 			Resource:   resource,
 			HTTPClient: this.apis.http.Client(clientSecret, accessToken),
@@ -170,33 +170,33 @@ func (this *Connector) openUI(role Role, resource, clientSecret, accessToken str
 		})
 	case state.DatabaseType:
 		var database _connector.DatabaseConnection
-		database, err = _connector.RegisteredDatabase(c.Name).Open(&_connector.DatabaseConfig{
+		database, err = _connector.RegisteredDatabase(c.Name).New(&_connector.DatabaseConfig{
 			Role: _connector.Role(role),
 		})
 		defer database.Close()
 		connection = database
 	case state.FileType:
-		connection, err = _connector.RegisteredFile(c.Name).Open(&_connector.FileConfig{
+		connection, err = _connector.RegisteredFile(c.Name).New(&_connector.FileConfig{
 			Role: _connector.Role(role),
 		})
 	case state.MobileType:
-		connection, err = _connector.RegisteredMobile(c.Name).Open(&_connector.MobileConfig{
+		connection, err = _connector.RegisteredMobile(c.Name).New(&_connector.MobileConfig{
 			Role: _connector.Role(role),
 		})
 	case state.ServerType:
-		connection, err = _connector.RegisteredServer(c.Name).Open(&_connector.ServerConfig{
+		connection, err = _connector.RegisteredServer(c.Name).New(&_connector.ServerConfig{
 			Role: _connector.Role(role),
 		})
 	case state.StorageType:
-		connection, err = _connector.RegisteredStorage(c.Name).Open(&_connector.StorageConfig{
+		connection, err = _connector.RegisteredStorage(c.Name).New(&_connector.StorageConfig{
 			Role: _connector.Role(role),
 		})
 	case state.StreamType:
-		connection, err = _connector.RegisteredStream(c.Name).Open(&_connector.StreamConfig{
+		connection, err = _connector.RegisteredStream(c.Name).New(&_connector.StreamConfig{
 			Role: _connector.Role(role),
 		})
 	case state.WebsiteType:
-		connection, err = _connector.RegisteredWebsite(c.Name).Open(&_connector.WebsiteConfig{
+		connection, err = _connector.RegisteredWebsite(c.Name).New(&_connector.WebsiteConfig{
 			Role: _connector.Role(role),
 		})
 	}

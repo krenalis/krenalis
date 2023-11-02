@@ -238,7 +238,7 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 	}
 
 	app := connector.RegisteredApp(c.Connector().Name)
-	connection, err := app.Open(&connector.AppConfig{
+	connection, err := app.New(&connector.AppConfig{
 		Role:     connector.Role(c.Role),
 		Settings: c.Settings,
 		SetSettings: func(ctx context.Context, settings []byte) error {

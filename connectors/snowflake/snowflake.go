@@ -38,11 +38,11 @@ func init() {
 		DestinationDescription: "export users and groups to a Snowflake database",
 		SampleQuery:            "SELECT * FROM users {{ LIMIT $limit }}",
 		Icon:                   icon,
-	}, open)
+	}, new)
 }
 
-// open opens a Snowflake connection and returns it.
-func open(conf *connector.DatabaseConfig) (*connection, error) {
+// new returns a new Snowflake connection.
+func new(conf *connector.DatabaseConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

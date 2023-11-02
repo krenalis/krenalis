@@ -32,8 +32,8 @@ type App struct {
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the app
@@ -42,9 +42,9 @@ func (app App) ConnectionReflectType() reflect.Type {
 	return app.ct
 }
 
-// Open opens an app connection.
-func (app App) Open(conf *AppConfig) (AppConnection, error) {
-	out := app.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new app connection.
+func (app App) New(conf *AppConfig) (AppConnection, error) {
+	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(AppConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -69,8 +69,8 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
-// OpenAppFunc represents functions that open app connections.
-type OpenAppFunc[T AppConnection] func(*AppConfig) (T, error)
+// AppNewFunc represents functions that create new app connections.
+type AppNewFunc[T AppConnection] func(*AppConfig) (T, error)
 
 // AppConnection is the interface implemented by app connections.
 //

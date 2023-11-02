@@ -34,11 +34,11 @@ func init() {
 		DestinationDescription: "export users to a JSON file",
 		Icon:                   icon,
 		Extension:              "json",
-	}, open)
+	}, new)
 }
 
-// open opens a JSON connection and returns it.
-func open(conf *connector.FileConfig) (*connection, error) {
+// new returns a new JSON connection.
+func new(conf *connector.FileConfig) (*connection, error) {
 	c := connection{role: conf.Role, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

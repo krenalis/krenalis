@@ -38,11 +38,11 @@ func init() {
 		SourceDescription: "import users and groups from a parquet file",
 		Icon:              icon,
 		Extension:         "parquet",
-	}, open)
+	}, new)
 }
 
-// open opens a Parquet connection and returns it.
-func open(conf *connector.FileConfig) (*connection, error) {
+// new returns a new Parquet connection.
+func new(conf *connector.FileConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

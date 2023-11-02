@@ -40,11 +40,11 @@ func init() {
 	connector.RegisterStorage(connector.Storage{
 		Name: "HTTP",
 		Icon: icon,
-	}, open)
+	}, new)
 }
 
-// open opens an HTTP connection and returns it.
-func open(conf *connector.StorageConfig) (*connection, error) {
+// new returns a new HTTP connection.
+func new(conf *connector.StorageConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

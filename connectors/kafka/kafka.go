@@ -37,11 +37,11 @@ func init() {
 	connector.RegisterStream(connector.Stream{
 		Name: "Kafka",
 		Icon: icon,
-	}, open)
+	}, new)
 }
 
-// open opens a Kafka connection and returns it.
-func open(conf *connector.StreamConfig) (*connection, error) {
+// new returns a new Kafka connection.
+func new(conf *connector.StreamConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

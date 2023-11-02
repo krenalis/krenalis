@@ -25,11 +25,11 @@ func init() {
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
-	}, open)
+	}, new)
 }
 
-// open opens a UISample connection and returns it.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new UISample connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

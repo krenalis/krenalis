@@ -42,11 +42,11 @@ func init() {
 		DestinationDescription: "export users and groups to a PostgreSQL database",
 		SampleQuery:            "SELECT * FROM users {{ LIMIT $limit }}",
 		Icon:                   icon,
-	}, open)
+	}, new)
 }
 
-// open opens a PostgreSQL connection and returns it.
-func open(conf *connector.DatabaseConfig) (*connection, error) {
+// new returns a new PostgreSQL connection.
+func new(conf *connector.DatabaseConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

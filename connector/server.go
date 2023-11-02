@@ -18,8 +18,8 @@ type Server struct {
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the server
@@ -28,9 +28,9 @@ func (server Server) ConnectionReflectType() reflect.Type {
 	return server.ct
 }
 
-// Open opens a server connection.
-func (server Server) Open(conf *ServerConfig) (ServerConnection, error) {
-	out := server.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new server connection.
+func (server Server) New(conf *ServerConfig) (ServerConnection, error) {
+	out := server.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(ServerConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -43,8 +43,8 @@ type ServerConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenServerFunc represents functions that open server connections.
-type OpenServerFunc[T ServerConnection] func(*ServerConfig) (T, error)
+// ServerNewFunc represents functions that create new server connections.
+type ServerNewFunc[T ServerConnection] func(*ServerConfig) (T, error)
 
 // ServerConnection is the interface implemented by server connections.
 type ServerConnection interface{}

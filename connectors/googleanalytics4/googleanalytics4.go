@@ -49,11 +49,11 @@ func init() {
 		Name:                   "Google Analytics 4",
 		DestinationDescription: "send events to Google Analytics 4",
 		Icon:                   icon,
-	}, open)
+	}, new)
 }
 
-// open opens a Google Analytics 4 connection and returns it.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new Google Analytics 4 connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

@@ -37,11 +37,11 @@ func init() {
 		SourceDescription: "import users from an Excel file",
 		Icon:              icon,
 		Extension:         "xlsx",
-	}, open)
+	}, new)
 }
 
-// open opens an Excel connection and returns it.
-func open(conf *connector.FileConfig) (*connection, error) {
+// new returns a new Excel connection.
+func new(conf *connector.FileConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

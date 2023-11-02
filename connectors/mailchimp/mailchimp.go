@@ -56,11 +56,11 @@ func init() {
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
 		},
-	}, open)
+	}, new)
 }
 
-// open opens a Mailchimp connection and returns it.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new Mailchimp connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

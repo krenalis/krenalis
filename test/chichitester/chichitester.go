@@ -184,7 +184,7 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		conn, err := net.DialTimeout("tcp", testsSettings.ChichiHost, 500*time.Millisecond)
 		if err != nil {
 			attempts++
-			if attempts >= 10 {
+			if attempts >= 30 {
 				t.Fatalf("cannot connect to Chichi on %q. No response after %d connections attempts, aborting test", testsSettings.ChichiHost, attempts)
 			}
 			// Use an exponential backoff timeout.

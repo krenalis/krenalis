@@ -19,8 +19,8 @@ type Stream struct {
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the stream
@@ -29,9 +29,9 @@ func (stream Stream) ConnectionReflectType() reflect.Type {
 	return stream.ct
 }
 
-// Open opens a stream connection.
-func (stream Stream) Open(conf *StreamConfig) (StreamConnection, error) {
-	out := stream.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new stream connection.
+func (stream Stream) New(conf *StreamConfig) (StreamConnection, error) {
+	out := stream.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(StreamConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -44,8 +44,8 @@ type StreamConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenStreamFunc represents functions that open stream connections.
-type OpenStreamFunc[T StreamConnection] func(*StreamConfig) (T, error)
+// StreamNewFunc represents functions that create new stream connections.
+type StreamNewFunc[T StreamConnection] func(*StreamConfig) (T, error)
 
 // SendOptions are the send options.
 type SendOptions struct {

@@ -38,8 +38,8 @@ type Storage struct {
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the storage
@@ -48,9 +48,9 @@ func (storage Storage) ConnectionReflectType() reflect.Type {
 	return storage.ct
 }
 
-// Open opens a storage connection.
-func (storage Storage) Open(conf *StorageConfig) (StorageConnection, error) {
-	out := storage.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new instance  StorageConnection storage connection.
+func (storage Storage) New(conf *StorageConfig) (StorageConnection, error) {
+	out := storage.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(StorageConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -63,8 +63,8 @@ type StorageConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenStorageFunc represents functions that open storage connections.
-type OpenStorageFunc[T StorageConnection] func(*StorageConfig) (T, error)
+// StorageNewFunc represents functions that create new storage connections.
+type StorageNewFunc[T StorageConnection] func(*StorageConfig) (T, error)
 
 // StorageConnection is the interface implemented by storage connections.
 type StorageConnection interface {

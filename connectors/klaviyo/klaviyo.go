@@ -44,11 +44,11 @@ func init() {
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "users",
 		Icon:                   icon,
-	}, open)
+	}, new)
 }
 
-// open opens a Klaviyo connection and returns it.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new Klaviyo connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

@@ -1666,7 +1666,7 @@ func (this *Connection) openApp() (_connector.AppConnection, error) {
 		resourceID = r.ID
 		resourceCode = r.Code
 	}
-	app, err := _connector.RegisteredApp(c.Connector().Name).Open(&_connector.AppConfig{
+	app, err := _connector.RegisteredApp(c.Connector().Name).New(&_connector.AppConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1702,7 +1702,7 @@ func (this *Connection) openAppUsers() (_connector.AppUsersConnection, error) {
 // value.
 func (this *Connection) openDatabase() (_connector.DatabaseConnection, error) {
 	c := this.connection
-	database, err := _connector.RegisteredDatabase(c.Connector().Name).Open(&_connector.DatabaseConfig{
+	database, err := _connector.RegisteredDatabase(c.Connector().Name).New(&_connector.DatabaseConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1713,7 +1713,7 @@ func (this *Connection) openDatabase() (_connector.DatabaseConnection, error) {
 // openFile opens a file connection.
 func (this *Connection) openFile() (_connector.FileConnection, error) {
 	c := this.connection
-	file, err := _connector.RegisteredFile(c.Connector().Name).Open(&_connector.FileConfig{
+	file, err := _connector.RegisteredFile(c.Connector().Name).New(&_connector.FileConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1724,7 +1724,7 @@ func (this *Connection) openFile() (_connector.FileConnection, error) {
 // openMobile opens a mobile connection.
 func (this *Connection) openMobile() (_connector.MobileConnection, error) {
 	c := this.connection
-	mobile, err := _connector.RegisteredMobile(c.Connector().Name).Open(&_connector.MobileConfig{
+	mobile, err := _connector.RegisteredMobile(c.Connector().Name).New(&_connector.MobileConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1735,7 +1735,7 @@ func (this *Connection) openMobile() (_connector.MobileConnection, error) {
 // openServer opens a server connection.
 func (this *Connection) openServer() (_connector.ServerConnection, error) {
 	c := this.connection
-	server, err := _connector.RegisteredServer(c.Connector().Name).Open(&_connector.ServerConfig{
+	server, err := _connector.RegisteredServer(c.Connector().Name).New(&_connector.ServerConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1749,7 +1749,7 @@ func (this *Connection) openStorage() (_connector.StorageConnection, error) {
 	if c.Connector().Type == state.FileType {
 		c, _ = c.Storage()
 	}
-	storage, err := _connector.RegisteredStorage(c.Connector().Name).Open(&_connector.StorageConfig{
+	storage, err := _connector.RegisteredStorage(c.Connector().Name).New(&_connector.StorageConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1763,7 +1763,7 @@ func (this *Connection) openStorage() (_connector.StorageConnection, error) {
 // value.
 func (this *Connection) openStream() (_connector.StreamConnection, error) {
 	c := this.connection
-	database, err := _connector.RegisteredStream(c.Connector().Name).Open(&_connector.StreamConfig{
+	database, err := _connector.RegisteredStream(c.Connector().Name).New(&_connector.StreamConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1774,7 +1774,7 @@ func (this *Connection) openStream() (_connector.StreamConnection, error) {
 // openWebsite opens a website connection.
 func (this *Connection) openWebsite() (_connector.WebsiteConnection, error) {
 	c := this.connection
-	website, err := _connector.RegisteredWebsite(c.Connector().Name).Open(&_connector.WebsiteConfig{
+	website, err := _connector.RegisteredWebsite(c.Connector().Name).New(&_connector.WebsiteConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),

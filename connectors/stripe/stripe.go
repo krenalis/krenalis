@@ -65,11 +65,11 @@ func init() {
 		TermForUsers:           "customers",
 		Icon:                   icon,
 		WebhooksPer:            connector.WebhooksPerSource,
-	}, open)
+	}, new)
 }
 
-// open opens a Stripe connection.
-func open(conf *connector.AppConfig) (*connection, error) {
+// new returns a new Stripe connection.
+func new(conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

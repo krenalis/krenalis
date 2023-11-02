@@ -24,8 +24,8 @@ type File struct {
 	Icon                   string // icon in SVG format
 	Extension              string // default extension of the file
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the file
@@ -34,9 +34,9 @@ func (file File) ConnectionReflectType() reflect.Type {
 	return file.ct
 }
 
-// Open opens a file connection.
-func (file File) Open(conf *FileConfig) (FileConnection, error) {
-	out := file.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new file connection.
+func (file File) New(conf *FileConfig) (FileConnection, error) {
+	out := file.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(FileConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -49,8 +49,8 @@ type FileConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenFileFunc represents functions that open file connections.
-type OpenFileFunc[T FileConnection] func(*FileConfig) (T, error)
+// FileNewFunc represents functions that create new file connections.
+type FileNewFunc[T FileConnection] func(*FileConfig) (T, error)
 
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {

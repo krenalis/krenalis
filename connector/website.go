@@ -18,8 +18,8 @@ type Website struct {
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
 
-	open reflect.Value
-	ct   reflect.Type
+	newFunc reflect.Value
+	ct      reflect.Type
 }
 
 // ConnectionReflectType returns the type of the value implementing the website
@@ -28,9 +28,9 @@ func (website Website) ConnectionReflectType() reflect.Type {
 	return website.ct
 }
 
-// Open opens a website connection.
-func (website Website) Open(conf *WebsiteConfig) (WebsiteConnection, error) {
-	out := website.open.Call([]reflect.Value{reflect.ValueOf(conf)})
+// New returns a new website connection.
+func (website Website) New(conf *WebsiteConfig) (WebsiteConnection, error) {
+	out := website.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(WebsiteConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -43,8 +43,8 @@ type WebsiteConfig struct {
 	SetSettings SetSettingsFunc
 }
 
-// OpenWebsiteFunc represents functions that open website connections.
-type OpenWebsiteFunc[T WebsiteConnection] func(*WebsiteConfig) (T, error)
+// WebsiteNewFunc represents functions that create new website connections.
+type WebsiteNewFunc[T WebsiteConnection] func(*WebsiteConfig) (T, error)
 
 // WebsiteConnection is the interface implemented by website connections.
 type WebsiteConnection interface{}

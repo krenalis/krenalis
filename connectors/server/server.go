@@ -67,12 +67,12 @@ func init() {
 		},
 	}
 	for _, srv := range servers {
-		connector.RegisterServer(srv, open)
+		connector.RegisterServer(srv, new)
 	}
 }
 
-// open opens a Server connection and returns it.
-func open(*connector.ServerConfig) (*connection, error) {
+// new returns a new Server connection.
+func new(*connector.ServerConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

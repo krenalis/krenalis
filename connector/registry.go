@@ -38,11 +38,11 @@ var (
 
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if fn is nil, it panics.
-func RegisterApp[T AppConnection](app App, open OpenAppFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterApp[T AppConnection](app App, new AppNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	app.open = reflect.ValueOf(open)
+	app.newFunc = reflect.ValueOf(new)
 	app.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -55,11 +55,11 @@ func RegisterApp[T AppConnection](app App, open OpenAppFunc[T]) {
 // RegisterDatabase makes a database connector available by the provided name.
 // If RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterDatabase[T DatabaseConnection](database Database, open OpenDatabaseFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterDatabase[T DatabaseConnection](database Database, new DatabaseNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	database.open = reflect.ValueOf(open)
+	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -71,11 +71,11 @@ func RegisterDatabase[T DatabaseConnection](database Database, open OpenDatabase
 
 // RegisterFile makes a file connector available by the provided name. If
 // RegisterFile is called twice with the same name or if fn is nil, it panics.
-func RegisterFile[T FileConnection](file File, open OpenFileFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterFile[T FileConnection](file File, new FileNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	file.open = reflect.ValueOf(open)
+	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -88,11 +88,11 @@ func RegisterFile[T FileConnection](file File, open OpenFileFunc[T]) {
 // RegisterMobile makes a mobile connector available by the provided name. If
 // RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterMobile[T MobileConnection](mobile Mobile, open OpenMobileFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterMobile[T MobileConnection](mobile Mobile, new MobileNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	mobile.open = reflect.ValueOf(open)
+	mobile.newFunc = reflect.ValueOf(new)
 	mobile.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -105,11 +105,11 @@ func RegisterMobile[T MobileConnection](mobile Mobile, open OpenMobileFunc[T]) {
 // RegisterServer makes a server connector available by the provided name. If
 // RegisterServer is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterServer[T ServerConnection](server Server, open OpenServerFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterServer[T ServerConnection](server Server, new ServerNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	server.open = reflect.ValueOf(open)
+	server.newFunc = reflect.ValueOf(new)
 	server.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -122,11 +122,11 @@ func RegisterServer[T ServerConnection](server Server, open OpenServerFunc[T]) {
 // RegisterStorage makes a storage connector available by the provided name. If
 // RegisterStorage is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterStorage[T StorageConnection](storage Storage, open OpenStorageFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterStorage[T StorageConnection](storage Storage, new StorageNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	storage.open = reflect.ValueOf(open)
+	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -139,11 +139,11 @@ func RegisterStorage[T StorageConnection](storage Storage, open OpenStorageFunc[
 // RegisterStream makes a stream connector available by the provided name.
 // If RegisterStream is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterStream[T StreamConnection](stream Stream, open OpenStreamFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterStream[T StreamConnection](stream Stream, new StreamNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	stream.open = reflect.ValueOf(open)
+	stream.newFunc = reflect.ValueOf(new)
 	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
@@ -156,11 +156,11 @@ func RegisterStream[T StreamConnection](stream Stream, open OpenStreamFunc[T]) {
 // RegisterWebsite makes a website connector available by the provided name. If
 // RegisterWebsite is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterWebsite[T WebsiteConnection](website Website, open OpenWebsiteFunc[T]) {
-	if open == nil {
-		panic("connector: open function is nil")
+func RegisterWebsite[T WebsiteConnection](website Website, new WebsiteNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
 	}
-	website.open = reflect.ValueOf(open)
+	website.newFunc = reflect.ValueOf(new)
 	website.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()

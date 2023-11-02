@@ -26,12 +26,12 @@ func init() {
 		},
 	}
 	for _, ws := range websites {
-		connector.RegisterWebsite(ws, open)
+		connector.RegisterWebsite(ws, new)
 	}
 }
 
-// open opens a Website connection and returns it.
-func open(*connector.WebsiteConfig) (*connection, error) {
+// new returns a new Website connection.
+func new(*connector.WebsiteConfig) (*connection, error) {
 	return &connection{}, nil
 }
 
