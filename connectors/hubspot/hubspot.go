@@ -377,15 +377,16 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 
 	objects := make([]connector.Object, len(response.Results))
 	for i, result := range response.Results {
+		objects[i] = connector.Object{
+			ID: result.ID,
+		}
 		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
 		if err != nil {
-			return nil, "", fmt.Errorf("invalid updatedAt returned by HubSpot: %q", updatedAt)
+			objects[i].Err = fmt.Errorf("HubSpot has returned an invalid value for updatedAt: %q", updatedAt)
+			continue
 		}
-		objects[i] = connector.Object{
-			ID:         result.ID,
-			Properties: result.Properties,
-			Timestamp:  updatedAt.UTC(),
-		}
+		objects[i].Properties = result.Properties
+		objects[i].Timestamp = updatedAt.UTC()
 	}
 
 	if response.Paging.Next.After == "" {

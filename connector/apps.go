@@ -108,6 +108,10 @@ type Object struct {
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
 	Associations []string
+
+	// Err reports an error that occurred while reading the user.
+	// If Err is not nil, only the ID field is significant.
+	Err error
 }
 
 // User represents a user.

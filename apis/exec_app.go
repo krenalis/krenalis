@@ -54,6 +54,10 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 
 		for _, user := range users {
 
+			if user.Err != nil {
+				return actionExecutionError{err}
+			}
+
 			externalPropName := this.action.MatchingProperties.External
 			externalProp, ok := user.Properties[externalPropName]
 			if !ok {
@@ -240,6 +244,10 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 		inSchemaProps := this.action.InSchema.PropertiesNames()
 
 		for _, user := range users {
+
+			if user.Err != nil {
+				return actionExecutionError{err}
+			}
 
 			// Take only the necessary properties.
 			props := make(map[string]any, len(inSchemaProps))

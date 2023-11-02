@@ -366,19 +366,20 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 
 	users := make([]connector.User, len(response.Data))
 	for i, data := range response.Data {
+		users[i] = connector.User{
+			ID: data.ID,
+		}
 		updated, _ := data.Attributes["updated"].(string)
 		timestamp, err := time.Parse(time.RFC3339, updated)
 		if err != nil {
-			return nil, "", fmt.Errorf("Klaviyo has returned a missing or invalid \"updated\" attribute: %q", updated)
+			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
+			continue
 		}
 		if !hasUpdatedProperty {
 			delete(data.Attributes, "updated")
 		}
-		users[i] = connector.User{
-			ID:         data.ID,
-			Properties: data.Attributes,
-			Timestamp:  timestamp.UTC(),
-		}
+		users[i].Properties = data.Attributes
+		users[i].Timestamp = timestamp.UTC()
 	}
 
 	if response.Links.Next == "" {

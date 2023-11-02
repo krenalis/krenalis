@@ -561,6 +561,9 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 	users := make([]map[string]any, len(objects))
 	for i, object := range objects {
+		if object.Err != nil {
+			return nil, "", err
+		}
 		user, err := normalize(object.Properties, schema)
 		if err != nil {
 			return nil, "", err
