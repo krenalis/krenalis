@@ -16,6 +16,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -296,6 +297,50 @@ func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
 		return err
 	}
 	return nil
+}
+
+// ExecQueryTestDatabase executes a query on the test database.
+func (c *Chichi) ExecQueryTestDatabase(ctx context.Context, query string, args ...any) {
+	db, err := postgres.Open(&postgres.Options{
+		Host:     testsSettings.Database.Host,
+		Port:     testsSettings.Database.Port,
+		Username: testsSettings.Database.Username,
+		Password: testsSettings.Database.Password,
+		Database: testsSettings.Database.Database,
+		Schema:   testsSettings.Database.Schema,
+	})
+	if err != nil {
+		c.t.Fatalf("cannot open database for executing query tests: %s", err)
+	}
+	_, err = db.Exec(ctx, query, args...)
+	if err != nil {
+		c.t.Fatalf("query %q failed: %s", query, err)
+	}
+	db.Close()
+}
+
+// QueryRowTestDatabase queries a row on the test database, scanning it into
+// dest, which must be a pointer.
+func (c *Chichi) QueryRowTestDatabase(ctx context.Context, dest any, query string, args ...any) {
+	if reflect.TypeOf(dest).Kind() != reflect.Pointer {
+		panic("dest must be a pointer")
+	}
+	db, err := postgres.Open(&postgres.Options{
+		Host:     testsSettings.Database.Host,
+		Port:     testsSettings.Database.Port,
+		Username: testsSettings.Database.Username,
+		Password: testsSettings.Database.Password,
+		Database: testsSettings.Database.Database,
+		Schema:   testsSettings.Database.Schema,
+	})
+	if err != nil {
+		c.t.Fatalf("cannot open database for executing query tests: %s", err)
+	}
+	err = db.QueryRow(ctx, query, args...).Scan(dest)
+	if err != nil {
+		c.t.Fatalf("cannot scan result of QueryRow: %s", err)
+	}
+	db.Close()
 }
 
 func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {

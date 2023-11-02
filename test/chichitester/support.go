@@ -8,11 +8,14 @@
 package chichitester
 
 import (
+	"encoding/json"
+	"net/url"
 	"strconv"
 	"time"
 
 	"chichi/apis"
 	"chichi/connector"
+	"chichi/connector/types"
 )
 
 // This file contains support methods which reduce verbosity of tests.
@@ -42,6 +45,24 @@ func (c *Chichi) AddActionErr(connection int, data map[string]any) (int, error) 
 func (c *Chichi) AddConnection(data map[string]any) int {
 	id := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/add-connection", data).(float64)
 	return int(id)
+}
+
+func (c *Chichi) AddDestinationPostgreSQL() int {
+	return c.AddConnection(map[string]any{
+		"Connection": map[string]any{
+			"Name":      "PostgreSQL (destination)",
+			"Role":      apis.Destination,
+			"Enabled":   true,
+			"Connector": 10, // PostgreSQL.
+			"Settings": map[string]any{
+				"Host":     testsSettings.Database.Host,
+				"Port":     testsSettings.Database.Port,
+				"Username": testsSettings.Database.Username,
+				"Password": testsSettings.Database.Password,
+				"Database": testsSettings.Database.Database,
+			},
+		},
+	})
 }
 
 func (c *Chichi) AddDummy(name string, role connector.Role) int {
@@ -119,6 +140,20 @@ func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifi
 		"AnonymousIdentifiers": anonymousIdentifiers,
 	}
 	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body)
+}
+
+func (c *Chichi) TableSchema(connection int, table string) types.Type {
+	mapSchema := c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+
+		strconv.Itoa(connection)+"/tables/"+url.PathEscape(table)+"/schema", nil)
+	jsonSchema, err := json.Marshal(mapSchema)
+	if err != nil {
+		c.t.Fatalf("cannot marshal schema: %s", err)
+	}
+	schema, err := types.Parse(string(jsonSchema))
+	if err != nil {
+		c.t.Fatalf("cannot parse schema: %s", err)
+	}
+	return schema
 }
 
 func (c *Chichi) Users(properties []string, start, end int) map[string]any {
