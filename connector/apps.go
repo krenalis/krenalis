@@ -103,7 +103,7 @@ type AppEventsConnection interface {
 type Object struct {
 	ID         string         // Identifier.
 	Properties map[string]any // Properties.
-	Timestamp  time.Time      // Last modification time, not necessarily in UTC.
+	Timestamp  time.Time      // Last modification time, in UTC.
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.

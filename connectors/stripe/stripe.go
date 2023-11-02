@@ -260,7 +260,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		users[i] = connector.User{
 			ID:         customer["id"].(string),
 			Properties: customer,
-			Timestamp:  time.Now(),
+			Timestamp:  time.Now().UTC(),
 		}
 	}
 

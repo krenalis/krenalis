@@ -507,7 +507,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		users[i] = connector.User{
 			ID:         member.ID,
 			Properties: member.Properties(),
-			Timestamp:  member.LastChanged,
+			Timestamp:  member.LastChanged.UTC(),
 		}
 	}
 

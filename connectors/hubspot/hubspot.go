@@ -384,7 +384,7 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 		objects[i] = connector.Object{
 			ID:         result.ID,
 			Properties: result.Properties,
-			Timestamp:  updatedAt,
+			Timestamp:  updatedAt.UTC(),
 		}
 	}
 
