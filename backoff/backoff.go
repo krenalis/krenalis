@@ -67,10 +67,10 @@ func New(attempts, base int, cap time.Duration) *Backoff {
 	return &Backoff{attempts, float64(base), cap, 0, 0, nil}
 }
 
-// AfterFunc calls f in its own goroutine after the bo.WaitTime() duration, if
-// another attempt can be made, and returns true. Otherwise, returns false.
-// If it returns true, it calls function f even if the context is canceled and
-// does so as soon as possible after cancellation.
+// AfterFunc calls f, if another attempt can be made, in its own goroutine after
+// the bo.WaitTime() duration, and returns true. If no other attempts can be
+// made, it returns false. It calls f even if the context is canceled and does
+// so as soon as possible after cancellation.
 func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) bool {
 	if bo.attempt > 0 {
 		if bo.attempt == bo.attempts {
