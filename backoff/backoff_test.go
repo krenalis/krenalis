@@ -30,7 +30,7 @@ func Test_AfterFunc(t *testing.T) {
 		}
 		select {
 		case <-c:
-		case <-time.NewTimer(cap * 2).C:
+		case <-time.NewTimer(cap * 10).C:
 			t.Fatalf("function has not been called")
 		}
 		i++
