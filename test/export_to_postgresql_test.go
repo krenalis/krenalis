@@ -8,11 +8,12 @@
 package test
 
 import (
+	"context"
+	"testing"
+
 	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
-	"context"
-	"testing"
 )
 
 func TestExportToPostgreSQL(t *testing.T) {
