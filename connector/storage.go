@@ -70,7 +70,7 @@ type OpenStorageFunc[T StorageConnection] func(*StorageConfig) (T, error)
 type StorageConnection interface {
 
 	// CompletePath returns the complete representation of the given path name or an
-	// InvalidPathError if name is not valid for use in calls to Open and Write.
+	// InvalidPathError if name is not valid for use in calls to Reader and Write.
 	//
 	// name's length in runes will be in range [1, 1024].
 	CompletePath(ctx context.Context, name string) (string, error)
