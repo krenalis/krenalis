@@ -249,7 +249,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	err = database.Upsert(ctx, this.action.TableName, rows, columns)
 	_ = database.Close()
 
-	slog.Info("user exported to database", "count", len(users), "table", this.action.TableName)
+	slog.Info("users exported to database", "count", len(users), "table", this.action.TableName)
 
 	return err
 }
