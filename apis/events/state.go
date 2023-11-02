@@ -62,16 +62,6 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 	return eventSt
 }
 
-// Source returns the enabled source connection with the identifier id and true,
-// if it exists, otherwise returns nil and false.
-func (st *eventsState) Source(id int) (*state.Connection, bool) {
-	source, ok := st.state.Connection(id)
-	if ok && source.Enabled && source.Role == state.Source {
-		return source, true
-	}
-	return nil, false
-}
-
 // Destination returns an open connection to the destination with identifier id
 // and true, if such destination has been opened, otherwise returns nil and
 // false.
