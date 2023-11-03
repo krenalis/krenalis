@@ -10,6 +10,8 @@ package events
 import (
 	"context"
 	"log/slog"
+
+	"chichi/connector"
 )
 
 // startSenders starts some senders that read from the events channel and write
@@ -40,7 +42,7 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 					}
 					// TODO(Gianluca): use correct error handling here.
 					err := destination.SendEvent(ctx, event.eventType, event.inEvent, event.mappedEvent)
-					if err != nil {
+					if err != nil && err != connector.ErrEventTypeNotExist {
 						if err != context.Canceled {
 							slog.Error("cannot send event", "err", err)
 						}

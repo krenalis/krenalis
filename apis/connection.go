@@ -1194,7 +1194,15 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	return app.PreviewSendEvent(ctx, eventType, ev.ConnectorEvent(), data)
+	preview, err := app.PreviewSendEvent(ctx, eventType, ev.ConnectorEvent(), data)
+	if err != nil {
+		if err == _connector.ErrEventTypeNotExist {
+			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+		}
+		return nil, err
+	}
+
+	return preview, nil
 }
 
 // Set sets the connection.

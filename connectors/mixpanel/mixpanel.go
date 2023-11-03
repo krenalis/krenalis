@@ -105,7 +105,13 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 
 // PreviewSendEvent returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
+// If the event type does not exist, it returns the ErrEventTypeNotExist error.
 func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
+	switch eventType {
+	case "track", "page", "screen":
+	default:
+		return nil, connector.ErrEventTypeNotExist
+	}
 	var b bytes.Buffer
 	if c.conf.Region == connector.PrivacyRegionEurope {
 		b.WriteString("POST https://api-eu.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
@@ -114,7 +120,7 @@ func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, eve
 	}
 	b.WriteString("Authorization: Basic REDACTED\n")
 	b.WriteString("Content-Type: application/x-ndjson\n\n")
-	body, err := json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
+	body, err := json.MarshalIndent(eventBody(event, data), "", "\t")
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +135,14 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 
 // SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
+// If the event type does not exist, it returns the ErrEventTypeNotExist error.
 func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
-	b, err := json.Marshal(eventBody(eventType, event, data))
+	switch eventType {
+	case "track", "page", "screen":
+	default:
+		return connector.ErrEventTypeNotExist
+	}
+	b, err := json.Marshal(eventBody(event, data))
 	if err != nil {
 		return err
 	}
@@ -240,7 +252,7 @@ func formatTimestamp(t time.Time) string {
 	return ms[:l-3] + "." + ms[l-3:]
 }
 
-func eventBody(eventType string, event *connector.Event, data map[string]any) any {
+func eventBody(event *connector.Event, data map[string]any) any {
 
 	if e := data["event"].(string); e == "" {
 		return errors.New("event cannot be empty")
