@@ -14,7 +14,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -23,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/normalization"
 	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
@@ -347,20 +345,4 @@ func init() {
 		usersTimestamps[u.ID] = time.Now().UTC()
 	}
 	usersLock.Unlock()
-}
-
-func normalize(values map[string]any, schema types.Type) (map[string]any, error) {
-	out := make(map[string]any, len(values))
-	for name, value := range values {
-		prop, ok := schema.Property(name)
-		if !ok {
-			return nil, fmt.Errorf("property %q not found", name)
-		}
-		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable)
-		if err != nil {
-			return nil, err
-		}
-		out[name] = v
-	}
-	return out, nil
 }
