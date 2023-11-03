@@ -594,17 +594,17 @@ inherit the disabled style */
 	color: var(--sl-color-primary-700);
 }
 
-.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted,
+.action .fullscreenTransformation .inputPanel .samples .sample.open,
 .action .fullscreenTransformation .inputPanel .samples .sample:hover {
 	background-color: var(--sl-color-primary-50);
 	color: var(--sl-color-primary-950);
 }
 
-.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .sampleFullName,
+.action .fullscreenTransformation .inputPanel .samples .sample.open .sampleFullName,
 .action .fullscreenTransformation .inputPanel .samples .sample:hover .sampleFullName,
-.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .sampleID,
+.action .fullscreenTransformation .inputPanel .samples .sample.open .sampleID,
 .action .fullscreenTransformation .inputPanel .samples .sample:hover .sampleID,
-.action .fullscreenTransformation .inputPanel .samples .sample.lastExecuted .sampleEmail,
+.action .fullscreenTransformation .inputPanel .samples .sample.open .sampleEmail,
 .action .fullscreenTransformation .inputPanel .samples .sample:hover .sampleEmail {
 	color: var(--sl-color-primary-950);
 }
@@ -693,20 +693,20 @@ inherit the disabled style */
 }
 
 .action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover,
-.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected {
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.open {
 	background-color: var(--sl-color-primary-50);
 }
 
 .action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover,
 .action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover .name,
 .action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover .time,
-.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected,
-.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected .name,
-.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected .time {
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.open,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.open .name,
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.open .time {
 	color: var(--sl-color-primary-950);
 }
 
-.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected:last-child {
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.open:last-child {
 	border-bottom-left-radius: var(--radius);
 }
 
@@ -726,7 +726,7 @@ inherit the disabled style */
 }
 
 .action .fullscreenTransformation .inputPanel .eventListener .eventList .event:hover .runButton,
-.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.selected .runButton {
+.action .fullscreenTransformation .inputPanel .eventListener .eventList .event.lastExecuted .runButton {
 	visibility: visible;
 }
 
@@ -737,6 +737,7 @@ inherit the disabled style */
 
 .action .fullscreenTransformation .inputPanel .eventListener .eventList .eventSource {
 	padding: 20px;
+	background-color: #fafbff;
 }
 
 .action .fullscreenTransformation .outputPanel sl-spinner {

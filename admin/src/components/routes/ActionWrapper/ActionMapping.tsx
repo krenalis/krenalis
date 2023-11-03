@@ -743,6 +743,56 @@ const FullscreenTransformation = ({
 		fetchSamples();
 	}, []);
 
+	useEffect(() => {
+		let el: Element;
+		if (selectedSample == null) {
+			// sample has been closed.
+			el = document.querySelector('.sample.lastExecuted');
+			if (el == null) {
+				// sample has been closed directly by a click on its heading and
+				// not because another sample has been executed.
+				return;
+			}
+		} else {
+			// sample has been closed because another sample has been opened.
+			el = document.querySelector('.sample.open');
+		}
+		const accordion = el.closest('.accordion');
+		const panel = document.querySelector('.leftPanel .inputPanel .panelContent');
+
+		setTimeout(() => {
+			const isVisible = isElementVisibleInLeftPanel(accordion, panel);
+			if (!isVisible) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+			}
+		}, 250);
+	}, [selectedSample]);
+
+	useEffect(() => {
+		let el: Element;
+		if (selectedEvent == null) {
+			// event has been closed.
+			el = document.querySelector('.event.lastExecuted');
+			if (el == null) {
+				// event has been closed directly by a click on its heading and
+				// not because another event has been executed.
+				return;
+			}
+		} else {
+			// event has been closed because another event has been opened.
+			el = document.querySelector('.event.open');
+		}
+		const accordion = el.closest('.accordion');
+		const panel = document.querySelector('.leftPanel .inputPanel .panelContent');
+
+		setTimeout(() => {
+			const isVisible = isElementVisibleInLeftPanel(accordion, panel);
+			if (!isVisible) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+			}
+		}, 250);
+	}, [selectedEvent]);
+
 	const onSelectInputSamples = () => {
 		setIsInputSchemaSelected(false);
 	};
@@ -787,6 +837,9 @@ const FullscreenTransformation = ({
 
 	const onExecuteSample = async (sample: Record<string, any>) => {
 		lastExecutedSample.current = sample;
+		if (JSON.stringify(sample) !== JSON.stringify(selectedSample)) {
+			setSelectedSample(null);
+		}
 		setOutputError('');
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
@@ -820,6 +873,9 @@ const FullscreenTransformation = ({
 
 	const onExecuteEvent = async (event: EventListenerEvent) => {
 		lastExecutedEvent.current = event;
+		if (selectedEvent && event.id !== selectedEvent.id) {
+			setSelectedEvent(null);
+		}
 		setOutputError('');
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
@@ -937,18 +993,16 @@ const FullscreenTransformation = ({
 		inputPanelContent = (
 			<div className='samples'>
 				{Array.from(samples.entries()).map(([i, s]) => {
+					const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
+					const isLastExecuted =
+						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
 					return (
 						<Accordion
 							key={i}
-							isOpen={JSON.stringify(s) === JSON.stringify(selectedSample)}
+							isOpen={isOpen}
 							summary={
 								<div
-									className={`sample${
-										lastExecutedSample.current &&
-										JSON.stringify(lastExecutedSample.current) === JSON.stringify(s)
-											? ' lastExecuted'
-											: ''
-									}`}
+									className={`sample${isOpen ? ' open' : ''}${isLastExecuted ? ' lastExecuted' : ''}`}
 									onClick={(e) => onSampleClick(e, s)}
 								>
 									<div className='sampleName'>
@@ -1025,14 +1079,18 @@ const FullscreenTransformation = ({
 							</div>
 						)}
 						{reversedEvents.map((e) => {
+							const isOpen = selectedEvent && selectedEvent.id === e.id;
+							const isLastExecuted =
+								lastExecutedEvent.current &&
+								JSON.stringify(lastExecutedEvent.current) === JSON.stringify(e);
 							return (
 								<Accordion
 									key={e.id}
 									isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
 									summary={
 										<div
-											className={`event${
-												selectedEvent && selectedEvent.id === e.id ? ' selected' : ''
+											className={`event${isOpen ? ' open' : ''}${
+												isLastExecuted ? ' lastExecuted' : ''
 											}`}
 											onClick={(evt) => onEventClick(evt, e)}
 										>
@@ -1414,5 +1472,18 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 		</div>
 	);
 };
+
+function isElementVisibleInLeftPanel(element: Element, container: Element) {
+	const elementRect = element.getBoundingClientRect();
+	const containerRect = container.getBoundingClientRect();
+
+	const elementTop = elementRect.top;
+	const elementBottom = elementRect.bottom;
+	const containerTop = containerRect.top + container.scrollTop;
+	const containerBottom = containerTop + container.clientHeight;
+
+	const isVerticallyVisible = elementTop >= containerTop && elementBottom <= containerBottom;
+	return isVerticallyVisible;
+}
 
 export default ActionMapping;
