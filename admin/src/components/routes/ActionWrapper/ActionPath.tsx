@@ -107,7 +107,7 @@ const ActionPath = () => {
 		getCompletePathTimeoutID.current = window.setTimeout(async () => {
 			let res: CompletePathResponse;
 			try {
-				res = await api.workspaces.connections.completePath(connection.storage, path);
+				res = await api.workspaces.connections.completePath(connection.id, path);
 			} catch (err) {
 				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
 					setCompletePathError(err.message);

@@ -589,13 +589,14 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 }
 
 // CompletePath returns the complete representation of the given path, based
-// on the connector that must be a storage. path cannot be empty, cannot be
-// longer than 1024 runes, and must be UTF-8 encoded.
+// on the connector that must be a file with a storage. path cannot be empty,
+// cannot be longer than 1024 runes, and must be UTF-8 encoded.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - InvalidPath, if path is not valid for the storage connector.
 //   - InvalidInvalidPlaceholders, if path for destination connections contains
 //     invalid placeholders.
+//   - NoStorage, if the connection does not have a storage.
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
 	if path == "" {
@@ -609,8 +610,11 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	}
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.StorageType {
-		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
+	if connector.Type != state.FileType {
+		return "", errors.BadRequest("connection %d is not a file connection", c.ID)
+	}
+	if _, ok := c.Storage(); !ok {
+		return "", errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
 	}
 	storage, err := this.openStorage()
 	if err != nil {
