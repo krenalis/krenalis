@@ -86,8 +86,8 @@ type Mapping struct {
 // transformation.
 func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Transformer, formatTime bool) (*Mapping, error) {
 
-	if !inSchema.Valid() || !outSchema.Valid() {
-		return nil, errors.New("input or output schema is not valid")
+	if !outSchema.Valid() {
+		return nil, errors.New("output schema is not valid")
 	}
 
 	m := Mapping{
