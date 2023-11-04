@@ -24,14 +24,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Marshal encodes values, based on the schema of their elements, which must be
-// an Object, into a JavaScript array or a Python list, and appends it to b. The
-// resulting value can be included in a JSON string without escaping.
+// Marshal encodes values, based on the schema of their elements into a
+// JavaScript array or a Python list, and appends it to b. The resulting value
+// can be included in a JSON string without escaping.
+//
+// schema must be an Object or invalid. If it is invalid, values is marshaled as
+// an array of empty objects.
 func Marshal(b []byte, schema types.Type, values []map[string]any, language state.Language) ([]byte, error) {
-	if !schema.Valid() {
-		return nil, errors.New("apis/transformers: schema is not valid")
-	}
-	if schema.PhysicalType() != types.PtObject {
+	if schema.Valid() && schema.PhysicalType() != types.PtObject {
 		return nil, errors.New("apis/transformers: schema is not an object")
 	}
 	var marshal func([]byte, types.Type, any) ([]byte, error)
@@ -49,9 +49,13 @@ func Marshal(b []byte, schema types.Type, values []map[string]any, language stat
 		if i > 0 {
 			b = append(b, ',')
 		}
-		b, err = marshal(b, schema, v)
-		if err != nil {
-			return nil, err
+		if schema.Valid() && len(v) > 0 {
+			b, err = marshal(b, schema, v)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			b = append(b, "{}"...)
 		}
 		i++
 	}

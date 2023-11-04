@@ -145,7 +145,8 @@ var pythonDecoderOptions = decoderOptions{
 }
 
 // Unmarshal decodes a JSON array of objects read from r, validating it
-// according to the schema of its elements, which must be an Object.
+// according to the schema of its elements, which must be an Object or invalid.
+// An invalid schema is treated as an object with no properties.
 //
 // It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
 // valid JSON or does not conform to the expected structure.
@@ -202,10 +203,7 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 	if r == nil {
 		return nil, errors.New("apis/transformers: r is nil")
 	}
-	if !schema.Valid() {
-		return nil, errors.New("apis/transformers: schema is not valid")
-	}
-	if schema.PhysicalType() != types.PtObject {
+	if schema.Valid() && schema.PhysicalType() != types.PtObject {
 		return nil, errors.New("apis/transformers: schema is not an object")
 	}
 	d := decoder{dec: jsontext.NewDecoder(r)}
@@ -380,7 +378,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 			return nil, err
 		}
 		switch t.PhysicalType() {
-		case types.PtObject:
+		case types.PtObject, types.PtInvalid:
 			o := map[string]any{}
 			for {
 				if d.peekKind() == '}' {
@@ -393,6 +391,9 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				}
 				name := tok.String()
 				if !types.IsValidPropertyPath(name) {
+					return nil, newErrPropertyNotExist(name, d.opts.terms)
+				}
+				if !t.Valid() {
 					return nil, newErrPropertyNotExist(name, d.opts.terms)
 				}
 				p, ok := t.Property(name)
@@ -419,10 +420,12 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				}
 				o[name] = value
 			}
-			for _, p := range t.Properties() {
-				if p.Required {
-					if _, ok := o[p.Name]; !ok {
-						return nil, newErrMissingProperty(p.Name, d.opts.terms)
+			if t.Valid() {
+				for _, p := range t.Properties() {
+					if p.Required {
+						if _, ok := o[p.Name]; !ok {
+							return nil, newErrMissingProperty(p.Name, d.opts.terms)
+						}
 					}
 				}
 			}

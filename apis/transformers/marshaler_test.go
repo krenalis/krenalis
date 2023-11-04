@@ -210,6 +210,17 @@ func Test_MarshalJavaScript(t *testing.T) {
 			result: []byte(`[{Boolean:true,Int:1307298102,Int8:-12,Int16:8023,Int24:-2880217,Int64:927041163082605n,UInt:1307298102,UInt8:12,UInt16:8023,UInt24:2880217,UInt64:927041163082605n,Float:18372.36240184391,Float32:57.16038,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_nil:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
 		},
 		{
+			name:   "Empty values",
+			values: []map[string]any{{}, {}, {}},
+			result: []byte(`[{},{},{}]`),
+		},
+		{
+			name:   "Invalid schema",
+			schema: types.Type{},
+			values: []map[string]any{{"foo": 4}, {}, {"boo": true}},
+			result: []byte(`[{},{},{}]`),
+		},
+		{
 			name: "Text encoding",
 			schema: types.Object([]types.Property{
 				{

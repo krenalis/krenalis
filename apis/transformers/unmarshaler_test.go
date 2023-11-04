@@ -202,6 +202,7 @@ func Test_Unmarshal(t *testing.T) {
 
 	tests := []struct {
 		language     state.Language
+		schema       types.Type
 		timeTruncate time.Duration
 		data         string
 		results      []Result
@@ -209,142 +210,174 @@ func Test_Unmarshal(t *testing.T) {
 	}{
 		{
 			language:     state.JavaScript,
+			schema:       schema,
 			timeTruncate: time.Millisecond,
 			data:         `[{"value":{"Boolean":true,"Int":1307298102,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int64":"927041163082605","UInt":1307298102,"UInt8":12,"UInt16":8023,"UInt24":2880217,"UInt64":"927041163082605","Float":18372.36240184391,"Float32":57.16038,"Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
 			results:      results,
 		},
 		{
 			language:     state.Python,
+			schema:       schema,
 			timeTruncate: time.Microsecond,
 			data:         `[{"value":{"Boolean":true,"Int":1307298102,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int64":927041163082605,"UInt":1307298102,"UInt8":12,"UInt16":8023,"UInt24":2880217,"UInt64":927041163082605,"Float":18372.36240184391,"Float32":57.16038,"Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
 			results:      results,
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     ``,
 			err:      ErrSyntaxInvalid,
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[]`,
 			results:  []Result{},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[5]`,
 			err:      ErrSyntaxInvalid,
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":}}]`,
 			err:      ErrSyntaxInvalid,
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":true`,
 			err:      ErrSyntaxInvalid,
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Object":{"c":5}}}]`,
 			results:  []Result{{Error: newErrPropertyNotExist("Object.c", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Object":{"b":true}}}]`,
 			results:  []Result{{Error: newErrMissingProperty("Object.a", pyTerms)}},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Object":{"b":3}}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: 3`, "Object.b", jsTerms)}},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Int8":21}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`is out of range [-20, 20]: 21`, "Int8", jsTerms)}},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Int8":-25}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`is out of range [-20, 20]: -25`, "Int8", jsTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":"a \" \\ b"}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: "a \" \\ b"`, "Boolean", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":null}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`cannot be None`, "Boolean", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Date":"2023-02-30"}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: "2023-02-30"`, "Date", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Text":"some long text"}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`is longer than 10 characters: "some long text"`, "Text", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Text_values":"c"}}]`,
 			results:  []Result{{Value: map[string]any{"Text_values": "c"}}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Text_values":"foo"}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`has an invalid value: "foo"; valid values are "a", "b", and "c"`, "Text_values", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Text_regexp":"foo"}}]`,
 			results:  []Result{{Value: map[string]any{"Text_regexp": "foo"}}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Text_regexp":"faa"}}]`,
 			results:  []Result{{Error: newErrInvalidValue(fmt.Sprintf(`has an invalid value: "faa"; it does not match the property's regular expression`), "Text_regexp", pyTerms)}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{}},{"value":{}}]`,
 			results:  []Result{{Value: map[string]any{}}, {Value: map[string]any{}}},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":true}},{"value":{"Int":547}}]`,
 			results:  []Result{{Value: map[string]any{"Boolean": true}}, {Value: map[string]any{"Int": 547}}},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"foo":"boo"}},{"value":{"Int":547}}]`,
 			results:  []Result{{Error: newErrPropertyNotExist("foo", jsTerms)}, {Value: map[string]any{"Int": 547}}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Object":{}}},{"value":{"Int":547}}]`,
 			results:  []Result{{Error: newErrMissingProperty("Object.a", pyTerms)}, {Value: map[string]any{"Int": 547}}},
 		},
 		{
 			language: state.JavaScript,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":3}},{"value":{"Int":547}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: 3`, "Boolean", jsTerms)}, {Value: map[string]any{"Int": 547}}},
 		},
 		{
 			language: state.Python,
+			schema:   schema,
 			data:     `[{"value":{"Boolean":3}},{"value":{"Object":{}}}]`,
 			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: 3`, "Boolean", pyTerms)}, {Error: newErrMissingProperty("Object.a", pyTerms)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   types.Type{},
+			data:     `[{"value":{}},{"value":{"foo":5}}]`,
+			results:  []Result{{Value: map[string]any{}}, {Error: newErrPropertyNotExist("foo", jsTerms)}},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.language.String(), func(t *testing.T) {
 			b := strings.NewReader(test.data)
-			got, err := Unmarshal(b, schema, test.language)
+			got, err := Unmarshal(b, test.schema, test.language)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Unmarshal: expected no error, got error %s", err)
