@@ -224,7 +224,7 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	var properties = mapping.PropertiesNames()
+	properties := this.action.InSchema.PropertiesNames()
 
 	var eof bool
 
@@ -241,8 +241,6 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", connector.ID)}
 		}
 
-		inSchemaProps := this.action.InSchema.PropertiesNames()
-
 		for _, user := range users {
 
 			if user.Err != nil {
@@ -250,8 +248,8 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 			}
 
 			// Take only the necessary properties.
-			props := make(map[string]any, len(inSchemaProps))
-			for _, name := range inSchemaProps {
+			props := make(map[string]any, len(properties))
+			for _, name := range properties {
 				if v, ok := user.Properties[name]; ok {
 					props[name] = v
 				}
