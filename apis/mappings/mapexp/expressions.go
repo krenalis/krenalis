@@ -81,13 +81,14 @@ type part struct {
 
 // Compile parses a map expression and returns an Expression value that can be
 // used to execute the expression. schema is the schema of the paths in the
-// expression, dt is the destination type, and nullable indicates whether
-// the result value of the evaluation can be nil.
+// expression, dt is the destination type, and nullable indicates whether the
+// result value of the evaluation can be nil.
+// An invalid schema can be passed to compile an expression without paths.
 func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
-	if schema.PhysicalType() != types.PtObject {
+	if schema.Valid() && schema.PhysicalType() != types.PtObject {
 		return nil, errors.New("schema is non an object")
 	}
 	if !dt.Valid() {

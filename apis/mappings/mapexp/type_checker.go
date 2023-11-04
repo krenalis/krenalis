@@ -16,6 +16,7 @@ import (
 // typeCheck type checks the expression expr. schema is the schema of the
 // properties in the expression, dt is the destination type, and nullable
 // indicates whether the result value of the evaluation can be nil.
+// An invalid schema can be passed to type check an expression without paths.
 func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 
 	typ := dt
@@ -38,7 +39,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 				switch t.PhysicalType() {
 				case types.PtJSON:
 					p.path[j] = ":" + name
-				case types.PtObject:
+				case types.PtObject, types.PtInvalid:
 					if name[len(name)-1] == '?' {
 						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
 					}
@@ -48,7 +49,11 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 							return fmt.Errorf("invalid %s: %q is not a valid property name", stringifyPath(p.path[:j+1]), name)
 						}
 					}
-					property, ok := t.Property(name)
+					var property types.Property
+					var ok bool
+					if t.Valid() {
+						property, ok = t.Property(name)
+					}
 					if !ok {
 						if len(p.path) == 1 {
 							return fmt.Errorf("property %q does not exist", name)

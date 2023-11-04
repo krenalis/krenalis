@@ -326,6 +326,28 @@ func TestCompile(t *testing.T) {
 
 }
 
+func TestInvalidSchema(t *testing.T) {
+
+	tests := []struct {
+		expr string
+		dt   types.Type
+	}{
+		{expr: "''", dt: types.Text()},
+		{expr: "5", dt: types.Int()},
+		{expr: "eq(2, 2)", dt: types.Boolean()},
+	}
+
+	for _, test := range tests {
+		t.Run(test.expr, func(t *testing.T) {
+			_, err := Compile(test.expr, types.Type{}, test.dt, false)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+		})
+	}
+
+}
+
 func TestPropertyPaths(t *testing.T) {
 
 	schema := types.Object([]types.Property{
