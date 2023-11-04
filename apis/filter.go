@@ -192,7 +192,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		}
 		properties[i] = path
 	}
-	return nil, nil
+	return properties, nil
 }
 
 // convertFilterToExpr converts a well-formed filter to an expr.Expr expression.
