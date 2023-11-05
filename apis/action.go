@@ -266,18 +266,33 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // more details.
 //
 // It returns an errors.UnprocessableError error with code
+//   - EventTypeNotExist, if the event type does not exist anymore for the
+//     connection.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
+
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
-	err := this.connection.validateActionToSet(ctx, action, this.action.Target, this.action.EventType)
+
+	// Validate the action.
+	var eventTypeSchema types.Type
+	if this.action.EventType != "" {
+		var err error
+		eventTypeSchema, err = this.connection.fetchAppSchema(ctx, this.action.Target, this.action.EventType)
+		if err != nil {
+			return err
+		}
+	}
+	err := this.connection.validateActionToSet(action, this.action.Target, eventTypeSchema)
 	if err != nil {
 		return err
 	}
+
 	span.Log("action validated successfully")
+
 	n := state.SetAction{
 		ID:                this.action.ID,
 		Name:              action.Name,
@@ -303,6 +318,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			n.Transformation.Language = state.Python
 		}
 	}
+
 	// Add the filter to the notification and marshal it.
 	var filter []byte
 	if action.Filter != nil {

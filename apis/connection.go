@@ -125,6 +125,12 @@ type ActionSchemas struct {
 
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
+//
+// It returns an errors.UnprocessableError error with code
+//   - EventTypeNotExist, if the event type does not exist for the connection.
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
+//   - NoGroupsSchema, if the data warehouse does not have groups schema.
+//   - NoUsersSchema, if the data warehouse does not have users schema.
 func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
 
 	this.apis.mustBeOpen()
@@ -132,29 +138,13 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.ActionSchemas", "target", target, "eventType", eventType)
 	defer span.End()
 
-	connector := this.connection.Connector()
-	role := _connector.Role(this.connection.Role)
-
-	// Validate the target.
-	switch target {
-	case Users, Groups, Events:
-		ok := allowsActionTarget(connector.Type, role, state.Target(target))
-		if !ok {
-			return nil, errors.NotFound("target not supported")
-		}
-	default:
-		return nil, errors.BadRequest("invalid target")
-	}
-	if !connector.Targets.Contains(state.Target(target)) {
-		return nil, errors.NotFound("connection does not support %s", target)
+	// Validate the target and the event type.
+	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
+	if err != nil {
+		return nil, err
 	}
 
-	// Validate the event type.
-	if target != Events && eventType != "" {
-		return nil, errors.NotFound("%s target does not support event types", target)
-	}
-
-	switch connector.Type {
+	switch connector := this.connection.Connector(); connector.Type {
 
 	case state.AppType:
 		switch target {
@@ -191,31 +181,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return &ActionSchemas{In: grSchema.Unflatten(), Out: appSchema}, nil
 			}
 		case Events:
-			if eventType == "" {
-				return nil, errors.NotFound("an event type is required")
-			}
-			eventTypes, err := this.fetchEventTypes(ctx)
-			if err != nil {
-				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
-			var et *_connector.EventType
-			for _, e := range eventTypes {
-				if e.ID == eventType {
-					et = e
-					break
-				}
-			}
-			if et == nil {
-				return nil, errors.Unprocessable(EventTypeNotExist, "event type %q not found", eventType)
-			}
-			etSchema, err := this.fetchAppSchema(ctx, state.Events, eventType)
-			if err != nil {
-				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
-			// Note that etSchema may be invalid.
-			return &ActionSchemas{In: events.Schema.Unflatten(), Out: etSchema}, nil
-		default:
-			panic("unexpected target")
+			return &ActionSchemas{In: events.Schema.Unflatten(), Out: eventTypeSchema}, nil
 		}
 
 	case state.DatabaseType:
@@ -252,8 +218,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				in := groups.Unflatten()
 				return &ActionSchemas{In: in}, nil
 			}
-		default:
-			panic("unexpected target")
 		}
 
 	case state.FileType:
@@ -290,8 +254,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				in := groups.Unflatten()
 				return &ActionSchemas{In: in}, nil
 			}
-		default:
-			panic("unexpected target")
 		}
 
 	case state.MobileType, state.ServerType, state.StreamType, state.WebsiteType:
@@ -316,11 +278,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		}
 		return &ActionSchemas{}, nil
 
-	default:
-		panic("unexpected connection type")
-
 	}
 
+	panic("unreachable code")
 }
 
 // AddAction adds action to the connection returning the identifier of the
@@ -333,6 +293,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
 //   - ConnectionNotExist, if the connection does not exist.
+//   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
@@ -345,36 +306,21 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.AddAction", "target", target, "eventType", eventType)
 	defer span.End()
 
-	c := this.connection
-	connector := c.Connector()
-
 	// Validate the target and the event type.
-	switch target {
-	case Events:
-	case Users, Groups:
-		if eventType != "" {
-			return 0, errors.BadRequest("users and groups actions cannot have an event type")
-		}
-	default:
-		return 0, errors.BadRequest("target %d is not valid", int(target))
-	}
-
-	// Check if the connection, with its connector type and role, allows the
-	// given target.
-	ok := allowsActionTarget(connector.Type, _connector.Role(c.Role), state.Target(target))
-	if !ok {
-		return 0, errors.BadRequest("target %q is not supported", target)
-	}
-
-	// Validate the arguments.
-	err := this.validateActionToSet(ctx, action, state.Target(target), eventType)
+	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
 	if err != nil {
 		return 0, err
 	}
+
+	// Validate the action.
+	if err := this.validateActionToSet(action, state.Target(target), eventTypeSchema); err != nil {
+		return 0, err
+	}
+
 	span.Log("action validated successfully")
 
 	n := state.AddAction{
-		Connection:        c.ID,
+		Connection:        this.connection.ID,
 		Target:            state.Target(target),
 		Name:              action.Name,
 		Enabled:           action.Enabled,
@@ -474,7 +420,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		switch n.Target {
 		case state.Events:
-			switch typ := c.Connector().Type; typ {
+			switch typ := this.connection.Connector().Type; typ {
 			case state.MobileType, state.ServerType, state.WebsiteType:
 				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != sql.ErrNoRows {
@@ -2144,7 +2090,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 // and eventType.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - EventTypeNotExist, if the event type does not exist.
+//   - EventTypeNotExist, if the event type does not exist for the connection.
 func (this *Connection) fetchAppSchema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
 
 	app, err := this.openApp()
@@ -2240,7 +2186,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
-func (this *Connection) validateActionToSet(ctx context.Context, action ActionToSet, target state.Target, eventType string) error {
+func (this *Connection) validateActionToSet(action ActionToSet, target state.Target, eventTypeSchema types.Type) error {
 
 	// First, do formal validations.
 
@@ -2533,11 +2479,7 @@ func (this *Connection) validateActionToSet(ctx context.Context, action ActionTo
 	switch connector.Type {
 	case state.AppType:
 		if c.Role == state.Destination && target == state.Events {
-			schema, err := this.fetchAppSchema(ctx, target, eventType)
-			if err != nil {
-				return err
-			}
-			mappingIsMandatory = schema.Valid()
+			mappingIsMandatory = eventTypeSchema.Valid()
 			transformationIsAllowed = true
 		} else {
 			mappingIsMandatory = targetUsersOrGroups
@@ -2590,32 +2532,6 @@ type ConnectionToSet struct {
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
 	WebsiteHost string
-}
-
-// allowsActionTarget reports whether a connection with the given connector type
-// and role supports an action with the given target.
-//
-// Refer to the specifications in the file "connector/Actions support.md" for
-// more details.
-func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target state.Target) bool {
-	isSource := role == _connector.Source
-	usersOrGroups := target == state.Users || target == state.Groups
-	switch typ {
-	case state.AppType:
-		return !isSource || (isSource && usersOrGroups)
-	case state.DatabaseType:
-		return usersOrGroups
-	case state.FileType:
-		return usersOrGroups
-	case
-		state.MobileType,
-		state.ServerType,
-		state.StreamType,
-		state.WebsiteType:
-		return isSource
-	default:
-		return false
-	}
 }
 
 const noQueryLimit = -1
@@ -2722,6 +2638,70 @@ func unmappedProperties(schema types.Type, mapped []types.Path) []string {
 	props := maps.Keys(notMapped)
 	slices.Sort(props)
 	return props
+}
+
+// validateTargetAndEventType validates a target and an event type and, if the
+// event type is not empty, it returns its schema. It returns an
+// errors.BadRequestError error if target or eventType is not valid, or the
+// connection does not support them, and returns an errors.UnprocessableError
+// error with code EventTypeNotExist if the connections does not have the given
+// event type.
+func (this *Connection) validateTargetAndEventType(ctx context.Context, target Target, eventType string) (types.Type, error) {
+	// Perform a formal validation.
+	if target != Users && target != Groups && target != Events {
+		return types.Type{}, errors.BadRequest("target %d is not valid", int(target))
+	}
+	if eventType != "" && target != Events {
+		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
+	}
+	// Perform a validation based on the connection's type and role.
+	// (Refer to the specifications in the file "connector/Actions support.md" for more details)
+	c := this.connection
+	connector := c.Connector()
+	var supported bool
+	switch connector.Type {
+	case state.AppType:
+		supported = c.Role == state.Destination || target != Events
+	case state.DatabaseType, state.FileType:
+		supported = target != Events
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		supported = c.Role == state.Source
+	case state.StreamType:
+		supported = false
+	}
+	if !supported {
+		return types.Type{}, errors.BadRequest("%s are not supported by %s connections", strings.ToLower(target.String()), connector.Type)
+	}
+	if target == Events {
+		if c.Role == state.Source && eventType != "" {
+			return types.Type{}, errors.BadRequest("source connections do not have an event type")
+		}
+		if c.Role == state.Destination && eventType == "" {
+			return types.Type{}, errors.BadRequest("destination connections want an event type")
+		}
+	}
+	// Check if the target is supported by the connection.
+	if !connector.Targets.Contains(state.Target(target)) {
+		return types.Type{}, errors.BadRequest("connection %d does not support %s target", c.ID, target)
+	}
+	// Check if the event type is supported by the connection.
+	if eventType != "" {
+		app, err := this.openAppEvents()
+		if err != nil {
+			return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
+		}
+		tt, err := app.EventTypes(ctx)
+		if err != nil {
+			return types.Type{}, err
+		}
+		for _, t := range tt {
+			if t.ID == eventType {
+				return t.Schema, nil
+			}
+		}
+		return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+	}
+	return types.Type{}, nil
 }
 
 // webhookURL returns the URL of the webhook for the given connection and
