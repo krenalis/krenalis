@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -268,6 +269,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // It returns an errors.UnprocessableError error with code
 //   - EventTypeNotExist, if the event type does not exist anymore for the
 //     connection.
+//   - FetchSchemaFailed, if an error occurred fetching the event type schema.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
@@ -277,16 +279,21 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
 
+	c := this.action.Connection()
+
 	// Validate the action.
 	var eventTypeSchema types.Type
+	var err error
 	if this.action.EventType != "" {
-		var err error
-		eventTypeSchema, err = this.connection.fetchAppSchema(ctx, this.action.Target, this.action.EventType)
+		eventTypeSchema, err = this.app().Schema(ctx, c.Role, state.Events, this.action.EventType)
 		if err != nil {
-			return err
+			if err == connectors.ErrEventTypeNotExist {
+				return errors.Unprocessable(EventTypeNotExist, "connection %d no longer has the event type %q", c.ID, this.action.EventType)
+			}
+			return errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the event type schema: %w", err)
 		}
 	}
-	err := this.connection.validateActionToSet(action, this.action.Target, eventTypeSchema)
+	err = this.connection.validateActionToSet(action, this.action.Target, eventTypeSchema)
 	if err != nil {
 		return err
 	}
@@ -516,17 +523,34 @@ func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
 	return err
 }
 
+// app returns the app of the action.
+func (this *Action) app() *connectors.App {
+	return this.apis.connectors.App(this.action.Connection())
+}
+
+// database returns the database of the action.
+// The caller must call the database's Close method when the database is no
+// longer needed.
+func (this *Action) database() *connectors.Database {
+	return this.apis.connectors.Database(this.action.Connection())
+}
+
 // isLanguageSupported reports whether the transformation language of the action
 // is supported. If the action does not have a transformation, it returns true.
-func (a *Action) isLanguageSupported() bool {
-	transformation := a.action.Transformation
+func (this *Action) isLanguageSupported() bool {
+	transformation := this.action.Transformation
 	if transformation == nil {
 		return true
 	}
-	if a.apis.transformer != nil && a.apis.transformer.SupportLanguage(transformation.Language) {
+	if this.apis.transformer != nil && this.apis.transformer.SupportLanguage(transformation.Language) {
 		return true
 	}
 	return false
+}
+
+// file returns the file of the action.
+func (this *Action) file() *connectors.File {
+	return this.apis.connectors.File(this.action.Connection())
 }
 
 // ActionToSet represents an action to set in a connection, by adding a new

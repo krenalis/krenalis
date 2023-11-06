@@ -144,7 +144,7 @@ type eventContext struct {
 }
 
 // ConnectorEvent returns event as a connector event to be passed as an
-// argument to the SendEvent and SendEventPreview methods of an app connector.
+// argument to the SendEvent and PreviewSendEvent methods of an app connector.
 func (event *collectedEvent) ConnectorEvent() *connector.Event {
 	// Keep in sync with the connector.Event type.
 	groupId := event.GroupId

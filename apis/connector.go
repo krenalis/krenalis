@@ -11,11 +11,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	"chichi/apis/errors"
 	"chichi/apis/state"
-	_connector "chichi/connector"
 )
 
 // Connector represents a connector.
@@ -149,66 +147,5 @@ func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 	if this.connector.OAuth == nil {
 		return "", errors.BadRequest("connector %d does not support OAuth", this.connector.ID)
 	}
-	return this.apis.http.AuthCodeURL(this.connector.OAuth, redirectURI)
-}
-
-// openUI opens the UI of the connector, and returns the UI or nil if the
-// connector does not have the UI.
-//
-// If the returned value implements the io.Close interface, it is the caller's
-// responsibility to call the Close method
-func (this *Connector) openUI(role Role, resource, clientSecret, accessToken string, region state.PrivacyRegion) (_connector.UI, error) {
-	var err error
-	var connection any
-	switch c := this.connector; c.Type {
-	case state.AppType:
-		connection, err = _connector.RegisteredApp(c.Name).New(&_connector.AppConfig{
-			Role:       _connector.Role(role),
-			Resource:   resource,
-			HTTPClient: this.apis.http.Client(clientSecret, accessToken),
-			Region:     _connector.PrivacyRegion(region),
-		})
-	case state.DatabaseType:
-		var database _connector.DatabaseConnection
-		database, err = _connector.RegisteredDatabase(c.Name).New(&_connector.DatabaseConfig{
-			Role: _connector.Role(role),
-		})
-		defer database.Close()
-		connection = database
-	case state.FileType:
-		connection, err = _connector.RegisteredFile(c.Name).New(&_connector.FileConfig{
-			Role: _connector.Role(role),
-		})
-	case state.MobileType:
-		connection, err = _connector.RegisteredMobile(c.Name).New(&_connector.MobileConfig{
-			Role: _connector.Role(role),
-		})
-	case state.ServerType:
-		connection, err = _connector.RegisteredServer(c.Name).New(&_connector.ServerConfig{
-			Role: _connector.Role(role),
-		})
-	case state.StorageType:
-		connection, err = _connector.RegisteredStorage(c.Name).New(&_connector.StorageConfig{
-			Role: _connector.Role(role),
-		})
-	case state.StreamType:
-		connection, err = _connector.RegisteredStream(c.Name).New(&_connector.StreamConfig{
-			Role: _connector.Role(role),
-		})
-	case state.WebsiteType:
-		connection, err = _connector.RegisteredWebsite(c.Name).New(&_connector.WebsiteConfig{
-			Role: _connector.Role(role),
-		})
-	}
-	if err != nil {
-		return nil, err
-	}
-	connectorUI, ok := connection.(_connector.UI)
-	if !ok {
-		if c, ok := connection.(io.Closer); ok {
-			_ = c.Close()
-		}
-		return nil, nil
-	}
-	return connectorUI, nil
+	return this.apis.connectors.AuthorizationEndpoint(this.connector, redirectURI)
 }

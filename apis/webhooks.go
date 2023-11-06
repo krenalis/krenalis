@@ -9,7 +9,6 @@ package apis
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,8 +17,8 @@ import (
 	"regexp"
 	"strconv"
 
+	"chichi/apis/connectors"
 	"chichi/apis/state"
-	_connector "chichi/connector"
 )
 
 // WebhooksPer values indicates if webhooks are per connector, resource or
@@ -99,13 +98,13 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 	err := apis.receiveWebhook(r)
 	if err != nil {
 		switch err {
-		case errBadRequest:
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
 		case errNotFound:
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
-		case _connector.ErrWebhookUnauthorized:
+		case connectors.ErrNoWebhooks:
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		case connectors.ErrWebhookUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -116,90 +115,48 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-var webhookPathReg = regexp.MustCompile(`^/webhook/([crs])/([^/]+)/`)
+var webhookPathReg = regexp.MustCompile(`^/webhook/([scr])/([^/]+)/`)
 
 // receiveWebhook receives a webhook.
-func (apis *APIs) receiveWebhook(r *http.Request) error {
-	m := webhookPathReg.FindStringSubmatch(r.URL.Path)
+func (apis *APIs) receiveWebhook(req *http.Request) error {
+	m := webhookPathReg.FindStringSubmatch(req.URL.Path)
 	if m == nil {
-		return errBadRequest
+		return errNotFound
 	}
-	var connector *state.Connector
-	conf := _connector.AppConfig{
-		Role: _connector.Source,
-	}
+	var events []connectors.WebhookPayload
+	var err error
 	switch m[1] {
-	case "c":
-		id, _ := strconv.Atoi(m[2])
-		if id < 1 || id > maxInt32 {
-			return errBadRequest
-		}
-		var ok bool
-		connector, ok = apis.state.Connector(id)
-		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
-			return errNotFound
-		}
-	case "r":
-		id, _ := strconv.Atoi(m[2])
-		if id < 1 || id > maxInt32 {
-			return errBadRequest
-		}
-		var resource *state.Resource
-	Resource:
-		for _, a := range apis.state.Accounts() {
-			for _, ws := range a.Workspaces() {
-				if r, ok := ws.Resource(id); ok {
-					connector = r.Connector()
-					resource = r
-					break Resource
-				}
-			}
-		}
-		if connector == nil || connector.WebhooksPer != state.WebhooksPerResource {
-			return errNotFound
-		}
-		conf.Resource = resource.Code
-		if connector.OAuth != nil {
-			conf.HTTPClient = apis.http.Client(connector.OAuth.ClientSecret, resource.AccessToken)
-		}
-		conf.Region = _connector.PrivacyRegion(resource.Workspace().PrivacyRegion)
 	case "s":
 		id, _ := strconv.Atoi(m[2])
 		if id < 1 || id > maxInt32 {
 			return errBadRequest
 		}
-		var connection *state.Connection
-	Connection:
-		for _, a := range apis.state.Accounts() {
-			for _, ws := range a.Workspaces() {
-				if c, ok := ws.Connection(id); ok {
-					connection = c
-					break Connection
-				}
-			}
-		}
-		if connection == nil {
+		connection, ok := apis.state.Connection(id)
+		if !ok {
 			return errNotFound
 		}
-		connector = connection.Connector()
-		if connector.WebhooksPer != state.WebhooksPerConnection {
+		events, err = apis.connectors.ReceivePerConnectionWebhook(connection, req)
+	case "c":
+		id, _ := strconv.Atoi(m[2])
+		if id < 1 || id > maxInt32 {
 			return errNotFound
 		}
-		conf.Settings = connection.Settings
-		conf.SetSettings = func(ctx context.Context, settings []byte) error {
-			return setSettings(ctx, apis.db, id, settings)
+		connector, ok := apis.state.Connector(id)
+		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
+			return errNotFound
 		}
-		if r, ok := connection.Resource(); ok {
-			conf.Resource = r.Code
+		events, err = apis.connectors.ReceivePerConnectorWebhook(connector, req)
+	case "r":
+		id, _ := strconv.Atoi(m[2])
+		if id < 1 || id > maxInt32 {
+			return errBadRequest
 		}
-		conf.HTTPClient = apis.http.ConnectionClient(connection.ID)
-		conf.Region = _connector.PrivacyRegion(connection.Workspace().PrivacyRegion)
+		resource, ok := apis.state.Resource(id)
+		if !ok {
+			return errNotFound
+		}
+		events, err = apis.connectors.ReceivePerResourceWebhook(resource, req)
 	}
-	connection, err := _connector.RegisteredApp(connector.Name).New(&conf)
-	if err != nil {
-		return err
-	}
-	events, err := connection.(_connector.AppUsersConnection).ReceiveWebhook(r)
 	if err != nil {
 		return err
 	}

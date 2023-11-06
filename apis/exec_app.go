@@ -17,19 +17,24 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/connector"
+	"chichi/connector/types"
 )
 
 // downloadUsersForIdentityMatch downloads the users of the external app for
 // resolving the external identity.
 func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 
-	app, err := this.connection.openAppUsers()
+	// Create a schema with only the matching property.
+	sourceSchema, err := this.app().Schema(ctx, state.Source, state.Users, "")
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
+		return err
 	}
-
-	// Read the users from the app.
-	properties := []string{this.action.MatchingProperties.External}
+	externalPropName := this.action.MatchingProperties.External
+	property, ok := sourceSchema.Property(externalPropName)
+	if !ok {
+		return fmt.Errorf("external matching property %q does not exist anymore in the app schema", externalPropName)
+	}
+	schema := types.Object([]types.Property{property})
 
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
@@ -38,11 +43,12 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 	c := this.connection
 
 	var eof bool
+	app := this.app()
 
 	// Importing users from a destination to match identities for the export.
 	for !eof {
 
-		users, next, err := app.Users(ctx, properties, cursor)
+		users, next, err := app.Users(ctx, schema, cursor)
 		if err != nil && err != io.EOF {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
@@ -58,7 +64,6 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 				return actionExecutionError{err}
 			}
 
-			externalPropName := this.action.MatchingProperties.External
 			externalProp, ok := user.Properties[externalPropName]
 			if !ok {
 				// TODO(Gianluca): handle this error properly.
@@ -138,14 +143,9 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		return err
 	}
 
-	// Open a connection to the app.
-	app, err := this.connection.openAppUsers()
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-	}
-
-	connector := this.action.Connection().Connector()
-	inSchemaProps := this.action.InSchema.PropertiesNames()
+	app := this.app()
+	connectorName := this.action.Connection().Connector().Name
+	properties := this.action.InSchema.PropertiesNames()
 
 	for _, user := range users {
 
@@ -163,8 +163,8 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		}
 
 		// Take only the necessary properties.
-		props := make(map[string]any, len(inSchemaProps))
-		for _, name := range inSchemaProps {
+		props := make(map[string]any, len(properties))
+		for _, name := range properties {
 			props[name] = user.Properties[name]
 		}
 
@@ -190,7 +190,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
-			slog.Info("user updated", "id", id, "connector", connector.Name, "properties", props)
+			slog.Info("user updated", "id", id, "connector", connectorName, "properties", props)
 			continue
 		}
 
@@ -199,7 +199,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
 		}
-		slog.Info("a new user has been created", "connector", connector.Name, "user", user)
+		slog.Info("a new user has been created", "connector", connectorName, "user", user)
 
 	}
 
@@ -209,10 +209,6 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 // importUsersFromApp imports the users from an app.
 func (this *Action) importUsersFromApp(ctx context.Context) error {
 
-	app, err := this.connection.openAppUsers()
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-	}
 	cursor := this.action.UserCursor
 	if exe, _ := this.action.Execution(); exe.Reimport {
 		cursor = connector.Cursor{}
@@ -224,21 +220,20 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	properties := this.action.InSchema.PropertiesNames()
-
 	var eof bool
+	app := this.app()
 
 	for !eof {
 
-		users, next, err := app.Users(ctx, properties, cursor)
+		users, next, err := app.Users(ctx, this.action.InSchema, cursor)
 		if err != nil && err != io.EOF {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
 		if err == io.EOF {
 			eof = true
 		} else if len(users) == 0 {
-			connector := this.action.Connection().Connector()
-			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", connector.ID)}
+			connectorID := this.action.Connection().Connector().ID
+			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", connectorID)}
 		}
 
 		for _, user := range users {
@@ -247,23 +242,8 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 				return actionExecutionError{err}
 			}
 
-			// Take only the necessary properties.
-			props := make(map[string]any, len(properties))
-			for _, name := range properties {
-				if v, ok := user.Properties[name]; ok {
-					props[name] = v
-				}
-			}
-
-			// Normalize the user properties (read from the app) using the
-			// action's mapping input schema.
-			userProps, err := normalize(props, this.action.InSchema)
-			if err != nil {
-				return actionExecutionError{err}
-			}
-
 			// Map the properties of the user.
-			identity, err := mapping.Apply(ctx, userProps)
+			identity, err := mapping.Apply(ctx, user.Properties)
 			if err != nil {
 				if err, ok := err.(mappings.Error); ok {
 					return actionExecutionError{err}

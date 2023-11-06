@@ -19,13 +19,13 @@ import (
 	"log/slog"
 	"math"
 	mathrand "math/rand"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
@@ -37,7 +37,6 @@ import (
 	"chichi/apis/transformers"
 	_connector "chichi/connector"
 	"chichi/connector/types"
-	"chichi/connector/ui"
 	"chichi/telemetry"
 
 	"github.com/google/uuid"
@@ -67,6 +66,7 @@ var (
 	InvalidTable         errors.Code = "InvalidTable"
 	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
+	NoColumns            errors.Code = "NoColumns"
 	NoGroupsSchema       errors.Code = "NoGroupsSchema"
 	NoStorage            errors.Code = "NoStorage"
 	NoUsersSchema        errors.Code = "NoUsersSchema"
@@ -144,41 +144,43 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
-	switch connector := this.connection.Connector(); connector.Type {
+	c := this.connection
+
+	switch connector := c.Connector(); connector.Type {
 
 	case state.AppType:
 		switch target {
 		case Users:
 			var err error
-			appSchema, err := this.fetchAppSchema(ctx, state.Users, "")
+			schema, err := this.app().Schema(ctx, c.Role, state.Users, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
-			usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
+			usersIdentities, ok := c.Workspace().Schemas["users_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
-			if this.connection.Role == state.Source {
-				return &ActionSchemas{In: appSchema, Out: *usersIdentities}, nil
+			if c.Role == state.Source {
+				return &ActionSchemas{In: schema, Out: *usersIdentities}, nil
 			} else {
-				return &ActionSchemas{In: usersIdentities.Unflatten(), Out: appSchema}, nil
+				return &ActionSchemas{In: usersIdentities.Unflatten(), Out: schema}, nil
 			}
 		case Groups:
 			var err error
-			appSchema, err := this.fetchAppSchema(ctx, state.Groups, "")
+			schema, err := this.app().Schema(ctx, c.Role, state.Groups, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
-			grSchema, ok := this.connection.Workspace().Schemas["groups"]
+			grSchema, ok := c.Workspace().Schemas["groups"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 			}
-			if this.connection.Role == state.Source {
-				return &ActionSchemas{In: appSchema, Out: grSchema.Unflatten()}, nil
+			if c.Role == state.Source {
+				return &ActionSchemas{In: schema, Out: grSchema.Unflatten()}, nil
 			} else {
-				return &ActionSchemas{In: grSchema.Unflatten(), Out: appSchema}, nil
+				return &ActionSchemas{In: grSchema.Unflatten(), Out: schema}, nil
 			}
 		case Events:
 			return &ActionSchemas{In: events.Schema.Unflatten(), Out: eventTypeSchema}, nil
@@ -187,15 +189,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	case state.DatabaseType:
 		switch target {
 		case Users:
-			if this.connection.Role == state.Source {
-				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
+			if c.Role == state.Source {
+				usersIdentities, ok := c.Workspace().Schemas["users_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
 				out := usersIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				users, ok := this.connection.Workspace().Schemas["users"]
+				users, ok := c.Workspace().Schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
@@ -203,15 +205,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return &ActionSchemas{In: in}, nil
 			}
 		case Groups:
-			if this.connection.Role == state.Source {
-				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
+			if c.Role == state.Source {
+				groupsIdentities, ok := c.Workspace().Schemas["groups_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
 				out := groupsIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				groups, ok := this.connection.Workspace().Schemas["groups"]
+				groups, ok := c.Workspace().Schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
@@ -223,15 +225,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	case state.FileType:
 		switch target {
 		case Users:
-			if this.connection.Role == state.Source {
-				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
+			if c.Role == state.Source {
+				usersIdentities, ok := c.Workspace().Schemas["users_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
 				out := usersIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				users, ok := this.connection.Workspace().Schemas["users"]
+				users, ok := c.Workspace().Schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
@@ -239,15 +241,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return &ActionSchemas{In: in}, nil
 			}
 		case Groups:
-			if this.connection.Role == state.Source {
-				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
+			if c.Role == state.Source {
+				groupsIdentities, ok := c.Workspace().Schemas["groups_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
 				out := groupsIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				groups, ok := this.connection.Workspace().Schemas["groups"]
+				groups, ok := c.Workspace().Schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
@@ -262,14 +264,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		}
 		switch target {
 		case Users:
-			usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
+			usersIdentities, ok := c.Workspace().Schemas["users_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			out := usersIdentities.Unflatten()
 			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
 		case Groups:
-			groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
+			groupsIdentities, ok := c.Workspace().Schemas["groups_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
@@ -491,30 +493,18 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 		}
 	}
 
-	app, err := this.openAppUsers()
-	if err != nil {
-		return nil, "", err
-	}
-
 	// Get the users.
-	objects, next, err := app.Users(ctx, schema.PropertiesNames(), cur)
+	objects, next, err := this.app().Users(ctx, schema, cur)
 	eof := err == io.EOF
 	if err != nil && !eof {
 		return nil, "", err
-	}
-	if len(objects) == 0 {
-		return []map[string]any{}, "", nil
 	}
 	users := make([]map[string]any, len(objects))
 	for i, object := range objects {
 		if object.Err != nil {
 			return nil, "", err
 		}
-		user, err := normalize(object.Properties, schema)
-		if err != nil {
-			return nil, "", err
-		}
-		users[i] = user
+		users[i] = object.Properties
 	}
 	if eof {
 		return users, "", nil
@@ -545,6 +535,10 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 //   - NoStorage, if the connection does not have a storage.
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
+	c := this.connection
+	if c.Connector().Type != state.FileType {
+		return "", errors.BadRequest("connection %d is not a file connection", c.ID)
+	}
 	if path == "" {
 		return "", errors.BadRequest("path is empty")
 	}
@@ -554,28 +548,20 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if n := utf8.RuneCountInString(path); n > 1024 {
 		return "", errors.BadRequest("path is longer than 1024 runes")
 	}
-	c := this.connection
-	connector := c.Connector()
-	if connector.Type != state.FileType {
-		return "", errors.BadRequest("connection %d is not a file connection", c.ID)
-	}
-	if _, ok := c.Storage(); !ok {
-		return "", errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
-	}
-	storage, err := this.openStorage()
-	if err != nil {
-		return "", err
-	}
 	if c.Role == state.Destination {
+		var err error
 		path, err = replacePathPlaceholders(path, time.Now())
 		if err != nil {
 			return "", errors.Unprocessable(InvalidPlaceholders, "%s", err)
 		}
 	}
-	path, err = storage.CompletePath(ctx, path)
+	path, err := this.file().CompletePath(ctx, path)
 	if err != nil {
-		if err, ok := err.(_connector.InvalidPathError); ok {
-			return "", errors.Unprocessable(InvalidPath, "%s", err)
+		if err == connectors.ErrNoStorage {
+			return "", errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
+		}
+		if err, ok := err.(*connectors.InvalidPathError); ok {
+			return "", errors.Unprocessable(InvalidPath, "%w", err)
 		}
 		return "", err
 	}
@@ -649,52 +635,35 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	}
 
 	// Execute the query.
-	var err error
-	query, err = compileActionQuery(query, limit)
+	query, err := compileActionQuery(query, limit)
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
-	database, err := this.openDatabase()
-	if err != nil {
-		return nil, types.Type{}, err
-	}
+	database := this.database()
 	defer database.Close()
-	rawRows, properties, err := database.Query(ctx, query)
+	rows, err := database.Query(ctx, query)
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
+	defer rows.Close()
 
-	schema, err := types.ObjectOf(properties)
-	if err != nil {
-		_ = rawRows.Close()
-		for _, p := range properties {
-			if !types.IsValidPropertyName(p.Name) {
-				return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "database has returned an invalid column name: %q", p.Name)
-			}
-		}
-		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "%w", err)
-	}
-
-	// Fill the rows.
-	dest := make([]any, len(properties))
-
-	var rows []map[string]any
-	for rawRows.Next() {
-		row := make(map[string]any, len(properties))
-		for i, p := range properties {
-			dest[i] = databaseScanValue{property: p, row: row}
-		}
-		if err := rawRows.Scan(dest...); err != nil {
+	// Scan the rows.
+	var users []map[string]any
+	for rows.Next() {
+		row, err := rows.Scan()
+		if err != nil {
 			return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 		}
-		rows = append(rows, row)
+		users = append(users, row)
 	}
-	err = rawRows.Close()
+	err = rows.Err()
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
 
-	return rows, schema, nil
+	schema := types.Object(rows.Columns())
+
+	return users, schema, nil
 }
 
 // An Execution describes an action execution as returned by Executions.
@@ -799,13 +768,14 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 
 // Records returns the records and the schema of the file with the given path
 // for the connection, that must be a file connection. path must be UTF-8
-// encoded with a length in range [1, 1024]. If the connection has multiple
-// sheets, sheet is the sheet name and must be UTF-8 encoded with a length in
-// range [1, 100], otherwise must be an empty string. limit limits the number of
+// encoded with a length in range [1, 1024]. If the connection supports sheets,
+// sheet is the sheet name and must be UTF-8 encoded with a length in range
+// [1, 100], otherwise must be an empty string. limit limits the number of
 // records to return and must be in range [0, 100].
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - NoColumns, if the file has no columns.
 //   - NoStorage, if the connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([]map[string]any, types.Type, error) {
@@ -849,43 +819,19 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	if limit < 0 || limit > 100 {
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
-	// Validate the storage.
-	if _, ok := c.Storage(); !ok {
-		return nil, types.Type{}, errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
-	}
 
-	// Connect to the file connector.
-	file, err := this.openFile()
+	columns, records, err := this.file().Read(ctx, path, sheet, limit)
 	if err != nil {
-		return nil, types.Type{}, err
-	}
-
-	// Open the file.
-	var r io.ReadCloser
-	{
-		storage, err := this.openStorage()
-		if err != nil {
-			return nil, types.Type{}, err
+		switch err {
+		case connectors.ErrNoColumns:
+			return nil, types.Type{}, errors.Unprocessable(NoColumns, "file does not have columns")
+		case connectors.ErrNoStorage:
+			return nil, types.Type{}, errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
 		}
-		r, _, err = storage.Reader(ctx, path)
-		if err != nil {
-			return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
-		}
-		defer r.Close()
-	}
-
-	// Read the records.
-	rw := newRecordWriter(c.ID, limit)
-	err = file.Read(ctx, r, sheet, rw)
-	if err != nil && err != errRecordStop {
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
-	if rw.columns == nil {
-		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", errNoColumns)
-	}
-	schema := types.Object(rw.columns)
 
-	return rw.records, schema, nil
+	return records, types.Object(columns), nil
 }
 
 // Rename renames the connection with the given new name.
@@ -1024,27 +970,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	app, err := this.openAppEvents()
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
-	}
-
 	// Get the event type.
-	eventTypes, err := app.EventTypes(ctx)
+	outSchema, err := this.app().Schema(ctx, c.Role, state.Events, eventType)
 	if err != nil {
-		return nil, err
-	}
-	var found bool
-	var outSchema types.Type
-	for _, t := range eventTypes {
-		if t.ID == eventType {
-			outSchema = t.Schema
-			found = true
-			break
+		if err == connectors.ErrEventTypeNotExist {
+			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 		}
-	}
-	if !found {
-		return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+		return nil, err
 	}
 
 	var data map[string]any
@@ -1140,7 +1072,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	preview, err := app.PreviewSendEvent(ctx, eventType, ev.ConnectorEvent(), data)
+	preview, err := this.app().PreviewSendEvent(ctx, eventType, ev.ConnectorEvent(), data)
 	if err != nil {
 		if err == _connector.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
@@ -1246,57 +1178,20 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 // If the event does not exist, it returns an errors.UnprocessableError error
 // with code EventNotExist.
 func (this *Connection) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
-
 	this.apis.mustBeOpen()
-
-	c := this.connection
-	connector := c.Connector()
-
-	var err error
-	var connection any
-
-	switch connector.Type {
-	case state.AppType:
-		connection, err = this.openApp()
-	case state.DatabaseType:
-		connection, err = this.openDatabase()
-	case state.FileType:
-		connection, err = this.openFile()
-	case state.MobileType:
-		connection, err = this.openMobile()
-	case state.ServerType:
-		connection, err = this.openServer()
-	case state.StorageType:
-		connection, err = this.openStorage()
-	case state.StreamType:
-		connection, err = this.openStream()
-	case state.WebsiteType:
-		connection, err = this.openWebsite()
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	if c, ok := connection.(io.Closer); ok {
-		defer c.Close()
-	}
-	connectionUI, ok := connection.(_connector.UI)
-	if !ok {
-		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
-	}
-
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	form, alert, err := connectionUI.ServeUI(ctx, event, values)
+	b, err := this.apis.connectors.ServeConnectionUI(ctx, this.connection, event, values)
 	if err != nil {
-		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector",
-				event, connector.Name)
+		switch err {
+		case connectors.ErrNoUserInterface:
+			err = errors.BadRequest("connector %d does not have a UI", this.connection.ID)
+		case connectors.ErrEventNotExist:
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, this.connection.Connector().Name)
 		}
 		return nil, err
 	}
-
-	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
+	return b, nil
 }
 
 // Sheets returns the sheets of the file at the given path. The connection must
@@ -1307,15 +1202,16 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 // error.
 //
 // It returns an errors.UnprocessableError error with code
-//
 //   - NoStorage, if the file connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) Sheets(ctx context.Context, path string) ([]string, error) {
 	this.apis.mustBeOpen()
-	c := this.connection
-	connector := c.Connector()
+	connector := this.connection.Connector()
 	if connector.Type != state.FileType {
-		return nil, errors.BadRequest("connection %d is not a file", c.ID)
+		return nil, errors.BadRequest("connection %d is not a file", this.connection.ID)
+	}
+	if !connector.HasSheets {
+		return nil, errors.BadRequest("connection %d does not supports sheets", this.connection.ID)
 	}
 	if path == "" {
 		return nil, errors.BadRequest("path is empty")
@@ -1323,28 +1219,11 @@ func (this *Connection) Sheets(ctx context.Context, path string) ([]string, erro
 	if !utf8.ValidString(path) {
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
-	f, err := this.openFile()
+	sheets, err := this.file().Sheets(ctx, path)
 	if err != nil {
-		return nil, err
-	}
-	file, ok := f.(_connector.Sheets)
-	if !ok {
-		return nil, errors.BadRequest("file connection %d does not support multiple sheet", c.ID)
-	}
-	if _, ok := c.Storage(); !ok {
-		return nil, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
-	}
-	storage, err := this.openStorage()
-	if err != nil {
-		return nil, err
-	}
-	r, _, err := storage.Reader(ctx, path)
-	if err != nil {
-		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
-	}
-	defer r.Close()
-	sheets, err := file.Sheets(ctx, r)
-	if err != nil {
+		if err == connectors.ErrNoStorage {
+			return nil, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", this.connection.ID)
+		}
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	return sheets, nil
@@ -1406,12 +1285,9 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if table == "" || utf8.RuneCountInString(table) > 1024 {
 		return types.Type{}, errors.BadRequest("table name is not valid")
 	}
-	database, err := this.openDatabase()
-	if err != nil {
-		return types.Type{}, err
-	}
+	database := this.database()
+	defer database.Close()
 	columns, err := database.Columns(ctx, table)
-	_ = database.Close()
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -1597,7 +1473,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 				actionTypes = append(actionTypes, at)
 			}
 		case state.AppType:
-			eventTypes, err := this.fetchEventTypes(ctx)
+			eventTypes, err := this.app().EventTypes(ctx)
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -1618,132 +1494,22 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 	return actionTypes, nil
 }
 
-// openApp opens an app connection.
-func (this *Connection) openApp() (_connector.AppConnection, error) {
-	c := this.connection
-	var resourceID int
-	var resourceCode string
-	if r, ok := c.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
-	}
-	app, err := _connector.RegisteredApp(c.Connector().Name).New(&_connector.AppConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-		Resource:    resourceCode,
-		HTTPClient:  this.apis.http.ConnectionClient(c.ID),
-		Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
-		WebhookURL:  webhookURL(c, resourceID),
-	})
-	return app, err
+// app returns the app of the connection.
+func (this *Connection) app() *connectors.App {
+	return this.apis.connectors.App(this.connection)
 }
 
-// openAppEvents opens an app events connection.
-func (this *Connection) openAppEvents() (_connector.AppEventsConnection, error) {
-	app, err := this.openApp()
-	if err != nil {
-		return nil, err
-	}
-	return app.(_connector.AppEventsConnection), nil
+// database returns the database of the connection.
+// The caller must call the database's Close method when the database is no
+// longer needed.
+func (this *Connection) database() *connectors.Database {
+	return this.apis.connectors.Database(this.connection)
 }
 
-// openAppUsers opens an app users connection.
-func (this *Connection) openAppUsers() (_connector.AppUsersConnection, error) {
-	app, err := this.openApp()
-	if err != nil {
-		return nil, err
-	}
-	return app.(_connector.AppUsersConnection), nil
+// file returns the file of the connection.
+func (this *Connection) file() *connectors.File {
+	return this.apis.connectors.File(this.connection)
 }
-
-// openDatabase opens a database connection.
-//
-// It is the caller's responsibility to call the Close method on the returned
-// value.
-func (this *Connection) openDatabase() (_connector.DatabaseConnection, error) {
-	c := this.connection
-	database, err := _connector.RegisteredDatabase(c.Connector().Name).New(&_connector.DatabaseConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return database, err
-}
-
-// openFile opens a file connection.
-func (this *Connection) openFile() (_connector.FileConnection, error) {
-	c := this.connection
-	file, err := _connector.RegisteredFile(c.Connector().Name).New(&_connector.FileConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return file, err
-}
-
-// openMobile opens a mobile connection.
-func (this *Connection) openMobile() (_connector.MobileConnection, error) {
-	c := this.connection
-	mobile, err := _connector.RegisteredMobile(c.Connector().Name).New(&_connector.MobileConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return mobile, err
-}
-
-// openServer opens a server connection.
-func (this *Connection) openServer() (_connector.ServerConnection, error) {
-	c := this.connection
-	server, err := _connector.RegisteredServer(c.Connector().Name).New(&_connector.ServerConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return server, err
-}
-
-// openStorage opens a storage connection.
-func (this *Connection) openStorage() (_connector.StorageConnection, error) {
-	c := this.connection
-	if c.Connector().Type == state.FileType {
-		c, _ = c.Storage()
-	}
-	storage, err := _connector.RegisteredStorage(c.Connector().Name).New(&_connector.StorageConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return storage, err
-}
-
-// openStream opens a stream connection.
-//
-// It is the caller's responsibility to call the Close method on the returned
-// value.
-func (this *Connection) openStream() (_connector.StreamConnection, error) {
-	c := this.connection
-	database, err := _connector.RegisteredStream(c.Connector().Name).New(&_connector.StreamConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return database, err
-}
-
-// openWebsite opens a website connection.
-func (this *Connection) openWebsite() (_connector.WebsiteConnection, error) {
-	c := this.connection
-	website, err := _connector.RegisteredWebsite(c.Connector().Name).New(&_connector.WebsiteConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(),
-	})
-	return website, err
-}
-
-var errRecordStop = errors.New("stop record")
 
 // isWriteKey reports whether key can be a write key.
 func isWriteKey(key string) bool {
@@ -1762,195 +1528,6 @@ func generateWriteKey() (string, error) {
 		return "", errors.New("cannot generate a write key")
 	}
 	return base62.EncodeToString(key)[0:32], nil
-}
-
-// marshalUIFormAlert marshals form with given role and alert in JSON format.
-// form and alert can be nil or not, independently of each other.
-func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ui.Role) ([]byte, error) {
-
-	if form == nil && alert == nil {
-		return []byte("null"), nil
-	}
-
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
-
-	b.WriteString("{")
-
-	// Serialize the form, if present.
-	if form != nil {
-
-		// Makes the keys of form.Values to have the same case as the Name field of the components.
-		values := map[string]any{}
-		if len(form.Values) > 0 {
-			err := json.Unmarshal(form.Values, &values)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		comma := false
-		b.WriteString(`"Form":{"Fields":[`)
-		for _, field := range form.Fields {
-			ok, err := marshalUIComponent(&b, field, role, values, comma)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				comma = true
-			}
-		}
-		b.WriteString(`],"Actions":`)
-		err := enc.Encode(form.Actions)
-		if err != nil {
-			return nil, err
-		}
-		if len(form.Values) > 0 {
-			b.WriteString(`,"Values":`)
-			err = json.NewEncoder(&b).Encode(values)
-			if err != nil {
-				return nil, err
-			}
-		}
-		b.WriteString("}")
-
-	}
-
-	// Serialize the alert, if present.
-	if alert != nil {
-		if form != nil {
-			b.WriteString(",")
-		}
-		b.WriteString(`"Alert":{"Message":`)
-		err := enc.Encode(alert.Message)
-		if err != nil {
-			return nil, err
-		}
-		b.WriteString(`,"Variant":"`)
-		b.WriteString(alert.Variant.String())
-		b.WriteString(`"`)
-		b.WriteString("}")
-	}
-
-	b.WriteString(`}`)
-
-	return b.Bytes(), nil
-}
-
-// adjustValuesCase adjusts the case of keys of values.
-func adjustValuesCase(key string, values map[string]any) {
-	var found struct {
-		key   string
-		value any
-	}
-	for k, v := range values {
-		if strings.EqualFold(k, key) {
-			found.key = k
-			found.value = v
-			break
-		}
-	}
-	if found.key == "" {
-		return
-	}
-	delete(values, found.key)
-	values[key] = found.value
-}
-
-// marshalUIComponent marshals component with the given role in JSON format. If
-// comma is true, it prepends a comma. Returns whether it has been marhalled.
-func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, values map[string]any, comma bool) (bool, error) {
-	rv := reflect.ValueOf(component).Elem()
-	rt := rv.Type()
-	if role != ui.Both {
-		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.Both && r != role {
-			return false, nil
-		}
-	}
-	if comma {
-		b.WriteString(`,`)
-	}
-	b.WriteString(`{"ComponentType":"`)
-	b.WriteString(rt.Name())
-	b.WriteString(`"`)
-	for j := 0; j < rt.NumField(); j++ {
-		name := rt.Field(j).Name
-		if name == "Role" {
-			continue
-		}
-		field := rv.Field(j)
-		if name == "Name" && values != nil {
-			adjustValuesCase(field.String(), values)
-		}
-		b.WriteString(`,"`)
-		b.WriteString(name)
-		b.WriteString(`":`)
-		var err error
-		switch field := field.Interface().(type) {
-		case ui.Component:
-			_, err = marshalUIComponent(b, field, role, values, false)
-		case []ui.FieldSet:
-			b.WriteByte('[')
-			comma = false
-			for _, set := range field {
-				var ok bool
-				ok, err = marshalUIFieldSet(b, set, role, values, comma)
-				if ok {
-					comma = true
-				}
-			}
-			b.WriteByte(']')
-		default:
-			err = json.NewEncoder(b).Encode(field)
-		}
-		if err != nil {
-			return false, err
-		}
-	}
-	b.WriteString(`}`)
-	return true, nil
-}
-
-// marshalUIFieldSet marshals fieldSet with the given role in JSON format. If
-// comma is true, it prepends a comma. Returns whether it has been marhalled.
-func marshalUIFieldSet(b *bytes.Buffer, fieldSet ui.FieldSet, role ui.Role, values map[string]any, comma bool) (bool, error) {
-	if role != ui.Both {
-		if fieldSet.Role != ui.Both && fieldSet.Role != role {
-			return false, nil
-		}
-	}
-	name := fieldSet.Name
-	if values != nil {
-		adjustValuesCase(name, values)
-	}
-	if comma {
-		b.WriteByte(',')
-	}
-	b.WriteString(`{"Name":`)
-	_ = json.NewEncoder(b).Encode(name)
-	b.WriteString(`,"Label":`)
-	_ = json.NewEncoder(b).Encode(fieldSet.Label)
-	b.WriteString(`,"Fields":[`)
-	comma = false
-	for _, c := range fieldSet.Fields {
-		var valuesOfSet map[string]any
-		switch vs := values[name].(type) {
-		case nil:
-		case map[string]any:
-			valuesOfSet = vs
-		default:
-			return false, fmt.Errorf("expected a map[string]any value for field set %s, got %T", name, values[name])
-		}
-		ok, err := marshalUIComponent(b, c, role, valuesOfSet, comma)
-		if err != nil {
-			return false, err
-		}
-		if ok {
-			comma = true
-		}
-	}
-	b.WriteString(`]}`)
-	return true, nil
 }
 
 // abbreviate abbreviates s to almost n runes. If s is longer than n runes,
@@ -2084,86 +1661,6 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	}
 	*role = r
 	return nil
-}
-
-// fetchAppSchema fetches the schema of an app connection for the given target
-// and eventType.
-//
-// It returns an errors.UnprocessableError error with code:
-//   - EventTypeNotExist, if the event type does not exist for the connection.
-func (this *Connection) fetchAppSchema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
-
-	app, err := this.openApp()
-	if err != nil {
-		return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
-	}
-
-	c := this.connection
-
-	var schema types.Type
-
-	switch target {
-	case state.Events:
-		if eventType != "" {
-			eventTypes, err := app.(_connector.AppEventsConnection).EventTypes(ctx)
-			if err != nil {
-				return types.Type{}, err
-			}
-			var found bool
-			for _, t := range eventTypes {
-				if t.ID == eventType {
-					schema = t.Schema
-					found = true
-					break
-				}
-			}
-			if !found {
-				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
-			}
-		}
-	case state.Users:
-		schema, err = app.(_connector.AppUsersConnection).UserSchema(ctx)
-		if err != nil {
-			return types.Type{}, err
-		}
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connection %d returned an invalid user schema", c.ID)
-		}
-		schema = schema.AsRole(types.Role(c.Role))
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(c.Role.String()))
-		}
-	case state.Groups:
-		schema, err = app.(_connector.AppGroupsConnection).GroupSchema(ctx)
-		if err != nil {
-			return types.Type{}, err
-		}
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connection %d returned an invalid group schema", c.ID)
-		}
-		schema = schema.AsRole(types.Role(c.Role))
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(c.Role.String()))
-		}
-	}
-	return schema, nil
-}
-
-// fetchEventTypes fetches the event types for the connection.
-func (this *Connection) fetchEventTypes(ctx context.Context) ([]*_connector.EventType, error) {
-	app, err := this.openAppEvents()
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
-	}
-	return app.EventTypes(ctx)
-}
-
-// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
-// settings for the connection.
-func (this *Connection) setSettingsFunc() _connector.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
-		return setSettings(ctx, this.apis.db, this.connection.ID, settings)
-	}
 }
 
 // updateConnectionsStats updates the statistics about the connection.
@@ -2613,29 +2110,6 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 	return out, nil
 }
 
-// setSettings sets the given settings of the given connection.
-// It is a copy of the apis.setSettings function, so keep in sync.
-func setSettings(ctx context.Context, db *postgres.DB, connection int, settings []byte) error {
-	if !utf8.Valid(settings) {
-		return errors.New("settings is not valid UTF-8")
-	}
-	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
-		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
-	}
-	n := state.SetConnectionSettings{
-		Connection: connection,
-		Settings:   settings,
-	}
-	err := db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
 // statsTimeSlot returns the stats time slot for the time t.
 // t must be a UTC time.
 func statsTimeSlot(t time.Time) int {
@@ -2664,11 +2138,13 @@ func unmappedProperties(schema types.Type, mapped []types.Path) []string {
 }
 
 // validateTargetAndEventType validates a target and an event type and, if the
-// event type is not empty, it returns its schema. It returns an
-// errors.BadRequestError error if target or eventType is not valid, or the
-// connection does not support them, and returns an errors.UnprocessableError
-// error with code EventTypeNotExist if the connections does not have the given
-// event type.
+// event type is not empty, it returns its schema.
+//
+// It returns an errors.BadRequestError error if target or eventType is not
+// valid, or the connection does not support them, and returns an
+// errors.UnprocessableError error with code:
+//   - EventTypeNotExist, if the connection does not have the event type.
+//   - FetchSchemaFailed, if an error occurred fetching the event type schema.
 func (this *Connection) validateTargetAndEventType(ctx context.Context, target Target, eventType string) (types.Type, error) {
 	// Perform a formal validation.
 	if target != Users && target != Groups && target != Events {
@@ -2709,60 +2185,35 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
-		app, err := this.openAppEvents()
+		schema, err := this.app().Schema(ctx, c.Role, state.Target(target), eventType)
 		if err != nil {
-			return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
-		}
-		tt, err := app.EventTypes(ctx)
-		if err != nil {
-			return types.Type{}, err
-		}
-		for _, t := range tt {
-			if t.ID == eventType {
-				return t.Schema, nil
+			if err == connectors.ErrEventTypeNotExist {
+				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 			}
+			return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 		}
-		return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+		return schema, nil
 	}
 	return types.Type{}, nil
 }
 
-// webhookURL returns the URL of the webhook for the given connection and
-// resource.
-// If the connector does not support webhooks, it returns an empty string.
-func webhookURL(connection *state.Connection, resource int) string {
-	connector := connection.Connector()
-	u := "https://localhost:9090/webhook/"
-	switch connector.WebhooksPer {
-	case state.WebhooksPerNone:
-		return ""
-	case state.WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(connector.ID) + "/"
-	case state.WebhooksPerResource:
-		return u + "r/" + strconv.Itoa(resource) + "/"
-	case state.WebhooksPerConnection:
-		return u + "s/" + strconv.Itoa(connection.ID) + "/"
-	}
-	panic("unexpected webhooksPer value")
-}
-
 // deserializeCursor deserializes a cursor passed to the API.
-func deserializeCursor(cursor string) (_connector.Cursor, error) {
+func deserializeCursor(cursor string) (connectors.Cursor, error) {
 	data, err := hex.DecodeString(cursor)
 	if err != nil {
-		return _connector.Cursor{}, err
+		return connectors.Cursor{}, err
 	}
 	var c _connector.Cursor
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		return _connector.Cursor{}, err
+		return connectors.Cursor{}, err
 	}
 	// TODO(marco): validate the cursor's fields.
 	return c, nil
 }
 
 // serializeCursor serializes a cursor to be returned by the API.
-func serializeCursor(cursor _connector.Cursor) (string, error) {
+func serializeCursor(cursor connectors.Cursor) (string, error) {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)

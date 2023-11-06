@@ -13,17 +13,16 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"slices"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 
+	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/httpclient"
 	"chichi/apis/mappings"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
@@ -44,7 +43,7 @@ type APIs struct {
 	db             *postgres.DB
 	state          *state.State
 	datastore      *datastore.Datastore
-	http           *httpclient.HTTP
+	connectors     *connectors.Connectors
 	events         *events.Events
 	transformer    transformers.Transformer
 	mu             sync.Mutex // for the scheduler field
@@ -142,10 +141,6 @@ func New(conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
-	// Set the HTTP client.
-	apis.http = httpclient.New(db, apis.state, http.DefaultTransport)
-	apis.http.SetTrace(os.Stdout)
-
 	// Listen to state changes.
 	apis.state.AddListener(apis.onDeleteAction)
 	apis.state.AddListener(apis.onElectLeader)
@@ -160,12 +155,15 @@ func New(conf *Config) (*APIs, error) {
 	// Init the datastore.
 	apis.datastore = datastore.New(apis.state)
 
-	apis.events, err = events.New(db, apis.state, apis.datastore, apis.transformer, apis.http)
+	apis.events, err = events.New(db, apis.state, apis.datastore, apis.transformer, apis.connectors)
 	if err != nil {
 		apis.datastore.Close()
 		apis.state.Close()
 		return nil, err
 	}
+
+	// Init the connectors.
+	apis.connectors = connectors.New(db, apis.state)
 
 	apis.close.ctx, apis.close.cancelCtx = context.WithCancel(context.Background())
 

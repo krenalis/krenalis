@@ -216,6 +216,20 @@ func (state *State) IsLeader() bool {
 	return election.leader == state.id
 }
 
+// Resource returns the resource with identifier id.
+// The boolean return value reports whether the resource exists.
+func (state *State) Resource(id int) (*Resource, bool) {
+	// TODO(marco): optimize.
+	for _, a := range state.Accounts() {
+		for _, ws := range a.Workspaces() {
+			if r, ok := ws.Resource(id); ok {
+				return r, true
+			}
+		}
+	}
+	return nil, false
+}
+
 // Workspace returns the workspace with identifier id.
 // The boolean return value reports whether the workspace exists.
 func (state *State) Workspace(id int) (*Workspace, bool) {

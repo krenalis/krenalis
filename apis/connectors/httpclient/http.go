@@ -7,20 +7,6 @@
 
 // Package httpclient provides an HTTP client with OAuth support for
 // connections.
-//
-// How OAuth works:
-//
-//  1. The UI calls the (*Connector).AuthCodeURL method with the redirect URL. This
-//     method returns the URL to which the user should be redirected to grant authorization.
-//  2. The UI redirects the user to the returned URL.
-//  3. The user authorizes the application.
-//  4. The provider redirects the user to the specified redirect URL.
-//  5. If no error occurs, the UI receives the authorization code from the provider and
-//     calls the (*Workspace).OAuthToken method. In return, it receives a string
-//     that identifies the authorized resource.
-//  6. The UI displays the connector settings interface.
-//  7. The UI calls the (*Workspace).AddConnection method to add the new connection,
-//     passing the string of the authorized resource as one of the arguments.
 package httpclient
 
 import (
@@ -57,33 +43,6 @@ func New(db *postgres.DB, state *state.State, transport http.RoundTripper) *HTTP
 	}
 }
 
-// AuthCodeURL returns a URL that directs to the consent page of the OAuth
-// provider. This page requests explicit permissions for the required scopes.
-// After that, the provider redirects to the URL specified by redirectURI.
-//
-// After acquiring the authorization code, call GrantAuthorization to get the
-// resulting access token, refresh token and expiration time.
-func (h *HTTP) AuthCodeURL(auth *state.OAuth, redirectURI string) (string, error) {
-	var b strings.Builder
-	b.WriteString(auth.AuthURL)
-	v := url.Values{
-		"response_type": {"code"},
-		"client_id":     {auth.ClientID},
-		"redirect_uri":  {redirectURI},
-		"state":         {"state"},
-	}
-	if len(auth.Scopes) > 0 {
-		v.Set("scope", strings.Join(auth.Scopes, " "))
-	}
-	if strings.Contains(auth.AuthURL, "?") {
-		b.WriteByte('&')
-	} else {
-		b.WriteByte('?')
-	}
-	b.WriteString(v.Encode())
-	return b.String(), nil
-}
-
 // Client returns an HTTP client with the provided OAuth client secret and
 // access token. If the client does not need to support OAuth, clientSecret
 // and accessToken can be left empty.
@@ -96,7 +55,7 @@ func (h *HTTP) Client(clientSecret, accessToken string) *Client {
 }
 
 // ConnectionClient returns an HTTP client capable of retrieving OAuth
-// credentials from the given connection if it supports OAuth.
+// credentials from the provided connection if it supports OAuth.
 func (h *HTTP) ConnectionClient(connection int) *Client {
 	return &Client{
 		http:       h,
@@ -105,10 +64,10 @@ func (h *HTTP) ConnectionClient(connection int) *Client {
 }
 
 // GrantAuthorization grants an OAuth authorization code and returns the access
-// token, the refresh token and the expiration time. redirectURI is the redirect
-// URL previously passed to AuthCodeURL.
-func (h *HTTP) GrantAuthorization(ctx context.Context, auth *state.OAuth, authorizationCode, redirectURI string) (string, string, time.Time, error) {
-	return h.retrieveOAuthToken(ctx, auth, authorizationCode, redirectURI, "")
+// token, the refresh token and the expiration time. redirectionURI is the
+// redirection URI.
+func (h *HTTP) GrantAuthorization(ctx context.Context, auth *state.OAuth, code, redirectionURI string) (string, string, time.Time, error) {
+	return h.retrieveOAuthToken(ctx, auth, code, redirectionURI, "")
 }
 
 // SetTrace sets w as the output destination for tracing HTTP request and
@@ -118,25 +77,25 @@ func (h *HTTP) SetTrace(w io.Writer) {
 }
 
 // retrieveOAuthToken retrieves an OAuth token and returns the access token,
-// refresh token, and expiration time of the access token for the given
+// refresh token, and expiration time of the access token for the provided
 // connector.
 //
-// To retrieve an authorization code for the first time, both authorizationCode
-// and redirectURI are required. To refresh the token, only the refreshToken
-// is required.
-func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, authorizationCode, redirectURI, refreshToken string) (string, string, time.Time, error) {
+// To retrieve an authorization code for the first time, both code and
+// redirectionURI are required. To refresh the token, only the refreshToken is
+// required.
+func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, redirectionURI, refreshToken string) (string, string, time.Time, error) {
 
 	v := url.Values{
 		"client_id":     {auth.ClientID},
 		"client_secret": {auth.ClientSecret},
 	}
-	if authorizationCode == "" {
+	if code == "" {
 		v.Set("grant_type", "refresh_token")
 		v.Set("refresh_token", refreshToken)
 	} else {
 		v.Set("grant_type", "authorization_code")
-		v.Set("code", authorizationCode)
-		v.Set("redirect_uri", redirectURI)
+		v.Set("code", code)
+		v.Set("redirect_uri", redirectionURI)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", auth.TokenURL, strings.NewReader(v.Encode()))

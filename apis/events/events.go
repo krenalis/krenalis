@@ -17,8 +17,8 @@ import (
 	"net/url"
 	"sync/atomic"
 
+	"chichi/apis/connectors"
 	"chichi/apis/datastore"
-	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
@@ -37,9 +37,9 @@ type Events struct {
 	closed      atomic.Bool
 }
 
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Transformer, http *httpclient.HTTP) (*Events, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Transformer, connectors *connectors.Connectors) (*Events, error) {
 	events := &Events{}
-	events.state = newEventsState(db, st, http)
+	events.state = newEventsState(st, connectors)
 	events.log = newEventsLog(db)
 	events.observer = newObserver(db)
 	var err error

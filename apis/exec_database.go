@@ -29,36 +29,29 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	database, err := this.connection.openDatabase()
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-	}
-
-	// Execute the query and get the results and the properties.
-	rawRows, properties, err := database.Query(ctx, query)
-	if err != nil {
-		return actionExecutionError{err}
-	}
-	defer rawRows.Close()
-
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
 		this.action.Transformation, this.action.ID, this.apis.transformer, false)
 	if err != nil {
 		return err
 	}
 
-	inSchemaProps := this.action.InSchema.PropertiesNames()
+	// Execute the query and get the results and the properties.
+	database := this.database()
+	defer database.Close()
+	rows, err := database.Query(ctx, query)
+	if err != nil {
+		return actionExecutionError{err}
+	}
+	defer rows.Close()
+
+	properties := this.action.InSchema.PropertiesNames()
 
 	// Iterate over the database rows.
-	dest := make([]any, len(properties))
-	for rawRows.Next() {
+	for rows.Next() {
 
 		// Scan values into a map.
-		row := make(map[string]any, len(properties))
-		for i, p := range properties {
-			dest[i] = databaseScanValue{property: p, row: row}
-		}
-		if err := rawRows.Scan(dest...); err != nil {
+		row, err := rows.Scan()
+		if err != nil {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
@@ -66,12 +59,12 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		// them from the SQL expression named "id" and "timestamp" returned by
 		// the query.
 		var idExpr, timestampExpr types.Property
-		for _, p := range properties {
-			switch p.Name {
+		for _, c := range rows.Columns() {
+			switch c.Name {
 			case "id":
-				idExpr = p
+				idExpr = c
 			case "timestamp":
-				timestampExpr = p
+				timestampExpr = c
 			}
 		}
 		if idExpr.Name == "" {
@@ -104,22 +97,22 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		}
 
 		// Take only the necessary properties.
-		props := make(map[string]any, len(inSchemaProps))
-		for _, name := range inSchemaProps {
+		user := make(map[string]any, len(properties))
+		for _, name := range properties {
 			if v, ok := row[name]; ok {
-				props[name] = v
+				user[name] = v
 			}
 		}
 
 		// Normalize the user properties (read from the database) using the
 		// action's mapping input schema.
-		props, err := normalize(props, this.action.InSchema)
+		user, err = normalize(user, this.action.InSchema)
 		if err != nil {
 			return actionExecutionError{err}
 		}
 
 		// Map the properties of the user.
-		mappedUser, err := mapping.Apply(ctx, props)
+		mappedUser, err := mapping.Apply(ctx, user)
 		if err != nil {
 			if err, ok := err.(mappings.Error); ok {
 				return actionExecutionError{err}
@@ -140,7 +133,7 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		}
 
 	}
-	if err = rawRows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
 	}
 
@@ -150,23 +143,6 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	return nil
-}
-
-// databaseScanValue implements the sql.Scanner interface to read the database
-// values from a database connector.
-type databaseScanValue struct {
-	property types.Property
-	row      map[string]any
-}
-
-func (sv databaseScanValue) Scan(src any) error {
-	p := sv.property
-	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
-	if err != nil {
-		return err
-	}
-	sv.row[sv.property.Name] = value
 	return nil
 }
 
@@ -242,14 +218,14 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	columns := append([]types.Property{{Name: "id", Type: types.Int()}},
 		datastore.PropertiesToColumns(outSchemaProps)...)
 
-	database, err := this.connection.openDatabase()
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-	}
+	database := this.database()
+	defer database.Close()
 	err = database.Upsert(ctx, this.action.TableName, rows, columns)
-	_ = database.Close()
+	if err != nil {
+		return err
+	}
 
 	slog.Info("users exported to database", "count", len(users), "table", this.action.TableName)
 
-	return err
+	return nil
 }

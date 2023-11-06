@@ -13,7 +13,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -23,6 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
@@ -34,9 +34,7 @@ import (
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	_connector "chichi/connector"
 	"chichi/connector/types"
-	"chichi/connector/ui"
 
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/maps"
@@ -189,27 +187,20 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		if c.OAuth != nil {
 			clientSecret = c.OAuth.ClientSecret
 		}
-		connector := &Connector{apis: this.apis, connector: c}
-		connectionUI, err := connector.openUI(connection.Role, n.Resource.Code, clientSecret,
-			n.Resource.AccessToken, state.PrivacyRegion(this.PrivacyRegion))
+		conf := &connectors.ConnectorConfig{
+			Role:         n.Role,
+			Resource:     n.Resource.Code,
+			ClientSecret: clientSecret,
+			AccessToken:  n.Resource.AccessToken,
+			Region:       state.PrivacyRegion(this.PrivacyRegion),
+		}
+		var err error
+		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, c, conf, connection.Settings)
 		if err != nil {
-			return 0, err
-		}
-		if connectionUI == nil {
-			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
-		}
-		n.Settings, err = connectionUI.ValidateSettings(ctx, connection.Settings)
-		if c, ok := connectionUI.(io.Closer); ok {
-			_ = c.Close()
-		}
-		if err != nil {
+			if err == connectors.ErrNoUserInterface {
+				err = errors.BadRequest("connector %d does not have a UI", connection.Connector)
+			}
 			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
-		}
-		if !utf8.Valid(n.Settings) {
-			return 0, errors.New("settings is not valid UTF-8")
-		}
-		if utf8.RuneCount(n.Settings) > maxSettingsLen {
-			return 0, fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 		}
 	}
 
@@ -755,17 +746,17 @@ type authorizedResource struct {
 }
 
 // OAuthToken returns an OAuth token, given an OAuth authorization code and the
-// redirect URL used to obtain that code, that can be used to add a new
+// redirection URI used to obtain that code, that can be used to add a new
 // connection to the workspace for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
 // It returns an errors.UnprocessableError error with code ConnectorNotExist if
 // the connector does not exist.
-func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redirectURI string, connector int) (string, error) {
+func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI string, connector int) (string, error) {
 
 	this.apis.mustBeOpen()
 
-	if authorizationCode == "" {
+	if code == "" {
 		return "", errors.BadRequest("authorization code is empty")
 	}
 	if connector < 1 || connector > maxInt32 {
@@ -780,19 +771,8 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
-	accessToken, refreshToken, expiresIn, err := this.apis.http.GrantAuthorization(ctx, c.OAuth, authorizationCode, redirectURI)
-	if err != nil {
-		return "", err
-	}
-
-	connection, err := _connector.RegisteredApp(c.Name).New(&_connector.AppConfig{
-		HTTPClient: this.apis.http.Client(c.OAuth.ClientSecret, accessToken),
-		Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
-	})
-	if err != nil {
-		return "", err
-	}
-	code, err := connection.Resource(ctx)
+	region := state.PrivacyRegion(this.PrivacyRegion)
+	auth, err := this.apis.connectors.GrantAuthorization(ctx, c, code, redirectionURI, region)
 	if err != nil {
 		return "", err
 	}
@@ -800,10 +780,10 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 	resource, err := json.Marshal(authorizedResource{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
-		Code:         code,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    expiresIn,
+		Code:         auth.ResourceCode,
+		AccessToken:  auth.AccessToken,
+		RefreshToken: auth.RefreshToken,
+		ExpiresIn:    auth.ExpiresIn,
 	})
 
 	// TODO(marco): Encrypt the token.
@@ -984,29 +964,27 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	if oAuth != "" {
 		clientSecret = c.OAuth.ClientSecret
 	}
-	conn := &Connector{apis: this.apis, connector: c}
-	connectionUI, err := conn.openUI(role, r.Code, clientSecret, r.AccessToken, this.workspace.PrivacyRegion)
-	if err != nil {
-		return nil, err
+	conf := &connectors.ConnectorConfig{
+		Role:         state.Role(role),
+		Resource:     r.Code,
+		ClientSecret: clientSecret,
+		AccessToken:  r.AccessToken,
+		Region:       this.workspace.PrivacyRegion,
 	}
-	if connectionUI == nil {
-		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
-	}
-
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	form, alert, err := connectionUI.ServeUI(ctx, event, values)
-	if c, ok := connectionUI.(io.Closer); ok {
-		_ = c.Close()
-	}
+	b, err := this.apis.connectors.ServeConnectorUI(ctx, c, conf, event, values)
 	if err != nil {
-		if err == ui.ErrEventNotExist {
+		switch err {
+		case connectors.ErrNoUserInterface:
+			err = errors.BadRequest("connector %d does not have a UI", c.ID)
+		case connectors.ErrEventNotExist:
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
 		}
 		return nil, err
 	}
 
-	return marshalUIFormAlert(form, alert, ui.Role(role))
+	return b, nil
 }
 
 // SetIdentifiers sets the identifiers and the anonymous identifiers of the

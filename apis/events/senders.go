@@ -11,7 +11,7 @@ import (
 	"context"
 	"log/slog"
 
-	"chichi/connector"
+	"chichi/apis/connectors"
 )
 
 // startSenders starts some senders that read from the events channel and write
@@ -35,14 +35,15 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 			for {
 				select {
 				case event := <-events:
-					destination, ok := st.Destination(event.destination)
-					if !ok {
+					c := event.action.Connection()
+					if !c.Enabled || c.Workspace().Warehouse == nil {
 						done <- event
 						continue
 					}
 					// TODO(Gianluca): use correct error handling here.
-					err := destination.SendEvent(ctx, event.eventType, event.inEvent, event.mappedEvent)
-					if err != nil && err != connector.ErrEventTypeNotExist {
+					app := st.connectors.App(c)
+					err := app.SendEvent(ctx, event.eventType, event.inEvent, event.mappedEvent)
+					if err != nil && err != connectors.ErrEventTypeNotExist {
 						if err != context.Canceled {
 							slog.Error("cannot send event", "err", err)
 						}
