@@ -565,7 +565,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 		}
 		return "", err
 	}
-	return path + c.Compression.Ext(), nil
+	return path, nil
 }
 
 // Delete deletes the connection.

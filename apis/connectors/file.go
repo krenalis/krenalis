@@ -17,7 +17,8 @@ import (
 	"log/slog"
 	"math"
 	"os"
-	pkgPath "path"
+	pathPkg "path"
+	"strings"
 	"time"
 
 	"chichi/apis/postgres"
@@ -99,7 +100,8 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 		return nil, nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	r, _, err := s.Reader(ctx, name)
+	extension := file.connection.Connector().FileExtension
+	r, _, err := s.Reader(ctx, name, extension)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -133,7 +135,8 @@ func (file *File) ReadFunc(ctx context.Context, name, sheet string, write func([
 		return err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	r, _, err := s.Reader(ctx, name)
+	extension := file.connection.Connector().FileExtension
+	r, _, err := s.Reader(ctx, name, extension)
 	if err != nil {
 		return err
 	}
@@ -166,7 +169,8 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	r, _, err := s.Reader(ctx, name)
+	extension := file.connection.Connector().FileExtension
+	r, _, err := s.Reader(ctx, name, extension)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +197,8 @@ func (file *File) Write(ctx context.Context, name, sheet string, columns []types
 		return err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	w, err := s.Writer(ctx, name, file.inner.ContentType(ctx))
+	extension := file.connection.Connector().FileExtension
+	w, err := s.Writer(ctx, name, file.inner.ContentType(ctx), extension)
 	if err != nil {
 		return err
 	}
@@ -488,12 +493,10 @@ func newCompressedStorage(s _connector.StorageConnection, c state.Compression) *
 }
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
-// from which to read the file and its timestamp.
+// from which to read the file and its timestamp. extension is the extension of
+// the file connector (e.g., "csv" for the CSV connector).
 // It is the caller's responsibility to close the returned reader.
-func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	originalName := name
-	ext := cs.compression.Ext()
-	name += ext
+func (cs compressorStorage) Reader(ctx context.Context, name string, extension string) (io.ReadCloser, time.Time, error) {
 	r, t, err := cs.storage.Reader(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -502,8 +505,12 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 	case state.ZipCompression:
 		var err error
 		var fi *os.File
+		var r2 *zip.ReadCloser
 		defer func() {
 			if err != nil {
+				if r2 != nil {
+					_ = r2.Close()
+				}
 				if fi != nil {
 					_ = removeTempFile(fi)
 				}
@@ -516,7 +523,7 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 		if err != nil {
 			return nil, time.Time{}, err
 		}
-		size, err := io.Copy(fi, r)
+		_, err = io.Copy(fi, r)
 		if err != nil {
 			return nil, time.Time{}, err
 		}
@@ -529,18 +536,35 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 		if err != nil {
 			return nil, time.Time{}, err
 		}
-		z, err := zip.NewReader(fi, size)
+		r2, err = zip.OpenReader(fi.Name())
 		if err != nil {
 			return nil, time.Time{}, err
 		}
-		name := pkgPath.Base(originalName)
-		r2, err := z.Open(name)
-		if err != nil {
-			return nil, time.Time{}, err
+		var r3 io.ReadCloser
+		for _, file := range r2.File {
+			// Skip directories.
+			if strings.HasSuffix(file.Name, "/") {
+				continue
+			}
+			if r3 != nil {
+				return nil, time.Time{}, errors.New("the ZIP archive contains not just a single file, but multiple files")
+			}
+			r3, err = file.Open()
+			if err != nil {
+				return nil, time.Time{}, err
+			}
+			t = file.Modified
 		}
-		r = newFuncReadCloser(r2, func() error {
+		if r3 == nil {
+			return nil, time.Time{}, errors.New("the ZIP archive does not contain any files")
+		}
+		r = newFuncReadCloser(r3, func() error {
+			err3 := r3.Close()
 			err2 := r2.Close()
 			err := removeTempFile(fi)
+			if err3 != nil {
+				return err3
+			}
 			if err2 != nil {
 				return err2
 			}
@@ -577,7 +601,7 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 // with an appended extension, and an appropriate content type.
 //
 // It is the caller's responsibility to call Close on the returned Writer.
-func (cs compressorStorage) Writer(ctx context.Context, path, contentType string) (*storageWriteCloser, error) {
+func (cs compressorStorage) Writer(ctx context.Context, path, contentType, extension string) (*storageWriteCloser, error) {
 	pr, pw := io.Pipe()
 	var w io.WriteCloser
 	switch cs.compression {
@@ -585,7 +609,14 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType string
 		w = pw
 	case state.ZipCompression:
 		z := zip.NewWriter(pw)
-		name := pkgPath.Base(path)
+		name := pathPkg.Base(path)
+		if ext := strings.ToLower(pathPkg.Ext(name)); ext == "" {
+			name += "." + extension
+		} else if ext == "." {
+			name += extension
+		} else if ext[1:] != extension {
+			name = strings.TrimSuffix(name, ext[1:]) + extension
+		}
 		zw, err := z.Create(name)
 		if err != nil {
 			_ = z.Close()
