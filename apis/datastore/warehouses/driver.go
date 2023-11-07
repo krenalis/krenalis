@@ -70,8 +70,8 @@ type Warehouse interface {
 	Settings() []byte
 
 	// Tables returns the tables of the data warehouse.
-	// It returns only the tables 'users', 'groups', 'events', and the tables with
-	// prefix 'users_', 'groups_' and 'events_'.
+	// It returns only the tables 'users', 'users_identities', 'groups',
+	// 'groups_identities' and 'events'.
 	Tables(ctx context.Context) ([]*Table, error)
 
 	// QueryRow executes a query that should return at most one row.

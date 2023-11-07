@@ -160,8 +160,8 @@ func (warehouse *ClickHouse) Settings() []byte {
 }
 
 // Tables returns the tables of the data warehouse.
-// It returns only the tables 'users', 'groups', 'events', and the tables with
-// prefix 'users_', 'groups_' and 'events_'.
+// It returns only the tables 'users', 'users_identities', 'groups',
+// 'groups_identities' and 'events'.
 func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
@@ -175,8 +175,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		"FROM information_schema.columns c\n" +
 		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
 		"WHERE t.table_schema = '" + warehouse.settings.Database + "' AND t.table_type = 'BASE TABLE' AND" +
-		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') OR t.table_name LIKE 'users\\__%' OR" +
-		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
+		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') )\n" +
 		"ORDER BY c.table_name, c.ordinal_position"
 
 	var table *warehouses.Table

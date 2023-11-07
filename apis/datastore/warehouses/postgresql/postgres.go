@@ -713,8 +713,8 @@ func (warehouse *PostgreSQL) Settings() []byte {
 }
 
 // Tables returns the tables of the data warehouse.
-// It returns only the tables 'users', 'groups', 'events', and the tables with
-// prefix 'users_', 'groups_' and 'events_'.
+// It returns only the tables 'users', 'users_identities', 'groups',
+// 'groups_identities' and 'events'.
 func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.

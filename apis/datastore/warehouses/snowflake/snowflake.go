@@ -479,8 +479,8 @@ func (warehouse *Snowflake) Settings() []byte {
 }
 
 // Tables returns the tables of the data warehouse.
-// It returns only the tables 'users', 'groups', 'events', and the tables with
-// prefix 'users_', 'groups_' and 'events_'.
+// It returns only the tables 'users', 'users_identities', 'groups',
+// 'groups_identities' and 'events'.
 func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
@@ -503,8 +503,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 	b.WriteString(" AND t.table_schema = ")
 	quoteString(&b, warehouse.settings.Schema)
 	b.WriteString(" AND t.table_type = 'BASE TABLE' AND" +
-		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') OR t.table_name LIKE 'users\\__%' OR" +
-		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
+		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') )\n" +
 		"ORDER BY c.table_name, c.ordinal_position")
 
 	rows, err := db.QueryContext(ctx, b.String())
