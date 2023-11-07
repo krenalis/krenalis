@@ -110,7 +110,34 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 
 // Query executes the given query and returns the resulting rows and columns.
 func (c *connection) Query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
-	return c.query(ctx, query)
+	if err := c.openDB(); err != nil {
+		return nil, nil, err
+	}
+	rows, err := c.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, nil, err
+	}
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		_ = rows.Close()
+		return nil, nil, err
+	}
+	columns := make([]types.Property, len(columnTypes))
+	for i, column := range columnTypes {
+		typ, err := propertyType(column)
+		if err != nil {
+			_ = rows.Close()
+			return nil, nil, err
+		}
+		columns[i] = types.Property{
+			Name: column.Name(),
+			Type: typ,
+			// Nullable is always considered true, as the PostgreSQL driver does
+			// not have information about nullability of returned columns.
+			Nullable: true,
+		}
+	}
+	return rows, columns, nil
 }
 
 // ServeUI serves the connector's user interface.
@@ -289,38 +316,6 @@ func (c *connection) openDB() error {
 	db.SetMaxIdleConns(0)
 	c.db = db
 	return nil
-}
-
-// query executes the given query and returns the resulting rows and columns.
-func (c *connection) query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
-	if err := c.openDB(); err != nil {
-		return nil, nil, err
-	}
-	rows, err := c.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, nil, err
-	}
-	columnTypes, err := rows.ColumnTypes()
-	if err != nil {
-		_ = rows.Close()
-		return nil, nil, err
-	}
-	columns := make([]types.Property, len(columnTypes))
-	for i, column := range columnTypes {
-		typ, err := propertyType(column)
-		if err != nil {
-			_ = rows.Close()
-			return nil, nil, err
-		}
-		columns[i] = types.Property{
-			Name: column.Name(),
-			Type: typ,
-			// Nullable is always considered true, as the PostgreSQL driver does
-			// not have information about nullability of returned columns.
-			Nullable: true,
-		}
-	}
-	return rows, columns, nil
 }
 
 // testConnection tests a connection with the given settings.
