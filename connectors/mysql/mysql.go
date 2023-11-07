@@ -273,6 +273,8 @@ func (c *connection) query(ctx context.Context, query string) (connector.Rows, [
 			_ = rows.Close()
 			return nil, nil, fmt.Errorf("cannot get type for property %q: %s", column.Name(), err)
 		}
+		// Unlike what happens with PostgreSQL, the MySQL driver is able to
+		// determine whether a column returned by the query is nullable or not.
 		nullable, ok := column.Nullable()
 		columns[i] = types.Property{
 			Name:     column.Name(),
