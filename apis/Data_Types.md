@@ -37,7 +37,7 @@
 
 [^4]: JSON types: `json.RawMessage`, `bool`, `string`, `json.Number`, `float64`, `map[string]any`, and `[]any`. `nil` represents a `nil` value, not the JSON `null`.
 
-[^5]: Only the data warehouse driver supports arrays. Arrays of numeric, array, and composite types are not supported yet.
+[^5]: For the connector, the support for Arrays is not implemented neither for the `Query` method nor for the `Upsert` method, but for the latter it may be implemented by changing the `quoteTable` function.
 
 [^6]: As Snowflake `VARIANT` type.
 
