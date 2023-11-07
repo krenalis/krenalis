@@ -37,7 +37,7 @@ const ConnectionOverview = () => {
 			}, 300);
 		};
 		const fetchData = async () => {
-			if (c.role !== 'Source' || (c.type !== 'App' && c.type !== 'Database' && c.type !== 'File')) {
+			if (c.type !== 'App' && c.type !== 'Database' && c.type !== 'File') {
 				setHasExecutions(false);
 				stopLoading();
 				return;
@@ -118,20 +118,22 @@ const ConnectionOverview = () => {
 		<div className='connectionOverview'>
 			{hasExecutions ? (
 				<>
-					<div className='chart'>
-						<Flex className='chartHead' justifyContent='space-between' alignItems='baseline'>
-							<div className='title'>User identities ingested by {c.name} in the last 24 hours</div>
-						</Flex>
-						<BarChart width={1400} height={350} data={userStats}>
-							<CartesianGrid strokeDasharray='3 3' />
-							<XAxis dataKey='name' />
-							<YAxis />
-							<Tooltip />
-							<Bar dataKey='users' fill='var(--color-primary-600)' />
-						</BarChart>
-					</div>
+					{c.role === 'Source' && (
+						<div className='chart'>
+							<Flex className='chartHead' justifyContent='space-between' alignItems='baseline'>
+								<div className='title'>User identities ingested by {c.name} in the last 24 hours</div>
+							</Flex>
+							<BarChart width={1400} height={350} data={userStats}>
+								<CartesianGrid strokeDasharray='3 3' />
+								<XAxis dataKey='name' />
+								<YAxis />
+								<Tooltip />
+								<Bar dataKey='users' fill='var(--color-primary-600)' />
+							</BarChart>
+						</div>
+					)}
 					<div className='executionsWrapper'>
-						<div className='title'>Executions list</div>
+						<div className='title'>{c.role === 'Source' ? 'Imports' : 'Exports'}</div>
 						<Grid
 							columns={EXECUTIONS_COLUMNS}
 							rows={rows}
@@ -147,7 +149,7 @@ const ConnectionOverview = () => {
 				style={{ '--width': '600px' } as React.CSSProperties}
 				onSlAfterHide={() => setSelectedExecution(null)}
 				className='selectedErrorDialog'
-				label={selectedExecution ? `Execution ${selectedExecution.ID}` : ''}
+				label={selectedExecution ? `${c.role === 'Source' ? 'Import' : 'Export'} ${selectedExecution.ID}` : ''}
 			>
 				{selectedExecution ? selectedExecution.Error : ''}
 			</SlDialog>
