@@ -62,7 +62,7 @@ var (
 	EventTypeNotExist    errors.Code = "EventTypeNotExist"
 	FetchSchemaFailed    errors.Code = "FetchSchemaFailed"
 	InvalidPath          errors.Code = "InvalidPath"
-	InvalidPlaceholders  errors.Code = "InvalidPlaceholders"
+	InvalidPlaceholder   errors.Code = "InvalidPlaceholder"
 	InvalidTable         errors.Code = "InvalidTable"
 	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
@@ -530,8 +530,8 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 //
 // It returns an errors.UnprocessableError error with code:
 //   - InvalidPath, if path is not valid for the storage connector.
-//   - InvalidPlaceholders, if path for destination connections contains
-//     invalid placeholders.
+//   - InvalidPlaceholder, if path for destination connections contains an
+//     invalid placeholder.
 //   - NoStorage, if the connection does not have a storage.
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
@@ -552,7 +552,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 		var err error
 		path, err = replacePathPlaceholders(path, time.Now())
 		if err != nil {
-			return "", errors.Unprocessable(InvalidPlaceholders, "%s", err)
+			return "", errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		}
 	}
 	path, err := this.file().CompletePath(ctx, path)
