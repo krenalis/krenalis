@@ -26,7 +26,7 @@ import (
 	"chichi/connector/types"
 	"chichi/connector/ui"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 // Connector icon.
@@ -74,18 +74,36 @@ func (c *connection) Close() error {
 
 // Columns returns the columns of the given table.
 func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
-	var err error
-	table, err = quoteTable(table)
+	if err := c.openDB(); err != nil {
+		return nil, err
+	}
+	conn, err := c.db.Conn(ctx)
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := c.query(ctx, "SELECT * FROM "+table)
+	var columns []types.Property
+	err = conn.Raw(func(driverConn any) error {
+		conn := driverConn.(*stdlib.Conn)
+		tx, err := conn.Conn().Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback(ctx)
+		// TODO(Gianluca): validate the table name. See https://github.com/open2b/chichi/issues/372.
+		tables, err := tablesSchemas(ctx, tx, "public", []string{table})
+		if err != nil {
+			return err
+		}
+		if len(tables) == 1 {
+			columns = tables[0].columns
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	err = rows.Close()
-	if err != nil {
-		return nil, err
+	if len(columns) == 0 {
+		return nil, errors.New("table does not exist") // TODO(Gianluca): https://github.com/open2b/chichi/issues/372.
 	}
 	return columns, nil
 }

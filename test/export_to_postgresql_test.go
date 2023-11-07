@@ -73,8 +73,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 	{
 		schema := c.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},     // TODO(Gianluca): for Nullable: true, see the issue https://github.com/open2b/chichi/issues/363.
-			{Name: "full_name", Type: types.Text(), Nullable: true}, // TODO(Gianluca): for Nullable: true, see the issue https://github.com/open2b/chichi/issues/363.
+			{Name: "email", Type: types.Text(), Nullable: false},
+			{Name: "full_name", Type: types.Text(), Nullable: false},
 		})
 		if !expectedSchema.EqualTo(schema) {
 			t.Fatalf("\nexpecting:  %#v\ngot:        %#v", expectedSchema.Properties(), schema.Properties())

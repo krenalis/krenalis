@@ -384,6 +384,11 @@ func (db *DB) Tables(ctx context.Context, database string) ([]string, error) {
 	return tables, nil
 }
 
+// UnderlyingPool returns the underlying pool.
+func (db *DB) UnderlyingPool() *pgxpool.Pool {
+	return db.db
+}
+
 type Conn struct {
 	conn *pgxpool.Conn
 	log  io.Writer
