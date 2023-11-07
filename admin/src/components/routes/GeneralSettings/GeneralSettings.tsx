@@ -2,7 +2,7 @@ import React, { useState, useContext, useLayoutEffect, useRef } from 'react';
 import './GeneralSettings.css';
 import * as icons from '../../../constants/icons';
 import DangerZone from '../../shared/DangerZone/DangerZone';
-import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
+import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import { CONFIRM_ANIMATION_DURATION } from '../ActionWrapper/Action.constants';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -137,7 +137,7 @@ const GeneralSettings = () => {
 				</p>
 				<div className='general-settings__confirmation-buttons'>
 					<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
-					<ConfirmationButton
+					<FeedbackButton
 						ref={deleteButtonRef}
 						className='general-settings__deletion-button'
 						variant='danger'
@@ -145,7 +145,7 @@ const GeneralSettings = () => {
 						animationDuration={CONFIRM_ANIMATION_DURATION}
 					>
 						Delete
-					</ConfirmationButton>
+					</FeedbackButton>
 				</div>
 			</SlDialog>
 		</div>

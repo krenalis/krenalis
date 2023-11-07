@@ -2,6 +2,7 @@
 	left: 50%;
 	transform: translateX(-50%);
 	overflow: visible !important;
+	z-index: 999999 !important;
 }
 
 .sl-toast-stack sl-alert::part(base) {

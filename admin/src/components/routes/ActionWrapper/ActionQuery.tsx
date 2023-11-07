@@ -1,5 +1,5 @@
 import React, { useState, useRef, useContext, useEffect } from 'react';
-import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
+import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import Grid from '../../shared/Grid/Grid';
 import Section from '../../shared/Section/Section';
 import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
@@ -153,7 +153,7 @@ const ActionQuery = () => {
 					<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
 						Preview
 					</SlButton>
-					<ConfirmationButton
+					<FeedbackButton
 						ref={queryConfirmButtonRef}
 						variant='success'
 						size='small'
@@ -161,7 +161,7 @@ const ActionQuery = () => {
 						animationDuration={CONFIRM_ANIMATION_DURATION}
 					>
 						Confirm
-					</ConfirmationButton>
+					</FeedbackButton>
 				</div>
 			</Section>
 			<SlDrawer

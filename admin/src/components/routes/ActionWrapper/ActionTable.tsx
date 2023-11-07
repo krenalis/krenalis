@@ -1,6 +1,6 @@
 import React, { useContext, useRef, useEffect } from 'react';
 import Section from '../../shared/Section/Section';
-import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
+import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import { AppContext } from '../../../context/providers/AppProvider';
 import ActionContext from '../../../context/ActionContext';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
@@ -76,7 +76,7 @@ const ActionTable = () => {
 		<Section title='Table' description='The name of the table of the database'>
 			<div className='actionTable'>
 				<SlInput value={action.Table} onSlInput={onUpdateTable} />
-				<ConfirmationButton
+				<FeedbackButton
 					ref={tableConfirmationButtonRef}
 					variant='success'
 					size='small'
@@ -84,7 +84,7 @@ const ActionTable = () => {
 					animationDuration={CONFIRM_ANIMATION_DURATION}
 				>
 					Confirm
-				</ConfirmationButton>
+				</FeedbackButton>
 			</div>
 		</Section>
 	);

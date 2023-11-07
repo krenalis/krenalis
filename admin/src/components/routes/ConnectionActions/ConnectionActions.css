@@ -66,16 +66,8 @@
 	padding-right: 20px;
 }
 
-.connectionActions .runButton > sl-icon {
+.connectionActions .runButton > sl-icon[name='play'] {
 	font-size: 16px;
-}
-
-.connectionActions .runButton > sl-spinner {
-	font-size: 16px;
-}
-
-.connectionActions .runButton::part(label) {
-	padding-left: 5px;
 }
 
 .actionDialog::part(body) {

@@ -1,14 +1,12 @@
-import React, { useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import Grid from '../../shared/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/helpers/transformedAction';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
-import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
@@ -16,8 +14,13 @@ import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.
 import { Action, ActionType } from '../../../types/external/action';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
+import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
+import { Execution } from '../../../types/external/api';
+import { sleep } from '../../../lib/utils/sleep';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
+
+const TIME_DELTA = 1000;
 
 interface ActionsGridProps {
 	newActionID: React.MutableRefObject<number>;
@@ -27,9 +30,12 @@ interface ActionsGridProps {
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
 	const [runningActions, setRunningActions] = useState<number[]>([]);
-
-	const { api, showError, showStatus, setAreConnectionsStale } = useContext(AppContext);
+	const { api, showError, setAreConnectionsStale, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
+
+	const runButtonRefs = useRef<{
+		[key: number]: React.RefObject<FeedbackButtonRef>;
+	}>({});
 
 	useEffect(() => {
 		const running: number[] = [];
@@ -39,6 +45,12 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			}
 		}
 		setRunningActions(running);
+	}, [actions]);
+
+	useEffect(() => {
+		for (const a of actions) {
+			runButtonRefs.current[a.ID] = React.createRef();
+		}
 	}, [actions]);
 
 	const onActionStatusSwitch = async (actionID: number) => {
@@ -65,26 +77,76 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	};
 
 	const executeAction = async (actionID: number) => {
-		setRunningActions([...runningActions, actionID]);
+		runButtonRefs.current[actionID].current!.load();
+		const startTime = new Date().getTime();
+		const errorButton = (
+			<SlButton
+				size='small'
+				variant='neutral'
+				onClick={() =>
+					redirect(
+						`connections/${connection.id}/overview?failed-execution-action=${actionID}&failed-execution-start-time=${startTime}`,
+					)
+				}
+			>
+				See in {connection.role === 'Source' ? 'imports' : 'exports'} list
+			</SlButton>
+		);
 		try {
 			await api.workspaces.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'ExecutionInProgress':
-						showStatus(statuses.actionExecutionInProgress);
-						break;
-					case 'NoStorage':
-						showStatus(statuses.noStorage);
-						break;
-					default:
-						break;
-				}
+				runButtonRefs.current[actionID].current!.error(
+					<>
+						{err.message}
+						{errorButton}
+					</>,
+				);
 				return;
 			}
+			runButtonRefs.current[actionID].current!.stop();
 			showError(err);
 			return;
 		}
+
+		let execution: Execution;
+		while (execution == null) {
+			let executions: Execution[];
+			try {
+				executions = await api.workspaces.connections.executions(connection.id);
+			} catch (err) {
+				showError(err);
+				return;
+			}
+
+			const exec = executions
+				.filter((imp) => {
+					return imp.Action === actionID;
+				})
+				.filter((imp) => {
+					return new Date(imp.StartTime).getTime() >= startTime - TIME_DELTA;
+				})[0];
+
+			if (!exec || exec.EndTime == null) {
+				// wait before making a new request.
+				await sleep(500);
+				continue;
+			}
+
+			execution = exec;
+		}
+
+		if (execution.Error !== '') {
+			runButtonRefs.current[actionID].current!.error(
+				<>
+					{execution.Error}
+					{errorButton}
+				</>,
+			);
+			return;
+		}
+
+		runButtonRefs.current[actionID].current!.confirm();
 	};
 
 	const onSchedulerPeriodChange = async (e: Event, actionID: number) => {
@@ -159,20 +221,16 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								</SlRadioGroup>
 							</SlMenu>
 						</SlDropdown>
-						<SlButton
-							disabled={runningActions.includes(a.ID)}
-							variant='default'
+						<FeedbackButton
+							ref={runButtonRefs.current[a.ID]}
 							className='runButton'
 							size='small'
 							onClick={() => executeAction(a.ID)}
+							loading={runningActions.includes(a.ID)}
 						>
-							{runningActions.includes(a.ID) ? (
-								<SlSpinner slot='prefix' />
-							) : (
-								<SlIcon slot='prefix' name='play' />
-							)}
+							<SlIcon slot='prefix' name='play' />
 							Run now
-						</SlButton>
+						</FeedbackButton>
 					</>
 				)}
 				<SlButton variant='default' size='small' onClick={() => onSelectAction(a)}>

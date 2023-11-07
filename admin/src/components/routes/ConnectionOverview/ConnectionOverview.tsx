@@ -79,6 +79,28 @@ const ConnectionOverview = () => {
 			}
 			setExecutions(executions);
 			stopLoading();
+			const params = new URLSearchParams(window.location.search);
+			const hasFailedExecution = params.has('failed-execution-action');
+			if (hasFailedExecution) {
+				setTimeout(() => {
+					const executionsListElement = document.querySelector('.executionsWrapper');
+					executionsListElement.scrollIntoView({ behavior: 'smooth' });
+					setTimeout(() => {
+						const actionID = Number(decodeURIComponent(params.get('failed-execution-action')));
+						const startTime = new Date(
+							Number(decodeURIComponent(params.get('failed-execution-start-time'))),
+						);
+						const execution = executions
+							.filter((imp) => {
+								return imp.Action === actionID;
+							})
+							.filter((imp) => {
+								return new Date(imp.StartTime) >= startTime;
+							})[0];
+						setSelectedExecution(execution);
+					}, 500);
+				}, 500);
+			}
 		};
 		fetchData();
 	}, []);

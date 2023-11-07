@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import './ConnectorSettings.css';
 import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
-import ConfirmationButton, { ConfirmationButtonRef } from '../../shared/ConfirmationButton/ConfirmationButton';
+import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import NotFound from '../NotFound/NotFound';
 import Flex from '../../shared/Flex/Flex';
 import SettingsForm from '../../shared/SettingsForm/SettingsForm';
@@ -45,7 +45,7 @@ const ConnectorSettings = () => {
 		selectedWorkspace,
 	} = useContext(AppContext);
 
-	const confirmationButtonsRef = useRef<ConfirmationButtonRef[]>([]);
+	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
 	let connectorID: number, connectionRole: ConnectionRole, OAuthToken: string;
 	const url = new URL(document.location.href);
@@ -125,7 +125,7 @@ const ConnectorSettings = () => {
 	}, []);
 
 	const onActionClick = async (eventName: string, confirmationButtonIndex?: number) => {
-		let confirmationButton: ConfirmationButtonRef | null = null;
+		let confirmationButton: FeedbackButtonRef | null = null;
 		if (confirmationButtonIndex != null) {
 			confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
 		}
@@ -294,7 +294,7 @@ const ConnectorSettings = () => {
 	for (const [i, a] of actions.entries()) {
 		if (a.Confirm) {
 			actionsToRender.push(
-				<ConfirmationButton
+				<FeedbackButton
 					key={a.Event}
 					variant={a.Variant}
 					onClick={async () => {
@@ -305,7 +305,7 @@ const ConnectorSettings = () => {
 					}}
 				>
 					{a.Text}
-				</ConfirmationButton>,
+				</FeedbackButton>,
 			);
 		} else {
 			actionsToRender.push(

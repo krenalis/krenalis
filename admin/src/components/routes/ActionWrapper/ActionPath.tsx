@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import Section from '../../shared/Section/Section';
-import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
+import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import Grid from '../../shared/Grid/Grid';
 import { AppContext } from '../../../context/providers/AppProvider';
 import ActionContext from '../../../context/ActionContext';
@@ -357,7 +357,7 @@ const ActionPath = () => {
 					<SlButton variant='neutral' size='small' onClick={onFilePreview}>
 						Preview
 					</SlButton>
-					<ConfirmationButton
+					<FeedbackButton
 						ref={fileConfirmButtonRef}
 						variant='success'
 						size='small'
@@ -365,7 +365,7 @@ const ActionPath = () => {
 						animationDuration={CONFIRM_ANIMATION_DURATION}
 					>
 						Confirm
-					</ConfirmationButton>
+					</FeedbackButton>
 				</div>
 			)}
 			<SlDrawer

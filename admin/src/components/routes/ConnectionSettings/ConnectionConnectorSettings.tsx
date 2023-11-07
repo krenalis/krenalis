@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
-import ConfirmationButton, { ConfirmationButtonRef } from '../../shared/ConfirmationButton/ConfirmationButton';
+import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
@@ -22,7 +22,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 
 	const { api, showError, showStatus, redirect } = useContext(AppContext);
 
-	const confirmationButtonsRef = useRef<ConfirmationButtonRef[]>([]);
+	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
 	useEffect(() => {
 		const fetchUI = async () => {
@@ -57,7 +57,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	}, []);
 
 	const onActionClick = async (eventName: string, confirmationButtonIndex?: number) => {
-		let confirmationButton: ConfirmationButtonRef | null = null;
+		let confirmationButton: FeedbackButtonRef | null = null;
 		if (confirmationButtonIndex != null) {
 			confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
 		}
@@ -139,7 +139,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	for (const [i, a] of actions.entries()) {
 		if (a.Confirm) {
 			actionsToRender.push(
-				<ConfirmationButton
+				<FeedbackButton
 					key={a.Event}
 					variant={a.Variant}
 					onClick={async () => {
@@ -150,7 +150,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 					}}
 				>
 					{a.Text}
-				</ConfirmationButton>,
+				</FeedbackButton>,
 			);
 		} else {
 			actionsToRender.push(

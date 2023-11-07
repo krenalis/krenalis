@@ -1,0 +1,73 @@
+.feedbackButton {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.feedbackButton::part(label) {
+	transition: transform var(--scale-animation-duration);
+	will-change: transform;
+}
+
+.feedbackButton.confirm::part(label),
+.feedbackButton.error::part(label) {
+	transform: scale(1.8);
+}
+
+.feedbackTooltip::part(base) {
+	background-color: var(--sl-color-neutral-300);
+}
+
+.feedbackTooltip::part(body) {
+	background-color: var(--bg-gray);
+	border: 1px solid var(--sl-color-neutral-300);
+	pointer-events: all;
+}
+
+.feedbackTooltip::part(base__popup) {
+	pointer-events: all;
+}
+
+.feedbackTooltip::part(base__arrow) {
+	background-color: var(--bg-gray);
+	border: 1px solid var(--sl-color-neutral-300);
+	z-index: 10;
+	border-left: 0;
+	border-top: 0;
+}
+
+.feedbackTooltip .tooltipContent {
+	font-size: 12px;
+	padding: 12px 8px 8px 8px;
+	position: relative;
+}
+
+.feedbackTooltip .tooltipContent sl-button {
+	display: block;
+	margin-top: 8px;
+}
+
+.feedbackTooltip .tooltipContent sl-button::part(base) {
+	height: unset;
+	min-height: unset;
+	line-height: unset;
+	padding: 2px 0;
+}
+
+.feedbackTooltip .tooltipContent sl-button::part(label) {
+	font-size: 11px;
+}
+
+.feedbackTooltip .tooltipContent > .errorIcon {
+	color: var(--sl-color-danger-500);
+	margin-right: 8px;
+	position: relative;
+	top: 1px;
+}
+
+.feedbackTooltip .tooltipContent > .closeIcon {
+	position: absolute;
+	right: -2px;
+	top: 0px;
+	cursor: pointer;
+}
