@@ -550,7 +550,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	}
 	if c.Role == state.Destination {
 		var err error
-		path, err = replacePathPlaceholders(path, time.Now())
+		path, err = replacePathPlaceholders(path, time.Now().UTC())
 		if err != nil {
 			return "", errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		}

@@ -63,7 +63,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	}
 
 	// Write the file.
-	path, err := replacePathPlaceholders(this.action.Path, time.Now())
+	path, err := replacePathPlaceholders(this.action.Path, time.Now().UTC())
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("invalid path: %s", err)}
 	}
@@ -217,8 +217,7 @@ var (
 )
 
 // replacePathPlaceholders replaces the placeholders in the file export path
-// using now as current time. The timezone of now is ignored, since UTC is
-// always used.
+// using now as current time.
 //
 // Supported placeholders are:
 //
@@ -232,8 +231,8 @@ var (
 // Any character-sequence enclosed between "{{" and "}}" and not recognized,
 // makes this function return error.
 func replacePathPlaceholders(path string, now time.Time) (string, error) {
-	path = todayPlaceholder.ReplaceAllLiteralString(path, now.UTC().Format(time.DateOnly))
-	path = nowPlaceholder.ReplaceAllLiteralString(path, now.UTC().Format("2006-01-02-15-04-05"))
+	path = todayPlaceholder.ReplaceAllLiteralString(path, now.Format(time.DateOnly))
+	path = nowPlaceholder.ReplaceAllLiteralString(path, now.Format("2006-01-02-15-04-05"))
 	path = unixPlaceholder.ReplaceAllLiteralString(path, strconv.FormatInt(now.Unix(), 10))
 	remaining := placeholder.FindString(path)
 	if remaining != "" {
