@@ -152,7 +152,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			var err error
-			schema, err := this.app().Schema(ctx, c.Role, state.Users, "")
+			schema, err := this.app().Schema(ctx, state.Users, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -168,7 +168,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		case Groups:
 			var err error
-			schema, err := this.app().Schema(ctx, c.Role, state.Groups, "")
+			schema, err := this.app().Schema(ctx, state.Groups, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -971,7 +971,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	}
 
 	// Get the event type.
-	outSchema, err := this.app().Schema(ctx, c.Role, state.Events, eventType)
+	outSchema, err := this.app().Schema(ctx, state.Events, eventType)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
@@ -2185,7 +2185,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
-		schema, err := this.app().Schema(ctx, c.Role, state.Target(target), eventType)
+		schema, err := this.app().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {
 				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)

@@ -25,7 +25,7 @@ import (
 func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 
 	// Create a schema with only the matching property.
-	sourceSchema, err := this.app().Schema(ctx, state.Source, state.Users, "")
+	sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
 	if err != nil {
 		return err
 	}

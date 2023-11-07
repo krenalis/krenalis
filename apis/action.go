@@ -285,7 +285,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	var eventTypeSchema types.Type
 	var err error
 	if this.action.EventType != "" {
-		eventTypeSchema, err = this.app().Schema(ctx, c.Role, state.Events, this.action.EventType)
+		eventTypeSchema, err = this.app().Schema(ctx, state.Events, this.action.EventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {
 				return errors.Unprocessable(EventTypeNotExist, "connection %d no longer has the event type %q", c.ID, this.action.EventType)

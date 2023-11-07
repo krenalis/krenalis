@@ -24,6 +24,7 @@ type WebhookPayload = _connector.WebhookPayload
 // App represents the app of an app connection.
 type App struct {
 	name  string
+	role  state.Role
 	http  *httpclient.HTTP
 	inner _connector.AppConnection
 	err   error
@@ -34,6 +35,7 @@ type App struct {
 func (connectors *Connectors) App(connection *state.Connection) *App {
 	app := &App{
 		name: connection.Connector().Name,
+		role: connection.Role,
 		http: connectors.http,
 	}
 	var resourceID int
@@ -90,16 +92,22 @@ func (app *App) PreviewSendEvent(ctx context.Context, eventType string, event *E
 	return preview, nil
 }
 
-// Schema returns the app's schema for the provided role and target. If target
-// is state.Events, eventType represents the type of the event. If the event
-// type does not exist, it returns the ErrEventTypeNotExist error.
+// Schema returns the app's schema for the provided target. If target is
+// state.Events, eventType represents the type of the event. If the event type
+// does not exist, it returns the ErrEventTypeNotExist error.
 //
 // For the users and the groups target, the returned schema contains only the
 // properties compatible with the provided role. For the events target, the
 // returned schema can be the invalid schema.
 //
 // It panics if the app does not support the provided target.
-func (app *App) Schema(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
+func (app *App) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
+	return app.SchemaAsRole(ctx, app.role, target, eventType)
+}
+
+// SchemaAsRole is like Schema but returns the schema as the provided role,
+// instead of the role of the app's connection.
+func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {
 		return types.Type{}, app.err
 	}
