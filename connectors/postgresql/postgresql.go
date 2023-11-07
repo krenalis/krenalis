@@ -312,11 +312,12 @@ func (c *connection) query(ctx context.Context, query string) (connector.Rows, [
 			_ = rows.Close()
 			return nil, nil, err
 		}
-		nullable, ok := column.Nullable()
 		columns[i] = types.Property{
-			Name:     column.Name(),
-			Type:     typ,
-			Nullable: nullable || !ok,
+			Name: column.Name(),
+			Type: typ,
+			// Nullable is always considered true, as the PostgreSQL driver does
+			// not have information about nullability of returned columns.
+			Nullable: true,
 		}
 	}
 	return rows, columns, nil
