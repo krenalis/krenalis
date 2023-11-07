@@ -36,8 +36,8 @@ POST    /api/workspaces/{id}/ui-event                                           
 GET     /api/connectors/{id}/auth-code-url                                       Return the URL that directs to the consent page of an OAuth 2.0 provider.
 PUT     /api/workspaces/{id}/event-listeners/                                    Add a new event listener.
 DELETE  /api/workspaces/{id}/event-listeners/{id}                                Remove an event listener.
-GET     /api/workspaces/{id}/event-listeners/{id}/events                         Returns the processed events.
-POST    /api/workspaces/{id}/users                                               List the Golden Records of the users and the schema.
+GET     /api/workspaces/{id}/event-listeners/{id}/events                         Return the processed events.
+POST    /api/workspaces/{id}/users                                               List the Golden Records of the users and their schema.
 GET     /api/workspaces/{id}/users/{id}/events                                   List the events of a user.
 GET     /api/workspaces/{id}/users/{id}/traits                                   List the traits of a user.
 GET     /api/workspaces/{id}                                                     Get the workspace.
