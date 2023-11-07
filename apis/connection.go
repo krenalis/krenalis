@@ -828,7 +828,7 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 		case connectors.ErrNoStorage:
 			return nil, types.Type{}, errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
 		}
-		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
+		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", connector.Name, err)
 	}
 
 	return records, types.Object(columns), nil
