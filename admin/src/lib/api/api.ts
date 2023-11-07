@@ -25,7 +25,6 @@ import {
 	UIResponse,
 	UIValues,
 	authCodeURLResponse,
-	Import,
 	EventListenerEventsResponse,
 	AddEventListenerResponse,
 	ActionSchemasResponse,
@@ -42,6 +41,7 @@ import {
 	ObservedEvent,
 	UserEventsResponse,
 	userTraitsResponse,
+	Execution,
 } from '../../types/external/api';
 
 class API {
@@ -137,8 +137,8 @@ class Connections {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/stats`, http.GET);
 	};
 
-	imports = async (connection: number): Promise<Import[]> => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/imports`, http.GET);
+	executions = async (connection: number): Promise<Execution[]> => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/executions`, http.GET);
 	};
 
 	query = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {

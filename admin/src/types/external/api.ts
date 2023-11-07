@@ -19,7 +19,7 @@ interface UIResponse {
 	Alert: ConnectorAlert;
 }
 
-interface Import {
+interface Execution {
 	ID: number;
 	Action: number;
 	StartTime: string;
@@ -123,7 +123,7 @@ export type {
 	authCodeURLResponse,
 	UIResponse,
 	UIValues,
-	Import,
+	Execution,
 	EventListenerEventsResponse,
 	AddEventListenerResponse,
 	ActionSchemasResponse,

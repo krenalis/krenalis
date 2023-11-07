@@ -662,7 +662,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							_ = json.NewEncoder(w).Encode(map[string]any{"sheets": sheets})
 						})
-						router.Get("/imports", func(w http.ResponseWriter, r *http.Request) {
+						router.Get("/executions", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)
 							if err != nil {

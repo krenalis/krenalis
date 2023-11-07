@@ -11,9 +11,9 @@ import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { ConnectionStats } from '../../../types/external/connection';
 import { GridRow } from '../../../types/componentTypes/Grid.types';
-import { Import } from '../../../types/external/api';
+import { Execution } from '../../../types/external/api';
 
-const IMPORTS_COLUMNS = [
+const EXECUTIONS_COLUMNS = [
 	{ name: 'ID' },
 	{ name: 'Start time', type: 'DateTime' },
 	{ name: 'End time', type: 'DateTime' },
@@ -22,9 +22,9 @@ const IMPORTS_COLUMNS = [
 
 const ConnectionOverview = () => {
 	const [userStats, setUserStats] = useState<any[]>([]);
-	const [imports, setImports] = useState<Import[]>([]);
-	const [hasImports, setHasImports] = useState<boolean>(true);
-	const [selectedError, setSelectedError] = useState<string>('');
+	const [executions, setExecutions] = useState<Execution[]>([]);
+	const [hasExecutions, setHasExecutions] = useState<boolean>(true);
+	const [selectedExecution, setSelectedExecution] = useState<Execution>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
 	const { api, showStatus, showError, redirect } = useContext(AppContext);
@@ -38,7 +38,7 @@ const ConnectionOverview = () => {
 		};
 		const fetchData = async () => {
 			if (c.role !== 'Source' || (c.type !== 'App' && c.type !== 'Database' && c.type !== 'File')) {
-				setHasImports(false);
+				setHasExecutions(false);
 				stopLoading();
 				return;
 			}
@@ -68,16 +68,16 @@ const ConnectionOverview = () => {
 			}
 			setUserStats(userStats);
 
-			// get the imports.
-			let imports: Import[];
+			// get the executions.
+			let executions: Execution[];
 			try {
-				imports = await api.workspaces.connections.imports(c.id);
+				executions = await api.workspaces.connections.executions(c.id);
 			} catch (err) {
 				showError(err);
 				stopLoading();
 				return;
 			}
-			setImports(imports);
+			setExecutions(executions);
 			stopLoading();
 		};
 		fetchData();
@@ -99,24 +99,24 @@ const ConnectionOverview = () => {
 	}
 
 	const rows: GridRow[] = [];
-	for (const i of imports) {
+	for (const exec of executions) {
 		const errorCell = (
 			<div
-				className={`cell error${i.Error !== '' ? ' hasError' : ''}`}
+				className={`cell error${exec.Error !== '' ? ' hasError' : ''}`}
 				onClick={() => {
-					setSelectedError(i.Error);
+					setSelectedExecution(exec);
 				}}
 			>
-				{i.Error === '' ? '-' : i.Error}
+				{exec.Error === '' ? '-' : exec.Error}
 			</div>
 		);
-		const row = { cells: [i.ID, i.StartTime, i.EndTime, errorCell], key: String(i.ID) };
+		const row = { cells: [exec.ID, exec.StartTime, exec.EndTime, errorCell], key: String(exec.ID) };
 		rows.push(row);
 	}
 
 	return (
 		<div className='connectionOverview'>
-			{hasImports ? (
+			{hasExecutions ? (
 				<>
 					<div className='chart'>
 						<Flex className='chartHead' justifyContent='space-between' alignItems='baseline'>
@@ -130,12 +130,12 @@ const ConnectionOverview = () => {
 							<Bar dataKey='users' fill='var(--color-primary-600)' />
 						</BarChart>
 					</div>
-					<div className='importsWrapper'>
-						<div className='title'>Imports list</div>
+					<div className='executionsWrapper'>
+						<div className='title'>Executions list</div>
 						<Grid
-							columns={IMPORTS_COLUMNS}
+							columns={EXECUTIONS_COLUMNS}
 							rows={rows}
-							noRowsMessage={`No import has been yet performed from the ${c.name} connection`}
+							noRowsMessage={`No execution has been yet performed from the ${c.name} connection`}
 						/>
 					</div>
 				</>
@@ -143,13 +143,13 @@ const ConnectionOverview = () => {
 				<div className='nothingToShow'>Currently there is nothing to show for connection {c.name}</div>
 			)}
 			<SlDialog
-				open={selectedError !== ''}
+				open={selectedExecution !== null}
 				style={{ '--width': '600px' } as React.CSSProperties}
-				onSlAfterHide={() => setSelectedError('')}
+				onSlAfterHide={() => setSelectedExecution(null)}
 				className='selectedErrorDialog'
-				label='Full length error'
+				label={selectedExecution ? `Execution ${selectedExecution.ID}` : ''}
 			>
-				{selectedError}
+				{selectedExecution ? selectedExecution.Error : ''}
 			</SlDialog>
 		</div>
 	);

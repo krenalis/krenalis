@@ -19,11 +19,11 @@
 	left: -20px;
 }
 
-.connectionOverview .importsWrapper {
+.connectionOverview .executionsWrapper {
 	margin: 100px auto 20px auto;
 }
 
-.connectionOverview .importsWrapper .title {
+.connectionOverview .executionsWrapper .title {
 	max-width: 1400px;
 	margin: auto;
 	margin-bottom: 20px;

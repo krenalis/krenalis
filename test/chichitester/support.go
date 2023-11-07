@@ -125,8 +125,8 @@ func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport})
 }
 
-func (c *Chichi) Imports(connection int) []any {
-	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/imports"
+func (c *Chichi) Executions(connection int) []any {
+	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/executions"
 	return c.MustCall("GET", method, nil).([]any)
 }
 
@@ -168,11 +168,8 @@ func (c *Chichi) Users(properties []string, start, end int) map[string]any {
 func (c *Chichi) WaitActionsToFinish(conn int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
-		// TODO(Gianluca): here 'Imports' is called because it also returns the
-		// executions of exports. This call will be changed when we will revise
-		// the implementation of such method.
 		stillRunning := false
-		for _, exec := range c.Imports(conn) {
+		for _, exec := range c.Executions(conn) {
 			e := exec.(map[string]any)
 			// If the action execution ended with an error,
 			// make the test fail.
