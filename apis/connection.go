@@ -609,8 +609,8 @@ func (this *Connection) Delete(ctx context.Context) error {
 // in range [0, 100].
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-// If the execution of the query fails, it returns an errors.UnprocessableError
-// with code QueryExecutionFailed.
+// If a database error occurred, it returns an errors.UnprocessableError with
+// code DatabaseFailed.
 func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]map[string]any, types.Type, error) {
 
 	this.apis.mustBeOpen()
@@ -637,13 +637,13 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	// Execute the query.
 	query, err := compileActionQuery(query, limit)
 	if err != nil {
-		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
 	database := this.database()
 	defer database.Close()
 	rows, err := database.Query(ctx, query)
 	if err != nil {
-		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
 	defer rows.Close()
 
@@ -652,13 +652,13 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	for rows.Next() {
 		row, err := rows.Scan()
 		if err != nil {
-			return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+			return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 		}
 		users = append(users, row)
 	}
 	err = rows.Err()
 	if err != nil {
-		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
 
 	schema := types.Object(rows.Columns())
@@ -1269,9 +1269,10 @@ func (this *Connection) Stats(ctx context.Context) (*ConnectionsStats, error) {
 // connection must be a destination database connection, and table must be UTF-8
 // encoded with a length in range [1, 1024].
 //
-// It returns an error.Unprocessable error with code InvalidTable if the table
-// does not contain an unsigned 32-bit column named "id" or if there are no
-// other columns apart from "id".
+// It returns an error.Unprocessable error with code:
+//   - DatabaseFailed, if a database error occurred.
+//   - InvalidTable, if the table does not contain an unsigned 32-bit column
+//     named "id" or if there are no other columns apart from "id".
 func (this *Connection) TableSchema(ctx context.Context, table string) (types.Type, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
@@ -1289,7 +1290,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	defer database.Close()
 	columns, err := database.Columns(ctx, table)
 	if err != nil {
-		return types.Type{}, err
+		return types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
 	var hasID bool
 	for i, column := range columns {

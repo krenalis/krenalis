@@ -27,7 +27,7 @@ import (
 
 var (
 	MappingOverAnonymousIdentifier errors.Code = "MappingOverAnonymousIdentifier"
-	QueryExecutionFailed           errors.Code = "QueryExecutionFailed"
+	DatabaseFailed                 errors.Code = "DatabaseFailed"
 )
 
 // Action represents an action associated to a destination connection to send

@@ -115,7 +115,7 @@ const useActionData = (
 						return;
 					}
 					if (err instanceof UnprocessableError) {
-						if (err.code === 'QueryExecutionFailed') {
+						if (err.code === 'DatabaseFailed') {
 							let statusMessage: string;
 							if (err.cause && err.cause !== '') {
 								statusMessage = err.cause;

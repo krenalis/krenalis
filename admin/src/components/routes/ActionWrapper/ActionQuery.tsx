@@ -117,7 +117,7 @@ const ActionQuery = () => {
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'QueryExecutionFailed') {
+				if (err.code === 'DatabaseFailed') {
 					showStatus({ variant: variants.DANGER, icon: icons.CODE_ERROR, text: err.cause });
 				}
 				return;
