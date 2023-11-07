@@ -210,9 +210,9 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 }
 
 var (
-	todayPlaceholder = regexp.MustCompile(`(?i){{\ *today\ *}}`)
-	nowPlaceholder   = regexp.MustCompile(`(?i){{\ *now\ *}}`)
-	unixPlaceholder  = regexp.MustCompile(`(?i){{\ *unix\ *}}`)
+	todayPlaceholder = regexp.MustCompile(`(?i){{\s*today\s*}}`)
+	nowPlaceholder   = regexp.MustCompile(`(?i){{\s*now\s*}}`)
+	unixPlaceholder  = regexp.MustCompile(`(?i){{\s*unix\s*}}`)
 	placeholder      = regexp.MustCompile(`{{.*?}}`)
 )
 
