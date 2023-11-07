@@ -65,7 +65,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	// Write the file.
 	path, err := replacePathPlaceholders(this.action.Path, time.Now().UTC())
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("invalid path: %s", err)}
+		return fmt.Errorf("invalid path: %s", err)
 	}
 	err = this.file().Write(ctx, path, this.action.Sheet, columns, rows)
 	if err != nil {
