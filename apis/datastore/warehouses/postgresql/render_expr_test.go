@@ -8,6 +8,7 @@
 package postgresql
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -114,6 +115,36 @@ func Test_renderExpr(t *testing.T) {
 			}
 			if cas.query != gotQuery {
 				t.Fatalf("\nexpecting query:  %s\ngot:              %s", cas.query, gotQuery)
+			}
+		})
+	}
+}
+
+func Test_quoteString(t *testing.T) {
+	tests := []struct {
+		s        string
+		expected string
+	}{
+		{"", "''"},
+		{"'", "''''"},  // one single quote
+		{"\"", "'\"'"}, // one double quote
+		{"\x00", "''"},
+		{"''", "''''''"},   // two single quotes
+		{"\"\"", "'\"\"'"}, // two double quotes
+		{"hello", "'hello'"},
+		{"_+\tè+^", "'_+\tè+^'"},
+		{"\x00\x00\x00\x00", "''"},
+		{"paul's car", "'paul''s car'"},
+		{"hello world", "'hello world'"},
+		{"hello\x00world", "'helloworld'"},
+		{"\x00hello\x00world\x00", "'helloworld'"},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			var got strings.Builder
+			quoteString(&got, test.s)
+			if test.expected != got.String() {
+				t.Fatalf("expected %q, got %q", test.expected, got.String())
 			}
 		})
 	}

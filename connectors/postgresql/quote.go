@@ -28,6 +28,15 @@ func quoteTable(name string) (string, error) {
 }
 
 // quoteString quotes s as a string and writes it into b.
+//
+// See the documentation at
+// https://www.postgresql.org/docs/16/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
+// (for the escaping of single quotes) and at
+// https://www.postgresql.org/docs/13/datatype-character.html (for the character
+// with code 0).
+//
+// NOTE: keep this function in sync with the one within the data warehouse
+// driver of PostgreSQL.
 func quoteString(b *strings.Builder, s string) {
 	if s == "" {
 		b.WriteString("''")
