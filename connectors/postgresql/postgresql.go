@@ -103,7 +103,7 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 		return nil, err
 	}
 	if len(columns) == 0 {
-		return nil, errors.New("table does not exist") // TODO(Gianluca): https://github.com/open2b/chichi/issues/372.
+		return nil, fmt.Errorf("table '%s' does not exist", table)
 	}
 	return columns, nil
 }
