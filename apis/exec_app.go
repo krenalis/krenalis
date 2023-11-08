@@ -20,9 +20,9 @@ import (
 	"chichi/connector/types"
 )
 
-// downloadUsersForIdentityMatch downloads the users of the external app for
-// resolving the external identity.
-func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
+// downloadUsersForExportMatch downloads the users of the external app for the
+// matching of the export.
+func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 
 	// Create a schema with only the matching property.
 	sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
@@ -122,8 +122,9 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		return nil
 	}
 
-	// Download the users from this connection to match the identities.
-	err = this.downloadUsersForIdentityMatch(ctx)
+	// Download the users from this connection to match the identities for the
+	// export.
+	err = this.downloadUsersForExportMatch(ctx)
 	if err != nil {
 		return err
 	}
