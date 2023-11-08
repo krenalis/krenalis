@@ -103,9 +103,9 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 //
 // If an error occurs with the data warehouse, it returns a DataWarehouseError
 // error.
-func (store *Store) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
+func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
-	return store.warehouse.SetDestinationUser(ctx, connection, externalUserID, externalProperty)
+	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
 }
 
 // SetIdentity sets the identity id (which may have an anonymous ID) imported

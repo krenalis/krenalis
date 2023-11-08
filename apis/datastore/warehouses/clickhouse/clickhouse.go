@@ -141,7 +141,7 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 
 // SetDestinationUser sets the destination user relative to the action, with the
 // given external user ID and external property.
-func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
+func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	panic("TODO: not implemented")
 }
 

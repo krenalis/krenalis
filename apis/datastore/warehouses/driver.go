@@ -58,7 +58,7 @@ type Warehouse interface {
 
 	// SetDestinationUser sets the destination user relative to the action, with
 	// the given external user ID and external property.
-	SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error
+	SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error
 
 	// SetIdentity sets the identity id (which may have an anonymous ID) imported
 	// from the action. fromEvents indicates if the identity has been imported from
