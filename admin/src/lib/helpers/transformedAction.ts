@@ -25,12 +25,12 @@ const SCHEDULE_PERIODS = {
 	1440: '24h',
 };
 
-type TransformedExportMode = 'Create only' | 'Update only' | 'Create and update';
+type TransformedExportMode = 'Create and update' | 'Create only' | 'Update only';
 
 const EXPORT_MODE_OPTIONS: Record<ExportMode, TransformedExportMode> = {
+	CreateOrUpdate: 'Create and update',
 	CreateOnly: 'Create only',
 	UpdateOnly: 'Update only',
-	CreateOrUpdate: 'Create and update',
 };
 
 interface TransformedProperty {
