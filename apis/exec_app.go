@@ -100,9 +100,6 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 // exportUsersToApp exports the users to the app.
 func (this *Action) exportUsersToApp(ctx context.Context) error {
 
-	// TODO(Gianluca): we should export only the users modified since last
-	// export.
-
 	users, err := this.readUsersFromDataWarehouse(ctx, nil)
 	if err != nil {
 		return err
