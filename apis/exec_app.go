@@ -29,12 +29,11 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	externalPropName := this.action.MatchingProperties.External
-	property, ok := sourceSchema.Property(externalPropName)
+	externalProp, ok := sourceSchema.Property(this.action.MatchingProperties.External)
 	if !ok {
-		return fmt.Errorf("external matching property %q does not exist anymore in the app schema", externalPropName)
+		return actionExecutionError{fmt.Errorf("external matching property %q does not exist anymore in the app schema", this.action.MatchingProperties.External)}
 	}
-	schema := types.Object([]types.Property{property})
+	schema := types.Object([]types.Property{externalProp})
 
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
@@ -64,12 +63,12 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 				return actionExecutionError{err}
 			}
 
-			externalProp, ok := user.Properties[externalPropName]
+			value, ok := user.Properties[externalProp.Name]
 			if !ok {
 				// TODO(Gianluca): handle this error properly.
-				return actionExecutionError{fmt.Errorf("user does not contain property %q", externalPropName)}
+				return actionExecutionError{fmt.Errorf("user does not contain property %q", externalProp.Name)}
 			}
-			p, err := json.Marshal(externalProp)
+			p, err := json.Marshal(value)
 			if err != nil {
 				return actionExecutionError{err}
 			}
