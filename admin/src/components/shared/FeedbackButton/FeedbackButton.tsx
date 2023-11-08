@@ -49,24 +49,21 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			if (feedback === 'confirmation') {
 				className = 'confirm';
 				iconHTML = `<sl-icon name='check' />`;
-			} else {
-				className = 'error';
-				iconHTML = `<sl-icon name='x' />`;
-			}
-			button.classList.add(className);
-			button.style.width = `${initialWidth}px`;
-			button.innerHTML = iconHTML;
-			setTimeout(() => {
-				button.classList.remove(className);
-				if (feedback === 'error') {
-					setError(errorContent);
-				}
+				button.classList.add(className);
+				button.style.width = `${initialWidth}px`;
+				button.innerHTML = iconHTML;
 				setTimeout(() => {
-					button.innerHTML = initialContent!;
-					button.style.width = `unset`;
-					isAnimating.current = false;
+					button.classList.remove(className);
+					setTimeout(() => {
+						button.innerHTML = initialContent!;
+						button.style.width = `unset`;
+						isAnimating.current = false;
+					}, halfAnimation);
 				}, halfAnimation);
-			}, halfAnimation);
+			} else if (feedback === 'error') {
+				setError(errorContent);
+				isAnimating.current = false;
+			}
 		};
 
 		const startLoading = () => {
@@ -131,10 +128,11 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				open={error !== null ? true : false}
 				trigger='manual'
 				style={{ '--max-width': '250px' } as React.CSSProperties}
+				placement='bottom'
 			>
 				{error !== null && (
 					<div slot='content' className='tooltipContent'>
-						<SlIcon className='closeIcon' name='x' onClick={() => setError(null)} />
+						<SlIcon className='closeIcon' name='x-lg' onClick={() => setError(null)} />
 						<SlIcon className='errorIcon' name='exclamation-circle-fill' />
 						{error}
 					</div>

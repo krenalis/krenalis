@@ -22,24 +22,27 @@
 	background-color: var(--bg-gray);
 	border: 1px solid var(--sl-color-neutral-300);
 	pointer-events: all;
+	padding: 0;
 }
 
 .feedbackTooltip::part(base__popup) {
 	pointer-events: all;
+	box-shadow: var(--sl-shadow-x-large);
 }
 
 .feedbackTooltip::part(base__arrow) {
 	background-color: var(--bg-gray);
 	border: 1px solid var(--sl-color-neutral-300);
 	z-index: 10;
-	border-left: 0;
-	border-top: 0;
+	border-right: 0;
+	border-bottom: 0;
 }
 
 .feedbackTooltip .tooltipContent {
 	font-size: 12px;
-	padding: 12px 8px 8px 8px;
+	padding: 25px;
 	position: relative;
+	box-shadow: var(--sl-shadow-x-large);
 }
 
 .feedbackTooltip .tooltipContent sl-button {
@@ -58,16 +61,29 @@
 	font-size: 11px;
 }
 
-.feedbackTooltip .tooltipContent > .errorIcon {
+.feedbackTooltip .tooltipContent .errorIcon {
 	color: var(--sl-color-danger-500);
 	margin-right: 8px;
 	position: relative;
-	top: 1px;
+	top: 3px;
+	font-size: 15px;
 }
 
 .feedbackTooltip .tooltipContent > .closeIcon {
 	position: absolute;
-	right: -2px;
-	top: 0px;
+	right: 7px;
+	top: 7px;
 	cursor: pointer;
+}
+
+.feedbackTooltip .tooltipContent .linkToOverview {
+	text-align: center;
+	margin-top: 5px;
+}
+
+.feedbackTooltip .tooltipContent .linkToOverview .link {
+	color: var(--sl-color-primary-500);
+	text-decoration: underline;
+	cursor: pointer;
+	font-weight: 600;
 }

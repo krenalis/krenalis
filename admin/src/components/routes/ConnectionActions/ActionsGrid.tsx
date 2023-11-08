@@ -80,17 +80,18 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		runButtonRefs.current[actionID].current!.load();
 		const startTime = new Date().getTime();
 		const errorButton = (
-			<SlButton
-				size='small'
-				variant='neutral'
-				onClick={() =>
-					redirect(
-						`connections/${connection.id}/overview?failed-execution-action=${actionID}&failed-execution-start-time=${startTime}`,
-					)
-				}
-			>
-				See in {connection.role === 'Source' ? 'imports' : 'exports'} list
-			</SlButton>
+			<div className='linkToOverview'>
+				Go to{' '}
+				<span
+					className='link'
+					onClick={() =>
+						redirect(`connections/${connection.id}/overview?failed-execution-action=${actionID}`)
+					}
+				>
+					overview
+				</span>{' '}
+				for details
+			</div>
 		);
 		try {
 			await api.workspaces.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
