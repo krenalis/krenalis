@@ -128,9 +128,7 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		if i > 0 {
 			tablesNamesStr.WriteByte(',')
 		}
-		tablesNamesStr.WriteByte('\'')
-		tablesNamesStr.WriteString(name)
-		tablesNamesStr.WriteByte('\'')
+		quoteString(&tablesNamesStr, name)
 	}
 	query = "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
 		" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
