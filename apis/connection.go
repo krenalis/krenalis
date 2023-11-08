@@ -1979,8 +1979,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check if the export options are needed.
 	needsExportOptions := connector.Type == state.AppType &&
-		c.Role == state.Destination &&
-		targetUsersOrGroups
+		c.Role == state.Destination && target == state.Users
 	if needsExportOptions {
 		if action.ExportMode == nil {
 			return errors.BadRequest("export mode cannot be nil")
