@@ -89,7 +89,7 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 			return err
 		}
 		defer tx.Rollback(ctx)
-		// TODO(Gianluca): validate the table name. See https://github.com/open2b/chichi/issues/372.
+		// TODO(Gianluca): validate/escape the table name. See https://github.com/open2b/chichi/issues/375.
 		tables, err := tablesSchemas(ctx, tx, "public", []string{table})
 		if err != nil {
 			return err
