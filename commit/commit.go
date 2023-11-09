@@ -103,7 +103,7 @@ func main() {
 
 	// Test single packages or modules.
 	fmt.Println("Running Go tests")
-	args := []string{"test"}
+	args := []string{"test", "-count", "1"}
 	if short {
 		args = append(args, "-short")
 	}
