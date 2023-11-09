@@ -827,7 +827,6 @@ func QuoteValue(value any) string {
 }
 
 func QuoteIdent(name string) string {
-	name = strings.ReplaceAll(name, "\x00", "")
 	name = strings.ReplaceAll(name, `"`, `""`)
 	return `"` + name + `"`
 }
@@ -837,7 +836,6 @@ func quote(s string) string {
 }
 
 func escape(s string) string {
-	s = strings.ReplaceAll(s, "\x00", "")
 	return strings.ReplaceAll(s, "'", "''")
 }
 
