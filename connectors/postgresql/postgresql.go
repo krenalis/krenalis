@@ -196,14 +196,9 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 // named "id" that serves as the table's key.
 func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, columns []types.Property) error {
 
-	var err error
-	table, err = quoteTable(table)
-	if err != nil {
-		return err
-	}
 	var b strings.Builder
 	b.WriteString("INSERT INTO ")
-	b.WriteString(table)
+	b.WriteString(quoteTable(table))
 	b.WriteString(" (")
 	for i, column := range columns {
 		if i > 0 {
@@ -241,10 +236,10 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 	}
 	query := b.String()
 
-	if err = c.openDB(); err != nil {
+	if err := c.openDB(); err != nil {
 		return err
 	}
-	_, err = c.db.ExecContext(ctx, query)
+	_, err := c.db.ExecContext(ctx, query)
 
 	return err
 }

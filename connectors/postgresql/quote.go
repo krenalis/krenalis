@@ -9,7 +9,6 @@ package postgresql
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,11 +19,8 @@ import (
 )
 
 // quoteTable quotes a table name.
-func quoteTable(name string) (string, error) {
-	if strings.Contains(name, "\x00") {
-		return "", errors.New("table name contains a character with code zero")
-	}
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`, nil
+func quoteTable(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
 // quoteString quotes s as a string and writes it into b.
