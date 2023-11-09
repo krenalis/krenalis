@@ -77,7 +77,7 @@ const ActionPath = () => {
 			}
 			setSheets(res.sheets);
 		};
-		if (action.Path == null || action.Path === '') {
+		if (!connection.connector.hasSheets || action.Path == null || action.Path === '') {
 			return;
 		}
 		fetchSheets();
