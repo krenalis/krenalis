@@ -1817,9 +1817,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if n := utf8.RuneCountInString(action.Path); n > 1024 {
 			return errors.BadRequest("path is longer than 1024 runes")
 		}
-		_, err := replacePathPlaceholders(action.Path, time.Now().UTC())
-		if err != nil {
-			return errors.BadRequest("path is not valid: %s", err)
+		if this.connection.Role == state.Destination {
+			_, err := replacePathPlaceholders(action.Path, time.Now().UTC())
+			if err != nil {
+				return errors.BadRequest("path is not valid: %s", err)
+			}
 		}
 	}
 	// Validate the table name.
