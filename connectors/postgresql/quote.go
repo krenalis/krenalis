@@ -44,7 +44,7 @@ func quoteString(b *strings.Builder, s string) {
 	}
 	b.WriteByte('\'')
 	for {
-		p := strings.IndexAny(s, "\x00'")
+		p := strings.IndexByte(s, '\'')
 		if p == -1 {
 			p = len(s)
 		}
@@ -52,9 +52,7 @@ func quoteString(b *strings.Builder, s string) {
 		if p == len(s) {
 			break
 		}
-		if s[p] == '\'' {
-			b.WriteString("''")
-		}
+		b.WriteString("''")
 		s = s[p+1:]
 		if len(s) == 0 {
 			break

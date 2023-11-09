@@ -126,18 +126,18 @@ func Test_quoteString(t *testing.T) {
 		expected string
 	}{
 		{"", "''"},
-		{"'", "''''"},  // one single quote
-		{"\"", "'\"'"}, // one double quote
-		{"\x00", "''"},
+		{"'", "''''"},      // one single quote
+		{"\"", "'\"'"},     // one double quote
 		{"''", "''''''"},   // two single quotes
 		{"\"\"", "'\"\"'"}, // two double quotes
+		{"\x00", "'\x00'"},
 		{"hello", "'hello'"},
 		{"_+\tè+^", "'_+\tè+^'"},
-		{"\x00\x00\x00\x00", "''"},
 		{"paul's car", "'paul''s car'"},
 		{"hello world", "'hello world'"},
-		{"hello\x00world", "'helloworld'"},
-		{"\x00hello\x00world\x00", "'helloworld'"},
+		{"hello\x00world", "'hello\x00world'"},
+		{"\x00\x00\x00\x00", "'\x00\x00\x00\x00'"},
+		{"\x00hello\x00world\x00", "'\x00hello\x00world\x00'"},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
