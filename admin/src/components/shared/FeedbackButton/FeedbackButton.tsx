@@ -127,14 +127,14 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				className='feedbackTooltip'
 				open={error !== null ? true : false}
 				trigger='manual'
-				style={{ '--max-width': '250px' } as React.CSSProperties}
+				style={{ '--max-width': '300px' } as React.CSSProperties}
 				placement='bottom'
 			>
 				{error !== null && (
 					<div slot='content' className='tooltipContent'>
 						<SlIcon className='closeIcon' name='x-lg' onClick={() => setError(null)} />
-						<SlIcon className='errorIcon' name='exclamation-circle-fill' />
-						{error}
+						<SlIcon className='errorIcon' name='exclamation-circle' />
+						<div className='tooltipError'>{error}</div>
 					</div>
 				)}
 				{button}

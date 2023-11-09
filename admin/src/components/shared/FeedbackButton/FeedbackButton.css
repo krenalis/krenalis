@@ -40,9 +40,11 @@
 
 .feedbackTooltip .tooltipContent {
 	font-size: 12px;
-	padding: 25px;
+	padding: 30px 50px 30px 30px;
 	position: relative;
 	box-shadow: var(--sl-shadow-x-large);
+	display: flex;
+	gap: 12px;
 }
 
 .feedbackTooltip .tooltipContent sl-button {
@@ -63,21 +65,19 @@
 
 .feedbackTooltip .tooltipContent .errorIcon {
 	color: var(--sl-color-danger-500);
-	margin-right: 8px;
 	position: relative;
-	top: 3px;
-	font-size: 15px;
+	top: 4px;
+	font-size: 16px;
 }
 
 .feedbackTooltip .tooltipContent > .closeIcon {
 	position: absolute;
-	right: 7px;
-	top: 7px;
+	right: 12px;
+	top: 10px;
 	cursor: pointer;
 }
 
 .feedbackTooltip .tooltipContent .linkToOverview {
-	text-align: center;
 	margin-top: 5px;
 }
 
