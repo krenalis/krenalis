@@ -38,7 +38,7 @@ func init() {
 		Name:                   "ClickHouse",
 		SourceDescription:      "import users and groups from a ClickHouse database",
 		DestinationDescription: "export users and groups to a ClickHouse database",
-		SampleQuery:            "SELECT * FROM users {{ LIMIT $limit }}",
+		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
 	}, new)
 }

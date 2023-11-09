@@ -11,8 +11,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"chichi/apis/mappings"
@@ -63,7 +63,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	}
 
 	// Write the file.
-	path, err := replacePathPlaceholders(this.action.Path, time.Now().UTC())
+	path, err := replacePlaceholders(this.action.Path, newPathPlaceholderReplacer(time.Now().UTC()))
 	if err != nil {
 		return fmt.Errorf("invalid path: %s", err)
 	}
@@ -209,34 +209,25 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 	return nil
 }
 
-var (
-	todayPlaceholder = regexp.MustCompile(`(?i){{\s*today\s*}}`)
-	nowPlaceholder   = regexp.MustCompile(`(?i){{\s*now\s*}}`)
-	unixPlaceholder  = regexp.MustCompile(`(?i){{\s*unix\s*}}`)
-	placeholder      = regexp.MustCompile(`{{.*?}}`)
-)
-
-// replacePathPlaceholders replaces the placeholders in the file export path
-// using now as current time.
+// newPathPlaceholderReplacer returns a placeholder replacer that replaces the
+// following placeholders using time.Now().UTC() as current time.
 //
-// Supported placeholders are:
+//	${today}  which renders to something like:  2035-10-30
+//	${now}    which renders to something like:  2035-10-30-16-33-25
+//	${unix}   which renders to something like:  2077374805
 //
-//	{{ today }}  which renders to something like:  2035-10-30
-//	{{ now }}    which renders to something like:  2035-10-30-16-33-25
-//	{{ unix }}   which renders to something like:  2077374805
-//
-// Note that placeholders replacements is case-insensitive and
-// space-insensitive, so {{TODAY}} is handled like {{   today   }}.
-//
-// Any character-sequence enclosed between "{{" and "}}" and not recognized,
-// makes this function return error.
-func replacePathPlaceholders(path string, now time.Time) (string, error) {
-	path = todayPlaceholder.ReplaceAllLiteralString(path, now.Format(time.DateOnly))
-	path = nowPlaceholder.ReplaceAllLiteralString(path, now.Format("2006-01-02-15-04-05"))
-	path = unixPlaceholder.ReplaceAllLiteralString(path, strconv.FormatInt(now.Unix(), 10))
-	remaining := placeholder.FindString(path)
-	if remaining != "" {
-		return "", fmt.Errorf("invalid placeholder: %s", remaining)
+// These placeholders are case-insensitive, so ${TODAY} is handled like
+// ${today}.
+func newPathPlaceholderReplacer(t time.Time) func(string) (string, bool) {
+	return func(name string) (string, bool) {
+		switch strings.ToLower(name) {
+		case "today":
+			return t.Format(time.DateOnly), true
+		case "now":
+			return t.Format("2006-01-02-15-04-05"), true
+		case "unix":
+			return strconv.FormatInt(t.Unix(), 10), true
+		}
+		return "", false
 	}
-	return path, nil
 }

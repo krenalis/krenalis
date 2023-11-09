@@ -548,9 +548,17 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if n := utf8.RuneCountInString(path); n > 1024 {
 		return "", errors.BadRequest("path is longer than 1024 runes")
 	}
-	if c.Role == state.Destination {
+	switch c.Role {
+	case state.Source:
+		_, err := replacePlaceholders(path, func(_ string) (string, bool) {
+			return "", false
+		})
+		if err != nil {
+			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
+		}
+	case state.Destination:
 		var err error
-		path, err = replacePathPlaceholders(path, time.Now().UTC())
+		path, err = replacePlaceholders(path, newPathPlaceholderReplacer(time.Now().UTC()))
 		if err != nil {
 			return "", errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		}
@@ -635,7 +643,12 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	}
 
 	// Execute the query.
-	query, err := compileActionQuery(query, limit)
+	query, err := replacePlaceholders(query, func(name string) (string, bool) {
+		if strings.ToLower(name) == "limit" {
+			return strconv.Itoa(limit), true
+		}
+		return "", false
+	})
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
@@ -1817,8 +1830,19 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if n := utf8.RuneCountInString(action.Path); n > 1024 {
 			return errors.BadRequest("path is longer than 1024 runes")
 		}
-		if this.connection.Role == state.Destination {
-			_, err := replacePathPlaceholders(action.Path, time.Now().UTC())
+		switch this.connection.Role {
+		case state.Source:
+			_, err := replacePlaceholders(action.Path, func(_ string) (string, bool) {
+				return "", false
+			})
+			if err != nil {
+				return errors.BadRequest("placeholders syntax is not supported by source actions")
+			}
+		case state.Destination:
+			_, err := replacePlaceholders(action.Path, func(name string) (string, bool) {
+				name = strings.ToLower(name)
+				return "", name == "today" || name == "now" || name == "unix"
+			})
 			if err != nil {
 				return errors.BadRequest("path is not valid: %s", err)
 			}
@@ -2060,30 +2084,37 @@ type ConnectionToSet struct {
 	WebsiteHost string
 }
 
-const noQueryLimit = -1
-
-// compileActionQuery compiles the given query and returns it. If limit is
-// noQueryLimit removes the $limit variable (along with '{{' and '}}');
-// otherwise, replaces the variable with limit.
-func compileActionQuery(query string, limit int) (string, error) {
-	p := strings.Index(query, "$limit")
-	if p == -1 {
-		return "", errors.BadRequest("query does not contain the $limit variable")
+// replacePlaceholders replaces the placeholders in s with the values read
+// calling the f function with the name of each placeholder as argument.
+func replacePlaceholders(s string, f func(name string) (string, bool)) (string, error) {
+	var b strings.Builder
+	var name string
+	for {
+		i := strings.Index(s, "${")
+		if i < 0 {
+			break
+		}
+		b.WriteString(s[:i])
+		s = s[i+2:]
+		i = strings.IndexByte(s, '}')
+		if i < 0 {
+			return "", fmt.Errorf("a placeholder is not closed")
+		}
+		name, s = strings.TrimSpace(s[:i]), s[i+1:]
+		if strings.Contains(name, "${") {
+			return "", fmt.Errorf("a placeholder is not closed")
+		}
+		value, ok := f(name)
+		if !ok {
+			return "", fmt.Errorf("placeholder %q does not exist", name)
+		}
+		b.WriteString(value)
 	}
-	s1 := strings.Index(query[:p], "{{")
-	if s1 == -1 {
-		return "", errors.BadRequest("query does not contain '{{'")
+	if b.Len() == 0 {
+		return s, nil
 	}
-	n := len("$limit")
-	s2 := strings.Index(query[p+n:], "}}")
-	if s2 == -1 {
-		return "", errors.BadRequest("query does not contain '}}'")
-	}
-	s2 += p + n + 2
-	if limit == noQueryLimit {
-		return query[:s1] + query[s2:], nil
-	}
-	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
+	b.WriteString(s)
+	return b.String(), nil
 }
 
 // marshalSchema marshals the given schema.

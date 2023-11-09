@@ -103,8 +103,8 @@ const ActionQuery = () => {
 			showError('The query is too long');
 			return;
 		}
-		if (!q.includes('$limit')) {
-			showError(`The query does not contain the $limit variable`);
+		if (!/\${\s*limit\s*}/i.test(q)) {
+			showError('The query does not contain the ${limit} placeholder');
 			return;
 		}
 		let res: ExecQueryResponse;
@@ -140,7 +140,7 @@ const ActionQuery = () => {
 		<>
 			<Section
 				title='Query'
-				description='The query used to import the data. It must contain the string {{ LIMIT $limit }}.'
+				description='The query used to import the data. It must contain the placeholder ${limit}.'
 			>
 				<EditorWrapper
 					language='sql'

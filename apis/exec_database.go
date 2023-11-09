@@ -11,6 +11,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
+	"strconv"
 	"time"
 
 	"chichi/apis/datastore"
@@ -24,7 +26,13 @@ import (
 func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 
 	// Compile the query.
-	query, err := compileActionQuery(this.action.Query, noQueryLimit)
+	query, err := replacePlaceholders(this.action.Query, func(name string) (string, bool) {
+		if name == "limit" {
+			return strconv.FormatUint(math.MaxUint64, 10), true
+		}
+		return "", false
+	})
+
 	if err != nil {
 		return actionExecutionError{err}
 	}

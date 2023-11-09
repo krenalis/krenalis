@@ -36,7 +36,7 @@ func init() {
 		Name:                   "Snowflake",
 		SourceDescription:      "import users and groups from a Snowflake database",
 		DestinationDescription: "export users and groups to a Snowflake database",
-		SampleQuery:            "SELECT * FROM users {{ LIMIT $limit }}",
+		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
 	}, new)
 }

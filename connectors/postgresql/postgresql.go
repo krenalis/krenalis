@@ -40,7 +40,7 @@ func init() {
 		Name:                   "PostgreSQL",
 		SourceDescription:      "import users and groups from a PostgreSQL database",
 		DestinationDescription: "export users and groups to a PostgreSQL database",
-		SampleQuery:            "SELECT * FROM users {{ LIMIT $limit }}",
+		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
 	}, new)
 }

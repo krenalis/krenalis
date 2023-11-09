@@ -294,9 +294,9 @@ const ActionPath = () => {
 	return (
 		<Section
 			title={`Path${actionType.Fields.includes('Sheet') ? ' and Sheet' : ''}`}
-			description={`The path${
-				actionType.Fields.includes('Sheet') ? ' and sheet' : ''
-			} of the file. You can use the \{\{ now \}\}, \{\{ today \}\} and \{\{ unix \}\} placeholders.`}
+			description={`The path${actionType.Fields.includes('Sheet') ? ' and sheet' : ''} of the file.${
+				connection.role == 'Destination' ? 'You can use the ${now}, ${today} and ${unix} placeholders.' : ''
+			}`}
 			padded
 		>
 			<div className='pathInputWrapper'>
