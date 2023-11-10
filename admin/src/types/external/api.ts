@@ -36,9 +36,15 @@ interface AddEventListenerResponse {
 	id: string;
 }
 
+interface ActionMatchingSchemas {
+	Internal: ObjectType;
+	External: ObjectType;
+}
+
 interface ActionSchemasResponse {
 	In: ObjectType;
 	Out: ObjectType;
+	Matchings: ActionMatchingSchemas;
 }
 
 interface ExecQueryResponse {

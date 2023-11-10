@@ -119,6 +119,7 @@ interface ComboBoxInputProps {
 	error?: string;
 	size?: Size;
 	disabled?: boolean;
+	readonly?: boolean;
 }
 
 const ComboBoxInput = ({
@@ -132,6 +133,7 @@ const ComboBoxInput = ({
 	error,
 	size = 'medium',
 	disabled,
+	readonly,
 	...delegated
 }: ComboBoxInputProps) => {
 	const onKeyUpRef = useRef<any>();
@@ -207,6 +209,7 @@ const ComboBoxInput = ({
 				autocomplete='off'
 				disabled={disabled}
 				size={size}
+				readonly={readonly}
 				{...delegated}
 			>
 				{children}

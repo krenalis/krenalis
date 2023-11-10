@@ -95,6 +95,13 @@ const useActionData = (
 			let inputSchema = schemas.In;
 			let outputSchema = schemas.Out;
 
+			let inputMatchingSchema: ObjectType;
+			let outputMatchingSchema: ObjectType;
+			if (schemas.Matchings) {
+				inputMatchingSchema = schemas.Matchings.Internal;
+				outputMatchingSchema = schemas.Matchings.External;
+			}
+
 			// Compute which fields are supported by the action type.
 			const fields = computeActionTypeFields(connection, actionType, schemas);
 
@@ -192,6 +199,8 @@ const useActionData = (
 				MissingSchema: actionType.MissingSchema,
 				InputSchema: inputSchema,
 				OutputSchema: outputSchema,
+				InputMatchingSchema: inputMatchingSchema,
+				OutputMatchingSchema: outputMatchingSchema,
 				Fields: fields,
 			};
 			setActionType(transformedActionType);

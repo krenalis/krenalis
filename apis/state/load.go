@@ -327,7 +327,7 @@ func (state *State) Load() error {
 					var eventType string
 					var rawInSchema, rawOutSchema, filter, mapping []byte
 					var transformation Transformation
-					var matchPropInternal, matchPropExternal string
+					var matchPropInternal, matchPropExternal []byte
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
@@ -367,10 +367,14 @@ func (state *State) Load() error {
 					if transformation.Source != "" {
 						action.Transformation = &transformation
 					}
-					if matchPropInternal != "" {
-						action.MatchingProperties = &MatchingProperties{
-							Internal: matchPropInternal,
-							External: matchPropExternal,
+					if len(matchPropInternal) > 0 {
+						err = json.Unmarshal(matchPropInternal, &action.MatchingProperties.Internal)
+						if err != nil {
+							return err
+						}
+						err = json.Unmarshal(matchPropExternal, &action.MatchingProperties.External)
+						if err != nil {
+							return err
 						}
 					}
 					state.actions[action.ID] = &action

@@ -369,10 +369,17 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 
 	// Matching properties.
-	var matchPropInternal, matchPropExternal string
+	var matchPropInternal, matchPropExternal []byte
 	if n.MatchingProperties != nil {
-		matchPropInternal = n.MatchingProperties.Internal
-		matchPropExternal = n.MatchingProperties.External
+		var err error
+		matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
+		if err != nil {
+			return err
+		}
+		matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Transformation.
@@ -431,7 +438,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"matching_properties_internal = $18, matching_properties_external = $19\nWHERE id = $20",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
 			transformation.Language, transformation.Version, n.Query, n.Path, n.TableName, n.Sheet,
-			n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
+			n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode, matchPropInternal,
+			matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -640,8 +648,8 @@ type ActionToSet struct {
 // match identities of users in the data warehouse with users on the external
 // app, during export.
 type MatchingProperties struct {
-	Internal string
-	External string
+	Internal types.Property // TODO(Gianluca): this is not correctly (de)serialized in JSON. See https://github.com/open2b/chichi/issues/381.
+	External types.Property // TODO(Gianluca): this is not correctly (de)serialized in JSON. See https://github.com/open2b/chichi/issues/381.
 }
 
 // SchedulePeriod represents a scheduler period in minutes.

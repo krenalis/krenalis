@@ -25,14 +25,7 @@ import (
 func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 
 	// Create a schema with only the matching property.
-	sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
-	if err != nil {
-		return err
-	}
-	externalProp, ok := sourceSchema.Property(this.action.MatchingProperties.External)
-	if !ok {
-		return actionExecutionError{fmt.Errorf("external matching property %q does not exist anymore in the app schema", this.action.MatchingProperties.External)}
-	}
+	externalProp := this.action.MatchingProperties.External
 	schema := types.Object([]types.Property{externalProp})
 
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
@@ -98,6 +91,27 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 
 // exportUsersToApp exports the users to the app.
 func (this *Action) exportUsersToApp(ctx context.Context) error {
+
+	// Ensure that the type of the internal matching property is equal to the
+	// type of the corresponding property in the users schema.
+	{
+		ws := this.action.Connection().Workspace()
+		internal := this.action.MatchingProperties.Internal
+		usersSchema, ok := ws.Schemas["users"]
+		if !ok {
+			return actionExecutionError{fmt.Errorf("users schema not found")}
+		}
+		prop, ok := usersSchema.Property(internal.Name)
+		if !ok {
+			return actionExecutionError{fmt.Errorf("property '%s' not found in users schema", internal.Name)}
+		}
+		if !internal.Type.EqualTo(prop.Type) {
+			return actionExecutionError{fmt.Errorf("type of internal matching "+
+				"property '%s' does not match with the type of the corresponding "+
+				"property in users", internal.Name)}
+		}
+
+	}
 
 	users, err := this.readUsersFromDataWarehouse(ctx, nil)
 	if err != nil {
@@ -290,9 +304,9 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 // user does not exist on the remote app.
 func (this *Action) resolveExternalIdentity(ctx context.Context, user userToExport) (string, bool, error) {
 	internalPropName := this.action.MatchingProperties.Internal
-	property, ok := user.Properties[internalPropName]
+	property, ok := user.Properties[internalPropName.Name]
 	if !ok {
-		return "", false, fmt.Errorf("property %q not found", internalPropName)
+		return "", false, fmt.Errorf("property %q not found", internalPropName.Name)
 	}
 	p, err := json.Marshal(property)
 	if err != nil {

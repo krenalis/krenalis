@@ -47,6 +47,16 @@ interface TransformedProperty {
 
 type TransformedMapping = Record<string, TransformedProperty>;
 
+type ActionTypeField =
+	| 'Filter'
+	| 'Mapping'
+	| 'MatchingProperties'
+	| 'ExportMode'
+	| 'Query'
+	| 'Path'
+	| 'Sheet'
+	| 'Table';
+
 interface TransformedActionType {
 	Name: string;
 	Description: string;
@@ -55,6 +65,8 @@ interface TransformedActionType {
 	MissingSchema: boolean;
 	InputSchema: ObjectType;
 	OutputSchema: ObjectType;
+	InputMatchingSchema: ObjectType | null;
+	OutputMatchingSchema: ObjectType | null;
 	Fields: string[];
 }
 
@@ -191,7 +203,7 @@ const computeDefaultAction = (
 		action.ExportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
 	}
 	if (fields.includes('MatchingProperties')) {
-		action.MatchingProperties = { Internal: '', External: '' };
+		action.MatchingProperties = { Internal: null, External: null };
 	}
 	return action;
 };
@@ -201,7 +213,7 @@ const computeActionTypeFields = (
 	actionType: ActionType,
 	schemas: ActionSchemasResponse,
 ) => {
-	const fields: string[] = [];
+	const fields: ActionTypeField[] = [];
 	if (
 		(connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') ||
 		(connection.type === 'Database' && connection.role === 'Destination')

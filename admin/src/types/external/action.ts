@@ -1,5 +1,5 @@
 import { Filter } from './api';
-import Type from './types';
+import Type, { Property } from './types';
 
 type ActionTarget = 'Events' | 'Users' | 'Groups';
 
@@ -21,8 +21,8 @@ interface MappingExpression {
 }
 
 interface MatchingProperties {
-	Internal: string;
-	External: string;
+	Internal: Property | null;
+	External: Property | null;
 }
 
 interface Action {

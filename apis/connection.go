@@ -120,7 +120,12 @@ func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 }
 
 type ActionSchemas struct {
-	In, Out types.Type
+	In, Out   types.Type
+	Matchings *ActionSchemasMatchings `json:",omitempty"` // only for destination apps on users.
+}
+
+type ActionSchemasMatchings struct {
+	Internal, External types.Type
 }
 
 // ActionSchemas returns the input and the output schemas of an action with the
@@ -163,9 +168,25 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 			if c.Role == state.Source {
 				return &ActionSchemas{In: schema, Out: *usersIdentities}, nil
-			} else {
-				return &ActionSchemas{In: usersIdentities.Unflatten(), Out: schema}, nil
 			}
+			// Role is destination.
+			users, ok := c.Workspace().Schemas["users"]
+			if !ok {
+				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
+			if err != nil {
+				return nil, err
+			}
+			actionSchemas := &ActionSchemas{
+				In:  usersIdentities.Unflatten(),
+				Out: schema,
+			}
+			actionSchemas.Matchings = &ActionSchemasMatchings{
+				Internal: onlyForMatching(*users),
+				External: onlyForMatching(sourceSchema),
+			}
+			return actionSchemas, nil
 		case Groups:
 			var err error
 			schema, err := this.app().Schema(ctx, state.Groups, "")
@@ -441,10 +462,17 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 				return err
 			}
 		}
-		var matchPropInternal, matchPropExternal string
+		var matchPropInternal, matchPropExternal []byte
 		if n.MatchingProperties != nil {
-			matchPropInternal = n.MatchingProperties.Internal
-			matchPropExternal = n.MatchingProperties.External
+			var err error
+			matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
+			if err != nil {
+				return err
+			}
+			matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
+			if err != nil {
+				return err
+			}
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source, " +
@@ -455,7 +483,8 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
 			transformation.Source, transformation.Language, transformation.Version, n.Query, n.Path, n.TableName,
-			n.Sheet, n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode, matchPropInternal, matchPropExternal)
+			n.Sheet, n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode,
+			string(matchPropInternal), string(matchPropExternal))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
@@ -1876,11 +1905,23 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 	if action.MatchingProperties != nil {
 		props := *action.MatchingProperties
-		if !types.IsValidPropertyName(props.Internal) {
-			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
+		if !types.IsValidPropertyName(props.Internal.Name) {
+			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal.Name)
 		}
-		if !types.IsValidPropertyName(props.External) {
-			return errors.BadRequest("external matching property %q is not a valid property name", props.External)
+		if !types.IsValidPropertyName(props.External.Name) {
+			return errors.BadRequest("external matching property %q is not a valid property name", props.External.Name)
+		}
+		if !props.Internal.Type.Valid() {
+			return errors.BadRequest("internal matching property type is not valid")
+		}
+		if !props.External.Type.Valid() {
+			return errors.BadRequest("external matching property type is not valid")
+		}
+		if !canBeUsedAsAsMatchingProp(props.Internal.Type.PhysicalType()) {
+			return errors.BadRequest("type %s cannot be used as matching property", props.Internal.Type)
+		}
+		if !canBeUsedAsAsMatchingProp(props.External.Type.PhysicalType()) {
+			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
 	}
 
@@ -2084,6 +2125,15 @@ type ConnectionToSet struct {
 	WebsiteHost string
 }
 
+// canBeUsedAsAsMatchingProp reports whether a type with physical type pt can be
+// used as a matching property for the export.
+func canBeUsedAsAsMatchingProp(pt types.PhysicalType) bool {
+	// Only integers, UUIDs and texts are allowed.
+	return (types.PtInt <= pt && pt <= types.PtUInt64) ||
+		pt == types.PtUUID ||
+		pt == types.PtText
+}
+
 // replacePlaceholders replaces the placeholders in s with the values read
 // calling the f function with the name of each placeholder as argument.
 func replacePlaceholders(s string, f func(name string) (string, bool)) (string, error) {
@@ -2145,6 +2195,24 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 		out[name] = v
 	}
 	return out, nil
+}
+
+// onlyForMatching returns a schema which contains only the properties of schema
+// which can be used for the apps export matching.
+//
+// Returns an invalid schema in case none of the properties of schema can be
+// used.
+func onlyForMatching(schema types.Type) types.Type {
+	props := []types.Property{}
+	for _, p := range schema.Properties() {
+		if canBeUsedAsAsMatchingProp(p.Type.PhysicalType()) {
+			props = append(props, p)
+		}
+	}
+	if len(props) == 0 {
+		return types.Type{}
+	}
+	return types.Object(props)
 }
 
 // statsTimeSlot returns the stats time slot for the time t.

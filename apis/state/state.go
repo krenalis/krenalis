@@ -959,8 +959,8 @@ const (
 // match identities of users in the data warehouse with users on the external
 // app, during export.
 type MatchingProperties struct {
-	Internal string
-	External string
+	Internal types.Property
+	External types.Property
 }
 
 // ActionExecution represents an action execution.
