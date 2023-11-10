@@ -297,7 +297,6 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	if len(columns) == 0 {
 		return fmt.Errorf("connector %d has called Columns with an empty columns", rw.connector)
 	}
-	labelToName := make(map[string]string, len(columns))
 	hasName := make(map[string]struct{}, len(columns))
 	for _, c := range columns {
 		if c.Name == "" {
@@ -307,12 +306,9 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			return fmt.Errorf("connector %d has returned an invalid column name: %q", rw.connector, c.Name)
 		}
 		if _, ok := hasName[c.Name]; ok {
-			return fmt.Errorf("connector %d returned a ducplicated column name: %s", rw.connector, c.Name)
+			return fmt.Errorf("connector %d returned a duplicated column name: %s", rw.connector, c.Name)
 		}
 		hasName[c.Name] = struct{}{}
-		if _, ok := labelToName[c.Label]; !ok {
-			labelToName[c.Label] = c.Name
-		}
 		if !c.Type.Valid() {
 			return fmt.Errorf("connector %d returned an invalid type", rw.connector)
 		}
