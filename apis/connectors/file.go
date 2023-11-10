@@ -100,8 +100,7 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 		return nil, nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	extension := file.connection.Connector().FileExtension
-	r, _, err := s.Reader(ctx, name, extension)
+	r, _, err := s.Reader(ctx, name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -135,8 +134,7 @@ func (file *File) ReadFunc(ctx context.Context, name, sheet string, write func([
 		return err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	extension := file.connection.Connector().FileExtension
-	r, _, err := s.Reader(ctx, name, extension)
+	r, _, err := s.Reader(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -169,8 +167,7 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	extension := file.connection.Connector().FileExtension
-	r, _, err := s.Reader(ctx, name, extension)
+	r, _, err := s.Reader(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -493,10 +490,9 @@ func newCompressedStorage(s _connector.StorageConnection, c state.Compression) *
 }
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
-// from which to read the file and its timestamp. extension is the extension of
-// the file connector (e.g., "csv" for the CSV connector).
+// from which to read the file and its timestamp.
 // It is the caller's responsibility to close the returned reader.
-func (cs compressorStorage) Reader(ctx context.Context, name string, extension string) (io.ReadCloser, time.Time, error) {
+func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	r, t, err := cs.storage.Reader(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
