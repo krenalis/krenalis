@@ -11,7 +11,6 @@ import (
 	"context"
 	"io"
 	"reflect"
-	"time"
 
 	"chichi/connector/types"
 )
@@ -102,9 +101,4 @@ type RecordWriter interface {
 
 	// RecordString writes a record as a string slice.
 	RecordString([]string) error
-
-	// Timestamp sets the last modified time for all records.
-	// If ts is zero time, it means that the timestamp is unknown.
-	// Timestamp can be called before Record, RecordMap and RecordString.
-	Timestamp(ts time.Time) error
 }

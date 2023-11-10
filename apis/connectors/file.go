@@ -283,9 +283,7 @@ type recordWriter struct {
 	limit           int
 	write           func(columns []types.Property, record map[string]any) error
 	columns         []types.Property
-	timestamp       time.Time
 	columnByName    map[string]types.Property
-	setUserCalled   bool
 	textColumnsOnly bool
 	records         []map[string]any
 	err             error
@@ -462,17 +460,6 @@ func (rw *recordWriter) RecordString(record []string) error {
 // SetWriteFunc sets the write function for the recordWriter.
 func (rw *recordWriter) SetWriteFunc(write func(columns []types.Property, record map[string]any) error) {
 	rw.write = write
-}
-
-// Timestamp sets the last modified time for all records.
-// If ts is zero time, it means that the timestamp is unknown.
-// Timestamp can be called before Record, RecordMap and RecordString.
-func (rw *recordWriter) Timestamp(ts time.Time) error {
-	if rw.setUserCalled {
-		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.connector)
-	}
-	rw.timestamp = ts
-	return nil
 }
 
 // compressorStorage implements a storage capable of compressing and
