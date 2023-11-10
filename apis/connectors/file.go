@@ -286,7 +286,6 @@ type recordWriter struct {
 	columnByName    map[string]types.Property
 	textColumnsOnly bool
 	records         []map[string]any
-	err             error
 }
 
 // Columns sets the columns of the records as properties.
