@@ -515,7 +515,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				if d == ']' {
 					break
 				}
-				property, _, err := unmarshalProperty(dec, false)
+				property, err := unmarshalProperty(dec)
 				if err != nil {
 					return Type{}, err
 				}
@@ -855,13 +855,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 // unmarshalProperty reads the JSON tokens from dec, which must have already
 // read the token '{', and returns the decoded property.
-// If inSchema is true, it unmarshals a schema property and then also returns
-// its role.
-func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error) {
+func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var role Role
-	var hasLabel, hasDescription, hasPlaceholder, hasRole, hasRequired, hasNullable, hasFlat bool
+	var hasLabel, hasDescription, hasPlaceholder, hasRequired, hasNullable, hasFlat bool
 
 	// Read property keys and values.
 	for {
@@ -869,7 +866,7 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 		// Read a key or delimiter '}'.
 		tok, err := dec.Token()
 		if err != nil {
-			return Property{}, 0, err
+			return Property{}, err
 		}
 		if _, ok := tok.(json.Delim); ok {
 			break
@@ -878,11 +875,11 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 
 		if key == "type" {
 			if p.Type.Valid() {
-				return Property{}, 0, errors.New("repeated 'type' key")
+				return Property{}, errors.New("repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec)
 			if err != nil {
-				return Property{}, 0, err
+				return Property{}, err
 			}
 			continue
 		}
@@ -890,7 +887,7 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 		// Read the value.
 		tok, err = dec.Token()
 		if err != nil {
-			return Property{}, 0, err
+			return Property{}, err
 		}
 
 		var ok bool
@@ -898,39 +895,39 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 		switch key {
 		case "name":
 			if p.Name != "" {
-				return Property{}, 0, errors.New("repeated 'name' key")
+				return Property{}, errors.New("repeated 'name' key")
 			}
 			p.Name, ok = tok.(string)
 			if !ok {
-				return Property{}, 0, errors.New("unexpected value for property name")
+				return Property{}, errors.New("unexpected value for property name")
 			}
 			if p.Name == "" {
-				return Property{}, 0, errors.New("property name is empty")
+				return Property{}, errors.New("property name is empty")
 			}
 			if !IsValidPropertyName(p.Name) {
-				return Property{}, 0, errors.New("invalid property name")
+				return Property{}, errors.New("invalid property name")
 			}
 		case "label":
 			if hasLabel {
-				return Property{}, 0, errors.New("repeated 'label' key")
+				return Property{}, errors.New("repeated 'label' key")
 			}
 			p.Label, ok = tok.(string)
 			if !ok {
-				return Property{}, 0, errors.New("unexpected value for property label")
+				return Property{}, errors.New("unexpected value for property label")
 			}
 			hasLabel = true
 		case "description":
 			if hasDescription {
-				return Property{}, 0, errors.New("repeated 'description' key")
+				return Property{}, errors.New("repeated 'description' key")
 			}
 			p.Description, ok = tok.(string)
 			if !ok {
-				return Property{}, 0, errors.New("unexpected value for property description")
+				return Property{}, errors.New("unexpected value for property description")
 			}
 			hasDescription = true
 		case "placeholder":
 			if hasPlaceholder {
-				return Property{}, 0, errors.New("repeated 'placeholder' key")
+				return Property{}, errors.New("repeated 'placeholder' key")
 			}
 			switch tok.(type) {
 			case nil:
@@ -938,13 +935,13 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 				p.Placeholder = tok
 			case json.Delim:
 				if tok != json.Delim('{') {
-					return Property{}, 0, errors.New("unexpected value for property placeholder")
+					return Property{}, errors.New("unexpected value for property placeholder")
 				}
 				placeholder := map[string]string{}
 				for {
 					tok, err = dec.Token()
 					if err != nil {
-						return Property{}, 0, err
+						return Property{}, err
 					}
 					if tok == json.Delim('}') {
 						break
@@ -952,81 +949,64 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 					k := tok.(string)
 					tok, err = dec.Token()
 					if err != nil {
-						return Property{}, 0, err
+						return Property{}, err
 					}
 					v, ok := tok.(string)
 					if !ok {
-						return Property{}, 0, errors.New("unexpected value for property placeholder")
+						return Property{}, errors.New("unexpected value for property placeholder")
 					}
 					placeholder[k] = v
 				}
 				p.Placeholder = placeholder
 			default:
-				return Property{}, 0, errors.New("unexpected value for property placeholder")
+				return Property{}, errors.New("unexpected value for property placeholder")
 			}
-		case "role":
-			if !inSchema {
-				return Property{}, 0, errors.New("unknown property 'role'")
-			}
-			if hasRole {
-				return Property{}, 0, errors.New("repeated 'role' key")
-			}
-			switch r, _ := tok.(string); r {
-			case "both":
-			case "source":
-				role = SourceRole
-			case "destination":
-				role = DestinationRole
-			default:
-				return Property{}, 0, errors.New("unexpected value for property role")
-			}
-			hasRole = true
 		case "required":
 			if hasRequired {
-				return Property{}, 0, errors.New("repeated 'required' key")
+				return Property{}, errors.New("repeated 'required' key")
 			}
 			p.Required, ok = tok.(bool)
 			if !ok {
-				return Property{}, 0, errors.New("unexpected value for 'required' key of property")
+				return Property{}, errors.New("unexpected value for 'required' key of property")
 			}
 			hasRequired = true
 		case "nullable":
 			if hasNullable {
-				return Property{}, 0, errors.New("repeated 'nullable' key")
+				return Property{}, errors.New("repeated 'nullable' key")
 			}
 			p.Nullable, ok = tok.(bool)
 			if !ok {
-				return Property{}, 0, errors.New("unexpected value for 'nullable' key of property")
+				return Property{}, errors.New("unexpected value for 'nullable' key of property")
 			}
 			hasNullable = true
 		case "flat":
 			if hasFlat {
-				return Property{}, 0, errors.New("repeated 'flat' key")
+				return Property{}, errors.New("repeated 'flat' key")
 			}
 			p.Flat, ok = tok.(bool)
 			if !ok {
-				return Property{}, 0, errors.New("unexpected value for 'flat' key of property")
+				return Property{}, errors.New("unexpected value for 'flat' key of property")
 			}
 			hasFlat = true
 		default:
-			return Property{}, 0, fmt.Errorf("unknown property '%s'", key)
+			return Property{}, fmt.Errorf("unknown property '%s'", key)
 		}
 
 	}
 
 	if p.Name == "" {
-		return Property{}, 0, errors.New("missing property name")
+		return Property{}, errors.New("missing property name")
 	}
 	if !p.Type.Valid() {
-		return Property{}, 0, errors.New("missing property type")
+		return Property{}, errors.New("missing property type")
 	}
 	if hasPlaceholder {
 		if _, ok := p.Placeholder.(map[string]string); ok && p.Type.PhysicalType() != PtMap {
-			return Property{}, 0, errors.New("invalid placeholder value")
+			return Property{}, errors.New("invalid placeholder value")
 		}
 	}
 
-	return p, role, nil
+	return p, nil
 }
 
 const hex = "0123456789abcdef"
