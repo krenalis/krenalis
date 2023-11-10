@@ -163,7 +163,7 @@ func (this *Action) exec(ctx context.Context) {
 }
 
 type userToExport struct {
-	GID        int
+	ID         int
 	Properties map[string]any
 }
 
@@ -220,7 +220,7 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) (
 			return nil, errors.New("missing or invalid GID")
 		}
 		exportUsers[i] = userToExport{
-			GID:        gid,
+			ID:         gid,
 			Properties: user,
 		}
 	}

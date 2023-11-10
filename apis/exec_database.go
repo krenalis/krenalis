@@ -216,7 +216,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		// Serialize the props into column values.
 		datastore.SerializeRow(props, this.action.OutSchema)
 		row := make([]any, len(outSchemaProps)+1)
-		row[0] = user.GID
+		row[0] = user.ID
 		for i, p := range outSchemaProps {
 			row[i+1] = props[p.Name]
 		}
