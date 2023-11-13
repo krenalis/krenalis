@@ -8,7 +8,7 @@ interface ActionContext {
 	connection: TransformedConnection;
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction | undefined>>;
-	saveAction: () => Promise<void>;
+	saveAction: () => Promise<string | Error | null>;
 	actionType: TransformedActionType;
 	setActionType: React.Dispatch<React.SetStateAction<TransformedActionType | undefined>>;
 	isEditing: boolean;

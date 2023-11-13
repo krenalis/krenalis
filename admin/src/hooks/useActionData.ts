@@ -215,7 +215,7 @@ const useActionData = (
 
 	const saveAction = async () => {
 		if (action == null || actionType == null) {
-			return;
+			return 'Invalid action or action type';
 		}
 
 		let mapping: Mapping;
@@ -240,8 +240,7 @@ const useActionData = (
 					continue;
 				}
 				if (v.error && v.error !== '') {
-					showError(`Please fix the errors in the mapping before saving`);
-					return;
+					return `Please fix the errors in the mapping before saving`;
 				}
 				const property = flattenedOutputSchema![k];
 				const fullProperty = property.full;
@@ -263,8 +262,7 @@ const useActionData = (
 			try {
 				inputProperties = await api.expressionsProperties(expressions, actionType.InputSchema);
 			} catch (err) {
-				showError(err);
-				return;
+				return err;
 			}
 			for (const prop of inputProperties) {
 				const parentName = prop.split('.')[0];
@@ -330,14 +328,14 @@ const useActionData = (
 				);
 			}
 		} catch (err) {
-			showError(err);
-			return;
+			return err;
 		}
 
 		sessionStorage.setItem('newActionID', String(id));
 		setIsSaveButtonLoading(true);
 		await sleep(200);
 		setIsSaveButtonLoading(false);
+		return null;
 	};
 
 	const isTransformationAllowed: boolean = useMemo(

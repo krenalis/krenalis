@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react';
 import ActionContext from '../../../context/ActionContext';
+import AppContext from '../../../context/AppContext';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -11,6 +12,8 @@ interface ActionHeaderProps {
 
 const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
+
+	const { showError } = useContext(AppContext);
 
 	const {
 		connection,
@@ -31,8 +34,12 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 	};
 
 	const onSave = async () => {
-		await saveAction();
-		onClose();
+		const err = await saveAction();
+		if (err == null) {
+			onClose();
+		} else {
+			showError(err);
+		}
 	};
 
 	return (
