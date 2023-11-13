@@ -77,7 +77,7 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := c.query(ctx, "SELECT * FROM "+table)
+	rows, columns, err := c.query(ctx, "SELECT * FROM "+table+" LIMIT 0")
 	if err != nil {
 		return nil, err
 	}
