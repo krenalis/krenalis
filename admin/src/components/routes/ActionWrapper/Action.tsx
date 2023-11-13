@@ -81,7 +81,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		hasRecordsError ||
 		(isFileChanged && isImport) ||
 		hasTableError ||
-		isTableChanged;
+		isTableChanged ||
+		mustComputeSchema;
 
 	let disabledReason = '';
 	if (hasQueryError) {

@@ -77,6 +77,7 @@ const AppProvider = ({
 						c.HasSettings,
 						c.Icon,
 						c.FileExtension,
+						c.SampleQuery,
 						c.WebhooksPer,
 						c.OAuth,
 						c.SourceDescription,

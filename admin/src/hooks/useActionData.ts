@@ -240,7 +240,7 @@ const useActionData = (
 					MatchingProperties: providedAction.MatchingProperties,
 				};
 			} else {
-				transformedAction = computeDefaultAction(actionType, outputSchema, fields);
+				transformedAction = computeDefaultAction(actionType, connection, outputSchema, fields);
 			}
 			setAction(transformedAction);
 			setIsLoading(false);

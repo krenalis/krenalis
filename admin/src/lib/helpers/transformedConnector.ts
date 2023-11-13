@@ -24,6 +24,7 @@ class TransformedConnector {
 		hasSettings: boolean,
 		icon: string,
 		fileExtension: string,
+		sampleQuery: string,
 		webhooksPer: WebhooksPer,
 		oAuth: boolean,
 		sourceDescription: string,
@@ -38,6 +39,7 @@ class TransformedConnector {
 		this.hasSettings = hasSettings;
 		this.icon = icon;
 		this.fileExtension = fileExtension;
+		this.sampleQuery = sampleQuery;
 		this.webhooksPer = webhooksPer;
 		this.oAuth = oAuth;
 		this.sourceDescription = sourceDescription;

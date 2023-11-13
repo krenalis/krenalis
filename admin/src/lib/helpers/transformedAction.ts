@@ -172,6 +172,7 @@ const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): Tra
 
 const computeDefaultAction = (
 	actionType: ActionType,
+	connection: TransformedConnection,
 	outputSchema: ObjectType,
 	fields: string[],
 ): TransformedAction => {
@@ -185,7 +186,7 @@ const computeDefaultAction = (
 		Transformation: null,
 	};
 	if (fields.includes('Query')) {
-		action.Query = '';
+		action.Query = connection.connector.sampleQuery;
 	}
 	if (fields.includes('Path')) {
 		action.Path = '';
