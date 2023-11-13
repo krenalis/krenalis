@@ -18,9 +18,9 @@ import { Action, ActionToSet, ActionType, Mapping, MappingExpression, Transforma
 import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
 import { ObjectType } from '../types/external/types';
 import Workspace from '../types/external/workspace';
+import { sleep } from '../lib/utils/sleep';
 
 const useActionData = (
-	onClose: () => void,
 	connection: TransformedConnection,
 	providedActionType: ActionType,
 	providedAction: Action,
@@ -67,7 +67,6 @@ const useActionData = (
 					actionType.EventType,
 				);
 			} catch (err) {
-				onClose();
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
 						case 'NoUsersSchema':
@@ -379,10 +378,8 @@ const useActionData = (
 
 		sessionStorage.setItem('newActionID', String(id));
 		setIsSaveButtonLoading(true);
-		setTimeout(() => {
-			setIsSaveButtonLoading(false);
-			onClose();
-		}, 200);
+		await sleep(200);
+		setIsSaveButtonLoading(false);
 	};
 
 	let mustComputeSchema: boolean = false;

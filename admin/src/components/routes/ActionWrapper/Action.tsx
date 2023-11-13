@@ -48,7 +48,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		isMappingSectionDisabled,
 		disabledReason,
 		mustComputeSchema,
-	} = useActionData(onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
+	} = useActionData(connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
 
 	if (isLoading) {
 		return (
@@ -94,7 +94,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 			}}
 		>
 			<div className='action'>
-				<ActionHeader />
+				<ActionHeader onClose={onClose} />
 				<div className='body'>
 					{actionType!.Fields.includes('Filter') && <ActionFilters />}
 					{actionType!.Fields.includes('Query') && <ActionQuery />}

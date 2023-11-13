@@ -5,7 +5,11 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 
-const ActionHeader = () => {
+interface ActionHeaderProps {
+	onClose: () => void;
+}
+
+const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
 
 	const {
@@ -14,7 +18,6 @@ const ActionHeader = () => {
 		actionType,
 		setAction,
 		saveAction,
-		onClose,
 		isMappingSectionDisabled,
 		isEditing,
 		isSaveButtonLoading,
@@ -29,6 +32,7 @@ const ActionHeader = () => {
 
 	const onSave = async () => {
 		await saveAction();
+		onClose();
 	};
 
 	return (
