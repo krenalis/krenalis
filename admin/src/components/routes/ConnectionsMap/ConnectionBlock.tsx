@@ -4,7 +4,6 @@ import Arrow from '../../shared/Arrow/Arrow';
 import StatusDot from '../../shared/StatusDot/StatusDot';
 import { ArrowAnchor } from '../../../types/internal/app';
 import { AppContext } from '../../../context/providers/AppProvider';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
@@ -78,9 +77,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 						{getConnectorLogo(c.connector.icon)}
 						<div className='name'>{c.name}</div>
 					</Flex>
-					<SlTooltip content={c.status.text}>
-						<StatusDot status={c.status} />
-					</SlTooltip>
+					<StatusDot status={c.status} />
 				</div>
 			</div>
 			{arrow}
