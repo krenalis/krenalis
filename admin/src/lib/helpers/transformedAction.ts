@@ -1,4 +1,5 @@
 import {
+	Action,
 	ActionTarget,
 	ActionType,
 	ExportMode,
@@ -67,7 +68,7 @@ interface TransformedActionType {
 	OutputSchema: ObjectType;
 	InputMatchingSchema: ObjectType | null;
 	OutputMatchingSchema: ObjectType | null;
-	Fields: string[];
+	Fields: ActionTypeField[];
 }
 
 interface TransformedAction {
@@ -147,6 +148,28 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 	return flattenedSchema;
 };
 
+const transformActionType = (
+	actionType: ActionType,
+	inputSchema: ObjectType,
+	outputSchema: ObjectType,
+	inputMatchingSchema: ObjectType,
+	outputMatchingSchema: ObjectType,
+	fields: ActionTypeField[],
+): TransformedActionType => {
+	return {
+		Name: actionType.Name,
+		Description: actionType.Description,
+		Target: actionType.Target,
+		EventType: actionType.EventType,
+		MissingSchema: actionType.MissingSchema,
+		InputSchema: inputSchema,
+		OutputSchema: outputSchema,
+		InputMatchingSchema: inputMatchingSchema,
+		OutputMatchingSchema: outputMatchingSchema,
+		Fields: fields,
+	};
+};
+
 const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): TransformedMapping => {
 	const properties = flattenSchema(outputSchema)!;
 	for (const propertyName in properties) {
@@ -168,6 +191,34 @@ const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): Tra
 	}
 
 	return properties;
+};
+
+const transformAction = (action: Action, outputSchema: ObjectType): TransformedAction => {
+	return {
+		ID: action.ID,
+		Connection: action.Connection,
+		Target: action.Target,
+		Name: action.Name,
+		Enabled: action.Enabled,
+		EventType: action.EventType,
+		Running: action.Running,
+		ScheduleStart: action.ScheduleStart,
+		SchedulePeriod: action.SchedulePeriod,
+		InSchema: action.InSchema,
+		OutSchema: action.OutSchema,
+		Filter: action.Filter,
+		Mapping: action.Mapping != null ? transformActionMapping(action.Mapping, outputSchema) : null,
+		Transformation: action.Transformation,
+		Query: action.Query,
+		Path: action.Path,
+		Table: action.Table,
+		Sheet: action.Sheet,
+		IdentityProperty: action.IdentityProperty,
+		TimestampProperty: action.TimestampProperty,
+		TimestampFormat: action.TimestampFormat,
+		ExportMode: action.ExportMode,
+		MatchingProperties: action.MatchingProperties,
+	};
 };
 
 const computeDefaultAction = (
@@ -286,10 +337,11 @@ export {
 	SCHEDULE_PERIODS,
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
-	transformActionMapping,
 	computeDefaultAction,
 	computeActionTypeFields,
+	transformActionType,
+	transformAction,
 	isIdentifierProperty,
 };
 
-export type { TransformedMapping, TransformedActionType, TransformedAction };
+export type { TransformedMapping, TransformedActionType, TransformedAction, ActionTypeField };

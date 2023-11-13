@@ -1,13 +1,13 @@
 import { useEffect, useState, useContext, useMemo } from 'react';
 import {
 	flattenSchema,
-	transformActionMapping,
 	computeDefaultAction,
 	computeActionTypeFields,
 	TransformedActionType,
 	TransformedAction,
-	TransformedMapping,
 	isIdentifierProperty,
+	transformActionType,
+	transformAction,
 } from '../lib/helpers/transformedAction';
 import { AppContext } from '../context/providers/AppProvider';
 import * as variants from '../constants/variants';
@@ -43,16 +43,18 @@ const useActionData = (
 	useEffect(() => {
 		const fetchData = async () => {
 			// Get the action type.
-			let actionType: ActionType | undefined;
+			let actionType: ActionType;
 			if (isEditing) {
-				actionType = getActionTypeFromConnection(connection, providedAction.Target, providedAction.EventType);
-				if (actionType == null) {
+				const typ = getActionTypeFromConnection(connection, providedAction.Target, providedAction.EventType);
+				if (typ == null) {
 					console.error(
 						`Action type with target ${providedAction.Target}${
 							providedAction.EventType ? ' and event type ' + providedAction.EventType : ''
 						} does not exists anymore`,
 					);
 					return;
+				} else {
+					actionType = typ;
 				}
 			} else {
 				actionType = { ...providedActionType };
@@ -94,15 +96,11 @@ const useActionData = (
 				showError(err);
 				return;
 			}
+
 			let inputSchema = schemas.In;
 			let outputSchema = schemas.Out;
-
-			let inputMatchingSchema: ObjectType;
-			let outputMatchingSchema: ObjectType;
-			if (schemas.Matchings) {
-				inputMatchingSchema = schemas.Matchings.Internal;
-				outputMatchingSchema = schemas.Matchings.External;
-			}
+			let inputMatchingSchema = schemas.Matchings ? schemas.Matchings.Internal : null;
+			let outputMatchingSchema = schemas.Matchings ? schemas.Matchings.External : null;
 
 			// Compute which fields are supported by the action type.
 			const fields = computeActionTypeFields(connection, actionType, schemas);
@@ -193,54 +191,19 @@ const useActionData = (
 				outputSchema = schema;
 			}
 
-			const transformedActionType: TransformedActionType = {
-				Name: actionType.Name,
-				Description: actionType.Description,
-				Target: actionType.Target,
-				EventType: actionType.EventType,
-				MissingSchema: actionType.MissingSchema,
-				InputSchema: inputSchema,
-				OutputSchema: outputSchema,
-				InputMatchingSchema: inputMatchingSchema,
-				OutputMatchingSchema: outputMatchingSchema,
-				Fields: fields,
-			};
+			const transformedActionType = transformActionType(
+				actionType,
+				inputSchema,
+				outputSchema,
+				inputMatchingSchema,
+				outputMatchingSchema,
+				fields,
+			);
 			setActionType(transformedActionType);
 
-			// Compute the action in a UI-friendly format.
 			let transformedAction: TransformedAction;
 			if (isEditing) {
-				// TODO: merge this conversions inside a single transformation
-				// function.
-				let transformedMapping: TransformedMapping | null = null;
-				if (providedAction.Mapping != null) {
-					transformedMapping = transformActionMapping(providedAction.Mapping, outputSchema);
-				}
-				transformedAction = {
-					ID: providedAction.ID,
-					Connection: providedAction.Connection,
-					Target: providedAction.Target,
-					Name: providedAction.Name,
-					Enabled: providedAction.Enabled,
-					EventType: providedAction.EventType,
-					Running: providedAction.Running,
-					ScheduleStart: providedAction.ScheduleStart,
-					SchedulePeriod: providedAction.SchedulePeriod,
-					InSchema: providedAction.InSchema,
-					OutSchema: providedAction.OutSchema,
-					Filter: providedAction.Filter,
-					Mapping: transformedMapping,
-					Transformation: providedAction.Transformation,
-					Query: providedAction.Query,
-					Path: providedAction.Path,
-					Table: providedAction.Table,
-					Sheet: providedAction.Sheet,
-					IdentityProperty: providedAction.IdentityProperty,
-					TimestampProperty: providedAction.TimestampProperty,
-					TimestampFormat: providedAction.TimestampFormat,
-					ExportMode: providedAction.ExportMode,
-					MatchingProperties: providedAction.MatchingProperties,
-				};
+				transformedAction = transformAction(providedAction, outputSchema);
 			} else {
 				transformedAction = computeDefaultAction(actionType, connection, outputSchema, fields);
 			}
@@ -249,11 +212,6 @@ const useActionData = (
 		};
 		fetchData();
 	}, [providedActionType, providedAction]);
-
-	const isTransformationAllowed = useMemo(
-		() => connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server',
-		[connection, providedActionType, providedAction],
-	);
 
 	const saveAction = async () => {
 		if (action == null || actionType == null) {
@@ -382,10 +340,20 @@ const useActionData = (
 		setIsSaveButtonLoading(false);
 	};
 
-	let mustComputeSchema: boolean = false;
-	let isMappingSectionDisabled: boolean = false;
-	let disabledReason: string = '';
-	if (!isLoading) {
+	const isTransformationAllowed: boolean = useMemo(
+		() => connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server',
+		[connection, providedActionType, providedAction],
+	);
+
+	const { mustComputeSchema, isMappingSectionDisabled, disabledReason } = useMemo(() => {
+		let mustComputeSchema = false;
+		let isMappingSectionDisabled = false;
+		let disabledReason = '';
+
+		if (isLoading) {
+			return { mustComputeSchema, isMappingSectionDisabled, disabledReason };
+		}
+
 		mustComputeSchema =
 			((connection.type === 'Database' || connection.type === 'File') &&
 				actionType!.InputSchema == null &&
@@ -394,17 +362,21 @@ const useActionData = (
 				connection.role === 'Destination' &&
 				actionType!.OutputSchema == null &&
 				!isEditing);
+
 		const hasQueryError =
 			connection.type === 'Database' &&
 			connection.role === 'Source' &&
 			actionType!.InputSchema == null &&
 			isEditing;
+
 		const hasRecordsError =
 			connection.type === 'File' &&
 			connection.role === 'Destination' &&
 			actionType!.InputSchema == null &&
 			isEditing;
+
 		const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
+
 		isMappingSectionDisabled =
 			hasQueryError ||
 			isQueryChanged ||
@@ -433,7 +405,9 @@ const useActionData = (
 			disabledReason =
 				'Mappings are disabled since the file information has been modified . Please confirm the new information or revert the changes before proceeding with mappings.';
 		}
-	}
+
+		return { mustComputeSchema, isMappingSectionDisabled, disabledReason };
+	}, [isLoading, isQueryChanged, isFileChanged, isTableChanged, connection, actionType, isEditing, isImport]);
 
 	return {
 		isEditing,
