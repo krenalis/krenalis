@@ -46,12 +46,12 @@ var (
 	maxUIntDecimal = decimal.RequireFromString("18446744073709551615")
 )
 
-// convert converts v from type t1 to type t2 and returns the converted value.
+// convert converts v from type st to type dt and returns the converted value.
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
 //
 // formatTime reports whether DateTime and Date values should be formatted based
-// on the layout of t2, if any.
+// on the layout of dt, if any.
 //
 // For Array, Object, and Map values, it can modify the argument v. It returns
 // an error if v cannot be converted.
