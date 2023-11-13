@@ -150,11 +150,6 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
-	case PtDateTime, PtDate:
-		if layout, ok := t.vl.(string); ok {
-			b.WriteString(`,"layout":`)
-			marshalString(b, layout)
-		}
 	case PtJSON:
 		if t.s > 0 {
 			b.WriteString(`,"charLen":`)
@@ -272,7 +267,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasReal, hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
+	var hasReal, hasScale, hasMinItems, hasMaxItems, hasUniqueItems bool
 
 	var pt PhysicalType
 	var minimum, maximum json.Number
@@ -280,7 +275,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var values []string
-	var layout string
 	var itemType Type
 	var minItems, maxItems = 0, MaxItems
 	var uniqueItems bool
@@ -423,18 +417,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid scale")
 			}
 			hasScale = true
-		case "layout":
-			if hasLayout {
-				return Type{}, errors.New("repeated 'layout' key")
-			}
-			layout, ok = tok.(string)
-			if !ok {
-				return Type{}, errors.New("invalid layout")
-			}
-			if layout == "" {
-				return Type{}, errors.New("layout cannot be empty")
-			}
-			hasLayout = true
 		case "byteLen":
 			if byteLen > 0 {
 				return Type{}, errors.New("repeated 'byteLen' key")
@@ -756,12 +738,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected values for non-Text type")
 		}
 		t.vl = values
-	}
-	if hasLayout {
-		if pt != PtDateTime && pt != PtDate {
-			return Type{}, errors.New("unexpected layout for non-time type")
-		}
-		t.vl = layout
 	}
 	if byteLen > 0 {
 		if pt != PtText {

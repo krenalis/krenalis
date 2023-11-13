@@ -359,6 +359,14 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
+// Layouts represents the layouts used to format DateTime, Date, and Time
+// values.
+type Layouts struct {
+	DateTime string
+	Date     string
+	Time     string
+}
+
 // Connector represents a connector.
 type Connector struct {
 	ID                     int
@@ -372,6 +380,7 @@ type Connector struct {
 	HasSheets              bool
 	HasSettings            bool
 	Icon                   string
+	Layouts                Layouts
 	FileExtension          string
 	SampleQuery            string
 	WebhooksPer            WebhooksPer

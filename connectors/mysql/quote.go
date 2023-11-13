@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"chichi/connector/types"
 
@@ -51,6 +52,15 @@ func quoteValue(b *strings.Builder, v any, pt types.PhysicalType) {
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, bits))
 	case decimal.Decimal:
 		b.WriteString(v.String())
+	case time.Time:
+		switch pt {
+		case types.PtDateTime:
+			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+		case types.PtDate:
+			b.WriteString(v.Format("2006-01-02"))
+		case types.PtTime:
+			b.WriteString(v.Format("15:04:05.999999"))
+		}
 	case bool:
 		if v {
 			b.WriteString("1")

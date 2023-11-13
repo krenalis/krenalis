@@ -246,18 +246,18 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		{
 			Name:     "created",
 			Label:    "Profile Created",
-			Type:     types.DateTime().WithLayout(time.RFC3339),
+			Type:     types.DateTime(),
 			Nullable: true,
 		},
 		{
 			Name:     "updated",
 			Label:    "Profile Updated",
-			Type:     types.DateTime().WithLayout(time.RFC3339),
+			Type:     types.DateTime(),
 			Nullable: true,
 		},
 		{
 			Name:     "last_event_date",
-			Type:     types.DateTime().WithLayout(time.RFC3339),
+			Type:     types.DateTime(),
 			Nullable: true,
 		},
 		{

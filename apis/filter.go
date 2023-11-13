@@ -119,44 +119,17 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				valid = v.LessThan(min) || v.GreaterThan(max)
 			}
 		case types.PtDateTime:
-			var t time.Time
-			layout := typ.Layout()
-			switch layout {
-			case types.Seconds, types.Milliseconds, types.Microseconds, types.Nanoseconds:
-				n, err := strconv.ParseInt(cond.Value, 10, 64)
-				if err == nil {
-					t, valid = dateTimeFromUnixInt(n, layout)
-				}
-			default:
-				if layout == "" {
-					layout = time.DateTime
-				}
-				var err error
-				t, err = time.Parse(layout, cond.Value)
-				valid = err == nil
-			}
-			if valid {
+			if t, err := time.Parse(time.DateTime, cond.Value); err == nil {
 				y := t.UTC().Year()
 				valid = y >= 1 && y <= 9999
 			}
 		case types.PtDate:
-			layout := typ.Layout()
-			if layout == "" {
-				layout = time.DateOnly
-			}
-			t, err := time.Parse(layout, cond.Value)
-			valid = err == nil
-			if valid {
+			if t, err := time.Parse(time.DateOnly, cond.Value); err == nil {
 				y := t.UTC().Year()
 				valid = y >= 1 && y <= 9999
 			}
 		case types.PtTime:
-			if typ.Layout() == "" {
-				_, valid = parseTime(cond.Value)
-			} else {
-				_, err := time.Parse(typ.Layout(), cond.Value)
-				valid = err == nil
-			}
+			_, valid = parseTime(cond.Value)
 		case types.PtYear:
 			for i := 0; i < len(cond.Value); i++ {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
@@ -258,24 +231,6 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 		exp.Operands[i] = expr.NewBaseExpr(column, op, value)
 	}
 	return exp, nil
-}
-
-// dateTimeFromUnixInt returns the local Time corresponding to the given Unix
-// time. Unix time is expressed in seconds, milliseconds, microseconds or
-// nanoseconds according to layout.
-// The second return value reports whether the layout is appropriate.
-func dateTimeFromUnixInt(n int64, layout string) (time.Time, bool) {
-	switch layout {
-	case types.Seconds:
-		return time.Unix(n, 0), true
-	case types.Milliseconds:
-		return time.UnixMilli(n), true
-	case types.Microseconds:
-		return time.UnixMicro(n), true
-	case types.Nanoseconds:
-		return time.Unix(0, n), true
-	}
-	return time.Time{}, false
 }
 
 // parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as

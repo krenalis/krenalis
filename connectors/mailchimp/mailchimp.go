@@ -330,7 +330,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		}, {
 			Name:  "LastChanged",
 			Label: "Time of the last update",
-			Type:  types.DateTime().WithLayout(time.RFC3339),
+			Type:  types.DateTime(),
 		}, {
 			Name:  "LastNote",
 			Label: "Last Note",
@@ -342,7 +342,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 				}, {
 					Name:  "created_at",
 					Label: "Created at",
-					Type:  types.DateTime().WithLayout(time.RFC3339),
+					Type:  types.DateTime(),
 				}, {
 					Name:  "created_by",
 					Label: "Created by",
@@ -442,11 +442,11 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		}, {
 			Name:  "TimestampOpt",
 			Label: "Opt-in time",
-			Type:  types.DateTime().WithLayout(time.RFC3339),
+			Type:  types.DateTime(),
 		}, {
 			Name:  "TimestampSignup",
 			Label: "Sign up time",
-			Type:  types.DateTime().WithLayout(time.RFC3339),
+			Type:  types.DateTime(),
 		}, {
 			Name:  "UniqueEmailID",
 			Label: "Unique email ID",

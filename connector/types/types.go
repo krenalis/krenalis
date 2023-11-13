@@ -45,14 +45,6 @@ var (
 	MinDecimal = MaxDecimal.Neg()
 )
 
-// Time layouts.
-const (
-	Nanoseconds  = "ns"
-	Microseconds = "us"
-	Milliseconds = "ms"
-	Seconds      = "s"
-)
-
 const (
 	MaxDecimalPrecision = 76             // Maximum precision for a Decimal type
 	MaxDecimalScale     = 38             // Maximum scale for a Decimal type
@@ -252,7 +244,6 @@ type Type struct {
 	//   - uintRange value for UInt64
 	//   - floatRange value for Float and Float32
 	//   - decimalRange value for Decimal
-	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
 	//   - []string with the values for Text
 	//   - []Property for Object
@@ -841,45 +832,6 @@ func (t Type) Scale() int {
 		panic("cannot get scale of a non-Decimal type")
 	}
 	return int(t.s)
-}
-
-// Layout returns the layout of DateTime, Date and Time types.
-// Panics if t is not a DateTime, Date or Time type.
-func (t Type) Layout() string {
-	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get layout of a non-time types")
-	}
-	if t.vl == nil {
-		return ""
-	}
-	return t.vl.(string)
-}
-
-// WithLayout returns t but with the given layout. Panics if t is not a
-// DateTime, Date or Time type, or layout is not a valid non-empty UTF-8-encoded
-// string, or t has already a layout.
-//
-// A layout is a specific pattern used when a DateTime, Date or Time value is
-// represented as a string or, only for DateTime, an integer. For strings,
-// layout can be any time package layout string. For integers, layout can be
-// Nanoseconds, Microseconds, Milliseconds and Seconds, and the value is
-// relative to the Unix epoc.
-func (t Type) WithLayout(layout string) Type {
-	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get layout of a non-time types")
-	}
-	if layout == "" {
-		panic("layout cannot be an empty string")
-	}
-	if t.vl != nil {
-		panic("t already has a layout")
-	}
-	vl, err := normalizedUTF8(layout)
-	if err != nil {
-		panic(err)
-	}
-	t.vl = vl
-	return t
 }
 
 // ByteLen returns the maximum length in bytes of a Text type and true.

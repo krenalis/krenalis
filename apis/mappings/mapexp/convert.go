@@ -19,6 +19,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -50,12 +51,12 @@ var (
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
 //
-// formatTime reports whether DateTime and Date values should be formatted based
-// on the layout of dt, if any.
+// layouts represents, if not null, the layouts used to format DateTime, Date,
+// and Time values as strings.
 //
 // For Array, Object, and Map values, it can modify the argument v. It returns
 // an error if v cannot be converted.
-func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
+func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (any, error) {
 	spt := st.PhysicalType()
 	dpt := dt.PhysicalType()
 	// Convert between nil and other values.
@@ -275,17 +276,21 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		default:
 			return nil, errInvalidConversion
 		}
-		if layout := dt.Layout(); layout != "" && formatTime {
-			switch layout {
-			case types.Seconds:
+		if layouts != nil {
+			switch layouts.DateTime {
+			case "unix":
 				return t.Unix(), nil
-			case types.Milliseconds:
+			case "unixmilli":
 				return t.UnixMilli(), nil
-			case types.Microseconds:
+			case "unixmicro":
 				return t.UnixMicro(), nil
-			case types.Nanoseconds:
+			case "unixnano":
 				return t.UnixNano(), nil
 			default:
+				layout := layouts.DateTime
+				if layout == "" {
+					layout = "2006-01-02T15:04:05.999Z"
+				}
 				return t.Format(layout), nil
 			}
 		}
@@ -312,7 +317,11 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		default:
 			return nil, errInvalidConversion
 		}
-		if layout := dt.Layout(); layout != "" && formatTime {
+		if layouts != nil {
+			layout := layouts.Date
+			if layout == "" {
+				layout = "2006-01-02"
+			}
 			return t.Format(layout), nil
 		}
 		return t, nil
@@ -337,7 +346,11 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 				return nil, err
 			}
 		}
-		if layout := dt.Layout(); layout != "" && formatTime {
+		if layouts != nil {
+			layout := layouts.Time
+			if layout == "" {
+				layout = "15:04:05.999Z"
+			}
 			return t.Format(layout), nil
 		}
 		return t, nil
@@ -496,7 +509,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			}
 			var err error
 			for i, item := range s {
-				s[i], err = convert(item, it1, it2, false, formatTime)
+				s[i], err = convert(item, it1, it2, false, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -512,7 +525,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			}
 			it2 := dt.Elem()
 			for i, item := range s {
-				s[i], err = convert(item, types.JSON(), it2, false, formatTime)
+				s[i], err = convert(item, types.JSON(), it2, false, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -543,7 +556,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable, formatTime)
+				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -567,7 +580,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 					continue
 				}
 				var err error
-				s[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, formatTime)
+				s[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -585,7 +598,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			}
 			var err error
 			for key, value := range m {
-				m[key], err = convert(value, vt1, vt2, false, formatTime)
+				m[key], err = convert(value, vt1, vt2, false, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -598,7 +611,7 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 			}
 			vt2 := dt.Elem()
 			for key, value := range s {
-				s[key], err = convert(value, types.JSON(), vt2, false, formatTime)
+				s[key], err = convert(value, types.JSON(), vt2, false, layouts)
 				if err != nil {
 					return nil, err
 				}

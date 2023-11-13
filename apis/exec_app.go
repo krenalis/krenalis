@@ -92,12 +92,13 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 // exportUsersToApp exports the users to the app.
 func (this *Action) exportUsersToApp(ctx context.Context) error {
 
+	connection := this.action.Connection()
+
 	// Ensure that the type of the internal matching property is equal to the
 	// type of the corresponding property in the users schema.
 	{
-		ws := this.action.Connection().Workspace()
 		internal := this.action.MatchingProperties.Internal
-		usersSchema, ok := ws.Schemas["users"]
+		usersSchema, ok := connection.Workspace().Schemas["users"]
 		if !ok {
 			return actionExecutionError{fmt.Errorf("users schema not found")}
 		}
@@ -148,8 +149,9 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// behavior, and eventually add an additional normalization step.
 
 	// Instantiate a new mapping.
+	connector := connection.Connector()
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, true)
+		this.action.Transformation, this.action.ID, this.apis.transformer, &connector.Layouts)
 	if err != nil {
 		return err
 	}
@@ -226,7 +228,7 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 	}
 
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, false)
+		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
 	if err != nil {
 		return actionExecutionError{err}
 	}

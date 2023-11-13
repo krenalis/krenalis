@@ -137,7 +137,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			mappingProps := make(map[string]string, len(action.Mapping)+len(anonIdents))
 			maps.Copy(mappingProps, action.Mapping)
 			maps.Copy(mappingProps, anonIdents)
-			mapping, err := mappings.New(Schema, usersIdentities, mappingProps, action.Transformation, action.ID, c.transformer, false)
+			mapping, err := mappings.New(Schema, usersIdentities, mappingProps, action.Transformation, action.ID, c.transformer, nil)
 			if err != nil {
 				return err
 			}

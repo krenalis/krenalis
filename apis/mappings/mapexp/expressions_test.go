@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/shopspring/decimal"
@@ -57,7 +58,7 @@ func TestEval(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		got, typ, err := eval(test.expr, values)
+		got, typ, err := eval(test.expr, values, nil)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%d. unexpected error: %s", i+1, err)
@@ -113,6 +114,7 @@ func TestCompile(t *testing.T) {
 		expr          string
 		dt            types.Type
 		nullable      bool
+		layouts       *state.Layouts
 		compileErr    error
 		evalErr       error
 		expectedValue any
@@ -286,7 +288,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			// Test Compile.
-			expr, err := Compile(test.expr, schema, test.dt, test.nullable)
+			expr, err := Compile(test.expr, schema, test.dt, test.nullable, test.layouts)
 			if test.compileErr != nil {
 				if err == nil {
 					t.Fatalf("expecting compile error %s, got no errors", test.compileErr)
@@ -301,7 +303,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			// Test Eval.
-			gotValue, err := expr.Eval(values, false)
+			gotValue, err := expr.Eval(values)
 			if test.evalErr != nil {
 				if err == nil {
 					t.Fatalf("expecting eval error %s, got no errors", test.evalErr)
@@ -339,7 +341,7 @@ func TestInvalidSchema(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
-			_, err := Compile(test.expr, types.Type{}, test.dt, false)
+			_, err := Compile(test.expr, types.Type{}, test.dt, false, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -386,7 +388,7 @@ func TestPropertyPaths(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		expression, err := Compile(test.src, schema, types.JSON(), true)
+		expression, err := Compile(test.src, schema, types.JSON(), true, nil)
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}

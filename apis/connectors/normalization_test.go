@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/google/go-cmp/cmp"
@@ -30,103 +31,103 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		t types.Type
 		v any
 		e any
+		l *state.Layouts
 	}{
 		// Boolean.
-		{types.Boolean(), true, true},
+		{types.Boolean(), true, true, nil},
 		// Int.
-		{types.Int(), -9261, -9261},
-		{types.Int(), -9261.0, -9261},
-		{types.Int(), json.Number("-9261"), -9261},
-		{types.Int(), json.Number("-9261.0"), -9261},
+		{types.Int(), -9261, -9261, nil},
+		{types.Int(), -9261.0, -9261, nil},
+		{types.Int(), json.Number("-9261"), -9261, nil},
+		{types.Int(), json.Number("-9261.0"), -9261, nil},
 		// Int16.
-		{types.Int16(), -6, -6},
-		{types.Int16(), -6.0, -6},
-		{types.Int16(), json.Number("-6"), -6},
-		{types.Int16(), json.Number("-6.0"), -6},
+		{types.Int16(), -6, -6, nil},
+		{types.Int16(), -6.0, -6, nil},
+		{types.Int16(), json.Number("-6"), -6, nil},
+		{types.Int16(), json.Number("-6.0"), -6, nil},
 		// UInt.
-		{types.UInt(), uint(47303), uint(47303)},
-		{types.UInt(), 47303.0, uint(47303)},
-		{types.UInt(), json.Number("47303"), uint(47303)},
-		{types.UInt(), json.Number("47303.0"), uint(47303)},
+		{types.UInt(), uint(47303), uint(47303), nil},
+		{types.UInt(), 47303.0, uint(47303), nil},
+		{types.UInt(), json.Number("47303"), uint(47303), nil},
+		{types.UInt(), json.Number("47303.0"), uint(47303), nil},
 		// UInt8.
-		{types.UInt8(), uint(3), uint(3)},
-		{types.UInt8(), 3.0, uint(3)},
-		{types.UInt8(), json.Number("3"), uint(3)},
-		{types.UInt8(), json.Number("3.0"), uint(3)},
+		{types.UInt8(), uint(3), uint(3), nil},
+		{types.UInt8(), 3.0, uint(3), nil},
+		{types.UInt8(), json.Number("3"), uint(3), nil},
+		{types.UInt8(), json.Number("3.0"), uint(3), nil},
 		// Float.
-		{types.Float(), 12.7902743017496882, 12.7902743017496882},
-		{types.Float(), json.Number("12"), 12.0},
-		{types.Float(), json.Number("12.79027430174968829"), 12.79027430174968829},
-		{types.Float(), math.NaN(), math.NaN()},
+		{types.Float(), 12.7902743017496882, 12.7902743017496882, nil},
+		{types.Float(), json.Number("12"), 12.0, nil},
+		{types.Float(), json.Number("12.79027430174968829"), 12.79027430174968829, nil},
+		{types.Float(), math.NaN(), math.NaN(), nil},
 		// Float32.
-		{types.Float32(), 12.79, 12.79},
-		{types.Float32(), json.Number("12"), 12.0},
-		{types.Float32(), json.Number("12.79"), 12.79},
-		{types.Float32(), math.NaN(), math.NaN()},
+		{types.Float32(), 12.79, 12.79, nil},
+		{types.Float32(), json.Number("12"), 12.0, nil},
+		{types.Float32(), json.Number("12.79"), 12.79, nil},
+		{types.Float32(), math.NaN(), math.NaN(), nil},
 		// Decimal.
-		{types.Decimal(10, 3), decimal.NewFromFloat(6.639), decimal.NewFromFloat(6.639)},
-		{types.Decimal(10, 3), "6.639", decimal.NewFromFloat(6.639)},
-		{types.Decimal(10, 3), 6.639, decimal.NewFromFloat(6.639)},
-		{types.Decimal(10, 3), json.Number("6.639"), decimal.NewFromFloat(6.639)},
+		{types.Decimal(10, 3), decimal.NewFromFloat(6.639), decimal.NewFromFloat(6.639), nil},
+		{types.Decimal(10, 3), "6.639", decimal.NewFromFloat(6.639), nil},
+		{types.Decimal(10, 3), 6.639, decimal.NewFromFloat(6.639), nil},
+		{types.Decimal(10, 3), json.Number("6.639"), decimal.NewFromFloat(6.639), nil},
 		// DateTime.
-		{types.DateTime(), aDateTime, aDateTime},
-		{types.DateTime().WithLayout("s"), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
-		{types.DateTime().WithLayout("ms"), strconv.FormatInt(aDateTime.UnixMilli(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC)},
-		{types.DateTime().WithLayout("us"), strconv.FormatInt(aDateTime.UnixMicro(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC)},
-		{types.DateTime().WithLayout("ns"), strconv.FormatInt(aDateTime.UnixNano(), 10), aDateTime},
-		{types.DateTime().WithLayout(time.DateTime), "2023-05-03 15:47:22", time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
-		{types.DateTime().WithLayout(time.DateOnly), "2023-05-03", time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)},
-		{types.DateTime().WithLayout("s"), float64(aDateTime.Unix()), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
-		{types.DateTime().WithLayout("ms"), float64(aDateTime.UnixMilli()), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC)},
-		{types.DateTime().WithLayout("us"), float64(aDateTime.UnixMicro()), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC)},
-		{types.DateTime().WithLayout("ns"), float64(aDateTime.UnixNano()), time.Date(2023, 5, 3, 15, 47, 22, 769802496, time.UTC)},
-		{types.DateTime().WithLayout("s"), json.Number(strconv.FormatInt(aDateTime.Unix(), 10)), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
+		{types.DateTime(), aDateTime, aDateTime, nil},
+		{types.DateTime(), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: "unix"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.UnixMilli(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC), &state.Layouts{DateTime: "unixmilli"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.UnixMicro(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC), &state.Layouts{DateTime: "unixmicro"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.UnixNano(), 10), aDateTime, &state.Layouts{DateTime: "unixnano"}},
+		{types.DateTime(), "2023-05-03 15:47:22", time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: time.DateTime}},
+		{types.DateTime(), "2023-05-03", time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC), &state.Layouts{DateTime: time.DateOnly}},
+		{types.DateTime(), float64(aDateTime.Unix()), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: "unix"}},
+		{types.DateTime(), float64(aDateTime.UnixMilli()), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC), &state.Layouts{DateTime: "unixmilli"}},
+		{types.DateTime(), float64(aDateTime.UnixMicro()), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC), &state.Layouts{DateTime: "unixmicro"}},
+		{types.DateTime(), float64(aDateTime.UnixNano()), time.Date(2023, 5, 3, 15, 47, 22, 769802496, time.UTC), &state.Layouts{DateTime: "unixnano"}},
+		{types.DateTime(), json.Number(strconv.FormatInt(aDateTime.Unix(), 10)), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: "unix"}},
 		// Date.
-		{types.Date(), aDate, aDate},
-		{types.Date(), "2023-05-03", aDate},
-		{types.Date().WithLayout(time.DateOnly), "2023-05-03", aDate},
-		{types.Date().WithLayout("Mon, 02 Jan 2006"), "Wed, 03 May 2023", aDate},
+		{types.Date(), aDate, aDate, nil},
+		{types.Date(), "2023-05-03", aDate, &state.Layouts{Date: time.DateOnly}},
+		{types.Date(), "Wed, 03 May 2023", aDate, &state.Layouts{Date: "Mon, 02 Jan 2006"}},
 		// Time.
-		{types.Time(), time.Date(2023, 5, 3, 17, 34, 41, 804019312, time.UTC), time.Date(1970, 1, 1, 17, 34, 41, 804019312, time.UTC)},
-		{types.Time(), "00:00:00", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)},
-		{types.Time(), "13:16:47.801", time.Date(1970, 1, 1, 13, 16, 47, 801000000, time.UTC)},
-		{types.Time(), "23:59:59.999999999", time.Date(1970, 1, 1, 23, 59, 59, 999999999, time.UTC)},
-		{types.Time().WithLayout("15:04:05.000"), "09:22:51.834", time.Date(1970, 1, 1, 9, 22, 51, 834000000, time.UTC)},
-		{types.Time().WithLayout("15h 04m 05s"), "09h 31m 13s", time.Date(1970, 1, 1, 9, 31, 13, 0, time.UTC)},
+		{types.Time(), time.Date(2023, 5, 3, 17, 34, 41, 804019312, time.UTC), time.Date(1970, 1, 1, 17, 34, 41, 804019312, time.UTC), nil},
+		{types.Time(), "00:00:00", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), &state.Layouts{Time: "15:04:05.999999999"}},
+		{types.Time(), "13:16:47.801", time.Date(1970, 1, 1, 13, 16, 47, 801000000, time.UTC), &state.Layouts{Time: "15:04:05.999999999"}},
+		{types.Time(), "23:59:59.999999999", time.Date(1970, 1, 1, 23, 59, 59, 999999999, time.UTC), &state.Layouts{Time: "15:04:05.999999999"}},
+		{types.Time(), "09:22:51.834", time.Date(1970, 1, 1, 9, 22, 51, 834000000, time.UTC), &state.Layouts{Time: "15:04:05.000"}},
+		{types.Time(), "09h 31m 13s", time.Date(1970, 1, 1, 9, 31, 13, 0, time.UTC), &state.Layouts{Time: "15h 04m 05s"}},
 		// Year.
-		{types.Year(), 2023, 2023},
-		{types.Year(), 2023.0, 2023},
-		{types.Year(), json.Number("2023"), 2023},
+		{types.Year(), 2023, 2023, nil},
+		{types.Year(), 2023.0, 2023, nil},
+		{types.Year(), json.Number("2023"), 2023, nil},
 		// UUID.
-		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000"},
+		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", nil},
 		// JSON.
-		{types.JSON(), json.RawMessage(`{"a":5}`), json.RawMessage(`{"a":5}`)},
-		{types.JSON(), json.Number("302"), json.Number("302")},
-		{types.JSON(), `{"a":5}`, `{"a":5}`},
-		{types.JSON(), map[string]any{"a": 5.0}, map[string]any{"a": 5.0}},
+		{types.JSON(), json.RawMessage(`{"a":5}`), json.RawMessage(`{"a":5}`), nil},
+		{types.JSON(), json.Number("302"), json.Number("302"), nil},
+		{types.JSON(), `{"a":5}`, `{"a":5}`, nil},
+		{types.JSON(), map[string]any{"a": 5.0}, map[string]any{"a": 5.0}, nil},
 		// Inet.
-		{types.Inet(), "127.0.0.1", "127.0.0.1"},
-		{types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329"},
+		{types.Inet(), "127.0.0.1", "127.0.0.1", nil},
+		{types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", nil},
 		// Text.
-		{types.Text(), "foo", "foo"},
-		{types.Text().WithValues("foo", "boo"), "boo", "boo"},
-		{types.Text().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo"},
-		{types.Text().WithByteLen(3), "boo", "boo"},
-		{types.Text().WithCharLen(3), "bòò", "bòò"},
+		{types.Text(), "foo", "foo", nil},
+		{types.Text().WithValues("foo", "boo"), "boo", "boo", nil},
+		{types.Text().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo", nil},
+		{types.Text().WithByteLen(3), "boo", "boo", nil},
+		{types.Text().WithCharLen(3), "bòò", "bòò", nil},
 		// Array.
-		{types.Array(types.Int()), []any{1, 2}, []any{1, 2}},
-		{types.Array(types.Int()), []any{1.0, 2.3}, []any{1, 2}},
-		{types.Array(types.Int()), []any{json.Number("1.0"), json.Number("2.3")}, []any{1, 2}},
-		{types.Array(types.Array(types.Text())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}},
+		{types.Array(types.Int()), []any{1, 2}, []any{1, 2}, nil},
+		{types.Array(types.Int()), []any{1.0, 2.3}, []any{1, 2}, nil},
+		{types.Array(types.Int()), []any{json.Number("1.0"), json.Number("2.3")}, []any{1, 2}, nil},
+		{types.Array(types.Array(types.Text())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, nil},
 		// Object.
-		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int()}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}},
+		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int()}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, nil},
 		// Map.
-		{types.Map(types.Text()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}},
-		{types.Map(types.Array(types.Boolean())), map[string]any{"foo": []any{true, false}}, map[string]any{"foo": []any{true, false}}},
+		{types.Map(types.Text()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, nil},
+		{types.Map(types.Array(types.Boolean())), map[string]any{"foo": []any{true, false}}, map[string]any{"foo": []any{true, false}}, nil},
 	}
 
 	for _, test := range tests {
-		got, err := normalizeAppProperty("k", test.t, test.v, false)
+		got, err := normalizeAppProperty("k", test.t, test.v, false, test.l)
 		if err != nil {
 			t.Fatal(err)
 		}

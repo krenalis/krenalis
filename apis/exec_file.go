@@ -80,7 +80,7 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 
 	// Determine the input and the output schema.
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, false)
+		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
 	if err != nil {
 		return err
 	}

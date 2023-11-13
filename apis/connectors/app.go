@@ -23,20 +23,23 @@ type WebhookPayload = _connector.WebhookPayload
 
 // App represents the app of an app connection.
 type App struct {
-	name  string
-	role  state.Role
-	http  *httpclient.HTTP
-	inner _connector.AppConnection
-	err   error
+	name    string
+	role    state.Role
+	layouts *state.Layouts
+	http    *httpclient.HTTP
+	inner   _connector.AppConnection
+	err     error
 }
 
 // App returns an app for the provided connection. Errors are deferred until an
 // app's method is called. It panics if connection is not an app connection.
 func (connectors *Connectors) App(connection *state.Connection) *App {
+	connector := connection.Connector()
 	app := &App{
-		name: connection.Connector().Name,
-		role: connection.Role,
-		http: connectors.http,
+		name:    connector.Name,
+		role:    connection.Role,
+		layouts: &connector.Layouts,
+		http:    connectors.http,
 	}
 	var resourceID int
 	var resourceCode string
@@ -236,7 +239,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (us
 				delete(user.Properties, name)
 				continue
 			}
-			value, err = normalizeAppProperty(name, p.Type, value, p.Nullable)
+			value, err = normalizeAppProperty(name, p.Type, value, p.Nullable, app.layouts)
 			if err != nil {
 				user.Err = err
 				break

@@ -1041,7 +1041,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 					err := err.(types.PathNotExistError)
 					return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 				}
-				_, err = mapexp.Compile(expr, inSchema, p.Type, p.Nullable)
+				_, err = mapexp.Compile(expr, inSchema, p.Type, p.Nullable, nil)
 				if err != nil {
 					return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 				}
@@ -1091,7 +1091,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 		// Transform the data.
 		action := 1 // no matter the action, it will be overwritten by the temporary transformation.
-		m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, false)
+		m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -1800,7 +1800,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 				err := err.(types.PathNotExistError)
 				return errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 			}
-			expr, err := mapexp.Compile(expr, inSchema, p.Type, p.Nullable)
+			expr, err := mapexp.Compile(expr, inSchema, p.Type, p.Nullable, nil)
 			if err != nil {
 				return errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 			}
@@ -2188,7 +2188,7 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 			return nil, fmt.Errorf("property %q not found", name)
 		}
 		// TODO(Gianluca): call the proper normalization function.
-		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable)
+		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable, nil)
 		if err != nil {
 			return nil, err
 		}

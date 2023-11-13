@@ -68,12 +68,6 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Decimal","precision":10,"scale":8}`,
 			Type: Decimal(10, 8),
 		}, {
-			Data: `{"name":"DateTime","layout":"2006-01-02T15:04"}`,
-			Type: DateTime().WithLayout("2006-01-02T15:04"),
-		}, {
-			Data: `{"name":"Date","layout":"2006-01-02"}`,
-			Type: Date().WithLayout("2006-01-02"),
-		}, {
 			Data: `{"name":"DateTime"}`,
 			Type: DateTime(),
 		}, {

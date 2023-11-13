@@ -13,7 +13,6 @@ package clickhouse
 import (
 	"bytes"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"chichi/connector/types"
@@ -71,11 +70,11 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		case "UUID":
 			t = types.UUID()
 		case "Date":
-			t = types.Date().WithLayout(time.DateOnly)
+			t = types.Date()
 		case "Date32":
 			t = types.Int()
 		case "DateTime":
-			t = types.DateTime().WithLayout(time.DateTime)
+			t = types.DateTime()
 		case "JSON":
 			t = types.JSON()
 		case "IPv4", "IPv6":
@@ -111,7 +110,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if !ok || s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.DateTime().WithLayout(time.DateTime), false, s[1:]
+		return types.DateTime(), false, s[1:]
 	case "DateTime64":
 		n, s, ok := parseUint(s[i+1:])
 		if !ok || n > 9 {
@@ -127,11 +126,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if s == "" {
 			return types.Type{}, false, ""
 		}
-		const layout = time.DateTime + ".999999999"
-		if n > 0 {
-			n++
-		}
-		return types.DateTime().WithLayout(layout[:len(time.DateTime)+n]), false, s[1:]
+		return types.DateTime(), false, s[1:]
 	case "Enum8", "Enum16":
 		s = s[i+1:]
 		var values []string

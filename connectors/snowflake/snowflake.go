@@ -271,7 +271,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "BOOLEAN":
 		return types.Boolean(), nil
 	case "DATE":
-		return types.Date().WithLayout("2006-01-02"), nil
+		return types.Date(), nil
 	case "FIXED":
 		precision, scale, ok := t.DecimalSize()
 		if !ok {
@@ -297,9 +297,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		const maxBytesLen = 16_777_216
 		return types.Text().WithByteLen(maxBytesLen).WithCharLen(int(length)), nil
 	case "TIME":
-		return types.Time().WithLayout("15:04:05.999999999"), nil
+		return types.Time(), nil
 	case "TIMESTAMP_NTZ":
-		return types.DateTime().WithLayout("2006-01-02 15:04:05.999999999"), nil
+		return types.DateTime(), nil
 	case "VARIANT":
 		return types.JSON(), nil
 	}

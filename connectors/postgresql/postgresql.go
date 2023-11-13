@@ -341,7 +341,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Text(), nil
 	case "DATE":
-		return types.Date().WithLayout("2006-01-02"), nil
+		return types.Date(), nil
 	case "FLOAT4":
 		return types.Float32(), nil
 	case "FLOAT8":
@@ -368,9 +368,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Decimal(int(precision), int(scale)), nil
 	case "TIME", "1266":
 		// 1266: time with time zone.
-		return types.Time().WithLayout("15:04:05.999999"), nil
+		return types.Time(), nil
 	case "TIMESTAMP", "TIMESTAMPTZ":
-		return types.DateTime().WithLayout("2006-01-02 15:04:05.999999"), nil
+		return types.DateTime(), nil
 	case "UUID":
 		return types.UUID(), nil
 	}

@@ -114,7 +114,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 func asType(expr []part, dt types.Type, nullable bool) error {
 	p := expr[0]
 	if len(expr) == 1 && p.path == nil {
-		v, err := convert(p.value, p.typ, dt, nullable, false)
+		v, err := convert(p.value, p.typ, dt, nullable, nil)
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("cannot convert null to %s", dt)

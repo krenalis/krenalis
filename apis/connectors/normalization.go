@@ -20,9 +20,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
+	"github.com/relvacode/iso8601"
 	"github.com/shopspring/decimal"
 )
 
@@ -35,7 +37,7 @@ var (
 // normalizeAppProperty normalizes a property value returned by an app
 // connector, and returns its normalized value. If the value is not valid
 // it returns an error.
-func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (any, error) {
+func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, layouts *state.Layouts) (any, error) {
 	if src == nil {
 		if !nullable {
 			return nil, fmt.Errorf("property %s is non-nullable, but the app returned a nil value", name)
@@ -162,28 +164,28 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			t = src
 			valid = true
 		case float64:
-			t, valid = dateTimeFromUnixFloat(src, typ.Layout())
+			t, valid = dateTimeFromUnixFloat(src, layouts.DateTime)
 		case string:
-			layout := typ.Layout()
-			switch layout {
-			case types.Seconds, types.Milliseconds, types.Microseconds, types.Nanoseconds:
+			switch layouts.DateTime {
+			case "":
+				var err error
+				t, err = iso8601.ParseString(src)
+				valid = err == nil
+			case "unix", "unixmilli", "unixmicro", "unixnano":
 				n, err := strconv.ParseInt(src, 10, 64)
 				if err == nil {
-					t, valid = dateTimeFromUnixInt(n, layout)
+					t, valid = dateTimeFromUnixInt(n, layouts.DateTime)
 				}
 			default:
-				if layout == "" {
-					layout = time.DateTime
-				}
 				var err error
-				t, err = time.Parse(layout, src)
+				t, err = time.Parse(layouts.DateTime, src)
 				valid = err == nil
 			}
 		case json.Number:
 			if n, err := src.Int64(); err == nil {
-				t, valid = dateTimeFromUnixInt(n, typ.Layout())
+				t, valid = dateTimeFromUnixInt(n, layouts.DateTime)
 			} else if f, err := src.Float64(); err == nil {
-				t, valid = dateTimeFromUnixFloat(f, typ.Layout())
+				t, valid = dateTimeFromUnixFloat(f, layouts.DateTime)
 			}
 		}
 		if valid {
@@ -200,12 +202,12 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			t = src
 			valid = true
 		case string:
-			layout := typ.Layout()
-			if layout == "" {
-				layout = time.DateOnly
-			}
 			var err error
-			t, err = time.Parse(layout, src)
+			if layouts.Date == "" {
+				t, err = iso8601.ParseString(src)
+			} else {
+				t, err = time.Parse(layouts.Date, src)
+			}
 			valid = err == nil
 		}
 		if valid {
@@ -221,14 +223,16 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
 			valid = true
 		case string:
-			layout := typ.Layout()
-			if layout == "" {
-				value, valid = parseTime(src)
+			var t time.Time
+			var err error
+			if layouts.Time == "" {
+				t, err = iso8601.ParseString(src)
 			} else {
-				t, err := time.Parse(layout, src)
-				if valid = err == nil; valid {
-					value = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
-				}
+				t, err = time.Parse(layouts.Time, src)
+			}
+			valid = err == nil
+			if valid {
+				value = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 			}
 		}
 	case types.PtYear:
@@ -308,7 +312,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			t := typ.Elem()
 			for i := 0; i < n; i++ {
 				v := rv.Index(i).Interface()
-				a[i], err = normalizeAppProperty(name, t, v, false)
+				a[i], err = normalizeAppProperty(name, t, v, false, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -335,7 +339,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 				if !ok {
 					return nil, fmt.Errorf("app returned a non-existent property %s for object property %s", k, name)
 				}
-				obj[k], err = normalizeAppProperty(name, p.Type, v, p.Nullable)
+				obj[k], err = normalizeAppProperty(name, p.Type, v, p.Nullable, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -354,7 +358,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			for iter.Next() {
 				k := iter.Key().String()
 				v := iter.Value().Interface()
-				m[k], err = normalizeAppProperty(name, t, v, false)
+				m[k], err = normalizeAppProperty(name, t, v, false, layouts)
 				if err != nil {
 					return nil, err
 				}
@@ -708,13 +712,13 @@ func validateStringProperty(p types.Property, s string) error {
 // The second return value reports whether the layout is appropriate.
 func dateTimeFromUnixInt(n int64, layout string) (time.Time, bool) {
 	switch layout {
-	case types.Seconds:
+	case "unix":
 		return time.Unix(n, 0), true
-	case types.Milliseconds:
+	case "unixmilli":
 		return time.UnixMilli(n), true
-	case types.Microseconds:
+	case "unixmicro":
 		return time.UnixMicro(n), true
-	case types.Nanoseconds:
+	case "unixnano":
 		return time.Unix(0, n), true
 	}
 	return time.Time{}, false
@@ -726,15 +730,15 @@ func dateTimeFromUnixInt(n int64, layout string) (time.Time, bool) {
 // The second return value reports whether the layout is appropriate.
 func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 	switch layout {
-	case types.Seconds:
+	case "unix":
 		sec := int64(n)
 		nsec := int64((n - float64(sec)) * 1e9)
 		return time.Unix(sec, nsec), true
-	case types.Milliseconds:
+	case "unixmilli":
 		return time.UnixMilli(int64(n)), true
-	case types.Microseconds:
+	case "unixmicro":
 		return time.UnixMicro(int64(n)), true
-	case types.Nanoseconds:
+	case "unixnano":
 		return time.Unix(0, int64(n)), true
 	}
 	return time.Time{}, false

@@ -82,6 +82,9 @@ func (state *State) Load() error {
 							ClientID:     oauthClientID,
 						}
 					}
+					c.Layouts.DateTime = app.DateTimeLayout
+					c.Layouts.Date = app.DateLayout
+					c.Layouts.Time = app.TimeLayout
 				case DatabaseType:
 					database := connector.RegisteredDatabase(c.Name)
 					c.SourceDescription = database.SourceDescription

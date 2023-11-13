@@ -38,7 +38,7 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 	}
 
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, false)
+		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 
 	// Instantiate a new mapping.
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, true)
+		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
 	if err != nil {
 		return err
 	}

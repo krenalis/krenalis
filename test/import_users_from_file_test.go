@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"chichi/apis"
 	"chichi/connector/types"
@@ -60,7 +59,7 @@ func TestImportUsersFromFile(t *testing.T) {
 			}),
 			"OutSchema": types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
-				{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
+				{Name: "timestamp", Type: types.DateTime()},
 			}),
 			"Mapping": map[string]string{
 				"email":     "email",

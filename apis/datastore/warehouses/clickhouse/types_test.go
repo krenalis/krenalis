@@ -9,7 +9,6 @@ package clickhouse
 
 import (
 	"testing"
-	"time"
 
 	"chichi/connector/types"
 )
@@ -35,13 +34,13 @@ func TestTypes(t *testing.T) {
 		{`Bool`, types.Boolean(), false},
 		{`String`, types.Text(), false},
 		{`UUID`, types.UUID(), false},
-		{`Date`, types.Date().WithLayout(time.DateOnly), false},
+		{`Date`, types.Date(), false},
 		{`Date32`, types.Int(), false},
-		{`DateTime`, types.DateTime().WithLayout(time.DateTime), false},
-		{`DateTime('Asia/Istanbul')`, types.DateTime().WithLayout(time.DateTime), false},
-		{`DateTime64(0)`, types.DateTime().WithLayout(time.DateTime), false},
-		{`DateTime64(9)`, types.DateTime().WithLayout("2006-01-02 15:04:05.999999999"), false},
-		{`DateTime64(3, 'Asia/Istanbul')`, types.DateTime().WithLayout("2006-01-02 15:04:05.999"), false},
+		{`DateTime`, types.DateTime(), false},
+		{`DateTime('Asia/Istanbul')`, types.DateTime(), false},
+		{`DateTime64(0)`, types.DateTime(), false},
+		{`DateTime64(9)`, types.DateTime(), false},
+		{`DateTime64(3, 'Asia/Istanbul')`, types.DateTime(), false},
 		{`Enum8('hello' = 1, 'world' = 2)`, types.Text().WithValues("hello", "world"), false},
 		{`Enum8('a' = -10, 'b' = -8)`, types.Text().WithValues("a", "b"), false},
 		{`Enum16('\b', '\f', '\r', '\n', '\t', '\0', '\a', '\v')`, types.Text().WithValues("\b", "\f", "\r", "\n", "\t", "\x00", "\a", "\v"), false},
@@ -49,7 +48,7 @@ func TestTypes(t *testing.T) {
 		{`Enum8('\e', '\\', '''', '\x3a', 'a\x7fb', '\x7F')`, types.Text().WithValues("e", "\\", "'", "\x3a", "a\x7fb", "\x7F"), false},
 		{`LowCardinality(String)`, types.Text(), false},
 		{`Array(String)`, types.Array(types.Text()), false},
-		{`Array(DateTime64(9))`, types.Array(types.DateTime().WithLayout("2006-01-02 15:04:05.999999999")), false},
+		{`Array(DateTime64(9))`, types.Array(types.DateTime()), false},
 		{`Array(Array(Enum8('hello' = 1, 'world' = 2)))`, types.Array(types.Array(types.Text().WithValues("hello", "world"))), false},
 		{`Array(String)`, types.Array(types.Text()), false},
 		{`JSON`, types.JSON(), false},

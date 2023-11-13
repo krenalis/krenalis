@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"chichi/apis/state"
 	"chichi/connector/types"
 )
 
@@ -44,6 +45,7 @@ type Expression struct {
 	parts    []part     // expression parts.
 	dt       types.Type // destination type.
 	nullable bool       // reports whether the resulting value can be nil.
+	layouts  *state.Layouts
 }
 
 // part represents an expression part within an Expression. An expression part
@@ -81,10 +83,11 @@ type part struct {
 
 // Compile parses a map expression and returns an Expression value that can be
 // used to execute the expression. schema is the schema of the paths in the
-// expression, dt is the destination type, and nullable indicates whether the
-// result value of the evaluation can be nil.
+// expression, dt is the destination type, nullable indicates whether the result
+// value of the evaluation can be nil, and layouts represents, if not null, the
+// layouts used to format DateTime, Date, and Time values as strings.
 // An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Expression, error) {
+func Compile(expr string, schema types.Type, dt types.Type, nullable bool, layouts *state.Layouts) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
@@ -109,22 +112,21 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Exp
 		parts:    parts,
 		dt:       dt,
 		nullable: nullable,
+		layouts:  layouts,
 	}
 	return expression, nil
 }
 
 // Eval evaluates the map expression on the given values and returns the result.
-// formatTime reports whether DateTime and Date values should be formatted based
-// on the layout of the destination type, if any.
 // If the evaluation succeeds but cannot be converted to the destination type,
 // it returns an InvalidConversionError error.
-func (expr *Expression) Eval(values map[string]any, formatTime bool) (any, error) {
-	v, st, err := eval(expr.parts, values)
+func (expr *Expression) Eval(values map[string]any) (any, error) {
+	v, st, err := eval(expr.parts, values, expr.layouts)
 	if err != nil {
 		return nil, err
 	}
 	if v != nil || !expr.nullable {
-		c, err := convert(v, st, expr.dt, expr.nullable, formatTime)
+		c, err := convert(v, st, expr.dt, expr.nullable, expr.layouts)
 		if err != nil {
 			if err == errInvalidConversion {
 				err = &InvalidConversionError{v, st, expr.dt}
@@ -194,8 +196,9 @@ func appendProperties(properties []types.Path, expression []part) []types.Path {
 }
 
 // eval evaluates expression and returns its value and type. values contains the
-// property values.
-func eval(expression []part, values map[string]any) (any, types.Type, error) {
+// property values. layouts represents, if not null, the layouts used to format
+// DateTime, Date, and Time values as strings.
+func eval(expression []part, values map[string]any, layouts *state.Layouts) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
@@ -208,7 +211,7 @@ func eval(expression []part, values map[string]any) (any, types.Type, error) {
 				if p.args == nil {
 					return values[p.path[0]], p.typ, nil
 				}
-				return evalCall(p, values)
+				return evalCall(p, values, layouts)
 			}
 			v, err := valueOf(p.path, values)
 			if err != nil {
@@ -237,7 +240,7 @@ func eval(expression []part, values map[string]any) (any, types.Type, error) {
 			}
 			vt = p.typ
 		} else {
-			v, vt, err = evalCall(p, values)
+			v, vt, err = evalCall(p, values, layouts)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -321,12 +324,13 @@ func stringifyPath(path []string) string {
 }
 
 // evalCall evaluates p representing a function call, and returns its value and
-// type. values contains the property values.
-func evalCall(p part, values map[string]any) (any, types.Type, error) {
+// type. values contains the property values. layouts represents, if not null,
+// the layouts used to format DateTime, Date, and Time values as strings.
+func evalCall(p part, values map[string]any, layouts *state.Layouts) (any, types.Type, error) {
 	switch name := p.path[0]; name {
 	case "and":
 		for _, arg := range p.args {
-			v, _, err := eval(arg, values)
+			v, _, err := eval(arg, values, layouts)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -338,7 +342,7 @@ func evalCall(p part, values map[string]any) (any, types.Type, error) {
 	case "array":
 		a := make([]any, len(p.args))
 		for i, arg := range p.args {
-			v, _, err := eval(arg, values)
+			v, _, err := eval(arg, values, layouts)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -347,7 +351,7 @@ func evalCall(p part, values map[string]any) (any, types.Type, error) {
 		return a, types.Array(types.JSON()), nil
 	case "coalesce":
 		for _, arg := range p.args {
-			v, vt, err := eval(arg, values)
+			v, vt, err := eval(arg, values, layouts)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -357,16 +361,16 @@ func evalCall(p part, values map[string]any) (any, types.Type, error) {
 		}
 		return nil, p.typ, nil
 	case "eq":
-		v0, t0, err := eval(p.args[0], values)
+		v0, t0, err := eval(p.args[0], values, layouts)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		v1, t1, err := eval(p.args[1], values)
+		v1, t1, err := eval(p.args[1], values, layouts)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if !t0.EqualTo(t1) {
-			v0, err = convert(v0, t0, t1, true, false)
+			v0, err = convert(v0, t0, t1, true, layouts)
 			if err != nil {
 				if err == errInvalidConversion {
 					return false, types.Boolean(), nil
@@ -376,14 +380,14 @@ func evalCall(p part, values map[string]any) (any, types.Type, error) {
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "when":
-		v0, _, err := eval(p.args[0], values)
+		v0, _, err := eval(p.args[0], values, layouts)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if !v0.(bool) {
 			return nil, types.Type{}, ErrVoid
 		}
-		v1, t1, err := eval(p.args[1], values)
+		v1, t1, err := eval(p.args[1], values, layouts)
 		if err != nil {
 			return nil, types.Type{}, err
 		}

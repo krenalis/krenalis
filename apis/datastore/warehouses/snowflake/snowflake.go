@@ -545,7 +545,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		case "BOOLEAN":
 			column.Type = types.Boolean()
 		case "DATE":
-			column.Type = types.Date().WithLayout("2006-01-02")
+			column.Type = types.Date()
 		case "FLOAT":
 			column.Type = types.Float()
 		case "OBJECT":
@@ -590,9 +590,9 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 				column.Type = column.Type.WithCharLen(chars)
 			}
 		case "TIME":
-			column.Type = types.Time().WithLayout("15:04:05.999999999")
+			column.Type = types.Time()
 		case "TIMESTAMP_NTZ":
-			column.Type = types.DateTime().WithLayout("2006-01-02 15:04:05.999999999")
+			column.Type = types.DateTime()
 		case "VARIANT":
 			column.Type = types.JSON()
 		}

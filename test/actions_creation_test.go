@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"chichi/connector/types"
 	"chichi/test/chichitester"
@@ -63,7 +62,7 @@ func TestActionsCreation(t *testing.T) {
 					}),
 					"OutSchema": types.Object([]types.Property{
 						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
+						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Mapping": map[string]string{
 						"Email":     "email",
@@ -88,7 +87,7 @@ func TestActionsCreation(t *testing.T) {
 					}),
 					"OutSchema": types.Object([]types.Property{
 						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
+						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Mapping": map[string]string{
 						"Email":     "email",
@@ -113,7 +112,7 @@ func TestActionsCreation(t *testing.T) {
 					}),
 					"OutSchema": types.Object([]types.Property{
 						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
+						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Mapping": map[string]string{
 						"Email":     "email",
@@ -138,7 +137,7 @@ func TestActionsCreation(t *testing.T) {
 					}),
 					"OutSchema": types.Object([]types.Property{
 						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
+						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Mapping": map[string]string{
 						"Email":     "email",

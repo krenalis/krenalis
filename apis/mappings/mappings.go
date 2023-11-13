@@ -78,13 +78,14 @@ type Mapping struct {
 	transformation      *state.Transformation
 	transformer         transformers.Transformer
 	action              int
-	formatTime          bool
+	layouts             *state.Layouts
 }
 
 // New returns a new mapping that maps properties of inSchema to outSchema using
 // the given mapping and, in case a transformation is provided, also uses such
-// transformation.
-func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Transformer, formatTime bool) (*Mapping, error) {
+// transformation. layouts represents, if not null, the layouts used to format
+// DateTime, Date, and Time values as strings.
+func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Transformer, layouts *state.Layouts) (*Mapping, error) {
 
 	if !outSchema.Valid() {
 		return nil, errors.New("output schema is not valid")
@@ -96,7 +97,7 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 		transformation: transformation,
 		transformer:    transformer,
 		action:         action,
-		formatTime:     formatTime,
+		layouts:        layouts,
 	}
 
 	// Mapping.
@@ -108,7 +109,7 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 			if err != nil {
 				return nil, err
 			}
-			property.expression, err = mapexp.Compile(expression, inSchema, outProperty.Type, outProperty.Nullable)
+			property.expression, err = mapexp.Compile(expression, inSchema, outProperty.Type, outProperty.Nullable, layouts)
 			if err != nil {
 				return nil, err
 			}
@@ -127,7 +128,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	if m.properties != nil {
 		out := map[string]any{}
 		for _, property := range m.properties {
-			v, err := property.expression.Eval(values, m.formatTime)
+			v, err := property.expression.Eval(values)
 			if err != nil {
 				if err == mapexp.ErrVoid {
 					continue
