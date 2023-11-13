@@ -438,8 +438,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"matching_properties_internal = $18, matching_properties_external = $19\nWHERE id = $20",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
 			transformation.Language, transformation.Version, n.Query, n.Path, n.TableName, n.Sheet,
-			n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode, matchPropInternal,
-			matchPropExternal, n.ID,
+			n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode, string(matchPropInternal),
+			string(matchPropExternal), n.ID,
 		)
 		if err != nil {
 			return err
