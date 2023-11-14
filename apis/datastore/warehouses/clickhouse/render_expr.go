@@ -96,38 +96,25 @@ func renderExpr(exp expr.Expr) (string, error) {
 		}
 
 		switch pt := baseExpr.Column.Type; pt {
-		case
-			types.PtBoolean:
+		case types.PtBoolean:
 			b, ok := baseExpr.Value.(bool)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, b)
-		case
-			types.PtInt,
-			types.PtInt8,
-			types.PtInt16,
-			types.PtInt24,
-			types.PtInt64:
+		case types.PtInt:
 			i, ok := baseExpr.Value.(int)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, i)
-		case
-			types.PtUInt,
-			types.PtUInt8,
-			types.PtUInt16,
-			types.PtUInt24,
-			types.PtUInt64:
+		case types.PtUint:
 			u, ok := baseExpr.Value.(uint)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type uint, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, u)
-		case
-			types.PtFloat,
-			types.PtFloat32:
+		case types.PtFloat:
 			f, ok := baseExpr.Value.(float64)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)

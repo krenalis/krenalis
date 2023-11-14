@@ -4,18 +4,18 @@
 | Physical type | Go              | json.Unmarshal                | ClickHouse      | PostgreSQL | MySQL      | Snowflake   | Parquet      | JSON            | CSV    | Excel  |
 |---------------|-----------------|-------------------------------|-----------------|------------|------------|-------------|--------------|-----------------|--------|--------|
 | Boolean       | bool            | bool                          | bool            | bool       | -          | bool        | bool         | -               | -      | -      |
-| Int           | int             | float64, json.Number          | int32           | int64      | []byte     | -           | int32        | -               | -      | -      |
-| Int8          | int             | float64, json.Number          | int8            | -          | []byte     | -           |              | -               | -      | -      |
-| Int16         | int             | float64, json.Number          | int16           | int64      | []byte     | -           |              | -               | -      | -      |
-| Int24         | int             | float64, json.Number          | -               | -          | []byte     | -           | -            | -               | -      | -      |
-| Int64         | int             | float64, json.Number          | int64           | int64      | []byte     | -           | int64        | -               | -      | -      |
-| UInt          | uint            | float64, json.Number          | uint32          | -          | []byte     | -           |              | -               | -      | -      |
-| UInt8         | uint            | float64, json.Number          | uint8           | -          | []byte     | -           |              | -               | -      | -      |
-| UInt16        | uint            | float64, json.Number          | uint16          | -          | []byte     | -           |              | -               | -      | -      |
-| UInt24        | uint            | float64, json.Number          | -               | -          | []byte     | -           | -            | -               | -      | -      |
-| UInt64        | uint            | float64, json.Number          | uint64          | -          | []byte     | -           |              | -               | -      | -      |
-| Float         | float64         | float64, json.Number          | float64         | float64    | []byte     | float64     | float64      | -               | -      | -      |
-| Float32       | float64         | float64, json.Number          | float32         | float64    | []byte     | -           | float32      | -               | -      | -      |
+| Int(8)        | int             | float64, json.Number          | int8            | -          | []byte     | -           |              | -               | -      | -      |
+| Int(16)       | int             | float64, json.Number          | int16           | int64      | []byte     | -           |              | -               | -      | -      |
+| Int(24)       | int             | float64, json.Number          | -               | -          | []byte     | -           | -            | -               | -      | -      |
+| Int(32)       | int             | float64, json.Number          | int32           | int64      | []byte     | -           | int32        | -               | -      | -      |
+| Int(64)       | int             | float64, json.Number          | int64           | int64      | []byte     | -           | int64        | -               | -      | -      |
+| Uint(8)       | uint            | float64, json.Number          | uint8           | -          | []byte     | -           |              | -               | -      | -      |
+| Uint(16)      | uint            | float64, json.Number          | uint16          | -          | []byte     | -           |              | -               | -      | -      |
+| Uint(24)      | uint            | float64, json.Number          | -               | -          | []byte     | -           | -            | -               | -      | -      |
+| Uint(32)      | uint            | float64, json.Number          | uint32          | -          | []byte     | -           |              | -               | -      | -      |
+| Uint(64)      | uint            | float64, json.Number          | uint64          | -          | []byte     | -           |              | -               | -      | -      |
+| Float(32)     | float64         | float64, json.Number          | float32         | float64    | []byte     | -           | float32      | -               | -      | -      |
+| Float(64)     | float64         | float64, json.Number          | float64         | float64    | []byte     | float64     | float64      | -               | -      | -      |
 | Decimal       | decimal.Decimal | string, float64, json.Number  | decimal.Decimal | string     | []byte     | string      | int32, int64 | -               | -      | -      |
 | DateTime      | time.Time       | string, float64, json.Number  | time.Time       | time.Time  | time.Time  | time.Time   | time.Time    | -               | -      | -      |
 | Date          | time.Time       | string                        | time.Time [^2]  | time.Time  | time.Time  | time.Time   |              | -               | -      | -      |

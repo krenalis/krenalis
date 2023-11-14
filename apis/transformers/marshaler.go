@@ -64,8 +64,7 @@ func Marshal(b []byte, schema types.Type, values []map[string]any, language stat
 
 // marshalJavaScript marshals v as a JavaScript value.
 func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
-	pt := t.PhysicalType()
-	if pt == types.PtJSON {
+	if t.PhysicalType() == types.PtJSON {
 		var buf strings.Builder
 		enc := json.NewEncoder(&buf)
 		enc.SetEscapeHTML(false)
@@ -91,12 +90,12 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		}
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
-		if pt == types.PtInt64 {
+		if t.PhysicalType() == types.PtInt && t.BitSize() == 64 {
 			b = append(b, 'n')
 		}
 	case uint:
 		b = strconv.AppendUint(b, uint64(v), 10)
-		if pt == types.PtUInt64 {
+		if t.BitSize() == 64 {
 			b = append(b, 'n')
 		}
 	case float64:
@@ -109,11 +108,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, "-Infinity"...)
 			}
 		} else {
-			bs := 64
-			if pt == types.PtFloat32 {
-				bs = 32
-			}
-			b = strconv.AppendFloat(b, v, 'g', -1, bs)
+			b = strconv.AppendFloat(b, v, 'g', -1, t.BitSize())
 		}
 	case decimal.Decimal:
 		b = append(b, '\'')
@@ -129,7 +124,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		b = append(b, '\'')
 	default:
 		rv := reflect.ValueOf(v)
-		switch pt {
+		switch t.PhysicalType() {
 		case types.PtArray:
 			b = append(b, '[')
 			n := rv.Len()
@@ -197,7 +192,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 			}
 			b = append(b, '}')
 		default:
-			return nil, fmt.Errorf("apis/transformers: unexpected type %s", pt)
+			return nil, fmt.Errorf("apis/transformers: unexpected type %s", t)
 		}
 	}
 	return b, nil
@@ -244,11 +239,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, "float('-inf')"...)
 			}
 		} else {
-			bs := 64
-			if pt == types.PtFloat32 {
-				bs = 32
-			}
-			b = strconv.AppendFloat(b, v, 'g', -1, bs)
+			b = strconv.AppendFloat(b, v, 'g', -1, t.BitSize())
 		}
 	case decimal.Decimal:
 		b = append(b, "Decimal('"...)

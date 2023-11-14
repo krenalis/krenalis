@@ -338,7 +338,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 				{
 					Name:  "note_id",
 					Label: "ID",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "created_at",
 					Label: "Created at",
@@ -364,19 +364,19 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 				{
 					Name:  "latitude",
 					Label: "Latitude",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "longitude",
 					Label: "Longitude",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "gmtoff",
 					Label: "Time difference in hours from GMT",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "dstoff",
 					Label: "Daylight saving time offset",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "country_code",
 					Label: "Country code",
@@ -398,7 +398,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		}, {
 			Name:  "MemberRating",
 			Label: "Member rating",
-			Type:  types.Int(),
+			Type:  types.Int(32),
 		},
 		{
 			Name:  "MergeFields",
@@ -416,11 +416,11 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 				{
 					Name:  "avg_open_rate",
 					Label: "Open rate",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "avg_click_rate",
 					Label: "Click rate",
-					Type:  types.Int(),
+					Type:  types.Int(32),
 				}, {
 					Name:  "ecommerce_data",
 					Label: "Ecommerce data",
@@ -438,7 +438,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		}, {
 			Name:  "TagsCount",
 			Label: "Tags count",
-			Type:  types.Int(),
+			Type:  types.Int(32),
 		}, {
 			Name:  "TimestampOpt",
 			Label: "Opt-in time",
@@ -458,7 +458,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		}, {
 			Name:  "WebID",
 			Label: "Web ID",
-			Type:  types.Int(),
+			Type:  types.Int(32),
 		}, {
 			Name:  "Vip",
 			Label: "VIP status",

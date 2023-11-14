@@ -50,15 +50,11 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 	switch pt := t.PhysicalType(); pt {
 	case types.PtBoolean:
 		return strconv.AppendBool(b, v.(bool))
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtYear:
+	case types.PtInt, types.PtYear:
 		return strconv.AppendInt(b, int64(v.(int)), 10)
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		return strconv.AppendUint(b, uint64(v.(uint)), 10)
-	case types.PtFloat, types.PtFloat32:
-		bits := 64
-		if pt == types.PtFloat32 {
-			bits = 32
-		}
+	case types.PtFloat:
 		v := v.(float64)
 		switch {
 		case math.IsNaN(v):
@@ -71,7 +67,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 				return append(b, "Infinity"...)
 			}
 			v = math.MaxFloat64
-			if bits == 32 {
+			if t.BitSize() == 32 {
 				v = math.MaxFloat32
 			}
 		case math.IsInf(v, -1):
@@ -79,11 +75,11 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 				return append(b, "-Infinity"...)
 			}
 			v = -math.MaxFloat64
-			if bits == 32 {
+			if t.BitSize() == 32 {
 				v = -math.MaxFloat32
 			}
 		}
-		return enc.appendFloat(b, v, bits)
+		return enc.appendFloat(b, v, t.BitSize())
 	case types.PtDecimal:
 		return append(b, v.(decimal.Decimal).String()...)
 	case types.PtDateTime:

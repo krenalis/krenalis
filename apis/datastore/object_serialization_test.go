@@ -17,7 +17,7 @@ import (
 
 func TestColumnsToProperties(t *testing.T) {
 
-	typ := types.Int()
+	typ := types.Int(32)
 
 	columns := []types.Property{
 		{Name: "a", Type: typ},
@@ -156,8 +156,8 @@ func Test_PropertyPathToColumn(t *testing.T) {
 	}{
 		{path: "b.c", err: ErrNoFlat.Error()},
 		{path: "b.i.j", err: ErrNoFlat.Error()},
-		{path: "a", col: types.Property{Name: "a", Type: types.Int()}},
-		{path: "v.z", col: types.Property{Name: "v_z", Type: types.Float32()}},
+		{path: "a", col: types.Property{Name: "a", Type: types.Int(32)}},
+		{path: "v.z", col: types.Property{Name: "v_z", Type: types.Float(32)}},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -188,17 +188,17 @@ func Test_PropertyPathToColumn(t *testing.T) {
 }
 
 var testSchema = types.Object([]types.Property{
-	{Name: "a", Type: types.Int()},
+	{Name: "a", Type: types.Int(32)},
 	{Name: "b", Type: types.Object([]types.Property{
 		{Name: "c", Type: types.Text()},
 		{Name: "d", Type: types.Object([]types.Property{
 			{Name: "e", Type: types.Boolean()},
 			{Name: "f", Type: types.Text()},
 		})},
-		{Name: "g", Type: types.Array(types.Float())},
+		{Name: "g", Type: types.Array(types.Float(64))},
 		{Name: "h", Type: types.Array(types.Array(types.Text()))},
 		{Name: "i", Type: types.Array(types.Object([]types.Property{
-			{Name: "j", Type: types.UInt()},
+			{Name: "j", Type: types.Uint(32)},
 			{Name: "k", Flat: true, Type: types.Object([]types.Property{
 				{Name: "l", Type: types.Text()},
 				{Name: "m", Flat: true, Type: types.Object([]types.Property{
@@ -211,13 +211,13 @@ var testSchema = types.Object([]types.Property{
 		{Name: "q", Type: types.Map(types.Object([]types.Property{
 			{Name: "r", Type: types.Text()},
 			{Name: "s", Flat: true, Type: types.Object([]types.Property{
-				{Name: "t", Type: types.Int()},
-				{Name: "u", Type: types.Int()},
+				{Name: "t", Type: types.Int(32)},
+				{Name: "u", Type: types.Int(32)},
 			})},
 		}))},
 	})},
 	{Name: "v", Flat: true, Type: types.Object([]types.Property{
-		{Name: "z", Type: types.Float32()},
+		{Name: "z", Type: types.Float(32)},
 	})},
 })
 

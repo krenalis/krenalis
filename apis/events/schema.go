@@ -73,9 +73,9 @@ var Schema = types.Object([]types.Property{
 				Type: types.Object([]types.Property{
 					{Name: "city", Type: types.Text()},
 					{Name: "country", Type: types.Text()},
-					{Name: "latitude", Type: types.Float()},
-					{Name: "longitude", Type: types.Float()},
-					{Name: "speed", Type: types.Float()},
+					{Name: "latitude", Type: types.Float(64)},
+					{Name: "longitude", Type: types.Float(64)},
+					{Name: "speed", Type: types.Float(64)},
 				}),
 			},
 			{
@@ -114,12 +114,12 @@ var Schema = types.Object([]types.Property{
 			{
 				Name: "screen",
 				Type: types.Object([]types.Property{
-					{Name: "width", Type: types.Int()},
-					{Name: "height", Type: types.Int()},
-					{Name: "density", Type: types.Float()},
+					{Name: "width", Type: types.Int(32)},
+					{Name: "height", Type: types.Int(32)},
+					{Name: "density", Type: types.Float(64)},
 				}),
 			},
-			{Name: "sessionId", Type: types.Int64()},
+			{Name: "sessionId", Type: types.Int(64)},
 			{Name: "sessionStart", Type: types.Boolean()},
 			{Name: "groupId", Type: types.Text()},
 			{Name: "timezone", Type: types.Text()},
@@ -134,10 +134,10 @@ var Schema = types.Object([]types.Property{
 	{Name: "properties", Type: types.JSON()},
 	{Name: "receivedAt", Type: types.DateTime()},
 	{Name: "sentAt", Type: types.DateTime()},
-	{Name: "source", Type: types.Int()},
+	{Name: "source", Type: types.Int(32)},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
 	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	{Name: "userId", Type: types.Text()},
-	{Name: "version", Type: types.Int()},
+	{Name: "version", Type: types.Int(32)},
 })

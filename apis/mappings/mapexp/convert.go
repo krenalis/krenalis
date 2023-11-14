@@ -32,19 +32,19 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 var errInvalidConversion = errors.New("cannot convert")
 
 const (
-	// Range of Float values convertible to Int64: [-9223372036854776000.0, 9223372036854775000.0].
+	// Range of Float values convertible to Int(64): [-9223372036854776000.0, 9223372036854775000.0].
 	// These are the same limits that PostgreSQL uses when converting a double precision value to a bigint.
 	minFloatConvertibleToInt64 = -9223372036854776000.0 // converted to -9223372036854775808
 	maxFloatConvertibleToInt64 = 9223372036854775000.0  // converted to 9223372036854774784
 
-	// Range of Float values convertible to UInt64: [0, 18446744073709550000].
-	maxFloatConvertibleToUInt64 = 18446744073709550000.0 // converted to 18446744073709549568
+	// Range of Float values convertible to Uint(64): [0, 18446744073709550000].
+	maxFloatConvertibleToUint64 = 18446744073709550000.0 // converted to 18446744073709549568
 )
 
 var (
 	minIntDecimal  = decimal.NewFromInt(math.MinInt64)
 	maxIntDecimal  = decimal.NewFromInt(math.MaxInt64)
-	maxUIntDecimal = decimal.RequireFromString("18446744073709551615")
+	maxUintDecimal = decimal.RequireFromString("18446744073709551615")
 )
 
 // convert converts v from type st to type dt and returns the converted value.
@@ -86,10 +86,14 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 		switch spt {
 		case types.PtBoolean:
 			return v.(bool), nil
-		case types.PtInt8:
-			return v.(int) != 0, nil
-		case types.PtUInt8:
-			return v.(uint) > 0, nil
+		case types.PtInt:
+			if st.BitSize() == 8 {
+				return v.(int) != 0, nil
+			}
+		case types.PtUint:
+			if st.BitSize() == 8 {
+				return v.(uint) > 0, nil
+			}
 		case types.PtText:
 			switch v.(string) {
 			case "false", "False", "FALSE", "no", "No", "NO":
@@ -100,7 +104,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 		case types.PtJSON:
 			return jsonToBoolean(v)
 		}
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+	case types.PtInt:
 		var err error
 		var n int
 		switch spt {
@@ -108,18 +112,18 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			if v.(bool) {
 				n = 1
 			}
-			if dpt != types.PtInt8 {
+			if dt.BitSize() != 8 {
 				err = errInvalidConversion
 			}
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+		case types.PtInt:
 			n = v.(int)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		case types.PtUint:
 			u := v.(uint)
 			if u > math.MaxInt64 {
 				err = errInvalidConversion
 			}
 			n = int(u)
-		case types.PtFloat, types.PtFloat32:
+		case types.PtFloat:
 			n, err = floatToInt(v.(float64))
 		case types.PtDecimal:
 			n, err = decimalToInt(v.(decimal.Decimal))
@@ -139,7 +143,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return nil, errInvalidConversion
 		}
 		return n, nil
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		var err error
 		var n uint
 		switch spt {
@@ -147,21 +151,21 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			if v.(bool) {
 				n = 1
 			}
-			if dpt != types.PtUInt8 {
+			if dt.BitSize() != 8 {
 				err = errInvalidConversion
 			}
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+		case types.PtInt:
 			i := v.(int)
 			if i < 0 {
 				return nil, errInvalidConversion
 			}
 			n = uint(i)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		case types.PtUint:
 			n = v.(uint)
-		case types.PtFloat, types.PtFloat32:
-			n, err = floatToUInt(v.(float64))
+		case types.PtFloat:
+			n, err = floatToUint(v.(float64))
 		case types.PtDecimal:
-			n, err = decimalToUInt(v.(decimal.Decimal))
+			n, err = decimalToUint(v.(decimal.Decimal))
 		case types.PtYear:
 			n = uint(v.(int))
 		case types.PtText:
@@ -169,50 +173,40 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			u, err = strconv.ParseUint(v.(string), 10, 64)
 			n = uint(u)
 		case types.PtJSON:
-			n, err = jsonToUInt(v)
+			n, err = jsonToUint(v)
 		default:
 			return nil, errInvalidConversion
 		}
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		min, max := dt.UIntRange()
+		min, max := dt.UintRange()
 		if uint64(n) < min || uint64(n) > max {
 			return nil, errInvalidConversion
 		}
 		return n, nil
-	case types.PtFloat, types.PtFloat32:
+	case types.PtFloat:
 		var err error
 		var n float64
 		switch spt {
 		case types.PtFloat:
 			n = v.(float64)
-			if dpt == types.PtFloat32 {
+			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
-		case types.PtFloat32:
-			n = v.(float64)
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+		case types.PtInt:
 			n = float64(v.(int))
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		case types.PtUint:
 			n = float64(v.(uint))
 		case types.PtDecimal:
 			n, _ = v.(decimal.Decimal).Float64()
-			if dpt == types.PtFloat32 {
+			if dt.BitSize() == 32 {
 				n = float64(float32(n))
 			}
 		case types.PtText:
-			bits := 64
-			if dpt == types.PtFloat32 {
-				bits = 32
-			}
-			n, err = strconv.ParseFloat(v.(string), bits)
+			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
 		case types.PtJSON:
-			bits := 64
-			if dpt == types.PtFloat32 {
-				bits = 32
-			}
-			n, err = jsonToFloat(v, bits)
+			n, err = jsonToFloat(v, dt.BitSize())
 		default:
 			return nil, errInvalidConversion
 		}
@@ -229,11 +223,11 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 		switch spt {
 		case types.PtDecimal:
 			n, _ = v.(decimal.Decimal)
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+		case types.PtInt:
 			n = decimal.New(int64(v.(int)), 0)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		case types.PtUint:
 			n, _ = decimal.NewFromString(strconv.FormatUint(uint64(v.(uint)), 10))
-		case types.PtFloat, types.PtFloat32:
+		case types.PtFloat:
 			f := v.(float64)
 			if math.IsNaN(f) || math.IsInf(f, 0) {
 				return nil, errInvalidConversion
@@ -360,9 +354,9 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 		switch spt {
 		case types.PtYear:
 			return v.(int), nil
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+		case types.PtInt:
 			n = v.(int)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		case types.PtUint:
 			u := v.(uint)
 			if u > math.MaxInt64 {
 				return nil, errInvalidConversion
@@ -434,16 +428,12 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			if v.(bool) {
 				s = "true"
 			}
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+		case types.PtInt:
 			s = strconv.FormatInt(int64(v.(int)), 10)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		case types.PtUint:
 			s = strconv.FormatUint(uint64(v.(uint)), 10)
-		case types.PtFloat, types.PtFloat32:
-			bits := 64
-			if spt == types.PtFloat32 {
-				bits = 32
-			}
-			s = strconv.FormatFloat(v.(float64), 'g', -1, bits)
+		case types.PtFloat:
+			s = strconv.FormatFloat(v.(float64), 'g', -1, st.BitSize())
 		case types.PtDecimal:
 			s = v.(decimal.Decimal).String()
 		case types.PtDateTime:
@@ -632,19 +622,15 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	if s, ok := v.(string); ok {
 		return append(b, s...), nil
 	}
-	switch pt := t.PhysicalType(); pt {
+	switch t.PhysicalType() {
 	case types.PtBoolean:
 		strconv.AppendBool(b, v.(bool))
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtYear:
+	case types.PtInt, types.PtYear:
 		return strconv.AppendInt(b, int64(v.(int)), 10), nil
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
-	case types.PtFloat, types.PtFloat32:
-		bits := 64
-		if pt == types.PtFloat32 {
-			bits = 32
-		}
-		return strconv.AppendFloat(b, v.(float64), 'g', -1, bits), nil
+	case types.PtFloat:
+		return strconv.AppendFloat(b, v.(float64), 'g', -1, t.BitSize()), nil
 	case types.PtDecimal:
 		return append(b, v.(decimal.Decimal).String()...), nil
 	case types.PtDateTime:
@@ -703,11 +689,11 @@ func jsonToInt(v any) (int, error) {
 	return 0, errInvalidConversion
 }
 
-// jsonToUInt converts v of type JSON to UInt.
-func jsonToUInt(v any) (uint, error) {
+// jsonToUint converts v of type JSON to Uint.
+func jsonToUint(v any) (uint, error) {
 	switch v := v.(type) {
 	case float64:
-		if v < 0 || v > maxFloatConvertibleToUInt64 {
+		if v < 0 || v > maxFloatConvertibleToUint64 {
 			return 0, errInvalidConversion
 		}
 		return uint(math.Round(v)), nil
@@ -728,13 +714,13 @@ func jsonToUInt(v any) (uint, error) {
 			return uint(f), nil
 		}
 	case json.RawMessage:
-		return jsonToUInt(json.Number(v))
+		return jsonToUint(json.Number(v))
 	}
 	return 0, errInvalidConversion
 }
 
-// jsonToFloat converts v of type JSON to Float or Float64 depending on bitSize
-// bits (32 for Float32, 64 for Float).
+// jsonToFloat converts v of type JSON to Float with the provided bit size that
+// can be 32 or 64.
 func jsonToFloat(v any, bitSize int) (float64, error) {
 	switch v := v.(type) {
 	case float64:
@@ -973,8 +959,8 @@ func decimalToInt(n decimal.Decimal) (int, error) {
 	return int(n.IntPart()), nil
 }
 
-func decimalToUInt(n decimal.Decimal) (uint, error) {
-	if !n.IsInteger() || n.IsNegative() || n.GreaterThan(maxUIntDecimal) {
+func decimalToUint(n decimal.Decimal) (uint, error) {
+	if !n.IsInteger() || n.IsNegative() || n.GreaterThan(maxUintDecimal) {
 		return 0, errInvalidConversion
 	}
 	if n.LessThanOrEqual(maxIntDecimal) {
@@ -994,8 +980,8 @@ func floatToInt(n float64) (int, error) {
 	return int(math.Round(n)), nil
 }
 
-func floatToUInt(n float64) (uint, error) {
-	if math.IsNaN(n) || n < 0 || n > maxFloatConvertibleToUInt64 {
+func floatToUint(n float64) (uint, error) {
+	if math.IsNaN(n) || n < 0 || n > maxFloatConvertibleToUint64 {
 		return 0, errInvalidConversion
 	}
 	return uint(math.Round(n)), nil

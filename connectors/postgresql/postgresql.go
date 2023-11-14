@@ -218,8 +218,7 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			pt := columns[j].Type.PhysicalType()
-			quoteValue(&b, v, pt)
+			quoteValue(&b, v, columns[j].Type)
 		}
 		b.WriteByte(')')
 	}
@@ -343,17 +342,17 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "DATE":
 		return types.Date(), nil
 	case "FLOAT4":
-		return types.Float32(), nil
+		return types.Float(32), nil
 	case "FLOAT8":
-		return types.Float(), nil
+		return types.Float(64), nil
 	case "INET":
 		return types.Inet(), nil
 	case "INT2":
-		return types.Int16(), nil
+		return types.Int(16), nil
 	case "INT4":
-		return types.Int(), nil
+		return types.Int(32), nil
 	case "INT8":
-		return types.Int64(), nil
+		return types.Int(64), nil
 	case "JSON", "JSONB":
 		return types.JSON(), nil
 	case "NUMERIC":

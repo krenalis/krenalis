@@ -25,44 +25,44 @@ func TestConvertibleTo(t *testing.T) {
 	cases := []testCase{
 		// Boolean.
 		{types.Boolean(), types.Boolean(), true},
-		{types.Boolean(), types.Int(), false},
+		{types.Boolean(), types.Int(32), false},
 		{types.Boolean(), types.DateTime(), false},
 		{types.Boolean(), types.JSON(), true},
 		{types.Boolean(), types.Text(), true},
 		{types.Boolean(), types.Array(types.Text()), false},
 		{types.Boolean(), types.Object([]types.Property{{Name: "s", Type: types.Text()}}), false},
 		{types.Boolean(), types.Map(types.Text()), false},
-		// Int.
-		{types.Int(), types.Boolean(), false},
-		{types.Int(), types.Int(), true},
-		{types.Int(), types.Int8(), true},
-		{types.Int(), types.UInt64(), true},
-		{types.Int(), types.Float(), true},
-		{types.Int(), types.JSON(), true},
-		{types.Int(), types.Year(), true},
-		{types.Int(), types.Text(), true},
-		{types.Int(), types.Array(types.Int8()), false},
-		// Int8.
-		{types.Int8(), types.Int8(), true},
-		// Int16.
-		{types.Int16(), types.Int16(), true},
-		// Int24.
-		{types.Int24(), types.Int24(), true},
-		// Int64.
-		{types.Int64(), types.Int64(), true},
-		// UInt.
-		{types.UInt(), types.UInt(), true},
-		// UInt16.
-		{types.UInt16(), types.UInt16(), true},
-		// UInt24.
-		{types.UInt24(), types.UInt24(), true},
-		// UInt64.
-		{types.UInt64(), types.UInt64(), true},
-		{types.UInt64(), types.Year(), true},
-		// Float.
-		{types.Float(), types.Float(), true},
-		// Float32.
-		{types.Float32(), types.Float32(), true},
+		// Int(8).
+		{types.Int(8), types.Int(8), true},
+		// Int(16).
+		{types.Int(16), types.Int(16), true},
+		// Int(24).
+		{types.Int(24), types.Int(24), true},
+		// Int(32).
+		{types.Int(32), types.Boolean(), false},
+		{types.Int(32), types.Int(32), true},
+		{types.Int(32), types.Int(8), true},
+		{types.Int(32), types.Uint(64), true},
+		{types.Int(32), types.Float(64), true},
+		{types.Int(32), types.JSON(), true},
+		{types.Int(32), types.Year(), true},
+		{types.Int(32), types.Text(), true},
+		{types.Int(32), types.Array(types.Int(8)), false},
+		// Int(64).
+		{types.Int(64), types.Int(64), true},
+		// Uint(16).
+		{types.Uint(16), types.Uint(16), true},
+		// Uint(24).
+		{types.Uint(24), types.Uint(24), true},
+		// Uint(32).
+		{types.Uint(32), types.Uint(32), true},
+		// Uint(64).
+		{types.Uint(64), types.Uint(64), true},
+		{types.Uint(64), types.Year(), true},
+		// Float(32).
+		{types.Float(32), types.Float(32), true},
+		// Float(64).
+		{types.Float(64), types.Float(64), true},
 		// DateTime.
 		{types.DateTime(), types.DateTime(), true},
 		// Date.
@@ -71,23 +71,23 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Time(), types.Time(), true},
 		// Year.
 		{types.Year(), types.Boolean(), false},
-		{types.Year(), types.Int(), true},
+		{types.Year(), types.Int(32), true},
 		{types.Year(), types.Year(), true},
 		{types.Year(), types.JSON(), true},
-		{types.Year(), types.Array(types.Int()), false},
+		{types.Year(), types.Array(types.Int(32)), false},
 		// UUID.
 		{types.UUID(), types.UUID(), true},
 		// JSON.
 		{types.JSON(), types.Boolean(), true},
-		{types.JSON(), types.Int64(), true},
-		{types.JSON(), types.UInt(), true},
-		{types.JSON(), types.Float32(), true},
+		{types.JSON(), types.Int(64), true},
+		{types.JSON(), types.Uint(32), true},
+		{types.JSON(), types.Float(32), true},
 		{types.JSON(), types.Decimal(10, 3), true},
 		{types.JSON(), types.DateTime(), true},
 		{types.JSON(), types.JSON(), true},
 		{types.JSON(), types.Text(), true},
 		{types.JSON(), types.UUID(), true},
-		{types.JSON(), types.Array(types.Int()), true},
+		{types.JSON(), types.Array(types.Int(32)), true},
 		{types.JSON(), types.Object([]types.Property{{Name: "s", Type: types.Text()}}), true},
 		{types.JSON(), types.Map(types.Text()), true},
 		// Inet.
@@ -95,12 +95,12 @@ func TestConvertibleTo(t *testing.T) {
 		// Inet.
 		{types.Inet(), types.Inet(), true},
 		// Array.
-		{types.Array(types.Text()), types.Int(), false},
-		{types.Array(types.Text()), types.UInt(), false},
-		{types.Array(types.Int()), types.JSON(), true},
-		{types.Array(types.Float()), types.Array(types.Float()), true},
-		{types.Array(types.Int()), types.Array(types.Float()), true},
-		{types.Array(types.DateTime()), types.Array(types.Int()), false},
+		{types.Array(types.Text()), types.Int(32), false},
+		{types.Array(types.Text()), types.Uint(32), false},
+		{types.Array(types.Int(32)), types.JSON(), true},
+		{types.Array(types.Float(64)), types.Array(types.Float(64)), true},
+		{types.Array(types.Int(32)), types.Array(types.Float(64)), true},
+		{types.Array(types.DateTime()), types.Array(types.Int(32)), false},
 		{types.Array(types.Text()), types.Object([]types.Property{{Name: "s", Type: types.Text()}}), false},
 		{types.Array(types.Text()), types.Map(types.Text()), false},
 		// Object.
@@ -108,17 +108,17 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Object([]types.Property{{Name: "x", Type: types.Text()}}),
 			types.Object([]types.Property{{Name: "x", Type: types.Text()}}), true},
 		{types.Object([]types.Property{{Name: "x", Type: types.Boolean()}}),
-			types.Object([]types.Property{{Name: "y", Type: types.Int()}}), false},
+			types.Object([]types.Property{{Name: "y", Type: types.Int(32)}}), false},
 		{types.Object([]types.Property{{Name: "x", Type: types.Text()}, {Name: "y", Type: types.Text()}}),
 			types.Object([]types.Property{{Name: "x", Type: types.Text()}}), true},
-		{types.Object([]types.Property{{Name: "x", Type: types.Int()}}),
+		{types.Object([]types.Property{{Name: "x", Type: types.Int(32)}}),
 			types.Object([]types.Property{{Name: "x", Type: types.Text()}}), true},
 		{types.Object([]types.Property{{Name: "x", Type: types.Year()}}),
 			types.Object([]types.Property{{Name: "x", Type: types.Boolean()}}), false},
 		// Map.
 		{types.Map(types.Text()), types.JSON(), true},
-		{types.Map(types.Text()), types.Int(), false},
-		{types.Map(types.Text()), types.UInt(), false},
+		{types.Map(types.Text()), types.Int(32), false},
+		{types.Map(types.Text()), types.Uint(32), false},
 		{types.Map(types.Text()), types.JSON(), true},
 		{types.Map(types.Text()), types.Array(types.Text()), false},
 		{types.Map(types.Text()), types.Object([]types.Property{{Name: "s", Type: types.Text()}}), false},

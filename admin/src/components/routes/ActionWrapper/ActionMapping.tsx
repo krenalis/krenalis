@@ -37,7 +37,7 @@ import {
 	TransformationPreviewResponse,
 } from '../../../types/external/api';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
-import { ObjectType, Property } from '../../../types/external/types';
+import Type, { ObjectType, Property } from '../../../types/external/types';
 import actionContext from '../../../context/ActionContext';
 import extractSpecialProperties from '../../../lib/utils/extractSpecialProperties';
 import { EventListenerEvent, Sample } from '../../../types/internal/app';
@@ -1264,27 +1264,23 @@ const FullscreenTransformation = ({
 	);
 };
 
-function fromPhysicalTypeToJavascriptType(typeName: string) {
+function fromPhysicalTypeToJavascriptType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
 	//  property length). This needs the full type definition and not the
 	// type name only.
-	switch (typeName) {
+	const name = type.name;
+	switch (name) {
 		case 'Boolean':
 			return 'Boolean';
 		case 'Int':
-		case 'Int8':
-		case 'Int16':
-		case 'Int24':
-		case 'UInt':
-		case 'UInt8':
-		case 'UInt16':
-		case 'UInt24':
+		case 'Uint':
+			if (type.bitSize === 8 || type.bitSize === 16 || type.bitSize === 24 || type.bitSize === 32) {
+				return 'Number';
+			} else {
+				return 'BigInt';
+			}
 		case 'Float':
-		case 'Float32':
 			return 'Number';
-		case 'Int64':
-		case 'UInt64':
-			return 'BigInt';
 		case 'Decimal':
 			return 'String';
 		case 'DateTime':
@@ -1307,31 +1303,22 @@ function fromPhysicalTypeToJavascriptType(typeName: string) {
 		case 'Map':
 			return 'Map';
 		default:
-			console.error(`schema contains unknow property type ${typeName}`);
+			console.error(`schema contains unknow property type ${name}`);
 			return 'unknown property type';
 	}
 }
 
-function fromPhysicalTypeToPythonType(typeName: string) {
+function fromPhysicalTypeToPythonType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
 	// property length). This needs the full type definition and not the
 	// type name only.
-	switch (typeName) {
+	switch (type.name) {
 		case 'Boolean':
 			return 'bool';
 		case 'Int':
-		case 'Int8':
-		case 'Int16':
-		case 'Int24':
-		case 'Int64':
-		case 'UInt':
-		case 'UInt8':
-		case 'UInt16':
-		case 'UInt24':
-		case 'UInt64':
+		case 'Uint':
 			return 'int';
 		case 'Float':
-		case 'Float32':
 			return 'float';
 		case 'Decimal':
 			return 'decimal.Decimal';
@@ -1358,7 +1345,7 @@ function fromPhysicalTypeToPythonType(typeName: string) {
 		case 'Map':
 			return 'dict';
 		default:
-			console.error(`schema contains unknow property type ${typeName}`);
+			console.error(`schema contains unknow property type ${type}`);
 			return 'unknown property type';
 	}
 }
@@ -1466,8 +1453,8 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 			</div>
 			<div className='type'>
 				{language === 'Python'
-					? fromPhysicalTypeToPythonType(property.type.name)
-					: fromPhysicalTypeToJavascriptType(property.type.name)}
+					? fromPhysicalTypeToPythonType(property.type)
+					: fromPhysicalTypeToJavascriptType(property.type)}
 			</div>
 		</div>
 	);

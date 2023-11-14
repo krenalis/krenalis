@@ -17,6 +17,51 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+func TestBitSize(t *testing.T) {
+
+	for _, s := range []int{8, 16, 24, 32, 64} {
+		if got := Int(s).BitSize(); s != got {
+			t.Errorf("Int(%d).BitSize(): expected %d, got %d", s, s, got)
+		}
+		if got := Uint(s).BitSize(); s != got {
+			t.Errorf("Uint(%d).BitSize(): expected %d, got %d", s, s, got)
+		}
+	}
+
+	for _, s := range []int{32, 64} {
+		if got := Float(s).BitSize(); s != got {
+			t.Errorf("Float(%d).BitSize(): expected %d, got %d", s, s, got)
+		}
+	}
+
+}
+
+func TestRanges(t *testing.T) {
+
+	for _, s := range []int{8, 16, 24, 32, 64} {
+		if min, max := Int(s).IntRange(); min != -1<<(s-1) || max != 1<<(s-1)-1 {
+			t.Errorf("Int(%d).IntRange(): expected (%d, %d), got (%d, %d)", s, -1<<(s-1), 1<<(s-1)-1, min, max)
+		}
+		if min, max := Uint(s).UintRange(); min != 0 || max != 1<<s-1 {
+			t.Errorf("Int(%d).IntRange(): expected (%d, %d), got (%d, %d)", s, 0, 1<<s-1, min, max)
+		}
+	}
+
+	for _, s := range []int{32, 64} {
+		if min, max := Float(s).FloatRange(); min != math.Inf(-1) || max != math.Inf(1) {
+			t.Errorf("Float(32).FloatRange(): expected (-Inf, +Inf), got (%f, %f)", min, max)
+		}
+	}
+
+	if min, max := Float(32).AsReal().FloatRange(); min != -math.MaxFloat32 || max != math.MaxFloat32 {
+		t.Errorf("Float(32).FloatRange(): expected (%f, %f), got (%f, %f)", -math.MaxFloat32, math.MaxFloat32, min, max)
+	}
+	if min, max := Float(64).AsReal().FloatRange(); min != -math.MaxFloat64 || max != math.MaxFloat64 {
+		t.Errorf("Float(64).FloatRange(): expected (%f, %f), got (%f, %f)", -math.MaxFloat64, math.MaxFloat64, min, max)
+	}
+
+}
+
 func TestLen(t *testing.T) {
 
 	type Expected struct {
@@ -238,7 +283,7 @@ func TestHasFlatProperties(t *testing.T) {
 				{Name: "street2", Type: Text()},
 			}), Flat: true},
 		}), true},
-		{Array(Float()), false},
+		{Array(Float(64)), false},
 		{Array(Object([]Property{{Name: "email", Type: Text()}})), false},
 		{Array(Object([]Property{
 			{Name: "name", Type: Object([]Property{
@@ -251,7 +296,7 @@ func TestHasFlatProperties(t *testing.T) {
 				{Name: "street2", Type: Text()},
 			}), Flat: true},
 		})), true},
-		{Map(Int()), false},
+		{Map(Int(32)), false},
 		{Map(Object([]Property{{Name: "email", Type: Text()}})), false},
 		{Map(Object([]Property{
 			{Name: "email", Type: Text()},
@@ -472,6 +517,7 @@ func Test_ParsePropertyPath(t *testing.T) {
 // t1.
 func sameType(t1, t2 Type) error {
 	if t1.pt == t2.pt &&
+		t1.size == t2.size &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
 		t1.flat == t2.flat &&
@@ -487,16 +533,16 @@ func sameType(t1, t2 Type) error {
 		return fmt.Errorf("expected physical type %d, got %d", t1.pt, t2.pt)
 	}
 	// Minimum and maximum.
-	switch t1.pt {
-	case PtInt, PtInt8, PtInt16, PtInt24:
+	switch {
+	case t1.pt == PtInt && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", t1.p, t1.s, t2.p, t2.s)
 		}
-	case PtUInt, PtUInt8, PtUInt16, PtUInt24:
+	case t1.pt == PtUint && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", uint32(t1.p), uint32(t1.s), uint32(t2.p), uint32(t2.s))
 		}
-	case PtInt64, PtUInt64, PtFloat, PtFloat32:
+	case t1.pt == PtInt || t1.pt == PtUint || t1.pt == PtFloat:
 		if t1.vl != t2.vl {
 			if t1.vl == nil {
 				return fmt.Errorf("expected no range, got %v", t2.vl)
@@ -506,7 +552,7 @@ func sameType(t1, t2 Type) error {
 				return fmt.Errorf("expected range %v, got %v", t1.vl, t2.vl)
 			}
 		}
-	case PtDecimal:
+	case t1.pt == PtDecimal:
 		if vl1, ok := t1.vl.(decimalRange); ok {
 			vl2, ok := t2.vl.(decimalRange)
 			if !ok || !vl1.min.Equal(vl2.min) || !vl1.max.Equal(vl2.max) {

@@ -19,17 +19,8 @@ interface Property {
 type Type =
 	| BooleanType
 	| IntType
-	| Int8Type
-	| Int16Type
-	| Int24Type
-	| Int64Type
-	| UIntType
-	| UInt8Type
-	| UInt16Type
-	| UInt24Type
-	| UInt64Type
+	| UintType
 	| FloatType
-	| Float32Type
 	| DecimalType
 	| DateTimeType
 	| DateType
@@ -49,73 +40,21 @@ interface BooleanType {
 
 interface IntType {
 	name: 'Int';
+	bitSize: 8 | 16 | 24 | 32 | 64;
 	minimum?: number;
 	maximum?: number;
 }
 
-interface Int8Type {
-	name: 'Int8';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface Int16Type {
-	name: 'Int16';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface Int24Type {
-	name: 'Int24';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface Int64Type {
-	name: 'Int64';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface UIntType {
-	name: 'UInt';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface UInt8Type {
-	name: 'UInt8';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface UInt16Type {
-	name: 'UInt16';
-	minimum: number;
-	maximum: number;
-}
-
-interface UInt24Type {
-	name: 'UInt24';
-	minimum?: number;
-	maximum?: number;
-}
-
-interface UInt64Type {
-	name: 'UInt64';
+interface UintType {
+	name: 'Uint';
+	bitSize: 8 | 16 | 24 | 32 | 64;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface FloatType {
 	name: 'Float';
-	real?: boolean;
-	minimum?: number;
-	maximum?: number;
-}
-
-interface Float32Type {
-	name: 'Float32';
+	bitSize: 32 | 64;
 	real?: boolean;
 	minimum?: number;
 	maximum?: number;
@@ -187,4 +126,4 @@ interface MapType {
 }
 
 export default Type;
-export type { Property, ArrayType, TextType, ObjectType };
+export type { Property, ArrayType, TextType, ObjectType, IntType, UintType, FloatType };

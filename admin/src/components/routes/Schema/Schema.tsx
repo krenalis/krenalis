@@ -7,7 +7,7 @@ import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { UnprocessableError } from '../../../lib/api/errors';
-import { ArrayType, TextType, Property, ObjectType } from '../../../types/external/types';
+import { ArrayType, TextType, Property, ObjectType, IntType, UintType, FloatType } from '../../../types/external/types';
 import { GridRow, NestedGridRows } from '../../../types/componentTypes/Grid.types';
 
 const Schema = () => {
@@ -101,6 +101,10 @@ const Schema = () => {
 						const typ = p.type as TextType;
 						name += ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
 					}
+					if (name === 'Int' || name === 'Uint' || name === 'Float') {
+						const typ = p.type as IntType | UintType | FloatType;
+						name += `(${typ.bitSize})`;
+					}
 					nestedRows.push({ cells: [pr.name, name] });
 				}
 			}
@@ -122,6 +126,10 @@ const Schema = () => {
 				if ('values' in p.type) {
 					const typ = p.type as TextType;
 					name += ' (' + typ.values?.map((e: string) => '"' + e + '"').join(', ') + ')';
+				}
+				if (name === 'Int' || name === 'Uint' || name === 'Float') {
+					const typ = p.type as IntType | UintType | FloatType;
+					name += `(${typ.bitSize})`;
 				}
 				const row = { cells: [p.name, name] };
 				rows.push(row);

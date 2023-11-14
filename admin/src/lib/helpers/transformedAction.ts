@@ -10,7 +10,7 @@ import {
 } from '../../types/external/action';
 import { Filter } from '../../types/external/api';
 import { ActionSchemasResponse } from '../../types/external/api';
-import Type, { ObjectType, Property } from '../../types/external/types';
+import Type, { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
 import TransformedConnection from './transformedConnection';
 
 const SCHEDULE_PERIODS = {
@@ -39,6 +39,7 @@ interface TransformedProperty {
 	required: boolean;
 	type: string;
 	label: string;
+	size: number | null;
 	full: Property;
 	indentation?: number;
 	root?: string;
@@ -106,13 +107,19 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 	if (schema == null || schema.name !== 'Object') return null;
 
 	const flattenProperty = (property: Property): TransformedProperty => {
-		return {
+		const flat = {
 			value: property.placeholder || '',
 			required: property.required,
 			type: property.type.name,
 			label: property.label,
+			size: null,
 			full: { ...property },
 		};
+		if (flat.type === 'Int' || flat.type === 'Uint' || flat.type === 'Float') {
+			const prop = property.type as IntType | UintType | FloatType;
+			flat.size = prop.bitSize;
+		}
+		return flat;
 	};
 
 	const flattenSubProperties = (parentName: string, parentIndentation: number, properties: Property[]) => {

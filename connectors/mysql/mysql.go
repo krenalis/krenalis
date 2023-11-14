@@ -176,8 +176,7 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			pt := columns[j].Type.PhysicalType()
-			quoteValue(&b, v, pt)
+			quoteValue(&b, v, columns[j].Type)
 		}
 		b.WriteByte(')')
 	}
@@ -332,36 +331,36 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Decimal(int(precision), int(scale)), nil
 	case "DOUBLE":
-		return types.Float(), nil
+		return types.Float(64), nil
 	case "ENUM", "SET":
 		return types.Text(), nil
 	case "FLOAT":
-		return types.Float32(), nil
+		return types.Float(32), nil
 	case "UNSIGNED MEDIUMINT":
-		return types.UInt24(), nil
+		return types.Uint(24), nil
 	case "MEDIUMINT":
-		return types.Int24(), nil
+		return types.Int(24), nil
 	case "JSON":
 		// The driver seems to return the json type as VARCHAR instead of JSON.
 		return types.JSON(), nil
 	case "UNSIGNED INT":
-		return types.UInt(), nil
+		return types.Uint(32), nil
 	case "INT":
-		return types.Int(), nil
+		return types.Int(32), nil
 	case "LONGBLOB":
 		return types.Text().WithByteLen(math.MaxUint32), nil
 	case "LONGTEXT":
 		return types.Text().WithCharLen(math.MaxUint32), nil
 	case "UNSIGNED BIGINT":
-		return types.UInt64(), nil
+		return types.Uint(64), nil
 	case "BIGINT":
-		return types.Int64(), nil
+		return types.Int(64), nil
 	case "MEDIUMTEXT", "MEDIUMBLOB":
 		return types.Text().WithByteLen(16777216), nil
 	case "UNSIGNED SMALLINT":
-		return types.UInt16(), nil
+		return types.Uint(16), nil
 	case "SMALLINT":
-		return types.Int16(), nil
+		return types.Int(16), nil
 	case "VARCHAR", "CHAR":
 		length, ok := t.Length()
 		if !ok {
@@ -381,9 +380,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TIMESTAMP":
 		return types.DateTime(), nil
 	case "UNSIGNED TINYINT":
-		return types.UInt8(), nil
+		return types.Uint(8), nil
 	case "TINYINT":
-		return types.Int8(), nil
+		return types.Int(8), nil
 	case "TINYBLOB":
 		return types.Text().WithByteLen(255), nil
 	case "TINYTEXT":

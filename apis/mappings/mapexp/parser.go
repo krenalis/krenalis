@@ -161,7 +161,7 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 			if err != nil {
 				return v, types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 			}
-			return i, types.Int()
+			return i, types.Int(32)
 		case bool:
 			return v, types.Boolean()
 		}

@@ -58,12 +58,12 @@ func quoteString(b *strings.Builder, s string) {
 }
 
 // quoteValue quotes v and writes it into b.
-func quoteValue(b *strings.Builder, v any, pt types.PhysicalType) {
+func quoteValue(b *strings.Builder, v any, t types.Type) {
 	switch v := v.(type) {
 	case nil:
 		b.WriteString("NULL")
 	case string:
-		if pt == types.PtText {
+		if t.PhysicalType() == types.PtText {
 			quoteString(b, v)
 		} else {
 			b.WriteByte('\'')
@@ -75,11 +75,7 @@ func quoteValue(b *strings.Builder, v any, pt types.PhysicalType) {
 	case uint:
 		b.WriteString(strconv.FormatUint(uint64(v), 10))
 	case float64:
-		bits := 64
-		if pt == types.PtFloat32 {
-			bits = 32
-		}
-		b.WriteString(strconv.FormatFloat(v, 'G', -1, bits))
+		b.WriteString(strconv.FormatFloat(v, 'G', -1, t.BitSize()))
 	case decimal.Decimal:
 		b.WriteString(v.String())
 	case bool:

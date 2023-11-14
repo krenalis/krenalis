@@ -41,17 +41,17 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"JSON","charLen":10000}`,
 			Type: JSON().WithCharLen(10000),
 		}, {
-			Data: `{"name":"Int8","minimum":10}`,
-			Type: Int8().WithIntRange(10, MaxInt8),
+			Data: `{"name":"Int","bitSize":8,"minimum":10}`,
+			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {
-			Data: `{"name":"Float","minimum":-3.9936173,"maximum":8.00002312}`,
-			Type: Float().WithFloatRange(-3.9936173, 8.00002312),
+			Data: `{"name":"Float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
+			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
 		}, {
-			Data: `{"name":"Float32","minimum":3.99,"maximum":5.31}`,
-			Type: Float32().WithFloatRange(3.99, 5.31),
+			Data: `{"name":"Float","bitSize":32,"minimum":3.99,"maximum":5.31}`,
+			Type: Float(32).WithFloatRange(3.99, 5.31),
 		}, {
-			Data: `{"name":"Float","real":true}`,
-			Type: Float().AsReal(),
+			Data: `{"name":"Float","bitSize":64,"real":true}`,
+			Type: Float(64).AsReal(),
 		}, {
 			Data: `{"name":"Decimal"}`,
 			Type: Decimal(0, 0),
@@ -77,8 +77,8 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","itemType":{"name":"Int"}}`,
-			Type: Array(Int()),
+			Data: `{"name":"Array","itemType":{"name":"Int","bitSize":32}}`,
+			Type: Array(Int(32)),
 		}, {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
@@ -95,8 +95,8 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Object","properties":[{"name":"birthday","label":"","description":"","placeholder":"mm/dd/yyyy","type":{"name":"Date"},"nullable":false}]}`,
 			Type: Object([]Property{{Name: "birthday", Placeholder: "mm/dd/yyyy", Type: Date()}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"values","label":"","description":"","placeholder":{"a":"1","b":"2"},"type":{"name":"Map","valueType":{"name":"Int"}},"nullable":false}]}`,
-			Type: Object([]Property{{Name: "values", Placeholder: map[string]string{"a": "1", "b": "2"}, Type: Map(Int())}}),
+			Data: `{"name":"Object","properties":[{"name":"values","label":"","description":"","placeholder":{"a":"1","b":"2"},"type":{"name":"Map","valueType":{"name":"Int","bitSize":32}},"nullable":false}]}`,
+			Type: Object([]Property{{Name: "values", Placeholder: map[string]string{"a": "1", "b": "2"}, Type: Map(Int(32))}}),
 		},
 	}
 	for _, test := range tests {

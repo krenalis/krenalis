@@ -25,52 +25,52 @@ var schema = types.Object([]types.Property{
 		Type: types.Boolean(),
 	},
 	{
-		Name: "Int",
-		Type: types.Int(),
-	},
-	{
 		Name: "Int8",
-		Type: types.Int8(),
+		Type: types.Int(8),
 	},
 	{
 		Name: "Int16",
-		Type: types.Int16(),
+		Type: types.Int(16),
 	},
 	{
 		Name: "Int24",
-		Type: types.Int24(),
+		Type: types.Int(24),
+	},
+	{
+		Name: "Int32",
+		Type: types.Int(32),
 	},
 	{
 		Name: "Int64",
-		Type: types.Int64(),
+		Type: types.Int(64),
 	},
 	{
-		Name: "UInt",
-		Type: types.UInt(),
+		Name: "Uint8",
+		Type: types.Uint(8),
 	},
 	{
-		Name: "UInt8",
-		Type: types.UInt8(),
+		Name: "Uint16",
+		Type: types.Uint(16),
 	},
 	{
-		Name: "UInt16",
-		Type: types.UInt16(),
+		Name: "Uint24",
+		Type: types.Uint(24),
 	},
 	{
-		Name: "UInt24",
-		Type: types.UInt24(),
+		Name: "Uint32",
+		Type: types.Uint(32),
 	},
 	{
-		Name: "UInt64",
-		Type: types.UInt64(),
-	},
-	{
-		Name: "Float",
-		Type: types.Float(),
+		Name: "Uint64",
+		Type: types.Uint(64),
 	},
 	{
 		Name: "Float32",
-		Type: types.Float32(),
+		Type: types.Float(32),
+	},
+	{
+		Name: "Float64",
+		Type: types.Float(64),
 	},
 	{
 		Name: "Decimal",
@@ -145,7 +145,7 @@ var schema = types.Object([]types.Property{
 		Type: types.Object([]types.Property{
 			{
 				Name: "a",
-				Type: types.Int(),
+				Type: types.Int(32),
 			},
 			{
 				Name: "b",
@@ -155,25 +155,25 @@ var schema = types.Object([]types.Property{
 	},
 	{
 		Name: "Map",
-		Type: types.Map(types.Int()),
+		Type: types.Map(types.Int(32)),
 	},
 })
 
 var values = []map[string]any{
 	{
 		"Boolean":         true,
-		"Int":             1307298102,
 		"Int8":            -12,
 		"Int16":           8023,
 		"Int24":           -2880217,
+		"Int32":           1307298102,
 		"Int64":           927041163082605,
-		"UInt":            uint(1307298102),
-		"UInt8":           uint(12),
-		"UInt16":          uint(8023),
-		"UInt24":          uint(2880217),
-		"UInt64":          uint(927041163082605),
-		"Float":           18372.36240184391,
+		"Uint8":           uint(12),
+		"Uint16":          uint(8023),
+		"Uint24":          uint(2880217),
+		"Uint32":          uint(1307298102),
+		"Uint64":          uint(927041163082605),
 		"Float32":         57.16038,
+		"Float64":         18372.36240184391,
 		"Decimal":         decimal.RequireFromString("1752.064"),
 		"DateTime":        time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
 		"Date":            time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
@@ -207,7 +207,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{Boolean:true,Int:1307298102,Int8:-12,Int16:8023,Int24:-2880217,Int64:927041163082605n,UInt:1307298102,UInt8:12,UInt16:8023,UInt24:2880217,UInt64:927041163082605n,Float:18372.36240184391,Float32:57.16038,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_nil:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_nil:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
 		},
 		{
 			name:   "Empty values",
@@ -265,7 +265,7 @@ func Test_MarshalPython(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{'Boolean':True,'Int':1307298102,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int64':927041163082605,'UInt':1307298102,'UInt8':12,'UInt16':8023,'UInt24':2880217,'UInt64':927041163082605,'Float':18372.36240184391,'Float32':57.16038,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_nil':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_nil':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
 		},
 		{
 			name: "Text encoding",

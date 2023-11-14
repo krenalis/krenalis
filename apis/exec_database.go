@@ -84,8 +84,8 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 			if !ok {
 				return actionExecutionError{errors.New("no values for expression 'id' returned by the query")}
 			}
-			switch pt := idExpr.Type.PhysicalType(); {
-			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
+			switch pt := idExpr.Type.PhysicalType(); pt {
+			case types.PtInt, types.PtUint, types.PtJSON, types.PtText:
 				externalID = fmt.Sprint(rawID)
 			default:
 				return actionExecutionError{fmt.Errorf("expression 'id' with type %s cannot be used as identifier", pt)}
@@ -223,7 +223,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		rows = append(rows, row)
 	}
 
-	columns := append([]types.Property{{Name: "id", Type: types.Int()}},
+	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}},
 		datastore.PropertiesToColumns(outSchemaProps)...)
 
 	database := this.database()

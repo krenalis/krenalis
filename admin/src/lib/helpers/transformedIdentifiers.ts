@@ -1,23 +1,7 @@
 import { Identifiers, AnonymousIdentifiers } from '../../types/external/identifiers';
 import { TransformedMapping } from './transformedAction';
 
-const SUPPORTED_IDENTIFIERS_TYPES = [
-	'Int',
-	'Int8',
-	'Int16',
-	'Int24',
-	'Int64',
-	'UInt',
-	'UInt8',
-	'UInt16',
-	'UInt24',
-	'UInt64',
-	'Decimal',
-	'UUID',
-	'Inet',
-	'Text',
-	'Array',
-];
+const SUPPORTED_IDENTIFIERS_TYPES = ['Int', 'Uint', 'Decimal', 'UUID', 'Inet', 'Text', 'Array'];
 
 const DEFAULT_IDENTIFIERS_MAPPING = [];
 

@@ -172,11 +172,11 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		switch c.Type.PhysicalType() {
 		case types.PtBoolean:
 			q.WriteString("BOOLEAN")
-		case types.PtFloat, types.PtFloat32:
+		case types.PtFloat:
 			q.WriteString("FLOAT")
 		case
-			types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64,
-			types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64,
+			types.PtInt,
+			types.PtUint,
 			types.PtYear:
 			q.WriteString("NUMBER(38,0)")
 		case types.PtDecimal:
@@ -547,7 +547,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		case "DATE":
 			column.Type = types.Date()
 		case "FLOAT":
-			column.Type = types.Float()
+			column.Type = types.Float(64)
 		case "OBJECT":
 			column.Type = types.Map(types.JSON())
 		case "NUMBER":

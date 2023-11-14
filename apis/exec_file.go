@@ -109,8 +109,8 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 			if !ok {
 				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idCol.Name)}
 			}
-			switch pt := idCol.Type.PhysicalType(); {
-			case pt == types.PtText || pt == types.PtJSON || (pt >= types.PtInt && pt <= types.PtUInt64):
+			switch pt := idCol.Type.PhysicalType(); pt {
+			case types.PtInt, types.PtUint, types.PtJSON, types.PtText:
 				externalID = fmt.Sprint(rawID)
 			default:
 				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as identifier", idCol.Name, pt)}

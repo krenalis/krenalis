@@ -177,8 +177,7 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			pt := columns[j].Type.PhysicalType()
-			quoteValue(&b, v, pt)
+			quoteValue(&b, v, columns[j].Type)
 		}
 		b.WriteByte(')')
 	}

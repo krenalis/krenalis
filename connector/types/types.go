@@ -35,9 +35,10 @@ func (err PathNotExistError) Error() string {
 var one = decimal.New(1, 0)
 
 var (
-	minInt  = [...]int64{MinInt, MinInt8, MinInt16, MinInt24, MinInt64}
-	maxInt  = [...]int64{MaxInt, MaxInt8, MaxInt16, MaxInt24, MaxInt64}
-	maxUInt = [...]uint64{MaxUInt, MaxUInt8, MaxUInt16, MaxUInt24, MaxUInt64}
+	bitSize = [...]int{8, 16, 24, 32, 64}
+	minInt  = [...]int64{MinInt8, MinInt16, MinInt24, MinInt32, MinInt64}
+	maxInt  = [...]int64{MaxInt8, MaxInt16, MaxInt24, MaxInt32, MaxInt64}
+	maxUint = [...]uint64{MaxUint8, MaxUint16, MaxUint24, MaxUint32, MaxUint64}
 )
 
 var (
@@ -53,19 +54,19 @@ const (
 	MaxYear             = 9999           // Maximum year for DataTime, Date and Year types
 	MinYear             = 1              // Minimum year for DataTime, Date and Year types
 
-	MaxInt    = math.MaxInt32
 	MaxInt16  = math.MaxInt16
 	MaxInt24  = 1<<23 - 1
+	MaxInt32  = math.MaxInt32
 	MaxInt64  = math.MaxInt64
 	MaxInt8   = math.MaxInt8
-	MaxUInt   = math.MaxUint32
-	MaxUInt16 = math.MaxUint16
-	MaxUInt24 = 1<<24 - 1
-	MaxUInt64 = math.MaxUint64
-	MaxUInt8  = math.MaxUint8
-	MinInt    = math.MinInt32
+	MaxUint16 = math.MaxUint16
+	MaxUint24 = 1<<24 - 1
+	MaxUint32 = math.MaxUint32
+	MaxUint64 = math.MaxUint64
+	MaxUint8  = math.MaxUint8
 	MinInt16  = math.MinInt16
 	MinInt24  = -1 << 23
+	MinInt32  = math.MinInt32
 	MinInt64  = math.MinInt64
 	MinInt8   = math.MinInt8
 )
@@ -76,17 +77,8 @@ const (
 	PtInvalid PhysicalType = iota
 	PtBoolean
 	PtInt
-	PtInt8
-	PtInt16
-	PtInt24
-	PtInt64
-	PtUInt
-	PtUInt8
-	PtUInt16
-	PtUInt24
-	PtUInt64
+	PtUint
 	PtFloat
-	PtFloat32
 	PtDecimal
 	PtDateTime
 	PtDate
@@ -104,17 +96,8 @@ const (
 var physicalName = []string{
 	"Boolean",
 	"Int",
-	"Int8",
-	"Int16",
-	"Int24",
-	"Int64",
-	"UInt",
-	"UInt8",
-	"UInt16",
-	"UInt24",
-	"UInt64",
+	"Uint",
 	"Float",
-	"Float32",
 	"Decimal",
 	"DateTime",
 	"Date",
@@ -219,30 +202,32 @@ func (p Path) Equals(path Path) bool {
 type Type struct {
 	pt PhysicalType
 
+	size int8 // size for Int, Uint and Float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
+
 	unique bool // unique reports whether the items of an Array must be unique.
-	real   bool // real reports whether NaN, +Inf and -Inf are allowed for Float and Float32 types.
+	real   bool // real reports whether NaN, +Inf and -Inf are allowed for Float.
 	flat   bool // flat reports whether contains, at any level, a flat property.
 
 	// p represents
-	//   - minimum value for Int, Int8, Int16 and Int24
-	//   - minimum value, as uint32(p), for UInt, UInt8, UInt16 and UInt24
+	//   - minimum value for Int with 8, 16, 24, and 32 bits
+	//   - minimum value, as uint32(p), for Uint with 8, 16, 24, and 32 bits
 	//   - precision for Decimal
 	//   - length in bytes, as uint32(p), for Text
 	//   - minimum length for Array
 	p int32
 
 	// s represents
-	//   - maximum value for Int, Int8, Int16 and Int24
-	//   - maximum value, as uint32(s), for UInt, UInt8, UInt16 and UInt24
+	//   - maximum value for Int with 8, 16, 24, and 32 bits
+	//   - maximum value, as uint32(s), for Uint with 8, 16, 24, and 32 bits
 	//   - scale for Decimal
 	//   - length in characters, as uint32(s), for Text
 	//   - maximum length for Array
 	s int32
 
 	// vl can contain one of
-	//   - intRange value for Int64
-	//   - uintRange value for UInt64
-	//   - floatRange value for Float and Float32
+	//   - intRange value for Int with 64 bits
+	//   - uintRange value for Uint with 64 bits
+	//   - floatRange value for Float
 	//   - decimalRange value for Decimal
 	//   - *regexp.Regexp value for Text
 	//   - []string with the values for Text
@@ -259,65 +244,72 @@ func Boolean() Type {
 	return Type{pt: PtBoolean}
 }
 
-// Int returns the Int type.
-func Int() Type {
-	return Type{pt: PtInt, p: MinInt, s: MaxInt}
+// Int returns the Int type with the provided bit size. It panics if size is not
+// 8, 16, 24, 32 or 64.
+func Int(size int) Type {
+	t := Type{pt: PtInt}
+	switch size {
+	case 8:
+		t.p = MinInt8
+		t.s = MaxInt8
+	case 16:
+		t.size = 1
+		t.p = MinInt16
+		t.s = MaxInt16
+	case 24:
+		t.size = 2
+		t.p = MinInt24
+		t.s = MaxInt24
+	case 32:
+		t.size = 3
+		t.p = MinInt32
+		t.s = MaxInt32
+	case 64:
+		t.size = 4
+	default:
+		panic("bit size is not valid")
+	}
+	return t
 }
 
-// Int8 returns the Int8 type.
-func Int8() Type {
-	return Type{pt: PtInt8, p: MinInt8, s: MaxInt8}
+// Uint returns the Uint type with the provided bit size. It panics if size is
+// not 8, 16, 24, 32 or 64.
+func Uint(size int) Type {
+	t := Type{pt: PtUint}
+	switch size {
+	case 8:
+		t.s = int32(MaxUint8)
+	case 16:
+		t.size = 1
+		t.s = int32(MaxUint16)
+	case 24:
+		t.size = 2
+		t.s = int32(MaxUint24)
+	case 32:
+		t.size = 3
+		s := MaxUint32
+		t.s = int32(s)
+	case 64:
+		t.size = 4
+	default:
+		panic("bit size is not valid")
+	}
+	return t
 }
 
-// Int16 returns the Int16 type.
-func Int16() Type {
-	return Type{pt: PtInt16, p: MinInt16, s: MaxInt16}
-}
-
-// Int24 returns the Int24 type.
-func Int24() Type {
-	return Type{pt: PtInt24, p: MinInt24, s: MaxInt24}
-}
-
-// Int64 returns the Int64 type.
-func Int64() Type {
-	return Type{pt: PtInt64}
-}
-
-// UInt returns the UInt type.
-func UInt() Type {
-	s := MaxUInt
-	return Type{pt: PtUInt, s: int32(s)}
-}
-
-// UInt8 returns the UInt8 type.
-func UInt8() Type {
-	return Type{pt: PtUInt8, s: int32(MaxUInt8)}
-}
-
-// UInt16 returns the UInt16 type.
-func UInt16() Type {
-	return Type{pt: PtUInt16, s: int32(MaxUInt16)}
-}
-
-// UInt24 returns the UInt24 type.
-func UInt24() Type {
-	return Type{pt: PtUInt24, s: int32(MaxUInt24)}
-}
-
-// UInt64 returns the UInt64 type.
-func UInt64() Type {
-	return Type{pt: PtUInt64}
-}
-
-// Float returns the Float type.
-func Float() Type {
-	return Type{pt: PtFloat}
-}
-
-// Float32 returns the Float32 type.
-func Float32() Type {
-	return Type{pt: PtFloat32}
+// Float returns the Float type with the provided bit size. It panics if size is
+// not 32 or 64.
+func Float(size int) Type {
+	t := Type{pt: PtFloat}
+	switch size {
+	case 32:
+		t.size = 3
+	case 64:
+		t.size = 4
+	default:
+		panic("bit size is not valid")
+	}
+	return t
 }
 
 // Decimal returns the Decimal type with the given precision and scale.
@@ -555,12 +547,11 @@ func (t Type) AsRole(role Role) Type {
 }
 
 // AsReal returns t but as a real number. As a real number, t does not allow
-// NaN, +Inf and -Inf values. t must be a Float or a Float32 type. t cannot be
-// already real and cannot have a range.
-// It panics if previous restrictions are not met.
+// NaN, +Inf and -Inf values. t must be a Float type. t cannot be already real
+// and cannot have a range. It panics if previous restrictions are not met.
 func (t Type) AsReal() Type {
-	if t.pt != PtFloat && t.pt != PtFloat32 {
-		panic("type is not a Float or Float32 type")
+	if t.pt != PtFloat {
+		panic("type is not a Float type")
 	}
 	if t.real {
 		panic("type is already real")
@@ -572,11 +563,10 @@ func (t Type) AsReal() Type {
 	return t
 }
 
-// IsReal reports whether t is real.
-// Panics if t is not a Float or a Float32 type.
+// IsReal reports whether t is real. Panics if t is not a Float type.
 func (t Type) IsReal() bool {
-	if t.pt != PtFloat && t.pt != PtFloat32 {
-		panic("type is not a Float or Float32 type")
+	if t.pt != PtFloat {
+		panic("type is not a Float type")
 	}
 	return t.real
 }
@@ -591,6 +581,8 @@ func (t Type) Valid() bool {
 func (t Type) String() string {
 	s := t.pt.String()
 	switch t.pt {
+	case PtInt, PtUint, PtFloat:
+		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
 	case PtDecimal:
 		if t.p > 0 {
 			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
@@ -619,32 +611,42 @@ func (t Type) PhysicalType() PhysicalType {
 	return t.pt
 }
 
+// BitSize returns the bit size of t as 8, 16, 24, 32 or 64. t must be an Int,
+// Uint or Float type, otherwise it panics.
+func (t Type) BitSize() int {
+	if t.pt != PtInt && t.pt != PtUint && t.pt != PtFloat {
+		panic("type is not an Int, Uint or Float type")
+	}
+	return bitSize[t.size]
+}
+
 type intRange struct{ min, max int64 }
 
-// IntRange returns the minimum and maximum value for t. t must be ab Int,
-// Int8, Int16, Int24 or Int64 type, otherwise it panics.
+// IntRange returns the minimum and maximum value for t. t must be an Int type,
+// otherwise it panics.
 func (t Type) IntRange() (min, max int64) {
-	if t.pt < PtInt || t.pt > PtInt64 {
-		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
+	if t.pt != PtInt {
+		panic("type is not an Int type")
 	}
-	if t.pt != PtInt64 {
+	if t.size < 4 {
+		// 8, 16, 24, and 32 bits.
 		return int64(t.p), int64(t.s)
 	}
+	// 64 bits.
 	if i, ok := t.vl.(intRange); ok {
 		return i.min, i.max
 	}
 	return MinInt64, MaxInt64
 }
 
-// WithIntRange returns t but with values in [min,max]. t must be an Int, Int8,
-// Int16, Int24 or Int64 type. min cannot be greater than max. min and max must
-// be within the range of values of t.
-// It panics it previous restrictions are not met.
+// WithIntRange returns t but with values in [min,max]. t must be an Int type.
+// min cannot be greater than max. min and max must be within the range of
+// values of t. It panics it previous restrictions are not met.
 func (t Type) WithIntRange(min, max int64) Type {
-	if t.pt < PtInt || t.pt > PtInt64 {
-		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
+	if t.pt != PtInt {
+		panic("type is not an Int type")
 	}
-	Min, Max := minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+	Min, Max := minInt[t.size], maxInt[t.size]
 	if min == Min && max == Max {
 		return t
 	}
@@ -657,40 +659,43 @@ func (t Type) WithIntRange(min, max int64) Type {
 	if max > Max {
 		panic(fmt.Sprintf("max cannot be greater than %d", Max))
 	}
-	if t.pt == PtInt64 {
-		t.vl = intRange{min, max}
-	} else {
+	if t.size < 4 {
+		// 8, 16, 24, and 32 bits.
 		t.p, t.s = int32(min), int32(max)
+	} else {
+		// 64 bits.
+		t.vl = intRange{min, max}
 	}
 	return t
 }
 
 type uintRange struct{ min, max uint64 }
 
-// UIntRange returns the minimum and maximum value for t. t must be an UInt,
-// UInt8, UInt16, UInt24 or UInt64, otherwise it panics.
-func (t Type) UIntRange() (min, max uint64) {
-	if t.pt < PtUInt || t.pt > PtUInt64 {
-		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
+// UintRange returns the minimum and maximum value for t. t must be an Uint
+// type, otherwise it panics.
+func (t Type) UintRange() (min, max uint64) {
+	if t.pt != PtUint {
+		panic("type is not an Uint type")
 	}
-	if t.pt != PtUInt64 {
+	if t.size < 4 {
+		// 8, 16, 24, and 32 bits.
 		return uint64(uint32(t.p)), uint64(uint32(t.s))
 	}
+	// 64 bits.
 	if i, ok := t.vl.(uintRange); ok {
 		return i.min, i.max
 	}
-	return 0, MaxUInt64
+	return 0, MaxUint64
 }
 
-// WithUintRange returns t but with values in [min,max]. t must be a UInt,
-// UInt8, UInt16, UInt24 or UInt64 type. min cannot be greater than max.
-// min and max must be within the range of values of t.
-// It panics it previous restrictions are not met.
+// WithUintRange returns t but with values in [min,max]. t must be an Uint type.
+// min cannot be greater than max. min and max must be within the range of
+// values of t. It panics it previous restrictions are not met.
 func (t Type) WithUintRange(min, max uint64) Type {
-	if t.pt < PtUInt || t.pt > PtUInt64 {
-		panic("type is not a UInt, UInt8, Int16, UInt24 or UInt64 type")
+	if t.pt != PtUint {
+		panic("type is not an Uint type")
 	}
-	Max := maxUInt[t.pt-PtInt]
+	Max := maxUint[t.size]
 	if min == 0 && max == Max {
 		return t
 	}
@@ -703,10 +708,12 @@ func (t Type) WithUintRange(min, max uint64) Type {
 	if max > Max {
 		panic(fmt.Sprintf("max cannot be greater than %d", Max))
 	}
-	if t.pt == PtInt64 {
-		t.vl = uintRange{min, max}
-	} else {
+	if t.size < 4 {
+		// 8, 16, 24, and 32 bits.
 		t.p, t.s = int32(min), int32(max)
+	} else {
+		// 64 bits.
+		t.vl = uintRange{min, max}
 	}
 	return t
 }
@@ -716,31 +723,32 @@ type floatRange struct {
 	minS, maxS string
 }
 
-// FloatRange returns the minimum and maximum value of t. t must be a Float or
-// Float32 type, otherwise it panics.
+// FloatRange returns the minimum and maximum value of t. t must be a Float
+// type, otherwise it panics.
 func (t Type) FloatRange() (min, max float64) {
-	if t.pt != PtFloat && t.pt != PtFloat32 {
-		panic("type is not a Float or Float32 type")
+	if t.pt != PtFloat {
+		panic("type is not a Float type")
 	}
 	if f, ok := t.vl.(floatRange); ok {
 		return f.min, f.max
 	}
 	if t.real {
-		if t.pt == PtFloat32 {
+		if t.size == 3 {
+			// 32 bits.
 			return -math.MaxFloat32, math.MaxFloat32
 		}
+		// 64 bits.
 		return -math.MaxFloat64, math.MaxFloat64
 	}
 	return math.Inf(-1), math.Inf(1)
 }
 
-// WithFloatRange returns t but with values in [min,max]. t must be a Float or
-// Float32 type. min cannot be greater than max. min and max cannot be NaN, and
-// if r is real they cannot be ±Inf.
-// It panics if previous restrictions are not met.
+// WithFloatRange returns t but with values in [min,max]. t must be a Float
+// type. min cannot be greater than max. min and max cannot be NaN, and if r is
+// real they cannot be ±Inf. It panics if previous restrictions are not met.
 func (t Type) WithFloatRange(min, max float64) Type {
-	if t.pt != PtFloat && t.pt != PtFloat32 {
-		panic("type is not a Float or Float32 type")
+	if t.pt != PtFloat {
+		panic("type is not a Float type")
 	}
 	if math.IsNaN(min) || math.IsNaN(max) {
 		panic("min and max cannot be NaN")
@@ -755,7 +763,8 @@ func (t Type) WithFloatRange(min, max float64) Type {
 		panic("max cannot be less than min")
 	}
 	var minS, maxS string
-	if t.pt == PtFloat32 {
+	if t.size == 3 {
+		// 32 bits.
 		min, max = float64(float32(min)), float64(float32(max))
 		if !math.IsInf(min, -1) {
 			minS = decimal.NewFromFloat32(float32(min)).String()
@@ -764,6 +773,7 @@ func (t Type) WithFloatRange(min, max float64) Type {
 			maxS = decimal.NewFromFloat32(float32(max)).String()
 		}
 	} else {
+		// 64 bits.
 		if !math.IsInf(min, -1) {
 			minS = decimal.NewFromFloat(min).String()
 		}
@@ -1157,7 +1167,7 @@ func (t Type) Elem() Type {
 
 // EqualTo reports whether t is equals to t2.
 func (t Type) EqualTo(t2 Type) bool {
-	almostEqual := t.pt == t2.pt && t.unique == t2.unique && t.real == t2.real && t.flat == t2.flat && t.p == t2.p
+	almostEqual := t.pt == t2.pt && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.flat == t2.flat && t.p == t2.p
 	if !almostEqual {
 		return false
 	}

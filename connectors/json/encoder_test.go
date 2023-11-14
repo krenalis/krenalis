@@ -31,21 +31,21 @@ func TestEncoder(t *testing.T) {
 	var typ = types.Object([]types.Property{
 		{Name: "boolean_null", Type: types.Boolean()},
 		{Name: "boolean", Type: types.Boolean()},
-		{Name: "int", Type: types.Int()},
-		{Name: "int8", Type: types.Int8()},
-		{Name: "int16", Type: types.Int16()},
-		{Name: "int24", Type: types.Int24()},
-		{Name: "int64", Type: types.Int64()},
-		{Name: "uint", Type: types.UInt()},
-		{Name: "uint8", Type: types.UInt8()},
-		{Name: "uint16", Type: types.UInt16()},
-		{Name: "uint24", Type: types.UInt24()},
-		{Name: "uint64", Type: types.UInt64()},
-		{Name: "float", Type: types.Float()},
-		{Name: "float32", Type: types.Float32()},
-		{Name: "float_nan", Type: types.Float()},
-		{Name: "float_inf", Type: types.Float()},
-		{Name: "float_neg_inf", Type: types.Float()},
+		{Name: "int8", Type: types.Int(8)},
+		{Name: "int16", Type: types.Int(16)},
+		{Name: "int24", Type: types.Int(24)},
+		{Name: "int32", Type: types.Int(32)},
+		{Name: "int64", Type: types.Int(64)},
+		{Name: "uint8", Type: types.Uint(8)},
+		{Name: "uint16", Type: types.Uint(16)},
+		{Name: "uint24", Type: types.Uint(24)},
+		{Name: "uint32", Type: types.Uint(32)},
+		{Name: "uint64", Type: types.Uint(64)},
+		{Name: "float32", Type: types.Float(32)},
+		{Name: "float64", Type: types.Float(64)},
+		{Name: "float_nan", Type: types.Float(64)},
+		{Name: "float_inf", Type: types.Float(64)},
+		{Name: "float_neg_inf", Type: types.Float(64)},
 		{Name: "decimal", Type: types.Decimal(10, 3)},
 		{Name: "datetime", Type: types.DateTime()},
 		{Name: "date", Type: types.Date()},
@@ -55,13 +55,13 @@ func TestEncoder(t *testing.T) {
 		{Name: "json", Type: types.JSON()},
 		{Name: "inet", Type: types.Inet()},
 		{Name: "text", Type: types.Text()},
-		{Name: "array_int", Type: types.Array(types.Int())},
-		{Name: "array_map", Type: types.Array(types.Map(types.Int()))},
+		{Name: "array_int", Type: types.Array(types.Int(32))},
+		{Name: "array_map", Type: types.Array(types.Map(types.Int(32)))},
 		{Name: "object", Type: types.Object([]types.Property{
-			{Name: "a", Type: types.Float()},
+			{Name: "a", Type: types.Float(64)},
 			{Name: "b", Type: types.Object([]types.Property{
 				{Name: "b1", Type: types.Time()},
-				{Name: "b2", Type: types.UInt()},
+				{Name: "b2", Type: types.Uint(32)},
 			})},
 		})},
 		{Name: "map", Type: types.Map(types.Boolean())},
@@ -70,18 +70,18 @@ func TestEncoder(t *testing.T) {
 	v := map[string]any{
 		"boolean_null":  nil,
 		"boolean":       true,
-		"int":           2067926348,
 		"int8":          -34,
 		"int16":         91578,
 		"int24":         -3083617,
+		"int32":         2067926348,
 		"int64":         1740762658369,
-		"uint":          uint(2067926348),
 		"uint8":         uint(34),
 		"uint16":        uint(91578),
 		"uint24":        uint(3083617),
+		"uint32":        uint(2067926348),
 		"uint64":        uint(1740762658369),
-		"float":         3.14159,
 		"float32":       3.14,
+		"float64":       3.14159,
 		"float_nan":     math.NaN(),
 		"float_inf":     math.Inf(1),
 		"float_neg_inf": math.Inf(-1),
@@ -109,13 +109,13 @@ func TestEncoder(t *testing.T) {
 	enc := newEncoder(false, false, false)
 	got := enc.Append(nil, typ, v)
 	if !bytes.Equal(got, expectedTrue) {
-		t.Fatal("unexpected test false result")
+		t.Fatalf("unexpected test false result:\ngot     : %s\nexpected: %s\n", got, expectedTrue)
 	}
 
 	enc = newEncoder(true, true, true)
 	got = enc.Append(nil, typ, v)
 	if !bytes.Equal(got, expectedFalse) {
-		t.Fatal("unexpected test true result")
+		t.Fatalf("unexpected test true result:\ngot     : %s\nexpected: %s\n", got, expectedFalse)
 	}
 
 }

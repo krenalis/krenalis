@@ -233,11 +233,11 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 	var t types.Type
 	switch column.dataType {
 	case "smallint":
-		t = types.Int16()
+		t = types.Int(16)
 	case "integer":
-		t = types.Int()
+		t = types.Int(32)
 	case "bigint":
-		t = types.Int64()
+		t = types.Int(64)
 	case "numeric":
 		// Parse precision radix.
 		if column.radix == nil {
@@ -265,9 +265,9 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 		}
 		t = types.Decimal(int(p), int(s))
 	case "real":
-		t = types.Float32()
+		t = types.Float(32)
 	case "double precision":
-		t = types.Float()
+		t = types.Float(64)
 	case "character varying", "character":
 		if column.charLength != nil {
 			chars, _ := strconv.Atoi(*column.charLength)
@@ -309,17 +309,17 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 		case "_date":
 			et = types.Date()
 		case "_float4":
-			et = types.Float32()
+			et = types.Float(32)
 		case "_float8":
-			et = types.Float()
+			et = types.Float(64)
 		case "_inet":
 			et = types.Inet()
 		case "_int2":
-			et = types.Int16()
+			et = types.Int(16)
 		case "_int4":
-			et = types.Int()
+			et = types.Int(32)
 		case "_int8":
-			et = types.Int64()
+			et = types.Int(64)
 		case "_json", "_jsonb":
 			et = types.JSON()
 		case "_text":

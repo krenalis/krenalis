@@ -285,7 +285,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "OBJECT":
 		return types.Map(types.JSON()), nil
 	case "REAL":
-		return types.Float(), nil
+		return types.Float(64), nil
 	case "TEXT":
 		length, ok := t.Length()
 		if !ok {

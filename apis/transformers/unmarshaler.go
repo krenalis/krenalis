@@ -161,11 +161,11 @@ var pythonDecoderOptions = decoderOptions{
 //
 // The following are the expected JSON for each schema type:
 //   - Boolean: true or false
-//   - Int, Int8, Int16, Int24, and Int32: a Number representing an integer
-//   - Int64: a String representing an integer
-//   - UInt, UInt8, UInt16, UInt24, and UInt32: a Number representing an integer
-//   - UInt64: a String representing an integer
-//   - Float and Float32: a Number
+//   - Int (8, 16, 24, and 32 bits): a Number representing an integer
+//   - Int (64 bits): a String representing an integer
+//   - Uint (8, 16, 24, and 32 bits): a Number representing an integer
+//   - Uint (64 bits): a String representing an integer
+//   - Float: a Number
 //   - Decimal: a String representing a number
 //   - DateTime, Date, and Time: a String representing a time formatted as
 //     "2006-01-02T15:04:05.000Z07:00"
@@ -183,9 +183,9 @@ var pythonDecoderOptions = decoderOptions{
 //
 // The following are the expected JSON for each schema type:
 //   - Boolean: true or false
-//   - Int, Int8, Int16, Int24, Int32, and Int64: a Number representing an integer
-//   - UInt, UInt8, UInt16, UInt24, UInt32, and Uint64: a Number representing an integer
-//   - Float and Float32: a Number
+//   - Int: a Number representing an integer
+//   - Uint: a Number representing an integer
+//   - Float: a Number
 //   - Decimal: a String representing a number
 //   - DateTime: a String representing a time formatted as "2006-01-02
 //     15:04:05.999999"
@@ -470,23 +470,22 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 
 // value returns the marshalled value of v according to t.
 func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
-	pt := t.PhysicalType()
-	switch pt {
+	switch t.PhysicalType() {
 	case types.PtBoolean:
 		if v.Kind() == 'f' {
 			return false, nil
 		} else if v.Kind() == 't' {
 			return true, nil
 		}
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+	case types.PtInt:
 		var s string
 		switch v.Kind() {
 		case '0':
-			if pt != types.PtInt64 || !d.opts.int64AsString {
+			if t.BitSize() != 64 || !d.opts.int64AsString {
 				s = string(v)
 			}
 		case '"':
-			if pt == types.PtInt64 && d.opts.int64AsString {
+			if t.BitSize() == 64 && d.opts.int64AsString {
 				s = d.unquoteString(v)
 			}
 		}
@@ -498,33 +497,29 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				return int(n), nil
 			}
 		}
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		var s string
 		switch v.Kind() {
 		case '0':
-			if pt != types.PtUInt64 || !d.opts.int64AsString {
+			if t.BitSize() != 64 || !d.opts.int64AsString {
 				s = string(v)
 			}
 		case '"':
-			if pt == types.PtUInt64 && d.opts.int64AsString {
+			if t.BitSize() == 64 && d.opts.int64AsString {
 				s = d.unquoteString(v)
 			}
 		}
 		if s != "" {
 			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
-				if min, max := t.UIntRange(); n < min || n > max {
+				if min, max := t.UintRange(); n < min || n > max {
 					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
 				}
 				return uint(n), nil
 			}
 		}
-	case types.PtFloat, types.PtFloat32:
+	case types.PtFloat:
 		if v.Kind() == '0' {
-			bs := 64
-			if pt == types.PtFloat32 {
-				bs = 32
-			}
-			if n, err := strconv.ParseFloat(string(v), bs); err == nil {
+			if n, err := strconv.ParseFloat(string(v), t.BitSize()); err == nil {
 				if min, max := t.FloatRange(); n < min || n > max {
 					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n), "", d.opts.terms)
 				}

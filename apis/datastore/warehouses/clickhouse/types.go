@@ -44,25 +44,25 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		var t types.Type
 		switch s[:i] {
 		case "UInt8":
-			t = types.UInt8()
+			t = types.Uint(8)
 		case "UInt16":
-			t = types.UInt16()
+			t = types.Uint(16)
 		case "UInt32":
-			t = types.UInt()
+			t = types.Uint(32)
 		case "UInt64":
-			t = types.UInt64()
+			t = types.Uint(64)
 		case "Int8":
-			t = types.Int8()
+			t = types.Int(8)
 		case "Int16":
-			t = types.Int16()
+			t = types.Int(16)
 		case "Int32":
-			t = types.Int()
+			t = types.Int(32)
 		case "Int64":
-			t = types.Int64()
+			t = types.Int(64)
 		case "Float32":
-			t = types.Float32()
+			t = types.Float(32)
 		case "Float64":
-			t = types.Float()
+			t = types.Float(64)
 		case "Bool":
 			t = types.Boolean()
 		case "String":
@@ -72,7 +72,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		case "Date":
 			t = types.Date()
 		case "Date32":
-			t = types.Int()
+			t = types.Int(32)
 		case "DateTime":
 			t = types.DateTime()
 		case "JSON":

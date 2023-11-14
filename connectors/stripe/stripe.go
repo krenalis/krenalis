@@ -599,12 +599,12 @@ var schema = types.Object([]types.Property{
 	{
 		Name:  "balance",
 		Label: "Balance",
-		Type:  types.Int(),
+		Type:  types.Int(32),
 	},
 	{
 		Name:  "created",
 		Label: "Created",
-		Type:  types.Int64(),
+		Type:  types.Int(64),
 	},
 	{
 		Name:  "currency",
@@ -643,7 +643,7 @@ var schema = types.Object([]types.Property{
 					{
 						Name:     "amount_off",
 						Label:    "Coupon Amount Off",
-						Type:     types.Int(),
+						Type:     types.Int(32),
 						Nullable: true,
 					},
 					{
@@ -659,7 +659,7 @@ var schema = types.Object([]types.Property{
 					{
 						Name:  "duration_in_months",
 						Label: "Coupon Duration In Months",
-						Type:  types.Int(),
+						Type:  types.Int(32),
 					},
 					{
 						Name:  "metadata",
@@ -674,7 +674,7 @@ var schema = types.Object([]types.Property{
 					{
 						Name:  "percent_off",
 						Label: "Coupon Percent Off",
-						Type:  types.Float(),
+						Type:  types.Float(64),
 					},
 					{
 						Name:  "object",
@@ -684,7 +684,7 @@ var schema = types.Object([]types.Property{
 					{
 						Name:  "created",
 						Label: "Coupon Created",
-						Type:  types.Int64(),
+						Type:  types.Int(64),
 					},
 					{
 						Name:  "livemode",
@@ -694,19 +694,19 @@ var schema = types.Object([]types.Property{
 					{
 						Name:     "max_redemptions",
 						Label:    "Coupon Max Redemptions",
-						Type:     types.Int(),
+						Type:     types.Int(32),
 						Nullable: true,
 					},
 					{
 						Name:     "redeem_by",
 						Label:    "Coupon Redeem By",
-						Type:     types.Int64(),
+						Type:     types.Int(64),
 						Nullable: true,
 					},
 					{
 						Name:  "times_redeemed",
 						Label: "Coupon Times Redeemed",
-						Type:  types.Int(),
+						Type:  types.Int(32),
 					},
 					{
 						Name:  "valid",
@@ -723,12 +723,12 @@ var schema = types.Object([]types.Property{
 			{
 				Name:  "end",
 				Label: "Discount End",
-				Type:  types.Int64(),
+				Type:  types.Int(64),
 			},
 			{
 				Name:  "start",
 				Label: "Discount Start",
-				Type:  types.Int64(),
+				Type:  types.Int(64),
 			},
 			{
 				Name:     "subscription",
@@ -831,7 +831,7 @@ var schema = types.Object([]types.Property{
 	{
 		Name:  "next_invoice_sequence",
 		Label: "Next Invoice Sequence",
-		Type:  types.Int(),
+		Type:  types.Int(32),
 	},
 	{
 		Name:  "preferred_locales",

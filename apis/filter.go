@@ -66,7 +66,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		switch typ := property.Type; typ.PhysicalType() {
 		case types.PtBoolean:
 			valid = cond.Value == "true" || cond.Value == "false"
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt64:
+		case types.PtInt:
 			for i := 0; i < len(cond.Value); i++ {
 				if i == 0 && cond.Value[i] == '-' {
 					continue
@@ -84,7 +84,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 					valid = v >= min && v <= max
 				}
 			}
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt64:
+		case types.PtUint:
 			for i := 0; i < len(cond.Value); i++ {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
 					valid = false
@@ -95,11 +95,11 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				v, err := strconv.ParseUint(cond.Value, 10, 64)
 				valid = err == nil
 				if valid {
-					min, max := typ.UIntRange()
+					min, max := typ.UintRange()
 					valid = v >= min && v <= max
 				}
 			}
-		case types.PtFloat, types.PtFloat32:
+		case types.PtFloat:
 			v, err := strconv.ParseFloat(cond.Value, 64)
 			valid = err == nil
 			if valid {
@@ -201,11 +201,11 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 			if cond.Value == "true" {
 				value = true
 			}
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt64:
+		case types.PtInt:
 			value, _ = strconv.ParseInt(cond.Value, 10, 64)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt64:
+		case types.PtUint:
 			value, _ = strconv.ParseUint(cond.Value, 10, 64)
-		case types.PtFloat, types.PtFloat32:
+		case types.PtFloat:
 			value, _ = strconv.ParseFloat(cond.Value, 64)
 		case types.PtDecimal:
 			value = decimal.RequireFromString(cond.Value)

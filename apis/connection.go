@@ -2129,9 +2129,7 @@ type ConnectionToSet struct {
 // used as a matching property for the export.
 func canBeUsedAsAsMatchingProp(pt types.PhysicalType) bool {
 	// Only integers, UUIDs and texts are allowed.
-	return (types.PtInt <= pt && pt <= types.PtUInt64) ||
-		pt == types.PtUUID ||
-		pt == types.PtText
+	return pt == types.PtInt || pt == types.PtUint || pt == types.PtUUID || pt == types.PtText
 }
 
 // replacePlaceholders replaces the placeholders in s with the values read

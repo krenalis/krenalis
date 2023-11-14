@@ -33,52 +33,52 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.Boolean(),
 		},
 		{
-			Name: "Int",
-			Type: types.Int(),
-		},
-		{
 			Name: "Int8",
-			Type: types.Int8().WithIntRange(-20, 20),
+			Type: types.Int(8).WithIntRange(-20, 20),
 		},
 		{
 			Name: "Int16",
-			Type: types.Int16(),
+			Type: types.Int(16),
 		},
 		{
 			Name: "Int24",
-			Type: types.Int24(),
+			Type: types.Int(24),
+		},
+		{
+			Name: "Int32",
+			Type: types.Int(32),
 		},
 		{
 			Name: "Int64",
-			Type: types.Int64(),
+			Type: types.Int(64),
 		},
 		{
-			Name: "UInt",
-			Type: types.UInt(),
+			Name: "Uint8",
+			Type: types.Uint(8),
 		},
 		{
-			Name: "UInt8",
-			Type: types.UInt8(),
+			Name: "Uint16",
+			Type: types.Uint(16),
 		},
 		{
-			Name: "UInt16",
-			Type: types.UInt16(),
+			Name: "Uint24",
+			Type: types.Uint(24),
 		},
 		{
-			Name: "UInt24",
-			Type: types.UInt24(),
+			Name: "Uint32",
+			Type: types.Uint(32),
 		},
 		{
-			Name: "UInt64",
-			Type: types.UInt64(),
-		},
-		{
-			Name: "Float",
-			Type: types.Float(),
+			Name: "Uint64",
+			Type: types.Uint(64),
 		},
 		{
 			Name: "Float32",
-			Type: types.Float32(),
+			Type: types.Float(32),
+		},
+		{
+			Name: "Float64",
+			Type: types.Float(64),
 		},
 		{
 			Name: "Decimal",
@@ -147,7 +147,7 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.Object([]types.Property{
 				{
 					Name:     "a",
-					Type:     types.Int(),
+					Type:     types.Int(32),
 					Required: true,
 				},
 				{
@@ -158,7 +158,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			Name: "Map",
-			Type: types.Map(types.Int()),
+			Type: types.Map(types.Int(32)),
 		},
 	})
 
@@ -166,18 +166,18 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			Value: map[string]any{
 				"Boolean":   true,
-				"Int":       1307298102,
 				"Int8":      -12,
 				"Int16":     8023,
 				"Int24":     -2880217,
+				"Int32":     1307298102,
 				"Int64":     927041163082605,
-				"UInt":      uint(1307298102),
-				"UInt8":     uint(12),
-				"UInt16":    uint(8023),
-				"UInt24":    uint(2880217),
-				"UInt64":    uint(927041163082605),
-				"Float":     18372.36240184391,
+				"Uint8":     uint(12),
+				"Uint16":    uint(8023),
+				"Uint24":    uint(2880217),
+				"Uint32":    uint(1307298102),
+				"Uint64":    uint(927041163082605),
 				"Float32":   57.16038,
+				"Float64":   18372.36240184391,
 				"Decimal":   decimal.RequireFromString("1752.064"),
 				"DateTime":  time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 				"Date":      time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
@@ -212,14 +212,14 @@ func Test_Unmarshal(t *testing.T) {
 			language:     state.JavaScript,
 			schema:       schema,
 			timeTruncate: time.Millisecond,
-			data:         `[{"value":{"Boolean":true,"Int":1307298102,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int64":"927041163082605","UInt":1307298102,"UInt8":12,"UInt16":8023,"UInt24":2880217,"UInt64":"927041163082605","Float":18372.36240184391,"Float32":57.16038,"Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
 			results:      results,
 		},
 		{
 			language:     state.Python,
 			schema:       schema,
 			timeTruncate: time.Microsecond,
-			data:         `[{"value":{"Boolean":true,"Int":1307298102,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int64":927041163082605,"UInt":1307298102,"UInt8":12,"UInt16":8023,"UInt24":2880217,"UInt64":927041163082605,"Float":18372.36240184391,"Float32":57.16038,"Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
 			results:      results,
 		},
 		{
@@ -339,26 +339,26 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.JavaScript,
 			schema:   schema,
-			data:     `[{"value":{"Boolean":true}},{"value":{"Int":547}}]`,
-			results:  []Result{{Value: map[string]any{"Boolean": true}}, {Value: map[string]any{"Int": 547}}},
+			data:     `[{"value":{"Boolean":true}},{"value":{"Int32":547}}]`,
+			results:  []Result{{Value: map[string]any{"Boolean": true}}, {Value: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
-			data:     `[{"value":{"foo":"boo"}},{"value":{"Int":547}}]`,
-			results:  []Result{{Error: newErrPropertyNotExist("foo", jsTerms)}, {Value: map[string]any{"Int": 547}}},
+			data:     `[{"value":{"foo":"boo"}},{"value":{"Int32":547}}]`,
+			results:  []Result{{Error: newErrPropertyNotExist("foo", jsTerms)}, {Value: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `[{"value":{"Object":{}}},{"value":{"Int":547}}]`,
-			results:  []Result{{Error: newErrMissingProperty("Object.a", pyTerms)}, {Value: map[string]any{"Int": 547}}},
+			data:     `[{"value":{"Object":{}}},{"value":{"Int32":547}}]`,
+			results:  []Result{{Error: newErrMissingProperty("Object.a", pyTerms)}, {Value: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
-			data:     `[{"value":{"Boolean":3}},{"value":{"Int":547}}]`,
-			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: 3`, "Boolean", jsTerms)}, {Value: map[string]any{"Int": 547}}},
+			data:     `[{"value":{"Boolean":3}},{"value":{"Int32":547}}]`,
+			results:  []Result{{Error: newErrInvalidValue(`does not have a valid value: 3`, "Boolean", jsTerms)}, {Value: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.Python,
@@ -435,16 +435,18 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 		return fmt.Errorf("expected %#v (%T), got nil", v1, v1)
 	}
 	switch t.PhysicalType() {
-	case types.PtFloat32:
-		f2, ok := v2.(float64)
-		if !ok {
-			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
+	case types.PtFloat:
+		if t.BitSize() == 32 {
+			f2, ok := v2.(float64)
+			if !ok {
+				return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
+			}
+			f1 := v1.(float64)
+			if float32(f1) != float32(f2) {
+				return fmt.Errorf("expected value %f, got %f", float32(f1), float32(f2))
+			}
+			return nil
 		}
-		f1 := v1.(float64)
-		if float32(f1) != float32(f2) {
-			return fmt.Errorf("expected value %f, got %f", float32(f1), float32(f2))
-		}
-		return nil
 	case types.PtDecimal:
 		d2, ok := v2.(decimal.Decimal)
 		if !ok {

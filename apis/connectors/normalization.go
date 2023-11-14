@@ -52,7 +52,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			value = src
 			valid = true
 		}
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+	case types.PtInt:
 		var v int64
 		switch src := src.(type) {
 		case int:
@@ -79,7 +79,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = int(v)
 		}
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		var v uint64
 		switch src := src.(type) {
 		case uint:
@@ -99,14 +99,14 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			valid = err == nil
 		}
 		if valid {
-			min, max := typ.UIntRange()
+			min, max := typ.UintRange()
 			if v < min || v > max {
 				return nil, fmt.Errorf("app returned a value of %d for property %s which is not within the expected range of [%d, %d]",
 					v, name, min, max)
 			}
 			value = uint(v)
 		}
-	case types.PtFloat, types.PtFloat32:
+	case types.PtFloat:
 		var v float64
 		switch src := src.(type) {
 		case float64:
@@ -392,7 +392,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = src
 			valid = true
 		}
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+	case types.PtInt:
 		var v int64
 		switch src := src.(type) {
 		case int:
@@ -423,7 +423,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			value = int(v)
 		}
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		var v uint64
 		switch src := src.(type) {
 		case uint:
@@ -447,14 +447,14 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			valid = err == nil
 		}
 		if valid {
-			min, max := typ.UIntRange()
+			min, max := typ.UintRange()
 			if v < min || v > max {
 				return nil, fmt.Errorf("database returned a value of %d for column %s which is not within the expected range of [%d, %d]",
 					v, name, min, max)
 			}
 			value = uint(v)
 		}
-	case types.PtFloat, types.PtFloat32:
+	case types.PtFloat:
 		var v float64
 		switch src := src.(type) {
 		case float32:
@@ -465,11 +465,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			valid = true
 		case []byte:
 			var err error
-			size := 64
-			if typ.PhysicalType() == types.PtFloat32 {
-				size = 32
-			}
-			v, err = strconv.ParseFloat(string(src), size)
+			v, err = strconv.ParseFloat(string(src), typ.BitSize())
 			valid = err == nil
 		}
 		if valid {

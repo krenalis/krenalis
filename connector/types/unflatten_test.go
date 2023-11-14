@@ -47,8 +47,8 @@ func TestUnflatten(t *testing.T) {
 			Flatten:   Array(Object([]Property{{Name: "address", Type: Object([]Property{{Name: "street", Type: Text()}}), Required: true, Flat: true}})),
 			Unflatten: Array(Object([]Property{{Name: "address", Type: Object([]Property{{Name: "street", Type: Text()}}), Required: true}})),
 		}, {
-			Flatten:   Map(Int()),
-			Unflatten: Map(Int()),
+			Flatten:   Map(Int(32)),
+			Unflatten: Map(Int(32)),
 		}, {
 			Flatten:   Map(Object([]Property{{Name: "email", Type: Object([]Property{{Name: "street", Type: Text()}}), Nullable: true, Flat: true}})),
 			Unflatten: Map(Object([]Property{{Name: "email", Type: Object([]Property{{Name: "street", Type: Text()}}), Nullable: true}})),

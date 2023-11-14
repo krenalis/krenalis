@@ -128,7 +128,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 			Schema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "item_name", Type: types.Text()},
-				{Name: "item_id", Type: types.Int()},
+				{Name: "item_id", Type: types.Int(32)},
 			}),
 		},
 		{

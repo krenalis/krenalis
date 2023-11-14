@@ -292,14 +292,12 @@ func toString(v any, t types.Type) string {
 	switch pt := t.PhysicalType(); pt {
 	case types.PtBoolean:
 		return strconv.FormatBool(v.(bool))
-	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtYear:
+	case types.PtInt, types.PtYear:
 		return strconv.Itoa(v.(int))
-	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+	case types.PtUint:
 		return strconv.FormatUint(uint64(v.(uint)), 10)
 	case types.PtFloat:
-		return strconv.FormatFloat(v.(float64), 'g', -1, 64)
-	case types.PtFloat32:
-		return strconv.FormatFloat(v.(float64), 'g', -1, 32)
+		return strconv.FormatFloat(v.(float64), 'g', -1, t.BitSize())
 	case types.PtDecimal:
 		return v.(decimal.Decimal).String()
 	case types.PtDateTime:

@@ -11,6 +11,10 @@ const getSchemaComboboxItems = (schema: ObjectType, nonSelectableProperties?: st
 	const items: ComboboxItem[] = [];
 	for (const propertyName in flatSchema) {
 		if (nonSelectableProperties && nonSelectableProperties.includes(propertyName)) continue;
+		let typ = flatSchema[propertyName].type;
+		if (typ === 'Int' || typ === 'Uint' || typ === 'Float') {
+			typ += `(${flatSchema[propertyName].size})`;
+		}
 		items.push({
 			content: (
 				<Fragment key={propertyName}>
@@ -24,7 +28,7 @@ const getSchemaComboboxItems = (schema: ObjectType, nonSelectableProperties?: st
 							propertyName
 						)}
 					</div>
-					<div className='propertiesItemType'>{flatSchema[propertyName].type}</div>
+					<div className='propertiesItemType'>{typ}</div>
 				</Fragment>
 			),
 			term: propertyName,

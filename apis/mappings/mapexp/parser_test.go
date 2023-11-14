@@ -30,7 +30,7 @@ func TestParseExpression(t *testing.T) {
 	}{
 		{`"Page View"`, []part{{value: `Page View`, typ: types.Text()}}, ``, nil},
 		{` 'Page View' `, []part{{value: `Page View`, typ: types.Text()}}, ``, nil},
-		{`51`, []part{{value: 51, typ: types.Int()}}, ``, nil},
+		{`51`, []part{{value: 51, typ: types.Int(32)}}, ``, nil},
 		{`-6.803`, []part{{value: n, typ: dt}}, ``, nil},
 		{`true`, []part{{value: true, typ: types.Boolean()}}, ``, nil},
 		{`false`, []part{{value: false, typ: types.Boolean()}}, ``, nil},
@@ -55,13 +55,13 @@ func TestParseExpression(t *testing.T) {
 		{`coalesce(a)`, []part{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`a`}}}}}}, ``, nil},
 		{`coalesce(a, 'b')`, []part{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`a`}}}, {{value: `b`, typ: types.Text()}}}}}, ``, nil},
 		{`coalesce(5, 'a', coalesce(b))`, []part{{path: types.Path{`coalesce`}, args: [][]part{
-			{{value: 5, typ: types.Int()}}, {{value: `a`, typ: types.Text()}}, {{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}}}}}},
+			{{value: 5, typ: types.Int(32)}}, {{value: `a`, typ: types.Text()}}, {{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}}}}}},
 		}}}, ``, nil},
 		{`coalesce("a" coalesce(b, 5) c)`, []part{{path: types.Path{`coalesce`}, args: [][]part{
-			{{value: `a`, path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}}}, {{value: 5, typ: types.Int()}}}, typ: types.Text()}, {path: types.Path{`c`}}},
+			{{value: `a`, path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}}}, {{value: 5, typ: types.Int(32)}}}, typ: types.Text()}, {path: types.Path{`c`}}},
 		}}}, ``, nil},
 		{`coalesce( coalesce ( x , 5 ) )`, []part{{path: types.Path{`coalesce`}, args: [][]part{
-			{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`x`}}}, {{value: 5, typ: types.Int()}}}}},
+			{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`x`}}}, {{value: 5, typ: types.Int(32)}}}}},
 		}}}, ``, nil},
 		{`coalesce( , )`, nil, ``, errors.New("unexpected ',', expecting argument")},
 		{`coalesce(a, )`, nil, ``, errors.New("unexpected ), expecting argument")},

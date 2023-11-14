@@ -24,12 +24,12 @@ func TestTypes(t *testing.T) {
 		radix      *string
 		scale      *string
 	}{
-		{`smallint`, "", types.Int16(), nil, nil, nil, nil},
-		{`integer`, "", types.Int(), nil, nil, nil, nil},
-		{`bigint`, "", types.Int64(), nil, nil, nil, nil},
+		{`smallint`, "", types.Int(16), nil, nil, nil, nil},
+		{`integer`, "", types.Int(32), nil, nil, nil, nil},
+		{`bigint`, "", types.Int(64), nil, nil, nil, nil},
 		{`numeric`, "", types.Decimal(10, 3), nil, pointer("10"), pointer("10"), pointer("3")},
-		{`real`, "", types.Float32(), nil, nil, nil, nil},
-		{`double precision`, "", types.Float(), nil, nil, nil, nil},
+		{`real`, "", types.Float(32), nil, nil, nil, nil},
+		{`double precision`, "", types.Float(64), nil, nil, nil, nil},
 		{`character varying`, "", types.Text().WithCharLen(20), pointer("20"), nil, nil, nil},
 		{`character`, "", types.Text().WithCharLen(8), pointer("8"), nil, nil, nil},
 		{`text`, "", types.Text(), nil, nil, nil, nil},
@@ -41,7 +41,7 @@ func TestTypes(t *testing.T) {
 		{`uuid`, "", types.UUID(), nil, nil, nil, nil},
 		{`json`, "", types.JSON(), nil, nil, nil, nil},
 		{`jsonb`, "", types.JSON(), nil, nil, nil, nil},
-		{`ARRAY`, `_int4`, types.Array(types.Int()), nil, nil, nil, nil},
+		{`ARRAY`, `_int4`, types.Array(types.Int(32)), nil, nil, nil, nil},
 		{`ARRAY`, `_varchar`, types.Array(types.Text()), nil, nil, nil, nil},
 		{`ARRAY`, `_bool`, types.Array(types.Boolean()), nil, nil, nil, nil},
 	}

@@ -97,8 +97,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 		}
 
 		switch pt := baseExpr.Column.Type; pt {
-		case
-			types.PtBoolean:
+		case types.PtBoolean:
 			v, ok := baseExpr.Value.(bool)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
@@ -108,18 +107,13 @@ func renderExpr(exp expr.Expr) (string, error) {
 			} else {
 				s.WriteString("FALSE")
 			}
-		case
-			types.PtInt,
-			types.PtInt16,
-			types.PtInt64:
+		case types.PtInt:
 			v, ok := baseExpr.Value.(int)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
 			s.WriteString(strconv.Itoa(v))
-		case
-			types.PtFloat,
-			types.PtFloat32:
+		case types.PtFloat:
 			v, ok := baseExpr.Value.(float64)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
