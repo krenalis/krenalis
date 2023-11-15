@@ -442,6 +442,11 @@ inherit the disabled style */
 
 .action .transformation-box__header-buttons sl-button[variant='default'] img {
 	filter: grayscale(100%);
+	transition: filter 0.3s;
+}
+
+.action .transformation-box__header-buttons sl-button[variant='default']:hover img {
+	filter: grayscale(0%);
 }
 
 .action .transformation-box__mappings-button::part(base) {
