@@ -30,6 +30,9 @@ import (
 //
 // schema must be an Object or invalid. If it is invalid, values is marshaled as
 // an array of empty objects.
+//
+// Unlike Unmarshal, Marshal does not validate the values against the schema.
+// The values must already be validated.
 func Marshal(b []byte, schema types.Type, values []map[string]any, language state.Language) ([]byte, error) {
 	if schema.Valid() && schema.PhysicalType() != types.PtObject {
 		return nil, errors.New("apis/transformers: schema is not an object")
