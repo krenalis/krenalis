@@ -364,6 +364,89 @@ inherit the disabled style */
 	display: none;
 }
 
+.action .transformation-box {
+	border-radius: 20px;
+	background-color: var(--bg-primary);
+	box-shadow: var(--sl-shadow-small);
+	border: 1px solid var(--sl-color-neutral-200);
+}
+
+.action .transformation-box--mappings {
+	background-color: var(--bg-gray);
+}
+
+.action .transformation-box__header {
+	background-color: var(--bg-primary);
+	border-radius: 20px;
+	padding: 20px 30px;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	color: var(--sl-color-neutral-500);
+	text-transform: capitalize;
+	font-size: 13px;
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+}
+
+.action .transformation-box__header-title {
+	font-size: 15px;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.action .transformation-box__header-icon {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.action .transformation-box__header-title img {
+	max-height: 25px;
+	width: auto;
+}
+
+.action .transformation-box__header-icon > sl-icon {
+	font-size: 20px;
+}
+
+.action .transformation-box__header-buttons sl-icon {
+	font-size: 14px;
+}
+
+.action .transformation-box__header-buttons img {
+	max-height: 18px;
+	width: auto;
+}
+
+.action .transformation-box__header-buttons sl-button[variant='default']::part(base) {
+	background-color: hsl(0deg 0% 94.27%);
+}
+
+.action .transformation-box__header-buttons sl-button[variant='default'] img {
+	filter: grayscale(100%);
+}
+
+.action .transformation-box__header-buttons sl-button::part(label) {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.action .transformation-box--mappings .transformation-box__body {
+	padding: 30px;
+}
+
+.action .transformation-box .editorWrapper {
+	border-radius: 0;
+	box-shadow: none;
+	border: 0;
+	background-color: transparent;
+}
+
 .action .fullscreenTransformation {
 	position: fixed;
 	left: 0;
@@ -797,24 +880,18 @@ inherit the disabled style */
 	height: 100%;
 }
 
-.action .fullscreenTransformation .editorPanel .closeButtonWrapper {
-	position: absolute;
-	left: 0;
-	bottom: 0;
-	z-index: 50;
-	width: 100%;
-	background: var(--bg-gray);
-	height: 60px;
+.action .fullscreenTransformation .editorPanel .transformation-box {
+	border-radius: 0;
+	box-shadow: none;
+	border: 0;
 	border-top: 1px solid var(--border-primary);
-	border-bottom: 2px solid var(--border-primary);
-	display: flex;
-	justify-content: end;
-	align-items: center;
-	padding-right: 15px;
 }
 
-.action .fullscreenTransformation .editorPanel .closeButtonWrapper sl-button {
-	min-width: 200px;
+.action .fullscreenTransformation .editorPanel .transformation-box__header {
+	background-color: var(--bg-gray);
+	border-radius: 0;
+	height: 60px;
+	border-bottom: 2px solid var(--border-primary);
 }
 
 .action .fullscreenTransformation .editorPanel .editorWrapper {
@@ -827,15 +904,6 @@ inherit the disabled style */
 
 .action .fullscreenTransformation .editorPanel .editorWrapper .editor {
 	height: 100%;
-}
-
-.action .fullscreenTransformation .editorPanel .editorWrapper .heading {
-	background-color: var(--bg-gray);
-	border: 0;
-	border-radius: 0;
-	height: 60px;
-	border-top: 1px solid var(--border-primary);
-	border-bottom: 2px solid var(--border-primary);
 }
 
 .action .matchingProperties {

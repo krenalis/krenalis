@@ -1,7 +1,12 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, ReactNode } from 'react';
 import { updateMappingProperty, autocompleteExpression } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
-import { flattenSchema, isIdentifierProperty } from '../../../lib/helpers/transformedAction';
+import {
+	TransformedAction,
+	TransformedActionType,
+	flattenSchema,
+	isIdentifierProperty,
+} from '../../../lib/helpers/transformedAction';
 import { rawTransformationFunctions } from './Action.constants';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
@@ -20,9 +25,6 @@ import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/inde
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -43,6 +45,7 @@ import extractSpecialProperties from '../../../lib/utils/extractSpecialPropertie
 import { EventListenerEvent, Sample } from '../../../types/internal/app';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import Workspace from '../../../types/external/workspace';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -58,9 +61,8 @@ const timestampFormats = {
 };
 
 const ActionMapping = forwardRef<any>((_, ref) => {
-	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
-	const [selectedLanguage, setSelectedLanguage] = useState<string>();
+	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 
 	const { api, showError, workspaces, selectedWorkspace } = useContext(AppContext);
@@ -78,24 +80,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	} = useContext(ActionContext);
 
 	const propertiesListRef = useRef(null);
-	const minimizedEditorRef = useRef(null);
-	const fullscreenEditorRef = useRef(null);
-	const minimizedLanguageDropdownRef = useRef(null);
-	const fullscreenLanguageDropdownRef = useRef(null);
-
-	useEffect(() => {
-		if (minimizedLanguageDropdownRef.current == null) {
-			return;
-		}
-		// When the user clicks on the language dropdown of the minimized editor
-		// (whose submenu is hidden via CSS), wait for the fullscreen editor to
-		// display before opening its language dropdown submenu.
-		minimizedLanguageDropdownRef.current.addEventListener('sl-show', () => {
-			setTimeout(() => {
-				fullscreenLanguageDropdownRef.current.show();
-			}, 500);
-		});
-	}, [minimizedLanguageDropdownRef.current, fullscreenLanguageDropdownRef.current]);
 
 	useEffect(() => {
 		const fetchTransformationLanguages = async () => {
@@ -109,15 +93,13 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			const languages = response.languages;
 			setTransformationLanguages(languages);
 		};
-		if (action.Transformation) {
-			setSelectedLanguage(action.Transformation.Language);
-		}
 		fetchTransformationLanguages();
 	}, []);
 
 	useEffect(() => {
 		if (action.Transformation != null) {
 			setMode('transformation');
+			setSelectedLanguage(action.Transformation.Language);
 		} else {
 			setMode('mappings');
 		}
@@ -158,7 +140,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, [isFullscreenTransformationOpen]);
 
 	useEffect(() => {
-		if (selectedLanguage == null) {
+		if (selectedLanguage == '') {
 			return;
 		}
 		const a = { ...action };
@@ -176,40 +158,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	}, [selectedLanguage]);
 
-	const onMinimizedEditorMount = (editor) => {
-		minimizedEditorRef.current = editor;
-	};
-
-	const onFullscreenEditorMount = (editor) => {
-		fullscreenEditorRef.current = editor;
-	};
-
-	const onSwitchPropertiesMode = () => {
-		setIsAlertOpen(false);
-		setTimeout(() => {
-			const a = { ...action };
-			a.InSchema = null;
-			a.OutSchema = null;
-			if (mode === 'mappings') {
-				a.Mapping = null;
-				a.Transformation = {
-					Source: rawTransformationFunctions[selectedLanguage].replace(
-						'$parameterName',
-						defaultTransformationParameterByTarget[actionType.Target],
-					),
-					Language: selectedLanguage,
-				};
-				setAction(a);
-				setMode('transformation');
-			} else {
-				a.Mapping = flattenSchema(actionType.OutputSchema);
-				a.Transformation = null;
-				setAction(a);
-				setMode('mappings');
-			}
-		}, 150);
-	};
-
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
 		a.Transformation = {
@@ -217,16 +165,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			Language: selectedLanguage,
 		};
 		setAction(a);
-	};
-
-	const onTransformationLanguageSelect = (e) => {
-		setSelectedLanguage(e.detail.item.value);
-		setIsAlertOpen(true);
-	};
-
-	const onLanguageChange = (e) => {
-		const language = e.detail.item.value;
-		setSelectedLanguage(language);
 	};
 
 	const updateProperty = async (name, value) => {
@@ -315,14 +253,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	const onOpenFullscreenTransformation = () => {
 		setIsFullscreenTransformationOpen(true);
-		// wait while the full screen transformation becomes visible.
-		setTimeout(() => {
-			fullscreenEditorRef.current.focus();
-			fullscreenEditorRef.current.setPosition(minimizedEditorRef.current.getPosition());
-		}, 100);
 	};
 
-	const onCloseFullscreen = () => {
+	const onCloseFullscreenTransformation = () => {
 		setIsFullscreenTransformationOpen(false);
 	};
 
@@ -330,7 +263,195 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		return null;
 	}
 
-	let content: ReactNode | null = null;
+	const box = (
+		<TransformationBox
+			mode={mode}
+			setMode={setMode}
+			workspaces={workspaces}
+			selectedWorkspace={selectedWorkspace}
+			action={action}
+			setAction={setAction}
+			propertiesListRef={propertiesListRef}
+			onUpdateProperty={onUpdateProperty}
+			isMappingSectionDisabled={isMappingSectionDisabled}
+			disabledReason={disabledReason}
+			transformationLanguages={transformationLanguages}
+			selectedLanguage={selectedLanguage}
+			setSelectedLanguage={setSelectedLanguage}
+			onOpenFullscreenTransformation={onOpenFullscreenTransformation}
+			onChangeTransformationFunction={onChangeTransformationFunction}
+			isFullscreenTransformationOpen={isFullscreenTransformationOpen}
+			onCloseFullscreenTransformation={onCloseFullscreenTransformation}
+			actionType={actionType}
+			isTransformationAllowed={isTransformationAllowed}
+		/>
+	);
+
+	return (
+		<>
+			<Section
+				ref={ref}
+				title='Properties'
+				description='The relation between the event properties and the action type properties'
+				padded={false}
+				className={mode}
+			>
+				{connection.isFile && connection.isSource && (
+					<div className='specialProperties'>
+						<div className='identityProperty'>
+							<div className='label'>
+								Identity<span className='asterisk'>*</span>:
+							</div>
+							<ComboBoxInput
+								comboBoxListRef={propertiesListRef}
+								onInput={onUpdateIdentityProperty}
+								value={action.IdentityProperty!}
+								name='identityProperty'
+								disabled={isMappingSectionDisabled}
+								className='inputProperty'
+								size='small'
+							/>
+						</div>
+						<div className='timestampProperty'>
+							<div className='timestamp'>
+								<div className='label'>Timestamp:</div>
+								<ComboBoxInput
+									comboBoxListRef={propertiesListRef}
+									onInput={onUpdateTimestampProperty}
+									value={action.TimestampProperty!}
+									name='timestampProperty'
+									disabled={isMappingSectionDisabled}
+									className='inputProperty'
+									size='small'
+								/>
+							</div>
+							<div className='format'>
+								<div className='label'>with format:</div>
+								<SlSelect
+									onSlChange={onChangeTimestampFormat}
+									value={
+										action.TimestampProperty
+											? Object.keys(timestampFormats).find(
+													(key) => timestampFormats[key] === action.TimestampFormat,
+											  )
+											: ''
+									}
+									name='timestampFormat'
+									disabled={action.TimestampProperty == null || action.TimestampProperty === ''}
+									size='small'
+								>
+									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>
+									<SlOption value='rfc3339'>2006-01-02T15:04:05Z07:00</SlOption>
+									<SlOption value='rfc3339WithNanoseconds'>
+										2006-01-02T15:04:05.999999999Z07:00
+									</SlOption>
+									<SlOption value='dateOnly'>2006-01-02</SlOption>
+								</SlSelect>
+							</div>
+						</div>
+					</div>
+				)}
+				{box}
+				<FullscreenTransformation
+					isFullscreenTransformationOpen={isFullscreenTransformationOpen}
+					selectedLanguage={selectedLanguage}
+					body={box}
+					inputSchema={actionType.InputSchema}
+					outputSchema={actionType.OutputSchema}
+				/>
+				<ComboBoxList
+					ref={propertiesListRef}
+					items={getSchemaComboboxItems(actionType.InputSchema)}
+					onSelect={onSelectProperty}
+				/>
+			</Section>
+		</>
+	);
+});
+
+interface TransformationBoxProps {
+	mode: 'mappings' | 'transformation' | '';
+	setMode: React.Dispatch<React.SetStateAction<'mappings' | 'transformation' | ''>>;
+	workspaces: Workspace[];
+	selectedWorkspace: number;
+	action: TransformedAction;
+	setAction: React.Dispatch<React.SetStateAction<TransformedAction>>;
+	propertiesListRef: React.MutableRefObject<any>;
+	onUpdateProperty: (e: any) => Promise<void>;
+	isMappingSectionDisabled: boolean;
+	disabledReason: string;
+	transformationLanguages: string[];
+	selectedLanguage: string;
+	setSelectedLanguage: React.Dispatch<React.SetStateAction<string>>;
+	onOpenFullscreenTransformation: () => void;
+	onChangeTransformationFunction: (source: string) => void;
+	isFullscreenTransformationOpen: boolean;
+	onCloseFullscreenTransformation: () => void;
+	actionType: TransformedActionType;
+	isTransformationAllowed: boolean;
+}
+
+const TransformationBox = ({
+	mode,
+	setMode,
+	workspaces,
+	selectedWorkspace,
+	action,
+	setAction,
+	propertiesListRef,
+	onUpdateProperty,
+	isMappingSectionDisabled,
+	disabledReason,
+	transformationLanguages,
+	selectedLanguage,
+	setSelectedLanguage,
+	onOpenFullscreenTransformation,
+	onChangeTransformationFunction,
+	isFullscreenTransformationOpen,
+	onCloseFullscreenTransformation,
+	actionType,
+	isTransformationAllowed,
+}: TransformationBoxProps) => {
+	const [pendingMode, setPendingMode] = useState<string>('');
+	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
+
+	const onChangeMode = () => {
+		const a = { ...action };
+		a.InSchema = null;
+		a.OutSchema = null;
+		setIsAlertOpen(false);
+		setTimeout(() => {
+			if (pendingMode == 'mappings') {
+				a.Mapping = flattenSchema(actionType.OutputSchema);
+				a.Transformation = null;
+				setSelectedLanguage('');
+				setAction(a);
+				setMode('mappings');
+			} else {
+				a.Mapping = null;
+				a.Transformation = {
+					Source: rawTransformationFunctions[pendingMode].replace(
+						'$parameterName',
+						defaultTransformationParameterByTarget[actionType.Target],
+					),
+					Language: pendingMode,
+				};
+				setSelectedLanguage(pendingMode);
+				setAction(a);
+				setMode('transformation');
+			}
+		}, 200);
+	};
+
+	const onModeClick = (newMode: string) => {
+		if (newMode === mode) {
+			return;
+		}
+		setPendingMode(newMode);
+		setIsAlertOpen(true);
+	};
+
+	let body: ReactNode;
 	if (mode === 'mappings') {
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		const mappings: ReactNode[] = [];
@@ -391,7 +512,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				</div>,
 			);
 		}
-		content = (
+		body = (
 			<div className='mappings'>
 				{isMappingSectionDisabled && (
 					<SlAlert variant='danger' className='mappingsDisabledAlert' open>
@@ -402,27 +523,16 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				<div>{mappings}</div>
 			</div>
 		);
-	} else if (mode === 'transformation') {
+	} else {
 		const isTransformationLanguageDeprecated = !transformationLanguages.includes(selectedLanguage);
-		const fullscreenButton = (
-			<SlButton onClick={onOpenFullscreenTransformation} variant='primary'>
-				Edit...
-			</SlButton>
-		);
-		content = (
+		body = (
 			<div className='transformation'>
 				<EditorWrapper
 					language={selectedLanguage}
-					languageChoices={transformationLanguages}
-					languageDropdownRef={minimizedLanguageDropdownRef}
-					actions={fullscreenButton}
 					height={400}
 					name='actionTransformationEditor'
 					value={action.Transformation!.Source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
-					isReadOnly={true}
-					onClick={onOpenFullscreenTransformation}
-					onMount={onMinimizedEditorMount}
 					className='minimizedTransformation'
 				/>
 				{isTransformationLanguageDeprecated && (
@@ -431,125 +541,68 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 						{selectedLanguage} is not supported anymore
 					</SlAlert>
 				)}
-				<FullscreenTransformation
-					isFullscreenTransformationOpen={isFullscreenTransformationOpen}
-					onCloseFullscreen={onCloseFullscreen}
-					selectedLanguage={selectedLanguage}
-					transformationLanguages={transformationLanguages}
-					onLanguageChange={onLanguageChange}
-					languageDropdownRef={fullscreenLanguageDropdownRef}
-					value={action.Transformation!.Source}
-					onChangeTransformationFunction={onChangeTransformationFunction}
-					inputSchema={actionType.InputSchema}
-					outputSchema={actionType.OutputSchema}
-					onMount={onFullscreenEditorMount}
-				/>
 			</div>
 		);
 	}
 
-	let actionButton: ReactNode;
-	if (mode === 'transformation') {
-		actionButton = (
-			<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-				<SlIcon name='shuffle' slot='prefix'></SlIcon>
-				Switch to mappings
-			</SlButton>
-		);
-	} else {
-		const isTransformationSupported = transformationLanguages.length > 0;
-		if (isTransformationAllowed && isTransformationSupported) {
-			actionButton = (
-				<SlDropdown className='switchToTransformationDropdown'>
-					<SlButton slot='trigger' variant='neutral' size='small' caret>
-						<SlIcon name='file-earmark-code' slot='prefix'></SlIcon>
-						Switch to transformation function
-					</SlButton>
-					<SlMenu onSlSelect={onTransformationLanguageSelect}>
-						{transformationLanguages.map((language) => (
-							<SlMenuItem key={language} value={language}>
-								{getLanguageLogo(language)}
-								{language}
-							</SlMenuItem>
-						))}
-					</SlMenu>
-				</SlDropdown>
-			);
-		}
-	}
-
 	return (
-		<>
-			<Section
-				ref={ref}
-				title='Properties'
-				description='The relation between the event properties and the action type properties'
-				actions={actionButton}
-				padded={false}
-				className={mode}
-			>
-				{connection.isFile && connection.isSource && (
-					<div className='specialProperties'>
-						<div className='identityProperty'>
-							<div className='label'>
-								Identity<span className='asterisk'>*</span>:
+		<div className={`transformation-box${' transformation-box--' + mode}`}>
+			<div className='transformation-box__header'>
+				<div className='transformation-box__header-title'>
+					{isFullscreenTransformationOpen ||
+					!isTransformationAllowed ||
+					transformationLanguages.length == 0 ? (
+						<>
+							<span className='transformation-box__header-icon'>
+								{mode === 'mappings' ? <SlIcon name='shuffle' /> : getLanguageLogo(selectedLanguage)}
+							</span>
+							<div className='transformation-box__header-text'>
+								{mode === 'mappings' ? 'Mappings' : selectedLanguage}
 							</div>
-							<ComboBoxInput
-								comboBoxListRef={propertiesListRef}
-								onInput={onUpdateIdentityProperty}
-								value={action.IdentityProperty!}
-								name='identityProperty'
-								disabled={isMappingSectionDisabled}
-								className='inputProperty'
+						</>
+					) : (
+						<SlButtonGroup className='transformation-box__header-buttons'>
+							<SlButton
 								size='small'
-							/>
-						</div>
-						<div className='timestampProperty'>
-							<div className='timestamp'>
-								<div className='label'>Timestamp:</div>
-								<ComboBoxInput
-									comboBoxListRef={propertiesListRef}
-									onInput={onUpdateTimestampProperty}
-									value={action.TimestampProperty!}
-									name='timestampProperty'
-									disabled={isMappingSectionDisabled}
-									className='inputProperty'
-									size='small'
-								/>
-							</div>
-							<div className='format'>
-								<div className='label'>with format:</div>
-								<SlSelect
-									onSlChange={onChangeTimestampFormat}
-									value={
-										action.TimestampProperty
-											? Object.keys(timestampFormats).find(
-													(key) => timestampFormats[key] === action.TimestampFormat,
-											  )
-											: ''
-									}
-									name='timestampFormat'
-									disabled={action.TimestampProperty == null || action.TimestampProperty === ''}
-									size='small'
-								>
-									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>
-									<SlOption value='rfc3339'>2006-01-02T15:04:05Z07:00</SlOption>
-									<SlOption value='rfc3339WithNanoseconds'>
-										2006-01-02T15:04:05.999999999Z07:00
-									</SlOption>
-									<SlOption value='dateOnly'>2006-01-02</SlOption>
-								</SlSelect>
-							</div>
-						</div>
-					</div>
+								variant={mode === 'mappings' ? 'primary' : 'default'}
+								onClick={() => onModeClick('mappings')}
+							>
+								<SlIcon name='shuffle' slot='prefix' />
+								Mappings
+							</SlButton>
+							{transformationLanguages.map((language) => {
+								return (
+									<SlButton
+										key={language}
+										size='small'
+										variant={
+											mode === 'transformation' && selectedLanguage === language
+												? 'primary'
+												: 'default'
+										}
+										onClick={() => onModeClick(language)}
+									>
+										{getLanguageLogo(language)}
+										{language}
+									</SlButton>
+								);
+							})}
+						</SlButtonGroup>
+					)}
+				</div>
+				{isFullscreenTransformationOpen ? (
+					<SlButton size='small' variant='primary' onClick={onCloseFullscreenTransformation}>
+						<SlIcon name='fullscreen-exit' slot='suffix' />
+						Exit fullscreen
+					</SlButton>
+				) : (
+					<SlButton size='small' variant='primary' onClick={onOpenFullscreenTransformation}>
+						<SlIcon name='arrows-fullscreen' slot='suffix' />
+						Fullscreen
+					</SlButton>
 				)}
-				{content}
-				<ComboBoxList
-					ref={propertiesListRef}
-					items={getSchemaComboboxItems(actionType.InputSchema)}
-					onSelect={onSelectProperty}
-				/>
-			</Section>
+			</div>
+			<div className='transformation-box__body'>{body}</div>
 			<AlertDialog
 				variant='danger'
 				isOpen={isAlertOpen}
@@ -560,7 +613,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 						<SlButton variant='neutral' onClick={() => setIsAlertOpen(false)}>
 							Cancel
 						</SlButton>
-						<SlButton variant='danger' onClick={onSwitchPropertiesMode}>
+						<SlButton variant='danger' onClick={onChangeMode}>
 							Continue
 						</SlButton>
 					</>
@@ -580,51 +633,24 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					)}
 				</div>
 			</AlertDialog>
-		</>
+		</div>
 	);
-});
-
-const normalizeSample = (sample: Sample): Record<string, any> => {
-	const normalized = {};
-	for (const k in sample) {
-		normalized[k] = sample[k].value;
-	}
-	return normalized;
 };
-
-function removeTrailingS(str: string) {
-	if (str.endsWith('s')) {
-		return str.slice(0, -1);
-	}
-	return str;
-}
 
 interface FullscreenTransformationProps {
 	isFullscreenTransformationOpen: boolean;
-	onCloseFullscreen: () => void;
 	selectedLanguage: string;
-	transformationLanguages: string[];
-	value: string;
-	onLanguageChange: (e: any) => void;
-	languageDropdownRef: any;
-	onChangeTransformationFunction: (source: string) => void;
+	body: ReactNode;
 	inputSchema: ObjectType;
 	outputSchema: ObjectType;
-	onMount?: (editor: any) => void;
 }
 
 const FullscreenTransformation = ({
-	onCloseFullscreen,
 	isFullscreenTransformationOpen,
 	selectedLanguage,
-	transformationLanguages,
-	onLanguageChange,
-	languageDropdownRef,
-	value,
-	onChangeTransformationFunction,
+	body,
 	inputSchema,
 	outputSchema,
-	onMount,
 }: FullscreenTransformationProps) => {
 	const [isInputSchemaSelected, setIsInputSchemaSelected] = useState<boolean>(false);
 	const [isOutputSchemaSelected, setIsOutputSchemaSelected] = useState<boolean>(false);
@@ -1242,27 +1268,140 @@ const FullscreenTransformation = ({
 				</div>
 				<div className='rightPanel' slot='end'>
 					<div slot='start' className='editorPanel'>
-						<EditorWrapper
-							language={selectedLanguage}
-							languageChoices={transformationLanguages}
-							languageDropdownRef={languageDropdownRef}
-							onLanguageChange={onLanguageChange}
-							name='fullscreenActionTransformationEditor'
-							value={value}
-							onChange={(source) => onChangeTransformationFunction(source!)}
-							onMount={onMount}
-						/>
-						<div className='closeButtonWrapper'>
-							<SlButton onClick={onCloseFullscreen} variant='primary'>
-								Exit editor
-							</SlButton>
-						</div>
+						{body}
 					</div>
 				</div>
 			</SlSplitPanel>
 		</div>
 	);
 };
+
+interface TransformationNestedPropertiesProps {
+	property: Property;
+	language: string;
+	nesting: number;
+	parentName?: string;
+}
+
+const TransformationNestedProperties = ({
+	property,
+	language,
+	nesting,
+	parentName,
+}: TransformationNestedPropertiesProps) => {
+	const [isExpanded, setIsExpanded] = useState<boolean>(false);
+
+	const typ = property.type as ObjectType;
+	return (
+		<div
+			className={`property${isExpanded ? ' expand' : ''}${
+				property.label != null && property.label !== '' ? ' hasLabel' : ''
+			}`}
+		>
+			<div className='parentProperty'>
+				<SlIcon
+					name='caret-right-fill'
+					onClick={() => {
+						setIsExpanded(!isExpanded);
+					}}
+				/>
+				<TransformationProperty property={property} language={language} isParent={true} />
+			</div>
+			<div className='subProperties'>
+				{isExpanded &&
+					typ.properties.map((p) => {
+						if (p.type.name === 'Object') {
+							return (
+								<TransformationNestedProperties
+									key={p.name}
+									property={p}
+									language={language}
+									nesting={nesting + 1}
+									parentName={parentName ? parentName + '.' + property.name : property.name}
+								/>
+							);
+						} else {
+							return (
+								<TransformationProperty
+									key={p.name}
+									property={p}
+									language={language}
+									parentName={parentName ? parentName + '.' + property.name : property.name}
+								/>
+							);
+						}
+					})}
+			</div>
+		</div>
+	);
+};
+
+interface TransformationPropertyProps {
+	property: Property;
+	language: string;
+	isParent?: boolean;
+	parentName?: string;
+}
+
+const TransformationProperty = ({ property, language, isParent, parentName }: TransformationPropertyProps) => {
+	const { workspaces, selectedWorkspace } = useContext(AppContext);
+
+	console.log(language);
+
+	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+	let isIdentifier = false;
+	if (parentName) {
+		isIdentifier = workspace.Identifiers.includes(parentName + '.' + property.name);
+	} else {
+		isIdentifier = workspace.Identifiers.includes(property.name);
+	}
+
+	return (
+		<div className={isParent ? '' : 'property'}>
+			<div className='name'>
+				{isIdentifier && (
+					<SlTooltip content='Used as identifier'>
+						<SlIcon className='identifierIcon' name='person-check' />
+					</SlTooltip>
+				)}
+				{property.required && (
+					<SlTooltip content='Required'>
+						<SlIcon className='requiredIcon' name='asterisk' />
+					</SlTooltip>
+				)}
+				{property.name}
+				{property.label != null && property.label !== '' && <span className='label'>({property.label})</span>}
+				<SlCopyButton
+					className='copyProperty'
+					value={property.name}
+					copyLabel='Click to copy'
+					successLabel='✓ Copied'
+					errorLabel='Copying to clipboard is not supported by your browser'
+				/>
+			</div>
+			<div className='type'>
+				{language === ''
+					? property.type.name
+					: language === 'Python'
+					? fromPhysicalTypeToPythonType(property.type)
+					: fromPhysicalTypeToJavascriptType(property.type)}
+			</div>
+		</div>
+	);
+};
+
+function isElementVisibleInLeftPanel(element: Element, container: Element) {
+	const elementRect = element.getBoundingClientRect();
+	const containerRect = container.getBoundingClientRect();
+
+	const elementTop = elementRect.top;
+	const elementBottom = elementRect.bottom;
+	const containerTop = containerRect.top + container.scrollTop;
+	const containerBottom = containerTop + container.clientHeight;
+
+	const isVerticallyVisible = elementTop >= containerTop && elementBottom <= containerBottom;
+	return isVerticallyVisible;
+}
 
 function fromPhysicalTypeToJavascriptType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
@@ -1350,127 +1489,19 @@ function fromPhysicalTypeToPythonType(type: Type) {
 	}
 }
 
-interface TransformationNestedPropertiesProps {
-	property: Property;
-	language: string;
-	nesting: number;
-	parentName?: string;
-}
-
-const TransformationNestedProperties = ({
-	property,
-	language,
-	nesting,
-	parentName,
-}: TransformationNestedPropertiesProps) => {
-	const [isExpanded, setIsExpanded] = useState<boolean>(false);
-
-	const typ = property.type as ObjectType;
-	return (
-		<div
-			className={`property${isExpanded ? ' expand' : ''}${
-				property.label != null && property.label !== '' ? ' hasLabel' : ''
-			}`}
-		>
-			<div className='parentProperty'>
-				<SlIcon
-					name='caret-right-fill'
-					onClick={() => {
-						setIsExpanded(!isExpanded);
-					}}
-				/>
-				<TransformationProperty property={property} language={language} isParent={true} />
-			</div>
-			<div className='subProperties'>
-				{isExpanded &&
-					typ.properties.map((p) => {
-						if (p.type.name === 'Object') {
-							return (
-								<TransformationNestedProperties
-									key={p.name}
-									property={p}
-									language={language}
-									nesting={nesting + 1}
-									parentName={parentName ? parentName + '.' + property.name : property.name}
-								/>
-							);
-						} else {
-							return (
-								<TransformationProperty
-									key={p.name}
-									property={p}
-									language={language}
-									parentName={parentName ? parentName + '.' + property.name : property.name}
-								/>
-							);
-						}
-					})}
-			</div>
-		</div>
-	);
-};
-
-interface TransformationPropertyProps {
-	property: Property;
-	language: string;
-	isParent?: boolean;
-	parentName?: string;
-}
-
-const TransformationProperty = ({ property, language, isParent, parentName }: TransformationPropertyProps) => {
-	const { workspaces, selectedWorkspace } = useContext(AppContext);
-
-	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
-	let isIdentifier = false;
-	if (parentName) {
-		isIdentifier = workspace.Identifiers.includes(parentName + '.' + property.name);
-	} else {
-		isIdentifier = workspace.Identifiers.includes(property.name);
+const normalizeSample = (sample: Sample): Record<string, any> => {
+	const normalized = {};
+	for (const k in sample) {
+		normalized[k] = sample[k].value;
 	}
-
-	return (
-		<div className={isParent ? '' : 'property'}>
-			<div className='name'>
-				{isIdentifier && (
-					<SlTooltip content='Used as identifier'>
-						<SlIcon className='identifierIcon' name='person-check' />
-					</SlTooltip>
-				)}
-				{property.required && (
-					<SlTooltip content='Required'>
-						<SlIcon className='requiredIcon' name='asterisk' />
-					</SlTooltip>
-				)}
-				{property.name}
-				{property.label != null && property.label !== '' && <span className='label'>({property.label})</span>}
-				<SlCopyButton
-					className='copyProperty'
-					value={property.name}
-					copyLabel='Click to copy'
-					successLabel='✓ Copied'
-					errorLabel='Copying to clipboard is not supported by your browser'
-				/>
-			</div>
-			<div className='type'>
-				{language === 'Python'
-					? fromPhysicalTypeToPythonType(property.type)
-					: fromPhysicalTypeToJavascriptType(property.type)}
-			</div>
-		</div>
-	);
+	return normalized;
 };
 
-function isElementVisibleInLeftPanel(element: Element, container: Element) {
-	const elementRect = element.getBoundingClientRect();
-	const containerRect = container.getBoundingClientRect();
-
-	const elementTop = elementRect.top;
-	const elementBottom = elementRect.bottom;
-	const containerTop = containerRect.top + container.scrollTop;
-	const containerBottom = containerTop + container.clientHeight;
-
-	const isVerticallyVisible = elementTop >= containerTop && elementBottom <= containerBottom;
-	return isVerticallyVisible;
+function removeTrailingS(str: string) {
+	if (str.endsWith('s')) {
+		return str.slice(0, -1);
+	}
+	return str;
 }
 
 export default ActionMapping;

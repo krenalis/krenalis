@@ -3,8 +3,8 @@ import TransformedConnection from '../lib/helpers/transformedConnection';
 import { TransformedAction, TransformedActionType } from '../lib/helpers/transformedAction';
 
 interface ActionContext {
-	mode: string;
-	setMode: React.Dispatch<React.SetStateAction<string>>;
+	mode: 'mappings' | 'transformation' | '';
+	setMode: React.Dispatch<React.SetStateAction<'mappings' | 'transformation' | ''>>;
 	connection: TransformedConnection;
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction | undefined>>;

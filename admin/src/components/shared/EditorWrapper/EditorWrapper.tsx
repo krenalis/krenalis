@@ -23,6 +23,7 @@ interface EditorWrapperProps {
 	onClick?: () => void;
 	onMount?: (editor: any) => void;
 	isReadOnly?: boolean;
+	showHeading?: boolean;
 	className?: string;
 }
 
@@ -40,6 +41,7 @@ const EditorWrapper = ({
 	isReadOnly,
 	onClick,
 	onMount,
+	showHeading,
 	className,
 	...delegated
 }: EditorWrapperProps) => {
@@ -59,28 +61,30 @@ const EditorWrapper = ({
 
 	return (
 		<div className={`editorWrapper${className ? ' ' + className : ''}`} onClick={onClick}>
-			<div className='heading'>
-				<div className='logoAndLanguage'>
-					<span className='languageLogo'>{languageLogo}</span>
-					{languageChoices ? (
-						<SlDropdown className='switchEditorLanguageDropdown' ref={languageDropdownRef}>
-							<SlButton slot='trigger' variant='text' size='small' caret>
-								{language}
-							</SlButton>
-							<SlMenu onSlSelect={onLanguageChange}>
-								{languageChoices.map((language) => (
-									<SlMenuItem key={language} value={language}>
-										{language}
-									</SlMenuItem>
-								))}
-							</SlMenu>
-						</SlDropdown>
-					) : (
-						<span className='language'>{language}</span>
-					)}
+			{showHeading && (
+				<div className='heading'>
+					<div className='logoAndLanguage'>
+						<span className='languageLogo'>{languageLogo}</span>
+						{languageChoices ? (
+							<SlDropdown className='switchEditorLanguageDropdown' ref={languageDropdownRef}>
+								<SlButton slot='trigger' variant='text' size='small' caret>
+									{language}
+								</SlButton>
+								<SlMenu onSlSelect={onLanguageChange}>
+									{languageChoices.map((language) => (
+										<SlMenuItem key={language} value={language}>
+											{language}
+										</SlMenuItem>
+									))}
+								</SlMenu>
+							</SlDropdown>
+						) : (
+							<span className='language'>{language}</span>
+						)}
+					</div>
+					<div className='actions'>{actions}</div>
 				</div>
-				<div className='actions'>{actions}</div>
-			</div>
+			)}
 			<div className='editor' style={{ width: width ? `${width}px` : '', height: height ? `${height}px` : '' }}>
 				<Editor
 					key={key}
