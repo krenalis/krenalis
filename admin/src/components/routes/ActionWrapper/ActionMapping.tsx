@@ -563,18 +563,17 @@ const TransformationBox = ({
 					) : (
 						<SlButtonGroup className='transformation-box__header-buttons'>
 							<SlButton
-								size='small'
+								className='transformation-box__mappings-button'
 								variant={mode === 'mappings' ? 'primary' : 'default'}
 								onClick={() => onModeClick('mappings')}
 							>
-								<SlIcon name='shuffle' slot='prefix' />
+								<SlIcon name='shuffle' />
 								Mappings
 							</SlButton>
 							{transformationLanguages.map((language) => {
 								return (
 									<SlButton
 										key={language}
-										size='small'
 										variant={
 											mode === 'transformation' && selectedLanguage === language
 												? 'primary'
@@ -590,17 +589,22 @@ const TransformationBox = ({
 						</SlButtonGroup>
 					)}
 				</div>
-				{isFullscreenTransformationOpen ? (
-					<SlButton size='small' variant='primary' onClick={onCloseFullscreenTransformation}>
-						<SlIcon name='fullscreen-exit' slot='suffix' />
-						Exit fullscreen
-					</SlButton>
-				) : (
-					<SlButton size='small' variant='primary' onClick={onOpenFullscreenTransformation}>
-						<SlIcon name='arrows-fullscreen' slot='suffix' />
-						Fullscreen
-					</SlButton>
-				)}
+				<SlButton
+					className='transformation-box__fullscreen-button'
+					variant='primary'
+					onClick={
+						isFullscreenTransformationOpen
+							? onCloseFullscreenTransformation
+							: onOpenFullscreenTransformation
+					}
+				>
+					{isFullscreenTransformationOpen ? (
+						<SlIcon name='fullscreen-exit' />
+					) : (
+						<SlIcon name='arrows-fullscreen' />
+					)}
+					{isFullscreenTransformationOpen ? 'Exit fullscreen' : 'Fullscreen'}
+				</SlButton>
 			</div>
 			<div className='transformation-box__body'>{body}</div>
 			<AlertDialog

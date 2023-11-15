@@ -422,18 +422,30 @@ inherit the disabled style */
 	width: auto;
 }
 
+.action .transformation-box__header-buttons sl-button::part(base),
+.action .transformation-box__fullscreen-button::part(base) {
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+.action .transformation-box__header-buttons sl-button::part(label),
+.action .transformation-box__fullscreen-button::part(label) {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+}
+
 .action .transformation-box__header-buttons sl-button[variant='default']::part(base) {
-	background-color: hsl(0deg 0% 94.27%);
+	background-color: var(--bg-gray);
 }
 
 .action .transformation-box__header-buttons sl-button[variant='default'] img {
 	filter: grayscale(100%);
 }
 
-.action .transformation-box__header-buttons sl-button::part(label) {
-	display: flex;
-	align-items: center;
-	gap: 8px;
+.action .transformation-box__mappings-button::part(base) {
+	padding-left: 6px !important;
 }
 
 .action .transformation-box--mappings .transformation-box__body {
