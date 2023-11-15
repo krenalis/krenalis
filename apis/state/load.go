@@ -371,6 +371,7 @@ func (state *State) Load() error {
 						action.Transformation = &transformation
 					}
 					if len(matchPropInternal) > 0 {
+						action.MatchingProperties = &MatchingProperties{}
 						err = json.Unmarshal(matchPropInternal, &action.MatchingProperties.Internal)
 						if err != nil {
 							return err
