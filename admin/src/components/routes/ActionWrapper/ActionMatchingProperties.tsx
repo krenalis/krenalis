@@ -41,6 +41,14 @@ const ActionMatchingProperties = () => {
 		setAction(a);
 	};
 
+	// TODO: remove this when pull request #379 is closed.
+	//
+	// Here, a type conversion to 'any' is necessary, as the server serializes
+	// this data structure inconsistently compared to all other use cases. This
+	// conversion can be removed once pull request #379 is closed.
+	const internalMatchingProperty = action.MatchingProperties!.Internal as any;
+	const externalMatchingProperty = action.MatchingProperties!.External as any;
+
 	return (
 		<Section
 			title={`Matching properties`}
@@ -51,7 +59,7 @@ const ActionMatchingProperties = () => {
 				<ComboBoxInput
 					comboBoxListRef={internalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}
-					value={action.MatchingProperties!.Internal ? action.MatchingProperties!.Internal.name : ''}
+					value={internalMatchingProperty ? internalMatchingProperty.Name : ''}
 					label='Golden record property'
 					data-type='Internal'
 					className='inputProperty'
@@ -66,7 +74,7 @@ const ActionMatchingProperties = () => {
 					comboBoxListRef={externalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}
 					label={`${connection.name}'s property`}
-					value={action.MatchingProperties!.External ? action.MatchingProperties!.External.name : ''}
+					value={externalMatchingProperty ? externalMatchingProperty.Name : ''}
 					data-type='External'
 				></ComboBoxInput>
 				<ComboBoxList
