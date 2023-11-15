@@ -77,6 +77,10 @@
 	cursor: pointer;
 }
 
+.feedbackTooltip .tooltipContent .tooltipError {
+	user-select: text;
+}
+
 .feedbackTooltip .tooltipContent .linkToOverview {
 	margin-top: 5px;
 }
