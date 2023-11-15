@@ -14,6 +14,7 @@ import (
 	"io"
 	"log/slog"
 
+	"chichi/apis/connectors"
 	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/connector"
@@ -51,17 +52,10 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 		}
 
 		for _, user := range users {
-
 			if user.Err != nil {
 				return actionExecutionError{err}
 			}
-
-			value, ok := user.Properties[externalProp.Name]
-			if !ok {
-				// TODO(Gianluca): handle this error properly.
-				return actionExecutionError{fmt.Errorf("user does not contain property %q", externalProp.Name)}
-			}
-			p, err := json.Marshal(value)
+			p, err := json.Marshal(user.Properties[externalProp.Name])
 			if err != nil {
 				return actionExecutionError{err}
 			}
@@ -69,7 +63,6 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 			if err != nil {
 				return actionExecutionError{err}
 			}
-
 		}
 
 		// Set the user cursor.
@@ -240,13 +233,14 @@ func (this *Action) importUsersFromApp(ctx context.Context) error {
 
 		users, next, err := app.Users(ctx, this.action.InSchema, cursor)
 		if err != nil && err != io.EOF {
+			if err, ok := err.(*connectors.SchemaError); ok {
+				err.Msg += ". Please review and update the action before attempting to import the users."
+				return actionExecutionError{err}
+			}
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
 		if err == io.EOF {
 			eof = true
-		} else if len(users) == 0 {
-			connectorID := this.action.Connection().Connector().ID
-			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", connectorID)}
 		}
 
 		for _, user := range users {

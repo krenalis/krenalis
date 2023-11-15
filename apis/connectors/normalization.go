@@ -321,30 +321,31 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			valid = true
 		}
 	case types.PtObject:
-		rv := reflect.ValueOf(src)
-		if rv.Type() == objectType {
-			var err error
+		if src, ok := src.(map[string]any); ok {
 			properties := typ.Properties()
-			propertyByName := make(map[string]types.Property, len(properties))
+			var err error
 			for _, p := range properties {
-				propertyByName[p.Name] = p
-			}
-			n := rv.Len()
-			obj := make(map[string]any, n)
-			iter := rv.MapRange()
-			for iter.Next() {
-				k := iter.Key().String()
-				v := iter.Value().Interface()
-				p, ok := propertyByName[k]
+				value, ok := src[p.Name]
 				if !ok {
-					return nil, fmt.Errorf("app returned a non-existent property %s for object property %s", k, name)
+					return nil, fmt.Errorf(`app did not return a value for the "%s.%s" property`, name, p.Name)
 				}
-				obj[k], err = normalizeAppProperty(name, p.Type, v, p.Nullable, layouts)
+				src[p.Name], err = normalizeAppProperty(name, p.Type, value, p.Nullable, layouts)
 				if err != nil {
 					return nil, err
 				}
 			}
-			value = obj
+			if len(src) != len(properties) {
+			SRC:
+				for name := range src {
+					for _, p := range properties {
+						if p.Name == name {
+							continue SRC
+						}
+					}
+					delete(src, name)
+				}
+			}
+			value = src
 			valid = true
 		}
 	case types.PtMap:

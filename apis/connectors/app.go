@@ -9,6 +9,7 @@ package connectors
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -27,6 +28,7 @@ type App struct {
 	role    state.Role
 	layouts *state.Layouts
 	http    *httpclient.HTTP
+	users   schema
 	inner   _connector.AppConnection
 	err     error
 }
@@ -40,6 +42,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		role:    connection.Role,
 		layouts: &connector.Layouts,
 		http:    connectors.http,
+		users:   schema{lock: make(chan struct{}, 1)},
 	}
 	var resourceID int
 	var resourceCode string
@@ -114,16 +117,14 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	if app.err != nil {
 		return types.Type{}, app.err
 	}
-	var schema types.Type
-	var err error
 	switch target {
 	case state.Events:
-		inner := app.inner.(_connector.AppEventsConnection)
-		eventTypes, err := inner.EventTypes(ctx)
+		eventTypes, err := app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
 		if err != nil {
 			return types.Type{}, err
 		}
 		var found bool
+		var schema types.Type
 		for _, t := range eventTypes {
 			if t.ID == eventType {
 				schema = t.Schema
@@ -134,22 +135,11 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if !found {
 			return types.Type{}, ErrEventTypeNotExist
 		}
+		return schema, nil
 	case state.Users:
-		inner := app.inner.(_connector.AppUsersConnection)
-		schema, err = inner.UserSchema(ctx)
-		if err != nil {
-			return types.Type{}, err
-		}
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connector %s returned an invalid user schema", app.name)
-		}
-		schema = schema.AsRole(types.Role(role))
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(role.String()))
-		}
+		return app.usersSchema(ctx, types.Role(role))
 	case state.Groups:
-		inner := app.inner.(_connector.AppGroupsConnection)
-		schema, err = inner.GroupSchema(ctx)
+		schema, err := app.inner.(_connector.AppGroupsConnection).GroupSchema(ctx)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -160,8 +150,9 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if !schema.Valid() {
 			return types.Type{}, fmt.Errorf("connector has returned a schema without %s properties", strings.ToLower(role.String()))
 		}
+		return schema, nil
 	}
-	return schema, nil
+	panic("unexpected target")
 }
 
 // SendEvent sends an event, with the give event type, along with the provided
@@ -191,25 +182,46 @@ func (app *App) UpdateUser(ctx context.Context, id string, user map[string]any) 
 	return app.inner.(_connector.AppUsersConnection).UpdateUser(ctx, id, user)
 }
 
+type SchemaError struct {
+	Msg string
+}
+
+func (err SchemaError) Error() string {
+	return err.Msg
+}
+
 // Users returns the app's users starting from the provided cursor. The returned
-// users comply with the specified schema. Values are returned only for the
-// properties in the schema. If there is an error reading a user or validating
-// a user against the schema, the user is still returned, but User.Err is set.
+// users conform to the provided schema, which must be compatible with the
+// source users schema. If there is an error reading a user, it sets the
+// User.Err field with the error.
 //
-// It returns the io.EOF error when there are no more users other than the
-// returned one. It panics if the app does not support the users target.
+// It returns a SchemaError error if the provided schema does not conform to the
+// source users schema. Along with the users, it returns the io.EOF error when
+// there are no more users other than the returned one. It panics if the app
+// does not support the users target.
 func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (users []User, next string, err error) {
 
 	if app.err != nil {
 		return nil, "", app.err
 	}
 
+	// Check that the schema is compatible with the source users schema.
+	usersSchema, err := app.usersSchema(ctx, types.SourceRole)
+	if err != nil {
+		return nil, "", fmt.Errorf("cannot get users schema: %s", err)
+	}
+	err = checkConformity("", schema, usersSchema)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Prepare the user's properties to retrieve.
 	properties := schema.Properties()
-	property := make(map[string]*types.Property, len(properties))
 	names := make([]string, len(properties))
+	propertyByName := make(map[string]*types.Property, len(properties))
 	for i, p := range properties {
-		property[p.Name] = &p
 		names[i] = p.Name
+		propertyByName[p.Name] = &p
 	}
 
 	// Retrieve the users.
@@ -231,20 +243,29 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (us
 		return users, "", io.EOF
 	}
 
-	// Normalize the properties.
+	// Normalize the returned users.
 	for _, user := range users {
-		for name, value := range user.Properties {
-			p, ok := property[name]
+		for _, p := range properties {
+			value, ok := user.Properties[p.Name]
 			if !ok {
-				delete(user.Properties, name)
-				continue
+				user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
+				break
 			}
-			value, err = normalizeAppProperty(name, p.Type, value, p.Nullable, app.layouts)
+			value, err = normalizeAppProperty(p.Name, p.Type, value, p.Nullable, app.layouts)
 			if err != nil {
 				user.Err = err
 				break
 			}
-			user.Properties[name] = value
+			user.Properties[p.Name] = value
+		}
+		// Users method of the connector is permitted to return more properties than those requested,
+		// so if necessary, remove those that are not requested.
+		if len(user.Properties) != len(properties) {
+			for name := range user.Properties {
+				if _, ok := propertyByName[name]; !ok {
+					delete(propertyByName, name)
+				}
+			}
 		}
 		user.Timestamp = user.Timestamp.UTC()
 	}
@@ -253,4 +274,75 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (us
 		return users, "", io.EOF
 	}
 	return users, next, nil
+}
+
+type schema struct {
+	lock    chan struct{}
+	schemas [3]types.Type
+}
+
+// usersSchema returns the users schema with the provided role.
+func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, error) {
+	select {
+	case <-ctx.Done():
+		return types.Type{}, errors.New("canceled context")
+	case app.users.lock <- struct{}{}:
+	}
+	defer func() {
+		<-app.users.lock
+	}()
+	if schema := app.users.schemas[role]; schema.Valid() {
+		return schema, nil
+	}
+	schema, err := app.inner.(_connector.AppUsersConnection).UserSchema(ctx)
+	if err != nil {
+		return types.Type{}, err
+	}
+	var schemas [3]types.Type
+	for r := types.BothRole; r <= types.DestinationRole; r++ {
+		schemas[r] = schema.AsRole(r)
+		if !schemas[r].Valid() {
+			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(role.String()))
+		}
+	}
+	app.users.schemas = schemas
+	return app.users.schemas[role], nil
+}
+
+// checkConformity checks whether the schema t1 conforms to the new schema t2
+// and returns a SchemaError error if it does not conform.
+func checkConformity(name string, t1, t2 types.Type) error {
+	if t1.EqualTo(t2) {
+		return nil
+	}
+	pt1 := t1.PhysicalType()
+	pt2 := t2.PhysicalType()
+	if pt1 != pt2 {
+		if pt1 == types.PtInt && pt2 == types.PtUint || pt1 == types.PtUint && pt2 == types.PtInt {
+			return nil
+		}
+		return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
+	}
+	switch pt1 {
+	case types.PtArray:
+		return checkConformity(name, t1.Elem(), t2.Elem())
+	case types.PtObject:
+		for _, p1 := range t1.Properties() {
+			path := p1.Name
+			if name != "" {
+				path = name + "." + path
+			}
+			p2, ok := t2.Property(p1.Name)
+			if !ok {
+				return &SchemaError{Msg: fmt.Sprintf(`"%s" property no longer exists`, path)}
+			}
+			err := checkConformity(path, p1.Type, p2.Type)
+			if err != nil {
+				return err
+			}
+		}
+	case types.PtMap:
+		return checkConformity(name, t1.Elem(), t2.Elem())
+	}
+	return nil
 }
