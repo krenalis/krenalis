@@ -133,7 +133,9 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				{error !== null && (
 					<div slot='content' className='tooltipContent'>
 						<SlIcon className='closeIcon' name='x-lg' onClick={() => setError(null)} />
-						<SlIcon className='errorIcon' name='exclamation-circle' />
+						<div>
+							<SlIcon className='errorIcon' name='exclamation-circle' />
+						</div>
 						<div className='tooltipError'>{error}</div>
 					</div>
 				)}
