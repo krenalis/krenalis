@@ -567,7 +567,6 @@ const TransformationBox = ({
 								variant={mode === 'mappings' ? 'primary' : 'default'}
 								onClick={() => onModeClick('mappings')}
 							>
-								<SlIcon name='shuffle' />
 								Mappings
 							</SlButton>
 							{transformationLanguages.map((language) => {
@@ -581,7 +580,6 @@ const TransformationBox = ({
 										}
 										onClick={() => onModeClick(language)}
 									>
-										{getLanguageLogo(language)}
 										{language}
 									</SlButton>
 								);
