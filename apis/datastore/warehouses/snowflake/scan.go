@@ -8,7 +8,12 @@
 package snowflake
 
 import (
-	"chichi/apis/normalization"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 )
 
@@ -36,7 +41,7 @@ func newScanValues(properties []types.Property, rows *[][]any) []any {
 
 func (sv scanValue) Scan(src any) error {
 	p := sv.property
-	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
+	value, err := normalize(p.Name, p.Type, src, p.Nullable)
 	if err != nil {
 		return err
 	}
@@ -49,4 +54,90 @@ func (sv scanValue) Scan(src any) error {
 	}
 	row[sv.columnIndex] = value
 	return nil
+}
+
+// normalize normalizes a value returned by Snowflake and returns its normalized
+// form. If the value is not valid it returns an error.
+func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
+	if v == nil {
+		if !nullable {
+			return nil, fmt.Errorf("column %s is non-nullable, but Snowflake returned a NULL value", name)
+		}
+		return nil, nil
+	}
+	switch typ.PhysicalType() {
+	case types.PtBoolean:
+		if _, ok := v.(bool); ok {
+			return v, nil
+		}
+	case types.PtFloat:
+		if v, ok := v.(float64); ok {
+			return warehouses.ValidateFloat(name, typ, v)
+		}
+	case types.PtDecimal:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateDecimalString(name, typ, v)
+		}
+	case types.PtDateTime:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateDateTime(name, v)
+		}
+	case types.PtDate:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateDate(name, v)
+		}
+	case types.PtTime:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateTime(v)
+		}
+	case types.PtJSON:
+		return warehouses.ValidateJSON(name, v)
+	case types.PtText:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateText(name, typ, v)
+		}
+	case types.PtArray:
+		// The driver returns the value as a JSON array.
+		v, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		}
+		if v == "" || v[0] != '[' {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		}
+		// Snowflake only supports JSON as the item type.
+		if typ.Elem().PhysicalType() != types.PtJSON {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		}
+		dec := json.NewDecoder(strings.NewReader(v))
+		dec.UseNumber()
+		var a any
+		err := dec.Decode(&a)
+		if err != nil {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		}
+		return a, nil
+	case types.PtMap:
+		// The driver returns the value as a JSON object.
+		v, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		}
+		if v == "" || v[0] != '{' {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		}
+		// Snowflake only supports JSON as the item type.
+		if typ.Elem().PhysicalType() == types.PtJSON {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		}
+		dec := json.NewDecoder(strings.NewReader(v))
+		dec.UseNumber()
+		var m any
+		err := dec.Decode(&m)
+		if err != nil {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		}
+		return m, nil
+	}
+	return fmt.Errorf("Snowflake has returned an unsopported type %T for column %s", v, name), nil
 }

@@ -10,11 +10,13 @@ package postgresql
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"net/netip"
+	"reflect"
 	"time"
 
-	"chichi/apis/normalization"
+	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -53,7 +55,7 @@ func (sv scanValue) Scan(src any) error {
 			return err
 		}
 	}
-	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
+	value, err := normalize(p.Name, p.Type, src, p.Nullable)
 	if err != nil {
 		return err
 	}
@@ -293,4 +295,83 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		return nil, errors.New("unsupported type")
 	}
 	return values, nil
+}
+
+// normalize normalizes a value returned by PostgreSQL and returns its
+// normalized form. If the value is not valid it returns an error.
+func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
+	if v == nil {
+		if !nullable {
+			return nil, fmt.Errorf("column %s is non-nullable, but PostgreSQL returned a NULL value", name)
+		}
+		return nil, nil
+	}
+	switch typ.PhysicalType() {
+	case types.PtBoolean:
+		if _, ok := v.(bool); ok {
+			return v, nil
+		}
+	case types.PtInt:
+		if v, ok := v.(int64); ok {
+			return warehouses.ValidateInt(name, typ, int(v))
+		}
+	case types.PtFloat:
+		if v, ok := v.(float64); ok {
+			return warehouses.ValidateFloat(name, typ, v)
+		}
+	case types.PtDecimal:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateDecimalString(name, typ, v)
+		}
+	case types.PtDateTime:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateDateTime(name, v)
+		}
+	case types.PtDate:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateDate(name, v)
+		}
+	case types.PtTime:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
+		}
+	case types.PtUUID:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateUUID(name, v)
+		}
+	case types.PtJSON:
+		if v, ok := v.([]byte); ok {
+			return warehouses.ValidateJSONRaw(name, v)
+		}
+	case types.PtInet:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateInet(name, v)
+		}
+	case types.PtText:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateText(name, typ, v)
+		}
+	case types.PtArray:
+		rv := reflect.ValueOf(v)
+		if rv.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		}
+		n := rv.Len()
+		if n < typ.MinItems() || n > typ.MaxItems() {
+			return nil, fmt.Errorf("data warehouse returned an array with %d items for column %s, which is not within the expected range of [%d, %d]",
+				n, name, typ.MinItems(), typ.MaxItems())
+		}
+		a := make([]any, n)
+		t := typ.Elem()
+		var err error
+		for i := 0; i < n; i++ {
+			e := rv.Index(i).Interface()
+			a[i], err = normalize(name, t, e, false)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return a, nil
+	}
+	return fmt.Errorf("PostgreSQL has returned an unsopported type %T for column %s", v, name), nil
 }

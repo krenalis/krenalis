@@ -10,11 +10,21 @@ package warehouses
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"math"
+	"net/netip"
+	"slices"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chichi/apis/datastore/expr"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
+
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // MergeTable represents a table in which rows will be merged.
@@ -179,4 +189,221 @@ func IsValidIdentifier(name string) bool {
 // IsValidSchemaName reports whether name is a valid schema name.
 func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
+}
+
+// ValidateInt validates an Int value.
+func ValidateInt(name string, t types.Type, n int) (any, error) {
+	min, max := t.IntRange()
+	if int64(n) < min || int64(n) > max {
+		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not within the expected range of [%d, %d]", n, name, min, max)
+	}
+	return n, nil
+}
+
+// ValidateUint validates an Uint value.
+func ValidateUint(name string, t types.Type, n uint) (any, error) {
+	min, max := t.UintRange()
+	if uint64(n) < min || uint64(n) > max {
+		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not within the expected range of [%d, %d]", n, name, min, max)
+	}
+	return n, nil
+}
+
+// ValidateFloat validates a Float value.
+func ValidateFloat(name string, t types.Type, n float64) (any, error) {
+	if t.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
+		return nil, fmt.Errorf("data warehouse returned %f for column %s but its type does not allow it", n, name)
+	}
+	min, max := t.FloatRange()
+	if n < min || n > max {
+		return nil, fmt.Errorf("PostgreSQL returned a value of %f for column %s which is not within the expected range of [%f, %f]", n, name, min, max)
+	}
+	return n, nil
+}
+
+// ValidateDecimal validates a Decimal value.
+func ValidateDecimal(name string, t types.Type, n decimal.Decimal) (any, error) {
+	min, max := t.DecimalRange()
+	if n.LessThan(min) || n.GreaterThan(max) {
+		return nil, fmt.Errorf("data warehouse returned a value of %s for column %s which is not within the expected range of [%s, %s]", n, name, min, max)
+	}
+	return n, nil
+}
+
+// ValidateDecimalString validates a Decimal value represented as a string.
+func ValidateDecimalString(name string, t types.Type, s string) (any, error) {
+	n, err := decimal.NewFromString(s)
+	if err != nil {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Decimal value", s, name)
+	}
+	min, max := t.DecimalRange()
+	if n.LessThan(min) || n.GreaterThan(max) {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not within the expected range of [%s, %s]", s, name, min, max)
+	}
+	return n, nil
+}
+
+// ValidateDateTime validates a DateTime value.
+func ValidateDateTime(name string, dt time.Time) (any, error) {
+	dt = dt.UTC()
+	if y := dt.Year(); y < 1 || y > 9999 {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, with year %d not in range [1, 9999]", dt.Format(time.RFC3339Nano), name, y)
+	}
+	return dt, nil
+}
+
+// ValidateDate validates a Date value.
+func ValidateDate(name string, d time.Time) (any, error) {
+	d = d.UTC()
+	if y := d.Year(); y < 1 || y > 9999 {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, with year %d not in range [1, 9999]", d.Format(time.RFC3339Nano), name, y)
+	}
+	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC), nil
+}
+
+// ValidateTime validates a Time value.
+func ValidateTime(t time.Time) (any, error) {
+	t = t.UTC()
+	return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
+}
+
+// ValidateTimeString validates a Time value represented as a string.
+func ValidateTimeString(name string, format string, s string) (any, error) {
+	t, err := time.Parse(format, s)
+	if err != nil {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Time type", s, name)
+	}
+	t = t.UTC()
+	return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
+}
+
+// ValidateUUID validates an UUID value.
+func ValidateUUID(name string, s string) (any, error) {
+	u, err := uuid.Parse(s)
+	if err != nil {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Time type", s, name)
+	}
+	return u.String(), nil
+}
+
+// ValidateJSON validates a JSON value.
+func ValidateJSON(name string, v any) (any, error) {
+	if !isValidJSON(v) {
+		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
+	}
+	return v, nil
+}
+
+// ValidateJSONRaw validates a JSON value represented as a json.RawMessage.
+func ValidateJSONRaw(name string, b json.RawMessage) (any, error) {
+	if !json.Valid(b) {
+		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
+	}
+	return b, nil
+}
+
+// ValidateInet validates an Inet value.
+func ValidateInet(name string, s string) (any, error) {
+	ip, err := netip.ParseAddr(s)
+	if err != nil {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an Inet type", s, name)
+	}
+	return ip.String(), nil
+}
+
+// ValidateText validates a Text value.
+func ValidateText(name string, t types.Type, s string) (any, error) {
+	if !utf8.ValidString(s) {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which contains invalid UTF-8 characters", abbreviate(s, 20), name)
+	}
+	if values := t.Values(); values != nil {
+		if !slices.Contains(values, s) {
+			return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is not valid", s, name)
+		}
+		return s, nil
+	}
+	if rx := t.Regexp(); rx != nil {
+		if !rx.MatchString(s) {
+			return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is not valid", s, name)
+		}
+		return s, nil
+	}
+	if max, ok := t.ByteLen(); ok && len(s) > max {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d bytes", abbreviate(s, 20), name, max)
+	}
+	if max, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > max {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d characters", abbreviate(s, 20), name, max)
+	}
+	return s, nil
+}
+
+// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
+// the abbreviated string terminates with "...".
+func abbreviate(s string, n int) string {
+	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
+	s = strings.TrimRight(s, spaces)
+	if len(s) <= n {
+		return s
+	}
+	if n < 3 {
+		return ""
+	}
+	p := 0
+	n2 := 0
+	for i := range s {
+		switch p {
+		case n - 2:
+			n2 = i
+		case n:
+			break
+		}
+		p++
+	}
+	if p < n {
+		return s
+	}
+	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
+		s = strings.TrimRight(s[:p], spaces)
+	} else {
+		s = ""
+	}
+	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
+		s = s[:l]
+	}
+	return s + "..."
+}
+
+// isValidJSON reports whether src is a valid JSON value.
+func isValidJSON(src any) bool {
+	switch src := src.(type) {
+	case string:
+		return utf8.ValidString(src)
+	case bool:
+		return true
+	case float64:
+		return !math.IsNaN(src) && !math.IsInf(src, 0)
+	case []any:
+		for _, v := range src {
+			if v != nil {
+				if ok := isValidJSON(v); !ok {
+					return false
+				}
+			}
+		}
+		return true
+	case map[string]any:
+		for _, v := range src {
+			if v != nil {
+				if ok := isValidJSON(v); !ok {
+					return false
+				}
+			}
+		}
+		return true
+	case json.Number:
+		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && json.Valid([]byte(src))
+	case json.RawMessage:
+		return json.Valid(src)
+	}
+	return false
 }
