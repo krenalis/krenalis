@@ -599,9 +599,9 @@ const TransformationBox = ({
 					}
 				>
 					{isFullscreenTransformationOpen ? (
-						<SlIcon name='fullscreen-exit' />
+						<SlIcon name='arrows-angle-contract' />
 					) : (
-						<SlIcon name='arrows-fullscreen' />
+						<SlIcon name='arrows-angle-expand' />
 					)}
 					{isFullscreenTransformationOpen ? 'Exit testing mode' : 'Testing mode'}
 				</SlButton>
