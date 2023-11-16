@@ -1216,7 +1216,6 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 // ServeUI serves the user interface for the connection. event is the event and
 // values contains the form values in JSON format.
 //
-// If the connection does not exist, it returns an errors.NotFoundError error.
 // If the event does not exist, it returns an errors.UnprocessableError error
 // with code EventNotExist.
 func (this *Connection) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
