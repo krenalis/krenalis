@@ -603,7 +603,7 @@ const TransformationBox = ({
 					) : (
 						<SlIcon name='arrows-fullscreen' />
 					)}
-					{isFullscreenTransformationOpen ? 'Exit fullscreen' : 'Fullscreen'}
+					{isFullscreenTransformationOpen ? 'Exit testing mode' : 'Testing mode'}
 				</SlButton>
 			</div>
 			<div className='transformation-box__body'>{body}</div>
