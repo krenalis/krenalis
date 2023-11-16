@@ -6,12 +6,12 @@ import StatusDot from '../../shared/StatusDot/StatusDot';
 import { AppContext } from '../../../context/providers/AppProvider';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import { ConnectionRole } from '../../../types/external/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
-const GRID_COLUMNS = [
+const GRID_COLUMNS: GridColumn[] = [
 	{
 		name: 'Name',
 	},

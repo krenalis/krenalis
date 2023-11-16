@@ -212,6 +212,12 @@ const ActionPath = () => {
 			}
 			columns.push({ name: name, type: prop.type.name });
 		}
+		const areExcelLike = areColumnsExcelLike(columns);
+		if (areExcelLike) {
+			for (const column of columns) {
+				column.alignment = 'header-center';
+			}
+		}
 		setFilePreviewColumns(columns);
 		const rows: GridRow[] = [];
 		for (const record of res.records) {
@@ -400,6 +406,29 @@ const ActionPath = () => {
 			</SlDrawer>
 		</Section>
 	);
+};
+
+const areColumnsExcelLike = (columns: GridColumn[]): boolean => {
+	let lastColumn = -1;
+	for (const column of columns) {
+		const current = fromColumnNameToNumber(column.name);
+		if (current <= lastColumn) {
+			return false;
+		}
+		lastColumn = current;
+	}
+	return true;
+};
+
+const ALPHABET_LENGTH = 26;
+const fromColumnNameToNumber = (columnName: string): number => {
+	let num = 0;
+	for (let i = 0; i < columnName.length; i++) {
+		// get the position of the character in the alphabet.
+		const alphabetPosition = columnName.charCodeAt(i) - 'A'.charCodeAt(0) + 1;
+		num = num * ALPHABET_LENGTH + alphabetPosition;
+	}
+	return num;
 };
 
 export default ActionPath;

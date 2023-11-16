@@ -46,8 +46,15 @@
 }
 
 .grid .gridHeaderCell.center .cellContent,
+.grid .gridHeaderCell.header-center .cellContent,
 .grid .gridCell.center .cellContent {
 	margin: auto;
+}
+
+.grid .gridHeaderCell.right .cellContent,
+.grid .gridHeaderCell.header-right .cellContent,
+.grid .gridCell.right .cellContent {
+	margin-left: auto;
 }
 
 .grid .gridHeaderCell.right .cellContent,

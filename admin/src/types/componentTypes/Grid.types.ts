@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 interface GridColumn {
 	name: string;
 	type?: string;
-	alignment?: string;
+	alignment?: 'left' | 'center' | 'right' | 'header-left' | 'header-center' | 'header-right';
 }
 
 type GridRow = StandardGridRow | NestedGridRows;
