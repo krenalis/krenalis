@@ -13,114 +13,53 @@ import (
 	"log/slog"
 	"math"
 	"strconv"
-	"time"
 
 	"chichi/apis/datastore"
-	"chichi/apis/errors"
 	"chichi/apis/mappings"
-	"chichi/apis/normalization"
 	"chichi/connector/types"
 )
 
 // importUsersFromDatabase imports the users from a database.
 func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 
-	// Compile the query.
-	query, err := replacePlaceholders(this.action.Query, func(name string) (string, bool) {
+	action := this.action
+
+	// Replace the placeholders.
+	query, err := replacePlaceholders(action.Query, func(name string) (string, bool) {
 		if name == "limit" {
 			return strconv.FormatUint(math.MaxInt64, 10), true
 		}
 		return "", false
 	})
-
 	if err != nil {
 		return actionExecutionError{err}
 	}
 
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
+	mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
+		this.apis.transformer, nil)
 	if err != nil {
 		return err
 	}
 
-	// Execute the query and get the results and the properties.
+	// Execute the query.
 	database := this.database()
 	defer database.Close()
-	rows, err := database.Query(ctx, query)
+	records, err := database.Records(ctx, query, action.InSchema)
 	if err != nil {
 		return actionExecutionError{err}
 	}
-	defer rows.Close()
+	defer records.Close()
 
-	properties := this.action.InSchema.PropertiesNames()
+	// Read the users.
+	for records.Next() {
 
-	// Iterate over the database rows.
-	for rows.Next() {
-
-		// Scan values into a map.
-		row, err := rows.Scan()
+		user, err := records.Scan()
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
-		// Determine and validate the external id and the timestamp, reading
-		// them from the SQL expression named "id" and "timestamp" returned by
-		// the query.
-		var idExpr, timestampExpr types.Property
-		for _, c := range rows.Columns() {
-			switch c.Name {
-			case "id":
-				idExpr = c
-			case "timestamp":
-				timestampExpr = c
-			}
-		}
-		if idExpr.Name == "" {
-			return actionExecutionError{errors.New("expression with name 'id' not returned by the query")}
-		}
-		var externalID string
-		{
-			rawID, ok := row["id"]
-			if !ok {
-				return actionExecutionError{errors.New("no values for expression 'id' returned by the query")}
-			}
-			switch pt := idExpr.Type.PhysicalType(); pt {
-			case types.PtInt, types.PtUint, types.PtJSON, types.PtText:
-				externalID = fmt.Sprint(rawID)
-			default:
-				return actionExecutionError{fmt.Errorf("expression 'id' with type %s cannot be used as identifier", pt)}
-			}
-		}
-		var timestamp time.Time
-		if timestampExpr.Name != "" {
-			rawTimestamp, ok := row["timestamp"]
-			if !ok {
-				return actionExecutionError{errors.New("no values for expression 'timestamp' returned by the query")}
-			}
-			ts, err := normalization.NormalizeDatabaseFileProperty("timestamp", types.DateTime(), rawTimestamp, false)
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("expression 'timestamp' cannot be used as identifier: %s", err)}
-			}
-			timestamp = ts.(time.Time)
-		}
-
-		// Take only the necessary properties.
-		user := make(map[string]any, len(properties))
-		for _, name := range properties {
-			if v, ok := row[name]; ok {
-				user[name] = v
-			}
-		}
-
-		// Normalize the user properties (read from the database) using the
-		// action's mapping input schema.
-		user, err = normalize(user, this.action.InSchema)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
-		// Map the properties of the user.
-		mappedUser, err := mapping.Apply(ctx, user)
+		// Transform the user's properties.
+		user.Properties, err = mapping.Apply(ctx, user.Properties)
 		if err != nil {
 			if err, ok := err.(mappings.Error); ok {
 				return actionExecutionError{err}
@@ -129,7 +68,7 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		}
 
 		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, timestamp)
+		err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
 		if err != nil {
 			return err
 		}
@@ -141,7 +80,7 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 		}
 
 	}
-	if err = rows.Err(); err != nil {
+	if err = records.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
 	}
 
