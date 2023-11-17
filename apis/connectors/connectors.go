@@ -25,12 +25,24 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 )
 
 type Cursor = _connector.Cursor
 type Event = _connector.Event
 type EventType = _connector.EventType
 type Record = _connector.Record
+
+// WriteFunc represents the function passed to the (*File).ReadFunc method to
+// read file records.
+type WriteFunc func(Record) error
+
+// TimestampColumn represents the timestamp column passed to the
+// (*File).ReadFunc method.
+type TimestampColumn struct {
+	Name   string
+	Format string
+}
 
 // An InvalidPathError is returned when a path name is not valid.
 type InvalidPathError = _connector.InvalidPathError
@@ -241,6 +253,44 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 		return payload, nil
 	}
 	return nil, ErrNoWebhooks
+}
+
+// checkConformity checks whether the schema t1 conforms to the new schema t2
+// and returns a SchemaError error if it does not conform.
+func checkConformity(name string, t1, t2 types.Type) error {
+	if t1.EqualTo(t2) {
+		return nil
+	}
+	pt1 := t1.PhysicalType()
+	pt2 := t2.PhysicalType()
+	if pt1 != pt2 {
+		if pt1 == types.PtInt && pt2 == types.PtUint || pt1 == types.PtUint && pt2 == types.PtInt {
+			return nil
+		}
+		return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
+	}
+	switch pt1 {
+	case types.PtArray:
+		return checkConformity(name, t1.Elem(), t2.Elem())
+	case types.PtObject:
+		for _, p1 := range t1.Properties() {
+			path := p1.Name
+			if name != "" {
+				path = name + "." + path
+			}
+			p2, ok := t2.Property(p1.Name)
+			if !ok {
+				return &SchemaError{Msg: fmt.Sprintf(`"%s" property no longer exists`, path)}
+			}
+			err := checkConformity(path, p1.Type, p2.Type)
+			if err != nil {
+				return err
+			}
+		}
+	case types.PtMap:
+		return checkConformity(name, t1.Elem(), t2.Elem())
+	}
+	return nil
 }
 
 // maxSettingsLen is the maximum length of settings in runes.

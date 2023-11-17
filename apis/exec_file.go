@@ -15,9 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"chichi/apis/connectors"
 	"chichi/apis/mappings"
-	"chichi/apis/normalization"
-	"chichi/connector/types"
 )
 
 // exportUsersToFile exports the users to the file.
@@ -78,103 +77,30 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 // importUsersFromFile imports the users from a file.
 func (this *Action) importUsersFromFile(ctx context.Context) error {
 
-	// Determine the input and the output schema.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
+	action := this.action
+
+	mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
+		this.apis.transformer, nil)
 	if err != nil {
 		return err
 	}
 
-	properties := this.action.InSchema.PropertiesNames()
+	timestampColumn := connectors.TimestampColumn{
+		Name:   action.TimestampColumn,
+		Format: action.TimestampFormat,
+	}
 
 	// Read the records.
-	err = this.file().ReadFunc(ctx, this.action.Path, this.action.Sheet, func(columns []types.Property, record map[string]any) error {
+	err = this.file().ReadFunc(ctx, action.Path, action.Sheet, action.InSchema, action.IdentityColumn, timestampColumn, func(user connectors.Record) error {
 
-		// Determine and validate the external ID and the timestamp.
-		var idCol, timestampCol types.Property
-		for _, c := range columns {
-			switch c.Name {
-			case this.action.IdentityColumn:
-				idCol = c
-			case this.action.TimestampColumn:
-				timestampCol = c
-			}
-		}
-		if idCol.Name == "" {
-			return actionExecutionError{fmt.Errorf("identity column '%s' does not exist in file", this.action.IdentityColumn)}
-		}
-		var externalID string
-		{
-			rawID, ok := record[idCol.Name]
-			if !ok {
-				return actionExecutionError{fmt.Errorf("column '%s' not present in file record", idCol.Name)}
-			}
-			switch pt := idCol.Type.PhysicalType(); pt {
-			case types.PtInt, types.PtUint, types.PtJSON, types.PtText:
-				externalID = fmt.Sprint(rawID)
-			default:
-				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as identifier", idCol.Name, pt)}
-			}
+		var err error
+
+		if user.Err != nil {
+			return actionExecutionError{user.Err}
 		}
 
-		var timestamp time.Time
-		if timestampCol.Name != "" {
-
-			// Validate the physical type.
-			switch pt := timestampCol.Type.PhysicalType(); pt {
-			case types.PtText, types.PtJSON, types.PtDateTime:
-				// Ok.
-			default:
-				return actionExecutionError{fmt.Errorf("column '%s' with type %s cannot be used as timestamp", timestampCol.Name, pt)}
-			}
-
-			// Retrieve the value for the timestamp.
-			rawTimestamp, ok := record[timestampCol.Name]
-			if !ok {
-				return actionExecutionError{fmt.Errorf("no values for '%s' returned in file record", timestampCol.Name)}
-			}
-
-			// Normalize the value.
-			rawTimestamp, err = normalization.NormalizeDatabaseFileProperty(timestampCol.Name, timestampCol.Type, rawTimestamp, false)
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("column '%s' cannot be used as timestamp: %s", timestampCol.Name, err)}
-			}
-
-			// Determine the timestamp.
-			switch ts := rawTimestamp.(type) {
-			case string:
-				timestamp, err = time.Parse(this.action.TimestampFormat, ts)
-			case time.Time:
-				timestamp, err = ts, nil
-			default:
-				return actionExecutionError{fmt.Errorf("invalid value for column '%s', cannot be used as timestamp", timestampCol.Name)}
-			}
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("invalid value for column '%s': %s", timestampCol.Name, err)}
-			}
-
-		}
-
-		// Take only the necessary properties.
-		props := make(map[string]any, len(properties))
-		for _, name := range properties {
-			if v, ok := record[name]; ok {
-				props[name] = v
-			}
-		}
-
-		// Normalize the user properties (read from the file) using the action's
-		// mapping input schema.
-		props, err := normalize(props, this.action.InSchema)
-		if err != nil {
-			if err, ok := err.(mappings.Error); ok {
-				return actionExecutionError{err}
-			}
-			return err
-		}
-
-		// Map the properties of the user.
-		mappedUser, err := mapping.Apply(ctx, props)
+		// Transform the user's properties.
+		user.Properties, err = mapping.Apply(ctx, user.Properties)
 		if err != nil {
 			if err, ok := err.(mappings.Error); ok {
 				return actionExecutionError{err}
@@ -183,7 +109,7 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 		}
 
 		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, mappedUser, externalID, "", this.action.ID, false, timestamp)
+		err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
 		if err != nil {
 			return actionExecutionError{err}
 		}

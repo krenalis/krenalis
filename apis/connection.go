@@ -2133,9 +2133,12 @@ func canBeUsedAsAsMatchingProp(pt types.PhysicalType) bool {
 
 // replacePlaceholders replaces the placeholders in s with the values read
 // calling the f function with the name of each placeholder as argument.
+// If f is nil, it returns an error when s contains a placeholder.
 func replacePlaceholders(s string, f func(name string) (string, bool)) (string, error) {
 	var b strings.Builder
 	var name string
+	var value string
+	var ok bool
 	for {
 		i := strings.Index(s, "${")
 		if i < 0 {
@@ -2151,7 +2154,9 @@ func replacePlaceholders(s string, f func(name string) (string, bool)) (string, 
 		if strings.Contains(name, "${") {
 			return "", fmt.Errorf("a placeholder is not closed")
 		}
-		value, ok := f(name)
+		if f != nil {
+			value, ok = f(name)
+		}
 		if !ok {
 			return "", fmt.Errorf("placeholder %q does not exist", name)
 		}

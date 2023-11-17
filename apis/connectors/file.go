@@ -11,6 +11,7 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"math"
 	"os"
 	pathPkg "path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,7 +107,7 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 		return nil, nil, err
 	}
 	defer r.Close()
-	rw := newRecordWriter(file.connection.Connector().ID, limit)
+	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, limit)
 	err = file.inner.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return nil, nil, err
@@ -113,19 +115,26 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 	if err = r.Close(); err != nil {
 		return nil, nil, err
 	}
-	if rw.columns == nil {
+	if rw.properties == nil {
 		return nil, nil, ErrNoColumns
 	}
-	return rw.columns, rw.records, nil
+	return rw.properties, rw.records, nil
 }
 
-// ReadFunc is like Read but calls the write function for each record read,
-// passing the record and the columns to write. If the file has no rows, it does
-// not call write.
+// ReadFunc reads the records from the file at the provided path name and calls
+// the write function for each record read. The returned records conform to the
+// provided schema, which must be valid and compatible with the file's schema.
+//
+// name must be UTF-8 encoded with a length in range [1, 1024]. If the file
+// connection supports multiple sheets, sheet is the sheet name and must be
+// UTF-8 encoded with a length in range [1, 100], otherwise must be an empty
+// string. identityColumn is the column used as the identity, and if
+// timestampColumn is not nil, it represents the column used as the timestamp
+// along with its format.
 //
 // It returns the ErrNoStorage error if the file does not have a storage, and
 // it returns the ErrNoColumns error if the file has no columns.
-func (file *File) ReadFunc(ctx context.Context, name, sheet string, write func([]types.Property, map[string]any) error) error {
+func (file *File) ReadFunc(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn, write func(Record) error) error {
 	if file.err != nil {
 		return file.err
 	}
@@ -139,8 +148,8 @@ func (file *File) ReadFunc(ctx context.Context, name, sheet string, write func([
 		return err
 	}
 	defer r.Close()
-	rw := newRecordWriter(file.connection.Connector().ID, math.MaxInt)
-	rw.SetWriteFunc(write)
+	rw := newRecordWriter(file.connection.Connector().ID, schema, math.MaxInt)
+	rw.SetWriteFunc(write, identityColumn, timestampColumn)
 	err = file.inner.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return err
@@ -148,7 +157,7 @@ func (file *File) ReadFunc(ctx context.Context, name, sheet string, write func([
 	if err = r.Close(); err != nil {
 		return err
 	}
-	if rw.columns == nil {
+	if rw.properties == nil {
 		return ErrNoColumns
 	}
 	return nil
@@ -267,13 +276,16 @@ func (rr *recordReader) Record() ([]any, error) {
 // records. If the write function is set with SetWriteFunc, the recordWriter
 // calls the write function for each record written, otherwise it stores the
 // records in the records field.
-func newRecordWriter(connector int, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
+		schema:          schema,
 		limit:           limit,
 		textColumnsOnly: true,
 		records:         []map[string]any{},
 	}
+	rw.identityColumn.index = -1
+	rw.timestampColumn.index = -1
 	return &rw
 }
 
@@ -281,41 +293,95 @@ func newRecordWriter(connector int, limit int) *recordWriter {
 type recordWriter struct {
 	connector       int
 	limit           int
-	write           func(columns []types.Property, record map[string]any) error
-	columns         []types.Property
+	write           WriteFunc
+	schema          types.Type
+	properties      []types.Property // schema's properties, or the file's columns if a schema has not been provided
+	columnIndexOf   map[int]int      // map a property index in the schema to the corresponding file's column
+	columns         int              // number of file's columns
 	textColumnsOnly bool
-	records         []map[string]any
+	identityColumn  struct {
+		name  string
+		index int
+	}
+	timestampColumn struct {
+		name   string
+		index  int
+		format string
+	}
+	records []map[string]any
 }
 
 // Columns sets the columns of the records as properties.
 // Columns must be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Columns(columns []types.Property) error {
-	if rw.columns != nil {
+	if rw.properties != nil {
 		return fmt.Errorf("connector %d has called Columns twice", rw.connector)
 	}
 	if len(columns) == 0 {
 		return fmt.Errorf("connector %d has called Columns with an empty columns", rw.connector)
 	}
-	hasName := make(map[string]struct{}, len(columns))
-	for _, c := range columns {
+	columnByName := make(map[string]types.Property, len(columns))
+	columnIndex := make(map[string]int, len(columns))
+	for i, c := range columns {
 		if c.Name == "" {
 			return fmt.Errorf("connector %d has returned an empty column name", rw.connector)
 		}
 		if !types.IsValidPropertyName(c.Name) {
 			return fmt.Errorf("connector %d has returned an invalid column name: %q", rw.connector, c.Name)
 		}
-		if _, ok := hasName[c.Name]; ok {
+		if _, ok := columnByName[c.Name]; ok {
 			return fmt.Errorf("connector %d returned a duplicated column name: %s", rw.connector, c.Name)
 		}
-		hasName[c.Name] = struct{}{}
+		columnByName[c.Name] = c
 		if !c.Type.Valid() {
 			return fmt.Errorf("connector %d returned an invalid type", rw.connector)
 		}
 		if rw.textColumnsOnly {
 			rw.textColumnsOnly = c.Type.PhysicalType() == types.PtText
 		}
+		columnIndex[c.Name] = i
 	}
-	rw.columns = columns
+	// Validate the identity column.
+	if name := rw.identityColumn.name; name != "" {
+		c, ok := columnByName[name]
+		if !ok {
+			return fmt.Errorf("indentity column %q does not exist", name)
+		}
+		switch pt := c.Type.PhysicalType(); pt {
+		case types.PtInt, types.PtUint, types.PtUUID, types.PtJSON, types.PtText:
+		default:
+			return fmt.Errorf("identity column %q cannot have type %s", c.Name, pt)
+		}
+		rw.identityColumn.index = columnIndex[c.Name]
+	}
+	// Validate the timestamp column.
+	if name := rw.timestampColumn.name; name != "" {
+		c, ok := columnByName[name]
+		if !ok {
+			return fmt.Errorf("timestamp column %q does not exist", name)
+		}
+		switch pt := c.Type.PhysicalType(); pt {
+		case types.PtDateTime, types.PtDate, types.PtJSON, types.PtText:
+		default:
+			return fmt.Errorf("timestamp column %q cannot have type %s", c.Name, pt)
+		}
+		rw.timestampColumn.index = columnIndex[c.Name]
+	}
+	// Check that the schema, if valid, is compatible with the file's columns.
+	if rw.schema.Valid() {
+		err := checkConformity("", rw.schema, types.Object(columns))
+		if err != nil {
+			return err
+		}
+		rw.properties = rw.schema.Properties()
+		rw.columnIndexOf = make(map[int]int, len(rw.properties))
+		for i, c := range rw.properties {
+			rw.columnIndexOf[i] = columnIndex[c.Name]
+		}
+	} else {
+		rw.properties = columns
+	}
+	rw.columns = len(columns)
 	if rw.limit == 0 {
 		return errRecordStop
 	}
@@ -324,17 +390,17 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 
 // Record writes a record.
 func (rw *recordWriter) Record(record []any) error {
-	if rw.columns == nil {
+	if rw.properties == nil {
 		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.connector)
 	}
-	if len(record) != len(rw.columns) {
+	if len(record) != rw.columns {
 		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
 	}
 	var err error
 	if rw.write == nil {
 		// Store the record in the records field.
-		rd := make(map[string]any, len(rw.columns))
-		for i, c := range rw.columns {
+		rd := make(map[string]any, len(rw.properties))
+		for i, c := range rw.properties {
 			rd[c.Name], err = normalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
 			if err != nil {
 				return err
@@ -343,14 +409,32 @@ func (rw *recordWriter) Record(record []any) error {
 		rw.records = append(rw.records, rd)
 	} else {
 		// Call the rw.write function to store the record.
-		rd := map[string]any{}
-		for i, c := range rw.columns {
-			rd[c.Name], err = normalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
+		rd := Record{Properties: map[string]any{}}
+		for i, c := range rw.properties {
+			j := rw.columnIndexOf[i]
+			value, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[j], c.Nullable)
 			if err != nil {
 				return err
 			}
+			rd.Properties[c.Name] = value
+			// Parse the identity column.
+			if i == rw.identityColumn.index {
+				rd.ID, err = rw.parseIdentity(value)
+				if err != nil {
+					rd.Err = err
+					continue
+				}
+			}
+			// Parse the timestamp column.
+			if i == rw.timestampColumn.index {
+				rd.Timestamp, err = rw.parseTimestamp(value)
+				if err != nil {
+					rd.Err = err
+					continue
+				}
+			}
 		}
-		err = rw.write(rw.columns, rd)
+		err = rw.write(rd)
 		if err != nil {
 			return err
 		}
@@ -364,15 +448,14 @@ func (rw *recordWriter) Record(record []any) error {
 
 // RecordMap writes a record as a map.
 func (rw *recordWriter) RecordMap(record map[string]any) error {
-	if rw.columns == nil {
+	if rw.properties == nil {
 		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.connector)
 	}
 	var err error
 	if rw.write == nil {
 		// Store the record in the records field.
-
-		rd := make(map[string]any, len(rw.columns))
-		for _, c := range rw.columns {
+		rd := make(map[string]any, len(rw.properties))
+		for _, c := range rw.properties {
 			rd[c.Name], err = normalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
 			if err != nil {
 				return err
@@ -381,14 +464,31 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		rw.records = append(rw.records, rd)
 	} else {
 		// Call the rw.write function to store the record.
-		for _, c := range rw.columns {
-			v, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
+		rd := Record{Properties: record}
+		for i, c := range rw.properties {
+			value, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
 			if err != nil {
 				return err
 			}
-			record[c.Name] = v
+			rd.Properties[c.Name] = value
+			// Parse the identity column.
+			if i == rw.identityColumn.index {
+				rd.ID, err = rw.parseIdentity(value)
+				if err != nil {
+					rd.Err = err
+					continue
+				}
+			}
+			// Parse the timestamp column.
+			if i == rw.timestampColumn.index {
+				rd.Timestamp, err = rw.parseTimestamp(value)
+				if err != nil {
+					rd.Err = err
+					continue
+				}
+			}
 		}
-		err = rw.write(rw.columns, record)
+		err = rw.write(rd)
 		if err != nil {
 			return err
 		}
@@ -402,10 +502,10 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 
 // RecordString writes a record as a string slice.
 func (rw *recordWriter) RecordString(record []string) error {
-	if rw.columns == nil {
+	if rw.properties == nil {
 		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.connector)
 	}
-	if len(record) != len(rw.columns) {
+	if len(record) != rw.columns {
 		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
 	}
 	if !rw.textColumnsOnly {
@@ -414,8 +514,8 @@ func (rw *recordWriter) RecordString(record []string) error {
 	var err error
 	if rw.write == nil {
 		// Store the record in the records field.
-		rd := make(map[string]any, len(rw.columns))
-		for i, c := range rw.columns {
+		rd := make(map[string]any, len(rw.properties))
+		for i, c := range rw.properties {
 			err = validateStringProperty(c, record[i])
 			if err != nil {
 				return err
@@ -425,15 +525,33 @@ func (rw *recordWriter) RecordString(record []string) error {
 		rw.records = append(rw.records, rd)
 	} else {
 		// Call the rw.write function to store the record.
-		rd := map[string]any{}
-		for i, c := range rw.columns {
-			err = validateStringProperty(c, record[i])
+		rd := Record{Properties: make(map[string]any, len(rw.properties))}
+		for i, c := range rw.properties {
+			j := rw.columnIndexOf[i]
+			value := record[j]
+			err = validateStringProperty(c, value)
 			if err != nil {
 				return err
 			}
-			rd[c.Name] = record[i]
+			rd.Properties[c.Name] = value
+			// Parse the identity column.
+			if i == rw.identityColumn.index {
+				rd.ID, err = rw.parseIdentity(value)
+				if err != nil {
+					rd.Err = err
+					continue
+				}
+			}
+			// Parse the timestamp column.
+			if i == rw.timestampColumn.index {
+				rd.Timestamp, err = rw.parseTimestamp(value)
+				if err != nil {
+					rd.Err = err
+					continue
+				}
+			}
 		}
-		err = rw.write(rw.columns, rd)
+		err = rw.write(rd)
 		if err != nil {
 			return err
 		}
@@ -446,8 +564,82 @@ func (rw *recordWriter) RecordString(record []string) error {
 }
 
 // SetWriteFunc sets the write function for the recordWriter.
-func (rw *recordWriter) SetWriteFunc(write func(columns []types.Property, record map[string]any) error) {
+func (rw *recordWriter) SetWriteFunc(write WriteFunc, identity string, timestamp TimestampColumn) {
 	rw.write = write
+	rw.identityColumn.name = identity
+	rw.timestampColumn.name = timestamp.Name
+	rw.timestampColumn.format = timestamp.Format
+}
+
+// parseIdentity parses an identity column value.
+func (rw *recordWriter) parseIdentity(value any) (string, error) {
+	switch id := value.(type) {
+	case nil:
+		return "", fmt.Errorf("identify value is null")
+	case int:
+		return strconv.FormatInt(int64(id), 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(id), 10), nil
+	case string:
+		if id == "" {
+			return "", fmt.Errorf("identify value is empty")
+		}
+		return id, nil
+	case float64:
+		if int(math.Round(id)) == int(id) {
+			return strconv.FormatInt(int64(id), 10), nil
+		}
+	case json.Number:
+		var n int64
+		err := json.Unmarshal([]byte(id), &n)
+		if err == nil {
+			return strconv.FormatInt(n, 10), nil
+		}
+	case json.RawMessage:
+		if id[0] == '"' {
+			var s string
+			_ = json.Unmarshal(id, &s)
+			if s == "" {
+				return "", fmt.Errorf("identify value is empty")
+			}
+			return s, nil
+		} else {
+			var n int64
+			err := json.Unmarshal(id, &n)
+			if err == nil {
+				return strconv.FormatInt(n, 10), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
+}
+
+// parseTimestamp parses a timestamp column value.
+func (rw *recordWriter) parseTimestamp(value any) (time.Time, error) {
+	switch v := value.(type) {
+	case nil:
+		return time.Time{}, errors.New("timestamp value is null")
+	case time.Time:
+		return v, nil
+	case string:
+		ts, err := time.Parse(rw.timestampColumn.format, value.(string))
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, rw.timestampColumn.format)
+		}
+		return ts.UTC(), nil
+	case json.RawMessage:
+		var s string
+		err := json.Unmarshal(v, &s)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+		}
+		ts, err := time.Parse(rw.timestampColumn.format, value.(string))
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, rw.timestampColumn.format)
+		}
+		return ts.UTC(), nil
+	}
+	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 }
 
 // compressorStorage implements a storage capable of compressing and
