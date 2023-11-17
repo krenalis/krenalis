@@ -187,17 +187,17 @@
 	padding-bottom: 30px;
 }
 
-.action .specialProperties .identityProperty {
+.action .specialProperties .identityColumn {
 	margin-bottom: 20px;
 }
 
-.action .specialProperties .timestampProperty {
+.action .specialProperties .timestampColumn {
 	display: flex;
 	gap: 15px;
 }
 
-.action .specialProperties .identityProperty,
-.action .specialProperties .timestampProperty .timestamp {
+.action .specialProperties .identityColumn,
+.action .specialProperties .timestampColumn .timestamp {
 	display: grid;
 	justify-content: start;
 	gap: 10px;
@@ -205,28 +205,28 @@
 	grid-template-columns: 150px 300px;
 }
 
-.action .specialProperties .timestampProperty .format {
+.action .specialProperties .timestampColumn .format {
 	display: flex;
 	align-items: center;
 	gap: 15px;
 	width: 100%;
 }
 
-.action .specialProperties .timestampProperty .format .label {
+.action .specialProperties .timestampColumn .format .label {
 	text-wrap: nowrap;
 }
 
-.action .specialProperties .timestampProperty .format sl-select {
+.action .specialProperties .timestampColumn .format sl-select {
 	width: 100%;
 }
 
-.action .specialProperties .identityProperty .label,
-.action .specialProperties .timestampProperty .label {
+.action .specialProperties .identityColumn .label,
+.action .specialProperties .timestampColumn .label {
 	font-weight: 600;
 	font-size: 13px;
 }
 
-.action .specialProperties .identityProperty .label .asterisk {
+.action .specialProperties .identityColumn .label .asterisk {
 	color: var(--sl-color-danger-500);
 }
 

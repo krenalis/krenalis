@@ -309,8 +309,8 @@ const useActionData = (
 			tableName: action.Table,
 			sheet: action.Sheet,
 			exportMode: action.ExportMode,
-			IdentityProperty: action.IdentityProperty,
-			TimestampProperty: action.TimestampProperty,
+			IdentityColumn: action.IdentityColumn,
+			TimestampColumn: action.TimestampColumn,
 			TimestampFormat: action.TimestampFormat,
 			matchingProperties: action.MatchingProperties,
 		};

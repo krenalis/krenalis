@@ -903,8 +903,8 @@ type Action struct {
 	Path               string
 	TableName          string
 	Sheet              string
-	IdentityProperty   string
-	TimestampProperty  string
+	IdentityColumn     string
+	TimestampColumn    string
 	TimestampFormat    string
 	UserCursor         connector.Cursor
 	Health             Health

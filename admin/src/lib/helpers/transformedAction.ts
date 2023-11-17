@@ -91,8 +91,8 @@ interface TransformedAction {
 	Path?: string | null;
 	Table?: string | null;
 	Sheet?: string | null;
-	IdentityProperty?: string | null;
-	TimestampProperty?: string | null;
+	IdentityColumn?: string | null;
+	TimestampColumn?: string | null;
 	TimestampFormat?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: MatchingProperties | null;
@@ -220,8 +220,8 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		Path: action.Path,
 		Table: action.Table,
 		Sheet: action.Sheet,
-		IdentityProperty: action.IdentityProperty,
-		TimestampProperty: action.TimestampProperty,
+		IdentityColumn: action.IdentityColumn,
+		TimestampColumn: action.TimestampColumn,
 		TimestampFormat: action.TimestampFormat,
 		ExportMode: action.ExportMode,
 		MatchingProperties: action.MatchingProperties,
@@ -248,8 +248,8 @@ const computeDefaultAction = (
 	}
 	if (fields.includes('Path')) {
 		action.Path = '';
-		action.IdentityProperty = '';
-		action.TimestampProperty = '';
+		action.IdentityColumn = '';
+		action.TimestampColumn = '';
 		action.TimestampFormat = '';
 	}
 	if (fields.includes('Sheet')) {

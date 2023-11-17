@@ -94,14 +94,14 @@ func (this *Action) importUsersFromFile(ctx context.Context) error {
 		var idCol, timestampCol types.Property
 		for _, c := range columns {
 			switch c.Name {
-			case this.action.IdentityProperty:
+			case this.action.IdentityColumn:
 				idCol = c
-			case this.action.TimestampProperty:
+			case this.action.TimestampColumn:
 				timestampCol = c
 			}
 		}
 		if idCol.Name == "" {
-			return actionExecutionError{fmt.Errorf("identity column '%s' does not exist in file", this.action.IdentityProperty)}
+			return actionExecutionError{fmt.Errorf("identity column '%s' does not exist in file", this.action.IdentityColumn)}
 		}
 		var externalID string
 		{

@@ -54,8 +54,8 @@ type Action struct {
 	Path               *string
 	Table              *string
 	Sheet              *string
-	IdentityProperty   *string
-	TimestampProperty  *string
+	IdentityColumn     *string
+	TimestampColumn    *string
 	TimestampFormat    *string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
@@ -141,17 +141,17 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		sheet := action.Sheet
 		this.Sheet = &sheet
 	}
-	if action.IdentityProperty != "" {
-		idProp := action.IdentityProperty
-		this.IdentityProperty = &idProp
+	if action.IdentityColumn != "" {
+		column := action.IdentityColumn
+		this.IdentityColumn = &column
 	}
-	if action.TimestampProperty != "" {
-		tsProp := action.TimestampProperty
-		this.TimestampProperty = &tsProp
+	if action.TimestampColumn != "" {
+		column := action.TimestampColumn
+		this.TimestampColumn = &column
 	}
 	if action.TimestampFormat != "" {
-		tsFmt := action.TimestampFormat
-		this.TimestampFormat = &tsFmt
+		format := action.TimestampFormat
+		this.TimestampFormat = &format
 	}
 	this.ExportMode = (*ExportMode)(action.ExportMode)
 	if props := action.MatchingProperties; props != nil {
@@ -301,20 +301,20 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	span.Log("action validated successfully")
 
 	n := state.SetAction{
-		ID:                this.action.ID,
-		Name:              action.Name,
-		Enabled:           action.Enabled,
-		InSchema:          action.InSchema,
-		OutSchema:         action.OutSchema,
-		Mapping:           action.Mapping,
-		Query:             action.Query,
-		Path:              action.Path,
-		TableName:         action.TableName,
-		Sheet:             action.Sheet,
-		IdentityProperty:  action.IdentityProperty,
-		TimestampProperty: action.TimestampProperty,
-		TimestampFormat:   action.TimestampFormat,
-		ExportMode:        (*state.ExportMode)(action.ExportMode),
+		ID:              this.action.ID,
+		Name:            action.Name,
+		Enabled:         action.Enabled,
+		InSchema:        action.InSchema,
+		OutSchema:       action.OutSchema,
+		Mapping:         action.Mapping,
+		Query:           action.Query,
+		Path:            action.Path,
+		TableName:       action.TableName,
+		Sheet:           action.Sheet,
+		IdentityColumn:  action.IdentityColumn,
+		TimestampColumn: action.TimestampColumn,
+		TimestampFormat: action.TimestampFormat,
+		ExportMode:      (*state.ExportMode)(action.ExportMode),
 	}
 	if action.Transformation != nil {
 		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
@@ -433,12 +433,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6, "+
 			"transformation_source = $7, transformation_language = $8, transformation_version = $9, "+
-			"query = $10, path = $11, table_name = $12, sheet = $13, identity_property = $14, "+
-			"timestamp_property = $15, timestamp_format = $16, export_mode = $17, "+
+			"query = $10, path = $11, table_name = $12, sheet = $13, identity_column = $14, "+
+			"timestamp_column = $15, timestamp_format = $16, export_mode = $17, "+
 			"matching_properties_internal = $18, matching_properties_external = $19\nWHERE id = $20",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
 			transformation.Language, transformation.Version, n.Query, n.Path, n.TableName, n.Sheet,
-			n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode, string(matchPropInternal),
+			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ID,
 		)
 		if err != nil {
@@ -618,20 +618,20 @@ type ActionToSet struct {
 	// sheets actions.
 	Sheet string
 
-	// IdentityProperty is the property name used as identity in source file
+	// IdentityColumn is the column name used as identity in source file
 	// connections.
 	// It cannot be longer than 1024 runes.
-	IdentityProperty string
+	IdentityColumn string
 
-	// TimestampProperty is the property used as timestamp in source file
+	// TimestampColumn is the column name used as timestamp in source file
 	// connections. May be empty to indicate that no properties should be used as
 	// timestamp.
 	// When not empty, requires a TimestampFormat.
 	// It cannot be longer than 1024 runes.
-	TimestampProperty string
+	TimestampColumn string
 
 	// TimestampFormat indicates the timestamp format (in the Go format) for
-	// parsing the timestamp. Contains a format when a TimestampProperty is
+	// parsing the timestamp. Contains a format when a TimestampColumn is
 	// provided, otherwise is nil.
 	TimestampFormat string
 

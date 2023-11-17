@@ -65,7 +65,7 @@ func TestImportUsersFromFile(t *testing.T) {
 				"email":     "email",
 				"timestamp": "timestamp",
 			},
-			"IdentityProperty": "identity",
+			"IdentityColumn": "identity",
 		},
 	})
 

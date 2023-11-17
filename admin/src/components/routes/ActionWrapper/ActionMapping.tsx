@@ -107,20 +107,20 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (connection.isFile && connection.isSource) {
-			// precompile the 'IdentityProperty' and 'TimestampProperty' fields,
+			// precompile the 'IdentityColumn' and 'TimestampColumn' fields,
 			// if possible.
 			const a = { ...action };
-			if (action.IdentityProperty === '') {
-				const hasIdProperty = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
-				if (hasIdProperty) {
-					a.IdentityProperty = 'id';
+			if (action.IdentityColumn === '') {
+				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
+				if (hasIdColumn) {
+					a.IdentityColumn = 'id';
 				}
 			}
-			if (action.TimestampProperty === '') {
-				const hasTimestampProperty =
+			if (action.TimestampColumn === '') {
+				const hasTimestampColumn =
 					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
-				if (hasTimestampProperty) {
-					a.TimestampProperty = 'timestamp';
+				if (hasTimestampColumn) {
+					a.TimestampColumn = 'timestamp';
 				}
 			}
 			setAction(a);
@@ -209,14 +209,14 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	};
 
 	const onSelectProperty = async (input, value) => {
-		if (input.name === 'identityProperty') {
+		if (input.name === 'identityColumn') {
 			const a = { ...action };
-			a.IdentityProperty = value;
+			a.IdentityColumn = value;
 			setAction(a);
 			return;
-		} else if (input.name === 'timestampProperty') {
+		} else if (input.name === 'timestampColumn') {
 			const a = { ...action };
-			a.TimestampProperty = value;
+			a.TimestampColumn = value;
 			if (value === '') {
 				a.TimestampFormat = '';
 			}
@@ -226,19 +226,19 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		await updateProperty(input.name, value);
 	};
 
-	const onUpdateIdentityProperty = async (e) => {
+	const onUpdateIdentityColumn = async (e) => {
 		const target = e.target;
 		let { value } = target;
 		const a = { ...action };
-		a.IdentityProperty = value;
+		a.IdentityColumn = value;
 		setAction(a);
 	};
 
-	const onUpdateTimestampProperty = async (e) => {
+	const onUpdateTimestampColumn = async (e) => {
 		const target = e.target;
 		let { value } = target;
 		const a = { ...action };
-		a.TimestampProperty = value;
+		a.TimestampColumn = value;
 		if (value === '') {
 			a.TimestampFormat = '';
 		}
@@ -298,28 +298,28 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			>
 				{connection.isFile && connection.isSource && (
 					<div className='specialProperties'>
-						<div className='identityProperty'>
+						<div className='identityColumn'>
 							<div className='label'>
 								Identity<span className='asterisk'>*</span>:
 							</div>
 							<ComboBoxInput
 								comboBoxListRef={propertiesListRef}
-								onInput={onUpdateIdentityProperty}
-								value={action.IdentityProperty!}
-								name='identityProperty'
+								onInput={onUpdateIdentityColumn}
+								value={action.IdentityColumn!}
+								name='identityColumn'
 								disabled={isMappingSectionDisabled}
 								className='inputProperty'
 								size='small'
 							/>
 						</div>
-						<div className='timestampProperty'>
+						<div className='timestampColumn'>
 							<div className='timestamp'>
 								<div className='label'>Timestamp:</div>
 								<ComboBoxInput
 									comboBoxListRef={propertiesListRef}
-									onInput={onUpdateTimestampProperty}
-									value={action.TimestampProperty!}
-									name='timestampProperty'
+									onInput={onUpdateTimestampColumn}
+									value={action.TimestampColumn!}
+									name='timestampColumn'
 									disabled={isMappingSectionDisabled}
 									className='inputProperty'
 									size='small'
@@ -330,14 +330,14 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								<SlSelect
 									onSlChange={onChangeTimestampFormat}
 									value={
-										action.TimestampProperty
+										action.TimestampColumn
 											? Object.keys(timestampFormats).find(
 													(key) => timestampFormats[key] === action.TimestampFormat,
 											  )
 											: ''
 									}
 									name='timestampFormat'
-									disabled={action.TimestampProperty == null || action.TimestampProperty === ''}
+									disabled={action.TimestampColumn == null || action.TimestampColumn === ''}
 									size='small'
 								>
 									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>

@@ -343,24 +343,24 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	span.Log("action validated successfully")
 
 	n := state.AddAction{
-		Connection:        this.connection.ID,
-		Target:            state.Target(target),
-		Name:              action.Name,
-		Enabled:           action.Enabled,
-		EventType:         eventType,
-		ScheduleStart:     int16(mathrand.Intn(24 * 60)),
-		SchedulePeriod:    60,
-		InSchema:          action.InSchema,
-		OutSchema:         action.OutSchema,
-		Mapping:           action.Mapping,
-		Query:             action.Query,
-		Path:              action.Path,
-		TableName:         action.TableName,
-		Sheet:             action.Sheet,
-		IdentityProperty:  action.IdentityProperty,
-		TimestampProperty: action.TimestampProperty,
-		TimestampFormat:   action.TimestampFormat,
-		ExportMode:        (*state.ExportMode)(action.ExportMode),
+		Connection:      this.connection.ID,
+		Target:          state.Target(target),
+		Name:            action.Name,
+		Enabled:         action.Enabled,
+		EventType:       eventType,
+		ScheduleStart:   int16(mathrand.Intn(24 * 60)),
+		SchedulePeriod:  60,
+		InSchema:        action.InSchema,
+		OutSchema:       action.OutSchema,
+		Mapping:         action.Mapping,
+		Query:           action.Query,
+		Path:            action.Path,
+		TableName:       action.TableName,
+		Sheet:           action.Sheet,
+		IdentityColumn:  action.IdentityColumn,
+		TimestampColumn: action.TimestampColumn,
+		TimestampFormat: action.TimestampFormat,
+		ExportMode:      (*state.ExportMode)(action.ExportMode),
 	}
 	if action.Transformation != nil {
 		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
@@ -477,13 +477,13 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source, " +
 			"transformation_language, transformation_version, query, path, table_name, sheet, " +
-			"identity_property, timestamp_property, timestamp_format, " +
+			"identity_column, timestamp_column, timestamp_format, " +
 			"export_mode, matching_properties_internal, matching_properties_external)\n" +
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
 			transformation.Source, transformation.Language, transformation.Version, n.Query, n.Path, n.TableName,
-			n.Sheet, n.IdentityProperty, n.TimestampProperty, n.TimestampFormat, n.ExportMode,
+			n.Sheet, n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
@@ -1991,26 +1991,26 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 	}
 
-	// Check the property for the identity and for the timestamp.
+	// Check the column for the identity and for the timestamp.
 	if connector.Type == state.FileType && c.Role == state.Source {
-		if action.IdentityProperty == "" {
-			return errors.BadRequest("property for the identity is mandatory")
+		if action.IdentityColumn == "" {
+			return errors.BadRequest("column name for the identity is mandatory")
 		}
-		if !types.IsValidPropertyName(action.IdentityProperty) {
-			return errors.BadRequest("property for the identity has not a valid property name")
+		if !types.IsValidPropertyName(action.IdentityColumn) {
+			return errors.BadRequest("column name for the identity has not a valid property name")
 		}
-		if utf8.RuneCountInString(action.IdentityProperty) > 1024 {
-			return errors.BadRequest("property for the identity is longer than 1024 runes")
+		if utf8.RuneCountInString(action.IdentityColumn) > 1024 {
+			return errors.BadRequest("column name for the identity is longer than 1024 runes")
 		}
-		if action.TimestampProperty != "" {
-			if !types.IsValidPropertyName(action.TimestampProperty) {
-				return errors.BadRequest("property for the timestamp has a not valid property name")
+		if action.TimestampColumn != "" {
+			if !types.IsValidPropertyName(action.TimestampColumn) {
+				return errors.BadRequest("column name for the timestamp has a not valid property name")
 			}
-			if utf8.RuneCountInString(action.TimestampProperty) > 1024 {
-				return errors.BadRequest("property for the timestamp is longer than 1024 runes")
+			if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
+				return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
 			}
 			if action.TimestampFormat == "" {
-				return errors.BadRequest("timestamp format is mandatory when a timestamp property is provided")
+				return errors.BadRequest("timestamp format is mandatory when a timestamp column name is provided")
 			}
 			if !utf8.ValidString(action.TimestampFormat) {
 				return errors.BadRequest("timestamp format must be UTF-8 valid")
@@ -2024,11 +2024,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			}
 		}
 	} else {
-		if action.IdentityProperty != "" {
-			return errors.BadRequest("action cannot specify a property for the identity")
+		if action.IdentityColumn != "" {
+			return errors.BadRequest("action cannot specify a column name for the identity")
 		}
-		if action.TimestampProperty != "" {
-			return errors.BadRequest("action cannot specify a property for the timestamp")
+		if action.TimestampColumn != "" {
+			return errors.BadRequest("action cannot specify a column name for the timestamp")
 		}
 		if action.TimestampFormat != "" {
 			return errors.BadRequest("action cannot specify a timestamp format")
