@@ -2182,6 +2182,8 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 	return rawSchema, nil
 }
 
+var defaultLayout = &state.Layouts{}
+
 func normalize(values map[string]any, schema types.Type) (map[string]any, error) {
 	out := make(map[string]any, len(values))
 	for name, value := range values {
@@ -2190,7 +2192,7 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 			return nil, fmt.Errorf("property %q not found", name)
 		}
 		// TODO(Gianluca): call the proper normalization function.
-		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable, nil)
+		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable, defaultLayout)
 		if err != nil {
 			return nil, err
 		}
