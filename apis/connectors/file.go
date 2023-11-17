@@ -411,7 +411,7 @@ func (rw *recordWriter) Record(record []any) error {
 			rd.Properties[c.Name] = value
 			// Parse the identity column.
 			if i == rw.identityColumn.index {
-				rd.ID, err = rw.parseIdentity(value)
+				rd.ID, err = parseIdentityColumn(value)
 				if err != nil {
 					rd.Err = err
 					continue
@@ -419,7 +419,7 @@ func (rw *recordWriter) Record(record []any) error {
 			}
 			// Parse the timestamp column.
 			if i == rw.timestampColumn.index {
-				rd.Timestamp, err = rw.parseTimestamp(value)
+				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.format, value)
 				if err != nil {
 					rd.Err = err
 					continue
@@ -465,7 +465,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			rd.Properties[c.Name] = value
 			// Parse the identity column.
 			if i == rw.identityColumn.index {
-				rd.ID, err = rw.parseIdentity(value)
+				rd.ID, err = parseIdentityColumn(value)
 				if err != nil {
 					rd.Err = err
 					continue
@@ -473,7 +473,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			}
 			// Parse the timestamp column.
 			if i == rw.timestampColumn.index {
-				rd.Timestamp, err = rw.parseTimestamp(value)
+				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.format, value)
 				if err != nil {
 					rd.Err = err
 					continue
@@ -528,7 +528,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 			rd.Properties[c.Name] = value
 			// Parse the identity column.
 			if i == rw.identityColumn.index {
-				rd.ID, err = rw.parseIdentity(value)
+				rd.ID, err = parseIdentityColumn(value)
 				if err != nil {
 					rd.Err = err
 					continue
@@ -536,7 +536,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 			}
 			// Parse the timestamp column.
 			if i == rw.timestampColumn.index {
-				rd.Timestamp, err = rw.parseTimestamp(value)
+				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.format, value)
 				if err != nil {
 					rd.Err = err
 					continue
@@ -563,8 +563,8 @@ func (rw *recordWriter) SetWriteFunc(write WriteFunc, identity string, timestamp
 	rw.timestampColumn.format = timestamp.Format
 }
 
-// parseIdentity parses an identity column value.
-func (rw *recordWriter) parseIdentity(value any) (string, error) {
+// parseIdentityColumn parses an identity column value.
+func parseIdentityColumn(value any) (string, error) {
 	switch id := value.(type) {
 	case nil:
 		return "", fmt.Errorf("identify value is null")
@@ -606,17 +606,17 @@ func (rw *recordWriter) parseIdentity(value any) (string, error) {
 	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
 }
 
-// parseTimestamp parses a timestamp column value.
-func (rw *recordWriter) parseTimestamp(value any) (time.Time, error) {
+// parseTimestampColumn parses a timestamp column value.
+func parseTimestampColumn(format string, value any) (time.Time, error) {
 	switch v := value.(type) {
 	case nil:
 		return time.Time{}, errors.New("timestamp value is null")
 	case time.Time:
 		return v, nil
 	case string:
-		ts, err := time.Parse(rw.timestampColumn.format, value.(string))
+		ts, err := time.Parse(format, value.(string))
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, rw.timestampColumn.format)
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
 		return ts.UTC(), nil
 	case json.RawMessage:
@@ -625,9 +625,9 @@ func (rw *recordWriter) parseTimestamp(value any) (time.Time, error) {
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 		}
-		ts, err := time.Parse(rw.timestampColumn.format, value.(string))
+		ts, err := time.Parse(format, value.(string))
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, rw.timestampColumn.format)
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
 		return ts.UTC(), nil
 	}
