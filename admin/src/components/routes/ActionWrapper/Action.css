@@ -903,6 +903,10 @@ inherit the disabled style */
 	border-radius: 0;
 	height: 60px;
 	border-bottom: 2px solid var(--border-primary);
+	position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 10;
 }
 
 .action .fullscreenTransformation .editorPanel .editorWrapper {
