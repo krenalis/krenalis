@@ -281,7 +281,7 @@ const ActionPath = () => {
 						showStatus(statuses.linkedStorageDoesNotExistAnymore);
 						break;
 					default:
-						break;
+						showError(err);
 				}
 				return;
 			}
