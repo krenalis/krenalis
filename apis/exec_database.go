@@ -28,7 +28,7 @@ func (this *Action) importUsersFromDatabase(ctx context.Context) error {
 	// Compile the query.
 	query, err := replacePlaceholders(this.action.Query, func(name string) (string, bool) {
 		if name == "limit" {
-			return strconv.FormatUint(math.MaxUint64, 10), true
+			return strconv.FormatUint(math.MaxInt64, 10), true
 		}
 		return "", false
 	})
