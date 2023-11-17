@@ -320,26 +320,18 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	if len(columns) == 0 {
 		return fmt.Errorf("connector %d has called Columns with an empty columns", rw.connector)
 	}
+	fileSchema, err := types.ObjectOf(columns)
+	if err != nil {
+		return fmt.Errorf("connector %d has returned invalid columns: %s", rw.connector, err)
+	}
 	columnByName := make(map[string]types.Property, len(columns))
 	columnIndex := make(map[string]int, len(columns))
 	for i, c := range columns {
-		if c.Name == "" {
-			return fmt.Errorf("connector %d has returned an empty column name", rw.connector)
-		}
-		if !types.IsValidPropertyName(c.Name) {
-			return fmt.Errorf("connector %d has returned an invalid column name: %q", rw.connector, c.Name)
-		}
-		if _, ok := columnByName[c.Name]; ok {
-			return fmt.Errorf("connector %d returned a duplicated column name: %s", rw.connector, c.Name)
-		}
 		columnByName[c.Name] = c
-		if !c.Type.Valid() {
-			return fmt.Errorf("connector %d returned an invalid type", rw.connector)
-		}
+		columnIndex[c.Name] = i
 		if rw.textColumnsOnly {
 			rw.textColumnsOnly = c.Type.PhysicalType() == types.PtText
 		}
-		columnIndex[c.Name] = i
 	}
 	// Validate the identity column.
 	if name := rw.identityColumn.name; name != "" {
@@ -367,9 +359,9 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		}
 		rw.timestampColumn.index = columnIndex[c.Name]
 	}
-	// Check that the schema, if valid, is compatible with the file's columns.
+	// Check that the schema, if valid, is compatible with the file's schema.
 	if rw.schema.Valid() {
-		err := checkConformity("", rw.schema, types.Object(columns))
+		err := checkConformity("", rw.schema, fileSchema)
 		if err != nil {
 			return err
 		}
