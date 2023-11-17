@@ -72,7 +72,7 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 				</div>
 			</div>
 			<div className={`headerButtons${isSaveHidden ? ' hidden' : ''}`}>
-				<SlButton variant='default' onClick={onClose}>
+				<SlButton className='cancelAction' variant='default' onClick={onClose}>
 					Cancel
 				</SlButton>
 				<SlButton

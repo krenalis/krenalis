@@ -86,6 +86,10 @@
 	opacity: 0;
 }
 
+.action .header .headerButtons .cancelAction {
+	min-width: 150px;
+}
+
 .action .header .headerButtons .saveAction::part(base) {
 	min-width: 200px;
 }
