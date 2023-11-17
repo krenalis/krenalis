@@ -353,7 +353,8 @@ const ActionPath = () => {
 							onClick={onSheetsReload}
 							disabled={action.Path == null || action.Path === '' || areSheetsLoading}
 						>
-							<SlIcon name='arrow-clockwise' />
+							<SlIcon slot='prefix' name='arrow-clockwise' />
+							Reload
 						</SlButton>
 					</div>
 				</>

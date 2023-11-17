@@ -983,6 +983,10 @@ inherit the disabled style */
 	display: none;
 }
 
+.action .sheetsSelectWrapper sl-button {
+	min-width: 150px;
+}
+
 .action .sheetsError {
 	font-size: 13px;
 	color: var(--sl-color-danger-500);
