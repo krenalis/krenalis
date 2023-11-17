@@ -283,7 +283,6 @@ type recordWriter struct {
 	limit           int
 	write           func(columns []types.Property, record map[string]any) error
 	columns         []types.Property
-	columnByName    map[string]types.Property
 	textColumnsOnly bool
 	records         []map[string]any
 }
@@ -369,12 +368,6 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.connector)
 	}
 	var err error
-	if rw.columnByName == nil {
-		rw.columnByName = make(map[string]types.Property, len(rw.columns))
-		for _, c := range rw.columns {
-			rw.columnByName[c.Name] = c
-		}
-	}
 	if rw.write == nil {
 		// Store the record in the records field.
 
