@@ -473,7 +473,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.User, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
 
 	path := "/lists/" + c.settings.List + "/members"
 	values := url.Values{
@@ -502,9 +502,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	users := make([]connector.User, len(response.Members))
+	users := make([]connector.Record, len(response.Members))
 	for i, member := range response.Members {
-		users[i] = connector.User{
+		users[i] = connector.Record{
 			ID:         member.ID,
 			Properties: member.Properties(),
 			Timestamp:  member.LastChanged.UTC(),

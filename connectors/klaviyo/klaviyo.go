@@ -327,7 +327,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.User, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
 
 	var hasUpdatedProperty bool
 
@@ -372,9 +372,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	users := make([]connector.User, len(response.Data))
+	users := make([]connector.Record, len(response.Data))
 	for i, data := range response.Data {
-		users[i] = connector.User{
+		users[i] = connector.Record{
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)

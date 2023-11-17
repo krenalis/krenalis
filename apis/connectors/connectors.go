@@ -30,7 +30,7 @@ import (
 type Cursor = _connector.Cursor
 type Event = _connector.Event
 type EventType = _connector.EventType
-type User = _connector.User
+type Record = _connector.Record
 
 // An InvalidPathError is returned when a path name is not valid.
 type InvalidPathError = _connector.InvalidPathError

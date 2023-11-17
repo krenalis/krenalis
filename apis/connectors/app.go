@@ -199,7 +199,7 @@ func (err SchemaError) Error() string {
 // source users schema. Along with the users, it returns the io.EOF error when
 // there are no more users other than the returned one. It panics if the app
 // does not support the users target.
-func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (users []User, next string, err error) {
+func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (users []Record, next string, err error) {
 
 	if app.err != nil {
 		return nil, "", app.err
@@ -238,7 +238,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (us
 			return nil, "", fmt.Errorf("%s returned zero users but returned a non-empty next value", app.name)
 		}
 		if users == nil {
-			users = []User{}
+			users = []Record{}
 		}
 		return users, "", io.EOF
 	}

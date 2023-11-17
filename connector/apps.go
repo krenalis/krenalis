@@ -110,27 +110,6 @@ type AppEventsConnection interface {
 	SendEvent(ctx context.Context, eventType string, event *Event, data map[string]any) error
 }
 
-// Object represents a user or a group.
-type Object struct {
-	ID         string         // Identifier.
-	Properties map[string]any // Properties.
-	Timestamp  time.Time      // Last modification time, in UTC.
-
-	// Associations contains the identifiers of the user's groups or the group's users.
-	// It is not significant if it is nil.
-	Associations []string
-
-	// Err reports an error that occurred while reading the user.
-	// If Err is not nil, only the ID field is significant.
-	Err error
-}
-
-// User represents a user.
-type User = Object
-
-// Group represents a user.
-type Group = Object
-
 // Cursor represents a cursor used to implement pagination.
 type Cursor struct {
 	ID        string    // Identifier of the last returned user or group.
@@ -159,7 +138,7 @@ type AppUsersConnection interface {
 	UserSchema(ctx context.Context) (types.Type, error)
 
 	// Users returns the users starting from the given cursor.
-	Users(ctx context.Context, properties []string, cursor Cursor) (users []User, next string, err error)
+	Users(ctx context.Context, properties []string, cursor Cursor) (users []Record, next string, err error)
 }
 
 // AppGroupsConnection is the interface implemented by app connections that
@@ -174,7 +153,7 @@ type AppGroupsConnection interface {
 	GroupSchema(ctx context.Context) (types.Type, error)
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, properties []string, cursor Cursor) (groups []Group, next string, err error)
+	Groups(ctx context.Context, properties []string, cursor Cursor) (groups []Record, next string, err error)
 
 	// ReceiveWebhook receives a webhook request and returns its payloads.
 	// It returns the ErrWebhookUnauthorized error is the request was not
