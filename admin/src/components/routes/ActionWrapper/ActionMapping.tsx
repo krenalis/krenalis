@@ -414,6 +414,22 @@ const TransformationBox = ({
 }: TransformationBoxProps) => {
 	const [pendingMode, setPendingMode] = useState<string>('');
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
+	const [hasFullscreenText, setHasFullscreenText] = useState<boolean>();
+	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
+
+	useEffect(() => {
+		if (isFullscreenTransformationOpen) {
+			setTimeout(() => {
+				setIsFullscreenAnimating(true);
+			}, 100);
+			setTimeout(() => {
+				setIsFullscreenAnimating(false);
+				setHasFullscreenText(true);
+			}, 250);
+		} else {
+			setHasFullscreenText(false);
+		}
+	}, [isFullscreenTransformationOpen]);
 
 	const onChangeMode = () => {
 		const a = { ...action };
@@ -546,12 +562,14 @@ const TransformationBox = ({
 	}
 
 	return (
-		<div className={`transformation-box${' transformation-box--' + mode}`}>
+		<div
+			className={`transformation-box${' transformation-box--' + mode}${
+				isFullscreenAnimating ? ' is-fullscreen-animating' : ''
+			}`}
+		>
 			<div className='transformation-box__header'>
 				<div className='transformation-box__header-title'>
-					{isFullscreenTransformationOpen ||
-					!isTransformationAllowed ||
-					transformationLanguages.length == 0 ? (
+					{hasFullscreenText || !isTransformationAllowed || transformationLanguages.length == 0 ? (
 						<>
 							<span className='transformation-box__header-icon'>
 								{mode === 'mappings' ? <SlIcon name='shuffle' /> : getLanguageLogo(selectedLanguage)}
@@ -596,12 +614,12 @@ const TransformationBox = ({
 							: onOpenFullscreenTransformation
 					}
 				>
-					{isFullscreenTransformationOpen ? (
+					{hasFullscreenText ? (
 						<SlIcon name='arrows-angle-contract' />
 					) : (
 						<SlIcon name='arrows-angle-expand' />
 					)}
-					{isFullscreenTransformationOpen ? 'Exit testing mode' : 'Testing mode'}
+					{hasFullscreenText ? 'Exit testing mode' : 'Testing mode'}
 				</SlButton>
 			</div>
 			<div className='transformation-box__body'>{body}</div>

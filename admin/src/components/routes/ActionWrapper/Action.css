@@ -909,6 +909,16 @@ inherit the disabled style */
 	z-index: 10;
 }
 
+.action .fullscreenTransformation .editorPanel .transformation-box__header-title {
+	transition: opacity 0s;
+	opacity: 1;
+}
+
+.action .transformation-box.is-fullscreen-animating .transformation-box__header-title {
+	transition: opacity 0.2s;
+	opacity: 0;
+}
+
 .action .fullscreenTransformation .editorPanel .editorWrapper {
 	border-radius: 0;
 	border: 0 !important;
