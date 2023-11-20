@@ -294,14 +294,11 @@ func (sv databaseScanValue) Scan(src any) error {
 		if src == nil {
 			return errors.New("identity value is NULL")
 		}
-		value, err := normalizeDatabaseFileProperty(p.Name, sv.identityType, src, false)
+		value, err := parseIdentityColumn(p.Name, sv.identityType, src)
 		if err != nil {
 			return err
 		}
-		sv.record.ID, err = parseIdentityColumn(value)
-		if err != nil {
-			return err
-		}
+		sv.record.ID = value
 	case "timestamp":
 		if src == nil {
 			return errors.New("timestamp value is NULL")

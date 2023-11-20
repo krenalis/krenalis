@@ -301,10 +301,12 @@ type recordWriter struct {
 	textColumnsOnly bool
 	identityColumn  struct {
 		name  string
+		typ   types.Type
 		index int
 	}
 	timestampColumn struct {
 		name   string
+		typ    types.Type
 		index  int
 		format string
 	}
@@ -344,6 +346,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		default:
 			return fmt.Errorf("identity column %q has type %s instead of Int, Uint, UUID, JSON, or Text", c.Name, pt)
 		}
+		rw.identityColumn.typ = c.Type
 		rw.identityColumn.index = columnIndex[c.Name]
 	}
 	// Validate the timestamp column.
@@ -357,6 +360,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		default:
 			return fmt.Errorf("timestamp column %q has type %s instead of DateTime, Date, JSON, or Text", c.Name, pt)
 		}
+		rw.timestampColumn.typ = c.Type
 		rw.timestampColumn.index = columnIndex[c.Name]
 	}
 	// Check that the schema, if valid, is compatible with the file's schema.
@@ -406,24 +410,24 @@ func (rw *recordWriter) Record(record []any) error {
 			j := rw.columnIndexOf[i]
 			value, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[j], c.Nullable)
 			if err != nil {
-				return err
+				rd.Err = err
+				break
 			}
 			rd.Properties[c.Name] = value
-			// Parse the identity column.
-			if i == rw.identityColumn.index {
-				rd.ID, err = parseIdentityColumn(value)
-				if err != nil {
-					rd.Err = err
-					continue
-				}
+		}
+		// Parse the identity column.
+		rd.ID, err = parseIdentityColumn(rw.identityColumn.name, rw.identityColumn.typ, record[rw.identityColumn.index])
+		if err != nil {
+			if rd.Err != nil {
+				rd.Err = err
 			}
-			// Parse the timestamp column.
-			if i == rw.timestampColumn.index {
-				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.format, value)
-				if err != nil {
-					rd.Err = err
-					continue
-				}
+		}
+		// Parse the timestamp column.
+		if rd.Err == nil && rw.timestampColumn.name != "" {
+			ts := record[rw.timestampColumn.index]
+			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+			if err != nil {
+				rd.Err = err
 			}
 		}
 		err = rw.write(rd)
@@ -457,27 +461,27 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	} else {
 		// Call the rw.write function to store the record.
 		rd := Record{Properties: record}
-		for i, c := range rw.properties {
+		for _, c := range rw.properties {
 			value, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
 			if err != nil {
-				return err
+				rd.Err = err
+				break
 			}
 			rd.Properties[c.Name] = value
-			// Parse the identity column.
-			if i == rw.identityColumn.index {
-				rd.ID, err = parseIdentityColumn(value)
-				if err != nil {
-					rd.Err = err
-					continue
-				}
+		}
+		// Parse the identity column.
+		rd.ID, err = parseIdentityColumn(rw.identityColumn.name, rw.identityColumn.typ, record[rw.identityColumn.name])
+		if err != nil {
+			if rd.Err != nil {
+				rd.Err = err
 			}
-			// Parse the timestamp column.
-			if i == rw.timestampColumn.index {
-				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.format, value)
-				if err != nil {
-					rd.Err = err
-					continue
-				}
+		}
+		// Parse the timestamp column.
+		if rd.Err == nil && rw.timestampColumn.name != "" {
+			ts := record[rw.timestampColumn.name]
+			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+			if err != nil {
+				rd.Err = err
 			}
 		}
 		err = rw.write(rd)
@@ -523,24 +527,24 @@ func (rw *recordWriter) RecordString(record []string) error {
 			value := record[j]
 			err = validateStringProperty(c, value)
 			if err != nil {
-				return err
+				rd.Err = err
+				break
 			}
 			rd.Properties[c.Name] = value
-			// Parse the identity column.
-			if i == rw.identityColumn.index {
-				rd.ID, err = parseIdentityColumn(value)
-				if err != nil {
-					rd.Err = err
-					continue
-				}
+		}
+		// Parse the identity column.
+		rd.ID, err = parseIdentityColumn(rw.identityColumn.name, rw.identityColumn.typ, record[rw.identityColumn.index])
+		if err != nil {
+			if rd.Err != nil {
+				rd.Err = err
 			}
-			// Parse the timestamp column.
-			if i == rw.timestampColumn.index {
-				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.format, value)
-				if err != nil {
-					rd.Err = err
-					continue
-				}
+		}
+		// Parse the timestamp column.
+		if rd.Err == nil && rw.timestampColumn.name != "" {
+			ts := record[rw.timestampColumn.index]
+			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+			if err != nil {
+				rd.Err = err
 			}
 		}
 		err = rw.write(rd)
@@ -564,8 +568,12 @@ func (rw *recordWriter) SetWriteFunc(write WriteFunc, identity string, timestamp
 }
 
 // parseIdentityColumn parses an identity column value.
-func parseIdentityColumn(value any) (string, error) {
-	switch id := value.(type) {
+func parseIdentityColumn(name string, typ types.Type, value any) (string, error) {
+	id, err := normalizeDatabaseFileProperty(name, typ, value, false)
+	if err != nil {
+		return "", err
+	}
+	switch id := id.(type) {
 	case nil:
 		return "", fmt.Errorf("identify value is null")
 	case int:
@@ -607,12 +615,16 @@ func parseIdentityColumn(value any) (string, error) {
 }
 
 // parseTimestampColumn parses a timestamp column value.
-func parseTimestampColumn(format string, value any) (time.Time, error) {
-	switch v := value.(type) {
+func parseTimestampColumn(name string, typ types.Type, format string, value any) (time.Time, error) {
+	timestamp, err := normalizeDatabaseFileProperty(name, typ, value, false)
+	if err != nil {
+		return time.Time{}, err
+	}
+	switch timestamp := timestamp.(type) {
 	case nil:
 		return time.Time{}, errors.New("timestamp value is null")
 	case time.Time:
-		return v, nil
+		return timestamp, nil
 	case string:
 		ts, err := time.Parse(format, value.(string))
 		if err != nil {
@@ -621,7 +633,7 @@ func parseTimestampColumn(format string, value any) (time.Time, error) {
 		return ts.UTC(), nil
 	case json.RawMessage:
 		var s string
-		err := json.Unmarshal(v, &s)
+		err := json.Unmarshal(timestamp, &s)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 		}
