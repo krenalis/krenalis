@@ -1,2 +1,3 @@
-.gridCell {
+.gridCell .cellContent {
+	min-height: 20px;
 }

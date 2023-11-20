@@ -392,6 +392,8 @@ const ActionPath = () => {
 					<Grid
 						columns={filePreviewColumns!}
 						rows={filePreviewRows!}
+						showColumnBorder={true}
+						showRowBorder={true}
 						noRowsMessage={'Your file did not return data'}
 					/>
 				) : (

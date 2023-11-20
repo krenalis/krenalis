@@ -16,11 +16,13 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 interface GridProps {
 	columns: GridColumn[];
 	rows: GridRowInterface[];
+	showColumnBorder?: boolean;
+	showRowBorder?: boolean;
 	isLoading?: boolean;
 	noRowsMessage?: string;
 }
 
-const Grid = ({ columns, rows, isLoading, noRowsMessage }: GridProps) => {
+const Grid = ({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage }: GridProps) => {
 	const [columnsWidths, setColumnsWidths] = useState('');
 
 	const gridRef = useRef<any>(null);
@@ -80,7 +82,11 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }: GridProps) => {
 	}
 
 	return (
-		<div ref={gridRef} className='grid' style={{ '--grid-columns': columnsWidths } as React.CSSProperties}>
+		<div
+			ref={gridRef}
+			className={`grid${showColumnBorder ? ' column-border' : ''}${showRowBorder ? ' row-border' : ''}`}
+			style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
+		>
 			{isLoading ? (
 				<div className='loading'>
 					<SlSpinner

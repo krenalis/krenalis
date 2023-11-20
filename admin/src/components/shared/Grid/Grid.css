@@ -84,6 +84,34 @@
 	font-size: 13px;
 }
 
+.grid.column-border .gridHeaderCell {
+	border-right: 1px solid var(--border-primary);
+}
+
+.grid.column-border .gridHeaderCell.last {
+	border-right: 0;
+}
+
+.grid.row-border .gridHeaderCell {
+	border-bottom: 1px solid var(--border-primary);
+}
+
+.grid.column-border .gridCell {
+	border-right: 1px solid var(--border-primary);
+}
+
+.grid.column-border .gridCell.last {
+	border-right: 0;
+}
+
+.grid.row-border .gridRow .gridCell {
+	border-bottom: 1px solid var(--border-primary);
+}
+
+.grid.row-border .gridRow.last .gridCell {
+	border-bottom: 0;
+}
+
 .grid .gridRow.last {
 	border-bottom-left-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);
