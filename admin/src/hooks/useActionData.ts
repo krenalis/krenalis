@@ -1,20 +1,19 @@
 import { useEffect, useState, useContext, useMemo } from 'react';
 import {
-	flattenSchema,
 	computeDefaultAction,
 	computeActionTypeFields,
 	TransformedActionType,
 	TransformedAction,
-	isIdentifierProperty,
 	transformActionType,
 	transformAction,
+	transformInActionToSet,
 } from '../lib/helpers/transformedAction';
 import { AppContext } from '../context/providers/AppProvider';
 import * as variants from '../constants/variants';
 import * as icons from '../constants/icons';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
 import { UnprocessableError, NotFoundError } from '../lib/api/errors';
-import { Action, ActionToSet, ActionType, Mapping, MappingExpression, Transformation } from '../types/external/action';
+import { Action, ActionToSet, ActionType } from '../types/external/action';
 import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
 import { ObjectType } from '../types/external/types';
 import Workspace from '../types/external/workspace';
@@ -218,102 +217,12 @@ const useActionData = (
 			return 'Invalid action or action type';
 		}
 
-		let mapping: Mapping;
-		let inSchema: ObjectType;
-		let outSchema: ObjectType;
-		let transformation: Transformation;
-		let query: string;
-
-		// TODO: extract validation and data transformation / conversion in
-		// lib/action.js.
-		const flattenedInputSchema = flattenSchema(actionType.InputSchema);
-		const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
-
-		if (action.Mapping != null) {
-			const inputSchema: ObjectType = { name: 'Object', properties: [] };
-			const outputSchema: ObjectType = { name: 'Object', properties: [] };
-			const mappingToSave = {};
-			const expressions: MappingExpression[] = [];
-			for (const k in action.Mapping) {
-				const v = action.Mapping[k];
-				if (v.value === '') {
-					continue;
-				}
-				if (v.error && v.error !== '') {
-					return `Please fix the errors in the mapping before saving`;
-				}
-				const property = flattenedOutputSchema![k];
-				const fullProperty = property.full;
-				const parentProperty = flattenedOutputSchema![property.root!].full;
-				expressions.push({
-					value: v.value,
-					type: fullProperty!.type,
-					nullable: fullProperty!.nullable,
-				});
-				mappingToSave[k] = v.value;
-				const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find(
-					(p) => p.name === parentProperty!.name,
-				);
-				if (!isKeyPropertyAlreadyInSchema) {
-					outputSchema.properties!.push(parentProperty);
-				}
-			}
-			let inputProperties: string[];
-			try {
-				inputProperties = await api.expressionsProperties(expressions, actionType.InputSchema);
-			} catch (err) {
-				return err;
-			}
-			for (const prop of inputProperties) {
-				const parentName = prop.split('.')[0];
-				const isPropertyAlreadyInSchema = inputSchema.properties!.find((p) => p.name === parentName);
-				if (!isPropertyAlreadyInSchema) {
-					const fullProperty = flattenedInputSchema![parentName].full;
-					inputSchema.properties!.push(fullProperty);
-				}
-			}
-			mapping = mappingToSave;
-			inSchema = inputSchema;
-			outSchema = outputSchema;
+		let actionToSet: ActionToSet;
+		try {
+			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
+		} catch (err) {
+			return err;
 		}
-
-		if (action.Transformation != null) {
-			inSchema = actionType.InputSchema;
-			outSchema = { name: 'Object', properties: [] };
-			for (const property of actionType.OutputSchema.properties!) {
-				const isIdentifier = isIdentifierProperty(property.name, workspace.AnonymousIdentifiers.Priority);
-				if (!isIdentifier) {
-					outSchema.properties!.push(property);
-				}
-			}
-			transformation = {
-				Source: action.Transformation.Source.trim(),
-				Language: action.Transformation.Language,
-			};
-		}
-
-		if (action.Query != null) {
-			query = action.Query.trim();
-		}
-
-		let actionToSet: ActionToSet = {
-			name: action.Name,
-			enabled: action.Enabled,
-			filter: action.Filter,
-			inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
-			outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
-			mapping: mapping!,
-			transformation: transformation!,
-			query: query!,
-			path: action.Path,
-			tableName: action.Table,
-			sheet: action.Sheet,
-			exportMode: action.ExportMode,
-			IdentityColumn: action.IdentityColumn,
-			TimestampColumn: action.TimestampColumn,
-			TimestampFormat: action.TimestampFormat,
-			matchingProperties: action.MatchingProperties,
-		};
 
 		let id: number = 0;
 		try {

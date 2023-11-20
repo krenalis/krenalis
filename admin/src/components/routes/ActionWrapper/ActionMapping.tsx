@@ -6,6 +6,7 @@ import {
 	TransformedActionType,
 	flattenSchema,
 	isIdentifierProperty,
+	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
 import { rawTransformationFunctions } from './Action.constants';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
@@ -40,12 +41,12 @@ import {
 } from '../../../types/external/api';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
 import Type, { ObjectType, Property } from '../../../types/external/types';
-import actionContext from '../../../context/ActionContext';
 import extractSpecialProperties from '../../../lib/utils/extractSpecialProperties';
 import { EventListenerEvent, Sample } from '../../../types/internal/app';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import Workspace from '../../../types/external/workspace';
+import { ActionToSet } from '../../../types/external/action';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -682,9 +683,8 @@ const FullscreenTransformation = ({
 	const [outputError, setOutputError] = useState<string>('');
 	const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
-	const { connection } = useContext(actionContext);
-	const { showError, api } = useContext(AppContext);
-	const { action, actionType } = useContext(ActionContext);
+	const { showError, api, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { action, actionType, connection } = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
 	const lastNameIdentifier = useRef<string>('');
@@ -889,14 +889,36 @@ const FullscreenTransformation = ({
 		setOutputError('');
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
+
+		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+		let actionToSet: ActionToSet;
+		try {
+			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
+		} catch (err) {
+			setTimeout(() => {
+				showError(err);
+				setIsExecuting(false);
+			}, 300);
+			return;
+		}
+
+		const normalized = normalizeSample(sample);
+		let s = {};
+		for (const k in normalized) {
+			const isInSchema = actionToSet.inSchema.properties.findIndex((prop) => prop.name === k) !== -1;
+			if (isInSchema) {
+				s[k] = normalized[k];
+			}
+		}
+
 		let res: TransformationPreviewResponse;
 		try {
 			res = await api.transformationPreview(
-				normalizeSample(sample),
-				actionType.InputSchema,
-				actionType.OutputSchema,
-				null,
-				action.Transformation,
+				s,
+				actionToSet.inSchema,
+				actionToSet.outSchema,
+				actionToSet.mapping,
+				actionToSet.transformation,
 			);
 		} catch (err) {
 			setOutput('');
@@ -925,14 +947,27 @@ const FullscreenTransformation = ({
 		setOutputError('');
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
+
+		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+		let actionToSet: ActionToSet;
+		try {
+			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
+		} catch (err) {
+			setTimeout(() => {
+				showError(err);
+				setIsExecuting(false);
+			}, 300);
+			return;
+		}
+
 		let res: EventPreviewResponse;
 		try {
 			res = await api.workspaces.connections.eventPreview(
 				connection.id,
 				actionType.EventType,
 				event.full,
-				null,
-				action.Transformation,
+				actionToSet.mapping,
+				actionToSet.transformation,
 			);
 		} catch (err) {
 			setOutput('');
@@ -1365,8 +1400,6 @@ interface TransformationPropertyProps {
 
 const TransformationProperty = ({ property, language, isParent, parentName }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
-
-	console.log(language);
 
 	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 	let isIdentifier = false;

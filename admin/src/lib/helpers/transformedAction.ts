@@ -1,16 +1,20 @@
 import {
 	Action,
 	ActionTarget,
+	ActionToSet,
 	ActionType,
 	ExportMode,
 	Mapping,
+	MappingExpression,
 	MatchingProperties,
 	SchedulePeriod,
 	Transformation,
 } from '../../types/external/action';
 import { Filter } from '../../types/external/api';
 import { ActionSchemasResponse } from '../../types/external/api';
-import Type, { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
+import { AnonymousIdentifiers } from '../../types/external/identifiers';
+import { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
+import API from '../api/api';
 import TransformedConnection from './transformedConnection';
 
 const SCHEDULE_PERIODS = {
@@ -82,8 +86,8 @@ interface TransformedAction {
 	Running?: boolean;
 	ScheduleStart?: number | null;
 	SchedulePeriod?: SchedulePeriod | null;
-	InSchema: Type | null;
-	OutSchema: Type | null;
+	InSchema: ObjectType | null;
+	OutSchema: ObjectType | null;
 	Filter: Filter | null;
 	Mapping: TransformedMapping | null;
 	Transformation: Transformation | null;
@@ -228,6 +232,108 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 	};
 };
 
+const transformInActionToSet = async (
+	action: TransformedAction,
+	actionType: TransformedActionType,
+	api: API,
+	anonymousIdentifiers: AnonymousIdentifiers,
+): Promise<ActionToSet> => {
+	let mapping: Mapping;
+	let inSchema: ObjectType;
+	let outSchema: ObjectType;
+	let transformation: Transformation;
+	let query: string;
+
+	const flattenedInputSchema = flattenSchema(actionType.InputSchema);
+	const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
+
+	if (action.Mapping != null) {
+		const inputSchema: ObjectType = { name: 'Object', properties: [] };
+		const outputSchema: ObjectType = { name: 'Object', properties: [] };
+		const mappingToSave = {};
+		const expressions: MappingExpression[] = [];
+		for (const k in action.Mapping) {
+			const v = action.Mapping[k];
+			if (v.value === '') {
+				continue;
+			}
+			if (v.error && v.error !== '') {
+				throw `Please fix the errors in the mapping`;
+			}
+			const property = flattenedOutputSchema![k];
+			const fullProperty = property.full;
+			const parentProperty = flattenedOutputSchema![property.root!].full;
+			expressions.push({
+				value: v.value,
+				type: fullProperty!.type,
+				nullable: fullProperty!.nullable,
+			});
+			mappingToSave[k] = v.value;
+			const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find((p) => p.name === parentProperty!.name);
+			if (!isKeyPropertyAlreadyInSchema) {
+				outputSchema.properties!.push(parentProperty);
+			}
+		}
+		let inputProperties: string[];
+		try {
+			inputProperties = await api.expressionsProperties(expressions, actionType.InputSchema);
+		} catch (err) {
+			throw err;
+		}
+		for (const prop of inputProperties) {
+			const parentName = prop.split('.')[0];
+			const isPropertyAlreadyInSchema = inputSchema.properties!.find((p) => p.name === parentName);
+			if (!isPropertyAlreadyInSchema) {
+				const fullProperty = flattenedInputSchema![parentName].full;
+				inputSchema.properties!.push(fullProperty);
+			}
+		}
+		mapping = mappingToSave;
+		inSchema = inputSchema;
+		outSchema = outputSchema;
+	}
+
+	if (action.Transformation != null) {
+		inSchema = actionType.InputSchema;
+		outSchema = { name: 'Object', properties: [] };
+		for (const property of actionType.OutputSchema.properties!) {
+			const isIdentifier = isIdentifierProperty(property.name, anonymousIdentifiers.Priority);
+			if (!isIdentifier) {
+				outSchema.properties!.push(property);
+			}
+		}
+		transformation = {
+			Source: action.Transformation.Source.trim(),
+			Language: action.Transformation.Language,
+		};
+	}
+
+	if (action.Query != null) {
+		query = action.Query.trim();
+	}
+
+	const actionToSet: ActionToSet = {
+		name: action.Name,
+		enabled: action.Enabled,
+		filter: action.Filter,
+		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
+		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
+		mapping: mapping!,
+		transformation: transformation!,
+		query: query!,
+		path: action.Path,
+		tableName: action.Table,
+		sheet: action.Sheet,
+		exportMode: action.ExportMode,
+		IdentityColumn: action.IdentityColumn,
+		TimestampColumn: action.TimestampColumn,
+		TimestampFormat: action.TimestampFormat,
+		matchingProperties: action.MatchingProperties,
+	};
+
+	return actionToSet;
+};
+
 const computeDefaultAction = (
 	actionType: ActionType,
 	connection: TransformedConnection,
@@ -348,6 +454,7 @@ export {
 	computeActionTypeFields,
 	transformActionType,
 	transformAction,
+	transformInActionToSet,
 	isIdentifierProperty,
 };
 

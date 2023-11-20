@@ -1,5 +1,5 @@
 import { Filter } from './api';
-import Type, { Property } from './types';
+import Type, { ObjectType, Property } from './types';
 
 type ActionTarget = 'Events' | 'Users' | 'Groups';
 
@@ -35,8 +35,8 @@ interface Action {
 	Running: boolean;
 	ScheduleStart: number | null;
 	SchedulePeriod: SchedulePeriod | null;
-	InSchema: Type | null;
-	OutSchema: Type | null;
+	InSchema: ObjectType | null;
+	OutSchema: ObjectType | null;
 	Filter: Filter | null;
 	Mapping: Mapping | null;
 	Transformation: Transformation | null;
@@ -63,8 +63,8 @@ interface ActionToSet {
 	name: string;
 	enabled?: boolean;
 	filter?: Filter | null;
-	inSchema?: Type;
-	outSchema?: Type;
+	inSchema?: ObjectType;
+	outSchema?: ObjectType;
 	mapping?: Mapping;
 	transformation?: Transformation | null;
 	query?: string;
