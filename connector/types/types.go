@@ -8,6 +8,7 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -177,6 +178,11 @@ type Property struct {
 	Flat        bool
 }
 
+var _ interface {
+	json.Marshaler
+	json.Unmarshaler
+} = (*Property)(nil)
+
 // Path represents a property path.
 type Path []string
 
@@ -238,6 +244,11 @@ type Type struct {
 
 	_ []int // make Type non-comparable.
 }
+
+var _ interface {
+	json.Marshaler
+	json.Unmarshaler
+} = (*Type)(nil)
 
 // Boolean returns the Boolean type.
 func Boolean() Type {

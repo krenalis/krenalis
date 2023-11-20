@@ -648,8 +648,8 @@ type ActionToSet struct {
 // match identities of users in the data warehouse with users on the external
 // app, during export.
 type MatchingProperties struct {
-	Internal types.Property // TODO(Gianluca): this is not correctly (de)serialized in JSON. See https://github.com/open2b/chichi/issues/381.
-	External types.Property // TODO(Gianluca): this is not correctly (de)serialized in JSON. See https://github.com/open2b/chichi/issues/381.
+	Internal types.Property
+	External types.Property
 }
 
 // SchedulePeriod represents a scheduler period in minutes.

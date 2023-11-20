@@ -214,48 +214,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 			if i > 0 {
 				b.WriteString(",")
 			}
-			b.WriteString(`{"name":`)
-			b.WriteByte('"')
-			b.WriteString(p.Name)
-			b.WriteByte('"')
-			b.WriteString(`,"label":`)
-			_ = marshalString(b, p.Label)
-			b.WriteString(`,"description":`)
-			_ = marshalString(b, p.Description)
-			switch ph := p.Placeholder.(type) {
-			case nil:
-				b.WriteString(`,"placeholder":null`)
-			case string:
-				b.WriteString(`,"placeholder":`)
-				_ = marshalString(b, ph)
-			case map[string]string:
-				b.WriteString(`,"placeholder":{`)
-				keys := maps.Keys(ph)
-				slices.Sort(keys)
-				for i, k := range keys {
-					if i > 0 {
-						b.WriteByte(',')
-					}
-					_ = marshalString(b, k)
-					b.WriteByte(':')
-					_ = marshalString(b, ph[k])
-				}
-				b.WriteByte('}')
-			}
-			b.WriteString(`,"type":`)
-			marshalType(b, p.Type)
-			if p.Required {
-				b.WriteString(`,"required":true`)
-			}
-			if p.Nullable {
-				b.WriteString(`,"nullable":true`)
-			} else {
-				b.WriteString(`,"nullable":false`)
-			}
-			if p.Flat {
-				b.WriteString(`,"flat":true`)
-			}
-			b.WriteByte('}')
+			_ = marshalProperty(b, p)
 		}
 		b.WriteString("]")
 	case PtMap:
@@ -263,6 +222,89 @@ func marshalType(b *bytes.Buffer, t Type) {
 		marshalType(b, t.vl.(Type))
 	}
 	b.WriteString(`}`)
+}
+
+// MarshalJSON marshals p into JSON.
+func (p Property) MarshalJSON() ([]byte, error) {
+	var b bytes.Buffer
+	err := marshalProperty(&b, p)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// UnmarshalJSON parses the JSON-encoded data and stores the result in the
+// property pointed by p.
+func (p *Property) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
+	tok, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	d, ok := tok.(json.Delim)
+	if !ok || d != '{' {
+		return errors.New("invalid property syntax")
+	}
+	p2, err := unmarshalProperty(dec)
+	if err != nil {
+		return err
+	}
+	*p = p2
+	return nil
+}
+
+// marshalProperty marshals p as JSON and writes it to b.
+func marshalProperty(b *bytes.Buffer, p Property) error {
+	if p.Name == "" {
+		return errors.New("missing property name")
+	}
+	if !p.Type.Valid() {
+		return errors.New("missing property type")
+	}
+	b.WriteString(`{"name":`)
+	b.WriteByte('"')
+	b.WriteString(p.Name)
+	b.WriteByte('"')
+	b.WriteString(`,"label":`)
+	_ = marshalString(b, p.Label)
+	b.WriteString(`,"description":`)
+	_ = marshalString(b, p.Description)
+	switch ph := p.Placeholder.(type) {
+	case nil:
+		b.WriteString(`,"placeholder":null`)
+	case string:
+		b.WriteString(`,"placeholder":`)
+		_ = marshalString(b, ph)
+	case map[string]string:
+		b.WriteString(`,"placeholder":{`)
+		keys := maps.Keys(ph)
+		slices.Sort(keys)
+		for i, k := range keys {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			_ = marshalString(b, k)
+			b.WriteByte(':')
+			_ = marshalString(b, ph[k])
+		}
+		b.WriteByte('}')
+	}
+	b.WriteString(`,"type":`)
+	marshalType(b, p.Type)
+	if p.Required {
+		b.WriteString(`,"required":true`)
+	}
+	if p.Nullable {
+		b.WriteString(`,"nullable":true`)
+	} else {
+		b.WriteString(`,"nullable":false`)
+	}
+	if p.Flat {
+		b.WriteString(`,"flat":true`)
+	}
+	b.WriteByte('}')
+	return nil
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.

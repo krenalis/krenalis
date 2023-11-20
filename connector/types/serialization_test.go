@@ -8,10 +8,196 @@
 package types
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/shopspring/decimal"
 )
+
+func TestPropertySerialization(t *testing.T) {
+	tests := []struct {
+		Property Property
+		Expected string
+		Err      string
+	}{
+		{
+			Property: Property{},
+			Err:      "missing property name",
+		},
+		{
+			Property: Property{Name: "Qwerty"},
+			Err:      "missing property type",
+		},
+		{
+			Property: Property{Name: "a", Type: Text()},
+			Expected: `{"name":"a","label":"","description":"","placeholder":null,` +
+				`"type":{"name":"Text"},"nullable":false}`,
+		},
+		{
+			Property: Property{Name: "a", Label: "a label", Type: Text()},
+			Expected: `{"name":"a","label":"a label","description":"","placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+		},
+		{
+			Property: Property{Name: "a", Label: "a label",
+				Description: "some description", Type: Text()},
+			Expected: `{"name":"a","label":"a label","description":"some description",` +
+				`"placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+		},
+		{
+			Property: Property{
+				Name: "a", Label: "a label", Description: "some description",
+				Placeholder: "<placeholder>", Type: Text()},
+			Expected: `{"name":"a","label":"a label","description":"some description",` +
+				`"placeholder":"<placeholder>","type":{"name":"Text"},"nullable":false}`,
+		},
+		{
+			Property: Property{
+				Name: "a", Label: "a label", Description: "some description",
+				Placeholder: "<placeholder>", Role: DestinationRole, Type: Text()},
+			Expected: `{"name":"a","label":"a label","description":"some description",` +
+				`"placeholder":"<placeholder>","type":{"name":"Text"},"nullable":false}`,
+		},
+		{
+			Property: Property{
+				Name: "a", Label: "a label", Description: "some description",
+				Placeholder: "<placeholder>", Role: DestinationRole, Type: Text(),
+				Required: true},
+			Expected: `{"name":"a","label":"a label","description":"some description",` +
+				`"placeholder":"<placeholder>","type":{"name":"Text"},"required":true,` +
+				`"nullable":false}`,
+		},
+		{
+			Property: Property{
+				Name: "a", Label: "a label", Description: "some description",
+				Placeholder: "<placeholder>", Role: DestinationRole, Type: Text(),
+				Required: true, Nullable: true},
+			Expected: `{"name":"a","label":"a label","description":"some description",` +
+				`"placeholder":"<placeholder>","type":{"name":"Text"},"required":true,` +
+				`"nullable":true}`,
+		},
+		{
+			Property: Property{
+				Name: "a", Label: "a label", Description: "some description",
+				Placeholder: "<placeholder>", Role: DestinationRole, Type: Text(),
+				Required: true, Nullable: true, Flat: true},
+			Expected: `{"name":"a","label":"a label","description":"some description",` +
+				`"placeholder":"<placeholder>","type":{"name":"Text"},"required":true,` +
+				`"nullable":true,"flat":true}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got, err := test.Property.MarshalJSON()
+			var gotErr string
+			if err != nil {
+				gotErr = err.Error()
+			}
+			if test.Err != gotErr {
+				t.Fatalf("expecting error %q, got %q", test.Err, gotErr)
+			}
+			if test.Expected != string(got) {
+				t.Fatalf("expected %q, got %q", test.Expected, string(got))
+			}
+		})
+	}
+}
+
+func TestPropertyDeserialization(t *testing.T) {
+	tests := []struct {
+		JSON     string
+		Property Property
+		Err      string
+	}{
+		{
+			JSON: `{}`,
+			Err:  "missing property name",
+		},
+		{
+			JSON: `{"name":"a"}`,
+			Err:  "missing property type",
+		},
+		{
+			JSON: `{"Name":"a"}`,
+			Err:  "unknown property 'Name'",
+		},
+		{
+			JSON: `2`,
+			Err:  "invalid property syntax",
+		},
+		{
+			JSON: `[]`,
+			Err:  "invalid property syntax",
+		},
+		{
+			JSON: ``,
+			Err:  "unexpected end of JSON input",
+		},
+		{
+			JSON: `[`,
+			Err:  "unexpected end of JSON input",
+		},
+		{
+			JSON: `{"name":"a","label":"","description":"","placeholder":null,` +
+				`"type":{"name":"Text"},"nullable":false}`,
+			Property: Property{Name: "a", Type: Text()},
+		},
+		{
+			JSON: `{{`,
+			Err:  "invalid character '{' looking for beginning of object key string",
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			var p Property
+			err := json.Unmarshal([]byte(test.JSON), &p)
+			var gotErr string
+			if err != nil {
+				gotErr = err.Error()
+			}
+			if test.Err != gotErr {
+				t.Fatalf("expecting error %q, got %q", test.Err, gotErr)
+			}
+			if err := sameProperty(test.Property, p); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestPropertySerializationDeserialization(t *testing.T) {
+	tests := []struct {
+		JSON     string
+		Property Property
+	}{
+		{
+			`{"name":"Apple","label":"","description":"","placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+			Property{Name: "Apple", Type: Text()},
+		},
+		{
+			`{"name":"Apple","label":"A label","description":"Some description...","placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+			Property{Name: "Apple", Label: "A label", Description: "Some description...", Type: Text()},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			var p Property
+			err := json.Unmarshal([]byte(test.JSON), &p)
+			if err != nil {
+				t.Fatalf("cannot unmarshal property: %s", err)
+			}
+			if err := sameProperty(test.Property, p); err != nil {
+				t.Fatal(err)
+			}
+			got, err := p.MarshalJSON()
+			if err != nil {
+				t.Fatalf("cannot marshal property: %s", err)
+			}
+			if test.JSON != string(got) {
+				t.Fatalf("expected %q, got %q", test.JSON, string(got))
+			}
+		})
+	}
+}
 
 func TestTypeSerialization(t *testing.T) {
 
