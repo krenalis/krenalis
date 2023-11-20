@@ -373,6 +373,7 @@ inherit the disabled style */
 	background-color: var(--bg-primary);
 	box-shadow: var(--sl-shadow-small);
 	border: 1px solid var(--sl-color-neutral-200);
+	height: 100%;
 }
 
 .action .transformation-box--mappings {
@@ -447,8 +448,16 @@ inherit the disabled style */
 	background-color: var(--bg-gray);
 }
 
+.action .transformation-box__body {
+	height: calc(100% - 60px);
+}
+
 .action .transformation-box--mappings .transformation-box__body {
 	padding: 30px;
+}
+
+.action .transformation {
+	height: 100%;
 }
 
 .action .transformation-box .editorWrapper {
@@ -922,13 +931,13 @@ inherit the disabled style */
 .action .fullscreenTransformation .editorPanel .editorWrapper {
 	border-radius: 0;
 	border: 0 !important;
-	height: 90%;
+	height: 100%;
 	position: relative;
 	box-shadow: none !important;
 }
 
 .action .fullscreenTransformation .editorPanel .editorWrapper .editor {
-	height: 100%;
+	height: 100% !important;
 }
 
 .action .matchingProperties {
