@@ -96,8 +96,8 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteString("<= ")
 		}
 
-		switch pt := baseExpr.Column.Type; pt {
-		case types.PtBoolean:
+		switch k := baseExpr.Column.Type; k {
+		case types.BooleanKind:
 			v, ok := baseExpr.Value.(bool)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
@@ -107,25 +107,25 @@ func renderExpr(exp expr.Expr) (string, error) {
 			} else {
 				s.WriteString("FALSE")
 			}
-		case types.PtInt:
+		case types.IntKind:
 			v, ok := baseExpr.Value.(int)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
 			s.WriteString(strconv.Itoa(v))
-		case types.PtFloat:
+		case types.FloatKind:
 			v, ok := baseExpr.Value.(float64)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
 			}
 			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-		case types.PtDecimal:
+		case types.DecimalKind:
 			d, ok := baseExpr.Value.(decimal.Dec)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
 			}
 			s.WriteString(d.String())
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
@@ -133,7 +133,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteByte('\'')
 			s.WriteString(v.Format("2006-01-02 15:04:05.999999"))
 			s.WriteByte('\'')
-		case types.PtDate:
+		case types.DateKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
@@ -141,7 +141,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteByte('\'')
 			s.WriteString(v.Format(time.DateTime))
 			s.WriteByte('\'')
-		case types.PtTime:
+		case types.TimeKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
@@ -149,18 +149,18 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteByte('\'')
 			s.WriteString(v.Format("15:04:05.999999"))
 			s.WriteByte('\'')
-		case types.PtUUID, types.PtInet, types.PtText:
+		case types.UUIDKind, types.InetKind, types.TextKind:
 			v, ok := baseExpr.Value.(string)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type string, got %T", baseExpr.Value)
 			}
 			quoteString(&s, v)
-		case types.PtJSON:
+		case types.JSONKind:
 			return "", errors.New("cannot apply operators on JSON type")
-		case types.PtArray:
+		case types.ArrayKind:
 			return "", errors.New("cannot apply operators on Array type")
 		default:
-			return "", fmt.Errorf("unexpected column with type %q", pt)
+			return "", fmt.Errorf("unexpected column with type %q", k)
 		}
 
 	case expr.OperatorIsNull:

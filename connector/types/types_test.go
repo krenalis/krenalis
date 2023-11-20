@@ -516,7 +516,7 @@ func Test_ParsePropertyPath(t *testing.T) {
 // sameType reports whether t1 and t2 are the same type. It compares t2 against
 // t1.
 func sameType(t1, t2 Type) error {
-	if t1.pt == t2.pt &&
+	if t1.kind == t2.kind &&
 		t1.size == t2.size &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
@@ -525,24 +525,24 @@ func sameType(t1, t2 Type) error {
 		t1.vl == nil && t2.vl == nil {
 		return nil
 	}
-	// Physical type.
-	if t1.pt != t2.pt {
-		if !t2.pt.Valid() {
-			return fmt.Errorf("unknown physical type %d", t2.pt)
+	// Kind.
+	if t1.kind != t2.kind {
+		if !t2.kind.Valid() {
+			return fmt.Errorf("unknown kind %d", t2.kind)
 		}
-		return fmt.Errorf("expected physical type %d, got %d", t1.pt, t2.pt)
+		return fmt.Errorf("expected kind %d, got %d", t1.kind, t2.kind)
 	}
 	// Minimum and maximum.
 	switch {
-	case t1.pt == PtInt && t1.size < 4: // 8, 16, 24, and 32 bits
+	case t1.kind == IntKind && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", t1.p, t1.s, t2.p, t2.s)
 		}
-	case t1.pt == PtUint && t1.size < 4: // 8, 16, 24, and 32 bits
+	case t1.kind == UintKind && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", uint32(t1.p), uint32(t1.s), uint32(t2.p), uint32(t2.s))
 		}
-	case t1.pt == PtInt || t1.pt == PtUint || t1.pt == PtFloat:
+	case t1.kind == IntKind || t1.kind == UintKind || t1.kind == FloatKind:
 		if t1.vl != t2.vl {
 			if t1.vl == nil {
 				return fmt.Errorf("expected no range, got %v", t2.vl)
@@ -552,7 +552,7 @@ func sameType(t1, t2 Type) error {
 				return fmt.Errorf("expected range %v, got %v", t1.vl, t2.vl)
 			}
 		}
-	case t1.pt == PtDecimal:
+	case t1.kind == DecimalKind:
 		if vl1, ok := t1.vl.(decimalRange); ok {
 			vl2, ok := t2.vl.(decimalRange)
 			if !ok || !vl1.min.Equal(vl2.min) || !vl1.max.Equal(vl2.max) {
@@ -568,30 +568,30 @@ func sameType(t1, t2 Type) error {
 	}
 	// Precision, byte length or items minimum length.
 	if t1.p != t2.p {
-		switch t1.pt {
-		case PtDecimal:
+		switch t1.kind {
+		case DecimalKind:
 			return fmt.Errorf("expected precision %d, got %d", t1.p, t2.p)
-		case PtText:
+		case TextKind:
 			return fmt.Errorf("expected byte length %d, got %d", t1.p, t2.p)
-		case PtArray:
+		case ArrayKind:
 			return fmt.Errorf("expected items minimum length %d, got %d", t1.p, t2.p)
 		}
 		return fmt.Errorf("expected p == 0, got %d", t2.p)
 	}
 	// Scale, character length or items maximum length.
 	if t1.s != t2.s {
-		switch t1.pt {
-		case PtDecimal:
+		switch t1.kind {
+		case DecimalKind:
 			return fmt.Errorf("expected scale %d, got %d", t1.s, t2.s)
-		case PtText:
+		case TextKind:
 			return fmt.Errorf("expected character length %d, got %d", t1.s, t2.s)
-		case PtArray:
+		case ArrayKind:
 			return fmt.Errorf("expected items maximum length %d, got %d", t1.s, t2.s)
 		}
 		return fmt.Errorf("expected s == 0, got %d", t2.s)
 	}
 	// Regular expression or values.
-	if t1.pt == PtText {
+	if t1.kind == TextKind {
 		switch vl1 := t1.vl.(type) {
 		case nil:
 			if t2.vl != nil {
@@ -630,7 +630,7 @@ func sameType(t1, t2 Type) error {
 		}
 	}
 	// Unique items and item type.
-	if t1.pt == PtArray {
+	if t1.kind == ArrayKind {
 		if t1.unique != t2.unique {
 			if t1.unique {
 				return errors.New("expected unique items, got non-unique")
@@ -645,7 +645,7 @@ func sameType(t1, t2 Type) error {
 		}
 	}
 	// Properties.
-	if t1.pt == PtObject {
+	if t1.kind == ObjectKind {
 		if t2.vl == nil {
 			return errors.New("expected properties, got nil")
 		}
@@ -669,7 +669,7 @@ func sameType(t1, t2 Type) error {
 		}
 	}
 	// Value type.
-	if t1.pt == PtMap {
+	if t1.kind == MapKind {
 		if t2.vl == nil {
 			return errors.New("expected value type, got nil")
 		}

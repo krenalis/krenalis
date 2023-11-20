@@ -289,31 +289,31 @@ func toString(v any, t types.Type) string {
 	if v == nil {
 		return ""
 	}
-	switch pt := t.PhysicalType(); pt {
-	case types.PtBoolean:
+	switch k := t.Kind(); k {
+	case types.BooleanKind:
 		return strconv.FormatBool(v.(bool))
-	case types.PtInt, types.PtYear:
+	case types.IntKind, types.YearKind:
 		return strconv.Itoa(v.(int))
-	case types.PtUint:
+	case types.UintKind:
 		return strconv.FormatUint(uint64(v.(uint)), 10)
-	case types.PtFloat:
+	case types.FloatKind:
 		return strconv.FormatFloat(v.(float64), 'g', -1, t.BitSize())
-	case types.PtDecimal:
+	case types.DecimalKind:
 		return v.(decimal.Decimal).String()
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		return v.(time.Time).Format(time.RFC3339Nano)
-	case types.PtDate:
+	case types.DateKind:
 		return v.(time.Time).Format(time.DateOnly)
-	case types.PtTime:
+	case types.TimeKind:
 		return v.(time.Time).Format("15:04:05.999999999Z07:00")
-	case types.PtUUID, types.PtInet, types.PtText:
+	case types.UUIDKind, types.InetKind, types.TextKind:
 		return v.(string)
-	case types.PtJSON:
+	case types.JSONKind:
 		return string(v.(json.RawMessage))
-	case types.PtArray, types.PtObject, types.PtMap:
+	case types.ArrayKind, types.ObjectKind, types.MapKind:
 		return string(connector.MarshalJSON(v, t))
 	default:
-		panic(fmt.Sprintf("unexpected physical type %s", pt))
+		panic(fmt.Sprintf("unexpected kind %s", k))
 	}
 }
 

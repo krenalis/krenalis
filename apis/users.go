@@ -243,7 +243,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 	}
 	where := whereExpr(gid, this.id)
 	if where == nil {
-		return nil, fmt.Errorf("property 'gid' of the events schema has an unexpected type %s", gid.Type.PhysicalType())
+		return nil, fmt.Errorf("property 'gid' of the events schema has an unexpected type %s", gid.Type.Kind())
 	}
 
 	// Read the events.
@@ -447,7 +447,7 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	}
 	where := whereExpr(id, this.id)
 	if where == nil {
-		return nil, fmt.Errorf("property 'id' of the users schema has an unexpected type %s", id.Type.PhysicalType())
+		return nil, fmt.Errorf("property 'id' of the users schema has an unexpected type %s", id.Type.Kind())
 	}
 
 	rows, err := this.store.Users(ctx, schema.Properties(), where, types.Property{}, 0, 1)
@@ -470,14 +470,14 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 
 func whereExpr(property types.Property, value int) *expr.BaseExpr {
 	where := expr.NewBaseExpr(
-		expr.Column{Name: property.Name, Type: property.Type.PhysicalType()},
+		expr.Column{Name: property.Name, Type: property.Type.Kind()},
 		expr.OperatorEqual,
 		nil,
 	)
 	switch where.Column.Type {
-	case types.PtInt:
+	case types.IntKind:
 		where.Value = value
-	case types.PtDecimal:
+	case types.DecimalKind:
 		where.Value = decimal.Int(value)
 	default:
 		return nil

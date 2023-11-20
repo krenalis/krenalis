@@ -332,7 +332,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		columnByName[c.Name] = c
 		columnIndex[c.Name] = i
 		if rw.textColumnsOnly {
-			rw.textColumnsOnly = c.Type.PhysicalType() == types.PtText
+			rw.textColumnsOnly = c.Type.Kind() == types.TextKind
 		}
 	}
 	// Validate the identity column.
@@ -341,10 +341,10 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if !ok {
 			return fmt.Errorf("there is no identity column %q", name)
 		}
-		switch pt := c.Type.PhysicalType(); pt {
-		case types.PtInt, types.PtUint, types.PtUUID, types.PtJSON, types.PtText:
+		switch k := c.Type.Kind(); k {
+		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return fmt.Errorf("identity column %q has type %s instead of Int, Uint, UUID, JSON, or Text", c.Name, pt)
+			return fmt.Errorf("identity column %q has type %s instead of Int, Uint, UUID, JSON, or Text", c.Name, k)
 		}
 		rw.identityColumn.typ = c.Type
 		rw.identityColumn.index = columnIndex[c.Name]
@@ -355,10 +355,10 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if !ok {
 			return fmt.Errorf("there is no timestamp column %q", name)
 		}
-		switch pt := c.Type.PhysicalType(); pt {
-		case types.PtDateTime, types.PtDate, types.PtJSON, types.PtText:
+		switch k := c.Type.Kind(); k {
+		case types.DateTimeKind, types.DateKind, types.JSONKind, types.TextKind:
 		default:
-			return fmt.Errorf("timestamp column %q has type %s instead of DateTime, Date, JSON, or Text", c.Name, pt)
+			return fmt.Errorf("timestamp column %q has type %s instead of DateTime, Date, JSON, or Text", c.Name, k)
 		}
 		rw.timestampColumn.typ = c.Type
 		rw.timestampColumn.index = columnIndex[c.Name]

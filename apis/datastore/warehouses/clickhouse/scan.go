@@ -67,12 +67,12 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 		}
 		return nil, nil
 	}
-	switch typ.PhysicalType() {
-	case types.PtBoolean:
+	switch typ.Kind() {
+	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
 			return v, nil
 		}
-	case types.PtInt:
+	case types.IntKind:
 		var n int
 		switch v := v.(type) {
 		case int8:
@@ -87,7 +87,7 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Int type", v, name)
 		}
 		return warehouses.ValidateInt(name, typ, n)
-	case types.PtUint:
+	case types.UintKind:
 		var n uint
 		switch v := v.(type) {
 		case uint8:
@@ -102,7 +102,7 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Uint type", v, name)
 		}
 		return warehouses.ValidateUint(name, typ, n)
-	case types.PtFloat:
+	case types.FloatKind:
 		var n float64
 		switch v := v.(type) {
 		case float32:
@@ -113,31 +113,31 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Float type", v, name)
 		}
 		return warehouses.ValidateFloat(name, typ, n)
-	case types.PtDecimal:
+	case types.DecimalKind:
 		if v, ok := v.(decimal.Decimal); ok {
 			return warehouses.ValidateDecimal(name, typ, v)
 		}
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		if v, ok := v.(time.Time); ok {
 			return warehouses.ValidateDateTime(name, v)
 		}
-	case types.PtDate:
+	case types.DateKind:
 		if v, ok := v.(time.Time); ok {
 			return warehouses.ValidateDate(name, v)
 		}
-	case types.PtUUID:
+	case types.UUIDKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateUUID(name, v)
 		}
-	case types.PtInet:
+	case types.InetKind:
 		if v, ok := v.(net.IP); ok {
 			return warehouses.ValidateInet(name, v.String())
 		}
-	case types.PtText:
+	case types.TextKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateText(name, typ, v)
 		}
-	case types.PtArray:
+	case types.ArrayKind:
 		rv := reflect.ValueOf(v)
 		if rv.Kind() != reflect.Slice {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
@@ -158,7 +158,7 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 			}
 		}
 		return a, nil
-	case types.PtMap:
+	case types.MapKind:
 		rv := reflect.ValueOf(v)
 		if t := rv.Type(); t.Kind() != reflect.Map || t.Key().Kind() != reflect.String {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is a Map type", v, name)

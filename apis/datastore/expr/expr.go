@@ -74,5 +74,5 @@ const (
 // Column represents a column within an expression.
 type Column struct {
 	Name string
-	Type types.PhysicalType
+	Type types.Kind
 }

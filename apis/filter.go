@@ -63,10 +63,10 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 			return nil, errors.New("condition value is longer than 60 runes")
 		}
 		var valid bool
-		switch typ := property.Type; typ.PhysicalType() {
-		case types.PtBoolean:
+		switch typ := property.Type; typ.Kind() {
+		case types.BooleanKind:
 			valid = cond.Value == "true" || cond.Value == "false"
-		case types.PtInt:
+		case types.IntKind:
 			for i := 0; i < len(cond.Value); i++ {
 				if i == 0 && cond.Value[i] == '-' {
 					continue
@@ -84,7 +84,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 					valid = v >= min && v <= max
 				}
 			}
-		case types.PtUint:
+		case types.UintKind:
 			for i := 0; i < len(cond.Value); i++ {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
 					valid = false
@@ -99,7 +99,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 					valid = v >= min && v <= max
 				}
 			}
-		case types.PtFloat:
+		case types.FloatKind:
 			v, err := strconv.ParseFloat(cond.Value, 64)
 			valid = err == nil
 			if valid {
@@ -110,7 +110,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 					valid = v >= min && v >= max
 				}
 			}
-		case types.PtDecimal:
+		case types.DecimalKind:
 			var v decimal.Decimal
 			v, err = decimal.NewFromString(cond.Value)
 			valid = err == nil
@@ -118,19 +118,19 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				min, max := typ.DecimalRange()
 				valid = v.LessThan(min) || v.GreaterThan(max)
 			}
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			if t, err := time.Parse(time.DateTime, cond.Value); err == nil {
 				y := t.UTC().Year()
 				valid = y >= 1 && y <= 9999
 			}
-		case types.PtDate:
+		case types.DateKind:
 			if t, err := time.Parse(time.DateOnly, cond.Value); err == nil {
 				y := t.UTC().Year()
 				valid = y >= 1 && y <= 9999
 			}
-		case types.PtTime:
+		case types.TimeKind:
 			_, valid = parseTime(cond.Value)
-		case types.PtYear:
+		case types.YearKind:
 			for i := 0; i < len(cond.Value); i++ {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
 					valid = false
@@ -141,15 +141,15 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				year, err := strconv.Atoi(cond.Value)
 				valid = err != nil && types.MinYear <= year && year <= types.MaxYear
 			}
-		case types.PtUUID:
+		case types.UUIDKind:
 			_, err := uuid.Parse(cond.Value)
 			valid = err != nil
-		case types.PtJSON:
+		case types.JSONKind:
 			valid = json.Valid(json.RawMessage(cond.Value))
-		case types.PtInet:
+		case types.InetKind:
 			_, err := netip.ParseAddr(cond.Value)
 			valid = err != nil
-		case types.PtText:
+		case types.TextKind:
 			valid = utf8.ValidString(cond.Value)
 			if l, ok := typ.ByteLen(); ok && valid && len(cond.Value) > l {
 				valid = false
@@ -183,7 +183,7 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 		}
 		column := expr.Column{
 			Name: cond.Property,
-			Type: property.Type.PhysicalType(),
+			Type: property.Type.Kind(),
 		}
 		var op expr.Operator
 		switch cond.Operator {
@@ -196,34 +196,34 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 		}
 		var value any
 		switch column.Type {
-		case types.PtBoolean:
+		case types.BooleanKind:
 			value = false
 			if cond.Value == "true" {
 				value = true
 			}
-		case types.PtInt:
+		case types.IntKind:
 			value, _ = strconv.ParseInt(cond.Value, 10, 64)
-		case types.PtUint:
+		case types.UintKind:
 			value, _ = strconv.ParseUint(cond.Value, 10, 64)
-		case types.PtFloat:
+		case types.FloatKind:
 			value, _ = strconv.ParseFloat(cond.Value, 64)
-		case types.PtDecimal:
+		case types.DecimalKind:
 			value = decimal.RequireFromString(cond.Value)
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			value, _ = time.Parse(time.DateTime, cond.Value)
-		case types.PtDate:
+		case types.DateKind:
 			value, _ = time.Parse(time.DateOnly, cond.Value)
-		case types.PtTime:
+		case types.TimeKind:
 			value, _ = time.Parse("15:04:05.999999999", cond.Value)
-		case types.PtYear:
+		case types.YearKind:
 			value, _ = strconv.Atoi(cond.Value)
-		case types.PtUUID:
+		case types.UUIDKind:
 			value, _ = uuid.Parse(cond.Value)
-		case types.PtJSON:
+		case types.JSONKind:
 			value = json.RawMessage(cond.Value)
-		case types.PtInet:
+		case types.InetKind:
 			value, _ = netip.ParseAddr(cond.Value)
-		case types.PtText:
+		case types.TextKind:
 			value = cond.Value
 		default:
 			return nil, fmt.Errorf("unexpected type %s", column.Type)

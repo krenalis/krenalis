@@ -91,7 +91,7 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool, layou
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
-	if schema.Valid() && schema.PhysicalType() != types.PtObject {
+	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, errors.New("schema is non an object")
 	}
 	if !dt.Valid() {

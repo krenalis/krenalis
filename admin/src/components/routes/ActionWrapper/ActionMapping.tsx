@@ -1403,8 +1403,8 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 				{language === ''
 					? property.type.name
 					: language === 'Python'
-					? fromPhysicalTypeToPythonType(property.type)
-					: fromPhysicalTypeToJavascriptType(property.type)}
+					? fromKindToPythonType(property.type)
+					: fromKindToJavascriptType(property.type)}
 			</div>
 		</div>
 	);
@@ -1423,7 +1423,7 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 	return isVerticallyVisible;
 }
 
-function fromPhysicalTypeToJavascriptType(type: Type) {
+function fromKindToJavascriptType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
 	//  property length). This needs the full type definition and not the
 	// type name only.
@@ -1467,7 +1467,7 @@ function fromPhysicalTypeToJavascriptType(type: Type) {
 	}
 }
 
-function fromPhysicalTypeToPythonType(type: Type) {
+function fromKindToPythonType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
 	// property length). This needs the full type definition and not the
 	// type name only.

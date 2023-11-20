@@ -95,75 +95,75 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteString("<= ")
 		}
 
-		switch pt := baseExpr.Column.Type; pt {
-		case types.PtBoolean:
+		switch k := baseExpr.Column.Type; k {
+		case types.BooleanKind:
 			b, ok := baseExpr.Value.(bool)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, b)
-		case types.PtInt:
+		case types.IntKind:
 			i, ok := baseExpr.Value.(int)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, i)
-		case types.PtUint:
+		case types.UintKind:
 			u, ok := baseExpr.Value.(uint)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type uint, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, u)
-		case types.PtFloat:
+		case types.FloatKind:
 			f, ok := baseExpr.Value.(float64)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, f)
-		case types.PtDecimal:
+		case types.DecimalKind:
 			d, ok := baseExpr.Value.(decimal.Dec)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
 			}
 			s.WriteString(d.String())
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.DateTime, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format(time.DateTime))
-		case types.PtDate:
+		case types.DateKind:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.Date, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format(time.DateTime))
-		case types.PtTime:
+		case types.TimeKind:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.Time, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format(time.TimeOnly))
-		case types.PtYear:
+		case types.YearKind:
 			year, ok := baseExpr.Value.(int)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, year)
-		case types.PtUUID, types.PtInet, types.PtText:
+		case types.UUIDKind, types.InetKind, types.TextKind:
 			u, ok := baseExpr.Value.(string)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type uuid.UUID, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, u)
-		case types.PtJSON:
+		case types.JSONKind:
 			j, ok := baseExpr.Value.(json.RawMessage)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type json.RawMessage, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, string(j))
 		default:
-			return "", fmt.Errorf("unexpected column with type %q", pt)
+			return "", fmt.Errorf("unexpected column with type %q", k)
 		}
 	case expr.OperatorIsNull:
 		s.WriteString("IS NULL")

@@ -1256,8 +1256,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		if !ok {
 			return types.Type{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
-		switch orderProperty.Type.PhysicalType() {
-		case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
+		switch orderProperty.Type.Kind() {
+		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 			return types.Type{}, nil, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
@@ -1431,7 +1431,7 @@ func validateSchema(table string, schema types.Type) error {
 		if idIndex == -1 {
 			return fmt.Errorf("'%s' schema has no 'id' property", table)
 		}
-		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
+		if p := properties[idIndex]; p.Type.Kind() != types.IntKind && p.Type.Kind() != types.DecimalKind {
 			return fmt.Errorf("property '%s.id' does not have types Int or Decimal", table)
 		} else if p.Nullable {
 			return fmt.Errorf("property '%s.id' cannot be nullable", table)

@@ -100,14 +100,14 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 	for _, c := range columns {
 		switch c.Name {
 		case "id":
-			switch pt := c.Type.PhysicalType(); pt {
-			case types.PtInt, types.PtUint, types.PtUUID, types.PtText:
+			switch k := c.Type.Kind(); k {
+			case types.IntKind, types.UintKind, types.UUIDKind, types.TextKind:
 			default:
 				return nil, fmt.Errorf(`identity column "id" has type %s instead of Int, Uint, UUID, or Text`, c.Type)
 			}
 			hasIdentityColumn = true
 		case "timestamp":
-			if c.Type.PhysicalType() != types.PtDateTime {
+			if c.Type.Kind() != types.DateTimeKind {
 				return nil, fmt.Errorf(`timestamp column "timestamp" has type %s instead of DateTime`, c.Type)
 			}
 		}

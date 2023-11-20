@@ -151,7 +151,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		return types.Type{}, errors.New("unexpected Parquet nil type")
 	}
 
-	// Physical types.
+	// Kinds.
 	switch *elem.Type {
 	case parquet.Type_BOOLEAN:
 		return types.Boolean(), nil
@@ -260,7 +260,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		return types.Type{}, fmt.Errorf("unsupported converted Parquet type %q", *ct)
 	}
 
-	// Physical types.
+	// Kinds.
 	switch *elem.Type {
 	case parquet.Type_INT32:
 		return types.Int(32), nil

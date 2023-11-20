@@ -47,14 +47,14 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 	if v == nil {
 		return append(b, "null"...)
 	}
-	switch pt := t.PhysicalType(); pt {
-	case types.PtBoolean:
+	switch k := t.Kind(); k {
+	case types.BooleanKind:
 		return strconv.AppendBool(b, v.(bool))
-	case types.PtInt, types.PtYear:
+	case types.IntKind, types.YearKind:
 		return strconv.AppendInt(b, int64(v.(int)), 10)
-	case types.PtUint:
+	case types.UintKind:
 		return strconv.AppendUint(b, uint64(v.(uint)), 10)
-	case types.PtFloat:
+	case types.FloatKind:
 		v := v.(float64)
 		switch {
 		case math.IsNaN(v):
@@ -80,25 +80,25 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 			}
 		}
 		return enc.appendFloat(b, v, t.BitSize())
-	case types.PtDecimal:
+	case types.DecimalKind:
 		return append(b, v.(decimal.Decimal).String()...)
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		b = append(b, '"')
 		b = v.(time.Time).AppendFormat(b, time.RFC3339Nano)
 		return append(b, '"')
-	case types.PtDate:
+	case types.DateKind:
 		b = append(b, '"')
 		b = v.(time.Time).AppendFormat(b, time.DateOnly)
 		return append(b, '"')
-	case types.PtTime:
+	case types.TimeKind:
 		b = append(b, '"')
 		b = v.(time.Time).AppendFormat(b, "15:04:05.999999999Z")
 		return append(b, '"')
-	case types.PtUUID, types.PtInet:
+	case types.UUIDKind, types.InetKind:
 		b = append(b, '"')
 		b = append(b, v.(string)...)
 		return append(b, '"')
-	case types.PtJSON:
+	case types.JSONKind:
 		dec := json.NewDecoder(bytes.NewReader(v.(json.RawMessage)))
 		dec.UseNumber()
 		var jv any
@@ -107,9 +107,9 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 			panic(err)
 		}
 		return enc.appendJSONValue(b, jv)
-	case types.PtText:
+	case types.TextKind:
 		return enc.appendString(b, v.(string))
-	case types.PtArray:
+	case types.ArrayKind:
 		v := v.([]any)
 		b = append(b, '[')
 		if len(v) == 0 {
@@ -131,7 +131,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 			b = enc.appendIndentation(b)
 		}
 		return append(b, ']')
-	case types.PtObject:
+	case types.ObjectKind:
 		b = append(b, '{')
 		enc.depth++
 		switch v := v.(type) {
@@ -173,7 +173,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 			b = enc.appendIndentation(b)
 		}
 		return append(b, '}')
-	case types.PtMap:
+	case types.MapKind:
 		v := v.(map[string]any)
 		b = append(b, '{')
 		if len(v) == 0 {

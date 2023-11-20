@@ -57,81 +57,81 @@ var (
 // For Array, Object, and Map values, it can modify the argument v. It returns
 // an error if v cannot be converted.
 func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (any, error) {
-	spt := st.PhysicalType()
-	dpt := dt.PhysicalType()
+	spt := st.Kind()
+	dpt := dt.Kind()
 	// Convert between nil and other values.
 	if nullable {
 		switch {
 		case v == nil:
 			return nil, nil
-		case spt == types.PtJSON && dpt != types.PtJSON:
+		case spt == types.JSONKind && dpt != types.JSONKind:
 			if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
 				return nil, nil
 			}
-		case v == "" && dpt != types.PtText:
+		case v == "" && dpt != types.TextKind:
 			return nil, nil
 		}
 	} else if v == nil {
 		switch dpt {
-		case types.PtText:
+		case types.TextKind:
 			return "", nil
-		case types.PtJSON:
+		case types.JSONKind:
 			return json.RawMessage("null"), nil
 		}
 		return nil, errInvalidConversion
 	}
 	// Convert the unparsed cases, v is not nil.
 	switch dpt {
-	case types.PtBoolean:
+	case types.BooleanKind:
 		switch spt {
-		case types.PtBoolean:
+		case types.BooleanKind:
 			return v.(bool), nil
-		case types.PtInt:
+		case types.IntKind:
 			if st.BitSize() == 8 {
 				return v.(int) != 0, nil
 			}
-		case types.PtUint:
+		case types.UintKind:
 			if st.BitSize() == 8 {
 				return v.(uint) > 0, nil
 			}
-		case types.PtText:
+		case types.TextKind:
 			switch v.(string) {
 			case "false", "False", "FALSE", "no", "No", "NO":
 				return false, nil
 			case "true", "True", "TRUE", "yes", "Yes", "YES":
 				return true, nil
 			}
-		case types.PtJSON:
+		case types.JSONKind:
 			return jsonToBoolean(v)
 		}
-	case types.PtInt:
+	case types.IntKind:
 		var err error
 		var n int
 		switch spt {
-		case types.PtBoolean:
+		case types.BooleanKind:
 			if v.(bool) {
 				n = 1
 			}
 			if dt.BitSize() != 8 {
 				err = errInvalidConversion
 			}
-		case types.PtInt:
+		case types.IntKind:
 			n = v.(int)
-		case types.PtUint:
+		case types.UintKind:
 			u := v.(uint)
 			if u > math.MaxInt64 {
 				err = errInvalidConversion
 			}
 			n = int(u)
-		case types.PtFloat:
+		case types.FloatKind:
 			n, err = floatToInt(v.(float64))
-		case types.PtDecimal:
+		case types.DecimalKind:
 			n, err = decimalToInt(v.(decimal.Decimal))
-		case types.PtYear:
+		case types.YearKind:
 			n = v.(int)
-		case types.PtText:
+		case types.TextKind:
 			n, err = strconv.Atoi(v.(string))
-		case types.PtJSON:
+		case types.JSONKind:
 			n, err = jsonToInt(v)
 		default:
 			err = errInvalidConversion
@@ -143,36 +143,36 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return nil, errInvalidConversion
 		}
 		return n, nil
-	case types.PtUint:
+	case types.UintKind:
 		var err error
 		var n uint
 		switch spt {
-		case types.PtBoolean:
+		case types.BooleanKind:
 			if v.(bool) {
 				n = 1
 			}
 			if dt.BitSize() != 8 {
 				err = errInvalidConversion
 			}
-		case types.PtInt:
+		case types.IntKind:
 			i := v.(int)
 			if i < 0 {
 				return nil, errInvalidConversion
 			}
 			n = uint(i)
-		case types.PtUint:
+		case types.UintKind:
 			n = v.(uint)
-		case types.PtFloat:
+		case types.FloatKind:
 			n, err = floatToUint(v.(float64))
-		case types.PtDecimal:
+		case types.DecimalKind:
 			n, err = decimalToUint(v.(decimal.Decimal))
-		case types.PtYear:
+		case types.YearKind:
 			n = uint(v.(int))
-		case types.PtText:
+		case types.TextKind:
 			var u uint64
 			u, err = strconv.ParseUint(v.(string), 10, 64)
 			n = uint(u)
-		case types.PtJSON:
+		case types.JSONKind:
 			n, err = jsonToUint(v)
 		default:
 			return nil, errInvalidConversion
@@ -185,27 +185,27 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return nil, errInvalidConversion
 		}
 		return n, nil
-	case types.PtFloat:
+	case types.FloatKind:
 		var err error
 		var n float64
 		switch spt {
-		case types.PtFloat:
+		case types.FloatKind:
 			n = v.(float64)
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
-		case types.PtInt:
+		case types.IntKind:
 			n = float64(v.(int))
-		case types.PtUint:
+		case types.UintKind:
 			n = float64(v.(uint))
-		case types.PtDecimal:
+		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal).Float64()
 			if dt.BitSize() == 32 {
 				n = float64(float32(n))
 			}
-		case types.PtText:
+		case types.TextKind:
 			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
-		case types.PtJSON:
+		case types.JSONKind:
 			n, err = jsonToFloat(v, dt.BitSize())
 		default:
 			return nil, errInvalidConversion
@@ -217,25 +217,25 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return nil, errInvalidConversion
 		}
 		return n, nil
-	case types.PtDecimal:
+	case types.DecimalKind:
 		var err error
 		var n decimal.Decimal
 		switch spt {
-		case types.PtDecimal:
+		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
-		case types.PtInt:
+		case types.IntKind:
 			n = decimal.New(int64(v.(int)), 0)
-		case types.PtUint:
+		case types.UintKind:
 			n, _ = decimal.NewFromString(strconv.FormatUint(uint64(v.(uint)), 10))
-		case types.PtFloat:
+		case types.FloatKind:
 			f := v.(float64)
 			if math.IsNaN(f) || math.IsInf(f, 0) {
 				return nil, errInvalidConversion
 			}
 			n = decimal.NewFromFloat(f)
-		case types.PtText:
+		case types.TextKind:
 			n, err = decimal.NewFromString(v.(string))
-		case types.PtJSON:
+		case types.JSONKind:
 			n, err = jsonToDecimal(v)
 		default:
 			return nil, errInvalidConversion
@@ -247,13 +247,13 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return nil, errInvalidConversion
 		}
 		return n, nil
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		var t time.Time
 		var err error
 		switch spt {
-		case types.PtDateTime, types.PtDate:
+		case types.DateTimeKind, types.DateKind:
 			t = v.(time.Time)
-		case types.PtText:
+		case types.TextKind:
 			t, err = time.Parse(time.RFC3339Nano, v.(string))
 			if err != nil {
 				return nil, errInvalidConversion
@@ -262,7 +262,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			if y := t.Year(); y < 1 || y > 9999 {
 				return nil, errInvalidConversion
 			}
-		case types.PtJSON:
+		case types.JSONKind:
 			t, err = jsonToDateTime(v)
 			if err != nil {
 				return nil, errInvalidConversion
@@ -289,21 +289,21 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			}
 		}
 		return t, nil
-	case types.PtDate:
+	case types.DateKind:
 		var t time.Time
 		var err error
 		switch spt {
-		case types.PtDate:
+		case types.DateKind:
 			t = v.(time.Time)
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			t = v.(time.Time)
 			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-		case types.PtText:
+		case types.TextKind:
 			t, err = convertTextToDate(v.(string))
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-		case types.PtJSON:
+		case types.JSONKind:
 			t, err = jsonToDate(v)
 			if err != nil {
 				return nil, err
@@ -319,22 +319,22 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return t.Format(layout), nil
 		}
 		return t, nil
-	case types.PtTime:
+	case types.TimeKind:
 		var t time.Time
 		var err error
 		switch spt {
-		case types.PtTime:
+		case types.TimeKind:
 			t = v.(time.Time)
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			t = v.(time.Time)
 			t = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
-		case types.PtText:
+		case types.TextKind:
 			var ok bool
 			t, ok = parseTime(v.(string))
 			if !ok {
 				return nil, errInvalidConversion
 			}
-		case types.PtJSON:
+		case types.JSONKind:
 			t, err = jsonToTime(v)
 			if err != nil {
 				return nil, err
@@ -348,27 +348,27 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			return t.Format(layout), nil
 		}
 		return t, nil
-	case types.PtYear:
+	case types.YearKind:
 		var err error
 		var n int
 		switch spt {
-		case types.PtYear:
+		case types.YearKind:
 			return v.(int), nil
-		case types.PtInt:
+		case types.IntKind:
 			n = v.(int)
-		case types.PtUint:
+		case types.UintKind:
 			u := v.(uint)
 			if u > math.MaxInt64 {
 				return nil, errInvalidConversion
 			}
 			n = int(u)
-		case types.PtText:
+		case types.TextKind:
 			s := v.(string)
 			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
 				return nil, errInvalidConversion
 			}
 			n, err = strconv.Atoi(s)
-		case types.PtJSON:
+		case types.JSONKind:
 			n, err = jsonToYear(v)
 		default:
 			return nil, errInvalidConversion
@@ -376,20 +376,20 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 		if err == nil && 1 <= n && n <= 9999 {
 			return n, nil
 		}
-	case types.PtUUID:
+	case types.UUIDKind:
 		switch spt {
-		case types.PtUUID:
+		case types.UUIDKind:
 			return v.(string), nil
-		case types.PtText:
+		case types.TextKind:
 			u, err := uuid.Parse(v.(string))
 			if err != nil {
 				return nil, errInvalidConversion
 			}
 			return u.String(), nil
-		case types.PtJSON:
+		case types.JSONKind:
 			return jsonToUUID(v)
 		}
-	case types.PtJSON:
+	case types.JSONKind:
 		switch v := v.(type) {
 		case json.RawMessage:
 			return v, nil
@@ -405,48 +405,48 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			}
 			return json.RawMessage(b), nil
 		}
-	case types.PtInet:
+	case types.InetKind:
 		switch spt {
-		case types.PtInet:
+		case types.InetKind:
 			return v.(string), nil
-		case types.PtText:
+		case types.TextKind:
 			ip, err := netip.ParseAddr(v.(string))
 			if err != nil {
 				return nil, errInvalidConversion
 			}
 			return ip.String(), nil
-		case types.PtJSON:
+		case types.JSONKind:
 			return jsonToInet(v)
 		}
-	case types.PtText:
+	case types.TextKind:
 		var s string
 		switch spt {
-		case types.PtText:
+		case types.TextKind:
 			s = v.(string)
-		case types.PtBoolean:
+		case types.BooleanKind:
 			s = "false"
 			if v.(bool) {
 				s = "true"
 			}
-		case types.PtInt:
+		case types.IntKind:
 			s = strconv.FormatInt(int64(v.(int)), 10)
-		case types.PtUint:
+		case types.UintKind:
 			s = strconv.FormatUint(uint64(v.(uint)), 10)
-		case types.PtFloat:
+		case types.FloatKind:
 			s = strconv.FormatFloat(v.(float64), 'g', -1, st.BitSize())
-		case types.PtDecimal:
+		case types.DecimalKind:
 			s = v.(decimal.Decimal).String()
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			s = v.(time.Time).Format(time.RFC3339Nano)
-		case types.PtDate:
+		case types.DateKind:
 			s = v.(time.Time).Format(time.DateOnly)
-		case types.PtTime:
+		case types.TimeKind:
 			s = v.(time.Time).Format("15:04:05.999999999")
-		case types.PtYear:
+		case types.YearKind:
 			s = strconv.Itoa(v.(int))
-		case types.PtUUID, types.PtInet:
+		case types.UUIDKind, types.InetKind:
 			s = v.(string)
-		case types.PtJSON:
+		case types.JSONKind:
 			var err error
 			s, err = jsonToText(v)
 			if err != nil {
@@ -476,7 +476,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			}
 			if l, ok := dt.CharLen(); ok {
 				runes := len(s)
-				if spt == types.PtJSON || spt == types.PtText {
+				if spt == types.JSONKind || spt == types.TextKind {
 					runes = utf8.RuneCountInString(s)
 				}
 				if runes > l {
@@ -485,9 +485,9 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			}
 		}
 		return s, nil
-	case types.PtArray:
+	case types.ArrayKind:
 		switch spt {
-		case types.PtArray:
+		case types.ArrayKind:
 			s := v.([]any)
 			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
 				return nil, errInvalidConversion
@@ -505,7 +505,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 				}
 			}
 			return s, nil
-		case types.PtJSON:
+		case types.JSONKind:
 			s, err := jsonToArray(v)
 			if err != nil {
 				return nil, errInvalidConversion
@@ -522,9 +522,9 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			}
 			return s, nil
 		}
-	case types.PtObject:
+	case types.ObjectKind:
 		switch spt {
-		case types.PtObject:
+		case types.ObjectKind:
 			obj := v.(map[string]any)
 			if st.EqualTo(dt) {
 				return obj, nil
@@ -552,7 +552,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 				}
 			}
 			return obj, nil
-		case types.PtJSON:
+		case types.JSONKind:
 			s, err := jsonToMap(v)
 			if err != nil {
 				return nil, errInvalidConversion
@@ -577,9 +577,9 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 			}
 			return s, nil
 		}
-	case types.PtMap:
+	case types.MapKind:
 		switch spt {
-		case types.PtMap:
+		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
 			m := v.(map[string]any)
@@ -594,7 +594,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (a
 				}
 			}
 			return m, nil
-		case types.PtJSON:
+		case types.JSONKind:
 			s, err := jsonToMap(v)
 			if err != nil {
 				return nil, errInvalidConversion
@@ -622,24 +622,24 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	if s, ok := v.(string); ok {
 		return append(b, s...), nil
 	}
-	switch t.PhysicalType() {
-	case types.PtBoolean:
+	switch t.Kind() {
+	case types.BooleanKind:
 		strconv.AppendBool(b, v.(bool))
-	case types.PtInt, types.PtYear:
+	case types.IntKind, types.YearKind:
 		return strconv.AppendInt(b, int64(v.(int)), 10), nil
-	case types.PtUint:
+	case types.UintKind:
 		return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
-	case types.PtFloat:
+	case types.FloatKind:
 		return strconv.AppendFloat(b, v.(float64), 'g', -1, t.BitSize()), nil
-	case types.PtDecimal:
+	case types.DecimalKind:
 		return append(b, v.(decimal.Decimal).String()...), nil
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		return v.(time.Time).AppendFormat(b, time.RFC3339Nano), nil
-	case types.PtDate:
+	case types.DateKind:
 		return v.(time.Time).AppendFormat(b, time.DateOnly), nil
-	case types.PtTime:
+	case types.TimeKind:
 		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
-	case types.PtJSON:
+	case types.JSONKind:
 		switch v := v.(type) {
 		case float64:
 			return strconv.AppendFloat(b, v, 'g', -1, 64), nil

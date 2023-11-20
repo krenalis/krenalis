@@ -169,44 +169,44 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		q.WriteByte('"')
 		q.WriteString(c.Name)
 		q.WriteString(`" `)
-		switch c.Type.PhysicalType() {
-		case types.PtBoolean:
+		switch c.Type.Kind() {
+		case types.BooleanKind:
 			q.WriteString("BOOLEAN")
-		case types.PtFloat:
+		case types.FloatKind:
 			q.WriteString("FLOAT")
 		case
-			types.PtInt,
-			types.PtUint,
-			types.PtYear:
+			types.IntKind,
+			types.UintKind,
+			types.YearKind:
 			q.WriteString("NUMBER(38,0)")
-		case types.PtDecimal:
+		case types.DecimalKind:
 			q.WriteString("NUMBER(")
 			q.WriteString(strconv.Itoa(c.Type.Precision()))
 			q.WriteByte(',')
 			q.WriteString(strconv.Itoa(c.Type.Scale()))
 			q.WriteByte(')')
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			q.WriteString("TIMESTAMP_NTZ")
-		case types.PtDate:
+		case types.DateKind:
 			q.WriteString("DATE")
-		case types.PtTime:
+		case types.TimeKind:
 			q.WriteString("TIME")
-		case types.PtJSON:
+		case types.JSONKind:
 			q.WriteString("VARIANT")
-		case types.PtUUID:
+		case types.UUIDKind:
 			q.WriteString("VARCHAR(36)")
-		case types.PtInet:
+		case types.InetKind:
 			q.WriteString("VARCHAR(45)")
-		case types.PtText:
+		case types.TextKind:
 			q.WriteString("VARCHAR")
 			if l, ok := c.Type.CharLen(); ok {
 				q.WriteByte('(')
 				q.WriteString(strconv.Itoa(l))
 				q.WriteByte(')')
 			}
-		case types.PtArray:
+		case types.ArrayKind:
 			q.WriteString("ARRAY")
-		case types.PtMap:
+		case types.MapKind:
 			q.WriteString("OBJECT")
 		default:
 			panic("unsupported type")
@@ -694,8 +694,8 @@ func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (i
 					b.WriteString(v)
 				}
 			default:
-				switch pt := columns[j].Type.PhysicalType(); pt {
-				case types.PtJSON, types.PtArray, types.PtMap:
+				switch k := columns[j].Type.Kind(); k {
+				case types.JSONKind, types.ArrayKind, types.MapKind:
 					switch v := v.(type) {
 					case json.RawMessage:
 						quoteCSVBytes(&b, v)
@@ -711,14 +711,14 @@ func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (i
 						}
 						quoteCSVBytes(&b, bj.Bytes())
 					}
-				case types.PtDateTime:
+				case types.DateTimeKind:
 					b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.999999999"))
-				case types.PtDate:
+				case types.DateKind:
 					b.WriteString(v.(time.Time).Format("2006-01-02"))
-				case types.PtTime:
+				case types.TimeKind:
 					b.WriteString(v.(time.Time).Format("15:04:05.999999999"))
 				default:
-					return nil, fmt.Errorf("cannot serialize as Snowflake CSV: unsupported type %T for column type %s", v, pt)
+					return nil, fmt.Errorf("cannot serialize as Snowflake CSV: unsupported type %T for column type %s", v, k)
 				}
 			}
 		}

@@ -43,25 +43,25 @@ var convertMatrix = [...]int32{
 
 // convertibleTo reports whether a value of type st can be converted to type dt.
 func convertibleTo(st, dt types.Type) bool {
-	spt := st.PhysicalType()
-	dpt := dt.PhysicalType()
-	mask := int32(1 << (types.PtMap - dpt))
+	spt := st.Kind()
+	dpt := dt.Kind()
+	mask := int32(1 << (types.MapKind - dpt))
 	if convertMatrix[spt-1]&mask == 0 {
-		if spt == types.PtBoolean && dpt == types.PtInt && dt.BitSize() == 8 { // Boolean is convertible to Int(8)
+		if spt == types.BooleanKind && dpt == types.IntKind && dt.BitSize() == 8 { // Boolean is convertible to Int(8)
 			return true
 		}
-		if spt == types.PtInt && dpt == types.PtBoolean && st.BitSize() == 8 { // Int(8) is convertible to Boolean.
+		if spt == types.IntKind && dpt == types.BooleanKind && st.BitSize() == 8 { // Int(8) is convertible to Boolean.
 			return true
 		}
 		return false
 	}
-	if spt == types.PtJSON {
+	if spt == types.JSONKind {
 		return true
 	}
 	switch dpt {
-	case types.PtArray, types.PtMap:
+	case types.ArrayKind, types.MapKind:
 		return convertibleTo(st.Elem(), dt.Elem())
-	case types.PtObject:
+	case types.ObjectKind:
 		var hasSameNameProperty bool
 		for _, sp := range st.Properties() {
 			if dp, ok := dt.Property(sp.Name); ok {

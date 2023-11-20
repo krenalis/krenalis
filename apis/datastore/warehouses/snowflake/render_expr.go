@@ -98,9 +98,9 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteString("<= ")
 		}
 
-		switch pt := baseExpr.Column.Type; pt {
+		switch k := baseExpr.Column.Type; k {
 		case
-			types.PtBoolean:
+			types.BooleanKind:
 			v, ok := baseExpr.Value.(bool)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
@@ -111,19 +111,19 @@ func renderExpr(exp expr.Expr) (string, error) {
 				s.WriteString("FALSE")
 			}
 		case
-			types.PtFloat:
+			types.FloatKind:
 			v, ok := baseExpr.Value.(float64)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
 			}
 			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-		case types.PtDecimal:
+		case types.DecimalKind:
 			d, ok := baseExpr.Value.(decimal.Dec)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
 			}
 			s.WriteString(d.String())
-		case types.PtDateTime:
+		case types.DateTimeKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
@@ -131,7 +131,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteByte('\'')
 			s.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
 			s.WriteByte('\'')
-		case types.PtDate:
+		case types.DateKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
@@ -139,7 +139,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteByte('\'')
 			s.WriteString(v.Format(time.DateTime))
 			s.WriteByte('\'')
-		case types.PtTime:
+		case types.TimeKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
@@ -147,7 +147,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteByte('\'')
 			s.WriteString(v.Format("15:04:05.999999999"))
 			s.WriteByte('\'')
-		case types.PtJSON:
+		case types.JSONKind:
 			s.WriteString("PARSE_JSON(")
 			switch v := baseExpr.Value.(type) {
 			case json.RawMessage:
@@ -168,20 +168,20 @@ func renderExpr(exp expr.Expr) (string, error) {
 				return "", fmt.Errorf("expecting value of type json.RawMessage, json.Number, bool, string, float64, map[string]any, or []any but got %T", baseExpr.Value)
 			}
 			s.WriteByte(')')
-		case types.PtText:
+		case types.TextKind:
 			v, ok := baseExpr.Value.(string)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type string, got %T", baseExpr.Value)
 			}
 			quoteString(&s, v)
-		case types.PtArray:
+		case types.ArrayKind:
 			// Snowflake allows comparison between arrays, but we currently do not support it in Chichi.
 			return "", errors.New("cannot apply operators on Array type")
-		case types.PtMap:
+		case types.MapKind:
 			// Snowflake allows comparison between objects, but we currently do not support it in Chichi.
 			return "", errors.New("cannot apply operators on Map type")
 		default:
-			return "", fmt.Errorf("unexpected column with type %q", pt)
+			return "", fmt.Errorf("unexpected column with type %q", k)
 		}
 
 	case expr.OperatorIsNull:

@@ -19,11 +19,11 @@ import (
 
 func Test_renderExpr(t *testing.T) {
 	var (
-		id        = expr.Column{Name: "id", Type: types.PtText}
-		count     = expr.Column{Name: "count", Type: types.PtDecimal}
-		weight    = expr.Column{Name: "weight", Type: types.PtFloat}
-		timestamp = expr.Column{Name: "timestamp", Type: types.PtDateTime}
-		values    = expr.Column{Name: "values", Type: types.PtJSON}
+		id        = expr.Column{Name: "id", Type: types.TextKind}
+		count     = expr.Column{Name: "count", Type: types.DecimalKind}
+		weight    = expr.Column{Name: "weight", Type: types.FloatKind}
+		timestamp = expr.Column{Name: "timestamp", Type: types.DateTimeKind}
+		values    = expr.Column{Name: "values", Type: types.JSONKind}
 	)
 	cases := []struct {
 		expr    expr.Expr

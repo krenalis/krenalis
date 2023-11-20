@@ -64,7 +64,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 	case nil:
 		b.WriteString("NULL")
 	case string:
-		if t.PhysicalType() == types.PtText {
+		if t.Kind() == types.TextKind {
 			quoteString(b, v)
 		} else {
 			b.WriteByte('\'')
@@ -78,12 +78,12 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 	case decimal.Decimal:
 		b.WriteString(v.String())
 	case time.Time:
-		switch t.PhysicalType() {
-		case types.PtDateTime:
+		switch t.Kind() {
+		case types.DateTimeKind:
 			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
-		case types.PtDate:
+		case types.DateKind:
 			b.WriteString(v.Format("2006-01-02"))
-		case types.PtTime:
+		case types.TimeKind:
 			b.WriteString(v.Format("15:04:05.999999"))
 		}
 	case bool:

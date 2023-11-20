@@ -84,14 +84,14 @@ Expression:
 				}
 				dot = false
 				// If there is a non-Text value, convert it to Text.
-				switch p.typ.PhysicalType() {
-				case types.PtBoolean:
+				switch p.typ.Kind() {
+				case types.BooleanKind:
 					p.value = strconv.FormatBool(p.value.(bool))
-				case types.PtInt:
+				case types.IntKind:
 					p.value = strconv.Itoa(p.value.(int))
-				case types.PtDecimal:
+				case types.DecimalKind:
 					p.value = p.value.(decimal.Decimal).String()
-				case types.PtJSON:
+				case types.JSONKind:
 					p.value = ""
 				}
 				// Parse the path.
@@ -150,7 +150,7 @@ Expression:
 // multipart reports whether p is a part of a multipart expression.
 func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 	// If a value is not already present, it sets it.
-	if !multipart && p.typ.PhysicalType() == types.PtInvalid {
+	if !multipart && p.typ.Kind() == types.InvalidKind {
 		switch v := v.(type) {
 		case nil:
 			return nil, types.JSON()
@@ -179,16 +179,16 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 	}
 	// Append the value.
 	t := types.Text()
-	switch p.typ.PhysicalType() {
-	case types.PtInvalid:
+	switch p.typ.Kind() {
+	case types.InvalidKind:
 		return s, t
-	case types.PtBoolean:
+	case types.BooleanKind:
 		return strconv.FormatBool(p.value.(bool)) + s, t
-	case types.PtInt:
+	case types.IntKind:
 		return strconv.Itoa(p.value.(int)) + s, t
-	case types.PtDecimal:
+	case types.DecimalKind:
 		return p.value.(decimal.Decimal).String() + s, t
-	case types.PtText:
+	case types.TextKind:
 		return p.value.(string) + s, t
 	}
 	panic("unexpected value type")

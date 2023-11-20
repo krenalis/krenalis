@@ -74,10 +74,10 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 // marshalType marshals t as JSON and writes it to b.
 func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"name":"`)
-	b.WriteString(t.pt.String())
+	b.WriteString(t.kind.String())
 	b.WriteString(`"`)
-	switch t.pt {
-	case PtInt:
+	switch t.kind {
+	case IntKind:
 		b.WriteString(`,"bitSize":`)
 		b.WriteString(strconv.Itoa(t.BitSize()))
 		if t.size < 4 {
@@ -103,7 +103,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 				}
 			}
 		}
-	case PtUint:
+	case UintKind:
 		b.WriteString(`,"bitSize":`)
 		b.WriteString(strconv.Itoa(t.BitSize()))
 		if t.size < 4 {
@@ -129,7 +129,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 				}
 			}
 		}
-	case PtFloat:
+	case FloatKind:
 		b.WriteString(`,"bitSize":`)
 		b.WriteString(strconv.Itoa(t.BitSize()))
 		if t.real {
@@ -145,7 +145,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 				b.WriteString(f.maxS)
 			}
 		}
-	case PtDecimal:
+	case DecimalKind:
 		if d, ok := t.vl.(decimalRange); ok {
 			if d.min.GreaterThan(MinDecimal) {
 				b.WriteString(`,"minimum":`)
@@ -164,12 +164,12 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
-	case PtJSON:
+	case JSONKind:
 		if t.s > 0 {
 			b.WriteString(`,"charLen":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
-	case PtText:
+	case TextKind:
 		if t.p > 0 {
 			b.WriteString(`,"byteLen":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
@@ -193,7 +193,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 			}
 			b.WriteByte(']')
 		}
-	case PtArray:
+	case ArrayKind:
 		if t.p > 0 {
 			b.WriteString(`,"minItems":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
@@ -207,7 +207,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 		}
 		b.WriteString(`,"itemType":`)
 		marshalType(b, t.vl.(Type))
-	case PtObject:
+	case ObjectKind:
 		b.WriteString(`,"properties":[`)
 		properties := t.vl.([]Property)
 		for i, p := range properties {
@@ -217,7 +217,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 			_ = marshalProperty(b, p)
 		}
 		b.WriteString("]")
-	case PtMap:
+	case MapKind:
 		b.WriteString(`,"valueType":`)
 		marshalType(b, t.vl.(Type))
 	}
@@ -325,7 +325,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var hasReal, hasScale, hasMinItems, hasMaxItems, hasUniqueItems bool
 
-	var pt PhysicalType
+	var kind Kind
 	var bitSize int
 	var minimum, maximum json.Number
 	var real bool
@@ -376,12 +376,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 		switch key {
 		case "name":
-			if pt.Valid() {
+			if kind.Valid() {
 				return Type{}, errors.New("repeated 'name' key")
 			}
-			pt, ok = PhysicalTypeByName(tok.(string))
+			kind, ok = KindByName(tok.(string))
 			if !ok {
-				return Type{}, errors.New("invalid physical type")
+				return Type{}, errors.New("invalid kind type")
 			}
 		case "bitSize":
 			if bitSize != 0 {
@@ -593,18 +593,18 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var t Type
 
-	if !pt.Valid() {
+	if !kind.Valid() {
 		return Type{}, errors.New("missing 'name' key")
 	}
-	t.pt = pt
+	t.kind = kind
 	if bitSize == 0 {
-		if t.pt == PtInt || t.pt == PtUint || t.pt == PtFloat {
+		if t.kind == IntKind || t.kind == UintKind || t.kind == FloatKind {
 			return Type{}, errors.New("missing 'bitSize' key")
 		}
 	} else {
-		switch t.pt {
-		case PtInt, PtUint:
-		case PtFloat:
+		switch t.kind {
+		case IntKind, UintKind:
+		case FloatKind:
 			if bitSize != 32 && bitSize != 64 {
 				return Type{}, errors.New("invalid bit size")
 			}
@@ -625,12 +625,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	}
 	if minimum == "" {
-		if t.pt == PtInt && t.size < 4 { // 8, 16, 24, and 32 bits
+		if t.kind == IntKind && t.size < 4 { // 8, 16, 24, and 32 bits
 			t.p = int32(minInt[t.size])
 		}
 	} else {
-		switch t.pt {
-		case PtInt:
+		switch t.kind {
+		case IntKind:
 			min, err := minimum.Int64()
 			if err != nil {
 				return Type{}, errors.New("invalid value for minimum")
@@ -646,7 +646,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					t.vl = intRange{min, Max} // 64 bits
 				}
 			}
-		case PtUint:
+		case UintKind:
 			min, err := strconv.ParseUint(string(minimum), 10, 64)
 			if err != nil {
 				return Type{}, errors.New("invalid value for minimum")
@@ -662,7 +662,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					t.vl = uintRange{min, Max} // 64 bits
 				}
 			}
-		case PtFloat:
+		case FloatKind:
 			if t.size == 4 {
 				// 64 bits.
 				min, err := minimum.Float64()
@@ -687,7 +687,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
 				}
 			}
-		case PtDecimal:
+		case DecimalKind:
 			min, err := decimal.NewFromString(string(minimum))
 			if err != nil {
 				return Type{}, errors.New("invalid value for minimum")
@@ -705,16 +705,16 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	if maximum == "" {
 		if t.size < 4 {
 			// 8, 16, 24, and 32 bits.
-			switch t.pt {
-			case PtInt:
+			switch t.kind {
+			case IntKind:
 				t.s = int32(maxInt[t.size])
-			case PtUint:
+			case UintKind:
 				t.s = int32(maxUint[t.size])
 			}
 		}
 	} else {
-		switch t.pt {
-		case PtInt:
+		switch t.kind {
+		case IntKind:
 			max, err := maximum.Int64()
 			if err != nil {
 				return Type{}, errors.New("invalid value for maximum")
@@ -742,7 +742,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					t.s = int32(max)
 				}
 			}
-		case PtUint:
+		case UintKind:
 			max, err := strconv.ParseUint(string(maximum), 10, 64)
 			if err != nil {
 				return Type{}, errors.New("invalid value for maximum")
@@ -770,7 +770,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					t.s = int32(max)
 				}
 			}
-		case PtFloat:
+		case FloatKind:
 			if t.size == 4 {
 				// 64 bits.
 				max, err := maximum.Float64()
@@ -811,7 +811,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					}
 				}
 			}
-		case PtDecimal:
+		case DecimalKind:
 			max, err := decimal.NewFromString(string(maximum))
 			if err != nil {
 				return Type{}, errors.New("invalid value for maximum")
@@ -835,43 +835,43 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	}
 	if hasReal {
-		if pt != PtFloat {
+		if kind != FloatKind {
 			return Type{}, errors.New("unexpected real for non-Float type")
 		}
 		t.real = real
 	}
 	if re != nil {
-		if pt != PtText {
+		if kind != TextKind {
 			return Type{}, errors.New("unexpected regular expression for non-Text type")
 		}
 		t.vl = re
 	}
 	if values != nil {
-		if pt != PtText {
+		if kind != TextKind {
 			return Type{}, errors.New("unexpected values for non-Text type")
 		}
 		t.vl = values
 	}
 	if byteLen > 0 {
-		if pt != PtText {
+		if kind != TextKind {
 			return Type{}, errors.New("unexpected length in bytes for non-Text type")
 		}
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
-		if pt != PtJSON && pt != PtText {
+		if kind != JSONKind && kind != TextKind {
 			return Type{}, errors.New("unexpected length in characters for non-JSON and non-Text types")
 		}
 		t.s = int32(charLen)
 	}
 	if precision > 0 {
-		if pt != PtDecimal {
+		if kind != DecimalKind {
 			return Type{}, errors.New("unexpected precision for non-Decimal type")
 		}
 		t.p = int32(precision)
 	}
 	if hasScale {
-		if pt != PtDecimal {
+		if kind != DecimalKind {
 			return Type{}, errors.New("unexpected scale for non-Decimal type")
 		}
 		if precision == 0 {
@@ -883,58 +883,58 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.s = int32(scale)
 	}
 	if itemType.Valid() {
-		if pt != PtArray {
+		if kind != ArrayKind {
 			return Type{}, errors.New("unexpected item type for non-Array type")
 		}
 		t.vl = itemType
 	} else {
-		if pt == PtArray {
+		if kind == ArrayKind {
 			return Type{}, errors.New("missing item type")
 		}
 	}
 	if hasMinItems {
-		if pt != PtArray {
+		if kind != ArrayKind {
 			return Type{}, errors.New("unexpected minItems for non-Array type")
 		}
 		t.p = int32(minItems)
 	}
 	if maxItems < MaxItems {
-		if pt != PtArray {
+		if kind != ArrayKind {
 			return Type{}, errors.New("unexpected maxItems for non-Array type")
 		}
 		if maxItems < minItems {
 			return Type{}, errors.New("maxItems must be greater or equal to minItems")
 		}
 	}
-	if pt == PtArray {
+	if kind == ArrayKind {
 		t.s = int32(maxItems)
 	}
 	if hasUniqueItems {
-		if pt != PtArray {
+		if kind != ArrayKind {
 			return Type{}, errors.New("unexpected uniqueItems for non-Array type")
 		}
-		if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
+		if k := t.vl.(Type).kind; k == ArrayKind || k == ObjectKind {
 			return Type{}, errors.New("unexpected uniqueItems for items with type Array or Object")
 		}
 		t.unique = uniqueItems
 	}
 	if properties == nil {
-		if pt == PtObject {
+		if kind == ObjectKind {
 			return Type{}, errors.New("missing object properties")
 		}
 	} else {
-		if pt != PtObject {
+		if kind != ObjectKind {
 			return Type{}, errors.New("unexpected properties for non-Object type")
 		}
 		t.vl = properties
 	}
 	if valueType.Valid() {
-		if pt != PtMap {
+		if kind != MapKind {
 			return Type{}, errors.New("unexpected value type for non-Map type")
 		}
 		t.vl = valueType
 	} else {
-		if pt == PtMap {
+		if kind == MapKind {
 			return Type{}, errors.New("missing value type")
 		}
 	}
@@ -1090,7 +1090,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 		return Property{}, errors.New("missing property type")
 	}
 	if hasPlaceholder {
-		if _, ok := p.Placeholder.(map[string]string); ok && p.Type.PhysicalType() != PtMap {
+		if _, ok := p.Placeholder.(map[string]string); ok && p.Type.Kind() != MapKind {
 			return Property{}, errors.New("invalid placeholder value")
 		}
 	}

@@ -72,29 +72,29 @@ const (
 	MinInt8   = math.MinInt8
 )
 
-type PhysicalType int8
+type Kind int8
 
 const (
-	PtInvalid PhysicalType = iota
-	PtBoolean
-	PtInt
-	PtUint
-	PtFloat
-	PtDecimal
-	PtDateTime
-	PtDate
-	PtTime
-	PtYear
-	PtUUID
-	PtJSON
-	PtInet
-	PtText
-	PtArray
-	PtObject
-	PtMap
+	InvalidKind Kind = iota
+	BooleanKind
+	IntKind
+	UintKind
+	FloatKind
+	DecimalKind
+	DateTimeKind
+	DateKind
+	TimeKind
+	YearKind
+	UUIDKind
+	JSONKind
+	InetKind
+	TextKind
+	ArrayKind
+	ObjectKind
+	MapKind
 )
 
-var physicalName = []string{
+var kindName = []string{
 	"Boolean",
 	"Int",
 	"Uint",
@@ -113,25 +113,25 @@ var physicalName = []string{
 	"Map",
 }
 
-// String returns the name of pt. Panics if pt is not a physical type.
-func (pt PhysicalType) String() string {
-	if !pt.Valid() {
-		panic("invalid physical type")
+// String returns the name of k. Panics if k is not a kind.
+func (k Kind) String() string {
+	if !k.Valid() {
+		panic("invalid kind")
 	}
-	return physicalName[pt-1]
+	return kindName[k-1]
 }
 
-// Valid reports whether pt is a valid physical type.
-func (pt PhysicalType) Valid() bool {
-	return 1 <= pt && int(pt) <= len(physicalName)
+// Valid reports whether k is a valid kind.
+func (k Kind) Valid() bool {
+	return 1 <= k && int(k) <= len(kindName)
 }
 
-// PhysicalTypeByName returns a physical type by its name. The second return
-// parameter reports whether a physical type with the given name exists.
-func PhysicalTypeByName(name string) (PhysicalType, bool) {
-	for i, n := range physicalName {
+// KindByName returns a kind by its name. The second return parameter reports
+// whether a kind with the given name exists.
+func KindByName(name string) (Kind, bool) {
+	for i, n := range kindName {
 		if n == name {
-			return PhysicalType(i + 1), true
+			return Kind(i + 1), true
 		}
 	}
 	return 0, false
@@ -206,7 +206,7 @@ func (p Path) Equals(path Path) bool {
 
 // Type represents a type.
 type Type struct {
-	pt PhysicalType
+	kind Kind
 
 	size int8 // size for Int, Uint and Float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
@@ -252,13 +252,13 @@ var _ interface {
 
 // Boolean returns the Boolean type.
 func Boolean() Type {
-	return Type{pt: PtBoolean}
+	return Type{kind: BooleanKind}
 }
 
 // Int returns the Int type with the provided bit size. It panics if size is not
 // 8, 16, 24, 32 or 64.
 func Int(size int) Type {
-	t := Type{pt: PtInt}
+	t := Type{kind: IntKind}
 	switch size {
 	case 8:
 		t.p = MinInt8
@@ -286,7 +286,7 @@ func Int(size int) Type {
 // Uint returns the Uint type with the provided bit size. It panics if size is
 // not 8, 16, 24, 32 or 64.
 func Uint(size int) Type {
-	t := Type{pt: PtUint}
+	t := Type{kind: UintKind}
 	switch size {
 	case 8:
 		t.s = int32(MaxUint8)
@@ -311,7 +311,7 @@ func Uint(size int) Type {
 // Float returns the Float type with the provided bit size. It panics if size is
 // not 32 or 64.
 func Float(size int) Type {
-	t := Type{pt: PtFloat}
+	t := Type{kind: FloatKind}
 	switch size {
 	case 32:
 		t.size = 3
@@ -330,7 +330,7 @@ func Float(size int) Type {
 // precision and scale.
 func Decimal(precision, scale int) Type {
 	if precision == 0 && scale == 0 {
-		return Type{pt: PtDecimal}
+		return Type{kind: DecimalKind}
 	}
 	if precision < 1 || precision > MaxDecimalPrecision {
 		panic("invalid decimal precision")
@@ -338,52 +338,52 @@ func Decimal(precision, scale int) Type {
 	if scale < 0 || scale > MaxDecimalScale || scale > precision {
 		panic("invalid decimal scale")
 	}
-	return Type{pt: PtDecimal, p: int32(precision), s: int32(scale)}
+	return Type{kind: DecimalKind, p: int32(precision), s: int32(scale)}
 }
 
 // DateTime returns the DateTime type.
 func DateTime() Type {
-	return Type{pt: PtDateTime}
+	return Type{kind: DateTimeKind}
 }
 
 // Date returns the Date type.
 func Date() Type {
-	return Type{pt: PtDate}
+	return Type{kind: DateKind}
 }
 
 // Time returns the Time type.
 func Time() Type {
-	return Type{pt: PtTime}
+	return Type{kind: TimeKind}
 }
 
 // Year returns the Year type.
 func Year() Type {
-	return Type{pt: PtYear}
+	return Type{kind: YearKind}
 }
 
 // UUID returns the UUID type.
 func UUID() Type {
-	return Type{pt: PtUUID}
+	return Type{kind: UUIDKind}
 }
 
 // JSON returns the JSON type.
 func JSON() Type {
-	return Type{pt: PtJSON}
+	return Type{kind: JSONKind}
 }
 
 // Inet returns the Inet type.
 func Inet() Type {
-	return Type{pt: PtInet}
+	return Type{kind: InetKind}
 }
 
 // Text returns a Text type.
 func Text() Type {
-	return Type{pt: PtText}
+	return Type{kind: TextKind}
 }
 
 // Array returns an Array type with items of type t.
 func Array(t Type) Type {
-	return Type{pt: PtArray, flat: t.flat, s: MaxItems, vl: t}
+	return Type{kind: ArrayKind, flat: t.flat, s: MaxItems, vl: t}
 }
 
 // Object returns an Object type with the given properties.
@@ -400,7 +400,7 @@ func Object(properties []Property) Type {
 
 // Map returns a Map type with value type t.
 func Map(t Type) Type {
-	return Type{pt: PtMap, flat: t.flat, vl: t}
+	return Type{kind: MapKind, flat: t.flat, vl: t}
 }
 
 // ObjectOf is like Object but returns an error instead of panicking if any.
@@ -440,7 +440,7 @@ func ObjectOf(properties []Property) (Type, error) {
 		if err != nil {
 			return Type{}, err
 		}
-		if property.Flat && property.Type.pt != PtObject {
+		if property.Flat && property.Type.kind != ObjectKind {
 			return Type{}, errors.New("invalid property flat")
 		}
 		ps[i] = Property{
@@ -456,7 +456,7 @@ func ObjectOf(properties []Property) (Type, error) {
 		}
 		flat = flat || property.Flat || property.Type.flat
 	}
-	return Type{pt: PtObject, flat: flat, vl: ps}, nil
+	return Type{kind: ObjectKind, flat: flat, vl: ps}, nil
 }
 
 // IsValidPropertyName reports whether name is a valid property name.
@@ -524,7 +524,7 @@ func (t Type) AsRole(role Role) Type {
 	if !t.Valid() {
 		panic("type is not valid")
 	}
-	if t.pt != PtObject {
+	if t.kind != ObjectKind {
 		panic("cannot return type as role for non-Object type")
 	}
 	if role < BothRole || role > DestinationRole {
@@ -554,14 +554,14 @@ func (t Type) AsRole(role Role) Type {
 	if roleProperties == nil {
 		return Type{}
 	}
-	return Type{pt: PtObject, vl: roleProperties}
+	return Type{kind: ObjectKind, vl: roleProperties}
 }
 
 // AsReal returns t but as a real number. As a real number, t does not allow
 // NaN, +Inf and -Inf values. t must be a Float type. t cannot be already real
 // and cannot have a range. It panics if previous restrictions are not met.
 func (t Type) AsReal() Type {
-	if t.pt != PtFloat {
+	if t.kind != FloatKind {
 		panic("type is not a Float type")
 	}
 	if t.real {
@@ -576,7 +576,7 @@ func (t Type) AsReal() Type {
 
 // IsReal reports whether t is real. Panics if t is not a Float type.
 func (t Type) IsReal() bool {
-	if t.pt != PtFloat {
+	if t.kind != FloatKind {
 		panic("type is not a Float type")
 	}
 	return t.real
@@ -584,21 +584,21 @@ func (t Type) IsReal() bool {
 
 // Valid indicates if t is valid.
 func (t Type) Valid() bool {
-	return t.pt != PtInvalid
+	return t.kind != InvalidKind
 }
 
 // String returns a string representation of t.
 // Panics if t is not a valid type.
 func (t Type) String() string {
-	s := t.pt.String()
-	switch t.pt {
-	case PtInt, PtUint, PtFloat:
+	s := t.kind.String()
+	switch t.kind {
+	case IntKind, UintKind, FloatKind:
 		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
-	case PtDecimal:
+	case DecimalKind:
 		if t.p > 0 {
 			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
 		}
-	case PtText:
+	case TextKind:
 		if t.p > 0 || t.s > 0 {
 			s += "("
 			if t.p > 0 {
@@ -616,16 +616,16 @@ func (t Type) String() string {
 	return s
 }
 
-// PhysicalType returns the physical type of t.
+// Kind returns the kind of t.
 // Returns PtInvalid if t is not valid.
-func (t Type) PhysicalType() PhysicalType {
-	return t.pt
+func (t Type) Kind() Kind {
+	return t.kind
 }
 
 // BitSize returns the bit size of t as 8, 16, 24, 32 or 64. t must be an Int,
 // Uint or Float type, otherwise it panics.
 func (t Type) BitSize() int {
-	if t.pt != PtInt && t.pt != PtUint && t.pt != PtFloat {
+	if t.kind != IntKind && t.kind != UintKind && t.kind != FloatKind {
 		panic("type is not an Int, Uint or Float type")
 	}
 	return bitSize[t.size]
@@ -636,7 +636,7 @@ type intRange struct{ min, max int64 }
 // IntRange returns the minimum and maximum value for t. t must be an Int type,
 // otherwise it panics.
 func (t Type) IntRange() (min, max int64) {
-	if t.pt != PtInt {
+	if t.kind != IntKind {
 		panic("type is not an Int type")
 	}
 	if t.size < 4 {
@@ -654,7 +654,7 @@ func (t Type) IntRange() (min, max int64) {
 // min cannot be greater than max. min and max must be within the range of
 // values of t. It panics it previous restrictions are not met.
 func (t Type) WithIntRange(min, max int64) Type {
-	if t.pt != PtInt {
+	if t.kind != IntKind {
 		panic("type is not an Int type")
 	}
 	Min, Max := minInt[t.size], maxInt[t.size]
@@ -685,7 +685,7 @@ type uintRange struct{ min, max uint64 }
 // UintRange returns the minimum and maximum value for t. t must be an Uint
 // type, otherwise it panics.
 func (t Type) UintRange() (min, max uint64) {
-	if t.pt != PtUint {
+	if t.kind != UintKind {
 		panic("type is not an Uint type")
 	}
 	if t.size < 4 {
@@ -703,7 +703,7 @@ func (t Type) UintRange() (min, max uint64) {
 // min cannot be greater than max. min and max must be within the range of
 // values of t. It panics it previous restrictions are not met.
 func (t Type) WithUintRange(min, max uint64) Type {
-	if t.pt != PtUint {
+	if t.kind != UintKind {
 		panic("type is not an Uint type")
 	}
 	Max := maxUint[t.size]
@@ -737,7 +737,7 @@ type floatRange struct {
 // FloatRange returns the minimum and maximum value of t. t must be a Float
 // type, otherwise it panics.
 func (t Type) FloatRange() (min, max float64) {
-	if t.pt != PtFloat {
+	if t.kind != FloatKind {
 		panic("type is not a Float type")
 	}
 	if f, ok := t.vl.(floatRange); ok {
@@ -758,7 +758,7 @@ func (t Type) FloatRange() (min, max float64) {
 // type. min cannot be greater than max. min and max cannot be NaN, and if r is
 // real they cannot be ±Inf. It panics if previous restrictions are not met.
 func (t Type) WithFloatRange(min, max float64) Type {
-	if t.pt != PtFloat {
+	if t.kind != FloatKind {
 		panic("type is not a Float type")
 	}
 	if math.IsNaN(min) || math.IsNaN(max) {
@@ -801,7 +801,7 @@ type decimalRange struct{ min, max decimal.Decimal }
 // DecimalRange returns the minimum and maximum value for t. t must be a
 // Decimal type, otherwise it panics.
 func (t Type) DecimalRange() (min, max decimal.Decimal) {
-	if t.pt != PtDecimal {
+	if t.kind != DecimalKind {
 		panic("type is not a Decimal type")
 	}
 	if d, ok := t.vl.(decimalRange); ok {
@@ -813,7 +813,7 @@ func (t Type) DecimalRange() (min, max decimal.Decimal) {
 // WithDecimalRange returns t but with values in [min,max]. t must be a Decimal
 // type, otherwise it panics.
 func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
-	if t.pt != PtDecimal {
+	if t.kind != DecimalKind {
 		panic("type is not a Decimal type")
 	}
 	Max := MaxDecimal
@@ -840,7 +840,7 @@ func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
 // Precision returns the precision of a Decimal type.
 // Panics if t is not a Decimal type.
 func (t Type) Precision() int {
-	if t.pt != PtDecimal {
+	if t.kind != DecimalKind {
 		panic("cannot get precision of a non-Decimal type")
 	}
 	return int(t.p)
@@ -849,7 +849,7 @@ func (t Type) Precision() int {
 // Scale returns the scale of a Decimal type.
 // Panics if t is not a Decimal type.
 func (t Type) Scale() int {
-	if t.pt != PtDecimal {
+	if t.kind != DecimalKind {
 		panic("cannot get scale of a non-Decimal type")
 	}
 	return int(t.s)
@@ -859,7 +859,7 @@ func (t Type) Scale() int {
 // If t has no maximum length in bytes, it returns 0 and false.
 // Panics if t is not a Text type.
 func (t Type) ByteLen() (int, bool) {
-	if t.pt != PtText {
+	if t.kind != TextKind {
 		panic("cannot get byte length of a non-Text type")
 	}
 	return int(uint32(t.p)), t.p != 0
@@ -870,7 +870,7 @@ func (t Type) ByteLen() (int, bool) {
 // Panics if t is not a Text type, or if l is not in range, or if t has already
 // a byte length, or if t already has values.
 func (t Type) WithByteLen(l int) Type {
-	if t.pt != PtText {
+	if t.kind != TextKind {
 		panic("cannot set byte length of a non-Text type")
 	}
 	if t.s > 0 {
@@ -890,7 +890,7 @@ func (t Type) WithByteLen(l int) Type {
 // true. If t has no maximum length in characters, it returns 0 and false.
 // Panics if t is not a JSON or Text type.
 func (t Type) CharLen() (int, bool) {
-	if t.pt != PtJSON && t.pt != PtText {
+	if t.kind != JSONKind && t.kind != TextKind {
 		panic("cannot get character length of non-JSON and non-Text types")
 	}
 	return int(uint32(t.s)), t.s != 0
@@ -901,7 +901,7 @@ func (t Type) CharLen() (int, bool) {
 // Panics if t is not a JSON or Text type, or if l is not in range, or if t has
 // already a char length, or if t already has values.
 func (t Type) WithCharLen(l int) Type {
-	if t.pt != PtJSON && t.pt != PtText {
+	if t.kind != JSONKind && t.kind != TextKind {
 		panic("cannot set character length of non-JSON and non-Text types")
 	}
 	if t.s > 0 {
@@ -920,7 +920,7 @@ func (t Type) WithCharLen(l int) Type {
 // Regexp returns the regular expression of t. If t has no regular expression,
 // it returns nil. Panics if t is not a Text type.
 func (t Type) Regexp() *regexp.Regexp {
-	if t.pt != PtText {
+	if t.kind != TextKind {
 		panic("cannot return regular expression for a non-Text type")
 	}
 	re, _ := t.vl.(*regexp.Regexp)
@@ -931,7 +931,7 @@ func (t Type) Regexp() *regexp.Regexp {
 // Panics if t is not a Text type, or t has already a regular expression or has
 // values.
 func (t Type) WithRegexp(re *regexp.Regexp) Type {
-	if t.pt != PtText {
+	if t.kind != TextKind {
 		panic("cannot set regular expression for a non-Text type")
 	}
 	switch t.vl.(type) {
@@ -947,7 +947,7 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 // Values returns the values of t. Returns nil if t has no values.
 // Panics if t is not a Text type.
 func (t Type) Values() []string {
-	if t.pt != PtText {
+	if t.kind != TextKind {
 		panic("cannot get values for a non-Text type")
 	}
 	if vl, ok := t.vl.([]string); ok {
@@ -963,7 +963,7 @@ func (t Type) Values() []string {
 // invalid UTF-8 string, or if t already has values, a regular expression, or
 // if it is already restricted by byte or character length.
 func (t Type) WithValues(values ...string) Type {
-	if t.pt != PtText {
+	if t.kind != TextKind {
 		panic("cannot set values for a non-Text type")
 	}
 	if len(values) == 0 {
@@ -996,7 +996,7 @@ func (t Type) WithValues(values ...string) Type {
 // MinItems returns the minimum number of items of t. t must be an Array,
 // otherwise it panics.
 func (t Type) MinItems() int {
-	if t.pt != PtArray {
+	if t.kind != ArrayKind {
 		panic("cannot get the minimum number of items of a non-Array type")
 	}
 	return int(t.p)
@@ -1006,7 +1006,7 @@ func (t Type) MinItems() int {
 // t must be an Array. Panics if t is not an Array type or min is not in
 // [0,max] where max is the maximum number of items of t.
 func (t Type) WithMinItems(min int) Type {
-	if t.pt != PtArray {
+	if t.kind != ArrayKind {
 		panic("cannot set the minimum number of items for a non-Array type")
 	}
 	if min < 0 || min > int(t.s) {
@@ -1019,7 +1019,7 @@ func (t Type) WithMinItems(min int) Type {
 // MaxItems returns the maximum number of items of t. t must be an Array,
 // otherwise it panics.
 func (t Type) MaxItems() int {
-	if t.pt != PtArray {
+	if t.kind != ArrayKind {
 		panic("cannot get the maximum number of items of a non-Array type")
 	}
 	return int(t.s)
@@ -1029,7 +1029,7 @@ func (t Type) MaxItems() int {
 // t must be an Array. Panics if t is not an Array type or max is not in
 // [min,MaxItems] where min is the minimum number of items of t.
 func (t Type) WithMaxItems(max int) Type {
-	if t.pt != PtArray {
+	if t.kind != ArrayKind {
 		panic("cannot set the maximum number of items for a non-Array type")
 	}
 	if max < int(t.p) || max > MaxItems {
@@ -1050,15 +1050,15 @@ func (t Type) Unflatten() Type {
 	if !t.flat {
 		return t
 	}
-	switch t.pt {
-	case PtObject:
+	switch t.kind {
+	case ObjectKind:
 		pp := t.Properties()
 		for i := 0; i < len(pp); i++ {
 			pp[i].Type = pp[i].Type.Unflatten()
 			pp[i].Flat = false
 		}
 		t.vl = pp
-	case PtArray, PtMap:
+	case ArrayKind, MapKind:
 		t.vl = t.Elem().Unflatten()
 	}
 	t.flat = false
@@ -1068,7 +1068,7 @@ func (t Type) Unflatten() Type {
 // Unique reports whether the items of t are unique.
 // Panics if t is not an Array.
 func (t Type) Unique() bool {
-	if t.pt != PtArray {
+	if t.kind != ArrayKind {
 		panic("cannot get unique of a non-Array type")
 	}
 	return t.unique
@@ -1078,10 +1078,10 @@ func (t Type) Unique() bool {
 // its item type cannot be Array or Object.
 // Panics if t is not an Array or the item type is Array or Object.
 func (t Type) WithUnique() Type {
-	if t.pt != PtArray {
+	if t.kind != ArrayKind {
 		panic("cannot set unique of a non-Array type")
 	}
-	if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
+	if k := t.vl.(Type).kind; k == ArrayKind || k == ObjectKind {
 		panic("cannot set unique for an Array with items of type Array or Object")
 	}
 	t.unique = true
@@ -1093,7 +1093,7 @@ func (t Type) WithUnique() Type {
 // Panics if t is not an Object type, path is empty or a property name within it
 // is not a valid property name.
 func (t Type) PropertyByPath(path Path) (Property, error) {
-	if t.pt != PtObject {
+	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-Object type")
 	}
 	if len(path) == 0 {
@@ -1103,7 +1103,7 @@ func (t Type) PropertyByPath(path Path) (Property, error) {
 	var i int
 	var name string
 	for i, name = range path {
-		if t.pt != PtObject {
+		if t.kind != ObjectKind {
 			break
 		}
 		for _, prop := range t.vl.([]Property) {
@@ -1130,7 +1130,7 @@ func (t Type) PropertyByPath(path Path) (Property, error) {
 // indicating if the property exists.
 // Panics if t is not an Object type or name is not a valid property name.
 func (t Type) Property(name string) (Property, bool) {
-	if t.pt != PtObject {
+	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-Object type")
 	}
 	for _, p := range t.vl.([]Property) {
@@ -1147,7 +1147,7 @@ func (t Type) Property(name string) (Property, bool) {
 // Properties returns the properties of the Object type t.
 // Panics if t is not an Object type.
 func (t Type) Properties() []Property {
-	if t.pt != PtObject {
+	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-Object type")
 	}
 	return slices.Clone(t.vl.([]Property))
@@ -1156,7 +1156,7 @@ func (t Type) Properties() []Property {
 // PropertiesNames returns the names of the properties of the Object t.
 // Panics if t is not an Object type.
 func (t Type) PropertiesNames() []string {
-	if t.pt != PtObject {
+	if t.kind != ObjectKind {
 		panic("cannot get the properties names of a non-Object type")
 	}
 	properties := t.vl.([]Property)
@@ -1170,7 +1170,7 @@ func (t Type) PropertiesNames() []string {
 // Elem returns a type's element type.
 // Panics if t is not an Array or Map type.
 func (t Type) Elem() Type {
-	if t.pt != PtArray && t.pt != PtMap {
+	if t.kind != ArrayKind && t.kind != MapKind {
 		panic("cannot get the element type for a non-Array and non-Map type")
 	}
 	return t.vl.(Type)
@@ -1178,7 +1178,7 @@ func (t Type) Elem() Type {
 
 // EqualTo reports whether t is equals to t2.
 func (t Type) EqualTo(t2 Type) bool {
-	almostEqual := t.pt == t2.pt && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.flat == t2.flat && t.p == t2.p
+	almostEqual := t.kind == t2.kind && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.flat == t2.flat && t.p == t2.p
 	if !almostEqual {
 		return false
 	}
@@ -1232,7 +1232,7 @@ func clonePlaceholder(placeholder any, t Type) (Placeholder, error) {
 	case string:
 		return normalizedUTF8(placeholder)
 	case map[string]string:
-		if t.PhysicalType() != PtMap {
+		if t.Kind() != MapKind {
 			return nil, fmt.Errorf("invalid placeholder type")
 		}
 		if placeholder == nil {

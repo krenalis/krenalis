@@ -47,13 +47,13 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 	}
 	var value any
 	var valid bool
-	switch pt := typ.PhysicalType(); pt {
-	case types.PtBoolean:
+	switch k := typ.Kind(); k {
+	case types.BooleanKind:
 		if _, ok := src.(bool); ok {
 			value = src
 			valid = true
 		}
-	case types.PtInt:
+	case types.IntKind:
 		var v int64
 		switch src := src.(type) {
 		case int:
@@ -80,7 +80,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = int(v)
 		}
-	case types.PtUint:
+	case types.UintKind:
 		var v uint64
 		switch src := src.(type) {
 		case uint:
@@ -107,7 +107,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = uint(v)
 		}
-	case types.PtFloat:
+	case types.FloatKind:
 		var v float64
 		switch src := src.(type) {
 		case float64:
@@ -132,7 +132,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = v
 		}
-	case types.PtDecimal:
+	case types.DecimalKind:
 		var v decimal.Decimal
 		switch src := src.(type) {
 		case decimal.Decimal:
@@ -158,7 +158,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = v
 		}
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		var t time.Time
 		switch src := src.(type) {
 		case time.Time:
@@ -196,7 +196,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = t
 		}
-	case types.PtDate:
+	case types.DateKind:
 		var t time.Time
 		switch src := src.(type) {
 		case time.Time:
@@ -218,7 +218,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 		}
-	case types.PtTime:
+	case types.TimeKind:
 		switch src := src.(type) {
 		case time.Time:
 			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
@@ -236,7 +236,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 				value = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 			}
 		}
-	case types.PtYear:
+	case types.YearKind:
 		var v int64
 		switch src := src.(type) {
 		case int:
@@ -252,27 +252,27 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		}
 		value = int(v)
 		valid = valid && types.MinYear <= v && v <= types.MaxYear
-	case types.PtUUID:
+	case types.UUIDKind:
 		if s, ok := src.(string); ok {
 			if v, err := uuid.Parse(s); err == nil {
 				value = v.String()
 				valid = true
 			}
 		}
-	case types.PtJSON:
+	case types.JSONKind:
 		if !validJSON(src) {
 			return nil, fmt.Errorf("app returned an invalid JSON for property %s", name)
 		}
 		value = src
 		valid = true
-	case types.PtInet:
+	case types.InetKind:
 		if s, ok := src.(string); ok {
 			if v, err := netip.ParseAddr(s); err == nil {
 				value = v.String()
 				valid = true
 			}
 		}
-	case types.PtText:
+	case types.TextKind:
 		var v string
 		v, valid = src.(string)
 		if valid {
@@ -300,7 +300,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			value = v
 		}
-	case types.PtArray:
+	case types.ArrayKind:
 		rv := reflect.ValueOf(src)
 		if rv.Type() == arrayType {
 			var err error
@@ -321,7 +321,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			value = a
 			valid = true
 		}
-	case types.PtObject:
+	case types.ObjectKind:
 		rv := reflect.ValueOf(src)
 		if rv.Type() == objectType {
 			var err error
@@ -348,7 +348,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			value = obj
 			valid = true
 		}
-	case types.PtMap:
+	case types.MapKind:
 		rv := reflect.ValueOf(src)
 		if rv.Type() == mapType {
 			var err error
@@ -370,7 +370,7 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 	}
 	if !valid {
 		return nil, fmt.Errorf("app returned a value of '%v' for property %s, but it cannot be converted to the %s type",
-			src, name, typ.PhysicalType())
+			src, name, typ.Kind())
 	}
 	return value, nil
 }
@@ -387,13 +387,13 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	}
 	var value any
 	var valid bool
-	switch typ.PhysicalType() {
-	case types.PtBoolean:
+	switch typ.Kind() {
+	case types.BooleanKind:
 		if _, ok := src.(bool); ok {
 			value = src
 			valid = true
 		}
-	case types.PtInt:
+	case types.IntKind:
 		var v int64
 		switch src := src.(type) {
 		case int:
@@ -424,7 +424,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			value = int(v)
 		}
-	case types.PtUint:
+	case types.UintKind:
 		var v uint64
 		switch src := src.(type) {
 		case uint:
@@ -455,7 +455,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			value = uint(v)
 		}
-	case types.PtFloat:
+	case types.FloatKind:
 		var v float64
 		switch src := src.(type) {
 		case float32:
@@ -483,7 +483,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			value = v
 		}
-	case types.PtDecimal:
+	case types.DecimalKind:
 		var v decimal.Decimal
 		switch src := src.(type) {
 		case string:
@@ -512,7 +512,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			value = v
 		}
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		if t, ok := src.(time.Time); ok {
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
@@ -521,7 +521,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = t
 			valid = true
 		}
-	case types.PtDate:
+	case types.DateKind:
 		if t, ok := src.(time.Time); ok {
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
@@ -530,7 +530,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 			valid = true
 		}
-	case types.PtTime:
+	case types.TimeKind:
 		switch src := src.(type) {
 		case time.Time:
 			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
@@ -540,7 +540,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		case string:
 			value, valid = parseTime(src)
 		}
-	case types.PtYear:
+	case types.YearKind:
 		switch y := src.(type) {
 		case int:
 			if valid = types.MinYear <= y && y <= types.MaxYear; valid {
@@ -555,14 +555,14 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = year
 			valid = err == nil && types.MinYear <= year && year <= types.MaxYear
 		}
-	case types.PtUUID:
+	case types.UUIDKind:
 		if s, ok := src.(string); ok {
 			if v, err := uuid.Parse(s); err == nil {
 				value = v.String()
 				valid = true
 			}
 		}
-	case types.PtJSON:
+	case types.JSONKind:
 		if v, ok := src.([]byte); ok {
 			src = json.RawMessage(v)
 		}
@@ -571,7 +571,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		}
 		value = src
 		valid = true
-	case types.PtInet:
+	case types.InetKind:
 		switch src := src.(type) {
 		case string:
 			if v, err := netip.ParseAddr(src); err == nil {
@@ -582,7 +582,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = src.String()
 			valid = true
 		}
-	case types.PtText:
+	case types.TextKind:
 		var v string
 		switch s := src.(type) {
 		case string:
@@ -617,10 +617,10 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			value = v
 		}
-	case types.PtArray:
+	case types.ArrayKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the item type. The driver returns the value as a JSON array.
-			if s != "" && s[0] == '[' && typ.Elem().PhysicalType() == types.PtJSON {
+			if s != "" && s[0] == '[' && typ.Elem().Kind() == types.JSONKind {
 				dec := json.NewDecoder(strings.NewReader(s))
 				dec.UseNumber()
 				err := dec.Decode(&value)
@@ -648,10 +648,10 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 				valid = true
 			}
 		}
-	case types.PtMap:
+	case types.MapKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the value type. The driver returns the value as a JSON object.
-			if s != "" && s[0] == '{' && typ.Elem().PhysicalType() == types.PtJSON {
+			if s != "" && s[0] == '{' && typ.Elem().Kind() == types.JSONKind {
 				dec := json.NewDecoder(strings.NewReader(s))
 				dec.UseNumber()
 				err := dec.Decode(&value)
@@ -680,7 +680,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	}
 	if !valid {
 		return nil, fmt.Errorf("database returned a value of '%v' for column %s, but it cannot be converted to the %s type",
-			src, name, typ.PhysicalType())
+			src, name, typ.Kind())
 	}
 	return value, nil
 }

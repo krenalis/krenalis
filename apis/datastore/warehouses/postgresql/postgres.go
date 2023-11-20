@@ -402,7 +402,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 		if comma {
 			usersSyncQueries.WriteByte(',')
 		}
-		if c.Type.PhysicalType() == types.PtObject {
+		if c.Type.Kind() == types.ObjectKind {
 			usersSyncQueries.WriteString(`(ARRAY_AGG(DISTINCT "`)
 			usersSyncQueries.WriteString(c.Name)
 			usersSyncQueries.WriteString(`"))[1] AS "`)
@@ -462,12 +462,12 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 		if !types.IsValidPropertyName(c.Name) {
 			return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
 		}
-		switch c.Type.PhysicalType() {
+		switch c.Type.Kind() {
 		default:
 			query.WriteByte('"')
 			query.WriteString(c.Name)
 			query.WriteByte('"')
-		case types.PtInet:
+		case types.InetKind:
 			query.WriteString(`host("`)
 			query.WriteString(c.Name)
 			query.WriteString(`")`)

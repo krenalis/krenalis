@@ -261,18 +261,18 @@ func checkConformity(name string, t1, t2 types.Type) error {
 	if t1.EqualTo(t2) {
 		return nil
 	}
-	pt1 := t1.PhysicalType()
-	pt2 := t2.PhysicalType()
+	pt1 := t1.Kind()
+	pt2 := t2.Kind()
 	if pt1 != pt2 {
-		if pt1 == types.PtInt && pt2 == types.PtUint || pt1 == types.PtUint && pt2 == types.PtInt {
+		if pt1 == types.IntKind && pt2 == types.UintKind || pt1 == types.UintKind && pt2 == types.IntKind {
 			return nil
 		}
 		return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
 	}
 	switch pt1 {
-	case types.PtArray:
+	case types.ArrayKind:
 		return checkConformity(name, t1.Elem(), t2.Elem())
-	case types.PtObject:
+	case types.ObjectKind:
 		for _, p1 := range t1.Properties() {
 			path := p1.Name
 			if name != "" {
@@ -287,7 +287,7 @@ func checkConformity(name string, t1, t2 types.Type) error {
 				return err
 			}
 		}
-	case types.PtMap:
+	case types.MapKind:
 		return checkConformity(name, t1.Elem(), t2.Elem())
 	}
 	return nil

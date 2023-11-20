@@ -190,7 +190,7 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) (
 		operands := make([]expr.Expr, len(ids))
 		for i := range ids {
 			operands[i] = expr.NewBaseExpr(
-				expr.Column{Name: "id", Type: types.PtInt},
+				expr.Column{Name: "id", Type: types.IntKind},
 				expr.OperatorEqual,
 				ids[i],
 			)

@@ -36,10 +36,10 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 			t := schema
 			for j := 0; j < len(p.path); j++ {
 				name := p.path[j]
-				switch t.PhysicalType() {
-				case types.PtJSON:
+				switch t.Kind() {
+				case types.JSONKind:
 					p.path[j] = ":" + name
-				case types.PtObject, types.PtInvalid:
+				case types.ObjectKind, types.InvalidKind:
 					if name[len(name)-1] == '?' {
 						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
 					}
@@ -61,7 +61,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 						return fmt.Errorf("invalid %s: property %q does not exist", stringifyPath(p.path[:j+1]), stringifyPath(p.path[:j]))
 					}
 					t = property.Type
-				case types.PtMap:
+				case types.MapKind:
 					if name[len(name)-1] == '?' {
 						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
 					}

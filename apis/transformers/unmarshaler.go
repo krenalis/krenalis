@@ -203,7 +203,7 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 	if r == nil {
 		return nil, errors.New("apis/transformers: r is nil")
 	}
-	if schema.Valid() && schema.PhysicalType() != types.PtObject {
+	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, errors.New("apis/transformers: schema is not an object")
 	}
 	d := decoder{dec: jsontext.NewDecoder(r)}
@@ -331,7 +331,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.PhysicalType() != types.PtArray {
+		if t.Kind() != types.ArrayKind {
 			return nil, newErrInvalidValue("cannot be an "+d.opts.terms["array"], "", d.opts.terms)
 		}
 		minItems, maxItems := t.MinItems(), t.MaxItems()
@@ -377,8 +377,8 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		switch t.PhysicalType() {
-		case types.PtObject, types.PtInvalid:
+		switch t.Kind() {
+		case types.ObjectKind, types.InvalidKind:
 			o := map[string]any{}
 			for {
 				if d.peekKind() == '}' {
@@ -434,7 +434,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				return nil, err
 			}
 			return o, nil
-		case types.PtMap:
+		case types.MapKind:
 			m := map[string]any{}
 			for {
 				// Read the property's name or the end of the map.
@@ -470,14 +470,14 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 
 // value returns the marshalled value of v according to t.
 func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
-	switch t.PhysicalType() {
-	case types.PtBoolean:
+	switch t.Kind() {
+	case types.BooleanKind:
 		if v.Kind() == 'f' {
 			return false, nil
 		} else if v.Kind() == 't' {
 			return true, nil
 		}
-	case types.PtInt:
+	case types.IntKind:
 		var s string
 		switch v.Kind() {
 		case '0':
@@ -497,7 +497,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				return int(n), nil
 			}
 		}
-	case types.PtUint:
+	case types.UintKind:
 		var s string
 		switch v.Kind() {
 		case '0':
@@ -517,7 +517,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				return uint(n), nil
 			}
 		}
-	case types.PtFloat:
+	case types.FloatKind:
 		if v.Kind() == '0' {
 			if n, err := strconv.ParseFloat(string(v), t.BitSize()); err == nil {
 				if min, max := t.FloatRange(); n < min || n > max {
@@ -526,7 +526,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				return n, nil
 			}
 		}
-	case types.PtDecimal:
+	case types.DecimalKind:
 		if v.Kind() == '"' {
 			if n, err := decimal.NewFromString(d.unquoteString(v)); err == nil {
 				if min, max := t.DecimalRange(); n.LessThan(min) || n.GreaterThan(max) {
@@ -535,7 +535,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				return n, nil
 			}
 		}
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		if v.Kind() == '"' {
 			if t, err := time.Parse(d.opts.datetimeFormat, d.unquoteString(v)); err == nil {
 				t = t.UTC()
@@ -544,7 +544,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				}
 			}
 		}
-	case types.PtDate:
+	case types.DateKind:
 		if v.Kind() == '"' {
 			if t, err := time.Parse(d.opts.dateFormat, d.unquoteString(v)); err == nil {
 				t = t.UTC()
@@ -553,14 +553,14 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				}
 			}
 		}
-	case types.PtTime:
+	case types.TimeKind:
 		if v.Kind() == '"' {
 			if t, err := time.Parse(d.opts.timeFormat, d.unquoteString(v)); err == nil {
 				t = t.UTC()
 				return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
 			}
 		}
-	case types.PtYear:
+	case types.YearKind:
 		if v.Kind() == '0' {
 			y, err := strconv.ParseInt(string(v), 10, 64)
 			if err == nil {
@@ -570,13 +570,13 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 				return int(y), nil
 			}
 		}
-	case types.PtUUID:
+	case types.UUIDKind:
 		if v.Kind() == '"' {
 			if u, err := uuid.ParseBytes(d.unquoteBytes(v)); err == nil {
 				return u.String(), nil
 			}
 		}
-	case types.PtJSON:
+	case types.JSONKind:
 		if v.Kind() == '"' {
 			data := d.unquoteBytes(v)
 			if !json.Valid(data) {
@@ -584,13 +584,13 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 			}
 			return json.RawMessage(data), nil
 		}
-	case types.PtInet:
+	case types.InetKind:
 		if v.Kind() == '"' {
 			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
 				return ip.String(), nil
 			}
 		}
-	case types.PtText:
+	case types.TextKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
 			if values := t.Values(); values != nil {

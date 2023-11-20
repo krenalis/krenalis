@@ -17,11 +17,11 @@ import (
 
 func Test_renderExpr(t *testing.T) {
 	var (
-		id          = expr.Column{Name: "id", Type: types.PtText}
-		count       = expr.Column{Name: "count", Type: types.PtInt}
-		timestamp   = expr.Column{Name: "timestamp", Type: types.PtDateTime}
-		ipAddr      = expr.Column{Name: "ip_addr", Type: types.PtInet}
-		installYear = expr.Column{Name: "install_year", Type: types.PtYear}
+		id          = expr.Column{Name: "id", Type: types.TextKind}
+		count       = expr.Column{Name: "count", Type: types.IntKind}
+		timestamp   = expr.Column{Name: "timestamp", Type: types.DateTimeKind}
+		ipAddr      = expr.Column{Name: "ip_addr", Type: types.InetKind}
+		installYear = expr.Column{Name: "install_year", Type: types.YearKind}
 	)
 	cases := []struct {
 		expr    expr.Expr

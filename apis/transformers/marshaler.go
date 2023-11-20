@@ -34,7 +34,7 @@ import (
 // Unlike Unmarshal, Marshal does not validate the values against the schema.
 // The values must already be validated.
 func Marshal(b []byte, schema types.Type, values []map[string]any, language state.Language) ([]byte, error) {
-	if schema.Valid() && schema.PhysicalType() != types.PtObject {
+	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, errors.New("apis/transformers: schema is not an object")
 	}
 	var marshal func([]byte, types.Type, any) ([]byte, error)
@@ -67,7 +67,7 @@ func Marshal(b []byte, schema types.Type, values []map[string]any, language stat
 
 // marshalJavaScript marshals v as a JavaScript value.
 func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
-	if t.PhysicalType() == types.PtJSON {
+	if t.Kind() == types.JSONKind {
 		var buf strings.Builder
 		enc := json.NewEncoder(&buf)
 		enc.SetEscapeHTML(false)
@@ -93,7 +93,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		}
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
-		if t.PhysicalType() == types.PtInt && t.BitSize() == 64 {
+		if t.Kind() == types.IntKind && t.BitSize() == 64 {
 			b = append(b, 'n')
 		}
 	case uint:
@@ -127,8 +127,8 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		b = append(b, '\'')
 	default:
 		rv := reflect.ValueOf(v)
-		switch t.PhysicalType() {
-		case types.PtArray:
+		switch t.Kind() {
+		case types.ArrayKind:
 			b = append(b, '[')
 			n := rv.Len()
 			for i := 0; i < n; i++ {
@@ -143,7 +143,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 			}
 			b = append(b, ']')
-		case types.PtObject:
+		case types.ObjectKind:
 			b = append(b, '{')
 			for i, p := range t.Properties() {
 				if i > 0 {
@@ -162,7 +162,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 			}
 			b = append(b, '}')
-		case types.PtMap:
+		case types.MapKind:
 			type entry struct {
 				k string
 				v any
@@ -203,8 +203,8 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 
 // marshalPython marshals v as a Python value.
 func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
-	pt := t.PhysicalType()
-	if pt == types.PtJSON {
+	k := t.Kind()
+	if k == types.JSONKind {
 		var buf strings.Builder
 		enc := json.NewEncoder(&buf)
 		enc.SetEscapeHTML(false)
@@ -249,16 +249,16 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 		b = append(b, v.String()...)
 		b = append(b, '\'', ')')
 	case time.Time:
-		switch pt {
-		case types.PtDateTime:
+		switch k {
+		case types.DateTimeKind:
 			b = fmt.Appendf(b, "datetime(%d,%d,%d,%d,%d,%d,%d)", v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
-		case types.PtDate:
+		case types.DateKind:
 			b = fmt.Appendf(b, "date(%d,%d,%d)", v.Year(), v.Month(), v.Day())
-		case types.PtTime:
+		case types.TimeKind:
 			b = fmt.Appendf(b, "time(%d,%d,%d,%d)", v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		}
 	case string:
-		if pt == types.PtUUID {
+		if k == types.UUIDKind {
 			b = append(b, "UUID('"...)
 			b = append(b, v...)
 			b = append(b, '\'', ')')
@@ -269,8 +269,8 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 		}
 	default:
 		rv := reflect.ValueOf(v)
-		switch pt {
-		case types.PtArray:
+		switch k {
+		case types.ArrayKind:
 			b = append(b, '[')
 			n := rv.Len()
 			for i := 0; i < n; i++ {
@@ -285,7 +285,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 			}
 			b = append(b, ']')
-		case types.PtObject:
+		case types.ObjectKind:
 			b = append(b, '{')
 			for i, p := range t.Properties() {
 				if i > 0 {
@@ -305,7 +305,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 			}
 			b = append(b, '}')
-		case types.PtMap:
+		case types.MapKind:
 			type entry struct {
 				k string
 				v any
@@ -338,7 +338,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 			}
 			b = append(b, '}')
 		default:
-			return nil, fmt.Errorf("apis/transformers: unexpected type %s", pt)
+			return nil, fmt.Errorf("apis/transformers: unexpected type %s", k)
 		}
 	}
 	return b, nil

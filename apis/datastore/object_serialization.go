@@ -152,7 +152,7 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 		if i > 0 {
 			name.WriteByte('_')
 		}
-		if typ.PhysicalType() != types.PtObject {
+		if typ.Kind() != types.ObjectKind {
 			return types.Property{}, errors.New("path refers to a non-object type")
 		}
 		prop, ok := typ.Property(part)
@@ -213,8 +213,8 @@ func serialize(v any, t types.Type) {
 	if v == nil {
 		return
 	}
-	switch t.PhysicalType() {
-	case types.PtObject:
+	switch t.Kind() {
+	case types.ObjectKind:
 		v := v.(map[string]any)
 		for _, p := range t.Properties() {
 			value, ok := v[p.Name]
@@ -229,12 +229,12 @@ func serialize(v any, t types.Type) {
 			serialize(value, p.Type)
 			continue
 		}
-	case types.PtArray:
+	case types.ArrayKind:
 		itemType := t.Elem()
 		for _, value := range v.([]any) {
 			serialize(value, itemType)
 		}
-	case types.PtMap:
+	case types.MapKind:
 		valueType := t.Elem()
 		for _, value := range v.(map[string]any) {
 			serialize(value, valueType)

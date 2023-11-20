@@ -48,7 +48,7 @@ func newScanValues(properties []types.Property, rows *[][]any) []any {
 
 func (sv scanValue) Scan(src any) error {
 	p := sv.property
-	if src != nil && p.Type.PhysicalType() == types.PtArray {
+	if src != nil && p.Type.Kind() == types.ArrayKind {
 		var err error
 		src, err = sv.scanArray(src)
 		if err != nil {
@@ -306,52 +306,52 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 		}
 		return nil, nil
 	}
-	switch typ.PhysicalType() {
-	case types.PtBoolean:
+	switch typ.Kind() {
+	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
 			return v, nil
 		}
-	case types.PtInt:
+	case types.IntKind:
 		if v, ok := v.(int64); ok {
 			return warehouses.ValidateInt(name, typ, int(v))
 		}
-	case types.PtFloat:
+	case types.FloatKind:
 		if v, ok := v.(float64); ok {
 			return warehouses.ValidateFloat(name, typ, v)
 		}
-	case types.PtDecimal:
+	case types.DecimalKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateDecimalString(name, typ, v)
 		}
-	case types.PtDateTime:
+	case types.DateTimeKind:
 		if v, ok := v.(time.Time); ok {
 			return warehouses.ValidateDateTime(name, v)
 		}
-	case types.PtDate:
+	case types.DateKind:
 		if v, ok := v.(time.Time); ok {
 			return warehouses.ValidateDate(name, v)
 		}
-	case types.PtTime:
+	case types.TimeKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
 		}
-	case types.PtUUID:
+	case types.UUIDKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateUUID(name, v)
 		}
-	case types.PtJSON:
+	case types.JSONKind:
 		if v, ok := v.([]byte); ok {
 			return warehouses.ValidateJSONRaw(name, v)
 		}
-	case types.PtInet:
+	case types.InetKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateInet(name, v)
 		}
-	case types.PtText:
+	case types.TextKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateText(name, typ, v)
 		}
-	case types.PtArray:
+	case types.ArrayKind:
 		rv := reflect.ValueOf(v)
 		if rv.Kind() != reflect.Slice {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)

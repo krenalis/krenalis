@@ -1336,7 +1336,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	var hasID bool
 	for i, column := range columns {
 		if column.Name == "id" {
-			if column.Type.PhysicalType() != types.PtInt {
+			if column.Type.Kind() != types.IntKind {
 				return types.Type{}, errors.Unprocessable(InvalidTable, "column \"id\" of table %q is not a signed 32 bit integer", table)
 			}
 			columns = slices.Delete(columns, i, i+1)
@@ -1755,10 +1755,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		return errors.BadRequest("name is longer than 60 runes")
 	}
 	// Validate the schemas.
-	if inSchema.Valid() && inSchema.PhysicalType() != types.PtObject {
+	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("input schema, if provided, must be an object")
 	}
-	if outSchema.Valid() && outSchema.PhysicalType() != types.PtObject {
+	if outSchema.Valid() && outSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("out schema, if provided, must be an object")
 	}
 	// Validate the filter.
@@ -1916,10 +1916,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !props.External.Type.Valid() {
 			return errors.BadRequest("external matching property type is not valid")
 		}
-		if !canBeUsedAsAsMatchingProp(props.Internal.Type.PhysicalType()) {
+		if !canBeUsedAsAsMatchingProp(props.Internal.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", props.Internal.Type)
 		}
-		if !canBeUsedAsAsMatchingProp(props.External.Type.PhysicalType()) {
+		if !canBeUsedAsAsMatchingProp(props.External.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
 	}
@@ -2124,11 +2124,11 @@ type ConnectionToSet struct {
 	WebsiteHost string
 }
 
-// canBeUsedAsAsMatchingProp reports whether a type with physical type pt can be
-// used as a matching property for the export.
-func canBeUsedAsAsMatchingProp(pt types.PhysicalType) bool {
+// canBeUsedAsAsMatchingProp reports whether a type with kind k can be used as a
+// matching property for the export.
+func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
-	return pt == types.PtInt || pt == types.PtUint || pt == types.PtUUID || pt == types.PtText
+	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
 // replacePlaceholders replaces the placeholders in s with the values read
@@ -2209,7 +2209,7 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 func onlyForMatching(schema types.Type) types.Type {
 	props := []types.Property{}
 	for _, p := range schema.Properties() {
-		if canBeUsedAsAsMatchingProp(p.Type.PhysicalType()) {
+		if canBeUsedAsAsMatchingProp(p.Type.Kind()) {
 			props = append(props, p)
 		}
 	}

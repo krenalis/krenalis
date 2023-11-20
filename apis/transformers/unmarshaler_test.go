@@ -434,8 +434,8 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 	} else if v2 == nil {
 		return fmt.Errorf("expected %#v (%T), got nil", v1, v1)
 	}
-	switch t.PhysicalType() {
-	case types.PtFloat:
+	switch t.Kind() {
+	case types.FloatKind:
 		if t.BitSize() == 32 {
 			f2, ok := v2.(float64)
 			if !ok {
@@ -447,7 +447,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			}
 			return nil
 		}
-	case types.PtDecimal:
+	case types.DecimalKind:
 		d2, ok := v2.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
@@ -457,7 +457,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			return fmt.Errorf("expected value %s, got %s", v1, d2)
 		}
 		return nil
-	case types.PtDateTime, types.PtDate, types.PtTime:
+	case types.DateTimeKind, types.DateKind, types.TimeKind:
 		t2, ok := v2.(time.Time)
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
@@ -467,7 +467,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			return fmt.Errorf("expected value %s, got %s", v1, t2)
 		}
 		return nil
-	case types.PtJSON:
+	case types.JSONKind:
 		j2, ok := v2.(json.RawMessage)
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
@@ -477,7 +477,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			return fmt.Errorf("expected value %q (%T), got %q (%T)", string(j1), v1, string(j2), v2)
 		}
 		return nil
-	case types.PtArray:
+	case types.ArrayKind:
 		a1 := v1.([]any)
 		a2, ok := v2.([]any)
 		if !ok {
@@ -490,7 +490,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			}
 		}
 		return nil
-	case types.PtObject:
+	case types.ObjectKind:
 		o1 := v1.(map[string]any)
 		o2, ok := v2.(map[string]any)
 		if !ok {
@@ -522,7 +522,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			return fmt.Errorf("unexpected property %q", keys[0])
 		}
 		return nil
-	case types.PtMap:
+	case types.MapKind:
 		m1 := v1.(map[string]any)
 		m2, ok := v2.(map[string]any)
 		if !ok {

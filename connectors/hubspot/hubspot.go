@@ -282,7 +282,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 		if r.ModificationMetadata.ReadOnlyValue {
 			property.Role = types.SourceRole
 		}
-		if typ.PhysicalType() == types.PtText {
+		if typ.Kind() == types.TextKind {
 			if len(r.Options) == 0 {
 				property.Type.WithCharLen(65536)
 			} else {

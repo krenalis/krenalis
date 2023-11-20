@@ -176,7 +176,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 	case "Map":
 		key, _, s := parseType(s[i+1:], false)
 		s, comma := trimComma(s)
-		if !key.Valid() || key.PhysicalType() != types.PtText || !comma {
+		if !key.Valid() || key.Kind() != types.TextKind || !comma {
 			return types.Type{}, false, ""
 		}
 		value, _, s := parseType(s, false)

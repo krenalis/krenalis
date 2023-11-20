@@ -63,7 +63,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 	case nil:
 		b.WriteString("NULL")
 	case string:
-		if t.PhysicalType() == types.PtText {
+		if t.Kind() == types.TextKind {
 			quoteString(b, v)
 		} else {
 			b.WriteByte('\'')
