@@ -218,6 +218,7 @@ var eventColumns = []types.Property{
 // It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
+//   - NoEventsSchema, if the data warehouse does not have events schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
@@ -243,7 +244,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 	}
 	schema, ok := schemas["events"]
 	if !ok {
-		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have events schema", ws.ID)
+		return nil, errors.Unprocessable(NoEventsSchema, "workspace %d does not have events schema", ws.ID)
 	}
 
 	gid, ok := schema.Property("gid")
