@@ -456,7 +456,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 // setUserCursor sets the user cursor of the action.
 func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor) error {
-	this.apis.mustBeOpen()
 	n := state.SetActionUserCursor{
 		ID:         this.action.ID,
 		UserCursor: cursor,
