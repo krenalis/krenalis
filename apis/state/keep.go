@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"chichi/apis/postgres"
-	"chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -885,7 +884,7 @@ func (state *State) setActionStatus(n postgres.Notification) {
 // set.
 type SetActionUserCursor struct {
 	ID         int
-	UserCursor connector.Cursor
+	UserCursor Cursor
 }
 
 // setActionUserCursor sets the user cursor of an action.

@@ -15,7 +15,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"math"
 	mathrand "math/rand"
@@ -513,7 +512,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	if !schema.Valid() {
 		return nil, "", errors.BadRequest("schema is not valid")
 	}
-	var cur _connector.Cursor
+	var cur state.Cursor
 	if cursor != "" {
 		var err error
 		cur, err = deserializeCursor(cursor)
@@ -523,28 +522,38 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	objects, next, err := this.app().Users(ctx, schema, cur)
-	eof := err == io.EOF
-	if err != nil && !eof {
+	records, err := this.app().Users(ctx, schema, cur)
+	if err != nil {
 		return nil, "", err
 	}
-	users := make([]map[string]any, len(objects))
-	for i, object := range objects {
-		if object.Err != nil {
-			return nil, "", err
+	defer records.Close()
+
+	var last connectors.Record
+	users := make([]map[string]any, 0, 100)
+
+	errBreak := errors.New("break")
+	err = records.For(func(user connectors.Record) error {
+		if user.Err != nil {
+			return user.Err
 		}
-		users[i] = object.Properties
+		last = user
+		users = append(users, user.Properties)
+		if len(users) == 100 {
+			return errBreak
+		}
+		return nil
+	})
+	if err != nil && err != errBreak {
+		return nil, "", err
 	}
-	if eof {
-		return users, "", nil
+	if err = records.Err(); err != nil {
+		return nil, "", err
 	}
 
 	// Build the cursor.
-	last := objects[len(objects)-1]
-	cursor, err = serializeCursor(_connector.Cursor{
+	cursor, err = serializeCursor(state.Cursor{
 		ID:        last.ID,
 		Timestamp: last.Timestamp,
-		Next:      next,
 	})
 	if err != nil {
 		return nil, "", err
@@ -2307,22 +2316,22 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 }
 
 // deserializeCursor deserializes a cursor passed to the API.
-func deserializeCursor(cursor string) (connectors.Cursor, error) {
+func deserializeCursor(cursor string) (state.Cursor, error) {
 	data, err := hex.DecodeString(cursor)
 	if err != nil {
-		return connectors.Cursor{}, err
+		return state.Cursor{}, err
 	}
-	var c _connector.Cursor
+	var c state.Cursor
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		return connectors.Cursor{}, err
+		return state.Cursor{}, err
 	}
 	// TODO(marco): validate the cursor's fields.
 	return c, nil
 }
 
 // serializeCursor serializes a cursor to be returned by the API.
-func serializeCursor(cursor connectors.Cursor) (string, error) {
+func serializeCursor(cursor state.Cursor) (string, error) {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)

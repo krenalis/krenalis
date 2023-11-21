@@ -107,7 +107,7 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 		return nil, nil, err
 	}
 	defer r.Close()
-	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, limit)
+	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, limit)
 	err = file.inner.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return nil, nil, err
@@ -121,44 +121,82 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 	return rw.properties, rw.records, nil
 }
 
-// ReadFunc reads the records from the file at the provided path name and calls
-// the write function for each record read. The returned records conform to the
-// provided schema, which must be valid and compatible with the file's schema.
-//
-// name must be UTF-8 encoded with a length in range [1, 1024]. If the file
-// connection supports multiple sheets, sheet is the sheet name and must be
-// UTF-8 encoded with a length in range [1, 100], otherwise must be an empty
-// string. identityColumn is the column used as the identity, and if
-// timestampColumn is not nil, it represents the column used as the timestamp
-// along with its format.
+// Records reads the records from the file at the provided path name and returns
+// a Records to iterate over the database's records The returned records conform
+// to the provided schema, which must be valid and compatible with the file's
+// schema.
 //
 // It returns the ErrNoStorage error if the file does not have a storage, and
 // it returns the ErrNoColumns error if the file has no columns.
-func (file *File) ReadFunc(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn, write func(Record) error) error {
+func (file *File) Records(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn) (Records, error) {
 	if file.err != nil {
-		return file.err
+		return nil, file.err
 	}
 	storage, err := file.storage()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, math.MaxInt)
 	s := newCompressedStorage(storage, file.connection.Compression)
-	r, _, err := s.Reader(ctx, name)
+	rc, _, err := s.Reader(ctx, name)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer r.Close()
-	rw := newRecordWriter(file.connection.Connector().ID, schema, math.MaxInt)
-	rw.SetWriteFunc(write, identityColumn, timestampColumn)
-	err = file.inner.Read(ctx, r, sheet, rw)
+	records := &fileRecords{
+		ctx:   ctx,
+		rw:    rw,
+		rc:    rc,
+		sheet: sheet,
+		inner: file.inner,
+	}
+	return records, nil
+}
+
+// fileRecords implements the Records interface for files.
+type fileRecords struct {
+	ctx    context.Context
+	rw     *recordWriter
+	rc     io.ReadCloser
+	sheet  string
+	inner  _connector.FileConnection
+	err    error
+	closed bool
+}
+
+func (r *fileRecords) Close() error {
+	if r.closed {
+		return nil
+	}
+	r.closed = true
+	err := r.rc.Close()
+	if err != nil && r.err == nil {
+		r.err = err
+	}
+	return err
+}
+
+func (r *fileRecords) Err() error {
+	return r.err
+}
+
+func (r *fileRecords) For(yield func(Record) error) error {
+	if r.closed {
+		r.err = errors.New("connectors: For called on a closed Records")
+		return nil
+	}
+	defer func() {
+		_ = r.Close()
+		if r.err == nil && r.rw.properties == nil {
+			r.err = ErrNoColumns
+		}
+	}()
+	r.rw.yield = yield
+	err := r.inner.Read(r.ctx, r.rc, r.sheet, r.rw)
 	if err != nil && err != errRecordStop {
-		return err
-	}
-	if err = r.Close(); err != nil {
-		return err
-	}
-	if rw.properties == nil {
-		return ErrNoColumns
+		if err, ok := err.(yieldError); ok {
+			return err.err
+		}
+		r.err = err
 	}
 	return nil
 }
@@ -273,10 +311,9 @@ func (rr *recordReader) Record() ([]any, error) {
 }
 
 // newRecordWriter returns a new record writer that writes at most limit
-// records. If the write function is set with SetWriteFunc, the recordWriter
-// calls the write function for each record written, otherwise it stores the
-// records in the records field.
-func newRecordWriter(connector int, schema types.Type, limit int) *recordWriter {
+// records. If the yield function is not nil, it calls the yield function for
+// each record, otherwise it stores the records in the records field.
+func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -284,8 +321,9 @@ func newRecordWriter(connector int, schema types.Type, limit int) *recordWriter 
 		textColumnsOnly: true,
 		records:         []map[string]any{},
 	}
-	rw.identityColumn.index = -1
-	rw.timestampColumn.index = -1
+	rw.identityColumn.name = identityColumn
+	rw.timestampColumn.name = timestamp.Name
+	rw.timestampColumn.format = timestamp.Format
 	return &rw
 }
 
@@ -293,7 +331,7 @@ func newRecordWriter(connector int, schema types.Type, limit int) *recordWriter 
 type recordWriter struct {
 	connector       int
 	limit           int
-	write           WriteFunc
+	yield           func(Record) error
 	schema          types.Type
 	properties      []types.Property // schema's properties, or the file's columns if a schema has not been provided
 	columnIndexOf   map[int]int      // map a property index in the schema to the corresponding file's column
@@ -393,7 +431,7 @@ func (rw *recordWriter) Record(record []any) error {
 		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
 	}
 	var err error
-	if rw.write == nil {
+	if rw.yield == nil {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
 		for i, c := range rw.properties {
@@ -430,9 +468,8 @@ func (rw *recordWriter) Record(record []any) error {
 				rd.Err = err
 			}
 		}
-		err = rw.write(rd)
-		if err != nil {
-			return err
+		if err := rw.yield(rd); err != nil {
+			return yieldError{err: err}
 		}
 	}
 	rw.limit--
@@ -448,7 +485,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.connector)
 	}
 	var err error
-	if rw.write == nil {
+	if rw.yield == nil {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
 		for _, c := range rw.properties {
@@ -484,9 +521,8 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				rd.Err = err
 			}
 		}
-		err = rw.write(rd)
-		if err != nil {
-			return err
+		if err := rw.yield(rd); err != nil {
+			return yieldError{err: err}
 		}
 	}
 	rw.limit--
@@ -508,7 +544,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 		return fmt.Errorf("connector %d has called RecordString when there are non-text columns", rw.connector)
 	}
 	var err error
-	if rw.write == nil {
+	if rw.yield == nil {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
 		for i, c := range rw.properties {
@@ -547,9 +583,8 @@ func (rw *recordWriter) RecordString(record []string) error {
 				rd.Err = err
 			}
 		}
-		err = rw.write(rd)
-		if err != nil {
-			return err
+		if err := rw.yield(rd); err != nil {
+			return yieldError{err: err}
 		}
 	}
 	rw.limit--
@@ -557,14 +592,6 @@ func (rw *recordWriter) RecordString(record []string) error {
 		return errRecordStop
 	}
 	return nil
-}
-
-// SetWriteFunc sets the write function for the recordWriter.
-func (rw *recordWriter) SetWriteFunc(write WriteFunc, identity string, timestamp TimestampColumn) {
-	rw.write = write
-	rw.identityColumn.name = identity
-	rw.timestampColumn.name = timestamp.Name
-	rw.timestampColumn.format = timestamp.Format
 }
 
 // parseIdentityColumn parses an identity column value.

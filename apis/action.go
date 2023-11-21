@@ -20,7 +20,6 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
-	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/telemetry"
 )
@@ -455,15 +454,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 }
 
 // setUserCursor sets the user cursor of the action.
-func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor) error {
+func (this *Action) setUserCursor(ctx context.Context, cursor state.Cursor) error {
 	n := state.SetActionUserCursor{
 		ID:         this.action.ID,
 		UserCursor: cursor,
 	}
 	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions\n"+
-			"SET user_cursor.id = $1, user_cursor.timestamp = $2, user_cursor.next = $3 WHERE id = $4",
-			n.UserCursor.ID, n.UserCursor.Timestamp, n.UserCursor.Next, n.ID)
+			"SET user_cursor.id = $1, user_cursor.timestamp = $2 WHERE id = $3",
+			n.UserCursor.ID, n.UserCursor.Timestamp, n.ID)
 		if err != nil {
 			return err
 		}

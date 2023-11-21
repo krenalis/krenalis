@@ -190,33 +190,70 @@ func (err SchemaError) Error() string {
 	return err.Msg
 }
 
-// Users returns the app's users starting from the provided cursor. The returned
-// users conform to the provided schema, which must be compatible with the
-// source users schema. If there is an error reading a user, it sets the
-// User.Err field with the error.
+// Users returns a Records to iterate over the app's users starting from the
+// provided cursor. The returned users conform to the provided schema, which
+// must be compatible with the source users schema.
 //
 // It returns a SchemaError error if the provided schema does not conform to the
-// source users schema. Along with the users, it returns the io.EOF error when
-// there are no more users other than the returned one. It panics if the app
-// does not support the users target.
-func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (users []Record, next string, err error) {
-
+// source users schema.
+func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Cursor) (Records, error) {
 	if app.err != nil {
-		return nil, "", app.err
+		return nil, app.err
 	}
-
-	// Check that the schema is compatible with the source users schema.
+	// Check that the schema conforms to the source users schema.
 	usersSchema, err := app.usersSchema(ctx, types.SourceRole)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot get users schema: %s", err)
+		return nil, fmt.Errorf("cannot get users schema: %s", err)
 	}
 	err = checkConformity("", schema, usersSchema)
 	if err != nil {
-		return nil, "", err
+		return nil, err
+	}
+	records := &appRecords{
+		ctx:     ctx,
+		schema:  schema,
+		layouts: app.layouts,
+		cursor:  cursor,
+		appName: app.name,
+		inner:   app.inner,
+	}
+	return records, nil
+}
+
+// appRecords implements the Records interface for apps.
+type appRecords struct {
+	ctx     context.Context
+	schema  types.Type
+	layouts *state.Layouts
+	cursor  state.Cursor
+	appName string
+	inner   _connector.AppConnection
+	err     error
+	closed  bool
+}
+
+func (r *appRecords) Close() error {
+	r.closed = true
+	return nil
+}
+
+func (r *appRecords) Err() error {
+	return r.err
+}
+
+func (r *appRecords) For(yield func(Record) error) error {
+
+	if r.closed {
+		r.err = errors.New("connectors: For called on a closed Records")
+		return nil
 	}
 
-	// Prepare the user's properties to retrieve.
-	properties := schema.Properties()
+	cursor := _connector.Cursor{
+		ID:        r.cursor.ID,
+		Timestamp: r.cursor.Timestamp,
+	}
+
+	properties := r.schema.Properties()
 	names := make([]string, len(properties))
 	propertyByName := make(map[string]*types.Property, len(properties))
 	for i, p := range properties {
@@ -224,56 +261,67 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor Cursor) (us
 		propertyByName[p.Name] = &p
 	}
 
-	// Retrieve the users.
-	users, next, err = app.inner.(_connector.AppUsersConnection).Users(ctx, names, cursor)
-	eof := err == io.EOF
-	if err != nil && !eof {
-		return nil, "", err
-	}
-	if len(users) == 0 {
-		if !eof {
-			return nil, "", fmt.Errorf("%s returned zero users but did not return io.EOF", app.name)
-		}
-		if next != "" {
-			return nil, "", fmt.Errorf("%s returned zero users but returned a non-empty next value", app.name)
-		}
-		if users == nil {
-			users = []Record{}
-		}
-		return users, "", io.EOF
-	}
+	for {
 
-	// Normalize the returned users.
-	for _, user := range users {
-		for _, p := range properties {
-			value, ok := user.Properties[p.Name]
-			if !ok {
-				user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
-				break
-			}
-			value, err = normalizeAppProperty(p.Name, p.Type, value, p.Nullable, app.layouts)
-			if err != nil {
-				user.Err = err
-				break
-			}
-			user.Properties[p.Name] = value
+		// Retrieve the users.
+		users, next, err := r.inner.(_connector.AppUsersConnection).Users(r.ctx, names, cursor)
+		eof := err == io.EOF
+		if err != nil && !eof {
+			r.err = err
+			return nil
 		}
-		// Users method of the connector is permitted to return more properties than those requested,
-		// so if necessary, remove those that are not requested.
-		if len(user.Properties) != len(properties) {
-			for name := range user.Properties {
-				if _, ok := propertyByName[name]; !ok {
-					delete(propertyByName, name)
+		if len(users) == 0 {
+			if !eof {
+				r.err = fmt.Errorf("%s returned zero users but did not return io.EOF", r.appName)
+				return nil
+			}
+			if next != "" {
+				r.err = fmt.Errorf("%s returned zero users but returned a non-empty next value", r.appName)
+			}
+			return nil
+		}
+
+		// Normalize the returned users.
+		for _, user := range users {
+			for _, p := range properties {
+				value, ok := user.Properties[p.Name]
+				if !ok {
+					user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
+					break
+				}
+				value, err = normalizeAppProperty(p.Name, p.Type, value, p.Nullable, r.layouts)
+				if err != nil {
+					user.Err = err
+					break
+				}
+				user.Properties[p.Name] = value
+			}
+			// Users method of the connector is permitted to return more properties than those requested,
+			// so if necessary, remove those that are not requested.
+			if len(user.Properties) != len(properties) {
+				for name := range user.Properties {
+					if _, ok := propertyByName[name]; !ok {
+						delete(propertyByName, name)
+					}
 				}
 			}
+			user.Timestamp = user.Timestamp.UTC()
+			if err := yield(user); err != nil {
+				return err
+			}
 		}
-		user.Timestamp = user.Timestamp.UTC()
+
+		if eof {
+			return nil
+		}
+
+		last := users[len(users)-1]
+		cursor.ID = last.ID
+		cursor.Timestamp = last.Timestamp
+		cursor.Next = next
+
 	}
 
-	if eof {
-		return users, "", io.EOF
-	}
-	return users, next, nil
 }
 
 type schema struct {

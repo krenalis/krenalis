@@ -322,7 +322,7 @@ func (state *State) Load() error {
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, mapping, transformation_source, transformation_language,\n"+
 			"transformation_version, query, path, table_name, sheet, identity_column, timestamp_column, timestamp_format,\n"+
-			"(user_cursor).id, (user_cursor).timestamp, (user_cursor).next, health, export_mode, matching_properties_internal,\n"+
+			"(user_cursor).id, (user_cursor).timestamp, health, export_mode, matching_properties_internal,\n"+
 			"matching_properties_external\nFROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
@@ -337,7 +337,7 @@ func (state *State) Load() error {
 						&filter, &mapping, &transformation.Source, &transformation.Language, &transformation.Version,
 						&action.Query, &action.Path, &action.TableName, &action.Sheet, &action.IdentityColumn,
 						&action.TimestampColumn, &action.TimestampFormat, &action.UserCursor.ID, &action.UserCursor.Timestamp,
-						&action.UserCursor.Next, &action.Health, &action.ExportMode, &matchPropInternal, &matchPropExternal)
+						&action.Health, &action.ExportMode, &matchPropInternal, &matchPropExternal)
 					if err != nil {
 						return err
 					}

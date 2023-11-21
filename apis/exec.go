@@ -82,23 +82,15 @@ func (this *Action) exec(ctx context.Context) {
 	} else if !this.isLanguageSupported() {
 		err = actionExecutionError{fmt.Errorf("%s transformation language is not supported", this.Transformation.Language)}
 	} else {
-		switch c.Type {
-		case state.AppType:
-			if connection.Role == state.Source {
-				err = this.importUsersFromApp(ctx)
-			} else {
+		if connection.Role == state.Source {
+			err = this.importUsers(ctx)
+		} else {
+			switch c.Type {
+			case state.AppType:
 				err = this.exportUsersToApp(ctx)
-			}
-		case state.DatabaseType:
-			if connection.Role == state.Source {
-				err = this.importUsersFromDatabase(ctx)
-			} else {
+			case state.DatabaseType:
 				err = this.exportUsersToDatabase(ctx)
-			}
-		case state.FileType:
-			if connection.Role == state.Source {
-				err = this.importUsersFromFile(ctx)
-			} else {
+			case state.FileType:
 				err = this.exportUsersToFile(ctx)
 			}
 		}

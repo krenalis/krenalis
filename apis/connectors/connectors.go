@@ -28,14 +28,28 @@ import (
 	"chichi/connector/types"
 )
 
-type Cursor = _connector.Cursor
 type Event = _connector.Event
 type EventType = _connector.EventType
 type Record = _connector.Record
 
-// WriteFunc represents the function passed to the (*File).ReadFunc method to
-// read file records.
-type WriteFunc func(Record) error
+// Records is the iterator interface used to iterate over the records read from
+// apps, databases, and files.
+type Records interface {
+
+	// Close closes the iterator. It is automatically called by the For method
+	// before returning. Close is idempotent and does not impact the result of Err.
+	Close() error
+
+	// Err returns any error encountered during iteration, excluding errors returned
+	// by the yield function, which may have occurred after an explicit or implicit
+	// Close.
+	Err() error
+
+	// For calls the yield function for each record (r) in the sequence. If yield
+	// returns an error, For stops and returns the error. After For completes, it
+	// is also necessary to check the result of Err for any potential errors.
+	For(yield func(Record) error) error
+}
 
 // TimestampColumn represents the timestamp column passed to the
 // (*File).ReadFunc method.
@@ -253,6 +267,16 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 		return payload, nil
 	}
 	return nil, ErrNoWebhooks
+}
+
+// yieldError is an error returned by the yield function of Records when
+// iterating over records.
+type yieldError struct {
+	err error
+}
+
+func (err yieldError) Error() string {
+	return err.Error()
 }
 
 // checkConformity checks whether the schema t1 conforms to the new schema t2

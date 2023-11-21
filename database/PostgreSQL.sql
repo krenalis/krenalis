@@ -99,8 +99,7 @@ CREATE TABLE connections (
 
 CREATE TYPE cursor AS (
     id text,
-    timestamp timestamptz(6),
-    next text
+    timestamp timestamp(6)
 );
 
 CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
@@ -129,7 +128,7 @@ CREATE TABLE actions (
     identity_column varchar(1024) NOT NULL DEFAULT '',
     timestamp_column varchar(1024) NOT NULL DEFAULT '',
     timestamp_format varchar(64) NOT NULL DEFAULT '',
-    user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00", "")',
+    user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00")',
     health health NOT NULL DEFAULT 'Healthy',
     export_mode export_mode DEFAULT NULL,
     matching_properties_internal text NOT NULL,

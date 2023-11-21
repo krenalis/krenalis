@@ -883,6 +883,12 @@ func (target Target) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Target: %d", target)
 }
 
+// Cursor represents a cursor.
+type Cursor struct {
+	ID        string
+	Timestamp time.Time
+}
+
 type Action struct {
 	mu                 *sync.Mutex
 	ID                 int
@@ -906,7 +912,7 @@ type Action struct {
 	IdentityColumn     string
 	TimestampColumn    string
 	TimestampFormat    string
-	UserCursor         connector.Cursor
+	UserCursor         Cursor
 	Health             Health
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties

@@ -11,13 +11,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"chichi/apis/connectors"
 	"chichi/apis/mappings"
 	"chichi/apis/state"
-	"chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -31,52 +29,43 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
-	var cursor connector.Cursor
+	var cursor state.Cursor
 
-	c := this.connection
-
-	var eof bool
-	app := this.app()
+	records, err := this.app().Users(ctx, schema, cursor)
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
+	}
+	defer records.Close()
 
 	// Importing users from a destination to match identities for the export.
-	for !eof {
+	err = records.For(func(user connectors.Record) error {
 
-		users, next, err := app.Users(ctx, schema, cursor)
-		if err != nil && err != io.EOF {
-			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
-		}
-		if err == io.EOF {
-			eof = true
-		} else if len(users) == 0 {
-			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.ID)}
+		if user.Err != nil {
+			return actionExecutionError{user.Err}
 		}
 
-		for _, user := range users {
-			if user.Err != nil {
-				return actionExecutionError{err}
-			}
-			p, err := json.Marshal(user.Properties[externalProp.Name])
-			if err != nil {
-				return actionExecutionError{err}
-			}
-			err = c.store.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
-			if err != nil {
-				return actionExecutionError{err}
-			}
+		p, err := json.Marshal(user.Properties[externalProp.Name])
+		if err != nil {
+			return actionExecutionError{err}
 		}
-
-		// Set the user cursor.
-		if len(users) > 0 {
-			last := users[len(users)-1]
-			cursor.ID = last.ID
-			cursor.Timestamp = last.Timestamp
-		}
-		cursor.Next = next
-		err = this.setUserCursor(ctx, cursor)
+		err = this.connection.store.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
 		if err != nil {
 			return actionExecutionError{err}
 		}
 
+		// Set the user cursor.
+		err = this.setUserCursor(ctx, state.Cursor{ID: user.ID, Timestamp: user.Timestamp})
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if err = records.Err(); err != nil {
+		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
 	}
 
 	return nil
@@ -207,89 +196,6 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		}
 		slog.Info("a new user has been created", "connector", connectorName, "user", user)
 
-	}
-
-	return nil
-}
-
-// importUsersFromApp imports the users from an app.
-func (this *Action) importUsersFromApp(ctx context.Context) error {
-
-	cursor := this.action.UserCursor
-	if exe, _ := this.action.Execution(); exe.Reimport {
-		cursor = connector.Cursor{}
-	}
-
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
-	if err != nil {
-		return actionExecutionError{err}
-	}
-
-	var eof bool
-	app := this.app()
-
-	for !eof {
-
-		users, next, err := app.Users(ctx, this.action.InSchema, cursor)
-		if err != nil && err != io.EOF {
-			if err, ok := err.(*connectors.SchemaError); ok {
-				err.Msg += ". Please review and update the action before attempting to import the users."
-				return actionExecutionError{err}
-			}
-			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
-		}
-		if err == io.EOF {
-			eof = true
-		}
-
-		for _, user := range users {
-
-			if user.Err != nil {
-				return actionExecutionError{err}
-			}
-
-			// Map the properties of the user.
-			identity, err := mapping.Apply(ctx, user.Properties)
-			if err != nil {
-				if err, ok := err.(mappings.Error); ok {
-					return actionExecutionError{err}
-				}
-				return err
-			}
-
-			// Set the identity into the data warehouse.
-			err = this.connection.store.SetIdentity(ctx, identity, user.ID, "", this.action.ID, false, user.Timestamp)
-			if err != nil {
-				return actionExecutionError{err}
-			}
-
-			// Update the connection stats.
-			err = this.connection.updateConnectionsStats(ctx)
-			if err != nil {
-				return actionExecutionError{err}
-			}
-
-		}
-
-		// Set the user cursor.
-		if len(users) > 0 {
-			last := users[len(users)-1]
-			cursor.ID = last.ID
-			cursor.Timestamp = last.Timestamp
-		}
-		cursor.Next = next
-		err = this.setUserCursor(ctx, cursor)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
-	}
-
-	// Resolve and sync the users.
-	err = this.connection.store.ResolveSyncUsers(ctx)
-	if err != nil {
-		return fmt.Errorf("cannot resolve and sync users: %s", err)
 	}
 
 	return nil

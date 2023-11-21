@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/connectors"
 	"chichi/apis/mappings"
 )
 
@@ -69,67 +68,6 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	err = this.file().Write(ctx, path, this.action.Sheet, columns, rows)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
-	}
-
-	return nil
-}
-
-// importUsersFromFile imports the users from a file.
-func (this *Action) importUsersFromFile(ctx context.Context) error {
-
-	action := this.action
-
-	mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
-		this.apis.transformer, nil)
-	if err != nil {
-		return err
-	}
-
-	timestampColumn := connectors.TimestampColumn{
-		Name:   action.TimestampColumn,
-		Format: action.TimestampFormat,
-	}
-
-	// Read the records.
-	err = this.file().ReadFunc(ctx, action.Path, action.Sheet, action.InSchema, action.IdentityColumn, timestampColumn, func(user connectors.Record) error {
-
-		var err error
-
-		if user.Err != nil {
-			return actionExecutionError{user.Err}
-		}
-
-		// Transform the user's properties.
-		user.Properties, err = mapping.Apply(ctx, user.Properties)
-		if err != nil {
-			if err, ok := err.(mappings.Error); ok {
-				return actionExecutionError{err}
-			}
-			return err
-		}
-
-		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
-		// Update the connection stats.
-		err = this.connection.updateConnectionsStats(ctx)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
-	}
-
-	// Resolve and sync the users.
-	err = this.connection.store.ResolveSyncUsers(ctx)
-	if err != nil {
-		return actionExecutionError{err}
 	}
 
 	return nil

@@ -78,15 +78,15 @@ func (database *Database) Query(ctx context.Context, query string) (*Rows, error
 	return newRows(rows, columns), nil
 }
 
-// Records executes a query and returns the resulting records. The returned
-// records conform to the provided schema, which must be valid and compatible
-// with the query's schema.
+// Records executes a query and returns a Records to iterate over the database's
+// records. The returned records conform to the provided schema, which must be
+// valid and compatible with the query's schema.
 //
 // The query execution must return a column named "id", the identity column,
 // with type Int, Uint, UUID, or Text. If the query execution returns a column
 // named "timestamp," that column is considered the timestamp column and must
-// have the type DateTime.
-func (database *Database) Records(ctx context.Context, query string, schema types.Type) (*Records, error) {
+// have the DateTime type.
+func (database *Database) Records(ctx context.Context, query string, schema types.Type) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
@@ -95,6 +95,12 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 	if err != nil {
 		return nil, err
 	}
+	var records Records
+	defer func() {
+		if records == nil {
+			_ = rows.Close()
+		}
+	}()
 	// Validate the identity and timestamp columns.
 	var hasIdentityColumn bool
 	for _, c := range columns {
@@ -103,17 +109,17 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 			switch k := c.Type.Kind(); k {
 			case types.IntKind, types.UintKind, types.UUIDKind, types.TextKind:
 			default:
-				return nil, fmt.Errorf(`identity column "id" has type %s instead of Int, Uint, UUID, or Text`, c.Type)
+				return nil, &SchemaError{fmt.Sprintf(`identity column "id" has type %s instead of Int, Uint, UUID, or Text`, c.Type)}
 			}
 			hasIdentityColumn = true
 		case "timestamp":
 			if c.Type.Kind() != types.DateTimeKind {
-				return nil, fmt.Errorf(`timestamp column "timestamp" has type %s instead of DateTime`, c.Type)
+				return nil, &SchemaError{fmt.Sprintf(`timestamp column "timestamp" has type %s instead of DateTime`, c.Type)}
 			}
 		}
 	}
 	if !hasIdentityColumn {
-		return nil, fmt.Errorf(`there is no identity column "id"`)
+		return nil, &SchemaError{`there is no identity column "id"`}
 	}
 	// Check that schema is compatible with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
@@ -125,7 +131,8 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 		return nil, err
 	}
 	// Return the records.
-	return newRecords(rows, columns, schema.Properties()), nil
+	records = newDatabaseRecords(rows, columns, schema.Properties())
+	return records, nil
 }
 
 // Upsert creates or updates the provided rows in the specified table.
@@ -197,17 +204,18 @@ func (rs *Rows) Scan() (map[string]any, error) {
 	return row, nil
 }
 
-// Records is the result of a query.
-type Records struct {
+// databaseRecords implements the Records interface for databases.
+type databaseRecords struct {
 	columns    []types.Property
 	rows       _connector.Rows
 	propertyOf map[string]types.Property
 	dst        []any
+	err        error
 	closed     bool
 }
 
-func newRecords(rows _connector.Rows, columns, properties []types.Property) *Records {
-	records := Records{
+func newDatabaseRecords(rows _connector.Rows, columns, properties []types.Property) *databaseRecords {
+	records := databaseRecords{
 		columns:    columns,
 		rows:       rows,
 		dst:        make([]any, len(columns)),
@@ -219,51 +227,54 @@ func newRecords(rows _connector.Rows, columns, properties []types.Property) *Rec
 	return &records
 }
 
-// Close closes the records. Close is idempotent.
-func (records *Records) Close() error {
-	if records.closed {
+func (r *databaseRecords) Close() error {
+	if r.closed {
 		return nil
 	}
-	records.closed = true
-	return records.rows.Close()
-}
-
-// Err returns the error encountered during iteration, if any. It can be called
-// after an explicit or implicit Close
-func (records *Records) Err() error {
-	return records.rows.Err()
-}
-
-// Next prepares the next record for reading with the Scan method.
-// It returns true on success, signaling the availability of a record, or
-// false in cases where there is no next record or an error occurred during
-// preparation.
-//
-// Every call to Scan, even the first one, must be preceded by a call to Next.
-func (records *Records) Next() bool {
-	return records.rows.Next()
-}
-
-// Scan returns the current record.
-func (records *Records) Scan() (Record, error) {
-	record := Record{
-		Properties: make(map[string]any, len(records.propertyOf)),
+	r.closed = true
+	err := r.rows.Close()
+	if err != nil && r.err == nil {
+		r.err = err
 	}
-	for i, c := range records.columns {
-		sv := databaseScanValue{
-			property: records.propertyOf[c.Name],
-			record:   &record,
+	return err
+}
+
+func (r *databaseRecords) Err() error {
+	return r.err
+}
+
+func (r *databaseRecords) For(yield func(Record) error) error {
+	if r.closed {
+		r.err = errors.New("connectors: For called on a closed Records")
+		return nil
+	}
+	defer r.Close()
+	for r.rows.Next() {
+		record := Record{
+			Properties: make(map[string]any, len(r.propertyOf)),
 		}
-		sv.property.Name = c.Name
-		if c.Name == "id" {
-			sv.identityType = c.Type
+		for i, c := range r.columns {
+			sv := databaseScanValue{
+				property: r.propertyOf[c.Name],
+				record:   &record,
+			}
+			sv.property.Name = c.Name
+			if c.Name == "id" {
+				sv.identityType = c.Type
+			}
+			r.dst[i] = sv
 		}
-		records.dst[i] = sv
+		if err := r.rows.Scan(r.dst...); err != nil {
+			r.err = err
+		}
+		if err := yield(record); err != nil {
+			return err
+		}
 	}
-	if err := records.rows.Scan(records.dst...); err != nil {
-		return Record{}, err
+	if err := r.rows.Err(); err != nil {
+		r.err = err
 	}
-	return record, nil
+	return nil
 }
 
 // databaseScanValue implements the sql.Scanner interface to read the database
