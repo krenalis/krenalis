@@ -9,6 +9,7 @@ package datastore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -167,20 +168,37 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		actions = append(actions, action.ID)
 	}
 
+	// TODO(Gianluca): should the users / users_identities schema be handled by
+	// Chichi, or internally by the data warehouse? See the issue
+	// https://github.com/open2b/chichi/issues/392.
+	schemas, err := store.Schemas(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Determine the columns for the identifiers.
 	var identifiersColumns []types.Property
-	usersIdentities := ws.Schemas["users_identities"]
+	usersIdentities, ok := schemas["users_identities"]
+	if !ok {
+		return errors.New("missing 'users_identities' schema")
+	}
 	count := len(ws.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
 	identifiersColumns = make([]types.Property, count)
 	for i, ident := range append(ws.Identifiers, ws.AnonymousIdentifiers.Priority...) {
 		var err error
-		identifiersColumns[i], err = PropertyPathToColumn(*usersIdentities, ident)
+		identifiersColumns[i], err = PropertyPathToColumn(usersIdentities, ident)
 		if err != nil {
 			return err
 		}
 	}
 
-	usersColumns := PropertiesToColumns(ws.Schemas["users"].Properties())
+	// Determine the user schema.
+	usersSchema, ok := schemas["users"]
+	if !ok {
+		return errors.New("missing 'users' schema")
+	}
+
+	usersColumns := PropertiesToColumns(usersSchema.Properties())
 	return store.warehouse.ResolveSyncUsers(ctx, actions, identifiersColumns, usersColumns)
 }
 

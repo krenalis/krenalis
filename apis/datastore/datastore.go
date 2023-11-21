@@ -19,7 +19,6 @@ import (
 	"chichi/apis/datastore/warehouses/postgresql"
 	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/state"
-	"chichi/connector/types"
 )
 
 type (
@@ -133,41 +132,6 @@ func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType,
 		return err
 	}
 	return dw.Close()
-}
-
-// WarehouseSchemas returns the schemas of users, groups, and events for the
-// relative tables of a data warehouse. If a table doesn't exist, it won't be
-// included in returned schemas.
-//
-// It returns a SettingsError error if the settings are not valid, and a
-// DataWarehouseError error if an error occurs with the data warehouse.
-func (ds *Datastore) WarehouseSchemas(ctx context.Context, typ state.WarehouseType, settings []byte) (map[string]types.Type, error) {
-	ds.mustBeOpen()
-	dw, err := openWarehouse(typ, settings)
-	if err != nil {
-		return nil, err
-	}
-	defer dw.Close()
-	tables, err := dw.Tables(ctx)
-	if err != nil {
-		return nil, err
-	}
-	schemas := make(map[string]types.Type)
-	for _, table := range tables {
-		switch table.Name {
-		case "users", "users_identities", "groups", "groups_identities", "events":
-			properties, err := ColumnsToProperties(table.Columns)
-			if err != nil {
-				return nil, err
-			}
-			schemas[table.Name] = types.Object(properties)
-		}
-	}
-	err = dw.Close()
-	if err != nil {
-		return nil, err
-	}
-	return schemas, nil
 }
 
 func (ds *Datastore) Store(workspace int) *Store {

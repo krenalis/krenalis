@@ -134,8 +134,6 @@ func (state *State) keepState() {
 			state.setWorkspace(n)
 		case "SetWorkspaceIdentifiers":
 			state.setWorkspaceIdentifiers(n)
-		case "SetWorkspaceSchemas":
-			state.setWorkspaceSchemas(n)
 		default:
 			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
@@ -523,7 +521,6 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	account := state.accounts[e.Account]
 	ws := Workspace{
 		mu:            &sync.Mutex{},
-		Schemas:       map[string]*types.Type{},
 		connections:   map[int]*Connection{},
 		ID:            e.ID,
 		account:       account,
@@ -973,7 +970,6 @@ func (state *State) setResource(n postgres.Notification) {
 type SetWarehouse struct {
 	Workspace int
 	Warehouse *Warehouse
-	Schemas   map[string]*types.Type // nil if the schemas are not changed.
 }
 
 // setWarehouse sets the settings of a data warehouse.
@@ -984,9 +980,6 @@ func (state *State) setWarehouse(n postgres.Notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = e.Warehouse
-		if e.Schemas != nil {
-			w.Schemas = e.Schemas
-		}
 	})
 	for _, listener := range state.listeners.SetWarehouse {
 		listener(e)
@@ -1034,29 +1027,6 @@ func (state *State) setWorkspaceIdentifiers(n postgres.Notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Identifiers = e.Identifiers
 		w.AnonymousIdentifiers = e.AnonymousIdentifiers
-	})
-}
-
-// SetWorkspaceSchemas is the event sent when schemas of a workspace are
-// changed.
-type SetWorkspaceSchemas struct {
-	Workspace int
-	Schemas   map[string]*types.Type
-}
-
-// setWorkspaceSchemas sets the schemas of a workspace.
-func (state *State) setWorkspaceSchemas(n postgres.Notification) {
-	e := SetWorkspaceSchemas{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		for name, typ := range e.Schemas {
-			if typ == nil {
-				e.Schemas[name] = w.Schemas[name]
-			}
-		}
-		w.Schemas = e.Schemas
 	})
 }
 

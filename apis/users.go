@@ -232,7 +232,16 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 	}
 
 	// Read the schema.
-	schema, ok := ws.Schemas["events"]
+	//
+	//TODO(Gianluca): should the users / users_identities / events schema be
+	// handled by Chichi, or internally by the data warehouse? See the issue
+	// https://github.com/open2b/chichi/issues/392.
+	//
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return nil, err
+	}
+	schema, ok := schemas["events"]
 	if !ok {
 		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have events schema", ws.ID)
 	}
@@ -436,9 +445,18 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	}
 
 	// Read the schema.
-	schema, ok := ws.Schemas["users"]
+	//
+	//TODO(Gianluca): should the users / users_identities / events schema be
+	// handled by Chichi, or internally by the data warehouse? See the issue
+	// https://github.com/open2b/chichi/issues/392.
+	//
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return nil, err
+	}
+	schema, ok := schemas["users"]
 	if !ok {
-		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
+		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have events schema", ws.ID)
 	}
 
 	id, ok := schema.Property("id")

@@ -9,14 +9,12 @@ package state
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
 
 	"chichi/apis/postgres"
 	"chichi/connector"
-	"chichi/connector/types"
 )
 
 var (
@@ -184,12 +182,12 @@ func (state *State) Load() error {
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings,\n"+
-			"identifiers, anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region, schemas\n"+
+			"identifiers, anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var accountID int
 				var warehouseType *WarehouseType
-				var warehouseSettings, mapping, schemas []byte
+				var warehouseSettings, mapping []byte
 				for rows.Next() {
 					ws := &Workspace{
 						mu:          new(sync.Mutex),
@@ -197,8 +195,7 @@ func (state *State) Load() error {
 						resources:   map[int]*Resource{},
 					}
 					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings,
-						&ws.Identifiers, &ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion,
-						&schemas); err != nil {
+						&ws.Identifiers, &ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion); err != nil {
 						return err
 					}
 					ws.account = state.accounts[accountID]
@@ -206,13 +203,6 @@ func (state *State) Load() error {
 						ws.Warehouse = &Warehouse{
 							Type:     *warehouseType,
 							Settings: warehouseSettings,
-						}
-					}
-					ws.Schemas = map[string]*types.Type{}
-					if len(schemas) > 0 {
-						err = json.Unmarshal(schemas, &ws.Schemas)
-						if err != nil {
-							return fmt.Errorf("cannot unmarshal schemas of workspace %d: %s", ws.ID, err)
 						}
 					}
 					err = json.Unmarshal(mapping, &ws.AnonymousIdentifiers.Mapping)

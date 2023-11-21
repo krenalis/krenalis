@@ -14,8 +14,7 @@
   - [4. Populate the database and the warehouse](#4-populate-the-database-and-the-warehouse)
   - [5. Connect the data warehouse](#5-connect-the-data-warehouse)
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
-  - [7. Reload the schemas](#7-reload-the-schemas)
-  - [8. Run and open the browser](#8-run-and-open-the-browser)
+  - [7. Run and open the browser](#7-run-and-open-the-browser)
 - [Enable telemetry (optional)](#enable-telemetry-optional)
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
@@ -152,15 +151,7 @@ Initialize the warehouse with:
 $ chichi-cli init-warehouse
 ```
 
-### 7. Reload the schemas
-
-Reload the schemas with:
-
-```
-$ chichi-cli reload-schemas
-```
-
-### 8. Run and open the browser
+### 7. Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 

@@ -167,11 +167,17 @@ type userToExport struct {
 // user at a time.
 func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) ([]userToExport, error) {
 
-	ws := this.action.Connection().Workspace()
-
 	// Read the schema.
-	schema, ok := ws.Schemas["users"]
-	if !ok {
+	//
+	//TODO(Gianluca): should the users / users_identities / events schema be
+	// handled by Chichi, or internally by the data warehouse? See the issue
+	// https://github.com/open2b/chichi/issues/392.
+	//
+	schema, err := this.connection.schema(ctx, "users")
+	if err != nil {
+		return nil, err
+	}
+	if !schema.Valid() {
 		return nil, errors.New("users schema not found")
 	}
 
@@ -199,6 +205,7 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) (
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
+			ws := this.action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
 		}

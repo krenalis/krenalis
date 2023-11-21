@@ -420,10 +420,6 @@ class Workspaces {
 		return await call(`${this.apiURL}/user-schema`, http.GET);
 	};
 
-	reloadSchemas = async (): Promise<void> => {
-		return await call(`${this.apiURL}/reload-schemas`, http.POST);
-	};
-
 	addConnection = async (connection: ConnectionToAdd, oAuthToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/add-connection`, http.POST, {
 			connection: connection,

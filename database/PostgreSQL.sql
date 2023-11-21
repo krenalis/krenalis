@@ -67,7 +67,6 @@ CREATE TABLE workspaces (
     anonymous_identifiers_priority text[] NOT NULL DEFAULT '{}',
     anonymous_identifiers_mapping jsonb NOT NULL DEFAULT '{}'::jsonb,
     privacy_region privacy_region NOT NULL DEFAULT '',
-    schemas text NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 

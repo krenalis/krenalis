@@ -41,11 +41,12 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 		users = filteredUsers
 	}
 
-	connection := this.action.Connection()
-
 	// Determine the columns of the exported file from the "users" schema.
-	usersSchema, ok := connection.Workspace().Schemas["users"]
-	if !ok {
+	usersSchema, err := this.connection.schema(ctx, "users")
+	if err != nil {
+		return actionExecutionError{err}
+	}
+	if !usersSchema.Valid() {
 		return actionExecutionError{errors.New("'users' schema not found")}
 	}
 	columns := usersSchema.Properties()

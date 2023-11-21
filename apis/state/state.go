@@ -280,7 +280,6 @@ type Warehouse struct {
 type Workspace struct {
 	mu                   *sync.Mutex
 	Warehouse            *Warehouse
-	Schemas              map[string]*types.Type
 	connections          map[int]*Connection
 	ID                   int
 	account              *Account

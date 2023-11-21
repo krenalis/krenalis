@@ -148,6 +148,12 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
+	// Read the schemas from the data warehouse.
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	c := this.connection
 
 	switch connector := c.Connector(); connector.Type {
@@ -161,15 +167,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
-			usersIdentities, ok := c.Workspace().Schemas["users_identities"]
+			usersIdentities, ok := schemas["users_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			if c.Role == state.Source {
-				return &ActionSchemas{In: schema, Out: *usersIdentities}, nil
+				return &ActionSchemas{In: schema, Out: usersIdentities}, nil
 			}
 			// Role is destination.
-			users, ok := c.Workspace().Schemas["users"]
+			users, ok := schemas["users"]
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
@@ -182,7 +188,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				Out: schema,
 			}
 			actionSchemas.Matchings = &ActionSchemasMatchings{
-				Internal: onlyForMatching(*users),
+				Internal: onlyForMatching(users),
 				External: onlyForMatching(sourceSchema),
 			}
 			return actionSchemas, nil
@@ -193,7 +199,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
-			grSchema, ok := c.Workspace().Schemas["groups"]
+			grSchema, ok := schemas["groups"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 			}
@@ -210,14 +216,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
-				usersIdentities, ok := c.Workspace().Schemas["users_identities"]
+				usersIdentities, ok := schemas["users_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
 				out := usersIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				users, ok := c.Workspace().Schemas["users"]
+				users, ok := schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
@@ -226,14 +232,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		case Groups:
 			if c.Role == state.Source {
-				groupsIdentities, ok := c.Workspace().Schemas["groups_identities"]
+				groupsIdentities, ok := schemas["groups_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
 				out := groupsIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				groups, ok := c.Workspace().Schemas["groups"]
+				groups, ok := schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
@@ -246,14 +252,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
-				usersIdentities, ok := c.Workspace().Schemas["users_identities"]
+				usersIdentities, ok := schemas["users_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
 				out := usersIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				users, ok := c.Workspace().Schemas["users"]
+				users, ok := schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
@@ -262,14 +268,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		case Groups:
 			if c.Role == state.Source {
-				groupsIdentities, ok := c.Workspace().Schemas["groups_identities"]
+				groupsIdentities, ok := schemas["groups_identities"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
 				out := groupsIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
-				groups, ok := c.Workspace().Schemas["groups"]
+				groups, ok := schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
@@ -284,14 +290,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		}
 		switch target {
 		case Users:
-			usersIdentities, ok := c.Workspace().Schemas["users_identities"]
+			usersIdentities, ok := schemas["users_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			out := usersIdentities.Unflatten()
 			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
 		case Groups:
-			groupsIdentities, ok := c.Workspace().Schemas["groups_identities"]
+			groupsIdentities, ok := schemas["groups_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
@@ -1407,7 +1413,10 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 	var actionTypes []ActionType
 	c := this.connection
 	connector := c.Connector()
-	wsSchemas := c.Workspace().Schemas
+	wsSchemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return nil, err
+	}
 	targets := connector.Targets
 	if targets.Contains(state.Users) {
 		switch typ := c.Connector().Type; typ {
@@ -1416,7 +1425,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.DatabaseType,
 			state.FileType:
 			var name, description string
-			var missingSchema bool
+			var haveSchema bool
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForUsers
 				description = "Import the " + connector.TermForUsers
@@ -1424,7 +1433,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as users"
 				}
 				description += " from " + connector.Name
-				missingSchema = wsSchemas["users_identities"] == nil
+				_, haveSchema = wsSchemas["users_identities"]
 			} else {
 				name = "Export " + connector.TermForUsers
 				description = "Export the users "
@@ -1432,13 +1441,13 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as " + connector.TermForUsers
 				}
 				description += " to " + connector.Name
-				missingSchema = wsSchemas["users"] == nil
+				_, haveSchema = wsSchemas["users"]
 			}
 			at := ActionType{
 				Name:          name,
 				Description:   description,
 				Target:        Users,
-				MissingSchema: missingSchema,
+				MissingSchema: !haveSchema,
 			}
 			actionTypes = append(actionTypes, at)
 		case
@@ -1446,11 +1455,12 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.ServerType,
 			state.WebsiteType:
 			if c.Role == state.Source {
+				_, haveSchema := wsSchemas["users_identities"]
 				at := ActionType{
 					Name:          "Import users",
 					Description:   "Import users from the events of the " + connector.Name,
 					Target:        Users,
-					MissingSchema: wsSchemas["users_identities"] == nil,
+					MissingSchema: !haveSchema,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -1463,7 +1473,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.DatabaseType,
 			state.FileType:
 			var name, description string
-			var missingSchema bool
+			var haveSchema bool
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForGroups
 				description = "Import the " + connector.TermForGroups
@@ -1471,7 +1481,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as groups"
 				}
 				description += " from " + connector.Name
-				missingSchema = wsSchemas["groups_identities"] == nil
+				_, haveSchema = wsSchemas["groups_identities"]
 			} else {
 				name = "Export " + connector.TermForGroups
 				description = "Export the groups "
@@ -1479,13 +1489,13 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as " + connector.TermForGroups
 				}
 				description += " to " + connector.Name
-				missingSchema = wsSchemas["groups"] == nil
+				_, haveSchema = wsSchemas["groups"]
 			}
 			at := ActionType{
 				Name:          name,
 				Description:   description,
 				Target:        Groups,
-				MissingSchema: missingSchema,
+				MissingSchema: !haveSchema,
 			}
 			actionTypes = append(actionTypes, at)
 		case
@@ -1493,11 +1503,12 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.ServerType,
 			state.WebsiteType:
 			if c.Role == state.Source {
+				_, haveSchema := wsSchemas["groups"]
 				at := ActionType{
 					Name:          "Import groups",
 					Description:   "Import groups from the events of the " + connector.Name,
 					Target:        Groups,
-					MissingSchema: wsSchemas["groups"] == nil,
+					MissingSchema: !haveSchema,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -1560,6 +1571,18 @@ func (this *Connection) database() *connectors.Database {
 // file returns the file of the connection.
 func (this *Connection) file() *connectors.File {
 	return this.apis.connectors.File(this.connection)
+}
+
+// schema returns the schema with the given name, if the corresponding table
+// exists in the data warehouse, otherwise returns the invalid schema.
+func (this *Connection) schema(ctx context.Context, name string) (types.Type, error) {
+	this.apis.mustBeOpen()
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return types.Type{}, err
+	}
+	schema := schemas[name]
+	return schema, nil
 }
 
 // isWriteKey reports whether key can be a write key.

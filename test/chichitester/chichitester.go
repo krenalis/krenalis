@@ -208,12 +208,6 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t.Fatalf("cannot init warehouse: %s", err)
 	}
 
-	// Reload the schemas.
-	err = c.reloadSchemas()
-	if err != nil {
-		t.Fatalf("cannot reload schemas: %s", err)
-	}
-
 	// Wait some time for the leader election.
 	time.Sleep(3 * time.Second)
 
@@ -257,14 +251,6 @@ func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 
 func (c *Chichi) initWarehouse() error {
 	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/init-warehouse", nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Chichi) reloadSchemas() error {
-	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/reload-schemas", nil)
 	if err != nil {
 		return err
 	}

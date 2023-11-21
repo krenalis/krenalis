@@ -522,42 +522,18 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 		return err
 	}
 
-	schemas, err := this.account.apis.datastore.WarehouseSchemas(ctx, state.WarehouseType(typ), settings)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "an error occurred with the data warehouse: %w", err.Err)
-		}
-		return err
-	}
-
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     state.WarehouseType(typ),
 			Settings: settings,
 		},
-		Schemas: map[string]*types.Type{},
-	}
-	for _, table := range []string{"users", "users_identities", "groups", "groups_identities", "events"} {
-		schema, ok := schemas[table]
-		if !ok {
-			return errors.Unprocessable(DataWarehouseFailed, "table %q does not exist in the data warehouse", table)
-		}
-		if err = validateSchema(table, schema); err != nil {
-			return errors.Unprocessable(DataWarehouseFailed, "%s", err)
-		}
-		n.Schemas[table] = &schema
-	}
-
-	rawSchemas, err := json.Marshal(n.Schemas)
-	if err != nil {
-		return fmt.Errorf("cannot marshal schemas for workspace %d: %s", this.workspace.ID, err)
 	}
 
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2, schemas = $3"+
-			"  WHERE id = $4 AND warehouse_type IS NULL",
-			n.Warehouse.Type, string(n.Warehouse.Settings), rawSchemas, n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2"+
+			"  WHERE id = $3 AND warehouse_type IS NULL",
+			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -791,86 +767,6 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 	return base62.EncodeToString(resource), nil
 }
 
-// ReloadSchemas reloads the users, groups and events schemas of the workspace.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist,
-// and it returns an errors.UnprocessableError error with code
-//   - NotConnected, if the workspace is not connected to a data warehouse.
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-func (this *Workspace) ReloadSchemas(ctx context.Context) error {
-
-	this.apis.mustBeOpen()
-
-	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", this.workspace.ID)
-	}
-
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		return err
-	}
-
-	n := state.SetWorkspaceSchemas{
-		Workspace: this.workspace.ID,
-		Schemas:   map[string]*types.Type{},
-	}
-	for _, table := range []string{"users", "users_identities", "groups", "groups_identities", "events"} {
-		schema, ok := schemas[table]
-		if !ok {
-			return errors.Unprocessable(DataWarehouseFailed, "table %q does not exist in the data warehouse", table)
-		}
-		if err = validateSchema(table, schema); err != nil {
-			return errors.Unprocessable(DataWarehouseFailed, "%s", err)
-		}
-		n.Schemas[table] = &schema
-	}
-
-	rawSchemas, err := json.Marshal(n.Schemas)
-	if err != nil {
-		return fmt.Errorf("cannot marshal schemas for workspace %d: %s", this.workspace.ID, err)
-	}
-
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		var typ *state.WarehouseType
-		var oldRawSchemas []byte
-		err := tx.QueryRow(ctx, "SELECT warehouse_type, schemas FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchemas)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				err = errors.NotFound("workspace %d does not exist", n.Workspace)
-			}
-			return err
-		}
-		if typ == nil {
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
-		}
-		if bytes.Equal(rawSchemas, oldRawSchemas) {
-			return nil
-		}
-		_, err = tx.Exec(ctx, "UPDATE workspaces SET schemas = $1 WHERE id = $2", rawSchemas, n.Workspace)
-		if err != nil {
-			return err
-		}
-		if len(oldRawSchemas) > 0 {
-			var oldSchemas map[string]*types.Type
-			err = json.Unmarshal(oldRawSchemas, &oldSchemas)
-			if err != nil {
-				return fmt.Errorf("cannot parse schemas of workspace %d: %s", n.Workspace, err)
-			}
-			for name, schema := range n.Schemas {
-				if oldSchema, ok := oldSchemas[name]; ok && schema.EqualTo(*oldSchema) {
-					n.Schemas[name] = nil
-				}
-			}
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
 // RemoveEventListener removes the given event listener from the workspace. It
 // does nothing if the listener does not exist.
 func (this *Workspace) RemoveEventListener(listener string) {
@@ -910,14 +806,23 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 
 // Schema returns the schema, with the given name, of the workspace. If the
 // schema does not exist, it returns an invalid schema.
-func (this *Workspace) Schema(name string) types.Type {
+func (this *Workspace) Schema(ctx context.Context, name string) (types.Type, error) {
 	this.apis.mustBeOpen()
-	ws := this.workspace
-	schema, ok := ws.Schemas[name]
-	if !ok {
-		return types.Type{}
+	if this.store == nil {
+		return types.Type{}, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", this.workspace.ID)
 	}
-	return schema.Unflatten()
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return types.Type{}, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		return types.Type{}, err
+	}
+	schema, ok := schemas[name]
+	if !ok {
+		return types.Type{}, nil
+	}
+	return schema.Unflatten(), nil
 }
 
 // ServeUI serves the user interface for the given connector, with the given
@@ -1212,7 +1117,16 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Read the schema.
-	usersSchema, ok := ws.Schemas["users"]
+	//
+	// TODO(Gianluca): should the users / users_identities / events schema be
+	// handled by Chichi, or internally by the data warehouse? See the issue
+	// https://github.com/open2b/chichi/issues/392.
+	//
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return types.Type{}, nil, err
+	}
+	usersSchema, ok := schemas["users"]
 	if !ok {
 		return types.Type{}, nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
 	}
@@ -1238,14 +1152,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	var where expr.Expr
 	if filter != nil {
-		_, err := validateFilter(filter, *usersSchema)
+		_, err := validateFilter(filter, usersSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return types.Type{}, nil, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where, _ = convertFilterToExpr(filter, *usersSchema)
+		where, _ = convertFilterToExpr(filter, usersSchema)
 	}
 	var orderProperty types.Property
 	if order != "" {

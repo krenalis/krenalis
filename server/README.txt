@@ -51,7 +51,6 @@ GET     /api/workspaces/{id}/warehouse-settings                                 
 PUT     /api/workspaces/{id}/warehouse-settings                                  Change the settings of the data warehouse for the workspace.
 POST    /api/workspaces/{id}/disconnect-warehouse                                Disconnect the data warehouse.
 POST    /api/workspaces/{id}/ping-warehouse                                      Ping a data warehouse.
-POST    /api/workspaces/{id}/reload-schemas                                      Reload the schemas of the data warehouse.
 POST    /api/workspaces/{id}/init-warehouse                                      Initialize the data warehouse.
 GET     /api/workspaces/{id}/user-schema                                         Get the user schema of the workspace.
 POST    /api/workspaces/{id}/oauth-token                                         Generate an OAuth token not yet associated with a connection.

@@ -146,10 +146,3 @@ func WorkspacePingWarehouse(workspace int, typ string, settings []byte) {
 		log.Fatal(err)
 	}
 }
-
-func WorkspaceReloadSchemas(workspace int) {
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/reload-schemas", nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}

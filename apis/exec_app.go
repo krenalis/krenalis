@@ -74,16 +74,18 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 // exportUsersToApp exports the users to the app.
 func (this *Action) exportUsersToApp(ctx context.Context) error {
 
-	connection := this.action.Connection()
+	usersSchema, err := this.connection.schema(ctx, "users")
+	if err != nil {
+		return actionExecutionError{err}
+	}
+	if !usersSchema.Valid() {
+		return actionExecutionError{fmt.Errorf("users schema not found")}
+	}
 
 	// Ensure that the type of the internal matching property is equal to the
 	// type of the corresponding property in the users schema.
 	{
 		internal := this.action.MatchingProperties.Internal
-		usersSchema, ok := connection.Workspace().Schemas["users"]
-		if !ok {
-			return actionExecutionError{fmt.Errorf("users schema not found")}
-		}
 		prop, ok := usersSchema.Property(internal.Name)
 		if !ok {
 			return actionExecutionError{fmt.Errorf("property '%s' not found in users schema", internal.Name)}
@@ -131,6 +133,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// behavior, and eventually add an additional normalization step.
 
 	// Instantiate a new mapping.
+	connection := this.action.Connection()
 	connector := connection.Connector()
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
 		this.action.Transformation, this.action.ID, this.apis.transformer, &connector.Layouts)
@@ -139,7 +142,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	}
 
 	app := this.app()
-	connectorName := this.action.Connection().Connector().Name
+	connectorName := connection.Connector().Name
 	properties := this.action.InSchema.PropertiesNames()
 
 	for _, user := range users {

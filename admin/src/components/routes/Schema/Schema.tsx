@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useContext, useLayoutEffect } from 'react';
 import './Schema.css';
 import Grid from '../../shared/Grid/Grid';
-import Toolbar from '../../layout/Toolbar/Toolbar';
 import { AppContext } from '../../../context/providers/AppProvider';
-import statuses from '../../../constants/statuses';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { UnprocessableError } from '../../../lib/api/errors';
 import { ArrayType, TextType, Property, ObjectType, IntType, UintType, FloatType } from '../../../types/external/types';
 import { GridRow, NestedGridRows } from '../../../types/componentTypes/Grid.types';
 
@@ -14,7 +9,7 @@ const Schema = () => {
 	const [properties, setProperties] = useState<Property[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { api, redirect, showError, showStatus, setTitle, selectedWorkspace, warehouse } = useContext(AppContext);
+	const { api, redirect, showError, setTitle, selectedWorkspace, warehouse } = useContext(AppContext);
 
 	useLayoutEffect(() => {
 		setTitle('Schema');
@@ -39,44 +34,6 @@ const Schema = () => {
 		}
 		fetchSchema();
 	}, [selectedWorkspace]);
-
-	const onReloadSchemas = async () => {
-		setIsLoading(true);
-		try {
-			await api.workspaces.reloadSchemas();
-		} catch (err) {
-			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'NotConnected':
-						showStatus(statuses.warehouseNotConnected);
-						break;
-					case 'DataWarehouseFailed':
-						showStatus(statuses.dataWarehouseFailed);
-						break;
-					default:
-						break;
-				}
-				return;
-			}
-			setProperties([]);
-			showError(err);
-			return;
-		}
-		let schema;
-		try {
-			schema = await api.workspaces.userSchema();
-		} catch (err) {
-			setProperties([]);
-			showError(err);
-			return;
-		}
-		localStorage.removeItem('usersProperties');
-		setProperties(schema.properties);
-		setTimeout(() => {
-			setIsLoading(false);
-			showStatus(statuses.schemasReloaded);
-		}, 300);
-	};
 
 	const getPropertiesRows = (properties: Property[]) => {
 		const getNestedRows = (p: Property): NestedGridRows => {
@@ -143,12 +100,6 @@ const Schema = () => {
 
 	return (
 		<div className='schema'>
-			<Toolbar>
-				<SlButton className='reloadSchemas' variant='default' onClick={onReloadSchemas}>
-					<SlIcon name='arrow-clockwise' slot='prefix'></SlIcon>
-					Reload Schemas
-				</SlButton>
-			</Toolbar>
 			<div className='routeContent schema'>
 				<Grid columns={columns} rows={rows} isLoading={isLoading}></Grid>
 			</div>
