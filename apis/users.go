@@ -456,7 +456,7 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	}
 	schema, ok := schemas["users"]
 	if !ok {
-		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have events schema", ws.ID)
+		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
 	}
 
 	id, ok := schema.Property("id")
