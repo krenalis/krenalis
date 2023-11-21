@@ -153,11 +153,3 @@ func WorkspaceReloadSchemas(workspace int) {
 		log.Fatal(err)
 	}
 }
-
-func Reload(workspace, connection int) error {
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/connections/"+strconv.Itoa(connection)+"/reload", nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
-}
