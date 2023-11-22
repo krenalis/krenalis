@@ -241,12 +241,17 @@ func (this *Action) Delete(ctx context.Context) error {
 // It returns an errors.UnprocessableError error with code
 //   - ExecutionInProgress, if the action is already in progress.
 //   - NoStorage, if the connection of the action is a file and has no storage.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reimport", reimport)
 	defer span.End()
 	if _, ok := this.action.Execution(); ok {
 		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
+	}
+	if this.connection.store == nil {
+		ws := this.action.Connection().Workspace()
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 	if t := this.action.Target; t != state.Users && t != state.Groups {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
