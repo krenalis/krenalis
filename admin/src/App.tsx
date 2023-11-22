@@ -5,130 +5,31 @@ import Sidebar from './components/layout/Sidebar/Sidebar';
 import Header from './components/layout/Header/Header';
 import Login from './components/routes/Login/Login';
 import Workspaces from './components/routes/Workspaces/Workspaces';
-import Workspace from './types/external/workspace';
-import API from './lib/api/api';
 import * as variants from './constants/variants';
 import * as icons from './constants/icons';
-import { Status, Warehouse } from './types/internal/app';
+import { Status } from './types/internal/app';
 import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
-import { checkSessionCookie } from './lib/helpers/auth';
 import { adminBasePath } from './constants/path';
-import { AppProvider } from './context/providers/AppProvider';
+import AppContext from './context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
 import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
+import { useApp } from './hooks/useApp';
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/dist/');
 
 const App = () => {
-	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+	const [account, setAccount] = useState<number | null>(null);
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
-	const [account, setAccount] = useState<number | null>(null);
-	const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
-	const [warehouse, setWarehouse] = useState<Warehouse>();
-	const [isWorkspaceStale, setIsWorkspaceStale] = useState<boolean>(true);
-	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(
-		Number(localStorage.getItem('chichi_workspace_id')),
-	);
 
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
-
-	const api = new API(window.location.origin, selectedWorkspace);
-
-	useEffect(() => {
-		const fetchWorkspaceData = async () => {
-			let ws: Workspace[];
-			try {
-				ws = await api.workspaces.list();
-			} catch (err) {
-				showError(err);
-				return;
-			}
-			const isDeleted = workspaces != null && ws.length < workspaces.length;
-			if (ws.length === 1 && !isDeleted) {
-				setSelectedWorkspace(ws[0].ID);
-			}
-			setWorkspaces(ws);
-			setIsWorkspaceStale(false);
-		};
-		if (isWorkspaceStale) {
-			fetchWorkspaceData();
-		}
-	}, [isWorkspaceStale]);
-
-	useEffect(() => {
-		const fetchWarehouse = async () => {
-			try {
-				const response = await api.workspaces.warehouseSettings();
-				setWarehouse({
-					type: response.type,
-					settings: response.settings,
-				});
-			} catch (err) {
-				if (err.code === 'NotConnected') {
-					setWarehouse(undefined);
-					return;
-				}
-				showError(err);
-			}
-		};
-		if (selectedWorkspace === 0) {
-			return;
-		}
-		fetchWarehouse();
-	}, [isWorkspaceStale, selectedWorkspace]);
-
-	useEffect(() => {
-		if (selectedWorkspace === 0) {
-			localStorage.removeItem('chichi_workspace_id');
-		} else {
-			localStorage.setItem('chichi_workspace_id', String(selectedWorkspace));
-		}
-	}, [selectedWorkspace]);
-
-	useEffect(() => {
-		const hasSessionCookie = checkSessionCookie();
-		if (hasSessionCookie) {
-			setIsLoggedIn(true);
-		} else {
-			setIsLoggedIn(false);
-		}
-		setIsLoading(false);
-	}, [location]);
-
-	useEffect(() => {
-		if (isLoading) {
-			return;
-		}
-		if (isLoggedIn && selectedWorkspace !== 0) {
-			let isBasePath = location.pathname === adminBasePath;
-			if (isBasePath) {
-				redirect('connections');
-			}
-		} else {
-			if (location.pathname !== adminBasePath) {
-				redirect('');
-			}
-		}
-	}, [isLoggedIn, selectedWorkspace, location]);
-
-	useEffect(() => {
-		for (const pattern of FULLSCREEN_PATTERNS) {
-			const match = matchPath(pattern, location.pathname);
-			if (match != null) {
-				setTimeout(() => setIsFullscreen(true), 200);
-				return;
-			}
-		}
-		setTimeout(() => setIsFullscreen(false), 200);
-	}, [location]);
 
 	const showStatus = (status: Status) => {
 		if (toastRef.current == null) return;
@@ -162,24 +63,60 @@ const App = () => {
 		}
 		const redirectURL = `${adminBasePath}${url}`;
 		if (redirectURL === location.pathname) {
-			navigate(0);
+			setIsLoadingState(true);
 			return;
 		}
 		return navigate(`${adminBasePath}${url}`);
 	};
 
-	const onLogout = () => {
-		document.cookie = 'session=; Max-Age=-99999999; Path=/';
-		setSelectedWorkspace(0);
-		setIsLoggedIn(false);
-	};
+	const {
+		isLoadingState,
+		setIsLoadingState,
+		isLoggedIn,
+		setIsLoggedIn,
+		connectors,
+		connections,
+		setIsLoadingConnections,
+		warehouse,
+		workspaces,
+		setIsLoadingWorkspaces,
+		selectedWorkspace,
+		setSelectedWorkspace,
+		api,
+	} = useApp(showError, redirect, location);
 
-	if (isLoading || workspaces == null) {
-		return null;
-	}
+	useEffect(() => {
+		// Determine whether the current route spans the entire viewport or
+		// includes a sidebar, and set the `isFullscreen` state variable to
+		// ensure proper centering of fixed elements.
+		if (isLoadingState) {
+			setIsFullscreen(true);
+			return;
+		}
+		for (const pattern of FULLSCREEN_PATTERNS) {
+			const match = matchPath(pattern, location.pathname);
+			if (match != null) {
+				setTimeout(() => setIsFullscreen(true), 200);
+				return;
+			}
+		}
+		setTimeout(() => setIsFullscreen(false), 200);
+	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (isLoggedIn) {
+	if (isLoadingState) {
+		content = (
+			<SlSpinner
+				className='globalSpinner'
+				style={
+					{
+						fontSize: '5rem',
+						'--track-width': '6px',
+					} as React.CSSProperties
+				}
+			/>
+		);
+	} else if (isLoggedIn) {
 		if (selectedWorkspace === 0) {
 			content = (
 				<Workspaces
@@ -188,28 +125,34 @@ const App = () => {
 					api={api}
 					showError={showError}
 					redirect={redirect}
-					setIsWorkspaceStale={setIsWorkspaceStale}
+					setIsLoadingState={setIsLoadingState}
 				/>
 			);
 		} else {
 			content = (
-				<AppProvider
-					api={api}
-					showError={showError}
-					showStatus={showStatus}
-					showNotFound={showNotFound}
-					redirect={redirect}
-					setTitle={setTitle}
-					account={account}
-					workspaces={workspaces}
-					warehouse={warehouse}
-					selectedWorkspace={selectedWorkspace}
-					setSelectedWorkspace={setSelectedWorkspace}
-					setIsWorkspaceStale={setIsWorkspaceStale}
+				<AppContext.Provider
+					value={{
+						api,
+						showError,
+						showStatus,
+						showNotFound,
+						redirect,
+						setTitle,
+						account,
+						workspaces,
+						setIsLoadingWorkspaces,
+						warehouse,
+						selectedWorkspace,
+						setSelectedWorkspace,
+						connectors,
+						connections,
+						setIsLoadingConnections,
+						setIsLoadingState,
+					}}
 				>
 					<div className='app'>
 						<Sidebar
-							onLogout={onLogout}
+							setIsLoggedIn={setIsLoggedIn}
 							workspaces={workspaces}
 							warehouse={warehouse}
 							selectedWorkspace={selectedWorkspace}
@@ -218,13 +161,14 @@ const App = () => {
 						<Header title={title} />
 						<Outlet />
 					</div>
-				</AppProvider>
+				</AppContext.Provider>
 			);
 		}
 	} else {
 		content = (
 			<Login
 				setIsLoggedIn={setIsLoggedIn}
+				setIsLoadingState={setIsLoadingState}
 				api={api}
 				showStatus={showStatus}
 				showError={showError}

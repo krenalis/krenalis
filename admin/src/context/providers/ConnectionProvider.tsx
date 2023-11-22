@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { AppContext } from './AppProvider';
+import AppContext from '../AppContext';
 import { NotFoundError } from '../../lib/api/errors';
 import { Outlet } from 'react-router-dom';
 import { Connection } from '../../types/external/connection';

@@ -1,7 +1,7 @@
 import React, { useContext, useRef, useEffect } from 'react';
 import Section from '../../shared/Section/Section';
 import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';

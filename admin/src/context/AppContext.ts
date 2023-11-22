@@ -15,12 +15,13 @@ interface AppContext {
 	account: number | null;
 	connectors: TransformedConnector[];
 	connections: TransformedConnection[];
-	setAreConnectionsStale: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsLoadingConnections: React.Dispatch<React.SetStateAction<boolean>>;
 	workspaces: Workspace[];
+	setIsLoadingWorkspaces: React.Dispatch<React.SetStateAction<boolean>>;
 	warehouse: Warehouse;
 	selectedWorkspace: number;
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
-	setIsWorkspaceStale: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);

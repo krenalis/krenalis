@@ -3,7 +3,7 @@ import Flex from '../../shared/Flex/Flex';
 import Arrow from '../../shared/Arrow/Arrow';
 import StatusDot from '../../shared/StatusDot/StatusDot';
 import { ArrowAnchor } from '../../../types/internal/app';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 

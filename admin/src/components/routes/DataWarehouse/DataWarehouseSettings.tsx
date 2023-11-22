@@ -24,13 +24,13 @@ const DataWarehouseSettings = ({
 	const [isPingLoading, setIsPingLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
-	const { setTitle, api, showError, showStatus, setIsWorkspaceStale } = useContext(appContext);
+	const { setTitle, api, showError, showStatus, setIsLoadingState } = useContext(appContext);
 
 	useLayoutEffect(() => {
 		setTitle(`${selectedWarehouse.label} settings`);
 	}, []);
 
-	const onCancelClick = () => setSelectedWarehouse(undefined);
+	const onCancelClick = () => setSelectedWarehouse(null);
 
 	const onPing = async () => {
 		const timeout = setTimeout(() => setIsPingLoading(true), 300);
@@ -62,8 +62,8 @@ const DataWarehouseSettings = ({
 		}
 		setTimeout(() => {
 			setIsActionButtonLoading(false);
-			setSelectedWarehouse(undefined);
-			setIsWorkspaceStale(true);
+			setSelectedWarehouse(null);
+			setIsLoadingState(true);
 		}, 500);
 	};
 
@@ -78,7 +78,7 @@ const DataWarehouseSettings = ({
 		}
 		setTimeout(() => {
 			setIsActionButtonLoading(false);
-			setSelectedWarehouse(undefined);
+			setSelectedWarehouse(null);
 		}, 500);
 	};
 

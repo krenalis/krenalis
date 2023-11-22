@@ -5,7 +5,7 @@ import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import ActionsGrid from './ActionsGrid';
 import ListTile from '../../shared/ListTile/ListTile';
 import ActionTypesDialog from './ActionTypesDialog';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { Outlet } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -19,7 +19,7 @@ const ConnectionActions = () => {
 	const [isActionOpen, setIsActionOpen] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
-	const { setAreConnectionsStale, redirect } = useContext(AppContext);
+	const { setIsLoadingConnections, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const refreshConnectionIntervalID = useRef<number>(0);
@@ -31,14 +31,14 @@ const ConnectionActions = () => {
 			setIsLoading(true);
 			setTimeout(() => {
 				setIsLoading(false);
-			}, 1000);
+			}, 300);
 		}
 	}, []);
 
 	useEffect(() => {
 		if (!isActionOpen) {
 			refreshConnectionIntervalID.current = window.setInterval(async () => {
-				setAreConnectionsStale(true);
+				setIsLoadingConnections(true);
 			}, 1000);
 
 			return () => {

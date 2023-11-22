@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useLayoutEffect, useMemo } from 'react';
 import './ConnectorsList.css';
 import Card from '../../shared/Card/Card';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';

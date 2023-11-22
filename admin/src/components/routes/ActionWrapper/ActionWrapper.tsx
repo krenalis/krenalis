@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import Action from './Action';
 import Fullscreen from '../../shared/Fullscreen/Fullscreen';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { useParams, useLocation, useOutletContext } from 'react-router-dom';
 import { Action as ActionInterface, ActionType } from '../../../types/external/action';
@@ -14,7 +14,7 @@ const ActionWrapper = () => {
 	const location = useLocation();
 
 	const { setIsActionOpen } = useOutletContext<any>();
-	const { setAreConnectionsStale, redirect } = useContext(AppContext);
+	const { setIsLoadingConnections, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	useEffect(() => {
@@ -55,7 +55,7 @@ const ActionWrapper = () => {
 	}, [params, location]);
 
 	const onClose = () => {
-		setAreConnectionsStale(true);
+		setIsLoadingConnections(true);
 		redirect(`connections/${connection.id}/actions`);
 		setIsActionOpen(false);
 	};

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useLayoutEffect } from 'react';
 import './Schema.css';
 import Grid from '../../shared/Grid/Grid';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ArrayType, TextType, Property, ObjectType, IntType, UintType, FloatType } from '../../../types/external/types';
 import { GridRow, NestedGridRows } from '../../../types/componentTypes/Grid.types';
 

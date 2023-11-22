@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef, ReactNode } from 'react
 import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
 import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import statuses from '../../../constants/statuses';
 import * as icons from '../../../constants/icons';
 import SettingsForm from '../../shared/SettingsForm/SettingsForm';

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import './ConnectionOverview.css';
 import Flex from '../../shared/Flex/Flex';
 import Grid from '../../shared/Grid/Grid';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { NotFoundError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';

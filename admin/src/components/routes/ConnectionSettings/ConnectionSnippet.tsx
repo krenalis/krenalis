@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { NotFoundError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 

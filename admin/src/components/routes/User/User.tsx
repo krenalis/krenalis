@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState, useRef, ReactNode, Fragment } f
 import './User.css';
 import { adminBasePath } from '../../../constants/path';
 import UsersContext from '../../../context/UsersContext';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import getConnectorLogo from '../../helpers/getConnectorLogo';

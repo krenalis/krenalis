@@ -26,9 +26,10 @@ const GeneralSettings = () => {
 		showStatus,
 		redirect,
 		workspaces,
+		setIsLoadingWorkspaces,
 		selectedWorkspace,
 		setSelectedWorkspace,
-		setIsWorkspaceStale,
+		setIsLoadingState,
 	} = useContext(appContext);
 
 	useLayoutEffect(() => {
@@ -53,7 +54,7 @@ const GeneralSettings = () => {
 			showError(err);
 		}
 		showStatus({ variant: 'success', icon: icons.OK, text: 'Workspace updated succesfully' });
-		setIsWorkspaceStale(true);
+		setIsLoadingWorkspaces(true);
 	};
 
 	const onDelete = () => setIsDeleteConfirmationDialogOpen(true);
@@ -92,7 +93,7 @@ const GeneralSettings = () => {
 		}
 		deleteButtonRef.current!.confirm();
 		setTimeout(() => {
-			setIsWorkspaceStale(true);
+			setIsLoadingState(true);
 			setSelectedWorkspace(0);
 		}, CONFIRM_ANIMATION_DURATION);
 	};

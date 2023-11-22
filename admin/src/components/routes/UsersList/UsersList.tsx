@@ -2,7 +2,7 @@ import React, { useContext, useLayoutEffect } from 'react';
 import './UsersList.css';
 import Toolbar from '../../layout/Toolbar/Toolbar';
 import Grid from '../../shared/Grid/Grid';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import UsersContext from '../../../context/UsersContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';

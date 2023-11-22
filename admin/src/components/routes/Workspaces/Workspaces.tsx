@@ -15,7 +15,7 @@ interface WorkspacesProps {
 	api: API;
 	showError: (err: Error | string) => void;
 	redirect: (url: string) => void;
-	setIsWorkspaceStale: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Workspaces = ({
@@ -24,12 +24,13 @@ const Workspaces = ({
 	api,
 	showError,
 	redirect,
-	setIsWorkspaceStale,
+	setIsLoadingState,
 }: WorkspacesProps) => {
 	const [isAddWorkspaceDialogOpen, setIsAddWorkspaceDialogOpen] = useState(false);
 
 	const onWorkspaceClick = (id: number) => {
 		setSelectedWorkspace(id);
+		setIsLoadingState(true);
 	};
 
 	const onAddNewWorkspace = () => setIsAddWorkspaceDialogOpen(true);
@@ -100,7 +101,7 @@ const Workspaces = ({
 					api={api}
 					showError={showError}
 					redirect={redirect}
-					setIsWorkspaceStale={setIsWorkspaceStale}
+					setIsLoadingState={setIsLoadingState}
 				/>
 			</div>
 		</div>
@@ -114,7 +115,7 @@ interface NewWorkspaceDialogProps {
 	api: API;
 	showError: (err: Error | string) => void;
 	redirect: (url: string) => void;
-	setIsWorkspaceStale: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const NewWorkspaceDialog = ({
@@ -124,7 +125,7 @@ const NewWorkspaceDialog = ({
 	api,
 	showError,
 	redirect,
-	setIsWorkspaceStale,
+	setIsLoadingState,
 }: NewWorkspaceDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
@@ -146,7 +147,7 @@ const NewWorkspaceDialog = ({
 		setName('');
 		setUseEuropeRegion(false);
 		setSelectedWorkspace(id);
-		setIsWorkspaceStale(true);
+		setIsLoadingState(true);
 		redirect('settings');
 	};
 

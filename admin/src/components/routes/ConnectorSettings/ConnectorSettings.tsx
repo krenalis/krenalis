@@ -5,7 +5,7 @@ import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/F
 import NotFound from '../NotFound/NotFound';
 import Flex from '../../shared/Flex/Flex';
 import SettingsForm from '../../shared/SettingsForm/SettingsForm';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -40,7 +40,7 @@ const ConnectorSettings = () => {
 		redirect,
 		connectors,
 		connections,
-		setAreConnectionsStale,
+		setIsLoadingConnections,
 		setTitle,
 		selectedWorkspace,
 	} = useContext(AppContext);
@@ -187,7 +187,7 @@ const ConnectorSettings = () => {
 				confirmationButton!.stop();
 			}
 			setNewConnectionID(id);
-			setAreConnectionsStale(true);
+			setIsLoadingConnections(true);
 			return;
 		}
 		let ui: UIResponse;
@@ -281,7 +281,7 @@ const ConnectorSettings = () => {
 			return;
 		}
 		setNewConnectionID(id);
-		setAreConnectionsStale(true);
+		setIsLoadingConnections(true);
 		return;
 	};
 

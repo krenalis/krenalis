@@ -1,6 +1,6 @@
 import React, { useContext, ReactNode, useState, useEffect } from 'react';
 import './Sidebar.css';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -56,15 +56,22 @@ const sidebarItems: sidebarItem[] = [
 ];
 
 interface SidebarProps {
-	onLogout: () => void;
+	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 	workspaces: Workspace[];
 	warehouse: Warehouse;
 	selectedWorkspace: number;
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const Sidebar = ({ onLogout, workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
-	const { redirect, connections, warehouse } = useContext(AppContext);
+const Sidebar = ({ setIsLoggedIn, workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
+	const { redirect, connections, warehouse, setIsLoadingState } = useContext(AppContext);
+
+	const onLogout = () => {
+		document.cookie = 'session=; Max-Age=-99999999; Path=/';
+		setSelectedWorkspace(0);
+		setIsLoggedIn(false);
+		setIsLoadingState(true);
+	};
 
 	const location = useLocation();
 	const currentRoute = getRouteFromPathname(location.pathname, connections);
@@ -134,6 +141,7 @@ const Sidebar = ({ onLogout, workspaces, selectedWorkspace, setSelectedWorkspace
 						setSelectedWorkspace={setSelectedWorkspace}
 						workspaces={workspaces}
 						selectedWorkspace={selectedWorkspace}
+						setIsLoadingState={setIsLoadingState}
 					/>
 					{items}
 				</div>
@@ -152,9 +160,15 @@ interface WorkspaceSelectorProps {
 	selectedWorkspace: number;
 	workspaces: Workspace[];
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
+	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const WorkspaceSelector = ({ setSelectedWorkspace, selectedWorkspace, workspaces }: WorkspaceSelectorProps) => {
+const WorkspaceSelector = ({
+	setSelectedWorkspace,
+	selectedWorkspace,
+	workspaces,
+	setIsLoadingState,
+}: WorkspaceSelectorProps) => {
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -187,6 +201,7 @@ const WorkspaceSelector = ({ setSelectedWorkspace, selectedWorkspace, workspaces
 
 	const onWorkspaceChange = (id: number) => {
 		setSelectedWorkspace(id);
+		setIsLoadingState(true);
 		setIsOpen(false);
 	};
 

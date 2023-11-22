@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import Grid from '../../shared/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/helpers/transformedAction';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -30,7 +30,7 @@ interface ActionsGridProps {
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
 	const [runningActions, setRunningActions] = useState<number[]>([]);
-	const { api, showError, setAreConnectionsStale, redirect } = useContext(AppContext);
+	const { api, showError, setIsLoadingConnections, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const runButtonRefs = useRef<{
@@ -62,7 +62,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			showError(err);
 			return;
 		}
-		setAreConnectionsStale(true);
+		setIsLoadingConnections(true);
 	};
 
 	const onRemoveAction = async (actionID: number) => {
@@ -73,7 +73,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			showError(err);
 			return;
 		}
-		setAreConnectionsStale(true);
+		setIsLoadingConnections(true);
 	};
 
 	const executeAction = async (actionID: number) => {
@@ -159,7 +159,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			showError(err);
 			return;
 		}
-		setAreConnectionsStale(true);
+		setIsLoadingConnections(true);
 	};
 
 	const isActionExecutionSupported =

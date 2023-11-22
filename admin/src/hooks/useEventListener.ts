@@ -1,7 +1,7 @@
 import { useEffect, useContext, useState } from 'react';
 import { AddEventListenerResponse, EventListenerEventsResponse } from '../types/external/api';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
-import { AppContext } from '../context/providers/AppProvider';
+import AppContext from '../context/AppContext';
 import statuses from '../constants/statuses';
 import { EventListenerEvent } from '../types/internal/app';
 

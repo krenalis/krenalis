@@ -5,7 +5,7 @@ import Section from '../../shared/Section/Section';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
 import {
 	validateIdentifiersMapping,
@@ -31,7 +31,7 @@ const Identifiers = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, showError, showStatus, workspaces, selectedWorkspace, setIsWorkspaceStale, redirect } =
+	const { api, showError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace, redirect } =
 		useContext(AppContext);
 
 	const identifiersListRef = useRef(null);
@@ -142,7 +142,7 @@ const Identifiers = () => {
 			}, 500);
 			return;
 		}
-		setIsWorkspaceStale(true);
+		setIsLoadingWorkspaces(true);
 		setTimeout(() => {
 			setIsSaving(false);
 			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Identifiers saved succesfully' });

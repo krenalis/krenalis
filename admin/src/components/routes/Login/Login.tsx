@@ -6,13 +6,14 @@ import { Status } from '../../../types/internal/app';
 
 interface LoginProps {
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 	api: API;
 	showStatus: (status: Status) => void;
 	showError: (err: Error | string) => void;
 	setAccount: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
-const Login = ({ setIsLoggedIn, api, showStatus, showError, setAccount }: LoginProps) => {
+const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError, setAccount }: LoginProps) => {
 	const [email, setEmail] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -36,6 +37,7 @@ const Login = ({ setIsLoggedIn, api, showStatus, showError, setAccount }: LoginP
 			}
 		}
 		setIsLoading(false);
+		setIsLoadingState(true);
 		setAccount(accountID);
 		setIsLoggedIn(true);
 	};

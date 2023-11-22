@@ -1,5 +1,5 @@
 import { useContext, useMemo } from 'react';
-import { AppContext } from '../context/providers/AppProvider';
+import AppContext from '../context/AppContext';
 import { flattenSchema } from '../lib/helpers/transformedAction';
 import { TransformedIdentifiers, isTypeSupportedAsIdentifier } from '../lib/helpers/transformedIdentifiers';
 import Type, { ObjectType, Property } from '../types/external/types';

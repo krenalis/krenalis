@@ -4,7 +4,7 @@ import ConnectionGeneralSettings from './ConnectionGeneralSettings';
 import ConnectionConnectorSettings from './ConnectionConnectorSettings';
 import ConnectionKeys from './ConnectionKeys';
 import ConnectionSnippet from './ConnectionSnippet';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';

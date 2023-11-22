@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useLocation } from 'react-router-dom';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';

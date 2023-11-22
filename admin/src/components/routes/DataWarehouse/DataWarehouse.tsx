@@ -95,7 +95,7 @@ const WarehouseInfo = ({
 	const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState<boolean>(false);
 	const [isDisconnectButtonLoading, setIsDisconnectButtonLoading] = useState<boolean>(false);
 
-	const { api, showError, setIsWorkspaceStale } = useContext(appContext);
+	const { api, showError, setIsLoadingState } = useContext(appContext);
 
 	const warehouse = warehouses.find((w) => w.label === warehouseName)!;
 
@@ -132,7 +132,7 @@ const WarehouseInfo = ({
 		setWarehouseSettings(undefined);
 		setIsConfirmationDialogOpen(false);
 		setIsDisconnectButtonLoading(false);
-		setIsWorkspaceStale(true);
+		setIsLoadingState(true);
 	};
 
 	const onCancelDisconnection = async () => {

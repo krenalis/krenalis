@@ -1,7 +1,7 @@
 import React, { useEffect, useContext, useState } from 'react';
 import './UsersWrapper.css';
 import UsersContext from '../../../context/UsersContext';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import statuses from '../../../constants/statuses';
 import { adminBasePath } from '../../../constants/path';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';

@@ -8,7 +8,7 @@ import {
 	transformAction,
 	transformInActionToSet,
 } from '../lib/helpers/transformedAction';
-import { AppContext } from '../context/providers/AppProvider';
+import AppContext from '../context/AppContext';
 import * as variants from '../constants/variants';
 import * as icons from '../constants/icons';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';

@@ -9,7 +9,7 @@ import * as icons from '../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import ActionContext from '../../../context/ActionContext';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';

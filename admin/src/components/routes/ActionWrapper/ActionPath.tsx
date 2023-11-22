@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import Section from '../../shared/Section/Section';
 import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import Grid from '../../shared/Grid/Grid';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { UnprocessableError, NotFoundError, BadRequestError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
@@ -30,7 +30,7 @@ const ActionPath = () => {
 	const [filePreviewRows, setFilePreviewRows] = useState<GridRow[] | null>(null);
 	const [showFilePreviewContent, setShowFilePreviewContent] = useState<boolean>(false);
 
-	const { showStatus, showError, api, setAreConnectionsStale } = useContext(AppContext);
+	const { showStatus, showError, api, setIsLoadingConnections } = useContext(AppContext);
 	const { connection, action, setAction, actionType, setActionType, isImport, mappingSectionRef, setIsFileChanged } =
 		useContext(ActionContext);
 
@@ -117,7 +117,7 @@ const ActionPath = () => {
 					showStatus(statuses.linkedStorageDoesNotExistAnymore);
 					const cn = { ...connection };
 					cn.storage = 0;
-					setAreConnectionsStale(true);
+					setIsLoadingConnections(true);
 					return;
 				}
 				showError(err);

@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import statuses from '../../../constants/statuses';
 import { NotFoundError } from '../../../lib/api/errors';
@@ -30,7 +30,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, showError, showStatus, redirect, setAreConnectionsStale, connections } = useContext(AppContext);
+	const { api, showError, showStatus, redirect, setIsLoadingConnections, connections } = useContext(AppContext);
 
 	const onNameChange = async (e) => {
 		const value = e.target.value;
@@ -82,7 +82,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			return;
 		}
 		setAskDeletionConfirmation(false);
-		setAreConnectionsStale(true);
+		setIsLoadingConnections(true);
 		onDelete();
 	};
 
@@ -99,7 +99,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		}
 		setTimeout(() => {
 			setIsSaving(false);
-			setAreConnectionsStale(true);
+			setIsLoadingConnections(true);
 		}, 500);
 	};
 

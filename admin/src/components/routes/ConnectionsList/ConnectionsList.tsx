@@ -3,7 +3,7 @@ import './ConnectionsList.css';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import Grid from '../../shared/Grid/Grid';
 import StatusDot from '../../shared/StatusDot/StatusDot';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';

@@ -3,7 +3,7 @@ import './ConnectionWrapper.css';
 import Flex from '../../shared/Flex/Flex';
 import StatusDot from '../../shared/StatusDot/StatusDot';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
-import { AppContext } from '../../../context/providers/AppProvider';
+import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import ConnectionTabs from './ConnectionTabs';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
