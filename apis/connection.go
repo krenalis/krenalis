@@ -1760,21 +1760,6 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 //     identifier.
 func (this *Connection) validateActionToSet(action ActionToSet, target state.Target, eventTypeSchema types.Type) error {
 
-	inSchema := action.InSchema
-	outSchema := action.OutSchema
-
-	// Check if the input schema must be the schema of the events.
-	isInEventsSchema := false
-	switch this.connection.Connector().Type {
-	case state.AppType:
-		isInEventsSchema = target == state.Events
-	case state.MobileType, state.ServerType, state.WebsiteType:
-		isInEventsSchema = true
-	}
-	if isInEventsSchema {
-		inSchema = events.Schema
-	}
-
 	// First, do formal validations.
 
 	// Validate the name.
@@ -1788,25 +1773,23 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		return errors.BadRequest("name is longer than 60 runes")
 	}
 	// Validate the schemas.
-	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
+	if action.InSchema.Valid() && action.InSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("input schema, if provided, must be an object")
 	}
-	if outSchema.Valid() && outSchema.Kind() != types.ObjectKind {
+	if action.OutSchema.Valid() && action.OutSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("out schema, if provided, must be an object")
 	}
 	// Validate the filter.
 	var inPaths []types.Path
 	if action.Filter != nil {
-		if !inSchema.Valid() {
+		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := validateFilter(action.Filter, inSchema)
+		properties, err := validateFilter(action.Filter, action.InSchema)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
-		if !isInEventsSchema {
-			inPaths = properties
-		}
+		inPaths = properties
 	}
 	// An action cannot have both mappings and transformations.
 	if action.Mapping != nil && action.Transformation != nil {
@@ -1815,10 +1798,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// Validate the mapping.
 	var outPaths []types.Path
 	if action.Mapping != nil && len(action.Mapping) > 0 {
-		if !inSchema.Valid() {
+		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the mapping")
 		}
-		if !outSchema.Valid() {
+		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
 		for path, expr := range action.Mapping {
@@ -1827,26 +1810,24 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 				return errors.BadRequest("output mapped property %q is not valid", path)
 			}
 			outPaths = append(outPaths, outPath)
-			p, err := outSchema.PropertyByPath(outPath)
+			p, err := action.OutSchema.PropertyByPath(outPath)
 			if err != nil {
 				err := err.(types.PathNotExistError)
 				return errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 			}
-			expr, err := mapexp.Compile(expr, inSchema, p.Type, p.Nullable, nil)
+			expr, err := mapexp.Compile(expr, action.InSchema, p.Type, p.Nullable, nil)
 			if err != nil {
 				return errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 			}
-			if !isInEventsSchema {
-				inPaths = append(inPaths, expr.Properties()...)
-			}
+			inPaths = append(inPaths, expr.Properties()...)
 		}
 	}
 	// Validate the transformation.
 	if action.Transformation != nil {
-		if !inSchema.Valid() {
+		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the transformation")
 		}
-		if !outSchema.Valid() {
+		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the transformation")
 		}
 		if action.Transformation.Source == "" {
@@ -1873,12 +1854,12 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// know which properties have been mapped, so this check cannot be done.
 	if action.Transformation == nil {
 		if inPaths != nil {
-			if props := unmappedProperties(inSchema, inPaths); props != nil {
+			if props := unmappedProperties(action.InSchema, inPaths); props != nil {
 				return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
 			}
 		}
 		if outPaths != nil {
-			if props := unmappedProperties(outSchema, outPaths); props != nil {
+			if props := unmappedProperties(action.OutSchema, outPaths); props != nil {
 				return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 			}
 		}
@@ -1968,7 +1949,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	if importingUsers := c.Role == state.Source && target == state.Users; importingUsers {
 		var tOutProps []string
 		if action.Transformation != nil {
-			tOutProps = outSchema.PropertiesNames()
+			tOutProps = action.OutSchema.PropertiesNames()
 		}
 		for _, p := range ws.AnonymousIdentifiers.Priority {
 			_, ok := action.Mapping[p]
