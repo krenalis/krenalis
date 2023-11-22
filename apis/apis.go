@@ -155,15 +155,15 @@ func New(conf *Config) (*APIs, error) {
 	// Init the datastore.
 	apis.datastore = datastore.New(apis.state)
 
+	// Init the connectors.
+	apis.connectors = connectors.New(db, apis.state)
+
 	apis.events, err = events.New(db, apis.state, apis.datastore, apis.transformer, apis.connectors)
 	if err != nil {
 		apis.datastore.Close()
 		apis.state.Close()
 		return nil, err
 	}
-
-	// Init the connectors.
-	apis.connectors = connectors.New(db, apis.state)
 
 	apis.close.ctx, apis.close.cancelCtx = context.WithCancel(context.Background())
 
