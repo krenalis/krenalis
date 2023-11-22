@@ -247,7 +247,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 				t.Fatalf("Marshal JavaScript: unexpected error: %s", err)
 			}
 			if !bytes.Equal(test.result, got) {
-				t.Fatalf("MarshalJavaScript: expected %s, got %s", string(test.result), string(got))
+				t.Fatalf("Marshal JavaScript: expected %s, got %s", string(test.result), string(got))
 			}
 		})
 	}
