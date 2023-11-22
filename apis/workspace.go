@@ -615,7 +615,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schemas = '' WHERE id = $1", n.Workspace)
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '' WHERE id = $1", n.Workspace)
 		if err != nil {
 			return err
 		}
