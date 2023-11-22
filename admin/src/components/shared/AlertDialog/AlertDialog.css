@@ -37,6 +37,7 @@
 
 .alertDialog .alertContent {
 	padding: 15px 0 30px 0;
+	text-align: center;
 }
 
 .alertDialog .alertActions {

@@ -10,7 +10,7 @@ import Grid from '../../shared/Grid/Grid';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const DataWarehouse = () => {
@@ -158,19 +158,28 @@ const WarehouseInfo = ({
 					Disconnect
 				</SlButton>
 			</div>
-			<SlDialog open={isConfirmationDialogOpen} label='Are you sure?' onSlAfterHide={onCancelDisconnection}>
-				<p className='warehouse-info__confirmation-text'>
-					If you disconnect the data warehouse, you will no longer be able to import users and events
-				</p>
-				<div className='warehouse-info__confirmation-buttons'>
-					<SlButton onClick={onCancelDisconnection} disabled={isDisconnectButtonLoading}>
-						Cancel
-					</SlButton>
-					<SlButton variant='danger' onClick={onDisconnectConfirmation} loading={isDisconnectButtonLoading}>
-						Disconnect
-					</SlButton>
-				</div>
-			</SlDialog>
+			<AlertDialog
+				variant='danger'
+				isOpen={isConfirmationDialogOpen}
+				onClose={onCancelDisconnection}
+				title='Are you sure?'
+				actions={
+					<>
+						<SlButton onClick={onCancelDisconnection} disabled={isDisconnectButtonLoading}>
+							Cancel
+						</SlButton>
+						<SlButton
+							variant='danger'
+							onClick={onDisconnectConfirmation}
+							loading={isDisconnectButtonLoading}
+						>
+							Disconnect
+						</SlButton>
+					</>
+				}
+			>
+				<p>If you disconnect the data warehouse, you will no longer be able to import users and events</p>
+			</AlertDialog>
 		</div>
 	);
 };

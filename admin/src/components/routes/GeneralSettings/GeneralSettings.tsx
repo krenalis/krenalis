@@ -5,10 +5,10 @@ import DangerZone from '../../shared/DangerZone/DangerZone';
 import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import { CONFIRM_ANIMATION_DURATION } from '../ActionWrapper/Action.constants';
 import appContext from '../../../context/AppContext';
+import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { Variant } from '../../../types/internal/app';
@@ -132,23 +132,28 @@ const GeneralSettings = () => {
 					</SlButton>
 				</div>
 			</DangerZone>
-			<SlDialog open={isDeleteConfirmationDialogOpen} label='Are you sure?' onSlAfterHide={onCancelDeletion}>
-				<p className='general-settings__confirmation-text'>
-					If you continue, you will lose all the workspace data
-				</p>
-				<div className='general-settings__confirmation-buttons'>
-					<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
-					<FeedbackButton
-						ref={deleteButtonRef}
-						className='general-settings__deletion-button'
-						variant='danger'
-						onClick={onDeleteConfirmation}
-						animationDuration={CONFIRM_ANIMATION_DURATION}
-					>
-						Delete
-					</FeedbackButton>
-				</div>
-			</SlDialog>
+			<AlertDialog
+				variant='danger'
+				isOpen={isDeleteConfirmationDialogOpen}
+				onClose={onCancelDeletion}
+				title='Are you sure?'
+				actions={
+					<>
+						<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
+						<FeedbackButton
+							ref={deleteButtonRef}
+							className='general-settings__deletion-button'
+							variant='danger'
+							onClick={onDeleteConfirmation}
+							animationDuration={CONFIRM_ANIMATION_DURATION}
+						>
+							Delete
+						</FeedbackButton>
+					</>
+				}
+			>
+				<p>If you continue, you will lose all the workspace data</p>
+			</AlertDialog>
 		</div>
 	);
 };

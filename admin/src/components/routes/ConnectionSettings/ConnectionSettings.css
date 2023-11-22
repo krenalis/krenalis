@@ -118,11 +118,3 @@
 .connectionSettings .dangerZone .description {
 	font-size: 14px;
 }
-
-.connectionSettings .deletionDialog .buttons {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	gap: 15px;
-	margin: 15px 0;
-}

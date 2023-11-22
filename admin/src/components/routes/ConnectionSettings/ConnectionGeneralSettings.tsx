@@ -4,9 +4,9 @@ import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import statuses from '../../../constants/statuses';
 import { NotFoundError } from '../../../lib/api/errors';
 import DangerZone from '../../shared/DangerZone/DangerZone';
+import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import Flex from '../../shared/Flex/Flex';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -184,23 +184,22 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				</Flex>
 			</DangerZone>
 
-			<SlDialog
-				className='deletionDialog'
-				open={askDeletionConfirmation}
-				style={{ '--width': '600px' } as React.CSSProperties}
-				onSlAfterHide={() => setAskDeletionConfirmation(false)}
-				label={`Are you sure?`}
+			<AlertDialog
+				variant='danger'
+				isOpen={askDeletionConfirmation}
+				onClose={() => setAskDeletionConfirmation(false)}
+				title='Are you sure?'
+				actions={
+					<>
+						<SlButton onClick={() => setAskDeletionConfirmation(false)}>Cancel</SlButton>
+						<SlButton variant='danger' onClick={onDeletionConfirmation}>
+							Delete
+						</SlButton>
+					</>
+				}
 			>
-				<p className='general-settings__confirmation-text'>
-					If you continue, you will lose all the connection data
-				</p>
-				<div className='buttons'>
-					<SlButton onClick={() => setAskDeletionConfirmation(false)}>Cancel</SlButton>
-					<SlButton variant='danger' onClick={onDeletionConfirmation}>
-						Delete
-					</SlButton>
-				</div>
-			</SlDialog>
+				<p>If you continue, you will permanently lose all the connection data</p>
+			</AlertDialog>
 		</div>
 	);
 };
