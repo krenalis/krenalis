@@ -21,6 +21,7 @@ interface FeedbackButtonRef {
 	error: (errorContent: ReactNode) => void;
 	load: () => void;
 	stop: (cb?: (...args: any) => any) => void;
+	hideError: () => void;
 }
 
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
@@ -101,6 +102,9 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				},
 				stop(cb?: (...args: any) => any) {
 					stopLoading(cb);
+				},
+				hideError() {
+					setError(null);
 				},
 			}),
 			[],

@@ -162,6 +162,14 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		setIsLoadingConnections(true);
 	};
 
+	const onEditClick = (action: Action) => {
+		for (const key in runButtonRefs.current) {
+			const button = runButtonRefs.current[key].current;
+			button.hideError();
+		}
+		onSelectAction(action);
+	};
+
 	const isActionExecutionSupported =
 		connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server';
 
@@ -234,7 +242,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						</FeedbackButton>
 					</>
 				)}
-				<SlButton variant='default' size='small' onClick={() => onSelectAction(a)}>
+				<SlButton variant='default' size='small' onClick={() => onEditClick(a)}>
 					Edit...
 				</SlButton>
 				<SlButton className='removeAction' variant='danger' size='small' onClick={() => onRemoveAction(a.ID)}>
