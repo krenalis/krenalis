@@ -1,4 +1,5 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useContext } from 'react';
+import AppContext from '../../../context/AppContext';
 import './AlertDialog.css';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -13,6 +14,8 @@ interface AlertDialogProps {
 }
 
 const AlertDialog = ({ variant, isOpen, onClose, title, actions, children }: AlertDialogProps) => {
+	const { isFullscreen } = useContext(AppContext);
+
 	let icon: ReactNode, color: string;
 	switch (variant) {
 		case 'danger':
@@ -26,7 +29,7 @@ const AlertDialog = ({ variant, isOpen, onClose, title, actions, children }: Ale
 
 	return (
 		<SlDialog
-			className={`alertDialog`}
+			className={`alertDialog${isFullscreen ? ' fullscreen' : ''}`}
 			open={isOpen}
 			onSlAfterHide={onClose}
 			style={{ '--alert-color': color, '--width': '600px' } as React.CSSProperties}

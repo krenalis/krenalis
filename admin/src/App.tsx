@@ -148,6 +148,7 @@ const App = () => {
 						connections,
 						setIsLoadingConnections,
 						setIsLoadingState,
+						isFullscreen,
 					}}
 				>
 					<div className='app'>

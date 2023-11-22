@@ -257,6 +257,10 @@ sl-dialog::part(base) {
 	padding-left: 280px;
 }
 
+sl-dialog.fullscreen::part(base) {
+	padding-left: 0;
+}
+
 sl-dialog::part(title) {
 	font-weight: 600;
 }

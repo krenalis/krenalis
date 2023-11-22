@@ -22,6 +22,7 @@ interface AppContext {
 	selectedWorkspace: number;
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
+	isFullscreen: boolean;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);
