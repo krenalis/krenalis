@@ -240,10 +240,9 @@ func Test_MarshalJavaScript(t *testing.T) {
 			result: []byte(`[{a:''},{a:'\u0027'},{a:'\"'},{a:'\u0026'},{a:'\u003c'},{a:'\u2028'},{a:'\u2029'}]`),
 		},
 	}
-	var b []byte
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(b, test.schema, test.values, state.JavaScript)
+			got, err := Marshal(nil, test.schema, test.values, state.JavaScript)
 			if err != nil {
 				t.Fatalf("Marshal JavaScript: unexpected error: %s", err)
 			}
@@ -287,10 +286,9 @@ func Test_MarshalPython(t *testing.T) {
 			result: []byte(`[{'a':''},{'a':'\x27'},{'a':'\"'},{'a':'\x26'},{'a':'\x3c'},{'a':'\u2028'},{'a':'\u2029'}]`),
 		},
 	}
-	var b []byte
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(b, test.schema, test.values, state.Python)
+			got, err := Marshal(nil, test.schema, test.values, state.Python)
 			if err != nil {
 				t.Fatalf("Marshal Python: unexpected error: %s", err)
 			}
