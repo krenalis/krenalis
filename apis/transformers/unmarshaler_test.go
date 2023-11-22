@@ -176,7 +176,7 @@ func Test_Unmarshal(t *testing.T) {
 				"Uint24":    uint(2880217),
 				"Uint32":    uint(1307298102),
 				"Uint64":    uint(927041163082605),
-				"Float32":   57.16038,
+				"Float32":   float64(float32(57.16038)),
 				"Float64":   18372.36240184391,
 				"Decimal":   decimal.RequireFromString("1752.064"),
 				"DateTime":  time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
