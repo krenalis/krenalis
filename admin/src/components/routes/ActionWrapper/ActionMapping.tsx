@@ -4,6 +4,7 @@ import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import {
 	TransformedAction,
 	TransformedActionType,
+	TransformedMapping,
 	flattenSchema,
 	isIdentifierProperty,
 	transformInActionToSet,
@@ -46,7 +47,7 @@ import { EventListenerEvent, Sample } from '../../../types/internal/app';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import Workspace from '../../../types/external/workspace';
-import { ActionToSet } from '../../../types/external/action';
+import { ActionToSet, Transformation } from '../../../types/external/action';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -392,6 +393,40 @@ interface TransformationBoxProps {
 	isTransformationAllowed: boolean;
 }
 
+const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
+	let isChanged = false;
+	for (const key in oldMapping) {
+		if (oldMapping[key].value !== newMapping[key].value) {
+			isChanged = true;
+			break;
+		}
+	}
+	return isChanged;
+};
+
+const isTransformationChanged = (oldTransformation: Transformation, newTransformation: Transformation): boolean => {
+	return oldTransformation.Source.trim() !== newTransformation.Source.trim();
+};
+
+const isMappingModified = (
+	mode: '' | 'mappings' | 'transformation',
+	oldValue: TransformedMapping | Transformation,
+	newValue: TransformedMapping | Transformation,
+) => {
+	if (mode === '') {
+		return;
+	}
+	if (mode === 'mappings') {
+		const oldV = oldValue as TransformedMapping;
+		const newV = newValue as TransformedMapping;
+		return isMappingChanged(oldV, newV);
+	} else {
+		const oldV = oldValue as Transformation;
+		const newV = newValue as Transformation;
+		return isTransformationChanged(oldV, newV);
+	}
+};
+
 const TransformationBox = ({
 	mode,
 	setMode,
@@ -413,10 +448,20 @@ const TransformationBox = ({
 	actionType,
 	isTransformationAllowed,
 }: TransformationBoxProps) => {
-	const [pendingMode, setPendingMode] = useState<string>('');
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [hasFullscreenText, setHasFullscreenText] = useState<boolean>();
 	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
+
+	const pendingMode = useRef<string>();
+	const firstValue = useRef<TransformedMapping | Transformation>();
+
+	useEffect(() => {
+		if (mode === 'mappings') {
+			firstValue.current = JSON.parse(JSON.stringify(action.Mapping));
+		} else {
+			firstValue.current = JSON.parse(JSON.stringify(action.Transformation));
+		}
+	}, [mode, selectedLanguage]);
 
 	useEffect(() => {
 		if (isFullscreenTransformationOpen) {
@@ -432,13 +477,13 @@ const TransformationBox = ({
 		}
 	}, [isFullscreenTransformationOpen]);
 
-	const onChangeMode = () => {
+	const onChangeMode = (delay: number) => {
 		const a = { ...action };
 		a.InSchema = null;
 		a.OutSchema = null;
 		setIsAlertOpen(false);
 		setTimeout(() => {
-			if (pendingMode == 'mappings') {
+			if (pendingMode.current == 'mappings') {
 				a.Mapping = flattenSchema(actionType.OutputSchema);
 				a.Transformation = null;
 				setSelectedLanguage('');
@@ -447,25 +492,29 @@ const TransformationBox = ({
 			} else {
 				a.Mapping = null;
 				a.Transformation = {
-					Source: rawTransformationFunctions[pendingMode].replace(
+					Source: rawTransformationFunctions[pendingMode.current].replace(
 						'$parameterName',
 						defaultTransformationParameterByTarget[actionType.Target],
 					),
-					Language: pendingMode,
+					Language: pendingMode.current,
 				};
-				setSelectedLanguage(pendingMode);
+				setSelectedLanguage(pendingMode.current);
 				setAction(a);
 				setMode('transformation');
 			}
-		}, 200);
+		}, delay);
 	};
 
 	const onModeClick = (newMode: string) => {
 		if (newMode === mode) {
 			return;
 		}
-		setPendingMode(newMode);
-		setIsAlertOpen(true);
+		pendingMode.current = newMode;
+		if (isMappingModified(mode, firstValue.current, mode === 'mappings' ? action.Mapping : action.Transformation)) {
+			setIsAlertOpen(true);
+		} else {
+			onChangeMode(0);
+		}
 	};
 
 	let body: ReactNode;
@@ -632,7 +681,7 @@ const TransformationBox = ({
 				actions={
 					<>
 						<SlButton onClick={() => setIsAlertOpen(false)}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={onChangeMode}>
+						<SlButton variant='danger' onClick={() => onChangeMode(200)}>
 							Continue
 						</SlButton>
 					</>
