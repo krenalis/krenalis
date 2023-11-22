@@ -631,9 +631,7 @@ const TransformationBox = ({
 				title={'You will lose your work'}
 				actions={
 					<>
-						<SlButton variant='neutral' onClick={() => setIsAlertOpen(false)}>
-							Cancel
-						</SlButton>
+						<SlButton onClick={() => setIsAlertOpen(false)}>Cancel</SlButton>
 						<SlButton variant='danger' onClick={onChangeMode}>
 							Continue
 						</SlButton>
@@ -641,17 +639,7 @@ const TransformationBox = ({
 				}
 			>
 				<div style={{ textAlign: 'center' }}>
-					{mode === 'mappings' ? (
-						<p>
-							If you switch to the transformation function you will <b>PERMANENTLY</b> lose the mappings
-							you have currently created
-						</p>
-					) : (
-						<p>
-							If you switch to the mappings you will <b>PERMANENTLY</b> lose the transformation code you
-							have currently written
-						</p>
-					)}
+					<p>If you switch the mapping mode you will permanently lose all the work you have done</p>
 				</div>
 			</AlertDialog>
 		</div>

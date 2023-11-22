@@ -1,14 +1,22 @@
-.alertDialog::part(body) {
-	padding: 0;
-	overflow: visible;
+.alertDialog::part(panel) {
+	position: relative;
+	padding: 35px 40px;
 }
 
 .alertDialog::part(title) {
 	padding: 0;
+	display: none;
 }
 
-.alertDialog::part(close-button) {
-	padding: 10px;
+.alertDialog::part(header) {
+	position: absolute;
+	right: 0;
+	top: 10px;
+}
+
+.alertDialog::part(body) {
+	padding: 0;
+	overflow: visible;
 }
 
 .alertDialog .alertIcon {
@@ -28,13 +36,11 @@
 }
 
 .alertDialog .alertContent {
-	padding: 15px 30px 30px 30px;
+	padding: 15px 0 30px 0;
 }
 
 .alertDialog .alertActions {
 	display: flex;
-	justify-content: end;
+	justify-content: center;
 	gap: 15px;
-	padding: 15px 25px;
-	border-top: 1px solid var(--border-primary);
 }
