@@ -641,7 +641,7 @@ func (d decoder) unquoteBytes(v []byte) []byte {
 	return b
 }
 
-// unquoteBytes unquote a JSON string.
+// unquoteString unquote a JSON string.
 func (d decoder) unquoteString(v []byte) string {
 	b, _ := jsontext.AppendUnquote(nil, v)
 	return string(b)
