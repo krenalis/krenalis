@@ -468,7 +468,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 	}
 }
 
-// value returns the marshalled value of v according to t.
+// value returns the unmarshalled value of v according to t.
 func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 	switch t.Kind() {
 	case types.BooleanKind:
