@@ -127,7 +127,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				className='feedbackTooltip'
 				open={error !== null ? true : false}
 				trigger='manual'
-				style={{ '--max-width': '300px' } as React.CSSProperties}
+				style={{ '--max-width': '400px' } as React.CSSProperties}
 				placement='bottom'
 			>
 				{error !== null && (
