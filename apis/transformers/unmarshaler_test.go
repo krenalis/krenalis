@@ -237,6 +237,18 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.JavaScript,
 			schema:   schema,
+			data:     `[],`,
+			err:      ErrSyntaxInvalid,
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `[],[]`,
+			err:      ErrSyntaxInvalid,
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
 			data:     `[5]`,
 			err:      ErrSyntaxInvalid,
 		},

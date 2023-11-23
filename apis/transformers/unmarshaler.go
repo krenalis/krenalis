@@ -272,6 +272,9 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 			return nil, ErrSyntaxInvalid
 		}
 	}
+	if _, err := d.readToken(); err != io.EOF {
+		return nil, ErrSyntaxInvalid
+	}
 	return results, nil
 }
 
