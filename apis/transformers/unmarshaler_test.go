@@ -390,6 +390,9 @@ func Test_Unmarshal(t *testing.T) {
 				}
 				return
 			}
+			if test.err != nil {
+				t.Fatalf("Unmarshal: expected error %q, got no error", test.err)
+			}
 			if len(test.results) != len(got) {
 				t.Fatalf("Unmarshal: expected %d results, got %d", len(test.results), len(got))
 			}
