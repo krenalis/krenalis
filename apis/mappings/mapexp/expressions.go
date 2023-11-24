@@ -54,8 +54,8 @@ type Expression struct {
 //   - value             example: "foo"
 //   - path              example: x
 //   - path(args)        example: add(x, 5)
-//   - value path         example: 5 a.b
-//   - value path(args)   example: "foo" coalesce(a.b, c)
+//   - value path        example: 5 a.b
+//   - value path(args)  example: "foo" coalesce(a.b, c)
 //
 // For instance, the Expression `"foo" x " " true a.b` is parsed as `"foo" x`,
 // `" true" a.b`.
