@@ -1041,7 +1041,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Post("/api/transformation-preview", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Data           map[string]any
+			Data           json.RawMessage
 			InSchema       types.Type
 			OutSchema      types.Type
 			Mapping        map[string]string
@@ -1058,7 +1058,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": data})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": json.RawMessage(data)})
 	})
 
 	router.ServeHTTP(w, r)

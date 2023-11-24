@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
+	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/mappings"
@@ -451,7 +453,7 @@ func (apis *APIs) TransformationLanguages() []string {
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) (map[string]any, error) {
+func (apis *APIs) TransformPreview(ctx context.Context, data []byte, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) ([]byte, error) {
 
 	apis.mustBeOpen()
 
@@ -514,10 +516,9 @@ func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inS
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
-	var err error
-	data, err = normalize(data, inSchema)
+	value, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
 	if err != nil {
-		return nil, errors.BadRequest("data does not conform to the input schema: %w", err)
+		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
 
 	// Create a temporary transformer.
@@ -546,7 +547,7 @@ func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inS
 	if err != nil {
 		return nil, err
 	}
-	data, err = m.Apply(ctx, data)
+	value, err = m.Apply(ctx, value)
 	if err != nil {
 		if err, ok := err.(mappings.Error); ok {
 			return nil, errors.Unprocessable(TransformationFailed, err.Error())
@@ -554,7 +555,7 @@ func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inS
 		return nil, err
 	}
 
-	return data, nil
+	return encoding.Marshal(outSchema, value)
 }
 
 // ValidateExpression validates an expression.
