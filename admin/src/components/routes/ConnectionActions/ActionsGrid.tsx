@@ -165,7 +165,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const onEditClick = (action: Action) => {
 		for (const key in runButtonRefs.current) {
 			const button = runButtonRefs.current[key].current;
-			button.hideError();
+			if (button != null) {
+				button.hideError();
+			}
 		}
 		onSelectAction(action);
 	};
