@@ -8,6 +8,7 @@
 package mapexp
 
 import (
+	"errors"
 	"fmt"
 
 	"chichi/connector/types"
@@ -55,10 +56,11 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 						property, ok = t.Property(name)
 					}
 					if !ok {
-						if len(p.path) == 1 {
-							return fmt.Errorf("property %q does not exist", name)
+						msg := fmt.Sprintf("property %q does not exist", name)
+						if j > 0 {
+							msg = fmt.Sprintf("invalid %s: %s", stringifyPath(p.path[:j+1]), msg)
 						}
-						return fmt.Errorf("invalid %s: property %q does not exist", stringifyPath(p.path[:j+1]), stringifyPath(p.path[:j]))
+						return errors.New(msg)
 					}
 					t = property.Type
 				case types.MapKind:

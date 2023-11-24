@@ -188,6 +188,9 @@ func TestCompile(t *testing.T) {
 		{expr: "revision_dates", dt: types.Array(types.Boolean()), compileErr: errors.New("cannot convert expression (type Array) to Array")},
 		{expr: "map", dt: types.Map(types.Date()), compileErr: errors.New("cannot convert expression (type Map) to Map")},
 		{expr: "map.x?", dt: types.Int(32), compileErr: errors.New("invalid map.x?: operator '?' can be used only with JSON")},
+		{expr: "engine.pover", dt: types.Int(32), compileErr: errors.New(`invalid engine.pover: property "pover" does not exist`)},
+		{expr: "engin.power", dt: types.Int(32), compileErr: errors.New(`property "engin" does not exist`)},
+		{expr: "manufacturer.power", dt: types.Int(32), compileErr: errors.New(`invalid manufacturer.power: manufacturer (type Text) cannot have properties or keys`)},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(32), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int(32)`)},
