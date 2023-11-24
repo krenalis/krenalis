@@ -17,7 +17,6 @@ interface Transformation {
 interface ExpressionToBeExtracted {
 	value: string;
 	type: Type;
-	nullable: boolean;
 }
 
 interface MatchingProperties {

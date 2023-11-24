@@ -266,7 +266,6 @@ const transformInActionToSet = async (
 			expressions.push({
 				value: v.value,
 				type: fullProperty!.type,
-				nullable: fullProperty!.nullable,
 			});
 			mappingToSave[k] = v.value;
 			const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find((p) => p.name === parentProperty!.name);

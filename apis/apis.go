@@ -97,9 +97,8 @@ type LocalConfig struct {
 }
 
 type ExpressionToBeExtracted struct {
-	Value    string
-	Type     types.Type
-	Nullable bool
+	Value string
+	Type  types.Type
 }
 
 // New returns an *APIs instance. It can only be called once.
@@ -403,7 +402,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	apis.mustBeOpen()
 	var properties []types.Path
 	for _, expression := range expressions {
-		exp, err := mapexp.Compile(expression.Value, schema, expression.Type, expression.Nullable, nil)
+		exp, err := mapexp.Compile(expression.Value, schema, expression.Type, true, nil)
 		if err != nil {
 			return nil, err
 		}
