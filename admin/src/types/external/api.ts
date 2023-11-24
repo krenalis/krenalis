@@ -69,7 +69,7 @@ interface TransformationLanguagesResponse {
 	languages: string[];
 }
 
-interface TransformationPreviewResponse {
+interface TransformDataResponse {
 	data: Record<string, any>;
 }
 
@@ -138,7 +138,7 @@ export type {
 	CompletePathResponse,
 	SheetsResponse,
 	TransformationLanguagesResponse,
-	TransformationPreviewResponse,
+	TransformDataResponse,
 	FilterLogical,
 	FilterCondition,
 	Filter,

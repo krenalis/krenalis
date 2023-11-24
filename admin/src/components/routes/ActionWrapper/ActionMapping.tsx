@@ -38,7 +38,7 @@ import {
 	FindUsersResponse,
 	RecordsResponse,
 	TransformationLanguagesResponse,
-	TransformationPreviewResponse,
+	TransformDataResponse,
 } from '../../../types/external/api';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
 import Type, { ObjectType, Property } from '../../../types/external/types';
@@ -948,9 +948,9 @@ const FullscreenTransformation = ({
 			}
 		}
 
-		let res: TransformationPreviewResponse;
+		let res: TransformDataResponse;
 		try {
-			res = await api.transformationPreview(
+			res = await api.transformData(
 				s,
 				actionToSet.inSchema,
 				actionToSet.outSchema,

@@ -33,7 +33,7 @@ import {
 	SheetsResponse,
 	RecordsResponse,
 	TransformationLanguagesResponse,
-	TransformationPreviewResponse,
+	TransformDataResponse,
 	Filter,
 	FindUsersResponse,
 	AppUsersResponse,
@@ -89,14 +89,14 @@ class API {
 		return await call(`${this.apiURL}/transformation-languages`, http.GET);
 	};
 
-	transformationPreview = async (
+	transformData = async (
 		data: Record<string, any>,
 		inSchema: ObjectType,
 		outSchema: ObjectType,
 		mapping: Mapping,
 		transformation: Transformation,
-	): Promise<TransformationPreviewResponse> => {
-		return await call(`${this.apiURL}/transformation-preview`, http.POST, {
+	): Promise<TransformDataResponse> => {
+		return await call(`${this.apiURL}/transform-data`, http.POST, {
 			data,
 			inSchema,
 			outSchema,

@@ -1039,7 +1039,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string][]string{"languages": languages})
 	})
-	router.Post("/api/transformation-preview", func(w http.ResponseWriter, r *http.Request) {
+	router.Post("/api/transform-data", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Data           json.RawMessage
 			InSchema       types.Type
@@ -1052,7 +1052,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			respond(w, err)
 			return
 		}
-		data, err := s.apis.TransformPreview(ctx, req.Data, req.InSchema, req.OutSchema, req.Mapping, req.Transformation)
+		data, err := s.apis.TransformData(ctx, req.Data, req.InSchema, req.OutSchema, req.Mapping, req.Transformation)
 		if err != nil {
 			respond(w, err)
 			return

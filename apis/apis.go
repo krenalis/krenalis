@@ -444,16 +444,16 @@ func (apis *APIs) TransformationLanguages() []string {
 	return languages
 }
 
-// TransformPreview transforms data using a mapping or a transformation and
-// returns the transformed data. inSchema is the schema of data, and outSchema
-// is the schema of the transformed data. Only one of mapping and transformation
-// must be non-nil.
+// TransformData transforms data using a mapping or a transformation and returns
+// the transformed data. inSchema is the schema of data, and outSchema is the
+// schema of the transformed data. Only one of mapping and transformation must
+// be non-nil.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (apis *APIs) TransformPreview(ctx context.Context, data []byte, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) ([]byte, error) {
+func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) ([]byte, error) {
 
 	apis.mustBeOpen()
 
