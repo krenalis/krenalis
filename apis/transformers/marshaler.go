@@ -146,19 +146,19 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		case types.ObjectKind:
 			b = append(b, '{')
 			for i, p := range t.Properties() {
+				rv := rv.MapIndex(reflect.ValueOf(p.Name))
+				if !rv.IsValid() {
+					return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
+				}
 				if i > 0 {
 					b = append(b, ',')
 				}
-				rv := rv.MapIndex(reflect.ValueOf(p.Name))
-				if rv.IsValid() {
-					b = append(b, p.Name...)
-					b = append(b, ':')
-					var err error
-					b, err = marshalJavaScript(b, p.Type, rv.Interface())
-					if err != nil {
-						return nil, err
-					}
-					i++
+				b = append(b, p.Name...)
+				b = append(b, ':')
+				var err error
+				b, err = marshalJavaScript(b, p.Type, rv.Interface())
+				if err != nil {
+					return nil, err
 				}
 			}
 			b = append(b, '}')
