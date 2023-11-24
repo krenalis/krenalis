@@ -142,6 +142,11 @@ func TestPropertyDeserialization(t *testing.T) {
 			Property: Property{Name: "a", Type: Text()},
 		},
 		{
+			JSON: `{"name":"a","label":"","description":"","placeholder":null,` +
+				`"type":{"name":"Int","bitSize":32},"nullable":false}`,
+			Property: Property{Name: "a", Type: Int(32)},
+		},
+		{
 			JSON: `{{`,
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},

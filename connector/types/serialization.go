@@ -238,6 +238,7 @@ func (p Property) MarshalJSON() ([]byte, error) {
 // property pointed by p.
 func (p *Property) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
+	dec.UseNumber()
 	tok, err := dec.Token()
 	if err != nil {
 		return err
