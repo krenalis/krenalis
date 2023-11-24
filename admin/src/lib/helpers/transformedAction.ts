@@ -4,8 +4,8 @@ import {
 	ActionToSet,
 	ActionType,
 	ExportMode,
+	ExpressionToBeExtracted,
 	Mapping,
-	MappingExpression,
 	MatchingProperties,
 	SchedulePeriod,
 	Transformation,
@@ -251,7 +251,7 @@ const transformInActionToSet = async (
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 		const mappingToSave = {};
-		const expressions: MappingExpression[] = [];
+		const expressions: ExpressionToBeExtracted[] = [];
 		for (const k in action.Mapping) {
 			const v = action.Mapping[k];
 			if (v.value === '') {

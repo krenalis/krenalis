@@ -14,7 +14,7 @@ interface Transformation {
 	Language: string;
 }
 
-interface MappingExpression {
+interface ExpressionToBeExtracted {
 	value: string;
 	type: Type;
 	nullable: boolean;
@@ -87,6 +87,6 @@ export type {
 	Action,
 	ActionType,
 	ActionToSet,
-	MappingExpression,
+	ExpressionToBeExtracted,
 	Mapping,
 };

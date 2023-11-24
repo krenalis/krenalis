@@ -13,7 +13,7 @@ import {
 	ActionTarget,
 	SchedulePeriod,
 	ActionToSet,
-	MappingExpression,
+	ExpressionToBeExtracted,
 	Mapping,
 	Transformation,
 } from '../../types/external/action';
@@ -78,7 +78,7 @@ class API {
 		});
 	};
 
-	expressionsProperties = async (expressions: MappingExpression[], schema: Type): Promise<string[]> => {
+	expressionsProperties = async (expressions: ExpressionToBeExtracted[], schema: Type): Promise<string[]> => {
 		return await call(`${this.apiURL}/expressions-properties`, http.POST, {
 			expressions,
 			schema,
