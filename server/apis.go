@@ -1002,10 +1002,10 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Post("/api/validate-expression", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Expression                  string
-			Schema                      types.Type
-			DestinationPropertyType     types.Type
-			DestinationPropertyNullable bool
+			Expression string
+			Properties []types.Property
+			Type       types.Type
+			Nullable   bool
 		}
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
@@ -1013,7 +1013,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		message := s.apis.ValidateExpression(req.Expression, req.Schema, req.DestinationPropertyType, req.DestinationPropertyNullable)
+		message := s.apis.ValidateExpression(req.Expression, req.Properties, req.Type, req.Nullable)
 		_ = json.NewEncoder(w).Encode(message)
 	})
 	router.Post("/api/expressions-properties", func(w http.ResponseWriter, r *http.Request) {

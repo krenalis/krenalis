@@ -1,6 +1,6 @@
 import call from './call';
 import * as http from './http';
-import Type, { ObjectType } from '../../types/external/types';
+import Type, { Property, ObjectType } from '../../types/external/types';
 import {
 	Connection,
 	ConnectionRole,
@@ -66,15 +66,15 @@ class API {
 
 	validateExpression = async (
 		expression: string,
-		schema: Type,
-		destinationPropertyType: Type,
-		destinationPropertyNullable: boolean,
+		properties: Property[],
+		type: Type,
+		nullable: boolean,
 	): Promise<string> => {
 		return await call(`${this.apiURL}/validate-expression`, http.POST, {
 			expression,
-			schema,
-			destinationPropertyType,
-			destinationPropertyNullable,
+			properties,
+			type: type,
+			nullable: nullable,
 		});
 	};
 

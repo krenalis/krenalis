@@ -557,10 +557,13 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	return encoding.Marshal(outSchema, value)
 }
 
-// ValidateExpression validates an expression.
-func (apis *APIs) ValidateExpression(expression string, schema types.Type, dtType types.Type, dtNullable bool) string {
+// ValidateExpression validates an expression. properties represents the allowed
+// properties in the expression. typ is the type of the property to which the
+// expression is assigned, and nullable indicates whether that property can be
+// nullable.
+func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, nullable bool) string {
 	apis.mustBeOpen()
-	_, err := mapexp.Compile(expression, schema, dtType, dtNullable, nil)
+	_, err := mapexp.Compile(expression, types.Object(properties), typ, nullable, nil)
 	if err != nil {
 		return err.Error()
 	}

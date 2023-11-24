@@ -2,7 +2,7 @@ import { useContext, useMemo } from 'react';
 import AppContext from '../context/AppContext';
 import { flattenSchema } from '../lib/helpers/transformedAction';
 import { TransformedIdentifiers, isTypeSupportedAsIdentifier } from '../lib/helpers/transformedIdentifiers';
-import Type, { ObjectType, Property } from '../types/external/types';
+import { ObjectType, Property } from '../types/external/types';
 
 const MAPPED_INDEX = 0;
 const IDENTIFIER_INDEX = 1;
@@ -53,13 +53,13 @@ const useIdentifiersMapping = (
 		[unusableProperties, usedProperties],
 	);
 
-	const validateExpression = async (expression: string, schema: Type, destinationProperty: Property) => {
+	const validateExpression = async (expression: string, properties: Property[], destinationProperty: Property) => {
 		let message = '';
 		if (expression !== '') {
 			try {
 				message = await api.validateExpression(
 					expression,
-					schema,
+					properties,
 					destinationProperty.type,
 					destinationProperty.nullable,
 				);
@@ -78,7 +78,7 @@ const useIdentifiersMapping = (
 		const associatedIdentifier = m[i][IDENTIFIER_INDEX];
 		const destinationProperty = flatOutputSchema![associatedIdentifier.value];
 		if (destinationProperty) {
-			const errorMessage = await validateExpression(value, inputSchema, destinationProperty.full);
+			const errorMessage = await validateExpression(value, inputSchema.properties, destinationProperty.full);
 			m[i][MAPPED_INDEX].error = errorMessage as string;
 		}
 		m[i][MAPPED_INDEX].value = value;

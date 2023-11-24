@@ -175,7 +175,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			try {
 				errorMessage = await api.validateExpression(
 					value,
-					actionType.InputSchema,
+					actionType.InputSchema.properties,
 					action.Mapping![name].full.type,
 					action.Mapping![name].full.nullable,
 				);
