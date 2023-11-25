@@ -74,11 +74,12 @@ type collector struct {
 // mobile, server and website sources and sends them to the eventsLog.
 func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, transformer transformers.Transformer, observer *Observer) (*collector, error) {
 	var collector = collector{
-		state:     st,
-		datastore: ds,
-		eventLog:  eventLog,
-		events:    make(chan *collectedEvent, 1000),
-		observer:  observer,
+		state:       st,
+		datastore:   ds,
+		eventLog:    eventLog,
+		events:      make(chan *collectedEvent, 1000),
+		observer:    observer,
+		transformer: transformer,
 	}
 	var err error
 	collector.geoLiteDB, err = geoip2.Open(geoLite2Path)
