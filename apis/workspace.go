@@ -31,9 +31,9 @@ import (
 	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/transformers/mapexp"
 	"chichi/connector/types"
 
 	"github.com/jxskiss/base62"

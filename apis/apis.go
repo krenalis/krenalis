@@ -26,12 +26,12 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/mappings"
-	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/lambda"
 	"chichi/apis/transformers/local"
+	"chichi/apis/transformers/mapexp"
 	"chichi/connector/types"
 	"chichi/telemetry"
 

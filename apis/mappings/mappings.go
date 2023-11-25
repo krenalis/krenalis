@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/apis/mappings/mapexp"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
+	"chichi/apis/transformers/mapexp"
 	"chichi/connector/types"
 )
 
