@@ -28,7 +28,6 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/datastore"
-	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 
@@ -133,16 +132,16 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				continue
 			}
 			// TODO(Gianluca): shall we normalize the user properties before
-			// mapping?
+			// transformation?
 			mappingProps := make(map[string]string, len(action.Mapping)+len(anonIdents))
 			maps.Copy(mappingProps, action.Mapping)
 			maps.Copy(mappingProps, anonIdents)
-			mapping, err := mappings.New(action.InSchema, action.OutSchema, mappingProps, action.Transformation, action.ID, c.transformer, nil)
+			transformer, err := transformers.New(action.InSchema, action.OutSchema, mappingProps, action.Transformation, action.ID, c.transformer, nil)
 			if err != nil {
 				return err
 			}
-			// Map the properties of the event.
-			mappedUser, err := mapping.Apply(ctx, event.MapEvent())
+			// Transform the event.
+			mappedUser, err := transformer.Transform(ctx, event.MapEvent())
 			if err != nil {
 				return err
 			}

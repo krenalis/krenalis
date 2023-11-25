@@ -14,8 +14,8 @@ import (
 	"log/slog"
 
 	"chichi/apis/connectors"
-	"chichi/apis/mappings"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
 	"chichi/connector/types"
 )
 
@@ -107,7 +107,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	if this.action.Filter != nil {
 		filteredUsers := []userToExport{}
 		for _, user := range users {
-			ok, err := mappings.FilterApplies(this.action.Filter, user.Properties)
+			ok, err := filterApplies(this.action.Filter, user.Properties)
 			if err != nil {
 				return err
 			}
@@ -132,10 +132,10 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// is correctly normalized. We should investigate and discuss about this
 	// behavior, and eventually add an additional normalization step.
 
-	// Instantiate a new mapping.
+	// Instantiate a new transformer.
 	connection := this.action.Connection()
 	connector := connection.Connector()
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+	transformer, err := transformers.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
 		this.action.Transformation, this.action.ID, this.apis.transformer, &connector.Layouts)
 	if err != nil {
 		return err
@@ -173,10 +173,10 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			return actionExecutionError{err}
 		}
 
-		// Map the properties of the user.
-		props, err = mapping.Apply(ctx, props)
+		// Transform the user.
+		props, err = transformer.Transform(ctx, props)
 		if err != nil {
-			if err, ok := err.(mappings.Error); ok {
+			if err, ok := err.(transformers.Error); ok {
 				return actionExecutionError{err}
 			}
 			return err

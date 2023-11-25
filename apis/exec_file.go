@@ -14,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"chichi/apis/mappings"
 )
 
 // exportUsersToFile exports the users to the file.
@@ -30,7 +28,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	if this.action.Filter != nil {
 		filteredUsers := []userToExport{}
 		for _, user := range users {
-			ok, err := mappings.FilterApplies(this.action.Filter, user.Properties)
+			ok, err := filterApplies(this.action.Filter, user.Properties)
 			if err != nil {
 				return err
 			}

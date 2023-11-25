@@ -12,7 +12,7 @@ import (
 	"log/slog"
 
 	"chichi/apis/datastore"
-	"chichi/apis/mappings"
+	"chichi/apis/transformers"
 	"chichi/connector/types"
 )
 
@@ -28,7 +28,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	if this.action.Filter != nil {
 		filteredUsers := []userToExport{}
 		for _, user := range users {
-			ok, err := mappings.FilterApplies(this.action.Filter, user.Properties)
+			ok, err := filterApplies(this.action.Filter, user.Properties)
 			if err != nil {
 				return err
 			}
@@ -39,8 +39,8 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		users = filteredUsers
 	}
 
-	// Instantiate a new mapping.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+	// Instantiate a new transformer.
+	transformer, err := transformers.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
 		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
 	if err != nil {
 		return err
@@ -66,10 +66,10 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 			return actionExecutionError{err}
 		}
 
-		// Map the properties of the user.
-		props, err = mapping.Apply(ctx, props)
+		// Transform the user.
+		props, err = transformer.Transform(ctx, props)
 		if err != nil {
-			if err, ok := err.(mappings.Error); ok {
+			if err, ok := err.(transformers.Error); ok {
 				return actionExecutionError{err}
 			}
 			return err

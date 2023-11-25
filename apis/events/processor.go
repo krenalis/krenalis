@@ -11,7 +11,6 @@ import (
 	"context"
 	"sync"
 
-	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector"
@@ -28,13 +27,13 @@ const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 type processedEvent struct {
 	*collectedEvent
-	action      *state.Action
-	destination int
-	eventType   string
-	endpoint    int
-	mappedEvent map[string]any
-	inEvent     *connector.Event
-	err         error
+	action           *state.Action
+	destination      int
+	eventType        string
+	endpoint         int
+	transformedEvent map[string]any
+	inEvent          *connector.Event
+	err              error
 }
 
 // Processor processes events received from source streams and sent them to
@@ -77,7 +76,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 						// Convert the collectedEvent to a map of properties.
 						mapEvent := event.MapEvent()
 						// Check if the filter applies.
-						ok, err := mappings.FilterApplies(action.Filter, mapEvent)
+						ok, err := filterApplies(action.Filter, mapEvent)
 						if err != nil {
 							eventLog.TransformationFailed(event.id, action.ID, err)
 							continue
@@ -85,28 +84,28 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 						if !ok {
 							continue
 						}
-						var mappedEvent map[string]any
+						var transformedEvent map[string]any
 						// If the action's input schema is valid (which means
 						// that there is a mapping or a transformation defined),
 						// apply the mapping or the transformation.
 						if action.InSchema.Valid() {
-							mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID, transformer, nil)
+							transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID, transformer, nil)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
 							}
-							mappedEvent, err = mapping.Apply(ctx, mapEvent)
+							transformedEvent, err = transformer.Transform(ctx, mapEvent)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
 							}
 						}
 						ev := &processedEvent{
-							collectedEvent: event,
-							action:         action,
-							destination:    action.Connection().ID,
-							eventType:      action.EventType,
-							mappedEvent:    mappedEvent,
+							collectedEvent:   event,
+							action:           action,
+							destination:      action.Connection().ID,
+							eventType:        action.EventType,
+							transformedEvent: transformedEvent,
 							// TODO(Gianluca): since the endpoints have been
 							// removed from the action, we do not have
 							// information about the endpoint. We should

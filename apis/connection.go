@@ -28,12 +28,11 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/mappings"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
-	"chichi/apis/transformers/mapexp"
+	"chichi/apis/transformers/mappings"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/telemetry"
@@ -1064,7 +1063,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 					err := err.(types.PathNotExistError)
 					return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 				}
-				_, err = mapexp.Compile(expr, inSchema, p.Type, p.Nullable, nil)
+				_, err = mappings.Compile(expr, inSchema, p.Type, p.Nullable, nil)
 				if err != nil {
 					return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 				}
@@ -1114,13 +1113,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 		// Transform the data.
 		action := 1 // no matter the action, it will be overwritten by the temporary transformation.
-		m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
+		m, err := transformers.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
 		if err != nil {
 			return nil, err
 		}
-		data, err = m.Apply(ctx, ev.MapEvent())
+		data, err = m.Transform(ctx, ev.MapEvent())
 		if err != nil {
-			if err, ok := err.(mappings.Error); ok {
+			if err, ok := err.(transformers.Error); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
 			}
 			return nil, err
@@ -1811,7 +1810,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		transformer, err := mapexp.New(action.Mapping, action.InSchema, action.OutSchema, nil)
+		transformer, err := mappings.New(action.Mapping, action.InSchema, action.OutSchema, nil)
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}

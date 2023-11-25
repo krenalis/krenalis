@@ -13,8 +13,8 @@ import (
 	"strconv"
 
 	"chichi/apis/connectors"
-	"chichi/apis/mappings"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
 )
 
 // importUsers imports the users of the action.
@@ -23,7 +23,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	action := this.action
 	connector := action.Connection().Connector()
 
-	mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
+	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
 		this.apis.transformer, nil)
 	if err != nil {
 		return actionExecutionError{err}
@@ -75,11 +75,11 @@ func (this *Action) importUsers(ctx context.Context) error {
 			return actionExecutionError{user.Err}
 		}
 
-		// Transform the user's properties.
+		// Transform the user.
 		var err error
-		user.Properties, err = mapping.Apply(ctx, user.Properties)
+		user.Properties, err = transformer.Transform(ctx, user.Properties)
 		if err != nil {
-			if err, ok := err.(mappings.Error); ok {
+			if err, ok := err.(transformers.Error); ok {
 				return actionExecutionError{err}
 			}
 			return err

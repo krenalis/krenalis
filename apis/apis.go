@@ -25,13 +25,12 @@ import (
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/lambda"
 	"chichi/apis/transformers/local"
-	"chichi/apis/transformers/mapexp"
+	"chichi/apis/transformers/mappings"
 	"chichi/connector/types"
 	"chichi/telemetry"
 
@@ -402,7 +401,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	apis.mustBeOpen()
 	var properties []types.Path
 	for _, expression := range expressions {
-		exp, err := mapexp.Compile(expression.Value, schema, expression.Type, true, nil)
+		exp, err := mappings.Compile(expression.Value, schema, expression.Type, true, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -481,7 +480,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 				err := err.(types.PathNotExistError)
 				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 			}
-			expr, err := mapexp.Compile(expr, inSchema, p.Type, p.Nullable, nil)
+			expr, err := mappings.Compile(expr, inSchema, p.Type, p.Nullable, nil)
 			if err != nil {
 				return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 			}
@@ -542,13 +541,13 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 
 	// Transform the data.
 	action := 1 // no matter the action, it will be overwritten by the temporary transformation.
-	m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
+	m, err := transformers.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
 	if err != nil {
 		return nil, err
 	}
-	value, err = m.Apply(ctx, value)
+	value, err = m.Transform(ctx, value)
 	if err != nil {
-		if err, ok := err.(mappings.Error); ok {
+		if err, ok := err.(transformers.Error); ok {
 			return nil, errors.Unprocessable(TransformationFailed, err.Error())
 		}
 		return nil, err
@@ -563,7 +562,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 // nullable.
 func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, nullable bool) string {
 	apis.mustBeOpen()
-	_, err := mapexp.Compile(expression, types.Object(properties), typ, nullable, nil)
+	_, err := mappings.Compile(expression, types.Object(properties), typ, nullable, nil)
 	if err != nil {
 		return err.Error()
 	}
