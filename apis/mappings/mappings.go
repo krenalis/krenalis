@@ -67,7 +67,7 @@ func FilterApplies(filter *state.Filter, props map[string]any) (bool, error) {
 // Mapping represents a mapping.
 type Mapping struct {
 	inSchema, outSchema types.Type
-	mapTransformer      *mapexp.Transformer
+	mapping             *mapexp.Mapping
 	transformation      *state.Transformation
 	transformer         transformers.Function
 	action              int
@@ -94,7 +94,7 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 	// Mapping.
 	if mappings != nil {
 		var err error
-		m.mapTransformer, err = mapexp.New(mappings, inSchema, outSchema, layouts)
+		m.mapping, err = mapexp.New(mappings, inSchema, outSchema, layouts)
 		if err != nil {
 			return nil, err
 		}
@@ -107,9 +107,9 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 // if values cannot be mapped.
 func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]any, error) {
 
-	// Map using properties mapping.
-	if m.mapTransformer != nil {
-		return m.mapTransformer.Transform(values)
+	// Transform using the mapping.
+	if m.mapping != nil {
+		return m.mapping.Transform(values)
 	}
 
 	// Map using the transformation.

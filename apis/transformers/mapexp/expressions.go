@@ -168,25 +168,25 @@ func (expr *Expression) Properties() []types.Path {
 	return uniqueProperties
 }
 
-// Transformer represents a transformer.
-type Transformer struct {
-	expressions []transformerExpr
+// Mapping represents a mapping transformer.
+type Mapping struct {
+	expressions []mappingExpr
 }
 
-type transformerExpr struct {
+type mappingExpr struct {
 	path types.Path
 	expr *Expression
 }
 
-// New returns a new transformer that transforms values according to the
-// provided expressions. st and dt represent the source and destination types,
+// New returns a new mapping that transforms values according to the provided
+// expressions. st and dt represent the source and destination types,
 // respectively. If layouts is not null, it specifies the layouts used to
 // format DateTime, Date, and Time values as strings.
 //
 // The source type can be the invalid type if expressions do not contain paths.
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
-func New(expressions map[string]string, st, dt types.Type, layouts *state.Layouts) (*Transformer, error) {
+func New(expressions map[string]string, st, dt types.Type, layouts *state.Layouts) (*Mapping, error) {
 	if len(expressions) == 0 {
 		return nil, errors.New("there are no expressions")
 	}
@@ -200,16 +200,16 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.Layout
 		return nil, errors.New("destination type is not an object")
 	}
 	// Compile the expressions.
-	transformerExpressions := make([]transformerExpr, len(expressions))
+	mappingExpressions := make([]mappingExpr, len(expressions))
 	i := 0
 	for name, expr := range expressions {
 		path := strings.Split(name, ".")
-		transformerExpressions[i].path = path
+		mappingExpressions[i].path = path
 		p, err := dt.PropertyByPath(path)
 		if err != nil {
 			return nil, err
 		}
-		transformerExpressions[i].expr, err = Compile(expr, st, p.Type, p.Nullable, layouts)
+		mappingExpressions[i].expr, err = Compile(expr, st, p.Type, p.Nullable, layouts)
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +218,7 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.Layout
 	// Sort the expressions based on their paths
 	// and ensure that no two paths have the same prefix.
 	var err error
-	slices.SortFunc(transformerExpressions, func(a, b transformerExpr) int {
+	slices.SortFunc(mappingExpressions, func(a, b mappingExpr) int {
 		last := len(b.path) - 1
 		for i, name := range a.path {
 			n := b.path[i]
@@ -240,7 +240,7 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.Layout
 	if err != nil {
 		return nil, err
 	}
-	return &Transformer{expressions: transformerExpressions}, nil
+	return &Mapping{expressions: mappingExpressions}, nil
 }
 
 // Properties returns the properties found in the expressions, sorted by their
@@ -250,9 +250,9 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.Layout
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {{"x"}} if x is a
 // JSON object, and returns {{"x", "z"}} if x is a map of objects.
-func (tr *Transformer) Properties() []types.Path {
+func (mapping *Mapping) Properties() []types.Path {
 	var properties []types.Path
-	for _, expr := range tr.expressions {
+	for _, expr := range mapping.expressions {
 		properties = appendProperties(properties, expr.expr.parts)
 	}
 	if len(properties) <= 1 {
@@ -277,9 +277,9 @@ func (tr *Transformer) Properties() []types.Path {
 // Transform transforms value and returns the result.
 // If the transformation succeeds but the result cannot be converted to the
 // destination type, it returns an InvalidConversionError error.
-func (tr *Transformer) Transform(value map[string]any) (map[string]any, error) {
-	out := make(map[string]any, len(tr.expressions))
-	for _, t := range tr.expressions {
+func (mapping *Mapping) Transform(value map[string]any) (map[string]any, error) {
+	out := make(map[string]any, len(mapping.expressions))
+	for _, t := range mapping.expressions {
 		v, err := t.expr.Transform(value)
 		if err != nil {
 			if err == ErrVoid {
