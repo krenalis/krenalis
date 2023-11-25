@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
+	"strings"
 
 	"chichi/apis/state"
 	"chichi/connector/types"
@@ -117,11 +119,11 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool, layou
 	return expression, nil
 }
 
-// Eval evaluates the map expression on the given values and returns the result.
-// If the evaluation succeeds but cannot be converted to the destination type,
-// it returns an InvalidConversionError error.
-func (expr *Expression) Eval(values map[string]any) (any, error) {
-	v, st, err := eval(expr.parts, values, expr.layouts)
+// Transform transforms value and returns the result.
+// If the transformation succeeds but the result cannot be converted to the
+// destination type, it returns an InvalidConversionError error.
+func (expr *Expression) Transform(value map[string]any) (any, error) {
+	v, st, err := eval(expr.parts, value, expr.layouts)
 	if err != nil {
 		return nil, err
 	}
@@ -147,10 +149,7 @@ func (expr *Expression) Eval(values map[string]any) (any, error) {
 // JSON object, and returns {{"x", "z"}} if x is a map of objects.
 func (expr *Expression) Properties() []types.Path {
 	properties := appendProperties(nil, expr.parts)
-	if properties == nil {
-		return nil
-	}
-	if len(properties) == 1 {
+	if len(properties) <= 1 {
 		return properties
 	}
 	uniqueProperties := make([]types.Path, 0, len(properties))
@@ -167,6 +166,130 @@ func (expr *Expression) Properties() []types.Path {
 		}
 	}
 	return uniqueProperties
+}
+
+// Transformer represents a transformer.
+type Transformer struct {
+	expressions []transformerExpr
+}
+
+type transformerExpr struct {
+	path types.Path
+	expr *Expression
+}
+
+// New returns a new transformer that transforms values according to the
+// provided expressions. st and dt represent the source and destination types,
+// respectively. If layouts is not null, it specifies the layouts used to
+// format DateTime, Date, and Time values as strings.
+//
+// The source type can be the invalid type if expressions do not contain paths.
+// It returns a types.PathNotExistError error if a path in expressions does not
+// exist in the source schema.
+func New(expressions map[string]string, st, dt types.Type, layouts *state.Layouts) (*Transformer, error) {
+	if len(expressions) == 0 {
+		return nil, errors.New("there are no expressions")
+	}
+	if k := st.Kind(); k != types.ObjectKind && k != types.InvalidKind {
+		return nil, errors.New("source is not an object and is not the invalid type")
+	}
+	if k := dt.Kind(); k != types.ObjectKind {
+		if k == types.InvalidKind {
+			return nil, errors.New("destination type is the invalid type")
+		}
+		return nil, errors.New("destination type is not an object")
+	}
+	// Compile the expressions.
+	transformerExpressions := make([]transformerExpr, len(expressions))
+	i := 0
+	for name, expr := range expressions {
+		path := strings.Split(name, ".")
+		transformerExpressions[i].path = path
+		p, err := dt.PropertyByPath(path)
+		if err != nil {
+			return nil, err
+		}
+		transformerExpressions[i].expr, err = Compile(expr, st, p.Type, p.Nullable, layouts)
+		if err != nil {
+			return nil, err
+		}
+		i++
+	}
+	// Sort the expressions based on their paths
+	// and ensure that no two paths have the same prefix.
+	var err error
+	slices.SortFunc(transformerExpressions, func(a, b transformerExpr) int {
+		last := len(b.path) - 1
+		for i, name := range a.path {
+			n := b.path[i]
+			switch {
+			case name < n:
+				return -1
+			case name > n:
+				return 1
+			}
+			if i == last {
+				break
+			}
+		}
+		if err == nil {
+			err = fmt.Errorf("paths %q and %q have the same prefix", a.path, b.path)
+		}
+		return 0
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Transformer{expressions: transformerExpressions}, nil
+}
+
+// Properties returns the properties found in the expressions, sorted by their
+// appearance order in the expressions. The returned properties are guaranteed
+// to be unique. If no property are present, it returns nil.
+//
+// If the expressions contain a map or JSON indexing, Properties does not return
+// the key. For example, for the expression x.y.z, it returns {{"x"}} if x is a
+// JSON object, and returns {{"x", "z"}} if x is a map of objects.
+func (tr *Transformer) Properties() []types.Path {
+	var properties []types.Path
+	for _, expr := range tr.expressions {
+		properties = appendProperties(properties, expr.expr.parts)
+	}
+	if len(properties) <= 1 {
+		return properties
+	}
+	uniqueProperties := make([]types.Path, 0, len(properties))
+	for _, property := range properties {
+		var exists bool
+		for _, p := range uniqueProperties {
+			if p.Equals(property) {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			uniqueProperties = append(uniqueProperties, property)
+		}
+	}
+	return uniqueProperties
+}
+
+// Transform transforms value and returns the result.
+// If the transformation succeeds but the result cannot be converted to the
+// destination type, it returns an InvalidConversionError error.
+func (tr *Transformer) Transform(value map[string]any) (map[string]any, error) {
+	out := make(map[string]any, len(tr.expressions))
+	for _, t := range tr.expressions {
+		v, err := t.expr.Transform(value)
+		if err != nil {
+			if err == ErrVoid {
+				continue
+			}
+			return nil, err
+		}
+		storeValue(out, t.path, v)
+	}
+	return out, nil
 }
 
 // appendProperties appends the properties in expression to properties.
@@ -394,4 +517,25 @@ func evalCall(p part, values map[string]any, layouts *state.Layouts) (any, types
 		return v1, t1, nil
 	}
 	panic(fmt.Errorf("unknown function %q", p.path[0]))
+}
+
+// storeValue stores v in value at the given path.
+func storeValue(value map[string]any, path types.Path, v any) {
+	if len(path) == 1 {
+		value[path[0]] = v
+		return
+	}
+	last := len(path) - 1
+	for i, name := range path {
+		if i == last {
+			value[name] = v
+			continue
+		}
+		object, ok := value[name].(map[string]any)
+		if !ok {
+			object = map[string]any{}
+			value[name] = object
+		}
+		value = object
+	}
 }

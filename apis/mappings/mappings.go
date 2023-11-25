@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 
@@ -65,20 +64,13 @@ func FilterApplies(filter *state.Filter, props map[string]any) (bool, error) {
 	return true, nil
 }
 
-// propertyMapping represents a property to map.
-type propertyMapping struct {
-	expression *mapexp.Expression
-	outPath    types.Path
-}
-
 // Mapping represents a mapping.
 type Mapping struct {
 	inSchema, outSchema types.Type
-	properties          []propertyMapping
+	mapTransformer      *mapexp.Transformer
 	transformation      *state.Transformation
 	transformer         transformers.Transformer
 	action              int
-	layouts             *state.Layouts
 }
 
 // New returns a new mapping that maps properties of inSchema to outSchema using
@@ -97,23 +89,14 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 		transformation: transformation,
 		transformer:    transformer,
 		action:         action,
-		layouts:        layouts,
 	}
 
 	// Mapping.
 	if mappings != nil {
-		m.properties = make([]propertyMapping, 0, len(mappings))
-		for path, expression := range mappings {
-			property := propertyMapping{outPath: strings.Split(path, ".")}
-			outProperty, err := outSchema.PropertyByPath(property.outPath)
-			if err != nil {
-				return nil, err
-			}
-			property.expression, err = mapexp.Compile(expression, inSchema, outProperty.Type, outProperty.Nullable, layouts)
-			if err != nil {
-				return nil, err
-			}
-			m.properties = append(m.properties, property)
+		var err error
+		m.mapTransformer, err = mapexp.New(mappings, inSchema, outSchema, layouts)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -125,23 +108,8 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]any, error) {
 
 	// Map using properties mapping.
-	if m.properties != nil {
-		out := map[string]any{}
-		for _, property := range m.properties {
-			v, err := property.expression.Eval(values)
-			if err != nil {
-				if err == mapexp.ErrVoid {
-					continue
-				}
-				if err, ok := err.(*mapexp.InvalidConversionError); ok {
-					slog.Info("cannot convert property", "err", err)
-					continue
-				}
-				return nil, err
-			}
-			writePropertyTo(out, property.outPath, v)
-		}
-		return out, nil
+	if m.mapTransformer != nil {
+		return m.mapTransformer.Transform(values)
 	}
 
 	// Map using the transformation.
@@ -181,26 +149,6 @@ func readPropertyFrom(m map[string]any, path types.Path) (any, bool) {
 		return nil, false
 	}
 	return readPropertyFrom(obj, path[1:])
-}
-
-// writePropertyTo writes the property value v into m at the given property
-// path.
-// m cannot be nil.
-func writePropertyTo(m map[string]any, path types.Path, v any) {
-	name := path[0]
-	if len(path) == 1 {
-		m[name] = v
-		return
-	}
-	_, ok := m[name]
-	if !ok {
-		m[name] = map[string]any{}
-	}
-	obj, ok := m[name].(map[string]any)
-	if !ok {
-		return
-	}
-	writePropertyTo(obj, path[1:], v)
 }
 
 // transformationFunctionName returns the name the transformation function for

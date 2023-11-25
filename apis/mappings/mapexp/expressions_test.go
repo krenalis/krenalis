@@ -306,7 +306,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			// Test Eval.
-			gotValue, err := expr.Eval(values)
+			gotValue, err := expr.Transform(values)
 			if test.evalErr != nil {
 				if err == nil {
 					t.Fatalf("expecting eval error %s, got no errors", test.evalErr)
@@ -475,4 +475,46 @@ func TestValueOf(t *testing.T) {
 
 	}
 
+}
+
+func Test_storeValue(t *testing.T) {
+	tests := []struct {
+		value    map[string]any
+		path     types.Path
+		v        any
+		expected map[string]any
+	}{
+		{
+			value:    map[string]any{},
+			path:     types.Path{"email"},
+			v:        "test@example.com",
+			expected: map[string]any{"email": "test@example.com"},
+		},
+		{
+			value:    map[string]any{},
+			path:     types.Path{"user", "email"},
+			v:        "test@example.com",
+			expected: map[string]any{"user": map[string]any{"email": "test@example.com"}},
+		},
+		{
+			value:    map[string]any{"user": map[string]any{"name": "Mike"}},
+			path:     types.Path{"user", "email"},
+			v:        "test@example.com",
+			expected: map[string]any{"user": map[string]any{"name": "Mike", "email": "test@example.com"}},
+		},
+		{
+			value:    map[string]any{"user": map[string]any{"address": map[string]any{"city": "Milan"}}},
+			path:     types.Path{"user", "address", "zip"},
+			v:        "20122",
+			expected: map[string]any{"user": map[string]any{"address": map[string]any{"city": "Milan", "zip": "20122"}}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			storeValue(test.value, test.path, test.v)
+			if !reflect.DeepEqual(test.value, test.expected) {
+				t.Fatalf("expecting %#v, got %#v", test.expected, test.value)
+			}
+		})
+	}
 }

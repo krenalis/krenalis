@@ -1811,23 +1811,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		for path, expr := range action.Mapping {
-			outPath, err := types.ParsePropertyPath(path)
-			if err != nil {
-				return errors.BadRequest("output mapped property %q is not valid", path)
-			}
-			outPaths = append(outPaths, outPath)
-			p, err := action.OutSchema.PropertyByPath(outPath)
-			if err != nil {
-				err := err.(types.PathNotExistError)
-				return errors.BadRequest("output mapped property %s not found in output schema", err.Path)
-			}
-			expr, err := mapexp.Compile(expr, action.InSchema, p.Type, p.Nullable, nil)
-			if err != nil {
-				return errors.BadRequest("invalid expression mapped to %s: %s", path, err)
-			}
-			inPaths = append(inPaths, expr.Properties()...)
+		transformer, err := mapexp.New(action.Mapping, action.InSchema, action.OutSchema, nil)
+		if err != nil {
+			return errors.BadRequest("invalid mapping: %s", err)
 		}
+		inPaths = append(inPaths, transformer.Properties()...)
 	}
 	// Validate the transformation.
 	if action.Transformation != nil {
