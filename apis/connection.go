@@ -444,7 +444,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	var transformation state.Transformation
 	if n.Transformation != nil {
 		name := transformationFunctionName(n.ID, n.Transformation.Language)
-		version, err := this.apis.transformer.CreateFunction(ctx, name, n.Transformation.Source)
+		version, err := this.apis.transformer.Create(ctx, name, n.Transformation.Source)
 		if err != nil {
 			return 0, err
 		}
@@ -1094,7 +1094,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 		// Create a temporary transformer.
 		var tr *state.Transformation
-		var transformer transformers.Transformer
+		var transformer transformers.Function
 		if transformation != nil {
 			tr = &state.Transformation{
 				Source:  transformation.Source,
@@ -2342,43 +2342,43 @@ func serializeCursor(cursor state.Cursor) (string, error) {
 	return hex.EncodeToString(b.Bytes()), nil
 }
 
-// temporaryTransformer is a transformers.Transformer that creates a function
+// temporaryTransformer is a transformers.Function that creates a function
 // at each call and deletes it after the call returns. Any call to a method that
 // is not CallFunction panics.
 type temporaryTransformer struct {
-	name        string                   // function name.
-	source      string                   // source code.
-	transformer transformers.Transformer // underlying transformer.
+	name        string                // function name.
+	source      string                // source code.
+	transformer transformers.Function // underlying transformer.
 }
 
-func newTemporaryTransformer(name, source string, transformer transformers.Transformer) *temporaryTransformer {
+func newTemporaryTransformer(name, source string, transformer transformers.Function) *temporaryTransformer {
 	return &temporaryTransformer{name, source, transformer}
 }
 
-func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
-	version, err := tp.transformer.CreateFunction(ctx, tp.name, tp.source)
+func (tp *temporaryTransformer) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+	version, err := tp.transformer.Create(ctx, tp.name, tp.source)
 	if err != nil {
 		return nil, nil
 	}
 	defer func() {
 		go func() {
-			err := tp.transformer.DeleteFunction(context.Background(), tp.name)
+			err := tp.transformer.Delete(context.Background(), tp.name)
 			if err != nil {
 				slog.Warn("cannot delete transformation function", "name", tp.name, "err", err)
 			}
 		}()
 	}()
-	return tp.transformer.CallFunction(ctx, tp.name, version, inSchema, outSchema, values)
+	return tp.transformer.Call(ctx, tp.name, version, inSchema, outSchema, values)
 }
 
 func (tp *temporaryTransformer) Close(_ context.Context) error { panic("not supported") }
-func (tp *temporaryTransformer) CreateFunction(_ context.Context, _, _ string) (string, error) {
+func (tp *temporaryTransformer) Create(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
 }
-func (tp *temporaryTransformer) DeleteFunction(_ context.Context, _ string) error {
+func (tp *temporaryTransformer) Delete(_ context.Context, _ string) error {
 	panic("not supported")
 }
 func (tp *temporaryTransformer) SupportLanguage(_ state.Language) bool { panic("not supported") }
-func (tp *temporaryTransformer) UpdateFunction(_ context.Context, _, _ string) (string, error) {
+func (tp *temporaryTransformer) Update(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
 }

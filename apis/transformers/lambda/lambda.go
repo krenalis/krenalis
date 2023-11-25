@@ -33,7 +33,7 @@ import (
 	"github.com/aws/smithy-go"
 )
 
-type transformer struct {
+type function struct {
 	settings Settings
 	client   *lambda.Client
 }
@@ -53,20 +53,20 @@ type Settings struct {
 	}
 }
 
-// New returns a new Transformer for Lambda with the given settings.
+// New returns a new function for Lambda with the given settings.
 // Supports every Node and Python 3 runtime.
-func New(settings Settings) transformers.Transformer {
-	return &transformer{settings: settings}
+func New(settings Settings) transformers.Function {
+	return &function{settings: settings}
 }
 
-// CallFunction calls the function with the given name and version, with the
-// given values to transform, and returns the results. inSchema and outSchema
-// are the input and output schemas.
+// Call calls the function with the given name and version, with the given
+// values to transform, and returns the results. inSchema and outSchema are the
+// input and output schemas.
 //
 // If an error occurs during execution, it returns an *ExecutionError error. If
 // the function does not exist, it returns the ErrNotExist error. If the
 // function is in a pending state, it returns the ErrPendingState error.
-func (tr *transformer) CallFunction(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 
 	if !transformers.ValidFunctionName(name) {
 		return nil, errors.New("function name is not valid")
@@ -82,7 +82,7 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 		return nil, errors.New("language is not supported")
 	}
 
-	client, err := tr.connect(ctx)
+	client, err := fn.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -161,30 +161,30 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	return results, nil
 }
 
-// Close closes the transformer.
-func (tr *transformer) Close(ctx context.Context) error {
-	tr.client = nil
+// Close closes the function.
+func (fn *function) Close(ctx context.Context) error {
+	fn.client = nil
 	return nil
 }
 
-// CreateFunction creates a new function with the given name and source, and
-// returns its version, which has a length in the range [1, 128]. name should
-// have an extension of either ".js" or ".py" depending on the source code's
-// language. If a function with the same name already exists, it returns the
-// ErrExist error.
-func (tr *transformer) CreateFunction(ctx context.Context, name, source string) (string, error) {
+// Create creates a new function with the given name and source, and returns its
+// version, which has a length in the range [1, 128]. name should have an
+// extension of either ".js" or ".py" depending on the source code's language.
+// If a function with the same name already exists, it returns the ErrExist
+// error.
+func (fn *function) Create(ctx context.Context, name, source string) (string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", errors.New("function name is not valid")
 	}
 	ext := path.Ext(name)
-	if !tr.supportLanguage(ext) {
+	if !fn.supportLanguage(ext) {
 		return "", errors.New("language is not supported")
 	}
-	code, err := tr.code(source, ext)
+	code, err := fn.code(source, ext)
 	if err != nil {
 		return "", err
 	}
-	client, err := tr.connect(ctx)
+	client, err := fn.connect(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -192,13 +192,13 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 	var layers []string
 	switch ext {
 	case ".js":
-		runtime = tr.settings.Node.Runtime
-		if layer := tr.settings.Node.Layer; layer != "" {
+		runtime = fn.settings.Node.Runtime
+		if layer := fn.settings.Node.Layer; layer != "" {
 			layers = []string{layer}
 		}
 	case ".py":
-		runtime = tr.settings.Python.Runtime
-		if layer := tr.settings.Python.Layer; layer != "" {
+		runtime = fn.settings.Python.Runtime
+		if layer := fn.settings.Python.Layer; layer != "" {
 			layers = []string{layer}
 		}
 	}
@@ -206,7 +206,7 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 		FunctionName: aws.String(lambdaFunctionName(name)),
 		Handler:      aws.String("index._handler"),
 		Publish:      true,
-		Role:         aws.String(tr.settings.Role),
+		Role:         aws.String(fn.settings.Role),
 		Runtime:      lambdatypes.Runtime(runtime),
 		Code:         &lambdatypes.FunctionCode{ZipFile: code},
 		Layers:       layers,
@@ -223,16 +223,16 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 	return *out.Version, nil
 }
 
-// DeleteFunction deletes the function with the given name.
+// Delete deletes the function with the given name.
 // If a function with the given name does not exist, it does nothing.
-func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
+func (fn *function) Delete(ctx context.Context, name string) error {
 	if !transformers.ValidFunctionName(name) {
 		return errors.New("function name is not valid")
 	}
-	if !tr.supportLanguage(path.Ext(name)) {
+	if !fn.supportLanguage(path.Ext(name)) {
 		return errors.New("language is not supported")
 	}
-	client, err := tr.connect(ctx)
+	client, err := fn.connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -248,32 +248,32 @@ func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
 
 // SupportLanguage reports whether language is supported as a language.
 // It panics if language is not valid.
-func (tr *transformer) SupportLanguage(language state.Language) bool {
+func (fn *function) SupportLanguage(language state.Language) bool {
 	switch language {
 	case state.JavaScript:
-		return tr.settings.Node.Runtime != ""
+		return fn.settings.Node.Runtime != ""
 	case state.Python:
-		return tr.settings.Python.Runtime != ""
+		return fn.settings.Python.Runtime != ""
 	}
 	panic("invalid language")
 }
 
-// UpdateFunction updates the source of the function with the given name, and
-// returns a new version, which has a length in the range [1, 128]. If the
-// function does not exist, it returns the ErrNotExist error.
-func (tr *transformer) UpdateFunction(ctx context.Context, name, source string) (string, error) {
+// Update updates the source of the function with the given name, and returns a
+// new version, which has a length in the range [1, 128]. If the function does
+// not exist, it returns the ErrNotExist error.
+func (fn *function) Update(ctx context.Context, name, source string) (string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", errors.New("function name is not valid")
 	}
 	ext := path.Ext(name)
-	if !tr.supportLanguage(ext) {
+	if !fn.supportLanguage(ext) {
 		return "", errors.New("language is not supported")
 	}
-	code, err := tr.code(source, ext)
+	code, err := fn.code(source, ext)
 	if err != nil {
 		return "", err
 	}
-	client, err := tr.connect(ctx)
+	client, err := fn.connect(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -296,7 +296,7 @@ func (tr *transformer) UpdateFunction(ctx context.Context, name, source string) 
 }
 
 // code returns the code of the function with the given source.
-func (tr *transformer) code(source string, ext string) ([]byte, error) {
+func (fn *function) code(source string, ext string) ([]byte, error) {
 	var filename string
 	switch ext {
 	case ".js":
@@ -362,28 +362,28 @@ def _handler(event, context):
 
 // connect connects to Lambda and returns a client. If it is already connected,
 // it returns the current client.
-func (tr *transformer) connect(ctx context.Context) (*lambda.Client, error) {
-	if tr.client != nil {
-		return tr.client, nil
+func (fn *function) connect(ctx context.Context) (*lambda.Client, error) {
+	if fn.client != nil {
+		return fn.client, nil
 	}
 	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(tr.settings.Region),
+		config.WithRegion(fn.settings.Region),
 		config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(tr.settings.AccessKeyID, tr.settings.SecretAccessKey, "")))
+			credentials.NewStaticCredentialsProvider(fn.settings.AccessKeyID, fn.settings.SecretAccessKey, "")))
 	if err != nil {
 		return nil, err
 	}
-	tr.client = lambda.NewFromConfig(cfg)
-	return tr.client, nil
+	fn.client = lambda.NewFromConfig(cfg)
+	return fn.client, nil
 }
 
 // supportLanguage is like SupportLanguage but gets an extension as argument.
-func (tr *transformer) supportLanguage(ext string) bool {
+func (fn *function) supportLanguage(ext string) bool {
 	switch ext {
 	case ".js":
-		return tr.settings.Node.Runtime != ""
+		return fn.settings.Node.Runtime != ""
 	case ".py":
-		return tr.settings.Python.Runtime != ""
+		return fn.settings.Python.Runtime != ""
 	}
 	panic("invalid extension")
 }

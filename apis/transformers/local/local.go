@@ -25,7 +25,7 @@ import (
 	"chichi/connector/types"
 )
 
-type transformer struct {
+type function struct {
 	settings Settings
 }
 
@@ -35,18 +35,18 @@ type Settings struct {
 	FunctionsDir     string
 }
 
-func New(settings Settings) transformers.Transformer {
-	return &transformer{settings: settings}
+func New(settings Settings) transformers.Function {
+	return &function{settings: settings}
 }
 
-// CallFunction calls the function with the given name and version, with the
-// given values to transform, and returns the results. inSchema and outSchema
-// are the input and output schemas.
+// Call calls the function with the given name and version, with the given
+// values to transform, and returns the results. inSchema and outSchema are the
+// input and output schemas.
 //
 // If an error occurs during execution, it returns an *ExecutionError error. If
 // the function does not exist, it returns the ErrNotExist error. If the
 // function is in a pending state, it returns the ErrPendingState error.
-func (tr *transformer) CallFunction(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return nil, err
@@ -56,14 +56,14 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	switch ext {
 	case ".js":
 		language = state.JavaScript
-		executable = tr.settings.NodeExecutable
+		executable = fn.settings.NodeExecutable
 	case ".py":
 		language = state.Python
-		executable = tr.settings.PythonExecutable
+		executable = fn.settings.PythonExecutable
 	default:
 		return nil, errors.New("language is not supported")
 	}
-	if !tr.supportLanguage(ext) {
+	if !fn.supportLanguage(ext) {
 		return nil, errors.New("language is not supported")
 	}
 
@@ -71,7 +71,7 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	if err != nil {
 		return nil, fmt.Errorf("invalid version %q", version)
 	}
-	filename := tr.absFilename(name, versionInt, ext)
+	filename := fn.absFilename(name, versionInt, ext)
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, transformers.ErrNotExist
@@ -101,34 +101,34 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, i
 	return results, nil
 }
 
-// Close closes the transformer.
-func (tr *transformer) Close(ctx context.Context) error {
+// Close closes the function.
+func (fn *function) Close(ctx context.Context) error {
 	return nil
 }
 
-// CreateFunction creates a new function with the given name and source, and
-// returns its version, which has a length in the range [1, 128]. name should
-// have an extension of either ".js" or ".py" depending on the source code's
-// language. If a function with the same name already exists, it returns the
-// ErrExist error.
-func (tr *transformer) CreateFunction(ctx context.Context, name, source string) (string, error) {
+// Create creates a new function with the given name and source, and returns its
+// version, which has a length in the range [1, 128]. name should have an
+// extension of either ".js" or ".py" depending on the source code's language.
+// If a function with the same name already exists, it returns the ErrExist
+// error.
+func (fn *function) Create(ctx context.Context, name, source string) (string, error) {
 	// TODO(Gianluca): on Windows, escape reserved filenames.
 	// See https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN.
-	err := tr.createFunction(name, 1, source)
+	err := fn.create(name, 1, source)
 	if err != nil {
 		return "", err
 	}
 	return "1", nil
 }
 
-// createFunction creates a function with the given name and version.
+// create creates a function with the given name and version.
 // If the function already exists, it returns the transformers.ErrExist error.
-func (tr *transformer) createFunction(name string, version int, source string) error {
+func (fn *function) create(name string, version int, source string) error {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return err
 	}
-	if !tr.supportLanguage(ext) {
+	if !fn.supportLanguage(ext) {
 		return errors.New("language is not supported")
 	}
 	switch ext {
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 	main()
 `
 	}
-	filename := tr.absFilename(name, version, ext)
+	filename := fn.absFilename(name, version, ext)
 	err = os.WriteFile(filename, []byte(source), 0644)
 	if err != nil && errors.Is(err, os.ErrExist) {
 		err = transformers.ErrExist
@@ -183,17 +183,17 @@ if __name__ == "__main__":
 	return nil
 }
 
-// DeleteFunction deletes the function with the given name.
+// Delete deletes the function with the given name.
 // If a function with the given name does not exist, it does nothing.
-func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
+func (fn *function) Delete(ctx context.Context, name string) error {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return err
 	}
-	if !tr.supportLanguage(ext) {
+	if !fn.supportLanguage(ext) {
 		return errors.New("language is not supported")
 	}
-	entries, err := os.ReadDir(tr.settings.FunctionsDir)
+	entries, err := os.ReadDir(fn.settings.FunctionsDir)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
 		}
 		v, ok := filenameToVersion(name, entry.Name(), ext)
 		if ok {
-			err := os.Remove(tr.absFilename(name, v, ext))
+			err := os.Remove(fn.absFilename(name, v, ext))
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
@@ -214,31 +214,31 @@ func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
 
 // SupportLanguage reports whether language is supported as a language.
 // It panics if language is not valid.
-func (tr *transformer) SupportLanguage(language state.Language) bool {
+func (fn *function) SupportLanguage(language state.Language) bool {
 	switch language {
 	case state.JavaScript:
-		return tr.settings.NodeExecutable != ""
+		return fn.settings.NodeExecutable != ""
 	case state.Python:
-		return tr.settings.PythonExecutable != ""
+		return fn.settings.PythonExecutable != ""
 	}
 	panic("invalid language")
 }
 
-// UpdateFunction updates the source of the function with the given name, and
-// returns a new version, which has a length in the range [1, 128]. If the
-// function does not exist, it returns the ErrNotExist error.
-func (tr *transformer) UpdateFunction(ctx context.Context, name, source string) (string, error) {
+// Update updates the source of the function with the given name, and returns a
+// new version, which has a length in the range [1, 128]. If the function does
+// not exist, it returns the ErrNotExist error.
+func (fn *function) Update(ctx context.Context, name, source string) (string, error) {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return "", err
 	}
-	if !tr.supportLanguage(ext) {
+	if !fn.supportLanguage(ext) {
 		return "", errors.New("language is not supported")
 	}
 	attempts := 0
 fileCreation:
 	for {
-		entries, err := os.ReadDir(tr.settings.FunctionsDir)
+		entries, err := os.ReadDir(fn.settings.FunctionsDir)
 		if err != nil {
 			return "", err
 		}
@@ -259,7 +259,7 @@ fileCreation:
 		if maxVersion == math.MaxInt64 {
 			return "", errors.New("too many versions")
 		}
-		err = tr.createFunction(name+ext, maxVersion+1, source)
+		err = fn.create(name+ext, maxVersion+1, source)
 		if err != nil {
 			if err == transformers.ErrExist {
 				attempts++
@@ -300,8 +300,8 @@ func filenameToVersion(name, filename, ext string) (int, bool) {
 	return v, err == nil
 }
 
-func (tr *transformer) absFilename(name string, version int, ext string) string {
-	return filepath.Join(tr.settings.FunctionsDir, fmt.Sprintf("%s_v%d%s", name, version, ext))
+func (fn *function) absFilename(name string, version int, ext string) string {
+	return filepath.Join(fn.settings.FunctionsDir, fmt.Sprintf("%s_v%d%s", name, version, ext))
 }
 
 // splitName splits a function returning the name without the extension and the
@@ -314,12 +314,12 @@ func splitName(name string) (string, string, error) {
 }
 
 // supportLanguage is like SupportLanguage but gets an extension as argument.
-func (tr *transformer) supportLanguage(ext string) bool {
+func (fn *function) supportLanguage(ext string) bool {
 	switch ext {
 	case ".js":
-		return tr.settings.NodeExecutable != ""
+		return fn.settings.NodeExecutable != ""
 	case ".py":
-		return tr.settings.PythonExecutable != ""
+		return fn.settings.PythonExecutable != ""
 	}
 	panic("invalid extension")
 }

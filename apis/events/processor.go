@@ -55,7 +55,7 @@ type Processor struct {
 }
 
 // newProcessor returns a new processor.
-func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers.Transformer, events <-chan *collectedEvent) (*Processor, error) {
+func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers.Function, events <-chan *collectedEvent) (*Processor, error) {
 
 	processor := Processor{
 		state:    st,

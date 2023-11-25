@@ -47,7 +47,7 @@ type APIs struct {
 	datastore      *datastore.Datastore
 	connectors     *connectors.Connectors
 	events         *events.Events
-	transformer    transformers.Transformer
+	transformer    transformers.Function
 	mu             sync.Mutex // for the scheduler field
 	scheduler      *scheduler
 	eventProcessor *events.Processor
@@ -522,7 +522,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 
 	// Create a temporary transformer.
 	var tr *state.Transformation
-	var transformer transformers.Transformer
+	var transformer transformers.Function
 	if transformation != nil {
 		tr = &state.Transformation{
 			Source:  transformation.Source,
@@ -602,7 +602,7 @@ func (apis *APIs) onDeleteAction(n state.DeleteAction) {
 			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
 				if apis.transformer.SupportLanguage(language) {
 					name := transformationFunctionName(n.ID, language)
-					err := apis.transformer.DeleteFunction(apis.close.ctx, name)
+					err := apis.transformer.Delete(apis.close.ctx, name)
 					if err != nil {
 						slog.Debug("cannot delete transformer function", "name", name, "err", err)
 					}

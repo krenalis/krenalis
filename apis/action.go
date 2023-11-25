@@ -392,9 +392,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		language := n.Transformation.Language
 		if this.action.Transformation == nil {
 			name := transformationFunctionName(n.ID, language)
-			version, err := this.apis.transformer.CreateFunction(ctx, name, source)
+			version, err := this.apis.transformer.Create(ctx, name, source)
 			if err == transformers.ErrExist {
-				version, err = this.apis.transformer.UpdateFunction(ctx, name, source)
+				version, err = this.apis.transformer.Update(ctx, name, source)
 			}
 			if err != nil {
 				return err
@@ -402,9 +402,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			n.Transformation.Version = version
 		} else if this.action.Transformation.Source != source || this.action.Transformation.Language != language {
 			name := transformationFunctionName(n.ID, language)
-			version, err := this.apis.transformer.UpdateFunction(ctx, name, source)
+			version, err := this.apis.transformer.Update(ctx, name, source)
 			if err == transformers.ErrNotExist {
-				version, err = this.apis.transformer.CreateFunction(ctx, name, source)
+				version, err = this.apis.transformer.Create(ctx, name, source)
 			}
 			if err != nil {
 				return err

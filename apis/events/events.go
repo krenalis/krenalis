@@ -37,7 +37,7 @@ type Events struct {
 	closed      atomic.Bool
 }
 
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Transformer, connectors *connectors.Connectors) (*Events, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Function, connectors *connectors.Connectors) (*Events, error) {
 	events := &Events{}
 	events.state = newEventsState(st, connectors)
 	events.log = newEventsLog(db)

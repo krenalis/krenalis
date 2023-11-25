@@ -21,8 +21,8 @@ var (
 	ErrPendingState = errors.New("function is in a pending state")
 )
 
-// An ExecutionError error is returned by the Transformer.CallFunction method
-// when an error occurs executing the function.
+// An ExecutionError error is returned by the Function.Call method when an error
+// occurs executing the function.
 type ExecutionError struct {
 	Msg string
 }
@@ -41,46 +41,46 @@ type Result struct {
 	Error error
 }
 
-// A Transformer represents a transformer.
+// A Function represents a transformer function.
 //
 // A function name must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_-]
 //   - terminate with ".js", for JavaScript functions, or with ".py" for Python
 //     functions
-type Transformer interface {
+type Function interface {
 
-	// CallFunction calls the function with the given name and version, with the
-	// given values to transform, and returns the results. inSchema and outSchema
-	// are the input and output schemas.
+	// Call calls the function with the given name and version, with the given
+	// values to transform, and returns the results. inSchema and outSchema are the
+	// input and output schemas.
 	//
 	// If an error occurs during execution, it returns an *ExecutionError error. If
 	// the function does not exist, it returns the ErrNotExist error. If the
 	// function is in a pending state, it returns the ErrPendingState error.
-	CallFunction(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]Result, error)
+	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]Result, error)
 
-	// Close the transformer.
+	// Close closes the function.
 	Close(ctx context.Context) error
 
-	// CreateFunction creates a new function with the given name and source, and
-	// returns its version, which has a length in the range [1, 128]. name should
-	// have an extension of either ".js" or ".py" depending on the source code's
-	// language. If a function with the same name already exists, it returns the
-	// ErrExist error.
-	CreateFunction(ctx context.Context, name, source string) (string, error)
+	// Create creates a new function with the given name and source, and returns its
+	// version, which has a length in the range [1, 128]. name should have an
+	// extension of either ".js" or ".py" depending on the source code's language.
+	// If a function with the same name already exists, it returns the ErrExist
+	// error.
+	Create(ctx context.Context, name, source string) (string, error)
 
-	// DeleteFunction deletes the function with the given name.
+	// Delete deletes the function with the given name.
 	// If a function with the given name does not exist, it does nothing.
-	DeleteFunction(ctx context.Context, name string) error
+	Delete(ctx context.Context, name string) error
 
 	// SupportLanguage reports whether language is supported as a language.
 	// It panics if language is not valid.
 	SupportLanguage(language state.Language) bool
 
-	// UpdateFunction updates the source of the function with the given name, and
-	// returns a new version, which has a length in the range [1, 128]. If the
-	// function does not exist, it returns the ErrNotExist error.
-	UpdateFunction(ctx context.Context, name, source string) (string, error)
+	// Update updates the source of the function with the given name, and returns a
+	// new version, which has a length in the range [1, 128]. If the function does
+	// not exist, it returns the ErrNotExist error.
+	Update(ctx context.Context, name, source string) (string, error)
 }
 
 // ValidFunctionName reports whether name is a valid function name.

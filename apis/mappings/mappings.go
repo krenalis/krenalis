@@ -69,7 +69,7 @@ type Mapping struct {
 	inSchema, outSchema types.Type
 	mapTransformer      *mapexp.Transformer
 	transformation      *state.Transformation
-	transformer         transformers.Transformer
+	transformer         transformers.Function
 	action              int
 }
 
@@ -77,7 +77,7 @@ type Mapping struct {
 // the given mapping and, in case a transformation is provided, also uses such
 // transformation. layouts represents, if not null, the layouts used to format
 // DateTime, Date, and Time values as strings.
-func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Transformer, layouts *state.Layouts) (*Mapping, error) {
+func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Function, layouts *state.Layouts) (*Mapping, error) {
 
 	if !outSchema.Valid() {
 		return nil, errors.New("output schema is not valid")
@@ -114,7 +114,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 
 	// Map using the transformation.
 	funcName := transformationFunctionName(m.action, m.transformation.Language)
-	results, err := m.transformer.CallFunction(ctx, funcName, m.transformation.Version, m.inSchema, m.outSchema, []map[string]any{values})
+	results, err := m.transformer.Call(ctx, funcName, m.transformation.Version, m.inSchema, m.outSchema, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(*transformers.ExecutionError); ok {
 			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)

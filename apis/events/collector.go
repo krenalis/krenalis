@@ -66,13 +66,13 @@ type collector struct {
 	eventLog    *eventsLog
 	events      chan *collectedEvent
 	observer    *Observer
-	transformer transformers.Transformer
+	transformer transformers.Function
 	geoLiteDB   *geoip2.Reader
 }
 
 // newCollector returns a new event collector. It receives HTTP requests from
 // mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, transformer transformers.Transformer, observer *Observer) (*collector, error) {
+func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, transformer transformers.Function, observer *Observer) (*collector, error) {
 	var collector = collector{
 		state:       st,
 		datastore:   ds,
