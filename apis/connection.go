@@ -400,15 +400,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 	}
 
-	// Marshal the mapping.
-	var mapping []byte
-	if action.Mapping != nil {
-		mapping, err = json.Marshal(action.Mapping)
-		if err != nil {
-			return 0, err
-		}
-	}
-
 	// Generate a random identifier.
 	n.ID, err = generateRandomID()
 	if err != nil {
@@ -426,6 +417,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Marshal the mapping.
+	var mapping []byte
 	if action.Mapping != nil {
 		mapping, err = json.Marshal(action.Mapping)
 		if err != nil {
