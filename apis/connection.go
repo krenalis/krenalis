@@ -1120,7 +1120,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	} else {
 
 		if mapping != nil {
-			return nil, errors.BadRequest("mapping is not allowed the event type %q does not have a schema", eventType)
+			return nil, errors.BadRequest("mapping is not allowed because the event type %q does not have a schema", eventType)
 		}
 		if transformation != nil {
 			return nil, errors.BadRequest("transformation is not allowed because the event type %q does not have a schema", eventType)
