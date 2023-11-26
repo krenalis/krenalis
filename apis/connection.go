@@ -1068,7 +1068,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			switch transformation.Language {
 			case "JavaScript":
 				if tr == nil || !tr.SupportLanguage(state.JavaScript) {
-					return nil, errors.Unprocessable(LanguageNotSupported, "Javascript transformation language  is not supported")
+					return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
 				}
 			case "Python":
 				if tr == nil || !tr.SupportLanguage(state.Python) {
@@ -1823,7 +1823,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		switch action.Transformation.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
-				return errors.Unprocessable(LanguageNotSupported, "Javascript transformation language is not supported")
+				return errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language is not supported")
 			}
 		case "Python":
 			if tr == nil || !tr.SupportLanguage(state.Python) {

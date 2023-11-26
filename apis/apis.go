@@ -500,7 +500,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		switch transformation.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
-				return nil, errors.Unprocessable(LanguageNotSupported, "Javascript transformation language  is not supported")
+				return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
 			}
 		case "Python":
 			if tr == nil || !tr.SupportLanguage(state.Python) {
