@@ -606,7 +606,10 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	}
 
 	// Browser and OS.
-	if event.Context.UserAgent != "" {
+	if event.Context.UserAgent == "" {
+		event.Context.browser.Name = "None"
+		event.Context.OS.Name = "None"
+	} else {
 		ua := useragent.New(event.Context.UserAgent)
 		browserName, browserVersion := ua.Browser()
 		switch browserName {
