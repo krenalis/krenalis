@@ -435,7 +435,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	var transformation state.Transformation
 	if n.Transformation != nil {
 		name := transformationFunctionName(n.ID, n.Transformation.Language)
-		version, err := this.apis.transformer.Create(ctx, name, n.Transformation.Source)
+		version, err := this.apis.functionTransformer.Create(ctx, name, n.Transformation.Source)
 		if err != nil {
 			return 0, err
 		}
@@ -1064,7 +1064,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			if transformation.Source == "" {
 				return nil, errors.BadRequest("transformation source is empty")
 			}
-			tr := this.apis.transformer
+			tr := this.apis.functionTransformer
 			switch transformation.Language {
 			case "JavaScript":
 				if tr == nil || !tr.SupportLanguage(state.JavaScript) {
@@ -1100,7 +1100,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 				name += ".py"
 				tr.Language = state.Python
 			}
-			transformer = newTemporaryTransformer(name, transformation.Source, this.apis.transformer)
+			transformer = newTemporaryTransformer(name, transformation.Source, this.apis.functionTransformer)
 		}
 
 		// Transform the data.
@@ -1819,7 +1819,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if action.Transformation.Source == "" {
 			return errors.BadRequest("transformation source is empty")
 		}
-		tr := this.apis.transformer
+		tr := this.apis.functionTransformer
 		switch action.Transformation.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {

@@ -41,16 +41,16 @@ import (
 const TransformationFailed errors.Code = "TransformationFailed"
 
 type APIs struct {
-	db             *postgres.DB
-	state          *state.State
-	datastore      *datastore.Datastore
-	connectors     *connectors.Connectors
-	events         *events.Events
-	transformer    transformers.Function
-	mu             sync.Mutex // for the scheduler field
-	scheduler      *scheduler
-	eventProcessor *events.Processor
-	close          struct {
+	db                  *postgres.DB
+	state               *state.State
+	datastore           *datastore.Datastore
+	connectors          *connectors.Connectors
+	events              *events.Events
+	functionTransformer transformers.Function
+	mu                  sync.Mutex // for the scheduler field
+	scheduler           *scheduler
+	eventProcessor      *events.Processor
+	close               struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		sync.WaitGroup
@@ -127,9 +127,9 @@ func New(conf *Config) (*APIs, error) {
 	// Create a transformer.
 	switch c := conf.Transformer.(type) {
 	case LambdaConfig:
-		apis.transformer = lambda.New(lambda.Settings(c))
+		apis.functionTransformer = lambda.New(lambda.Settings(c))
 	case LocalConfig:
-		apis.transformer = local.New(local.Settings(c))
+		apis.functionTransformer = local.New(local.Settings(c))
 	case nil:
 	default:
 		return nil, errors.New("invalid transformer")
@@ -158,7 +158,7 @@ func New(conf *Config) (*APIs, error) {
 	// Init the connectors.
 	apis.connectors = connectors.New(db, apis.state)
 
-	apis.events, err = events.New(db, apis.state, apis.datastore, apis.transformer, apis.connectors)
+	apis.events, err = events.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.connectors)
 	if err != nil {
 		apis.datastore.Close()
 		apis.state.Close()
@@ -429,14 +429,14 @@ func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 // TransformationLanguages returns the supported transformation languages.
 // Possible returned languages are "JavaScript" and "Python".
 func (apis *APIs) TransformationLanguages() []string {
-	if apis.transformer == nil {
+	if apis.functionTransformer == nil {
 		return []string{}
 	}
 	languages := make([]string, 0, 2)
-	if apis.transformer.SupportLanguage(state.JavaScript) {
+	if apis.functionTransformer.SupportLanguage(state.JavaScript) {
 		languages = append(languages, "JavaScript")
 	}
-	if apis.transformer.SupportLanguage(state.Python) {
+	if apis.functionTransformer.SupportLanguage(state.Python) {
 		languages = append(languages, "Python")
 	}
 	return languages
@@ -496,7 +496,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		if transformation.Source == "" {
 			return nil, errors.BadRequest("transformation source is empty")
 		}
-		tr := apis.transformer
+		tr := apis.functionTransformer
 		switch transformation.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
@@ -536,7 +536,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			name += ".py"
 			tr.Language = state.Python
 		}
-		transformer = newTemporaryTransformer(name, transformation.Source, apis.transformer)
+		transformer = newTemporaryTransformer(name, transformation.Source, apis.functionTransformer)
 	}
 
 	// Transform the data.
@@ -596,12 +596,12 @@ func (apis *APIs) onElectLeader(n state.ElectLeader) {
 
 // onDeleteAction is called when an action is deleted.
 func (apis *APIs) onDeleteAction(n state.DeleteAction) {
-	if apis.state.IsLeader() && apis.transformer != nil {
+	if apis.state.IsLeader() && apis.functionTransformer != nil {
 		go func() {
 			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
-				if apis.transformer.SupportLanguage(language) {
+				if apis.functionTransformer.SupportLanguage(language) {
 					name := transformationFunctionName(n.ID, language)
-					err := apis.transformer.Delete(apis.close.ctx, name)
+					err := apis.functionTransformer.Delete(apis.close.ctx, name)
 					if err != nil {
 						slog.Debug("cannot delete transformer function", "name", name, "err", err)
 					}

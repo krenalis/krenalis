@@ -41,7 +41,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 
 	// Instantiate a new transformer.
 	transformer, err := transformers.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, nil)
+		this.action.Transformation, this.action.ID, this.apis.functionTransformer, nil)
 	if err != nil {
 		return err
 	}

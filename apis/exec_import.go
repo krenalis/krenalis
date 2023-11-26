@@ -24,7 +24,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	connector := action.Connection().Connector()
 
 	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
-		this.apis.transformer, nil)
+		this.apis.functionTransformer, nil)
 	if err != nil {
 		return actionExecutionError{err}
 	}

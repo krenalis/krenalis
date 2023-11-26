@@ -136,7 +136,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	connection := this.action.Connection()
 	connector := connection.Connector()
 	transformer, err := transformers.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
-		this.action.Transformation, this.action.ID, this.apis.transformer, &connector.Layouts)
+		this.action.Transformation, this.action.ID, this.apis.functionTransformer, &connector.Layouts)
 	if err != nil {
 		return err
 	}

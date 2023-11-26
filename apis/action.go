@@ -392,9 +392,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		language := n.Transformation.Language
 		if this.action.Transformation == nil {
 			name := transformationFunctionName(n.ID, language)
-			version, err := this.apis.transformer.Create(ctx, name, source)
+			version, err := this.apis.functionTransformer.Create(ctx, name, source)
 			if err == transformers.ErrExist {
-				version, err = this.apis.transformer.Update(ctx, name, source)
+				version, err = this.apis.functionTransformer.Update(ctx, name, source)
 			}
 			if err != nil {
 				return err
@@ -402,9 +402,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			n.Transformation.Version = version
 		} else if this.action.Transformation.Source != source || this.action.Transformation.Language != language {
 			name := transformationFunctionName(n.ID, language)
-			version, err := this.apis.transformer.Update(ctx, name, source)
+			version, err := this.apis.functionTransformer.Update(ctx, name, source)
 			if err == transformers.ErrNotExist {
-				version, err = this.apis.transformer.Create(ctx, name, source)
+				version, err = this.apis.functionTransformer.Create(ctx, name, source)
 			}
 			if err != nil {
 				return err
@@ -553,7 +553,7 @@ func (this *Action) isLanguageSupported() bool {
 	if transformation == nil {
 		return true
 	}
-	if this.apis.transformer != nil && this.apis.transformer.SupportLanguage(transformation.Language) {
+	if this.apis.functionTransformer != nil && this.apis.functionTransformer.SupportLanguage(transformation.Language) {
 		return true
 	}
 	return false
