@@ -266,6 +266,7 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
 			r.err = err
+			return nil
 		}
 		if err := yield(record); err != nil {
 			return err
