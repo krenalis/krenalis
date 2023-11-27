@@ -294,7 +294,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		<>
 			<Section
 				ref={ref}
-				title='Properties'
+				title='Transformation'
 				description='The relation between the event properties and the action type properties'
 				padded={false}
 				className={mode}
