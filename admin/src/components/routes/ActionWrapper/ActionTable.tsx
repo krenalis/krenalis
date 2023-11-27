@@ -59,7 +59,7 @@ const ActionTable = () => {
 			actionTyp.OutputSchema = schema;
 			setActionType(actionTyp);
 			const a = { ...action };
-			a.Mapping = flattenSchema(schema);
+			a.Transformation.Mapping = flattenSchema(schema);
 			setAction(a);
 			setTimeout(() => {
 				const top = mappingSectionRef.current!.getBoundingClientRect().top;

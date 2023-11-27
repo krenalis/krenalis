@@ -741,15 +741,14 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							var req struct {
 								EventType      string
 								Event          *apis.ObservedEvent
-								Mapping        map[string]string
-								Transformation *apis.Transformation
+								Transformation apis.Transformation
 							}
 							err = json.NewDecoder(r.Body).Decode(&req)
 							if err != nil {
 								respond(w, err)
 								return
 							}
-							preview, err := connection.PreviewSendEvent(ctx, req.EventType, req.Event, req.Mapping, req.Transformation)
+							preview, err := connection.PreviewSendEvent(ctx, req.EventType, req.Event, req.Transformation)
 							if err != nil {
 								respond(w, err)
 								return
@@ -1045,15 +1044,14 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Data           json.RawMessage
 			InSchema       types.Type
 			OutSchema      types.Type
-			Mapping        map[string]string
-			Transformation *apis.Transformation
+			Transformation apis.Transformation
 		}
 		err = json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			respond(w, err)
 			return
 		}
-		data, err := s.apis.TransformData(ctx, req.Data, req.InSchema, req.OutSchema, req.Mapping, req.Transformation)
+		data, err := s.apis.TransformData(ctx, req.Data, req.InSchema, req.OutSchema, req.Transformation)
 		if err != nil {
 			respond(w, err)
 			return

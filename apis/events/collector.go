@@ -133,10 +133,16 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			}
 			// TODO(Gianluca): shall we normalize the user properties before
 			// transformation?
-			mappingProps := make(map[string]string, len(action.Mapping)+len(anonIdents))
-			maps.Copy(mappingProps, action.Mapping)
-			maps.Copy(mappingProps, anonIdents)
-			transformer, err := transformers.New(action.InSchema, action.OutSchema, mappingProps, action.Transformation, action.ID, c.transformer, nil)
+			transformation := state.Transformation{
+				Mapping:  action.Transformation.Mapping,
+				Function: action.Transformation.Function,
+			}
+			if len(anonIdents) > 0 {
+				transformation.Mapping = map[string]string{}
+				maps.Copy(transformation.Mapping, action.Transformation.Mapping)
+				maps.Copy(transformation.Mapping, anonIdents)
+			}
+			transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformer, nil)
 			if err != nil {
 				return err
 			}

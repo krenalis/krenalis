@@ -116,7 +116,7 @@ CREATE TABLE actions (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter text NOT NULL DEFAULT '',
-    mapping jsonb DEFAULT NULL,
+    transformation_mapping jsonb DEFAULT NULL,
     transformation_source text NOT NULL DEFAULT '',
     transformation_language transformation_language NOT NULL,
     transformation_version varchar(128) NOT NULL DEFAULT '',

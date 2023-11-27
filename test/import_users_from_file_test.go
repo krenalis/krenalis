@@ -61,9 +61,11 @@ func TestImportUsersFromFile(t *testing.T) {
 				{Name: "first_name", Type: types.Text()},
 				{Name: "email", Type: types.Text()},
 			}),
-			"Mapping": map[string]string{
-				"first_name": "name",
-				"email":      "email",
+			"Transformation": map[string]any{
+				"Mapping": map[string]string{
+					"first_name": "name",
+					"email":      "email",
+				},
 			},
 			"IdentityColumn": "identity",
 		},

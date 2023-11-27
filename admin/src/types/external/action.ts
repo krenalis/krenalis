@@ -10,6 +10,11 @@ type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
 type Mapping = Record<string, string>;
 
 interface Transformation {
+	Mapping: Mapping | null;
+	Function: TransformationFunction | null;
+}
+
+interface TransformationFunction {
 	Source: string;
 	Language: string;
 }
@@ -37,7 +42,6 @@ interface Action {
 	InSchema: ObjectType | null;
 	OutSchema: ObjectType | null;
 	Filter: Filter | null;
-	Mapping: Mapping | null;
 	Transformation: Transformation | null;
 	Query: string | null;
 	Path: string | null;
@@ -64,8 +68,7 @@ interface ActionToSet {
 	filter?: Filter | null;
 	inSchema?: ObjectType;
 	outSchema?: ObjectType;
-	mapping?: Mapping;
-	transformation?: Transformation | null;
+	transformation?: Transformation;
 	query?: string;
 	path?: string | null;
 	tableName?: string | null;
@@ -80,6 +83,7 @@ interface ActionToSet {
 export type {
 	ActionTarget,
 	Transformation,
+	TransformationFunction,
 	ExportMode,
 	MatchingProperties,
 	SchedulePeriod,

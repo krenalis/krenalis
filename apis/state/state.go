@@ -902,8 +902,7 @@ type Action struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             *Filter
-	Mapping            map[string]string
-	Transformation     *Transformation
+	Transformation     Transformation
 	Query              string
 	Path               string
 	TableName          string
@@ -954,6 +953,12 @@ func (lang *Language) Scan(src any) error {
 
 // Transformation represents a transformation.
 type Transformation struct {
+	Mapping  map[string]string
+	Function *TransformationFunction
+}
+
+// TransformationFunction represents a transformation function.
+type TransformationFunction struct {
 	Source   string
 	Language Language
 	Version  string

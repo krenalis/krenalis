@@ -47,7 +47,8 @@ func TestImportWithTransformation(t *testing.T) {
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
 			"Transformation": map[string]any{
-				"Source": `
+				"Function": map[string]any{
+					"Source": `
 def transform(user: dict) -> dict:
 	if user["first_name"] == "Jerad":
 		gender = "male"
@@ -58,7 +59,8 @@ def transform(user: dict) -> dict:
 		"first_name": user["first_name"],
 		"gender": gender,
 	}`,
-				"Language": "Python",
+					"Language": "Python",
+				},
 			},
 		},
 	})

@@ -89,7 +89,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 						// that there is a mapping or a transformation defined),
 						// apply the mapping or the transformation.
 						if action.InSchema.Valid() {
-							transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID, transformer, nil)
+							transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID, transformer, nil)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue

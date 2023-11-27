@@ -355,16 +355,18 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	span.Log("action validated successfully")
 
 	n := state.AddAction{
-		Connection:      this.connection.ID,
-		Target:          state.Target(target),
-		Name:            action.Name,
-		Enabled:         action.Enabled,
-		EventType:       eventType,
-		ScheduleStart:   int16(mathrand.Intn(24 * 60)),
-		SchedulePeriod:  60,
-		InSchema:        action.InSchema,
-		OutSchema:       action.OutSchema,
-		Mapping:         action.Mapping,
+		Connection:     this.connection.ID,
+		Target:         state.Target(target),
+		Name:           action.Name,
+		Enabled:        action.Enabled,
+		EventType:      eventType,
+		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
+		SchedulePeriod: 60,
+		InSchema:       action.InSchema,
+		OutSchema:      action.OutSchema,
+		Transformation: state.Transformation{
+			Mapping: action.Transformation.Mapping,
+		},
 		Query:           action.Query,
 		Path:            action.Path,
 		TableName:       action.TableName,
@@ -374,13 +376,13 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		TimestampFormat: action.TimestampFormat,
 		ExportMode:      (*state.ExportMode)(action.ExportMode),
 	}
-	if action.Transformation != nil {
-		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
-		switch action.Transformation.Language {
+	if function := action.Transformation.Function; function != nil {
+		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
+		switch function.Language {
 		case "JavaScript":
-			n.Transformation.Language = state.JavaScript
+			n.Transformation.Function.Language = state.JavaScript
 		case "Python":
-			n.Transformation.Language = state.Python
+			n.Transformation.Function.Language = state.Python
 		}
 	}
 
@@ -418,8 +420,8 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	// Marshal the mapping.
 	var mapping []byte
-	if action.Mapping != nil {
-		mapping, err = json.Marshal(action.Mapping)
+	if action.Transformation.Mapping != nil {
+		mapping, err = json.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return 0, err
 		}
@@ -432,15 +434,15 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			External: props.External,
 		}
 	}
-	var transformation state.Transformation
-	if n.Transformation != nil {
-		name := transformationFunctionName(n.ID, n.Transformation.Language)
-		version, err := this.apis.functionTransformer.Create(ctx, name, n.Transformation.Source)
+	var function state.TransformationFunction
+	if n.Transformation.Function != nil {
+		name := transformationFunctionName(n.ID, n.Transformation.Function.Language)
+		version, err := this.apis.functionTransformer.Create(ctx, name, n.Transformation.Function.Source)
 		if err != nil {
 			return 0, err
 		}
-		n.Transformation.Version = version
-		transformation = *n.Transformation
+		n.Transformation.Function.Version = version
+		function = *n.Transformation.Function
 	}
 
 	// Add the action.
@@ -479,14 +481,14 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			}
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source, " +
-			"transformation_language, transformation_version, query, path, table_name, sheet, " +
-			"identity_column, timestamp_column, timestamp_format, " +
-			"export_mode, matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)"
+			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping," +
+			"transformation_source, transformation_language, transformation_version, query, path, table_name," +
+			"sheet, identity_column, timestamp_column, timestamp_format, export_mode, matching_properties_internal," +
+			"matching_properties_external)\n" +
+			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
-			transformation.Source, transformation.Language, transformation.Version, n.Query, n.Path, n.TableName,
+			function.Source, function.Language, function.Version, n.Query, n.Path, n.TableName,
 			n.Sheet, n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal))
 		if err != nil {
@@ -974,15 +976,15 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 // PreviewSendEvent returns a preview of an event as it would be sent to an app.
 // The connection must be a destination app connection, and it is expected to
 // have an event type named eventType. If the event type has a schema, then
-// either the mapping or the transformation to apply to the event must be
-// present.
+// either the mapping or the function transformation to apply to the event must
+// be present.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, mapping map[string]string, transformation *Transformation) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation Transformation) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1006,8 +1008,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if event.Header == nil {
 		return nil, errors.BadRequest("event header is missing")
 	}
-	if mapping != nil && transformation != nil {
-		return nil, errors.BadRequest("mapping and transformation cannot both be present")
+	if transformation.Mapping != nil && transformation.Function != nil {
+		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
 	// Parse the event.
@@ -1044,8 +1046,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 		// Validate the mapping and the transformation.
 		switch {
-		case mapping != nil:
-			for path, expr := range mapping {
+		case transformation.Mapping != nil:
+			for path, expr := range transformation.Mapping {
 				outPath, err := types.ParsePropertyPath(path)
 				if err != nil {
 					return nil, errors.BadRequest("output mapped property %q is not valid", path)
@@ -1060,12 +1062,12 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 					return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 				}
 			}
-		case transformation != nil:
-			if transformation.Source == "" {
+		case transformation.Function != nil:
+			if transformation.Function.Source == "" {
 				return nil, errors.BadRequest("transformation source is empty")
 			}
 			tr := this.apis.functionTransformer
-			switch transformation.Language {
+			switch transformation.Function.Language {
 			case "JavaScript":
 				if tr == nil || !tr.SupportLanguage(state.JavaScript) {
 					return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
@@ -1077,35 +1079,39 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			case "":
 				return nil, errors.BadRequest("transformation language is empty")
 			default:
-				return nil, errors.BadRequest("transformation language %q is not valid", transformation.Language)
+				return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
 			}
 		default:
 			return nil, errors.BadRequest("mapping (or transformation) is required")
 		}
 
 		// Create a temporary transformer.
-		var tr *state.Transformation
 		var transformer transformers.Function
-		if transformation != nil {
-			tr = &state.Transformation{
-				Source:  transformation.Source,
+		var function *state.TransformationFunction
+		if transformation.Function != nil {
+			function = &state.TransformationFunction{
+				Source:  transformation.Function.Source,
 				Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
 			}
 			name := "temp-" + uuid.NewString()
-			switch transformation.Language {
+			switch transformation.Function.Language {
 			case "JavaScript":
 				name += ".js"
-				tr.Language = state.JavaScript
+				function.Language = state.JavaScript
 			case "Python":
 				name += ".py"
-				tr.Language = state.Python
+				function.Language = state.Python
 			}
-			transformer = newTemporaryTransformer(name, transformation.Source, this.apis.functionTransformer)
+			transformer = newTemporaryTransformer(name, transformation.Function.Source, this.apis.functionTransformer)
 		}
 
 		// Transform the data.
 		action := 1 // no matter the action, it will be overwritten by the temporary transformation.
-		m, err := transformers.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
+		tr := state.Transformation{
+			Mapping:  transformation.Mapping,
+			Function: function,
+		}
+		m, err := transformers.New(inSchema, outSchema, tr, action, transformer, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -1119,10 +1125,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	} else {
 
-		if mapping != nil {
-			return nil, errors.BadRequest("mapping is not allowed because the event type %q does not have a schema", eventType)
-		}
-		if transformation != nil {
+		if transformation.Mapping != nil || transformation.Function != nil {
 			return nil, errors.BadRequest("transformation is not allowed because the event type %q does not have a schema", eventType)
 		}
 
@@ -1790,37 +1793,37 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		inPaths = properties
 	}
 	// An action cannot have both mappings and transformations.
-	if action.Mapping != nil && action.Transformation != nil {
+	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
 		return errors.BadRequest("action cannot have both mappings and transformation")
 	}
 	// Validate the mapping.
 	var outPaths []types.Path
-	if action.Mapping != nil && len(action.Mapping) > 0 {
+	if mapping := action.Transformation.Mapping; mapping != nil && len(mapping) > 0 {
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the mapping")
 		}
 		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		transformer, err := mappings.New(action.Mapping, action.InSchema, action.OutSchema, nil)
+		transformer, err := mappings.New(mapping, action.InSchema, action.OutSchema, nil)
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
 		inPaths = append(inPaths, transformer.Properties()...)
 	}
 	// Validate the transformation.
-	if action.Transformation != nil {
+	if function := action.Transformation.Function; function != nil {
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the transformation")
 		}
 		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the transformation")
 		}
-		if action.Transformation.Source == "" {
-			return errors.BadRequest("transformation source is empty")
+		if function.Source == "" {
+			return errors.BadRequest("function transformation source is empty")
 		}
 		tr := this.apis.functionTransformer
-		switch action.Transformation.Language {
+		switch function.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
 				return errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language is not supported")
@@ -1832,13 +1835,13 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		case "":
 			return errors.BadRequest("transformation language is empty")
 		default:
-			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Language)
+			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
 		}
 	}
 	// Ensure that every property in the input and output schemas have been
 	// mapped, unless the action has a transformation; in that case, we do not
 	// know which properties have been mapped, so this check cannot be done.
-	if action.Transformation == nil {
+	if action.Transformation.Function == nil {
 		if inPaths != nil {
 			if props := unmappedProperties(action.InSchema, inPaths); props != nil {
 				return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
@@ -1934,11 +1937,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// anonymous identifiers of the workspace.
 	if importingUsers := c.Role == state.Source && target == state.Users; importingUsers {
 		var tOutProps []string
-		if action.Transformation != nil {
+		if action.Transformation.Function != nil {
 			tOutProps = action.OutSchema.PropertiesNames()
 		}
 		for _, p := range ws.AnonymousIdentifiers.Priority {
-			_, ok := action.Mapping[p]
+			_, ok := action.Transformation.Mapping[p]
 			if ok || slices.Contains(tOutProps, p) {
 				return errors.Unprocessable(MappingOverAnonymousIdentifier, "cannot map over the property %s because it is an anonymous identifier", p)
 			}
@@ -2085,13 +2088,13 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		mappingIsMandatory = c.Role == state.Source && targetUsersOrGroups
 		transformationIsAllowed = mappingIsMandatory
 	}
-	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
+	if mappingIsMandatory && action.Transformation.Mapping == nil && action.Transformation.Function == nil {
 		if transformationIsAllowed {
 			return errors.BadRequest("mapping (or transformation) is required")
 		}
 		return errors.BadRequest("mapping is required")
 	}
-	if !transformationIsAllowed && action.Transformation != nil {
+	if !transformationIsAllowed && action.Transformation.Function != nil {
 		return errors.BadRequest("transformation is not allowed")
 	}
 

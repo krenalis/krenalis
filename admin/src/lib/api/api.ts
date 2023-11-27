@@ -14,7 +14,6 @@ import {
 	SchedulePeriod,
 	ActionToSet,
 	ExpressionToBeExtracted,
-	Mapping,
 	Transformation,
 } from '../../types/external/action';
 import { adminBasePath } from '../../constants/path';
@@ -95,14 +94,12 @@ class API {
 		data: Record<string, any>,
 		inSchema: ObjectType,
 		outSchema: ObjectType,
-		mapping: Mapping,
 		transformation: Transformation,
 	): Promise<TransformDataResponse> => {
 		return await call(`${this.apiURL}/transform-data`, http.POST, {
 			data,
 			inSchema,
 			outSchema,
-			mapping,
 			transformation,
 		});
 	};
@@ -313,13 +310,11 @@ class Connections {
 		connection: number,
 		eventType: string,
 		event: ObservedEvent,
-		mapping?: Mapping,
 		transformation?: Transformation,
 	): Promise<EventPreviewResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-preview`, http.POST, {
 			eventType: eventType,
 			event: event,
-			mapping: mapping,
 			transformation: transformation,
 		});
 	};

@@ -442,16 +442,16 @@ func (apis *APIs) TransformationLanguages() []string {
 	return languages
 }
 
-// TransformData transforms data using a mapping or a transformation and returns
-// the transformed data. inSchema is the schema of data, and outSchema is the
-// schema of the transformed data. Only one of mapping and transformation must
-// be non-nil.
+// TransformData transforms data using a mapping or a function transformation
+// and returns the transformed data. inSchema is the schema of data, and
+// outSchema is the schema of the transformed data. Only one of mapping and
+// transformation must be non-nil.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) ([]byte, error) {
+func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation Transformation) ([]byte, error) {
 
 	apis.mustBeOpen()
 
@@ -462,14 +462,14 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	if !outSchema.Valid() {
 		return nil, errors.BadRequest("output schema is not valid")
 	}
-	if mapping != nil && transformation != nil {
-		return nil, errors.BadRequest("mapping and transformation cannot both be present")
+	if transformation.Mapping != nil && transformation.Function != nil {
+		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 	switch {
-	case mapping != nil:
+	case transformation.Mapping != nil:
 		var inPaths []types.Path
 		var outPaths []types.Path
-		for path, expr := range mapping {
+		for path, expr := range transformation.Mapping {
 			outPath, err := types.ParsePropertyPath(path)
 			if err != nil {
 				return nil, errors.BadRequest("output mapped property %q is not valid", path)
@@ -492,12 +492,12 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		if props := unmappedProperties(outSchema, outPaths); props != nil {
 			return nil, errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
-	case transformation != nil:
-		if transformation.Source == "" {
+	case transformation.Function != nil:
+		if transformation.Function.Source == "" {
 			return nil, errors.BadRequest("transformation source is empty")
 		}
 		tr := apis.functionTransformer
-		switch transformation.Language {
+		switch transformation.Function.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
 				return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
@@ -509,7 +509,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		case "":
 			return nil, errors.BadRequest("transformation language is empty")
 		default:
-			return nil, errors.BadRequest("transformation language %q is not valid", transformation.Language)
+			return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
 		}
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")
@@ -520,28 +520,32 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Create a temporary transformer.
-	var tr *state.Transformation
 	var transformer transformers.Function
-	if transformation != nil {
-		tr = &state.Transformation{
-			Source:  transformation.Source,
+	var function *state.TransformationFunction
+	if transformation.Function != nil {
+		function = &state.TransformationFunction{
+			Source:  transformation.Function.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
 		}
 		name := "temp-" + uuid.NewString()
-		switch transformation.Language {
+		switch transformation.Function.Language {
 		case "JavaScript":
 			name += ".js"
-			tr.Language = state.JavaScript
+			function.Language = state.JavaScript
 		case "Python":
 			name += ".py"
-			tr.Language = state.Python
+			function.Language = state.Python
 		}
-		transformer = newTemporaryTransformer(name, transformation.Source, apis.functionTransformer)
+		transformer = newTemporaryTransformer(name, transformation.Function.Source, apis.functionTransformer)
 	}
 
 	// Transform the data.
 	action := 1 // no matter the action, it will be overwritten by the temporary transformation.
-	m, err := transformers.New(inSchema, outSchema, mapping, tr, action, transformer, nil)
+	tr := state.Transformation{
+		Mapping:  transformation.Mapping,
+		Function: function,
+	}
+	m, err := transformers.New(inSchema, outSchema, tr, action, transformer, nil)
 	if err != nil {
 		return nil, err
 	}

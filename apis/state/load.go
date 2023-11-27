@@ -310,24 +310,24 @@ func (state *State) Load() error {
 
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-			"schedule_period, in_schema, out_schema, filter, mapping, transformation_source, transformation_language,\n"+
-			"transformation_version, query, path, table_name, sheet, identity_column, timestamp_column, timestamp_format,\n"+
-			"(user_cursor).id, (user_cursor).timestamp, health, export_mode, matching_properties_internal,\n"+
-			"matching_properties_external\nFROM actions",
+			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
+			"transformation_language, transformation_version, query, path, table_name, sheet, identity_column,\n"+
+			"timestamp_column, timestamp_format, (user_cursor).id, (user_cursor).timestamp, health, export_mode,\n"+
+			"matching_properties_internal, matching_properties_external\nFROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
 					var eventType string
 					var rawInSchema, rawOutSchema, filter, mapping []byte
-					var transformation Transformation
+					var function TransformationFunction
 					var matchPropInternal, matchPropExternal []byte
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
-						&filter, &mapping, &transformation.Source, &transformation.Language, &transformation.Version,
-						&action.Query, &action.Path, &action.TableName, &action.Sheet, &action.IdentityColumn,
-						&action.TimestampColumn, &action.TimestampFormat, &action.UserCursor.ID, &action.UserCursor.Timestamp,
-						&action.Health, &action.ExportMode, &matchPropInternal, &matchPropExternal)
+						&filter, &mapping, &function.Source, &function.Language, &function.Version, &action.Query,
+						&action.Path, &action.TableName, &action.Sheet, &action.IdentityColumn, &action.TimestampColumn,
+						&action.TimestampFormat, &action.UserCursor.ID, &action.UserCursor.Timestamp, &action.Health,
+						&action.ExportMode, &matchPropInternal, &matchPropExternal)
 					if err != nil {
 						return err
 					}
@@ -352,13 +352,13 @@ func (state *State) Load() error {
 						return err
 					}
 					if len(mapping) > 0 {
-						err = json.Unmarshal(mapping, &action.Mapping)
+						err = json.Unmarshal(mapping, &action.Transformation.Mapping)
 						if err != nil {
 							return err
 						}
 					}
-					if transformation.Source != "" {
-						action.Transformation = &transformation
+					if function.Source != "" {
+						action.Transformation.Function = &function
 					}
 					if len(matchPropInternal) > 0 {
 						action.MatchingProperties = &MatchingProperties{}

@@ -84,7 +84,7 @@ func (this *Action) exec(ctx context.Context) {
 	} else if this.Target == Groups {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else if !this.isLanguageSupported() {
-		err = actionExecutionError{fmt.Errorf("%s transformation language is not supported", this.Transformation.Language)}
+		err = actionExecutionError{fmt.Errorf("%s transformation language is not supported", this.Transformation.Function.Language)}
 	} else {
 		if connection.Role == state.Source {
 			err = this.importUsers(ctx)

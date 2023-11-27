@@ -42,9 +42,11 @@ func TestImportExportUsersToDummy(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "first_name", Type: types.Text()},
 				}),
-				"Mapping": map[string]string{
-					"email":      "email",
-					"first_name": "first_name",
+				"Transformation": map[string]any{
+					"Mapping": map[string]string{
+						"email":      "email",
+						"first_name": "first_name",
+					},
 				},
 			},
 		})
@@ -66,9 +68,11 @@ func TestImportExportUsersToDummy(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "last_name", Type: types.Text()},
 				}),
-				"Mapping": map[string]string{
-					"email":     "email",
-					"last_name": "email", // this is intended.
+				"Transformation": map[string]any{
+					"Mapping": map[string]string{
+						"email":     "email",
+						"last_name": "email", // this is intended.
+					},
 				},
 				"ExportMode": "CreateOrUpdate",
 				"MatchingProperties": map[string]types.Property{
@@ -105,10 +109,12 @@ func TestImportExportUsersToDummy(t *testing.T) {
 					{Name: "first_name", Type: types.Text()},
 					{Name: "last_name", Type: types.Text()},
 				}),
-				"Mapping": map[string]string{
-					"email":      "email",
-					"first_name": "first_name",
-					"last_name":  "last_name",
+				"Transformation": map[string]any{
+					"Mapping": map[string]string{
+						"email":      "email",
+						"first_name": "first_name",
+						"last_name":  "last_name",
+					},
 				},
 			},
 		})

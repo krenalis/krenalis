@@ -8,7 +8,7 @@ import {
 	Mapping,
 	MatchingProperties,
 	SchedulePeriod,
-	Transformation,
+	TransformationFunction,
 } from '../../types/external/action';
 import { Filter } from '../../types/external/api';
 import { ActionSchemasResponse } from '../../types/external/api';
@@ -53,6 +53,11 @@ interface TransformedProperty {
 
 type TransformedMapping = Record<string, TransformedProperty>;
 
+interface TransformedTransformation {
+	Mapping: TransformedMapping | null;
+	Function: TransformationFunction | null;
+}
+
 type ActionTypeField =
 	| 'Filter'
 	| 'Mapping'
@@ -89,8 +94,7 @@ interface TransformedAction {
 	InSchema: ObjectType | null;
 	OutSchema: ObjectType | null;
 	Filter: Filter | null;
-	Mapping: TransformedMapping | null;
-	Transformation: Transformation | null;
+	Transformation: TransformedTransformation | null;
 	Query?: string | null;
 	Path?: string | null;
 	Table?: string | null;
@@ -218,8 +222,13 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		InSchema: action.InSchema,
 		OutSchema: action.OutSchema,
 		Filter: action.Filter,
-		Mapping: action.Mapping != null ? transformActionMapping(action.Mapping, outputSchema) : null,
-		Transformation: action.Transformation,
+		Transformation: {
+			Mapping:
+				action.Transformation.Mapping != null
+					? transformActionMapping(action.Transformation.Mapping, outputSchema)
+					: null,
+			Function: action.Transformation.Function,
+		},
 		Query: action.Query,
 		Path: action.Path,
 		Table: action.Table,
@@ -241,19 +250,19 @@ const transformInActionToSet = async (
 	let mapping: Mapping;
 	let inSchema: ObjectType;
 	let outSchema: ObjectType;
-	let transformation: Transformation;
+	let func: TransformationFunction;
 	let query: string;
 
 	const flattenedInputSchema = flattenSchema(actionType.InputSchema);
 	const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
 
-	if (action.Mapping != null) {
+	if (action.Transformation.Mapping != null) {
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 		const mappingToSave = {};
 		const expressions: ExpressionToBeExtracted[] = [];
-		for (const k in action.Mapping) {
-			const v = action.Mapping[k];
+		for (const k in action.Transformation.Mapping) {
+			const v = action.Transformation.Mapping[k];
 			if (v.value === '') {
 				continue;
 			}
@@ -292,7 +301,7 @@ const transformInActionToSet = async (
 		outSchema = outputSchema;
 	}
 
-	if (action.Transformation != null) {
+	if (action.Transformation.Function != null) {
 		inSchema = actionType.InputSchema;
 		outSchema = { name: 'Object', properties: [] };
 		for (const property of actionType.OutputSchema.properties!) {
@@ -301,9 +310,9 @@ const transformInActionToSet = async (
 				outSchema.properties!.push(property);
 			}
 		}
-		transformation = {
-			Source: action.Transformation.Source.trim(),
-			Language: action.Transformation.Language,
+		func = {
+			Source: action.Transformation.Function.Source.trim(),
+			Language: action.Transformation.Function.Language,
 		};
 	}
 
@@ -317,8 +326,10 @@ const transformInActionToSet = async (
 		filter: action.Filter,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
-		mapping: mapping!,
-		transformation: transformation!,
+		transformation: {
+			Mapping: mapping!,
+			Function: func,
+		},
 		query: query!,
 		path: action.Path,
 		tableName: action.Table,
@@ -343,10 +354,12 @@ const computeDefaultAction = (
 		Name: actionType.Name,
 		Enabled: false,
 		Filter: null,
-		Mapping: flattenSchema(outputSchema),
+		Transformation: {
+			Mapping: flattenSchema(outputSchema),
+			Function: null,
+		},
 		InSchema: null,
 		OutSchema: null,
-		Transformation: null,
 	};
 	if (fields.includes('Query')) {
 		action.Query = connection.connector.sampleQuery;

@@ -47,8 +47,7 @@ type Action struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             *Filter
-	Mapping            map[string]string
-	Transformation     *Transformation
+	Transformation     Transformation
 	Query              *string
 	Path               *string
 	Table              *string
@@ -64,10 +63,16 @@ type Action struct {
 // and "Python".
 type Language string
 
-// Transformation represents a transformation.
-type Transformation struct {
+// TransformationFunction represents a transformation function.
+type TransformationFunction struct {
 	Source   string
 	Language Language
+}
+
+// Transformation represents a transformation.
+type Transformation struct {
+	Mapping  map[string]string
+	Function *TransformationFunction
 }
 
 // ExportMode represents one of the three export modes.
@@ -112,16 +117,16 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 			this.Filter.Conditions[i] = FilterCondition(condition)
 		}
 	}
-	if action.Mapping != nil {
-		this.Mapping = make(map[string]string, len(action.Mapping))
-		for out, in := range action.Mapping {
-			this.Mapping[out] = in
+	if mapping := action.Transformation.Mapping; mapping != nil {
+		this.Transformation.Mapping = make(map[string]string, len(mapping))
+		for out, in := range mapping {
+			this.Transformation.Mapping[out] = in
 		}
 	}
-	if action.Transformation != nil {
-		this.Transformation = &Transformation{
-			Source:   action.Transformation.Source,
-			Language: Language(action.Transformation.Language.String()),
+	if function := action.Transformation.Function; function != nil {
+		this.Transformation.Function = &TransformationFunction{
+			Source:   function.Source,
+			Language: Language(function.Language.String()),
 		}
 	}
 	if action.Query != "" {
@@ -305,12 +310,14 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	span.Log("action validated successfully")
 
 	n := state.SetAction{
-		ID:              this.action.ID,
-		Name:            action.Name,
-		Enabled:         action.Enabled,
-		InSchema:        action.InSchema,
-		OutSchema:       action.OutSchema,
-		Mapping:         action.Mapping,
+		ID:        this.action.ID,
+		Name:      action.Name,
+		Enabled:   action.Enabled,
+		InSchema:  action.InSchema,
+		OutSchema: action.OutSchema,
+		Transformation: state.Transformation{
+			Mapping: action.Transformation.Mapping,
+		},
 		Query:           action.Query,
 		Path:            action.Path,
 		TableName:       action.TableName,
@@ -320,13 +327,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		TimestampFormat: action.TimestampFormat,
 		ExportMode:      (*state.ExportMode)(action.ExportMode),
 	}
-	if action.Transformation != nil {
-		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
-		switch action.Transformation.Language {
+	if function := action.Transformation.Function; function != nil {
+		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
+		switch function.Language {
 		case "JavaScript":
-			n.Transformation.Language = state.JavaScript
+			n.Transformation.Function.Language = state.JavaScript
 		case "Python":
-			n.Transformation.Language = state.Python
+			n.Transformation.Function.Language = state.Python
 		}
 	}
 
@@ -365,8 +372,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	// Marshal the mapping.
 	var mapping []byte
-	if action.Mapping != nil {
-		mapping, err = json.Marshal(action.Mapping)
+	if action.Transformation.Mapping != nil {
+		mapping, err = json.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return err
 		}
@@ -387,29 +394,27 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 
 	// Transformation.
-	if n.Transformation != nil {
-		source := n.Transformation.Source
-		language := n.Transformation.Language
-		if this.action.Transformation == nil {
-			name := transformationFunctionName(n.ID, language)
-			version, err := this.apis.functionTransformer.Create(ctx, name, source)
+	if fn := n.Transformation.Function; fn != nil {
+		if this.action.Transformation.Function == nil {
+			name := transformationFunctionName(n.ID, fn.Language)
+			version, err := this.apis.functionTransformer.Create(ctx, name, fn.Source)
 			if err == transformers.ErrExist {
-				version, err = this.apis.functionTransformer.Update(ctx, name, source)
+				version, err = this.apis.functionTransformer.Update(ctx, name, fn.Source)
 			}
 			if err != nil {
 				return err
 			}
-			n.Transformation.Version = version
-		} else if this.action.Transformation.Source != source || this.action.Transformation.Language != language {
-			name := transformationFunctionName(n.ID, language)
-			version, err := this.apis.functionTransformer.Update(ctx, name, source)
+			n.Transformation.Function.Version = version
+		} else if this.action.Transformation.Function.Source != fn.Source || this.action.Transformation.Function.Language != fn.Language {
+			name := transformationFunctionName(n.ID, fn.Language)
+			version, err := this.apis.functionTransformer.Update(ctx, name, fn.Source)
 			if err == transformers.ErrNotExist {
-				version, err = this.apis.functionTransformer.Create(ctx, name, source)
+				version, err = this.apis.functionTransformer.Create(ctx, name, fn.Source)
 			}
 			if err != nil {
 				return err
 			}
-			n.Transformation.Version = version
+			n.Transformation.Function.Version = version
 		} else {
 			// The function's source code and language should not be changed.
 			// It will be verified during the transaction and assigned the current version.
@@ -417,31 +422,31 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		var transformation state.Transformation
-		if n.Transformation != nil {
-			var current state.Transformation
-			if n.Transformation.Version == "" {
+		var function state.TransformationFunction
+		if n.Transformation.Function != nil {
+			var current state.TransformationFunction
+			if n.Transformation.Function.Version == "" {
 				err := tx.QueryRow(ctx, "SELECT transformation_source, transformation_language, transformation_version "+
 					"FROM actions WHERE id = $1", n.ID).Scan(&current.Source, &current.Language, &current.Version)
 				if err != nil {
 					return err
 				}
-				if current.Source != n.Transformation.Source || current.Language != n.Transformation.Language {
+				if current.Source != n.Transformation.Function.Source || current.Language != n.Transformation.Function.Language {
 					return fmt.Errorf("abort update action %d: it was optimistically assumed that the transformation"+
 						" had not changed, but it has indeed changed", n.ID)
 				}
-				n.Transformation.Version = current.Version
+				n.Transformation.Function.Version = current.Version
 			}
-			transformation = *n.Transformation
+			function = *n.Transformation.Function
 		}
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6, "+
+			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, transformation_mapping = $6, "+
 			"transformation_source = $7, transformation_language = $8, transformation_version = $9, "+
 			"query = $10, path = $11, table_name = $12, sheet = $13, identity_column = $14, "+
 			"timestamp_column = $15, timestamp_format = $16, export_mode = $17, "+
 			"matching_properties_internal = $18, matching_properties_external = $19\nWHERE id = $20",
-			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
-			transformation.Language, transformation.Version, n.Query, n.Path, n.TableName, n.Sheet,
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, function.Source,
+			function.Language, function.Version, n.Query, n.Path, n.TableName, n.Sheet,
 			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ID,
 		)
@@ -549,7 +554,7 @@ func (this *Action) database() *connectors.Database {
 // isLanguageSupported reports whether the transformation language of the action
 // is supported. If the action does not have a transformation, it returns true.
 func (this *Action) isLanguageSupported() bool {
-	transformation := this.action.Transformation
+	transformation := this.action.Transformation.Function
 	if transformation == nil {
 		return true
 	}
@@ -588,20 +593,15 @@ type ActionToSet struct {
 	// OutSchema is the output schema of the mappings (of the transformation).
 	OutSchema types.Type
 
-	// Mapping is the mapping of the action, if it has one, otherwise is nil.
+	// Transformation is the mapping or function transformation, if it has one.
 	//
-	// Every action that supports mappings / transformation must have an
-	// associated mapping or a transformation, which are mutually exclusive.
+	// Every action that supports transformations must have an associated
+	// mapping or function, which are mutually exclusive.
 	//
 	// If it has a mapping, the names of the properties in which the values are
 	// mapped (the keys of the map) must be present in the output schema of the
 	// action, while the values of the map must be valid mapping expressions.
-	Mapping map[string]string
-
-	// Transformation contains the source code of the function used to transform
-	//source values into destination values. It is nil if the action does not
-	// have a transformation.
-	Transformation *Transformation
+	Transformation Transformation
 
 	// Query is the query of the action, if it has one, otherwise it is the
 	// empty string.

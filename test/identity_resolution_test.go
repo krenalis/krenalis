@@ -87,11 +87,13 @@ func TestIdentityResolution(t *testing.T) {
 	actionA := c.AddAction(jsonID, map[string]any{
 		"Target": "Users",
 		"Action": map[string]any{
-			"Name":           "Action A",
-			"Path":           "users.json",
-			"InSchema":       types.Object(inSchemaProps),
-			"OutSchema":      types.Object(outSchemaProps),
-			"Mapping":        mapping,
+			"Name":      "Action A",
+			"Path":      "users.json",
+			"InSchema":  types.Object(inSchemaProps),
+			"OutSchema": types.Object(outSchemaProps),
+			"Transformation": map[string]any{
+				"Mapping": mapping,
+			},
 			"IdentityColumn": "dummy_id",
 		},
 	})
@@ -100,11 +102,13 @@ func TestIdentityResolution(t *testing.T) {
 	actionB := c.AddAction(jsonID, map[string]any{
 		"Target": "Users",
 		"Action": map[string]any{
-			"Name":           "Action B",
-			"Path":           "users.json",
-			"InSchema":       types.Object(inSchemaProps),
-			"OutSchema":      types.Object(outSchemaProps),
-			"Mapping":        mapping,
+			"Name":      "Action B",
+			"Path":      "users.json",
+			"InSchema":  types.Object(inSchemaProps),
+			"OutSchema": types.Object(outSchemaProps),
+			"Transformation": map[string]any{
+				"Mapping": mapping,
+			},
 			"IdentityColumn": "dummy_id",
 		},
 	})

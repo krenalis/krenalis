@@ -290,8 +290,7 @@ type AddAction struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             *Filter
-	Mapping            map[string]string
-	Transformation     *Transformation
+	Transformation     Transformation
 	Query              string
 	Path               string
 	TableName          string
@@ -323,7 +322,6 @@ func (state *State) addAction(n postgres.Notification) {
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
 		Filter:             e.Filter,
-		Mapping:            e.Mapping,
 		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
@@ -797,8 +795,7 @@ type SetAction struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             *Filter
-	Mapping            map[string]string
-	Transformation     *Transformation
+	Transformation     Transformation
 	Query              string
 	Path               string
 	TableName          string
@@ -822,7 +819,6 @@ func (state *State) setAction(n postgres.Notification) {
 		a.InSchema = e.InSchema
 		a.OutSchema = e.OutSchema
 		a.Filter = e.Filter
-		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation
 		a.Query = e.Query
 		a.Path = e.Path

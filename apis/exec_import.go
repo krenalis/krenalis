@@ -23,7 +23,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	action := this.action
 	connector := action.Connection().Connector()
 
-	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID,
+	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
 		this.apis.functionTransformer, nil)
 	if err != nil {
 		return actionExecutionError{err}

@@ -47,7 +47,7 @@ import { EventListenerEvent, Sample } from '../../../types/internal/app';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import Workspace from '../../../types/external/workspace';
-import { ActionToSet, Transformation } from '../../../types/external/action';
+import { ActionToSet, TransformationFunction } from '../../../types/external/action';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -99,9 +99,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (action.Transformation != null) {
+		if (action.Transformation.Function != null) {
 			setMode('transformation');
-			setSelectedLanguage(action.Transformation.Language);
+			setSelectedLanguage(action.Transformation.Function.Language);
 		} else {
 			setMode('mappings');
 		}
@@ -146,10 +146,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			return;
 		}
 		const a = { ...action };
-		const isTransformationUndefined = a.Transformation == null;
-		const isLanguageChanged = a.Transformation != null && a.Transformation.Language !== selectedLanguage;
+		const isTransformationUndefined = a.Transformation.Function == null;
+		const isLanguageChanged = !isTransformationUndefined && a.Transformation.Function.Language !== selectedLanguage;
 		if (isTransformationUndefined || isLanguageChanged) {
-			a.Transformation = {
+			a.Transformation.Function = {
 				Source: rawTransformationFunctions[selectedLanguage].replace(
 					'$parameterName',
 					defaultTransformationParameterByTarget[actionType.Target],
@@ -162,7 +162,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
-		a.Transformation = {
+		a.Transformation.Function = {
 			Source: source,
 			Language: selectedLanguage,
 		};
@@ -172,14 +172,13 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const updateProperty = async (name, value) => {
 		let errorMessage = '';
 		if (value !== '') {
-			const p = action.Mapping![name].full;
 			try {
 				errorMessage = await api.validateExpression(
 					value,
 					actionType.InputSchema.properties,
-					p.type,
-					p.required,
-					p.nullable,
+					action.Transformation.Mapping![name].full.type,
+					action.Transformation.Mapping![name].full.required,
+					action.Transformation.Mapping![name].full.nullable,
 				);
 			} catch (err) {
 				showError(err);
@@ -193,7 +192,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const onUpdateProperty = async (e) => {
 		const target = e.target;
 		let { name, value } = target;
-		const oldValue = action.Mapping![name].value;
+		const oldValue = action.Transformation.Mapping![name].value;
 		const isPasted = Math.abs(oldValue.length - value.length) > 1;
 		const isBackspaced = oldValue.length > value.length;
 		const isEqual = oldValue.length === value.length;
@@ -406,14 +405,17 @@ const isMappingChanged = (oldMapping: TransformedMapping, newMapping: Transforme
 	return isChanged;
 };
 
-const isTransformationChanged = (oldTransformation: Transformation, newTransformation: Transformation): boolean => {
+const isTransformationChanged = (
+	oldTransformation: TransformationFunction,
+	newTransformation: TransformationFunction,
+): boolean => {
 	return oldTransformation.Source.trim() !== newTransformation.Source.trim();
 };
 
 const isMappingModified = (
 	mode: '' | 'mappings' | 'transformation',
-	oldValue: TransformedMapping | Transformation,
-	newValue: TransformedMapping | Transformation,
+	oldValue: TransformedMapping | TransformationFunction,
+	newValue: TransformedMapping | TransformationFunction,
 ) => {
 	if (mode === '') {
 		return;
@@ -423,8 +425,8 @@ const isMappingModified = (
 		const newV = newValue as TransformedMapping;
 		return isMappingChanged(oldV, newV);
 	} else {
-		const oldV = oldValue as Transformation;
-		const newV = newValue as Transformation;
+		const oldV = oldValue as TransformationFunction;
+		const newV = newValue as TransformationFunction;
 		return isTransformationChanged(oldV, newV);
 	}
 };
@@ -455,13 +457,13 @@ const TransformationBox = ({
 	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
 
 	const pendingMode = useRef<string>();
-	const firstValue = useRef<TransformedMapping | Transformation>();
+	const firstValue = useRef<TransformedMapping | TransformationFunction>();
 
 	useEffect(() => {
 		if (mode === 'mappings') {
-			firstValue.current = JSON.parse(JSON.stringify(action.Mapping));
+			firstValue.current = JSON.parse(JSON.stringify(action.Transformation.Mapping));
 		} else {
-			firstValue.current = JSON.parse(JSON.stringify(action.Transformation));
+			firstValue.current = JSON.parse(JSON.stringify(action.Transformation.Function));
 		}
 	}, [mode, selectedLanguage]);
 
@@ -486,14 +488,14 @@ const TransformationBox = ({
 		setIsAlertOpen(false);
 		setTimeout(() => {
 			if (pendingMode.current == 'mappings') {
-				a.Mapping = flattenSchema(actionType.OutputSchema);
-				a.Transformation = null;
+				a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
+				a.Transformation.Function = null;
 				setSelectedLanguage('');
 				setAction(a);
 				setMode('mappings');
 			} else {
-				a.Mapping = null;
-				a.Transformation = {
+				a.Transformation.Mapping = null;
+				a.Transformation.Function = {
 					Source: rawTransformationFunctions[pendingMode.current].replace(
 						'$parameterName',
 						defaultTransformationParameterByTarget[actionType.Target],
@@ -512,7 +514,13 @@ const TransformationBox = ({
 			return;
 		}
 		pendingMode.current = newMode;
-		if (isMappingModified(mode, firstValue.current, mode === 'mappings' ? action.Mapping : action.Transformation)) {
+		if (
+			isMappingModified(
+				mode,
+				firstValue.current,
+				mode === 'mappings' ? action.Transformation.Mapping : action.Transformation.Function,
+			)
+		) {
 			setIsAlertOpen(true);
 		} else {
 			onChangeMode(0);
@@ -523,7 +531,7 @@ const TransformationBox = ({
 	if (mode === 'mappings') {
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		const mappings: ReactNode[] = [];
-		for (const k in action.Mapping) {
+		for (const k in action.Transformation.Mapping) {
 			// hide anonymous identifiers and their parent properties.
 			const isIdentifier = isIdentifierProperty(k, workspace.AnonymousIdentifiers.Priority);
 			if (isIdentifier) {
@@ -536,21 +544,21 @@ const TransformationBox = ({
 					data-key={k}
 					style={
 						{
-							'--mapping-indentation': `${action.Mapping![k].indentation! * 30}px`,
+							'--mapping-indentation': `${action.Transformation.Mapping![k].indentation! * 30}px`,
 						} as React.CSSProperties
 					}
 				>
 					<ComboBoxInput
 						comboBoxListRef={propertiesListRef}
 						onInput={onUpdateProperty}
-						value={action.Mapping[k].value}
+						value={action.Transformation.Mapping[k].value}
 						name={k}
-						disabled={isMappingSectionDisabled || action.Mapping[k].disabled === true}
+						disabled={isMappingSectionDisabled || action.Transformation.Mapping[k].disabled === true}
 						className='inputProperty'
 						size='small'
-						error={action.Mapping[k].error}
+						error={action.Transformation.Mapping[k].error}
 					>
-						{action.Mapping[k].required && (
+						{action.Transformation.Mapping[k].required && (
 							<div className='propertyIcon' slot='prefix'>
 								<SlTooltip content='Required' hoist>
 									<SlIcon name='asterisk' className='isRequiredIcon' />
@@ -575,7 +583,9 @@ const TransformationBox = ({
 						value={k}
 						type='text'
 						name={k}
-						className={`outputProperty${action.Mapping![k].indentation! > 0 ? ' indented' : ''}`}
+						className={`outputProperty${
+							action.Transformation.Mapping![k].indentation! > 0 ? ' indented' : ''
+						}`}
 					/>
 				</div>,
 			);
@@ -599,7 +609,7 @@ const TransformationBox = ({
 					language={selectedLanguage}
 					height={400}
 					name='actionTransformationEditor'
-					value={action.Transformation!.Source}
+					value={action.Transformation!.Function.Source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
 					className='minimizedTransformation'
 				/>
@@ -952,13 +962,7 @@ const FullscreenTransformation = ({
 
 		let res: TransformDataResponse;
 		try {
-			res = await api.transformData(
-				s,
-				actionToSet.inSchema,
-				actionToSet.outSchema,
-				actionToSet.mapping,
-				actionToSet.transformation,
-			);
+			res = await api.transformData(s, actionToSet.inSchema, actionToSet.outSchema, actionToSet.transformation);
 		} catch (err) {
 			setOutput('');
 			if (err instanceof UnprocessableError && err.code === 'TransformationFailed') {
@@ -1005,7 +1009,6 @@ const FullscreenTransformation = ({
 				connection.id,
 				actionType.EventType,
 				event.full,
-				actionToSet.mapping,
 				actionToSet.transformation,
 			);
 		} catch (err) {

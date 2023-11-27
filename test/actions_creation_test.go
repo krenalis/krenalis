@@ -64,9 +64,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "Email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
-					"Mapping": map[string]string{
-						"Email":     "email",
-						"timestamp": "timestamp",
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email":     "email",
+							"timestamp": "timestamp",
+						},
 					},
 					"IdentityColumn":  "identity",
 					"TimestampColumn": "timestamp",
@@ -89,9 +91,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "Email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
-					"Mapping": map[string]string{
-						"Email":     "email",
-						"timestamp": "timestamp",
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email":     "email",
+							"timestamp": "timestamp",
+						},
 					},
 					"IdentityColumn":  "identity",
 					"TimestampColumn": "timestamp",
@@ -114,9 +118,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "Email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
-					"Mapping": map[string]string{
-						"Email":     "email",
-						"timestamp": "timestamp",
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email":     "email",
+							"timestamp": "timestamp",
+						},
 					},
 					"TimestampColumn": "timestamp",
 					"TimestampFormat": "2006-01-02 15:04:05",
@@ -139,9 +145,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "Email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
-					"Mapping": map[string]string{
-						"Email":     "email",
-						"timestamp": "timestamp",
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email":     "email",
+							"timestamp": "timestamp",
+						},
 					},
 					"IdentityColumn": "- - invalid - -",
 				},

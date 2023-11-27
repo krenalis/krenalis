@@ -31,42 +31,42 @@ const updateMappingProperty = (action: TransformedAction, name: string, value: s
 
 	const a = { ...action };
 
-	if (a.Mapping == null) return a;
+	if (a.Transformation.Mapping == null) return a;
 
-	if (a.Mapping[name].value === '' && value !== '') {
-		const alternativeProperties = getAlternativeProperties(name, a.Mapping);
+	if (a.Transformation.Mapping[name].value === '' && value !== '') {
+		const alternativeProperties = getAlternativeProperties(name, a.Transformation.Mapping);
 		// disable
-		for (const k in a.Mapping) {
+		for (const k in a.Transformation.Mapping) {
 			if (alternativeProperties.includes(k)) {
-				a.Mapping[k].disabled = true;
+				a.Transformation.Mapping[k].disabled = true;
 			}
 		}
 	} else if (value === '') {
 		let hasFilledSiblings = false;
-		const { root, indentation } = a.Mapping[name];
-		for (const k in a.Mapping) {
+		const { root, indentation } = a.Transformation.Mapping[name];
+		for (const k in a.Transformation.Mapping) {
 			if (
 				k !== name &&
-				a.Mapping[k].root === root &&
-				a.Mapping[k].indentation === indentation &&
-				a.Mapping[k].value !== ''
+				a.Transformation.Mapping[k].root === root &&
+				a.Transformation.Mapping[k].indentation === indentation &&
+				a.Transformation.Mapping[k].value !== ''
 			) {
 				hasFilledSiblings = true;
 			}
 		}
 		if (!hasFilledSiblings) {
 			// enable
-			const alternativeProperties = getAlternativeProperties(name, a.Mapping);
-			for (const k in a.Mapping) {
+			const alternativeProperties = getAlternativeProperties(name, a.Transformation.Mapping);
+			for (const k in a.Transformation.Mapping) {
 				if (alternativeProperties.includes(k)) {
-					a.Mapping[k].disabled = false;
+					a.Transformation.Mapping[k].disabled = false;
 				}
 			}
 		}
 	}
 
-	a.Mapping[name].error = error;
-	a.Mapping[name].value = value;
+	a.Transformation.Mapping[name].error = error;
+	a.Transformation.Mapping[name].value = value;
 	return a;
 };
 

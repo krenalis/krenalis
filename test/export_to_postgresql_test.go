@@ -43,11 +43,13 @@ func TestExportToPostgreSQL(t *testing.T) {
 					{Name: "last_name", Type: types.Text()},
 					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 				}),
-				"Mapping": map[string]string{
-					"email":      "coalesce(email, 'default.email@example.com')",
-					"first_name": "first_name",
-					"last_name":  "last_name",
-					"gender":     "'male'",
+				"Transformation": map[string]any{
+					"Mapping": map[string]string{
+						"email":      "coalesce(email, 'default.email@example.com')",
+						"first_name": "first_name",
+						"last_name":  "last_name",
+						"gender":     "'male'",
+					},
 				},
 			},
 		})
@@ -96,9 +98,11 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 				{Name: "full_name", Type: types.Text()},
 			}),
-			"Mapping": map[string]string{
-				"email":     "email",
-				"full_name": `first_name " " last_name`,
+			"Transformation": map[string]any{
+				"Mapping": map[string]string{
+					"email":     "email",
+					"full_name": `first_name " " last_name`,
+				},
 			},
 		},
 	})

@@ -25,7 +25,7 @@ func errorf(format string, a ...any) error {
 type Transformer struct {
 	inSchema, outSchema types.Type
 	mapping             *mappings.Mapping
-	transformation      *state.Transformation
+	transformation      state.Transformation
 	function            Function
 	action              int
 }
@@ -34,7 +34,7 @@ type Transformer struct {
 // outSchema using the given mapping and, in case a transformation is provided,
 // also uses such transformation. layouts represents, if not null, the layouts
 // used to format DateTime, Date, and Time values as strings.
-func New(inSchema, outSchema types.Type, mapping map[string]string, transformation *state.Transformation, action int, function Function, layouts *state.Layouts) (*Transformer, error) {
+func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, function Function, layouts *state.Layouts) (*Transformer, error) {
 
 	if !outSchema.Valid() {
 		return nil, errors.New("output schema is not valid")
@@ -49,9 +49,9 @@ func New(inSchema, outSchema types.Type, mapping map[string]string, transformati
 	}
 
 	// Mapping.
-	if mapping != nil {
+	if transformation.Mapping != nil {
 		var err error
-		m.mapping, err = mappings.New(mapping, inSchema, outSchema, layouts)
+		m.mapping, err = mappings.New(transformation.Mapping, inSchema, outSchema, layouts)
 		if err != nil {
 			return nil, err
 		}
@@ -70,17 +70,17 @@ func (m *Transformer) Transform(ctx context.Context, values map[string]any) (map
 	}
 
 	// Transform using a function.
-	funcName := transformationFunctionName(m.action, m.transformation.Language)
-	results, err := m.function.Call(ctx, funcName, m.transformation.Version, m.inSchema, m.outSchema, []map[string]any{values})
+	funcName := transformationFunctionName(m.action, m.transformation.Function.Language)
+	results, err := m.function.Call(ctx, funcName, m.transformation.Function.Version, m.inSchema, m.outSchema, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(*ExecutionError); ok {
-			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)
+			return nil, errorf("%s: %s ", m.transformation.Function.Language.String(), err.Msg)
 		}
 		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
 	if err := results[0].Error; err != nil {
 		if err, ok := err.(*ExecutionError); ok {
-			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)
+			return nil, errorf("%s: %s ", m.transformation.Function.Language.String(), err.Msg)
 		}
 		return nil, errorf("%s", err)
 	}
