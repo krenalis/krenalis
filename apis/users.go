@@ -410,12 +410,16 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 		e.GroupId = row[52].(string)
 		e.MessageId = row[53].(string)
 		e.Name = row[54].(string)
-		e.Properties = json.RawMessage(row[55].(string))
+		// TODO(Gianluca): this is a temporary workaround for
+		// the issue https://github.com/open2b/chichi/issues/403.
+		// e.Properties = json.RawMessage(row[55].(string))
 		e.ReceivedAt = row[56].(time.Time).Format(time.RFC3339)
 		e.SentAt = row[57].(time.Time).Format(time.RFC3339)
 		e.Source = row[58].(int)
 		e.Timestamp = row[59].(time.Time).Format(time.RFC3339)
-		e.Traits = json.RawMessage(row[60].(string))
+		// TODO(Gianluca): this is a temporary workaround for
+		// the issue https://github.com/open2b/chichi/issues/403.
+		// e.Traits = json.RawMessage(row[60].(string))
 		e.Type = row[61].(string)
 		e.UserId = row[62].(string)
 
