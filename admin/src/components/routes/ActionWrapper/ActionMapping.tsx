@@ -172,12 +172,14 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const updateProperty = async (name, value) => {
 		let errorMessage = '';
 		if (value !== '') {
+			const p = action.Mapping![name].full;
 			try {
 				errorMessage = await api.validateExpression(
 					value,
 					actionType.InputSchema.properties,
-					action.Mapping![name].full.type,
-					action.Mapping![name].full.nullable,
+					p.type,
+					p.required,
+					p.nullable,
 				);
 			} catch (err) {
 				showError(err);

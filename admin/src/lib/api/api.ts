@@ -68,12 +68,14 @@ class API {
 		expression: string,
 		properties: Property[],
 		type: Type,
+		required: boolean,
 		nullable: boolean,
 	): Promise<string> => {
 		return await call(`${this.apiURL}/validate-expression`, http.POST, {
 			expression,
 			properties,
 			type: type,
+			required: required,
 			nullable: nullable,
 		});
 	};

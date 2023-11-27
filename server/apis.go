@@ -1005,6 +1005,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Expression string
 			Properties []types.Property
 			Type       types.Type
+			Required   bool
 			Nullable   bool
 		}
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -1013,7 +1014,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		message := s.apis.ValidateExpression(req.Expression, req.Properties, req.Type, req.Nullable)
+		message := s.apis.ValidateExpression(req.Expression, req.Properties, req.Type, req.Required, req.Nullable)
 		_ = json.NewEncoder(w).Encode(message)
 	})
 	router.Post("/api/expressions-properties", func(w http.ResponseWriter, r *http.Request) {

@@ -15,10 +15,11 @@ import (
 )
 
 // typeCheck type checks the expression expr. schema is the schema of the
-// properties in the expression, dt is the destination type, and nullable
-// indicates whether the result value of the evaluation can be nil.
+// properties in the expression, dt is the destination type, required indicates
+// whether the result value of the evaluation is required (cannot be void), and
+// nullable indicates whether that value can be nil.
 // An invalid schema can be passed to type check an expression without paths.
-func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
+func typeCheck(expr []part, schema, dt types.Type, required, nullable bool) error {
 
 	typ := dt
 	n := nullable
@@ -83,15 +84,15 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		var err error
 		switch p.path[0] {
 		case "and":
-			expr[i].typ, err = checkAnd(p.args, schema, typ, n)
+			expr[i].typ, err = checkAnd(p.args, schema, typ, required, n)
 		case "array":
-			expr[i].typ, err = checkArray(p.args, schema, typ, n)
+			expr[i].typ, err = checkArray(p.args, schema, typ, required, n)
 		case "coalesce":
-			expr[i].typ, err = checkCoalesce(p.args, schema, typ, n)
+			expr[i].typ, err = checkCoalesce(p.args, schema, typ, required, n)
 		case "eq":
-			expr[i].typ, err = checkEq(p.args, schema, typ, n)
+			expr[i].typ, err = checkEq(p.args, schema, typ, required, n)
 		case "when":
-			expr[i].typ, err = checkWhen(p.args, schema, typ, n)
+			expr[i].typ, err = checkWhen(p.args, schema, typ, required, n)
 		default:
 			panic(fmt.Errorf("unknown function %q", p.path[0]))
 		}

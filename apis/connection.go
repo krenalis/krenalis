@@ -1055,7 +1055,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 					err := err.(types.PathNotExistError)
 					return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 				}
-				_, err = mappings.Compile(expr, inSchema, p.Type, p.Nullable, nil)
+				_, err = mappings.Compile(expr, inSchema, p.Type, p.Required, p.Nullable, nil)
 				if err != nil {
 					return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 				}

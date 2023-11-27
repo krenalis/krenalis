@@ -20,13 +20,16 @@ import (
 	"chichi/connector/types"
 )
 
+// void represents the void value.
+var void = struct{}{}
+
 // ErrVoid is returned by the 'when' function when the first argument is false,
 // and in this case the destination property is not changed.
 var ErrVoid = errors.New("void")
 
-// InvalidConversionError is the error returned by the Eval method of Expression
-// when a value resulted from an evaluation cannot be converted to the
-// destination type.
+// InvalidConversionError is the error returned by the Transform method of
+// Expression when a value resulted from an evaluation cannot be converted to
+// the destination type.
 type InvalidConversionError struct {
 	Value           any
 	SourceType      types.Type
@@ -34,8 +37,11 @@ type InvalidConversionError struct {
 }
 
 func (err *InvalidConversionError) Error() string {
-	if err.Value == nil {
+	switch err.Value {
+	case nil:
 		return fmt.Sprintf("cannot convert null to a non-nullable value")
+	case void:
+		return fmt.Sprintf("expression is required, but the evaluation returned no value")
 	}
 	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.Value, err.SourceType, err.DestinationType)
 }
@@ -46,6 +52,7 @@ func (err *InvalidConversionError) Error() string {
 type Expression struct {
 	parts    []part     // expression parts.
 	dt       types.Type // destination type.
+	required bool       // reports whether the resulting value is required and consequently it cannot be void.
 	nullable bool       // reports whether the resulting value can be nil.
 	layouts  *state.Layouts
 }
@@ -84,12 +91,16 @@ type part struct {
 }
 
 // Compile parses a map expression and returns an Expression value that can be
-// used to execute the expression. schema is the schema of the paths in the
-// expression, dt is the destination type, nullable indicates whether the result
-// value of the evaluation can be nil, and layouts represents, if not null, the
-// layouts used to format DateTime, Date, and Time values as strings.
+// used to execute the expression.
+//
+// schema is the schema of the paths in the expression, dt is the destination
+// type, required indicates whether the result value of the evaluation is
+// required (cannot be void), nullable indicates whether that value can be nil,
+// and layouts represents, if not null, the layouts used to format DateTime,
+// Date, and Time values as strings.
+//
 // An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema types.Type, dt types.Type, nullable bool, layouts *state.Layouts) (*Expression, error) {
+func Compile(expr string, schema types.Type, dt types.Type, required, nullable bool, layouts *state.Layouts) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
@@ -106,25 +117,29 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool, layou
 	if src != "" {
 		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
-	err = typeCheck(parts, schema, dt, nullable)
+	err = typeCheck(parts, schema, dt, required, nullable)
 	if err != nil {
 		return nil, err
 	}
 	expression := &Expression{
 		parts:    parts,
 		dt:       dt,
+		required: required,
 		nullable: nullable,
 		layouts:  layouts,
 	}
 	return expression, nil
 }
 
-// Transform transforms value and returns the result.
-// If the transformation succeeds but the result cannot be converted to the
-// destination type, it returns an InvalidConversionError error.
+// Transform transforms value and returns the result. If the result is void, it
+// returns void. If the transformation succeeds but the result cannot be
+// converted to the destination type, it returns an InvalidConversionError error.
 func (expr *Expression) Transform(value map[string]any) (any, error) {
 	v, st, err := eval(expr.parts, value, expr.layouts)
 	if err != nil {
+		if err == ErrVoid && expr.required {
+			err = &InvalidConversionError{void, st, expr.dt}
+		}
 		return nil, err
 	}
 	if v != nil || !expr.nullable {
@@ -209,7 +224,7 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.Layout
 		if err != nil {
 			return nil, err
 		}
-		mappingExpressions[i].expr, err = Compile(expr, st, p.Type, p.Nullable, layouts)
+		mappingExpressions[i].expr, err = Compile(expr, st, p.Type, p.Required, p.Nullable, layouts)
 		if err != nil {
 			return nil, err
 		}
@@ -321,6 +336,8 @@ func appendProperties(properties []types.Path, expression []part) []types.Path {
 // eval evaluates expression and returns its value and type. values contains the
 // property values. layouts represents, if not null, the layouts used to format
 // DateTime, Date, and Time values as strings.
+//
+// If the result of the evaluation is void, it returns the ErrVoid error.
 func eval(expression []part, values map[string]any, layouts *state.Layouts) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.

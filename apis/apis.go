@@ -401,7 +401,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	apis.mustBeOpen()
 	var properties []types.Path
 	for _, expression := range expressions {
-		exp, err := mappings.Compile(expression.Value, schema, expression.Type, true, nil)
+		exp, err := mappings.Compile(expression.Value, schema, expression.Type, false, true, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -480,7 +480,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 				err := err.(types.PathNotExistError)
 				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 			}
-			expr, err := mappings.Compile(expr, inSchema, p.Type, p.Nullable, nil)
+			expr, err := mappings.Compile(expr, inSchema, p.Type, p.Required, p.Nullable, nil)
 			if err != nil {
 				return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 			}
@@ -557,12 +557,12 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 }
 
 // ValidateExpression validates an expression. properties represents the allowed
-// properties in the expression. typ is the type of the property to which the
-// expression is assigned, and nullable indicates whether that property can be
-// nullable.
-func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, nullable bool) string {
+// properties in the expression. typ is the type of the expression, required
+// indicates whether a value for that property is required, and nullable
+// indicates whether it can be nullable.
+func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, required, nullable bool) string {
 	apis.mustBeOpen()
-	_, err := mappings.Compile(expression, types.Object(properties), typ, nullable, nil)
+	_, err := mappings.Compile(expression, types.Object(properties), typ, required, nullable, nil)
 	if err != nil {
 		return err.Error()
 	}

@@ -61,6 +61,7 @@ const useIdentifiersMapping = (
 					expression,
 					properties,
 					destinationProperty.type,
+					destinationProperty.required,
 					destinationProperty.nullable,
 				);
 			} catch (err) {

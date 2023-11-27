@@ -113,6 +113,7 @@ func TestCompile(t *testing.T) {
 	tests := []struct {
 		expr          string
 		dt            types.Type
+		required      bool
 		nullable      bool
 		layouts       *state.Layouts
 		compileErr    error
@@ -194,6 +195,7 @@ func TestCompile(t *testing.T) {
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(32), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int(32)`)},
+		{expr: "properties.a.b?", dt: types.Text(), required: true, evalErr: errors.New(`expression is required, but the evaluation returned no value`)},
 
 		// and.
 		{expr: "and(true, true)", dt: types.Boolean(), expectedValue: true},
@@ -243,6 +245,8 @@ func TestCompile(t *testing.T) {
 		{expr: "when(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
 		{expr: "when(false, null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
 		{expr: "when(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
+		{expr: "when(properties.foo, 'none')", dt: types.Text(), required: true, compileErr: errors.New("'when' function cannot be used in a required expression")},
+		{expr: "and(when(properties.foo, false), true)", dt: types.Text(), required: true, compileErr: errors.New("'when' function cannot be used in a required expression")},
 	}
 
 	for _, test := range tests {
@@ -291,7 +295,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			// Test Compile.
-			expr, err := Compile(test.expr, schema, test.dt, test.nullable, test.layouts)
+			expr, err := Compile(test.expr, schema, test.dt, test.required, test.nullable, test.layouts)
 			if test.compileErr != nil {
 				if err == nil {
 					t.Fatalf("expecting compile error %s, got no errors", test.compileErr)
@@ -344,7 +348,7 @@ func TestInvalidSchema(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
-			_, err := Compile(test.expr, types.Type{}, test.dt, false, nil)
+			_, err := Compile(test.expr, types.Type{}, test.dt, false, false, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -391,7 +395,7 @@ func TestPropertyPaths(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		expression, err := Compile(test.src, schema, types.JSON(), true, nil)
+		expression, err := Compile(test.src, schema, types.JSON(), false, true, nil)
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}

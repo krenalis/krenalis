@@ -26,13 +26,13 @@ var numArguments = map[string]int{
 }
 
 // checkAnd type checks a call to 'and' with the given arguments.
-func checkAnd(args [][]part, schema, dt types.Type, nullable bool) (types.Type, error) {
+func checkAnd(args [][]part, schema, dt types.Type, required, nullable bool) (types.Type, error) {
 	if len(args) < 2 {
 		return types.Type{}, errors.New("'and' function requires at least two argument")
 	}
 	booleanType := types.Boolean()
 	for _, arg := range args {
-		err := typeCheck(arg, schema, booleanType, nullable)
+		err := typeCheck(arg, schema, booleanType, required, nullable)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -41,9 +41,9 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool) (types.Type, 
 }
 
 // checkArray type checks a call to 'array' with the given arguments.
-func checkArray(args [][]part, schema, dt types.Type, nullable bool) (types.Type, error) {
+func checkArray(args [][]part, schema, dt types.Type, required, nullable bool) (types.Type, error) {
 	for _, arg := range args {
-		err := typeCheck(arg, schema, types.JSON(), false)
+		err := typeCheck(arg, schema, types.JSON(), required, false)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -52,12 +52,12 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool) (types.Type
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.
-func checkCoalesce(args [][]part, schema, dt types.Type, nullable bool) (types.Type, error) {
+func checkCoalesce(args [][]part, schema, dt types.Type, required, nullable bool) (types.Type, error) {
 	if len(args) < 1 {
 		return types.Type{}, errors.New("'coalesce' function requires at least one argument")
 	}
 	for _, arg := range args {
-		err := typeCheck(arg, schema, dt, nullable)
+		err := typeCheck(arg, schema, dt, required, nullable)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -66,12 +66,12 @@ func checkCoalesce(args [][]part, schema, dt types.Type, nullable bool) (types.T
 }
 
 // checkEq type checks a call to 'eq' with the given arguments.
-func checkEq(args [][]part, schema, dt types.Type, nullable bool) (types.Type, error) {
+func checkEq(args [][]part, schema, dt types.Type, required, nullable bool) (types.Type, error) {
 	if len(args) != 2 {
 		return types.Type{}, errors.New("'eq' function requires two arguments")
 	}
 	for _, arg := range args {
-		err := typeCheck(arg, schema, types.Type{}, true)
+		err := typeCheck(arg, schema, types.Type{}, required, true)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -91,15 +91,18 @@ func checkEq(args [][]part, schema, dt types.Type, nullable bool) (types.Type, e
 }
 
 // checkWhen type checks a call to 'when' with the given arguments.
-func checkWhen(args [][]part, schema, dt types.Type, nullable bool) (types.Type, error) {
+func checkWhen(args [][]part, schema, dt types.Type, required, nullable bool) (types.Type, error) {
 	if len(args) != 2 {
 		return types.Type{}, errors.New("'when' function requires two arguments")
 	}
-	err := typeCheck(args[0], schema, types.Boolean(), true)
+	if required {
+		return types.Type{}, errors.New("'when' function cannot be used in a required expression")
+	}
+	err := typeCheck(args[0], schema, types.Boolean(), false, true)
 	if err != nil {
 		return types.Type{}, err
 	}
-	err = typeCheck(args[1], schema, dt, nullable)
+	err = typeCheck(args[1], schema, dt, false, nullable)
 	if err != nil {
 		return types.Type{}, err
 	}

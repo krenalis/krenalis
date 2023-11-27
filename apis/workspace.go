@@ -924,7 +924,7 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string,
 		if !ok {
 			return errors.BadRequest("anonymous identifier %s does not have a mapped expression", id)
 		}
-		_, err := mappings.Compile(expr, events.Schema, types.JSON(), true, nil)
+		_, err := mappings.Compile(expr, events.Schema, types.JSON(), false, true, nil)
 		if err != nil {
 			return errors.BadRequest("expression of anonymous identifier %s is not valid: %w", id, err)
 		}
