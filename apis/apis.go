@@ -551,7 +551,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 	value, err = m.Transform(ctx, value)
 	if err != nil {
-		if err, ok := err.(transformers.Error); ok {
+		if err, ok := err.(transformers.FunctionExecutionError); ok {
 			return nil, errors.Unprocessable(TransformationFailed, err.Error())
 		}
 		return nil, err

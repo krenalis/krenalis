@@ -79,7 +79,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		var err error
 		user.Properties, err = transformer.Transform(ctx, user.Properties)
 		if err != nil {
-			if err, ok := err.(transformers.Error); ok {
+			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return actionExecutionError{err}
 			}
 			return err

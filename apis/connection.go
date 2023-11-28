@@ -1117,7 +1117,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		}
 		data, err = m.Transform(ctx, ev.MapEvent())
 		if err != nil {
-			if err, ok := err.(transformers.Error); ok {
+			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
 			}
 			return nil, err

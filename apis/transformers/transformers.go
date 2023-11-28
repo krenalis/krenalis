@@ -11,16 +11,6 @@ import (
 	"chichi/connector/types"
 )
 
-// Error represents an error resulting from a transformation, such as a syntax
-// error in the function, or the use of a non-existent property.
-type Error string
-
-func (err Error) Error() string { return string(err) }
-
-func errorf(format string, a ...any) error {
-	return Error(fmt.Sprintf(format, a...))
-}
-
 // Transformer represents a transformer.
 type Transformer struct {
 	inSchema, outSchema types.Type
@@ -62,27 +52,24 @@ func New(inSchema, outSchema types.Type, transformation state.Transformation, ac
 
 // Transform transforms values and returns the result or an error if values
 // cannot be transformed.
-func (m *Transformer) Transform(ctx context.Context, values map[string]any) (map[string]any, error) {
+func (transformer *Transformer) Transform(ctx context.Context, values map[string]any) (map[string]any, error) {
 
 	// Transform using the mapping.
-	if m.mapping != nil {
-		return m.mapping.Transform(values)
+	if transformer.mapping != nil {
+		return transformer.mapping.Transform(values)
 	}
 
 	// Transform using a function.
-	funcName := transformationFunctionName(m.action, m.transformation.Function.Language)
-	results, err := m.function.Call(ctx, funcName, m.transformation.Function.Version, m.inSchema, m.outSchema, []map[string]any{values})
+	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
+	results, err := transformer.function.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, []map[string]any{values})
 	if err != nil {
-		if err, ok := err.(*ExecutionError); ok {
-			return nil, errorf("%s: %s ", m.transformation.Function.Language.String(), err.Msg)
+		if err, ok := err.(FunctionExecutionError); ok {
+			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
 		}
-		return nil, fmt.Errorf("error while execution the transformation: %s", err)
+		return nil, err
 	}
-	if err := results[0].Error; err != nil {
-		if err, ok := err.(*ExecutionError); ok {
-			return nil, errorf("%s: %s ", m.transformation.Function.Language.String(), err.Msg)
-		}
-		return nil, errorf("%s", err)
+	if err := results[0].Err; err != nil {
+		return nil, err
 	}
 	out := results[0].Value
 

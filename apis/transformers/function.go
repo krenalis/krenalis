@@ -16,29 +16,20 @@ import (
 )
 
 var (
-	ErrExist        = errors.New("function already exists")
-	ErrNotExist     = errors.New("function does not exist")
-	ErrPendingState = errors.New("function is in a pending state")
+	ErrFunctionExist        = errors.New("function already exists")
+	ErrFunctionNotExist     = errors.New("function does not exist")
+	ErrFunctionPendingState = errors.New("function is in a pending state")
 )
 
-// An ExecutionError error is returned by the Function.Call method when an error
-// occurs executing the function.
-type ExecutionError struct {
-	Msg string
-}
+// FunctionExecutionError represents an error resulting from the execution of a
+// function transformation such as a syntax error in the function.
+type FunctionExecutionError string
 
-// NewExecutionError returns a new execution error with message msg.
-func NewExecutionError(msg string) *ExecutionError {
-	return &ExecutionError{Msg: msg}
-}
-
-func (err *ExecutionError) Error() string {
-	return err.Msg
-}
+func (err FunctionExecutionError) Error() string { return string(err) }
 
 type Result struct {
 	Value map[string]any
-	Error error
+	Err   error
 }
 
 // A Function represents a transformer function.
@@ -50,13 +41,15 @@ type Result struct {
 //     functions
 type Function interface {
 
-	// Call calls the function with the given name and version, with the given
-	// values to transform, and returns the results. inSchema and outSchema are the
-	// input and output schemas.
+	// Call calls the function with the given name and version for each value and
+	// returns the result of each invocation. Each element of values is supposed to
+	// conform to inSchema. Each result conforms to outSchema unless a
+	// transformation error occurred, and in that case, the error is stored in the
+	// Err field of the result.
 	//
-	// If an error occurs during execution, it returns an *ExecutionError error. If
-	// the function does not exist, it returns the ErrNotExist error. If the
-	// function is in a pending state, it returns the ErrPendingState error.
+	// It returns the ErrFunctionNotExist error if the function does not exist, the
+	// ErrFunctionPendingState error if the function is in a pending state, and a
+	// FunctionExecutionError if the execution fails.
 	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]Result, error)
 
 	// Close closes the function.
@@ -65,8 +58,8 @@ type Function interface {
 	// Create creates a new function with the given name and source, and returns its
 	// version, which has a length in the range [1, 128]. name should have an
 	// extension of either ".js" or ".py" depending on the source code's language.
-	// If a function with the same name already exists, it returns the ErrExist
-	// error.
+	// If a function with the same name already exists, it returns the
+	// ErrFunctionExist error.
 	Create(ctx context.Context, name, source string) (string, error)
 
 	// Delete deletes the function with the given name.
@@ -79,7 +72,7 @@ type Function interface {
 
 	// Update updates the source of the function with the given name, and returns a
 	// new version, which has a length in the range [1, 128]. If the function does
-	// not exist, it returns the ErrNotExist error.
+	// not exist, it returns the ErrFunctionNotExist error.
 	Update(ctx context.Context, name, source string) (string, error)
 }
 

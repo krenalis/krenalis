@@ -69,7 +69,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		// Transform the user.
 		props, err = transformer.Transform(ctx, props)
 		if err != nil {
-			if err, ok := err.(transformers.Error); ok {
+			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return actionExecutionError{err}
 			}
 			return err

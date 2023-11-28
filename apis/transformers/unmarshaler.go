@@ -27,14 +27,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// ErrSyntaxInvalid is the error returned by Unmarshal when the data being
+// errSyntaxInvalid is the error returned by Unmarshal when the data being
 // unmarshaled is not valid JSON, or does not conform to the expected structure.
-var ErrSyntaxInvalid = errors.New("syntax is not valid")
+var errSyntaxInvalid = errors.New("syntax is not valid")
 
-// SchemaValidationError represents a validation error related to the output
+// schemaValidationError represents a validation error related to the output
 // schema. It can be returned by Unmarshal for each single result in the
 // Result.Error field.
-type SchemaValidationError struct {
+type schemaValidationError struct {
 	kind  schemaValidationKind
 	msg   string
 	path  string
@@ -49,7 +49,7 @@ const (
 	invalidValue
 )
 
-func (err *SchemaValidationError) Error() string {
+func (err *schemaValidationError) Error() string {
 	switch err.kind {
 	case propertyNotExist:
 		return fmt.Sprintf("%s %q does not exist", err.terms["property"], err.path)
@@ -58,14 +58,14 @@ func (err *SchemaValidationError) Error() string {
 	case invalidValue:
 		return fmt.Sprintf("%s %q %s", err.terms["property"], err.path, err.msg)
 	}
-	panic("invalid SchemaValidationError's kind")
+	panic("invalid schemaValidationError's kind")
 }
 
-func (err *SchemaValidationError) appendIndexToPath(i int) {
+func (err *schemaValidationError) appendIndexToPath(i int) {
 	err.path = "[" + strconv.Itoa(i) + "]." + err.path
 }
 
-func (err *SchemaValidationError) appendNameToPath(name string) {
+func (err *schemaValidationError) appendNameToPath(name string) {
 	if err.path == "" {
 		err.path = name
 	} else if err.path[0] == '[' {
@@ -75,22 +75,22 @@ func (err *SchemaValidationError) appendNameToPath(name string) {
 	}
 }
 
-// newErrPropertyNotExist returns a new SchemaValidationError with kind
+// newErrPropertyNotExist returns a new schemaValidationError with kind
 // propertyNotExist.
 func newErrPropertyNotExist(path string, terms map[string]string) error {
-	return &SchemaValidationError{kind: propertyNotExist, path: path, terms: terms}
+	return &schemaValidationError{kind: propertyNotExist, path: path, terms: terms}
 }
 
-// newErrMissingProperty returns a new SchemaValidationError with kind
+// newErrMissingProperty returns a new schemaValidationError with kind
 // missingProperty.
 func newErrMissingProperty(path string, terms map[string]string) error {
-	return &SchemaValidationError{kind: missingProperty, path: path, terms: terms}
+	return &schemaValidationError{kind: missingProperty, path: path, terms: terms}
 }
 
-// newErrInvalidValue returns a new SchemaValidationError with kind
+// newErrInvalidValue returns a new schemaValidationError with kind
 // invalidValue.
 func newErrInvalidValue(msg, path string, terms map[string]string) error {
-	return &SchemaValidationError{kind: invalidValue, msg: msg, path: path, terms: terms}
+	return &schemaValidationError{kind: invalidValue, msg: msg, path: path, terms: terms}
 }
 
 // decoder implements a decoder for the JSON code returned by JavaScript or
@@ -147,12 +147,6 @@ var pythonDecoderOptions = decoderOptions{
 // Unmarshal decodes a JSON array of objects read from r, validating it
 // according to the schema of its elements, which must be an Object or invalid.
 // An invalid schema is treated as an object with no properties.
-//
-// It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
-// valid JSON or does not conform to the expected structure.
-//
-// If a single result returned has an error, it can be a *ExecutionError or a
-// *SchemaValidationError.
 //
 // For JavaScript, it assumes that the JSON code has been marshaled by a
 // JavaScript JSON.stringify(v) call after executing:
@@ -218,12 +212,12 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 	tok, err := d.readToken()
 	if err != nil {
 		if err == io.EOF {
-			return nil, ErrSyntaxInvalid
+			return nil, errSyntaxInvalid
 		}
 		return nil, err
 	}
 	if tok.Kind() != '[' {
-		return nil, ErrSyntaxInvalid
+		return nil, errSyntaxInvalid
 	}
 	var results []Result
 	for {
@@ -235,7 +229,7 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 			break
 		}
 		if tok.Kind() != '{' {
-			return nil, ErrSyntaxInvalid
+			return nil, errSyntaxInvalid
 		}
 		// Read the key:
 		tok, err = d.readToken()
@@ -247,7 +241,7 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 		case "value":
 			value, err := d.unmarshal(schema)
 			if err != nil {
-				result.Error = err
+				result.Err = err
 			} else {
 				result.Value = value.(map[string]any)
 			}
@@ -257,11 +251,11 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 				return nil, err
 			}
 			if tok.Kind() != '"' {
-				return nil, ErrSyntaxInvalid
+				return nil, errSyntaxInvalid
 			}
-			result.Error = NewExecutionError(tok.String())
+			result.Err = errors.New(tok.String())
 		default:
-			return nil, ErrSyntaxInvalid
+			return nil, errSyntaxInvalid
 		}
 		results = append(results, result)
 		tok, err = d.readToken()
@@ -269,11 +263,11 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 			return nil, err
 		}
 		if tok.Kind() != '}' {
-			return nil, ErrSyntaxInvalid
+			return nil, errSyntaxInvalid
 		}
 	}
 	if _, err := d.readToken(); err != io.EOF {
-		return nil, ErrSyntaxInvalid
+		return nil, errSyntaxInvalid
 	}
 	return results, nil
 }
@@ -284,25 +278,25 @@ func (d decoder) peekKind() jsontext.Kind {
 }
 
 // readToken reads a token.
-// It returns the ErrSyntaxInvalid error if the JSON source is not valid.
+// It returns the errSyntaxInvalid error if the JSON source is not valid.
 func (d decoder) readToken() (jsontext.Token, error) {
 	tok, err := d.dec.ReadToken()
 	if err == io.ErrUnexpectedEOF {
-		err = ErrSyntaxInvalid
+		err = errSyntaxInvalid
 	} else if _, ok := err.(*jsontext.SyntacticError); ok {
-		err = ErrSyntaxInvalid
+		err = errSyntaxInvalid
 	}
 	return tok, err
 }
 
 // readValue reads a value.
-// It returns the ErrSyntaxInvalid error if the JSON source is not valid.
+// It returns the errSyntaxInvalid error if the JSON source is not valid.
 func (d decoder) readValue() (jsontext.Value, error) {
 	v, err := d.dec.ReadValue()
 	if err == io.ErrUnexpectedEOF {
-		err = ErrSyntaxInvalid
+		err = errSyntaxInvalid
 	} else if _, ok := err.(*jsontext.SyntacticError); ok {
-		err = ErrSyntaxInvalid
+		err = errSyntaxInvalid
 	}
 	return v, err
 }
@@ -314,7 +308,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		// Unmarshal an array.
 		defer func() {
 			// Consume the remaining items.
-			if _, ok := err.(*SchemaValidationError); ok {
+			if _, ok := err.(*schemaValidationError); ok {
 				for {
 					if d.peekKind() == ']' {
 						_, err2 := d.readToken()
@@ -345,7 +339,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 			}
 			item, err := d.unmarshal(t.Elem())
 			if err != nil {
-				if err, ok := err.(*SchemaValidationError); ok {
+				if err, ok := err.(*schemaValidationError); ok {
 					err.appendIndexToPath(i)
 				}
 				return nil, err
@@ -364,7 +358,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		// Unmarshal an object.
 		defer func() {
 			// Consume the remaining key/value pairs.
-			if _, ok := err.(*SchemaValidationError); ok {
+			if _, ok := err.(*schemaValidationError); ok {
 				var er error
 				for er == nil && d.peekKind() != '}' {
 					_, er = d.readValue()
@@ -415,7 +409,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				} else {
 					value, err = d.unmarshal(p.Type)
 					if err != nil {
-						if err, ok := err.(*SchemaValidationError); ok {
+						if err, ok := err.(*schemaValidationError); ok {
 							err.appendNameToPath(name)
 						}
 						return nil, err

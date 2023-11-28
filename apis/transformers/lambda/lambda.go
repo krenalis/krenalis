@@ -59,13 +59,15 @@ func New(settings Settings) transformers.Function {
 	return &function{settings: settings}
 }
 
-// Call calls the function with the given name and version, with the given
-// values to transform, and returns the results. inSchema and outSchema are the
-// input and output schemas.
+// Call calls the function with the given name and version for each value and
+// returns the result of each invocation. Each element of values is supposed to
+// conform to inSchema. Each result conforms to outSchema unless a
+// transformation error occurred, and in that case, the error is stored in the
+// Err field of the result.
 //
-// If an error occurs during execution, it returns an *ExecutionError error. If
-// the function does not exist, it returns the ErrNotExist error. If the
-// function is in a pending state, it returns the ErrPendingState error.
+// It returns the ErrFunctionNotExist error if the function does not exist, the
+// ErrFunctionPendingState error if the function is in a pending state, and a
+// FunctionExecutionError if the execution fails.
 func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 
 	if !transformers.ValidFunctionName(name) {
@@ -116,10 +118,10 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	}
 	if err != nil {
 		if isHTTPErrorCode(err, 404) {
-			return nil, transformers.ErrNotExist
+			return nil, transformers.ErrFunctionNotExist
 		}
 		if isHTTPErrorCode(err, 409) {
-			return nil, transformers.ErrPendingState
+			return nil, transformers.ErrFunctionPendingState
 		}
 		return nil, err
 	}
@@ -137,7 +139,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		if err != nil {
 			return nil, fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
 		}
-		return nil, transformers.NewExecutionError(payload.ErrorMessage)
+		return nil, transformers.FunctionExecutionError(payload.ErrorMessage)
 	}
 	var r io.Reader
 	switch ext {
@@ -170,8 +172,8 @@ func (fn *function) Close(ctx context.Context) error {
 // Create creates a new function with the given name and source, and returns its
 // version, which has a length in the range [1, 128]. name should have an
 // extension of either ".js" or ".py" depending on the source code's language.
-// If a function with the same name already exists, it returns the ErrExist
-// error.
+// If a function with the same name already exists, it returns the
+// ErrFunctionExist error.
 func (fn *function) Create(ctx context.Context, name, source string) (string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", errors.New("function name is not valid")
@@ -213,7 +215,7 @@ func (fn *function) Create(ctx context.Context, name, source string) (string, er
 	})
 	if err != nil {
 		if isHTTPErrorCode(err, 409) {
-			return "", transformers.ErrExist
+			return "", transformers.ErrFunctionExist
 		}
 		return "", err
 	}
@@ -260,7 +262,7 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 
 // Update updates the source of the function with the given name, and returns a
 // new version, which has a length in the range [1, 128]. If the function does
-// not exist, it returns the ErrNotExist error.
+// not exist, it returns the ErrFunctionNotExist error.
 func (fn *function) Update(ctx context.Context, name, source string) (string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", errors.New("function name is not valid")
@@ -285,7 +287,7 @@ func (fn *function) Update(ctx context.Context, name, source string) (string, er
 	})
 	if err != nil {
 		if isHTTPErrorCode(err, 404) {
-			return "", transformers.ErrNotExist
+			return "", transformers.ErrFunctionNotExist
 		}
 		return "", err
 	}

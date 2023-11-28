@@ -89,7 +89,7 @@ func (log *eventsLog) TransformationFailed(id ksuid.KSUID, action int, terr erro
 		panic("terr is nil")
 	}
 	now := time.Now().UTC()
-	if err, ok := terr.(transformers.Error); ok {
+	if err, ok := terr.(transformers.FunctionExecutionError); ok {
 		terr = errors.New("an internal error occurred during the transformation")
 		slog.Error("transformation failed when processing event", "event", id, "action", action, "err", err)
 	}
