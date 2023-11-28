@@ -156,7 +156,7 @@ func TestCompile(t *testing.T) {
 		{expr: "properties", dt: types.JSON(), expectedValue: json.RawMessage(`{":":7,":x":8,"?":4,"[x":1,"[x]":3,"[x]?":6,"a":1,"b":{"c":[1,2]},"x?":5,"x]":2}`)},
 		{expr: "properties.a", dt: types.Int(32), expectedValue: 1},
 		{expr: "properties.a.x", dt: types.Int(32), evalErr: errors.New(`invalid properties.a.x: properties.a is not a JSON object, it is a JSON number`)},
-		{expr: "properties.a.x?", dt: types.Int(32), evalErr: ErrVoid},
+		{expr: "properties.a.x?", dt: types.Int(32), expectedValue: Void},
 		{expr: "properties.b.c", dt: types.Array(types.Int(32)), expectedValue: []any{1, 2}},
 		{expr: "properties.b['c']", dt: types.Array(types.Int(32)), expectedValue: []any{1, 2}},
 		{expr: "properties.b.x", dt: types.Array(types.Int(32)), evalErr: errors.New(`cannot convert null to a non-nullable value`)},
@@ -240,7 +240,7 @@ func TestCompile(t *testing.T) {
 
 		// when.
 		{expr: "when(true, 1)", dt: types.Int(32), expectedValue: 1},
-		{expr: "when(false, 1)", dt: types.Int(32), evalErr: ErrVoid},
+		{expr: "when(false, 1)", dt: types.Int(32), expectedValue: Void},
 		{expr: "when(false)", dt: types.Int(32), compileErr: errors.New("'when' function requires two arguments")},
 		{expr: "when(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
 		{expr: "when(false, null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
@@ -310,7 +310,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			// Test Eval.
-			gotValue, err := expr.Transform(values)
+			gotValue, err := expr.Eval(values)
 			if test.evalErr != nil {
 				if err == nil {
 					t.Fatalf("expecting eval error %s, got no errors", test.evalErr)
@@ -455,8 +455,8 @@ func TestValueOf(t *testing.T) {
 		{types.Path{"h", ":[i]]"}, "zoo", nil},
 		{types.Path{"h", ":[i]]?"}, "zoo", nil},
 		{types.Path{"h", ":i", ":x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
-		{types.Path{"h", ":i", ":x?"}, nil, ErrVoid},
-		{types.Path{"h", ":i", ":[x]?"}, nil, ErrVoid},
+		{types.Path{"h", ":i", ":x?"}, nil, errVoid},
+		{types.Path{"h", ":i", ":[x]?"}, nil, errVoid},
 	}
 
 	for _, test := range tests {

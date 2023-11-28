@@ -20,30 +20,30 @@ import (
 	"chichi/connector/types"
 )
 
-// void represents the void value.
-var void = struct{}{}
+// Void represents the void value.
+var Void = struct{}{}
 
-// ErrVoid is returned by the 'when' function when the first argument is false,
+// errVoid is returned by the 'when' function when the first argument is false,
 // and in this case the destination property is not changed.
-var ErrVoid = errors.New("void")
+var errVoid = errors.New("void")
 
-// InvalidConversionError is the error returned by the Transform method of
-// Expression when a value resulted from an evaluation cannot be converted to
+// invalidConversionError is the error returned by the Eval and Transform
+// methods of when a value resulted from an evaluation cannot be converted to
 // the destination type.
-type InvalidConversionError struct {
-	Value           any
-	SourceType      types.Type
-	DestinationType types.Type
+type invalidConversionError struct {
+	value           any
+	sourceType      types.Type
+	destinationType types.Type
 }
 
-func (err *InvalidConversionError) Error() string {
-	switch err.Value {
+func (err *invalidConversionError) Error() string {
+	switch err.value {
 	case nil:
 		return fmt.Sprintf("cannot convert null to a non-nullable value")
-	case void:
+	case Void:
 		return fmt.Sprintf("expression is required, but the evaluation returned no value")
 	}
-	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.Value, err.SourceType, err.DestinationType)
+	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.value, err.sourceType, err.destinationType)
 }
 
 // Expression represents a mapping expression used to transform data from a
@@ -131,14 +131,18 @@ func Compile(expr string, schema types.Type, dt types.Type, required, nullable b
 	return expression, nil
 }
 
-// Transform transforms value and returns the result. If the result is void, it
-// returns void. If the transformation succeeds but the result cannot be
-// converted to the destination type, it returns an InvalidConversionError error.
-func (expr *Expression) Transform(value map[string]any) (any, error) {
-	v, st, err := eval(expr.parts, value, expr.layouts)
+// Eval evaluates the expression using the provided values for the properties,
+// which must conform to the expression's source type, and returns the result
+// that conforms to the expression's destination type or Void if the result is
+// void.
+func (expr *Expression) Eval(values map[string]any) (any, error) {
+	v, st, err := eval(expr.parts, values, expr.layouts)
 	if err != nil {
-		if err == ErrVoid && expr.required {
-			err = &InvalidConversionError{void, st, expr.dt}
+		if err == errVoid {
+			if !expr.required {
+				return Void, nil
+			}
+			err = &invalidConversionError{Void, st, expr.dt}
 		}
 		return nil, err
 	}
@@ -146,7 +150,7 @@ func (expr *Expression) Transform(value map[string]any) (any, error) {
 		c, err := convert(v, st, expr.dt, expr.nullable, expr.layouts)
 		if err != nil {
 			if err == errInvalidConversion {
-				err = &InvalidConversionError{v, st, expr.dt}
+				err = &invalidConversionError{v, st, expr.dt}
 			}
 			return nil, err
 		}
@@ -289,20 +293,20 @@ func (mapping *Mapping) Properties() []types.Path {
 	return uniqueProperties
 }
 
-// Transform transforms value and returns the result.
-// If the transformation succeeds but the result cannot be converted to the
-// destination type, it returns an InvalidConversionError error.
+// Transform transforms value, that must conform to the expression's source
+// schema, and returns the result that conforms to the expression's output
+// schema. If the evaluation of an expression results in a void value, the
+// corresponding property will not be present in the returned value.
 func (mapping *Mapping) Transform(value map[string]any) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, t := range mapping.expressions {
-		v, err := t.expr.Transform(value)
+		v, err := t.expr.Eval(value)
 		if err != nil {
-			if err == ErrVoid {
-				continue
-			}
 			return nil, err
 		}
-		storeValue(out, t.path, v)
+		if v != Void {
+			storeValue(out, t.path, v)
+		}
 	}
 	return out, nil
 }
@@ -337,7 +341,7 @@ func appendProperties(properties []types.Path, expression []part) []types.Path {
 // property values. layouts represents, if not null, the layouts used to format
 // DateTime, Date, and Time values as strings.
 //
-// If the result of the evaluation is void, it returns the ErrVoid error.
+// If the result of the evaluation is void, it returns the errVoid error.
 func eval(expression []part, values map[string]any, layouts *state.Layouts) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
@@ -418,7 +422,7 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 			values, ok = v.(map[string]any)
 			if !ok {
 				if name := path[i+1]; name[len(name)-1] == '?' {
-					return nil, ErrVoid
+					return nil, errVoid
 				}
 				var t string
 				switch v.(type) {
@@ -525,7 +529,7 @@ func evalCall(p part, values map[string]any, layouts *state.Layouts) (any, types
 			return nil, types.Type{}, err
 		}
 		if !v0.(bool) {
-			return nil, types.Type{}, ErrVoid
+			return nil, types.Type{}, errVoid
 		}
 		v1, t1, err := eval(p.args[1], values, layouts)
 		if err != nil {
