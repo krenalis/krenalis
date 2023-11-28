@@ -8,7 +8,9 @@
 package chichitester
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -16,6 +18,8 @@ import (
 	"chichi/apis"
 	"chichi/connector"
 	"chichi/connector/types"
+
+	"github.com/segmentio/analytics-go"
 )
 
 // This file contains support methods which reduce verbosity of tests.
@@ -120,6 +124,28 @@ func (c *Chichi) AddSourceJSON(filesystem int) int {
 	})
 }
 
+func (c *Chichi) AddWebsiteSource(name, host string) int {
+	return c.AddConnection(map[string]any{
+		"Connection": map[string]any{
+			"Name":        name,
+			"Role":        connector.Source.String(),
+			"Enabled":     true,
+			"Connector":   12, // Website.
+			"WebsiteHost": host,
+		},
+	})
+}
+
+func (c *Chichi) ConnectionKeys(conn int) []string {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/keys"
+	rawKeys := c.MustCall("GET", url, nil).([]any)
+	keys := make([]string, len(rawKeys))
+	for i := range rawKeys {
+		keys[i] = rawKeys[i].(string)
+	}
+	return keys
+}
+
 func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
 	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/actions/" + strconv.Itoa(action) + "/execute"
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport})
@@ -128,6 +154,31 @@ func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
 func (c *Chichi) Executions(connection int) []any {
 	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/executions"
 	return c.MustCall("GET", method, nil).([]any)
+}
+
+func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
+	endpoint := "https://" + testsSettings.ChichiHost + "/" + "api"
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client, err := analytics.NewWithConfig(
+		writeKey,
+		analytics.Config{
+			Endpoint:  endpoint,
+			Transport: tr,
+		},
+	)
+	if err != nil {
+		c.t.Fatalf("cannot create client: %s", err)
+	}
+	err = client.Enqueue(message)
+	if err != nil {
+		c.t.Fatalf("cannot enqueue event: %s", err)
+	}
+	err = client.Close()
+	if err != nil {
+		c.t.Fatalf("cannot close client when sending events: %s", err)
+	}
 }
 
 func (c *Chichi) SetAction(connection, action int, data map[string]any) {
@@ -154,6 +205,22 @@ func (c *Chichi) TableSchema(connection int, table string) types.Type {
 		c.t.Fatalf("cannot parse schema: %s", err)
 	}
 	return schema
+}
+
+func (c *Chichi) UserEvents(user int) []apis.Event {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/users/" + strconv.Itoa(user) + "/events"
+	response := c.MustCall("GET", url, nil).(map[string]any)
+	rawEvents := response["events"]
+	data, err := json.Marshal(rawEvents)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	var events []apis.Event
+	err = json.Unmarshal(data, &events)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	return events
 }
 
 func (c *Chichi) Users(properties []string, start, end int) map[string]any {
