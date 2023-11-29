@@ -41,9 +41,6 @@ import (
 	"time"
 )
 
-// NoLimit indicates that there are no attempt limits.
-const NoLimit = 0
-
 // Backoff implements an exponential backoff algorithm with jitter.
 type Backoff struct {
 	attempts int
@@ -54,17 +51,13 @@ type Backoff struct {
 	timer    *time.Timer
 }
 
-// New returns a new Backoff with the given attempts, base and cap.
-// If attempts is 0 (NoLimit), the attempts are not limited.
-// It panics if attempts < 0 or base < 0 or cap < 1ms.
-func New(attempts, base int, cap time.Duration) *Backoff {
-	if attempts < 0 || base < 0 {
-		panic("backoff: invalid argument")
+// New returns a new Backoff with the given base, with limitless attempts and
+// without a cap. It panics if base < 0.
+func New(base int) *Backoff {
+	if base < 0 {
+		panic("backoff: base is negative")
 	}
-	if cap < time.Millisecond {
-		panic("backoff: cap must be equal or greater than 1ms")
-	}
-	return &Backoff{attempts, float64(base), cap, 0, 0, nil}
+	return &Backoff{base: float64(base)}
 }
 
 // AfterFunc calls f, if another attempt can be made, in its own goroutine after
@@ -107,7 +100,7 @@ func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) b
 }
 
 // Attempt returns the current attempt within the range [0, maxInt]. It returns
-// 0 if Step has not been called yet and returns maxInt if the current attempt
+// 0 if Next has not been called yet and returns maxInt if the current attempt
 // count is maxInt or greater.
 func (bo *Backoff) Attempt() int {
 	return bo.attempt
@@ -146,6 +139,30 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 	return true
 }
 
+// SetAttempts sets the attempts. It panics if attempts is zero or negative.
+func (bo *Backoff) SetAttempts(attempts int) {
+	if attempts <= 0 {
+		panic("backoff: attempts is zero or negative")
+	}
+	bo.attempts = attempts
+}
+
+// SetBase sets the base. It panics if base is negative.
+func (bo *Backoff) SetBase(base int) {
+	if base < 0 {
+		panic("backoff: base is negative")
+	}
+	bo.base = float64(base)
+}
+
+// SetCap sets the cap. It panics if cap is less than 1ms.
+func (bo *Backoff) SetCap(cap time.Duration) {
+	if cap < time.Millisecond {
+		panic("backoff: cap is less than 1ms")
+	}
+	bo.cap = cap
+}
+
 // SetNextWaitTime sets the wait time for the next attempt.
 func (bo *Backoff) SetNextWaitTime(d time.Duration) {
 	bo.waitTime = d
@@ -168,5 +185,8 @@ func (bo *Backoff) WaitTime() time.Duration {
 // setWaitTime sets the wait time.
 func (bo *Backoff) setWaitTime() {
 	// waitTime = min(random_between(0, base * 2^attempt), cap)
-	bo.waitTime = min(time.Duration(1+rand.Float64()*bo.base*math.Pow(2, float64(bo.attempt)))*time.Millisecond, bo.cap)
+	bo.waitTime = time.Duration(1+rand.Float64()*bo.base*math.Pow(2, float64(bo.attempt))) * time.Millisecond
+	if bo.cap > 0 && bo.waitTime > bo.cap {
+		bo.waitTime = bo.cap
+	}
 }

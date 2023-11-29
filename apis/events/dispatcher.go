@@ -166,7 +166,8 @@ dispatch:
 			event.err = nil
 			delete(readyQueues, queueKey{destination: q.destination, endpoint: q.endpoint})
 			if q.backoff == nil {
-				q.backoff = backoff.New(backoff.NoLimit, 2, 10*time.Second)
+				q.backoff = backoff.New(2)
+				q.backoff.SetCap(10 * time.Second)
 			}
 			ctx := context.Background()
 			q.backoff.AfterFunc(ctx, func(_ context.Context) {

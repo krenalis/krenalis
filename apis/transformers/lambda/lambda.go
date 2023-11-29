@@ -101,7 +101,9 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	// Invoke the function.
 	var out *lambda.InvokeOutput
 	name = lambdaFunctionName(name)
-	bo := backoff.New(10, 10, 1*time.Second)
+	bo := backoff.New(10)
+	bo.SetAttempts(10)
+	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		out, err = client.Invoke(ctx, &lambda.InvokeInput{
 			FunctionName: &name,

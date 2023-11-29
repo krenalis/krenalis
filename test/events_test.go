@@ -99,7 +99,9 @@ func TestEvents(t *testing.T) {
 	const expectedEventsCount = 3
 
 	// Wait for the events to be stored in the warehouse.
-	bo := backoff.New(10, 20, 2*time.Second)
+	bo := backoff.New(20)
+	bo.SetAttempts(10)
+	bo.SetCap(2 * time.Second)
 	bo.SetNextWaitTime(200 * time.Millisecond)
 	for bo.Next(ctx) {
 		count := c.CountEventsInWarehouse(ctx)
