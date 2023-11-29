@@ -68,16 +68,11 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
-	// Read the users.
-	err = records.For(func(user connectors.Record) error {
+	// processUsers does a bach processing of users.
+	processUsers := func(users []connectors.Record) error {
 
-		if user.Err != nil {
-			return actionExecutionError{user.Err}
-		}
-
-		// Transform the user.
-		var err error
-		user.Properties, err = transformer.Transform(ctx, user.Properties)
+		// Transform the users.
+		err := transformer.TransformRecords(ctx, users)
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return actionExecutionError{err}
@@ -85,27 +80,49 @@ func (this *Action) importUsers(ctx context.Context) error {
 			return err
 		}
 
-		// Set the identity into the data warehouse.
-		err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
-		if err != nil {
-			return actionExecutionError{err}
+		// Set the identities into the data warehouse.
+		for _, user := range users {
+			err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
+			if err != nil {
+				return actionExecutionError{err}
+			}
 		}
 
 		// Update the connection stats.
-		err = this.connection.updateConnectionsStats(ctx)
+		err = this.connection.updateConnectionsStats(ctx, len(users))
 		if err != nil {
 			return actionExecutionError{err}
 		}
 
 		// Set the user cursor.
 		if connector.Type == state.AppType {
-			err = this.setUserCursor(ctx, state.Cursor{ID: user.ID, Timestamp: user.Timestamp})
+			last := users[len(users)-1]
+			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, Timestamp: last.Timestamp})
 			if err != nil {
 				return actionExecutionError{err}
 			}
 		}
 
 		return nil
+	}
+
+	users := make([]connectors.Record, 0, 100)
+
+	// Read the users.
+	err = records.For(func(user connectors.Record) error {
+		if user.Err != nil {
+			return actionExecutionError{user.Err}
+		}
+		users = append(users, user)
+		if len(users) == 100 {
+			err := processUsers(users)
+			if err != nil {
+				return err
+			}
+			clear(users)
+			users = users[0:0]
+		}
+		return err
 	})
 	if err != nil {
 		return err
@@ -113,6 +130,15 @@ func (this *Action) importUsers(ctx context.Context) error {
 	if err = records.Err(); err != nil {
 		return actionExecutionError{err}
 	}
+
+	// Process the remaining users.
+	if len(users) > 0 {
+		err = processUsers(users)
+		if err != nil {
+			return err
+		}
+	}
+	users = nil
 
 	// Resolve and sync the users.
 	err = this.connection.store.ResolveSyncUsers(ctx)

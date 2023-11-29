@@ -1740,12 +1740,11 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 }
 
 // updateConnectionsStats updates the statistics about the connection.
-func (this *Connection) updateConnectionsStats(ctx context.Context) error {
-	connection := this.connection.ID
+func (this *Connection) updateConnectionsStats(ctx context.Context, count int) error {
 	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, user_identities)\n"+
-		"VALUES ($1, $2, 1)\n"+
-		"ON CONFLICT (connection, time_slot) DO UPDATE SET user_identities = cs.user_identities + 1",
-		connection, statsTimeSlot(time.Now().UTC()))
+		"VALUES ($1, $2, $3)\n"+
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET user_identities = cs.user_identities + $3",
+		this.connection.ID, statsTimeSlot(time.Now().UTC()), count)
 	return err
 }
 

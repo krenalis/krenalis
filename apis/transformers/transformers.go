@@ -8,6 +8,7 @@ import (
 
 	"chichi/apis/state"
 	"chichi/apis/transformers/mappings"
+	"chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -74,6 +75,61 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 	out := results[0].Value
 
 	return out, nil
+}
+
+// TransformRecords transforms the properties of the records. The records are
+// expected to conform to the input schema. If an error occurs during the
+// transformation of a single record, or the result of a record transformation
+// does not conform to the output schema, the error is stored in its Err field.
+//
+// For function transformers, it returns ErrFunctionNotExist if the function
+// does not exist, ErrFunctionPendingState if the function is in a pending
+// state, and a FunctionExecutionError error if an error occurs in the function
+// execution.
+func (transformer *Transformer) TransformRecords(ctx context.Context, records []connector.Record) error {
+
+	// Transform using the mapping.
+	if transformer.mapping != nil {
+		for i, record := range records {
+			properties, err := transformer.mapping.Transform(record.Properties)
+			if err != nil {
+				records[i].Err = err
+				continue
+			}
+			records[i].Properties = properties
+			if i%100 != 0 {
+				continue
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+		}
+		return nil
+	}
+
+	// Transform using a function.
+	values := make([]map[string]any, len(records))
+	for i, record := range records {
+		values[i] = record.Properties
+	}
+	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
+	results, err := transformer.function.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, values)
+	if err != nil {
+		if err, ok := err.(FunctionExecutionError); ok {
+			return FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
+		}
+		return err
+	}
+	for i, result := range results {
+		if err := result.Err; err != nil {
+			records[i].Err = err
+		}
+		records[i].Properties = result.Value
+	}
+
+	return nil
 }
 
 // transformationFunctionName returns the name the transformation function for
