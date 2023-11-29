@@ -108,7 +108,7 @@ const GeneralSettings = () => {
 			<SlInput
 				className='general-settings__name'
 				maxlength={100}
-				label='Name'
+				label="Workspace's name"
 				value={name}
 				onSlChange={onNameChange}
 			/>
@@ -117,7 +117,7 @@ const GeneralSettings = () => {
 				checked={useEuropeRegion}
 				onSlChange={onUseEuropeRegionChange}
 			>
-				Use the European Privacy Region
+				Use the European Privacy Region for this workspace
 			</SlCheckbox>
 			<SlButton className='general-settings__update-workspace-button' variant='primary' onClick={onUpdate}>
 				Save
