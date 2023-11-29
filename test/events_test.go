@@ -135,16 +135,32 @@ func TestEvents(t *testing.T) {
 	{
 		const (
 			expectedAnonymousId = "baeeb556-96f3-4631-a22d-928431af8bf6"
+			expectedIP          = "127.0.0.1"
+			expectedUserAgent   = "analytics-go (version: 3.0.0)"
+			expectedEvent       = "Signed Up"
+			expectedType        = "track"
 			expectedUserId      = "f4ca124298"
 		)
+		if event.AnonymousId != expectedAnonymousId {
+			t.Fatalf("expected anonymous ID %q, got %q", expectedAnonymousId, event.AnonymousId)
+		}
+		if event.Context.IP != expectedIP {
+			t.Fatalf("expected IP %q, got %q", expectedIP, event.Context.IP)
+		}
+		if event.Context.UserAgent != expectedUserAgent {
+			t.Fatalf("expected user agent %q, got %q", expectedUserAgent, event.Context.UserAgent)
+		}
+		if event.Event != expectedEvent {
+			t.Fatalf("expected event %q, got %q", expectedEvent, event.Event)
+		}
 		if event.Source != websiteID {
 			t.Fatalf("expected source %d, got %d", websiteID, event.Source)
 		}
+		if event.Type != expectedType {
+			t.Fatalf("expected event type %q, got %q", expectedType, event.Type)
+		}
 		if event.UserId != expectedUserId {
 			t.Fatalf("expected user ID %q, got %q", expectedUserId, event.UserId)
-		}
-		if event.AnonymousId != expectedAnonymousId {
-			t.Fatalf("expected anonymous ID %q, got %q", expectedAnonymousId, event.AnonymousId)
 		}
 	}
 
