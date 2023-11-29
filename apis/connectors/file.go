@@ -770,9 +770,10 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 			_ = r.Close()
 			return nil, time.Time{}, err
 		}
+		r1 := r
 		r = newFuncReadCloser(r2, func() error {
 			err2 := r2.Close()
-			err := r.Close()
+			err := r1.Close()
 			if err2 != nil {
 				return err2
 			}
@@ -781,8 +782,9 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 		r = r2
 	case state.SnappyCompression:
 		r2 := snappy.NewReader(r)
+		r1 := r
 		r = newFuncReadCloser(r2, func() error {
-			return r.Close()
+			return r1.Close()
 		})
 	}
 	return r, t, nil
