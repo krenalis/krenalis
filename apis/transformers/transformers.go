@@ -82,10 +82,9 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 // transformation of a single record, or the result of a record transformation
 // does not conform to the output schema, the error is stored in its Err field.
 //
-// For function transformers, it returns ErrFunctionNotExist if the function
-// does not exist, ErrFunctionPendingState if the function is in a pending
-// state, and a FunctionExecutionError error if an error occurs in the function
-// execution.
+// For function transformers, it returns the ErrFunctionNotExist error if the
+// function does not exist, and an FunctionExecutionError error if an error
+// occurs in the function execution.
 func (transformer *Transformer) TransformRecords(ctx context.Context, records []connector.Record) error {
 
 	// Transform using the mapping.

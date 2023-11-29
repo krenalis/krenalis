@@ -45,9 +45,8 @@ func New(settings Settings) transformers.Function {
 // transformation error occurred, and in that case, the error is stored in the
 // Err field of the result.
 //
-// It returns the ErrFunctionNotExist error if the function does not exist, the
-// ErrFunctionPendingState error if the function is in a pending state, and a
-// FunctionExecutionError if the execution fails.
+// It returns the ErrFunctionNotExist error if the function does not exist, and
+// a FunctionExecutionError if the execution fails.
 func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 	name, ext, err := splitName(name)
 	if err != nil {

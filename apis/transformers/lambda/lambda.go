@@ -65,9 +65,8 @@ func New(settings Settings) transformers.Function {
 // transformation error occurred, and in that case, the error is stored in the
 // Err field of the result.
 //
-// It returns the ErrFunctionNotExist error if the function does not exist, the
-// ErrFunctionPendingState error if the function is in a pending state, and a
-// FunctionExecutionError if the execution fails.
+// It returns the ErrFunctionNotExist error if the function does not exist, and
+// a FunctionExecutionError error if the function execution fails.
 func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
 
 	if !transformers.ValidFunctionName(name) {
@@ -101,29 +100,32 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	// Invoke the function.
 	var out *lambda.InvokeOutput
 	name = lambdaFunctionName(name)
-	bo := backoff.New(10)
-	bo.SetAttempts(10)
-	bo.SetCap(time.Second)
+	bo := backoff.New(100)
+	bo.SetCap(3 * time.Second)
 	for bo.Next(ctx) {
 		out, err = client.Invoke(ctx, &lambda.InvokeInput{
 			FunctionName: &name,
 			Payload:      payload,
 			Qualifier:    &version,
 		})
-		if isHTTPErrorCode(err, 409) {
-			if bo.Attempt() == 1 {
-				bo.SetNextWaitTime(3 * time.Second)
-			}
-			continue
+		status, ok := httpStatusCode(err)
+		if !ok {
+			return nil, err
 		}
-		break
-	}
-	if err != nil {
-		if isHTTPErrorCode(err, 404) {
+		if status == 404 {
 			return nil, transformers.ErrFunctionNotExist
 		}
-		if isHTTPErrorCode(err, 409) {
-			return nil, transformers.ErrFunctionPendingState
+		if status == 409 {
+			// The function is pending.
+			// Set the base with a greater value and retry.
+			bo.SetBase(300)
+			continue
+		}
+		if 500 <= status && status <= 599 {
+			// There was an internal error.
+			// Set the base with the default value and retry.
+			bo.SetBase(100)
+			continue
 		}
 		return nil, err
 	}
@@ -216,7 +218,7 @@ func (fn *function) Create(ctx context.Context, name, source string) (string, er
 		Layers:       layers,
 	})
 	if err != nil {
-		if isHTTPErrorCode(err, 409) {
+		if status, ok := httpStatusCode(err); ok && status == 409 {
 			return "", transformers.ErrFunctionExist
 		}
 		return "", err
@@ -244,7 +246,7 @@ func (fn *function) Delete(ctx context.Context, name string) error {
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &name,
 	})
-	if err != nil && isHTTPErrorCode(err, 404) {
+	if status, ok := httpStatusCode(err); ok && status == 404 {
 		err = nil
 	}
 	return err
@@ -288,7 +290,7 @@ func (fn *function) Update(ctx context.Context, name, source string) (string, er
 		ZipFile:      code,
 	})
 	if err != nil {
-		if isHTTPErrorCode(err, 404) {
+		if status, ok := httpStatusCode(err); ok && status == 404 {
 			return "", transformers.ErrFunctionNotExist
 		}
 		return "", err
@@ -392,15 +394,15 @@ func (fn *function) supportLanguage(ext string) bool {
 	panic("invalid extension")
 }
 
-// isHTTPErrorCode checks whether an error relates to an HTTP response error and
-// if the HTTP status code matches the specified code.
-func isHTTPErrorCode(err error, code int) bool {
+// httpStatusCode returns the status code returned by a Lambda HTTP response.
+// The boolean return value reports whether a status code exists.
+func httpStatusCode(err error) (int, bool) {
 	if err, ok := err.(*smithy.OperationError); ok {
 		if err, ok := err.Err.(*http.ResponseError); ok {
-			return err.Response.StatusCode == code
+			return err.Response.StatusCode, true
 		}
 	}
-	return false
+	return 0, false
 }
 
 // lambdaFunctionName returns a function name in the format accepted by Lambda.

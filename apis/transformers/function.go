@@ -16,9 +16,8 @@ import (
 )
 
 var (
-	ErrFunctionExist        = errors.New("function already exists")
-	ErrFunctionNotExist     = errors.New("function does not exist")
-	ErrFunctionPendingState = errors.New("function is in a pending state")
+	ErrFunctionExist    = errors.New("function already exists")
+	ErrFunctionNotExist = errors.New("function does not exist")
 )
 
 // FunctionExecutionError represents an error resulting from the execution of a
@@ -47,9 +46,8 @@ type Function interface {
 	// transformation error occurred, and in that case, the error is stored in the
 	// Err field of the result.
 	//
-	// It returns the ErrFunctionNotExist error if the function does not exist, the
-	// ErrFunctionPendingState error if the function is in a pending state, and a
-	// FunctionExecutionError if the execution fails.
+	// It returns the ErrFunctionNotExist error if the function does not exist, and
+	// a FunctionExecutionError if the execution fails.
 	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]Result, error)
 
 	// Close closes the function.
