@@ -48,7 +48,7 @@ interface ActionSchemasResponse {
 }
 
 interface ExecQueryResponse {
-	Rows: string[][];
+	Rows: Record<string, any>[];
 	Schema: ObjectType;
 }
 
