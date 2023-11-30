@@ -15,6 +15,7 @@ import (
 	"chichi/connector"
 
 	"github.com/segmentio/ksuid"
+	"github.com/shopspring/decimal"
 )
 
 // Event represents an event as returned by the ParseObservedEvent method of the
@@ -133,7 +134,7 @@ type eventContext struct {
 	Screen struct {
 		Width   int     `json:"width,omitempty"`
 		Height  int     `json:"height,omitempty"`
-		Density float64 `json:"density,omitempty"`
+		Density float32 `json:"density,omitempty"`
 	} `json:"screen,omitempty"`
 	SessionId    int            `json:"sessionId,omitempty"`
 	SessionStart bool           `json:"sessionStart,omitempty"`
@@ -197,7 +198,7 @@ func (event *collectedEvent) ConnectorEvent() *connector.Event {
 	e.Context.Referrer.Type = event.Context.Referrer.Type
 	e.Context.Screen.Width = event.Context.Screen.Width
 	e.Context.Screen.Height = event.Context.Screen.Height
-	e.Context.Screen.Density = event.Context.Screen.Density
+	e.Context.Screen.Density = decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2)
 	e.Context.SessionId = event.Context.SessionId
 	e.Context.SessionStart = event.Context.SessionStart
 	e.Context.Timezone = event.Context.Timezone
@@ -290,7 +291,7 @@ func (event *collectedEvent) MapEvent() map[string]any {
 			"screen": map[string]any{
 				"width":   event.Context.Screen.Width,
 				"height":  event.Context.Screen.Height,
-				"density": event.Context.Screen.Density,
+				"density": decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2),
 			},
 			"sessionId":    event.Context.SessionId,
 			"sessionStart": event.Context.SessionStart,

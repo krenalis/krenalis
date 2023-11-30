@@ -81,7 +81,7 @@ CREATE TABLE "events" (
     "referrer_type" VARCHAR NOT NULL,
     "screen_width" SMALLINT NOT NULL,
     "screen_height" SMALLINT NOT NULL,
-    "screen_density" SMALLINT NOT NULL,
+    "screen_density" NUMBER(3,2) NOT NULL,
     "session_id" BIGINT NOT NULL,
     "session_start" BOOLEAN NOT NULL,
     "timezone" VARCHAR NOT NULL,

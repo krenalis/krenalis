@@ -69,7 +69,7 @@ var eventsMergeTable = warehouses.MergeTable{
 		{Name: "referrer_type", Type: types.Text()},
 		{Name: "screen_width", Type: types.Int(32)},
 		{Name: "screen_height", Type: types.Int(32)},
-		{Name: "screen_density", Type: types.Float(64)},
+		{Name: "screen_density", Type: types.Decimal(3, 2)},
 		{Name: "session_id", Type: types.Int(64)},
 		{Name: "session_start", Type: types.Boolean()},
 		{Name: "timezone", Type: types.Text()},

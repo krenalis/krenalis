@@ -135,7 +135,7 @@ CREATE TABLE events (
     referrer_type varchar NOT NULL,
     screen_width smallint NOT NULL,
     screen_height smallint NOT NULL,
-    screen_density smallint NOT NULL,
+    screen_density NUMERIC(3,2) NOT NULL,
     session_id bigint NOT NULL,
     session_start boolean NOT NULL,
     timezone varchar NOT NULL,

@@ -141,9 +141,9 @@ type EventContextReferrer struct {
 }
 
 type EventContextScreen struct {
-	Width   int     `json:"width"`
-	Height  int     `json:"height"`
-	Density float64 `json:"density"`
+	Width   int             `json:"width"`
+	Height  int             `json:"height"`
+	Density decimal.Decimal `json:"density"`
 }
 
 var eventColumns = []types.Property{
@@ -193,7 +193,7 @@ var eventColumns = []types.Property{
 	{Name: "referrer_type", Type: types.Text()},
 	{Name: "screen_width", Type: types.Int(16)},
 	{Name: "screen_height", Type: types.Int(16)},
-	{Name: "screen_density", Type: types.Int(16)},
+	{Name: "screen_density", Type: types.Decimal(3, 2)},
 	{Name: "session_id", Type: types.Int(64)},
 	{Name: "session_start", Type: types.Boolean()},
 	{Name: "timezone", Type: types.Text()},
@@ -395,7 +395,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 		screen := EventContextScreen{
 			Width:   row[44].(int),
 			Height:  row[45].(int),
-			Density: float64(row[46].(int) / 100),
+			Density: row[46].(decimal.Decimal),
 		}
 		if screen != (EventContextScreen{}) {
 			e.Context.Screen = &screen

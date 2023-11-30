@@ -116,7 +116,7 @@ var Schema = types.Object([]types.Property{
 				Type: types.Object([]types.Property{
 					{Name: "width", Type: types.Int(32)},
 					{Name: "height", Type: types.Int(32)},
-					{Name: "density", Type: types.Float(64)},
+					{Name: "density", Type: types.Decimal(3, 2)},
 				}),
 			},
 			{Name: "sessionId", Type: types.Int(64)},

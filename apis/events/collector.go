@@ -716,8 +716,8 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 		event.Context.Screen.Width = w
 		event.Context.Screen.Height = h
 	}
-	if d := event.Context.Screen.Density; 0 < d && d < 10 {
-		event.Context.Screen.Density = math.Round(d * 100)
+	if d := event.Context.Screen.Density; d < 0 || d >= 9.995 {
+		event.Context.Screen.Density = 0
 	}
 
 	// UserAgent.
@@ -893,7 +893,7 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 			// screen.
 			int16(e.Context.Screen.Width),
 			int16(e.Context.Screen.Height),
-			int16(e.Context.Screen.Density),
+			e.Context.Screen.Density,
 
 			// session.
 			e.Context.SessionId,

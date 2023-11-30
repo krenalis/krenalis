@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"chichi/connector/types"
+
+	"github.com/shopspring/decimal"
 )
 
 // ErrWebhookUnauthorized is returned by the ReceiveWebhook method if the
@@ -240,7 +242,7 @@ type Event struct {
 		Screen struct {
 			Width   int
 			Height  int
-			Density float64
+			Density decimal.Decimal
 		}
 		SessionId    int
 		SessionStart bool

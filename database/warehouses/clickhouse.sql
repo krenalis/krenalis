@@ -90,7 +90,7 @@ CREATE TABLE events
     `referrer_type` String,
     `screen_width` Int16,
     `screen_height` Int16,
-    `screen_density` Int16,
+    `screen_density` Decimal(3,2),
     `session_id` Int64,
     `session_start` Bool,
     `timezone` String,
