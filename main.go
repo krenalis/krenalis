@@ -65,6 +65,7 @@ func main() {
 	err = server.Run(ctx, &settings)
 	if err != nil {
 		slog.Error("error occurred running server", "err", err)
+		os.Exit(1)
 	}
 
 }
