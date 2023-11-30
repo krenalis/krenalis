@@ -181,6 +181,11 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	// Wait until Chichi starts listening.
 	attempts := 0
 	for {
+		select {
+		case <-c.done:
+			t.Fatalf("ChiChi has exited")
+		default:
+		}
 		conn, err := net.DialTimeout("tcp", testsSettings.ChichiHost, 500*time.Millisecond)
 		if err != nil {
 			attempts++
