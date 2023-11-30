@@ -124,6 +124,4 @@ interface User {
 	traits: UserTraits;
 }
 
-type AppUser = Record<string, any>;
-
-export type { User, UserEvent, UserTraits, AppUser };
+export type { User, UserEvent, UserTraits };

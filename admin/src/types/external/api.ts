@@ -1,6 +1,6 @@
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorAction, ConnectorAlert } from './ui';
-import { AppUser, UserEvent, UserTraits } from './user';
+import { UserEvent, UserTraits } from './user';
 
 interface authCodeURLResponse {
 	url: string;
@@ -93,7 +93,7 @@ interface FindUsersResponse {
 }
 
 interface AppUsersResponse {
-	users: AppUser[];
+	users: Record<string, any>[];
 	cursor: string;
 }
 
