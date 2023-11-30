@@ -712,9 +712,9 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	}
 
 	// Screen.
-	if w, h := event.Context.Screen.Width, event.Context.Screen.Height; (0 < w && w <= math.MaxInt16) && (0 < h && h <= math.MaxInt16) {
-		event.Context.Screen.Width = w
-		event.Context.Screen.Height = h
+	if w, h := event.Context.Screen.Width, event.Context.Screen.Height; w <= 0 || w > math.MaxInt16 || h <= 0 || h > math.MaxInt16 {
+		event.Context.Screen.Width = 0
+		event.Context.Screen.Height = 0
 	}
 	if d := event.Context.Screen.Density; d < 0 || d >= 9.995 {
 		event.Context.Screen.Density = 0
