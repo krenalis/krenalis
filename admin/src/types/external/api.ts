@@ -53,7 +53,7 @@ interface ExecQueryResponse {
 }
 
 interface RecordsResponse {
-	records: any[][];
+	records: Record<string, any>[];
 	schema: ObjectType;
 }
 
