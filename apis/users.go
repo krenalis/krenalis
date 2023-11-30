@@ -21,7 +21,7 @@ import (
 	"chichi/apis/state"
 	"chichi/connector/types"
 
-	"github.com/open2b/nuts/decimal"
+	"github.com/shopspring/decimal"
 )
 
 // User represents a user.
@@ -501,7 +501,7 @@ func whereExpr(property types.Property, value int) *expr.BaseExpr {
 	case types.IntKind:
 		where.Value = value
 	case types.DecimalKind:
-		where.Value = decimal.Int(value)
+		where.Value = decimal.NewFromInt(int64(value))
 	default:
 		return nil
 	}
