@@ -19,29 +19,29 @@ import (
 
 // scanValue implements the sql.Scanner interface to read the database values.
 type scanValue struct {
-	property    types.Property
+	column      types.Property
 	rows        *[][]any
 	columnIndex int
 	columnCount int
 }
 
 // newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(properties []types.Property, rows *[][]any) []any {
-	values := make([]any, len(properties))
-	for i, p := range properties {
+func newScanValues(columns []types.Property, rows *[][]any) []any {
+	values := make([]any, len(columns))
+	for i, c := range columns {
 		values[i] = scanValue{
-			property:    p,
+			column:      c,
 			rows:        rows,
 			columnIndex: i,
-			columnCount: len(properties),
+			columnCount: len(columns),
 		}
 	}
 	return values
 }
 
 func (sv scanValue) Scan(src any) error {
-	p := sv.property
-	value, err := normalize(p.Name, p.Type, src, p.Nullable)
+	c := sv.column
+	value, err := normalize(c.Name, c.Type, src, c.Nullable)
 	if err != nil {
 		return err
 	}
