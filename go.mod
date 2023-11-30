@@ -77,7 +77,7 @@ require (
 	github.com/segmentio/analytics-go v3.1.0+incompatible
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
-	github.com/snowflakedb/gosnowflake v1.6.25
+	github.com/snowflakedb/gosnowflake v1.7.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.16.0

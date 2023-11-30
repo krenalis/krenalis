@@ -2,7 +2,7 @@ module snowflake
 
 go 1.21
 
-require github.com/snowflakedb/gosnowflake v1.6.25
+require github.com/snowflakedb/gosnowflake v1.7.0
 
 require (
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
