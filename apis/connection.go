@@ -26,6 +26,7 @@ import (
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
+	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/normalization"
@@ -509,7 +510,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 // AppUsers returns the users of an app connection and the cursor to get the
 // next users. The returned cursor is empty if there are no other users.
-func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) ([]map[string]any, string, error) {
+func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) ([]byte, string, error) {
 
 	this.apis.mustBeOpen()
 
@@ -566,7 +567,12 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 		return nil, "", err
 	}
 
-	return users, cursor, nil
+	marshaledUsers, err := encoding.MarshalSlice(schema, users)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return marshaledUsers, cursor, nil
 }
 
 // CompletePath returns the complete representation of the given path, based
@@ -664,7 +670,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If a database error occurred, it returns an errors.UnprocessableError with
 // code DatabaseFailed.
-func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]map[string]any, types.Type, error) {
+func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -706,13 +712,13 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	defer rows.Close()
 
 	// Scan the rows.
-	var users []map[string]any
+	var results []map[string]any
 	for rows.Next() {
 		row, err := rows.Scan()
 		if err != nil {
 			return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 		}
-		users = append(users, row)
+		results = append(results, row)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -720,8 +726,12 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	}
 
 	schema := types.Object(rows.Columns())
+	marshaledRows, err := encoding.MarshalSlice(schema, results)
+	if err != nil {
+		return nil, types.Type{}, err
+	}
 
-	return users, schema, nil
+	return marshaledRows, schema, nil
 }
 
 // An Execution describes an action execution as returned by Executions.
@@ -836,7 +846,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 //   - NoColumns, if the file has no columns.
 //   - NoStorage, if the connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([]map[string]any, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -889,7 +899,13 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", connector.Name, err)
 	}
 
-	return records, types.Object(columns), nil
+	schema := types.Object(columns)
+	marshaledRecords, err := encoding.MarshalSlice(schema, records)
+	if err != nil {
+		return nil, types.Type{}, err
+	}
+
+	return marshaledRecords, schema, nil
 }
 
 // Rename renames the connection with the given new name.

@@ -598,7 +598,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 							w.Header().Set("Content-Type", "application/json")
-							_ = json.NewEncoder(w).Encode(map[string]any{"users": users, "cursor": cursor})
+							_ = json.NewEncoder(w).Encode(map[string]any{"users": json.RawMessage(users), "cursor": cursor})
 						})
 						router.Get("/complete-path/{path}", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -642,7 +642,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 							w.Header().Set("Content-Type", "application/json")
-							_ = json.NewEncoder(w).Encode(map[string]any{"records": records, "schema": schema})
+							_ = json.NewEncoder(w).Encode(map[string]any{"records": json.RawMessage(records), "schema": schema})
 						})
 						router.Get("/sheets", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -778,7 +778,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 							w.Header().Add("Content-Type", "application/json")
-							_ = json.NewEncoder(w).Encode(map[string]any{"Rows": rows, "Schema": schema})
+							_ = json.NewEncoder(w).Encode(map[string]any{"Rows": json.RawMessage(rows), "Schema": schema})
 						})
 						router.Get("/tables/{table}/schema", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
