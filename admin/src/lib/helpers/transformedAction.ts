@@ -316,6 +316,12 @@ const transformInActionToSet = async (
 		};
 	}
 
+	if (action.MatchingProperties != null) {
+		if (action.MatchingProperties.Internal == null || action.MatchingProperties.External == null) {
+			throw 'Matching properties cannot be empty';
+		}
+	}
+
 	if (action.Query != null) {
 		query = action.Query.trim();
 	}
