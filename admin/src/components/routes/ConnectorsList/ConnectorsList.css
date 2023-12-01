@@ -6,8 +6,9 @@
 	margin: auto;
 }
 
-.connectorsList h1 {
-	text-align: center;
+.connectorsList .searchBar {
+	max-width: 1200px;
+	margin: auto;
 	margin-bottom: 30px;
 }
 
@@ -16,12 +17,29 @@
 	max-width: 1200px;
 	display: flex;
 	flex-flow: row wrap;
+	justify-content: start;
 	gap: 30px;
-	justify-content: center;
 }
 
 .connectorsList .connectors .card {
-	width: clamp(350px, calc(33% - 30px), 500px);
+	width: calc(33.333333% - 20px);
+}
+
+.connectorsList .connectors .noConnector {
+	text-align: center;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	flex-flow: column;
+	align-items: center;
+	gap: 10px;
+	margin-top: 30px;
+	font-size: 17px;
+	opacity: 0.7;
+}
+
+.connectorsList .connectors .noConnector sl-icon {
+	font-size: 30px;
 }
 
 .connectorsList sl-dialog::part(body) {

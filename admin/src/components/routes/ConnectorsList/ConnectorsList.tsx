@@ -4,11 +4,13 @@ import Card from '../../shared/Card/Card';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { authCodeURLResponse } from '../../../types/external/api';
 
 const ConnectorsList = () => {
 	const [goToConnectorSettings, setGoToConnectorSettings] = useState<number>(0);
+	const [searchTerm, setSearchTerm] = useState<string>('');
 
 	const { redirect, api, showError, connectors, setTitle } = useContext(AppContext);
 
@@ -45,38 +47,58 @@ const ConnectorsList = () => {
 		return;
 	};
 
+	const onSearchTermUpdate = (e) => {
+		const value = e.currentTarget.value;
+		setSearchTerm(value);
+	};
+
+	const connectorsCards = [];
+	for (const c of connectors) {
+		const name = c.name;
+		if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
+			connectorsCards.push(
+				<Card
+					key={c.id}
+					name={c.name}
+					icon={c.icon}
+					type={c.type}
+					description={connectionRole === 'Source' ? c.sourceDescription : c.destinationDescription}
+				>
+					<SlTooltip content={`Add ${c.name}`}>
+						<SlButton
+							size='medium'
+							variant='default'
+							onClick={c.oAuth ? () => authorizeWithOAuth(c.id) : () => setGoToConnectorSettings(c.id)}
+							circle
+						>
+							<SlIcon name='plus' />
+						</SlButton>
+					</SlTooltip>
+				</Card>,
+			);
+		}
+	}
+
 	return (
 		<div className='connectorsList'>
 			<div className='routeContent'>
+				<SlInput
+					className='searchBar'
+					value={searchTerm}
+					onSlInput={onSearchTermUpdate}
+					placeholder='Search for a connector...'
+				>
+					<SlIcon name='search' slot='prefix' />
+				</SlInput>
 				<div className='connectors'>
-					{connectors.map((c) => {
-						return (
-							<Card
-								key={c.id}
-								name={c.name}
-								icon={c.icon}
-								type={c.type}
-								description={
-									connectionRole === 'Source' ? c.sourceDescription : c.destinationDescription
-								}
-							>
-								<SlTooltip content={`Add ${c.name}`}>
-									<SlButton
-										size='medium'
-										variant='default'
-										onClick={
-											c.oAuth
-												? () => authorizeWithOAuth(c.id)
-												: () => setGoToConnectorSettings(c.id)
-										}
-										circle
-									>
-										<SlIcon name='plus' />
-									</SlButton>
-								</SlTooltip>
-							</Card>
-						);
-					})}
+					{connectorsCards.length > 0 ? (
+						connectorsCards
+					) : (
+						<div className='noConnector'>
+							<SlIcon name='exclamation-circle' />
+							Nothing found
+						</div>
+					)}
 				</div>
 			</div>
 		</div>
