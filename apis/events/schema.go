@@ -18,7 +18,6 @@ var Schema = types.Object([]types.Property{
 	{
 		Name: "context",
 		Type: types.Object([]types.Property{
-			{Name: "active", Type: types.Boolean()},
 			{
 				Name: "app",
 				Type: types.Object([]types.Property{
@@ -119,11 +118,14 @@ var Schema = types.Object([]types.Property{
 					{Name: "density", Type: types.Decimal(3, 2)},
 				}),
 			},
-			{Name: "sessionId", Type: types.Int(64)},
-			{Name: "sessionStart", Type: types.Boolean()},
-			{Name: "groupId", Type: types.Text()},
+			{
+				Name: "session",
+				Type: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(64)},
+					{Name: "start", Type: types.Boolean()},
+				}),
+			},
 			{Name: "timezone", Type: types.Text()},
-			{Name: "traits", Type: types.JSON()},
 			{Name: "userAgent", Type: types.Text()},
 		}),
 	},

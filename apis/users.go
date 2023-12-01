@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"chichi/apis/datastore"
@@ -37,24 +36,22 @@ type Event struct {
 	AnonymousId string `json:"anonymousId,omitempty"`
 	Category    string `json:"category,omitempty"`
 	Context     struct {
-		Active       bool                  `json:"active,omitempty"`
-		App          *EventContextApp      `json:"app,omitempty"`
-		Browser      *EventContextBrowser  `json:"browser,omitempty"`
-		Campaign     *EventContextCampaign `json:"campaign,omitempty"`
-		Device       *EventContextDevice   `json:"device,omitempty"`
-		IP           string                `json:"ip,omitempty"`
-		Library      *EventContextLibrary  `json:"library,omitempty"`
-		Locale       string                `json:"locale,omitempty"`
-		Location     *EventContextLocation `json:"location,omitempty"`
-		Network      *EventContextNetwork  `json:"network,omitempty"`
-		OS           *EventContextOS       `json:"os,omitempty"`
-		Page         *EventContextPage     `json:"page,omitempty"`
-		Referrer     *EventContextReferrer `json:"referrer,omitempty"`
-		Screen       *EventContextScreen   `json:"screen,omitempty"`
-		SessionId    string                `json:"sessionId,omitempty"`
-		SessionStart bool                  `json:"sessionStart,omitempty"`
-		Timezone     string                `json:"timezone,omitempty"`
-		UserAgent    string                `json:"userAgent,omitempty"`
+		App       *EventContextApp      `json:"app,omitempty"`
+		Browser   *EventContextBrowser  `json:"browser,omitempty"`
+		Campaign  *EventContextCampaign `json:"campaign,omitempty"`
+		Device    *EventContextDevice   `json:"device,omitempty"`
+		IP        string                `json:"ip,omitempty"`
+		Library   *EventContextLibrary  `json:"library,omitempty"`
+		Locale    string                `json:"locale,omitempty"`
+		Location  *EventContextLocation `json:"location,omitempty"`
+		Network   *EventContextNetwork  `json:"network,omitempty"`
+		OS        *EventContextOS       `json:"os,omitempty"`
+		Page      *EventContextPage     `json:"page,omitempty"`
+		Referrer  *EventContextReferrer `json:"referrer,omitempty"`
+		Screen    *EventContextScreen   `json:"screen,omitempty"`
+		Session   *EventContextSession  `json:"session,omitempty"`
+		Timezone  string                `json:"timezone,omitempty"`
+		UserAgent string                `json:"userAgent,omitempty"`
 	} `json:"context"`
 	Event      string          `json:"event,omitempty"`
 	GroupId    string          `json:"groupId,omitempty"`
@@ -144,6 +141,11 @@ type EventContextScreen struct {
 	Width   int             `json:"width"`
 	Height  int             `json:"height"`
 	Density decimal.Decimal `json:"density"`
+}
+
+type EventContextSession struct {
+	Id    int64 `json:"id"`
+	Start bool  `json:"start"`
 }
 
 var eventColumns = []types.Property{
@@ -401,8 +403,15 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 			e.Context.Screen = &screen
 		}
 
-		e.Context.SessionId = strconv.Itoa(row[47].(int))
-		e.Context.SessionStart = row[48].(bool)
+		// Session.
+		session := EventContextSession{
+			Id:    int64(row[47].(int)),
+			Start: row[48].(bool),
+		}
+		if session != (EventContextSession{}) {
+			e.Context.Session = &session
+		}
+
 		e.Context.Timezone = row[49].(string)
 		e.Context.UserAgent = row[50].(string)
 

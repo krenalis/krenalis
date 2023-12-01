@@ -428,10 +428,6 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	if defaultCtx == nil {
 		return
 	}
-	// Active.
-	if !ctx.Active {
-		ctx.Active = defaultCtx.Active
-	}
 	// App.
 	if ctx.App.Name == "" {
 		ctx.App.Name = defaultCtx.App.Name

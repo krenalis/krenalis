@@ -67,8 +67,7 @@ type collectedEvent struct {
 }
 
 type eventContext struct {
-	Active bool `json:"active,omitempty"`
-	App    struct {
+	App struct {
 		Name      string `json:"name,omitempty"`
 		Version   string `json:"version,omitempty"`
 		Build     string `json:"build,omitempty"`
@@ -155,7 +154,6 @@ func (event *collectedEvent) ConnectorEvent() *connector.Event {
 	e := connector.Event{}
 	e.AnonymousId = event.AnonymousId
 	e.Category = event.Category
-	e.Context.Active = event.Context.Active
 	e.Context.App.Name = event.Context.App.Name
 	e.Context.App.Version = event.Context.App.Version
 	e.Context.App.Build = event.Context.App.Build
@@ -220,12 +218,20 @@ func (event *collectedEvent) MapEvent() map[string]any {
 
 	// Keep in sync with the schema in "apis/events/schema.go".
 
+	groupId := event.GroupId
+	if event.GroupId == "" {
+		groupId = event.Context.GroupId
+	}
+	traits := event.Traits
+	if event.Traits == nil {
+		traits = event.Context.Traits
+	}
+
 	// TODO(Gianluca): define datetime layout and parse/convert the values.
 	mapEvent := map[string]any{
 		"anonymousId": event.AnonymousId,
 		"category":    event.Category,
 		"context": map[string]any{
-			"active": event.Context.Active,
 			"app": map[string]any{
 				"name":      event.Context.App.Name,
 				"version":   event.Context.App.Version,
@@ -293,15 +299,15 @@ func (event *collectedEvent) MapEvent() map[string]any {
 				"height":  event.Context.Screen.Height,
 				"density": decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2),
 			},
-			"sessionId":    event.Context.SessionId,
-			"sessionStart": event.Context.SessionStart,
-			"groupId":      event.Context.GroupId,
-			"timezone":     event.Context.Timezone,
-			"traits":       event.Context.Traits,
-			"userAgent":    event.Context.UserAgent,
+			"session": map[string]any{
+				"id":    event.Context.SessionId,
+				"start": event.Context.SessionStart,
+			},
+			"timezone":  event.Context.Timezone,
+			"userAgent": event.Context.UserAgent,
 		},
 		"event":      event.Event,
-		"groupId":    event.GroupId,
+		"groupId":    groupId,
 		"messageId":  event.MessageId,
 		"name":       event.Name,
 		"properties": event.Properties,
@@ -309,7 +315,7 @@ func (event *collectedEvent) MapEvent() map[string]any {
 		"sentAt":     event.sentAt,
 		"source":     event.source,
 		"timestamp":  event.timestamp,
-		"traits":     event.Traits,
+		"traits":     traits,
 		"type":       *event.Type,
 		"userId":     event.UserId,
 		"version":    event.version,
