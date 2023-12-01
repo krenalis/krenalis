@@ -79,17 +79,17 @@ def transform(user: dict) -> dict:
 
 	// Validate the users.
 	users := ret["users"].([]any)
-	expectedUsers := [][]any{
-		{"kbuessen0@example.com", "Kinsley", "female"},
-		{"jdebrett9@example.com", "Jerad", "male"},
-		{"emoakes2r@example.com", "Edyth", "female"},
-		{"lwhitesonrr@example.com", "Leann", "female"},
-		{"sattestone2s@example.com", "Susanne", "female"},
-		{"aquittonden2t@example.com", "Aimil", "female"},
-		{"tbrayson2u@example.com", "Teodora", "female"},
-		{"csifflett2v@example.com", "Cristiano", "female"},
-		{"mpordal2w@example.com", "Mona", "female"},
-		{"aniece2x@example.com", "Ashil", "female"},
+	expectedUsers := []map[string]any{
+		{"email": "kbuessen0@example.com", "first_name": "Kinsley", "gender": "female"},
+		{"email": "jdebrett9@example.com", "first_name": "Jerad", "gender": "male"},
+		{"email": "emoakes2r@example.com", "first_name": "Edyth", "gender": "female"},
+		{"email": "lwhitesonrr@example.com", "first_name": "Leann", "gender": "female"},
+		{"email": "sattestone2s@example.com", "first_name": "Susanne", "gender": "female"},
+		{"email": "aquittonden2t@example.com", "first_name": "Aimil", "gender": "female"},
+		{"email": "tbrayson2u@example.com", "first_name": "Teodora", "gender": "female"},
+		{"email": "csifflett2v@example.com", "first_name": "Cristiano", "gender": "female"},
+		{"email": "mpordal2w@example.com", "first_name": "Mona", "gender": "female"},
+		{"email": "aniece2x@example.com", "first_name": "Ashil", "gender": "female"},
 	}
 	if len(expectedUsers) != len(users) {
 		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))

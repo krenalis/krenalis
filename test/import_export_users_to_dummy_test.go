@@ -125,11 +125,9 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			t.Fatal("no users re-imported from Dummy")
 		}
 		for _, user := range users {
-			u := user.([]any)
-			email := u[0].(string)
-			lastName := u[2].(string)
-			if email != lastName {
-				t.Fatalf("expecting 'email' to be equal to 'last_name', got %q != %q", email, lastName)
+			u := user.(map[string]any)
+			if u["email"] != u["last_name"] {
+				t.Fatalf("expecting 'email' to be equal to 'last_name', got '%v' != '%v'", u["email"], u["last_name"])
 			}
 		}
 	}

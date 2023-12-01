@@ -13,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 
 	"chichi/apis"
@@ -118,21 +120,18 @@ func TestIdentityResolution(t *testing.T) {
 	expectUsers := func(expected []map[string]any) {
 
 		// Retrieve the users from the APIs and convert their format.
-		rawUsers := c.Users(allProps, "", 0, 1000)["users"].([]any)
-		gotUsers := make([]map[string]any, len(rawUsers))
-		for i := range rawUsers {
-			u := map[string]any{}
-			for j, p := range allProps {
-				u[p] = rawUsers[i].([]any)[j]
-			}
-			gotUsers[i] = u
-		}
+		users := c.Users(allProps, "", 0, 1000)["users"].([]any)
 
 		// Check if the users are equal to the expected or not.
-		if !reflect.DeepEqual(expected, gotUsers) {
-			t.Fatalf("\nexpected: %#v\ngot:      %#v", expected, gotUsers)
+		if len(expected) != len(users) {
+			t.Fatalf("\nexpected: %d users\ngot %d", len(expected), len(users))
 		}
-		t.Logf("users: %v", gotUsers)
+		for i, user := range users {
+			if !reflect.DeepEqual(expected[i], user) {
+				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expected, strings.Repeat(" ", len(strconv.Itoa(i))), users)
+			}
+		}
+		t.Logf("users: %v", users)
 	}
 
 	// Define a function "importUser" which imports the user into the data
