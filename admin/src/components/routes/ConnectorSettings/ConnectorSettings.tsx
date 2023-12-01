@@ -161,21 +161,9 @@ const ConnectorSettings = () => {
 				id = await api.workspaces.addConnection(connection, OAuthToken);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
-					switch (err.code) {
-						case 'ConnectorNotExist':
-							redirect('connectors');
-							showStatus(statuses.connectorDoesNotExistAnymore);
-							break;
-						case 'InvalidSettings':
-							showStatus(statuses.settingsNotValid);
-							break;
-						case 'StorageNotExist':
-							showStatus(statuses.storageNotExist);
-							break;
-						default:
-							break;
+					if (err.code === 'ConnectorNotExist') {
+						redirect('connectors');
 					}
-					return;
 				}
 				if (hasConfirmationButton) {
 					confirmationButton!.stop();
@@ -261,21 +249,9 @@ const ConnectorSettings = () => {
 			id = await api.workspaces.addConnection(connection, OAuthToken);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'ConnectorNotExist':
-						redirect('connectors');
-						showStatus(statuses.connectorDoesNotExistAnymore);
-						break;
-					case 'InvalidSettings':
-						showStatus(statuses.settingsNotValid);
-						break;
-					case 'StorageNotExist':
-						showStatus(statuses.storageNotExist);
-						break;
-					default:
-						break;
+				if (err.code === 'ConnectorNotExist') {
+					redirect('connectors');
 				}
-				return;
 			}
 			showError(err);
 			return;
