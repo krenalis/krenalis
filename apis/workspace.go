@@ -29,6 +29,7 @@ import (
 	"chichi/apis/datastore/warehouses/clickhouse"
 	"chichi/apis/datastore/warehouses/postgresql"
 	"chichi/apis/datastore/warehouses/snowflake"
+	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/postgres"
@@ -1091,7 +1092,7 @@ func (this *Workspace) User(id int) (*User, error) {
 	}, nil
 }
 
-// Users returns the user schema and the users of the workspace. It returns
+// Users returns the users and the user schema of the workspace. It returns
 // the users that satisfies the filter, if not nil, and in range
 // [first,first+limit] with first >= 0 and 0 < limit <= 1000 and only the given
 // properties. properties cannot be empty.
@@ -1109,7 +1110,7 @@ func (this *Workspace) User(id int) (*User, error) {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, first, limit int) ([][]any, types.Type, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, first, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1195,7 +1196,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	schema := types.Object(requestedProperties)
 
 	// Read the users.
-	users, err := this.store.UsersSlice(ctx, requestedProperties, where, orderProperty, first, limit)
+	users, err := this.store.Users(ctx, requestedProperties, where, orderProperty, first, limit)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -1205,7 +1206,13 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, err
 	}
 
-	return users, schema.Unflatten(), err
+	schema = schema.Unflatten()
+	marshaledUsers, err := encoding.MarshalSlice(schema, users)
+	if err != nil {
+		return nil, types.Type{}, err
+	}
+
+	return marshaledUsers, schema, nil
 }
 
 // WarehouseSettings returns the type and settings of the data warehouse for the

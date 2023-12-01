@@ -87,7 +87,7 @@ interface Filter {
 }
 
 interface FindUsersResponse {
-	users: any[][];
+	users: Record<string, any>[];
 	schema: ObjectType;
 }
 

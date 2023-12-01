@@ -910,7 +910,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 						w.Header().Add("Content-Type", "application/json")
 						_ = json.NewEncoder(w).Encode(map[string]any{
-							"users":  users,
+							"users":  json.RawMessage(users),
 							"schema": schema,
 						})
 					})

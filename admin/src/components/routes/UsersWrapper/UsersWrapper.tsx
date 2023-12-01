@@ -116,37 +116,29 @@ const UsersWrapper = () => {
 			return;
 		}
 
-		const { users } = res;
+		const users = res.users;
 		const count = users.length;
 
 		setUsersCount(count);
 		setPagination({ current: page, last: Math.ceil(count / limit) });
 
-		// find the index of the id property. We should use it for the
-		// navigation but also remove it from the rows if the user has manually
-		// hidden it in the UI.
-		let idIndex: number, isIDHidden: boolean;
-		for (const [i, p] of properties.entries()) {
-			if (p.name === 'id') {
-				idIndex = i;
-				if (!p.isUsed) isIDHidden = true;
-				break;
-			}
-		}
+		// we need the id for navigation but we must remove it from the rows of
+		// the grid if the user has manually hidden it in the UI.
+		const isIDUsed = properties.find((property) => property.name === 'id').isUsed;
 
 		const rows: GridRow[] = [];
 		const idList: number[] = [];
 		for (const user of users) {
-			const id = user[idIndex];
+			const id = user.id;
 			idList.push(id);
-			if (isIDHidden) {
-				user.splice(idIndex, 1);
+			if (!isIDUsed) {
+				delete user.id;
 			}
 			const row: GridRow = {
 				onClick: () => {
 					redirect(`users/${id}`);
 				},
-				cells: user,
+				cells: Object.values(user),
 			};
 			rows.push(row);
 		}
