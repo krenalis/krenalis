@@ -81,7 +81,7 @@ CREATE TABLE groups (
     PRIMARY KEY (id)
 );
 
--- Keep in sync with the apis.eventColumns and events.batchEventsColumns variables.
+-- Keep in sync with the apis.eventColumns and events.eventsMergeTable variables.
 
 CREATE TYPE event_os_name AS ENUM ('None', 'Android', 'Windows', 'iOS', 'macOS', 'Linux', 'Chrome OS', 'Other');
 CREATE TYPE event_browser_name AS ENUM ('None', 'Chrome', 'Safari', 'Edge', 'Firefox', 'Samsung Internet', 'Opera', 'Other');

@@ -39,7 +39,7 @@ PRIMARY KEY id
 ORDER BY id
 SETTINGS index_granularity = 8192;
 
--- Keep in sync with the apis.eventColumns and events.batchEventsColumns variables.
+-- Keep in sync with the apis.eventColumns and events.eventsMergeTable variables.
 
 CREATE TABLE events
 (

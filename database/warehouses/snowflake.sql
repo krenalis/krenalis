@@ -31,7 +31,7 @@ CREATE TABLE "groups" (
     PRIMARY KEY ("id")
 );
 
--- Keep in sync with the apis.eventColumns and events.batchEventsColumns variables.
+-- Keep in sync with the apis.eventColumns and events.eventsMergeTable variables.
 
 CREATE TABLE "events" (
     "gid" NUMBER NOT NULL,
