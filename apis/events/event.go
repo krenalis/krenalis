@@ -61,7 +61,6 @@ type collectedEvent struct {
 	UserId       string         `json:"userId,omitempty"`
 	PreviousId   string         `json:"previousId,omitempty"`
 	Properties   map[string]any `json:"properties,omitempty"`
-	version      int
 
 	WriteKey string `json:"writeKey,omitempty"`
 }
@@ -318,7 +317,6 @@ func (event *collectedEvent) MapEvent() map[string]any {
 		"traits":     traits,
 		"type":       *event.Type,
 		"userId":     event.UserId,
-		"version":    event.version,
 	}
 
 	return mapEvent

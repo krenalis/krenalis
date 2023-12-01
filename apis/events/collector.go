@@ -758,9 +758,6 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 		event.Properties = map[string]any{}
 	}
 
-	// Version.
-	event.version = 2
-
 	return
 }
 

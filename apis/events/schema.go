@@ -141,5 +141,4 @@ var Schema = types.Object([]types.Property{
 	{Name: "traits", Type: types.JSON()},
 	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	{Name: "userId", Type: types.Text()},
-	{Name: "version", Type: types.Int(32)},
 })
