@@ -60,8 +60,8 @@ func New(st *state.State) *Datastore {
 		store: map[int]*Store{},
 	}
 	ds.state.AddListener(ds.onSetWarehouse)
-	for _, account := range st.Accounts() {
-		for _, ws := range account.Workspaces() {
+	for _, organization := range st.Organizations() {
+		for _, ws := range organization.Workspaces() {
 			if ws.Warehouse == nil {
 				continue
 			}

@@ -7,7 +7,7 @@ interface ListTileProps {
 	description?: string;
 	disabled?: boolean;
 	disablingReason?: string;
-	action: ReactNode;
+	action?: ReactNode;
 	onClick?: MouseEventHandler;
 	className?: string;
 }

@@ -10,10 +10,9 @@ interface LoginProps {
 	api: API;
 	showStatus: (status: Status) => void;
 	showError: (err: Error | string) => void;
-	setAccount: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
-const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError, setAccount }: LoginProps) => {
+const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError }: LoginProps) => {
 	const [email, setEmail] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -21,9 +20,10 @@ const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError, s
 	const onLogin = async (e: FormEvent) => {
 		e.preventDefault();
 		setIsLoading(true);
-		let accountID: number, authError: string;
+		let memberID: number;
+		let authError: string;
 		try {
-			[accountID, authError] = await api.login(email, password);
+			[memberID, authError] = await api.login(email, password);
 		} catch (err) {
 			setIsLoading(false);
 			showError(err);
@@ -36,9 +36,9 @@ const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError, s
 				return;
 			}
 		}
+		sessionStorage.setItem('chichi-member', String(memberID));
 		setIsLoading(false);
 		setIsLoadingState(true);
-		setAccount(accountID);
 		setIsLoggedIn(true);
 	};
 

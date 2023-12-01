@@ -22,7 +22,6 @@ import { useApp } from './hooks/useApp';
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/dist/');
 
 const App = () => {
-	const [account, setAccount] = useState<number | null>(null);
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
@@ -74,6 +73,8 @@ const App = () => {
 		setIsLoadingState,
 		isLoggedIn,
 		setIsLoggedIn,
+		member,
+		setIsLoadingMember,
 		connectors,
 		connections,
 		setIsLoadingConnections,
@@ -138,7 +139,8 @@ const App = () => {
 						showNotFound,
 						redirect,
 						setTitle,
-						account,
+						member,
+						setIsLoadingMember,
 						workspaces,
 						setIsLoadingWorkspaces,
 						warehouse,
@@ -153,13 +155,12 @@ const App = () => {
 				>
 					<div className='app'>
 						<Sidebar
-							setIsLoggedIn={setIsLoggedIn}
 							workspaces={workspaces}
 							warehouse={warehouse}
 							selectedWorkspace={selectedWorkspace}
 							setSelectedWorkspace={setSelectedWorkspace}
 						/>
-						<Header title={title} />
+						<Header title={title} member={member} />
 						<Outlet />
 					</div>
 				</AppContext.Provider>
@@ -173,7 +174,6 @@ const App = () => {
 				api={api}
 				showStatus={showStatus}
 				showError={showError}
-				setAccount={setAccount}
 			/>
 		);
 	}

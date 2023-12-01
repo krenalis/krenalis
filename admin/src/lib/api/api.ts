@@ -41,6 +41,8 @@ import {
 	UserEventsResponse,
 	userTraitsResponse,
 	Execution,
+	MemberToSet,
+	Member,
 } from '../../types/external/api';
 
 class API {
@@ -57,6 +59,10 @@ class API {
 
 	login = async (email: string, password: string): Promise<[number, string]> => {
 		return await call(`${adminBasePath}`, http.POST, { email, password });
+	};
+
+	logout = async (): Promise<void> => {
+		return await call(`${adminBasePath}logout`, http.POST);
 	};
 
 	eventsSchema = async (): Promise<ObjectType> => {
@@ -102,6 +108,30 @@ class API {
 			outSchema,
 			transformation,
 		});
+	};
+
+	members = async (): Promise<Member[]> => {
+		return await call(`${this.apiURL}/members`, http.GET);
+	};
+
+	addMember = async (memberToSet: MemberToSet): Promise<void> => {
+		return await call(`${this.apiURL}/members`, http.POST, {
+			memberToSet: memberToSet,
+		});
+	};
+
+	member = async (member: number): Promise<Member> => {
+		return await call(`${this.apiURL}/members/${member}`, http.GET);
+	};
+
+	updateMember = async (member: number, memberToSet: MemberToSet): Promise<void> => {
+		return await call(`${this.apiURL}/members/${member}`, http.PUT, {
+			memberToSet: memberToSet,
+		});
+	};
+
+	deleteMember = async (member: number): Promise<void> => {
+		return await call(`${this.apiURL}/members/${member}`, http.DELETE);
 	};
 }
 

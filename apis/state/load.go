@@ -10,7 +10,6 @@ package state
 import (
 	"encoding/json"
 	"reflect"
-	"strings"
 	"sync"
 
 	"chichi/apis/postgres"
@@ -154,24 +153,22 @@ func (state *State) Load() error {
 			return err
 		}
 
-		// Read all accounts.
-		state.accounts = map[int]*Account{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
+		// Read all organizations.
+		state.organizations = map[int]*Organization{}
+		err = state.db.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *postgres.Rows) error {
 			var id int
-			var name, email, ips string
+			var name string
 			for rows.Next() {
-				if err := rows.Scan(&id, &name, &email, &ips); err != nil {
+				if err := rows.Scan(&id, &name); err != nil {
 					return err
 				}
-				account := &Account{
-					mu:          new(sync.Mutex),
-					ID:          id,
-					Name:        name,
-					Email:       email,
-					InternalIPs: strings.Fields(ips),
+				organization := &Organization{
+					mu:   new(sync.Mutex),
+					ID:   id,
+					Name: name,
 				}
-				account.workspaces = map[int]*Workspace{}
-				state.accounts[id] = account
+				organization.workspaces = map[int]*Workspace{}
+				state.organizations[id] = organization
 			}
 			return nil
 		})
@@ -181,11 +178,11 @@ func (state *State) Load() error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings,\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_settings,\n"+
 			"identifiers, anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
-				var accountID int
+				var organizationID int
 				var warehouseType *WarehouseType
 				var warehouseSettings, mapping []byte
 				for rows.Next() {
@@ -194,11 +191,11 @@ func (state *State) Load() error {
 						connections: map[int]*Connection{},
 						resources:   map[int]*Resource{},
 					}
-					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings,
+					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseSettings,
 						&ws.Identifiers, &ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion); err != nil {
 						return err
 					}
-					ws.account = state.accounts[accountID]
+					ws.organization = state.organizations[organizationID]
 					if warehouseType != nil {
 						ws.Warehouse = &Warehouse{
 							Type:     *warehouseType,
@@ -209,7 +206,7 @@ func (state *State) Load() error {
 					if err != nil {
 						return err
 					}
-					ws.account.workspaces[ws.ID] = ws
+					ws.organization.workspaces[ws.ID] = ws
 					state.workspaces[ws.ID] = ws
 				}
 				return nil
@@ -255,7 +252,7 @@ func (state *State) Load() error {
 				}
 				workspace := state.workspaces[workspaceID]
 				c.mu = new(sync.Mutex)
-				c.account = workspace.account
+				c.organization = workspace.organization
 				c.workspace = workspace
 				c.connector = state.connectors[connector]
 				c.actions = map[int]*Action{}

@@ -137,7 +137,7 @@ func IncrementCounter(ctx context.Context, name string, incr int64) {
 //
 // An example usage:
 //
-//	ctx, span := telemetry.TraceSpan(ctx, "apis.Account", "account_id", id)
+//	ctx, span := telemetry.TraceSpan(ctx, "apis.Action", "action_id", id)
 //	defer span.End()
 //
 // If the telemetry has not been initialized with the Init function, then this

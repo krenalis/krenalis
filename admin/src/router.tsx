@@ -24,6 +24,9 @@ import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
 import GeneralSettings from './components/routes/GeneralSettings/GeneralSettings';
 import Settings from './components/routes/Settings/Settings';
+import Members from './components/routes/Members/Members';
+import Member from './components/routes/Member/Member';
+import Organization from './components/routes/Organization/Organization';
 
 const router = createBrowserRouter([
 	{
@@ -89,6 +92,18 @@ const router = createBrowserRouter([
 						element: <DataWarehouse />,
 					},
 				],
+			},
+			{
+				path: 'organization',
+				element: <Organization />,
+			},
+			{
+				path: 'members/:id',
+				element: <Member />,
+			},
+			{
+				path: 'members',
+				element: <Members />,
 			},
 			{ path: '*', element: <NotFound /> },
 		],

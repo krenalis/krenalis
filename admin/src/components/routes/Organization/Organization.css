@@ -1,0 +1,25 @@
+.organization__content {
+	height: calc(100% - 70px);
+	background-color: var(--bg-gray);
+}
+
+.organization {
+	max-width: 900px;
+	margin: 0px auto;
+	padding: 30px;
+	animation: fade-in-entrance 0.5s;
+}
+
+.organization__title {
+	font-size: 23px;
+	font-weight: 600;
+	margin-bottom: 15px;
+}
+
+.organization__entry {
+	margin-bottom: 15px;
+}
+
+.organization__entry:last-child {
+	margin-bottom: 0;
+}

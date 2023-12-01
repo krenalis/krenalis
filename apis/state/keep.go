@@ -253,11 +253,11 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 	state.mu.Lock()
 	state.workspaces[id] = ww
 	state.mu.Unlock()
-	// Update the account.
-	account := ww.account
-	account.mu.Lock()
-	account.workspaces[id] = ww
-	account.mu.Unlock()
+	// Update the organization.
+	organization := ww.organization
+	organization.mu.Lock()
+	organization.workspaces[id] = ww
+	organization.mu.Unlock()
 	// Update the connections.
 	for _, connection := range ww.connections {
 		if connection.workspace == w {
@@ -410,20 +410,20 @@ func (state *State) addConnection(n postgres.Notification) {
 		}
 	}
 	c := &Connection{
-		mu:          new(sync.Mutex),
-		account:     workspace.account,
-		workspace:   workspace,
-		ID:          e.ID,
-		Name:        e.Name,
-		Role:        e.Role,
-		Enabled:     e.Enabled,
-		connector:   connector,
-		storage:     state.connections[e.Storage],
-		Compression: e.Compression,
-		resource:    r,
-		WebsiteHost: e.WebsiteHost,
-		Settings:    e.Settings,
-		actions:     map[int]*Action{},
+		mu:           new(sync.Mutex),
+		organization: workspace.organization,
+		workspace:    workspace,
+		ID:           e.ID,
+		Name:         e.Name,
+		Role:         e.Role,
+		Enabled:      e.Enabled,
+		connector:    connector,
+		storage:      state.connections[e.Storage],
+		Compression:  e.Compression,
+		resource:     r,
+		WebsiteHost:  e.WebsiteHost,
+		Settings:     e.Settings,
+		actions:      map[int]*Action{},
 	}
 	if e.Key != "" {
 		c.Keys = []string{e.Key}
@@ -505,7 +505,7 @@ func (state *State) executeAction(n postgres.Notification) {
 // AddWorkspace is the event sent when a workspace is added.
 type AddWorkspace struct {
 	ID            int
-	Account       int
+	Organization  int
 	Name          string
 	PrivacyRegion PrivacyRegion
 }
@@ -516,21 +516,21 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	account := state.accounts[e.Account]
+	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:            &sync.Mutex{},
 		connections:   map[int]*Connection{},
 		ID:            e.ID,
-		account:       account,
+		organization:  organization,
 		Name:          e.Name,
 		PrivacyRegion: e.PrivacyRegion,
 	}
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
 	state.mu.Unlock()
-	account.mu.Lock()
-	account.workspaces[e.ID] = &ws
-	account.mu.Unlock()
+	organization.mu.Lock()
+	organization.workspaces[e.ID] = &ws
+	organization.mu.Unlock()
 }
 
 // DeleteAction is the event sent when an action is deleted.
@@ -635,11 +635,11 @@ func (state *State) deleteWorkspace(n postgres.Notification) {
 		return
 	}
 	ws := state.workspaces[e.ID]
-	account := state.accounts[ws.account.ID]
+	organization := state.organizations[ws.organization.ID]
 	state.mu.Lock()
 	// Delete the workspace.
 	delete(state.workspaces, e.ID)
-	delete(account.workspaces, e.ID)
+	delete(organization.workspaces, e.ID)
 	// Delete the connections.
 	for _, c := range ws.connections {
 		for _, key := range c.Keys {

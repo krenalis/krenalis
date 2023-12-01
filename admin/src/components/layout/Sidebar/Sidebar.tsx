@@ -56,20 +56,24 @@ const sidebarItems: sidebarItem[] = [
 ];
 
 interface SidebarProps {
-	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 	workspaces: Workspace[];
 	warehouse: Warehouse;
 	selectedWorkspace: number;
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const Sidebar = ({ setIsLoggedIn, workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
-	const { redirect, connections, warehouse, setIsLoadingState } = useContext(AppContext);
+const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
+	const { api, showError, redirect, connections, warehouse, setIsLoadingState } = useContext(AppContext);
 
-	const onLogout = () => {
-		document.cookie = 'session=; Max-Age=-99999999; Path=/';
+	const onLogout = async () => {
+		try {
+			await api.logout();
+		} catch (err) {
+			showError(err);
+			return;
+		}
+		sessionStorage.removeItem('chichi-member');
 		setSelectedWorkspace(0);
-		setIsLoggedIn(false);
 		setIsLoadingState(true);
 	};
 

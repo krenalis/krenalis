@@ -9,6 +9,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -27,6 +28,9 @@ import (
 type Settings struct {
 	Main struct {
 		Host string
+	}
+	Admin struct {
+		SessionKey string `yaml:"sessionKey"`
 	}
 	ESBuild struct {
 		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
@@ -89,13 +93,28 @@ func Run(ctx context.Context, settings *Settings) error {
 		config.Transformer = apis.LocalConfig(settings.Transformer.Local)
 	}
 
+	// Decode the admin session key.
+	if settings.Admin.SessionKey == "" {
+		return errors.New("admin session key is missing from the configuration file")
+	}
+	if padding := len(settings.Admin.SessionKey) % 4; padding > 0 {
+		settings.Admin.SessionKey += strings.Repeat("=", 4-padding)
+	}
+	sessionKey, err := base64.StdEncoding.DecodeString(settings.Admin.SessionKey)
+	if err != nil {
+		return errors.New("admin session key in the configuration file is not in Base64 format")
+	}
+	if len(sessionKey) != 64 {
+		return fmt.Errorf("admin session key in the configuration file is not 64 bytes long, but %d", len(sessionKey))
+	}
+
 	apis, err := apis.New(&config)
 	if err != nil {
 		return err
 	}
 	defer apis.Close()
 
-	admin := admin.New(apis)
+	admin := admin.New(apis, sessionKey)
 
 	apisServer := &apisServer{apis}
 

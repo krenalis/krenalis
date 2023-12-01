@@ -65,6 +65,7 @@ var (
 	InvalidTable         errors.Code = "InvalidTable"
 	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
+	MemberNotExist       errors.Code = "MemberNotExist"
 	NoColumns            errors.Code = "NoColumns"
 	NoEventsSchema       errors.Code = "NoEventsSchema"
 	NoGroupsSchema       errors.Code = "NoGroupsSchema"

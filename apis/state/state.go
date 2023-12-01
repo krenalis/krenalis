@@ -38,7 +38,7 @@ type State struct {
 	db               *postgres.DB
 	syncing          bool // reports whether the keeper has started synchronizing the state.
 	election         election
-	accounts         map[int]*Account
+	organizations    map[int]*Organization
 	connectors       map[int]*Connector
 	workspaces       map[int]*Workspace
 	connections      map[int]*Connection
@@ -83,7 +83,7 @@ func New(db *postgres.DB) (*State, error) {
 		id:               id,
 		db:               db,
 		mu:               new(sync.Mutex),
-		accounts:         map[int]*Account{},
+		organizations:    map[int]*Organization{},
 		connectors:       map[int]*Connector{},
 		workspaces:       map[int]*Workspace{},
 		connections:      map[int]*Connection{},
@@ -100,29 +100,29 @@ func New(db *postgres.DB) (*State, error) {
 	return state, nil
 }
 
-// Account returns the account with identifier id.
-// The boolean return value reports whether the account exists.
-func (state *State) Account(id int) (*Account, bool) {
+// Organization returns the organization with identifier id.
+// The boolean return value reports whether the organization exists.
+func (state *State) Organization(id int) (*Organization, bool) {
 	state.mu.Lock()
-	a, ok := state.accounts[id]
+	a, ok := state.organizations[id]
 	state.mu.Unlock()
 	return a, ok
 }
 
-// Accounts returns all accounts.
-func (state *State) Accounts() []*Account {
+// Organizations returns all organizations.
+func (state *State) Organizations() []*Organization {
 	state.mu.Lock()
-	accounts := make([]*Account, len(state.accounts))
+	organizations := make([]*Organization, len(state.organizations))
 	i := 0
-	for _, account := range state.accounts {
-		accounts[i] = account
+	for _, organization := range state.organizations {
+		organizations[i] = organization
 		i++
 	}
 	state.mu.Unlock()
-	sort.Slice(accounts, func(i, j int) bool {
-		return accounts[i].ID < accounts[j].ID
+	sort.Slice(organizations, func(i, j int) bool {
+		return organizations[i].ID < organizations[j].ID
 	})
-	return accounts
+	return organizations
 }
 
 // Action returns the action with identifier id.
@@ -220,8 +220,8 @@ func (state *State) IsLeader() bool {
 // The boolean return value reports whether the resource exists.
 func (state *State) Resource(id int) (*Resource, bool) {
 	// TODO(marco): optimize.
-	for _, a := range state.Accounts() {
-		for _, ws := range a.Workspaces() {
+	for _, o := range state.Organizations() {
+		for _, ws := range o.Workspaces() {
 			if r, ok := ws.Resource(id); ok {
 				return r, true
 			}
@@ -239,35 +239,33 @@ func (state *State) Workspace(id int) (*Workspace, bool) {
 	return ws, ok
 }
 
-// Account represents an account.
-type Account struct {
-	mu          *sync.Mutex
-	workspaces  map[int]*Workspace
-	ID          int
-	Name        string
-	Email       string
-	InternalIPs []string
+// Organization represents an organization.
+type Organization struct {
+	mu         *sync.Mutex
+	workspaces map[int]*Workspace
+	ID         int
+	Name       string
 }
 
-// Workspace returns the workspace of the account with identifier id.
+// Workspace returns the workspace of the organization with identifier id.
 // The boolean return value reports whether the workspace exists.
-func (account *Account) Workspace(id int) (*Workspace, bool) {
-	account.mu.Lock()
-	w, ok := account.workspaces[id]
-	account.mu.Unlock()
+func (organization *Organization) Workspace(id int) (*Workspace, bool) {
+	organization.mu.Lock()
+	w, ok := organization.workspaces[id]
+	organization.mu.Unlock()
 	return w, ok
 }
 
-// Workspaces returns all the workspaces of the account.
-func (account *Account) Workspaces() []*Workspace {
-	account.mu.Lock()
-	workspaces := make([]*Workspace, len(account.workspaces))
+// Workspaces returns all the workspaces of the organization.
+func (organization *Organization) Workspaces() []*Workspace {
+	organization.mu.Lock()
+	workspaces := make([]*Workspace, len(organization.workspaces))
 	i := 0
-	for _, w := range account.workspaces {
+	for _, w := range organization.workspaces {
 		workspaces[i] = w
 		i++
 	}
-	account.mu.Unlock()
+	organization.mu.Unlock()
 	return workspaces
 }
 
@@ -282,7 +280,7 @@ type Workspace struct {
 	Warehouse            *Warehouse
 	connections          map[int]*Connection
 	ID                   int
-	account              *Account
+	organization         *Organization
 	Name                 string
 	resources            map[int]*Resource
 	Identifiers          []string
@@ -290,12 +288,12 @@ type Workspace struct {
 	PrivacyRegion        PrivacyRegion
 }
 
-// Account returns the account of the workspace.
-func (workspace *Workspace) Account() *Account {
+// Organization returns the organization of the workspace.
+func (workspace *Workspace) Organization() *Organization {
 	workspace.mu.Lock()
-	account := workspace.account
+	organization := workspace.organization
 	workspace.mu.Unlock()
-	return account
+	return organization
 }
 
 // Connection returns the connection of the workspace with identifier id.
@@ -582,31 +580,31 @@ func (resource *Resource) Connector() *Connector {
 
 // Connection represents a connection.
 type Connection struct {
-	mu          *sync.Mutex
-	account     *Account
-	workspace   *Workspace
-	ID          int
-	Name        string
-	Role        Role
-	Enabled     bool
-	connector   *Connector
-	storage     *Connection
-	Compression Compression
-	resource    *Resource
-	WebsiteHost string
-	Keys        []string
-	Settings    []byte
-	UsersQuery  string
-	actions     map[int]*Action
-	Health      Health
+	mu           *sync.Mutex
+	organization *Organization
+	workspace    *Workspace
+	ID           int
+	Name         string
+	Role         Role
+	Enabled      bool
+	connector    *Connector
+	storage      *Connection
+	Compression  Compression
+	resource     *Resource
+	WebsiteHost  string
+	Keys         []string
+	Settings     []byte
+	UsersQuery   string
+	actions      map[int]*Action
+	Health       Health
 }
 
-// Account returns the account of the connection.
-func (connection *Connection) Account() *Account {
+// Organization returns the organization of the connection.
+func (connection *Connection) Organization() *Organization {
 	connection.mu.Lock()
-	a := connection.account
+	o := connection.organization
 	connection.mu.Unlock()
-	return a
+	return o
 }
 
 // Workspace returns the workspace of the connection.

@@ -9,6 +9,8 @@ package chichitester
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -102,8 +104,20 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	}
 	c.transformationsTempDir = transformationsTempDir
 
+	// Create an admin session key.
+	var sessionKey string
+	{
+		key := make([]byte, 64)
+		_, err = rand.Read(key)
+		if err != nil {
+			t.Fatalf("cannot generate an admin session key: %s", err)
+		}
+		sessionKey = base64.StdEncoding.EncodeToString(key)
+	}
+
 	setts := server.Settings{}
 	setts.Main.Host = testsSettings.ChichiHost
+	setts.Admin.SessionKey = sessionKey
 	setts.PostgreSQL.Host = testsSettings.Database.Host
 	setts.PostgreSQL.Port = testsSettings.Database.Port
 	setts.PostgreSQL.Username = testsSettings.Database.Username

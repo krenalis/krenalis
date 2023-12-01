@@ -4,6 +4,7 @@ import TransformedConnector from '../lib/helpers/transformedConnector';
 import TransformedConnection from '../lib/helpers/transformedConnection';
 import { Status, Warehouse } from '../types/internal/app';
 import Workspace from '../types/external/workspace';
+import { TransformedMember } from '../lib/helpers/transformedMember';
 
 interface AppContext {
 	api: API;
@@ -12,7 +13,8 @@ interface AppContext {
 	showNotFound: () => void;
 	setTitle: React.Dispatch<React.SetStateAction<ReactNode>>;
 	redirect: (url: string) => void;
-	account: number | null;
+	member: TransformedMember;
+	setIsLoadingMember: React.Dispatch<React.SetStateAction<boolean>>;
 	connectors: TransformedConnector[];
 	connections: TransformedConnection[];
 	setIsLoadingConnections: React.Dispatch<React.SetStateAction<boolean>>;

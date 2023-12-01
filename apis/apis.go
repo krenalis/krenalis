@@ -10,15 +10,14 @@ package apis
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"unicode/utf8"
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
@@ -35,7 +34,6 @@ import (
 	"chichi/telemetry"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const TransformationFailed errors.Code = "TransformationFailed"
@@ -170,39 +168,37 @@ func New(conf *Config) (*APIs, error) {
 	return apis, nil
 }
 
-// Account returns the account with identifier id.
+// Organization returns the organization with identifier id.
 //
-// It returns an errors.NoFound error if the account does not exist.
-func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
+// It returns an errors.NotFound error if the organization does not exist.
+func (apis *APIs) Organization(ctx context.Context, id int) (*Organization, error) {
 	apis.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "apis.Account", "account_id", id)
+	_, t := telemetry.TraceSpan(ctx, "apis.Organization", "organization_id", id)
 	defer t.End()
 	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid account identifier", id)
+		return nil, errors.BadRequest("identifier %d is not a valid organization identifier", id)
 	}
-	acc, ok := apis.state.Account(id)
+	org, ok := apis.state.Organization(id)
 	if !ok {
-		return nil, errors.NotFound("account %d does not exist", id)
+		return nil, errors.NotFound("organization %d does not exist", id)
 	}
-	account := Account{
-		apis:        apis,
-		account:     acc,
-		ID:          acc.ID,
-		Name:        acc.Name,
-		Email:       acc.Email,
-		InternalIPs: slices.Clone(acc.InternalIPs),
+	organization := Organization{
+		apis:         apis,
+		organization: org,
+		ID:           org.ID,
+		Name:         org.Name,
 	}
-	return &account, nil
+	return &organization, nil
 }
 
-// Accounts returns a list of Account, in the given order, describing all
-// accounts but starting from first and up to limit. first must be >= 0 and
+// Organizations returns the organizations, in the given order, describing all
+// organizations but starting from first and up to limit. first must be >= 0 and
 // limit must be > 0.
-func (apis *APIs) Accounts(ctx context.Context, order AccountSort, first, limit int) ([]*Account, error) {
+func (apis *APIs) Organizations(ctx context.Context, order OrganizationSort, first, limit int) ([]*Organization, error) {
 	apis.mustBeOpen()
 	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
 	defer s.End()
-	if order != SortByName && order != SortByEmail {
+	if order != SortByName {
 		return nil, errors.BadRequest("order %d is not valid", int(order))
 	}
 	if limit <= 0 {
@@ -211,65 +207,31 @@ func (apis *APIs) Accounts(ctx context.Context, order AccountSort, first, limit 
 	if first < 0 {
 		return nil, errors.BadRequest("first %d is not valid", first)
 	}
-	accounts := apis.state.Accounts()
-	count := len(accounts)
+	organizations := apis.state.Organizations()
+	count := len(organizations)
 	if first >= count {
-		return []*Account{}, nil
+		return []*Organization{}, nil
 	}
 	if first+limit > count {
 		limit = count - first
 	}
-	sort.Slice(accounts, func(i, j int) bool {
-		a, b := accounts[i], accounts[j]
+	sort.Slice(organizations, func(i, j int) bool {
+		a, b := organizations[i], organizations[j]
 		switch order {
 		case SortByName:
 			return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
-		case SortByEmail:
-			return a.Email < b.Email || a.Email == b.Email && a.ID < b.ID
 		}
 		return false
 	})
-	accounts = accounts[first : first+limit]
-	accs := make([]*Account, len(accounts))
-	for i, account := range accounts {
-		accs[i] = &Account{
-			ID:          account.ID,
-			Name:        account.Name,
-			Email:       account.Email,
-			InternalIPs: slices.Clone(account.InternalIPs),
+	organizations = organizations[first : first+limit]
+	orgs := make([]*Organization, len(organizations))
+	for i, organization := range organizations {
+		orgs[i] = &Organization{
+			ID:   organization.ID,
+			Name: organization.Name,
 		}
 	}
-	return accs, nil
-}
-
-// AuthenticateAccount authenticates an account given its email and password.
-//
-// It returns an errors.UnprocessableError error with code
-// AuthenticationFailed, if the authentication fails.
-func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password string) (int, error) {
-	apis.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "apis.Connectors")
-	defer t.End()
-	if !emailRegExp.MatchString(email) {
-		return 0, errors.BadRequest("email is not valid")
-	}
-	if len(password) < 8 {
-		return 0, errors.BadRequest("password is not valid")
-	}
-	var id int
-	var hashedPassword []byte
-	err := apis.db.QueryRow(ctx, "SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
-		}
-		return 0, err
-	}
-	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
-	if err != nil {
-		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
-	}
-	return id, nil
+	return orgs, nil
 }
 
 // Close closes the APIs.
@@ -362,37 +324,35 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 	return connectors
 }
 
-// CountAccounts returns the total number of accounts.
-func (apis *APIs) CountAccounts(ctx context.Context) int {
+// CountOrganizations returns the total number of organizations.
+func (apis *APIs) CountOrganizations(ctx context.Context) int {
 	apis.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "apis.CountAccounts")
+	_, s := telemetry.TraceSpan(ctx, "apis.CountOrganizations")
 	defer s.End()
-	return len(apis.state.Accounts())
+	return len(apis.state.Organizations())
 }
 
-// CreateAccount a new account given its email and password and returns its
-// identifier.
-func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (int, error) {
+// AddOrganization adds a new organization and returns its identifier.
+// name cannot be empty and cannot be longer than 45 runes.
+func (apis *APIs) AddOrganization(ctx context.Context, name string) (int, error) {
 	apis.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "apis.CreateAccount")
+	_, t := telemetry.TraceSpan(ctx, "apis.AddOrganization")
+	if name == "" {
+		return 0, errors.BadRequest("name is empty")
+	}
+	if !utf8.ValidString(name) {
+		return 0, errors.BadRequest("name is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(name); n > 45 {
+		return 0, errors.BadRequest("name is longer than 45 runes")
+	}
 	defer t.End()
-	if !emailRegExp.MatchString(email) {
-		return 0, errors.BadRequest("email is not valid")
-	}
-	if len(password) < 8 {
-		return 0, errors.BadRequest("password is not valid")
-	}
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return 0, err
-	}
 	var id int
-	err = apis.db.QueryRow(ctx, "INSERT INTO accounts (email, password) VALUES ($1, $2)",
-		email, string(hashedPassword)).Scan(&id)
+	err := apis.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
 	if err != nil {
 		return 0, err
 	}
-	return id, err
+	return id, nil
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a
@@ -635,7 +595,7 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 // Workspace represents a workspace.
 type Workspace struct {
 	apis                 *APIs
-	account              *Account
+	organization         *Organization
 	store                *datastore.Store
 	workspace            *state.Workspace
 	ID                   int
@@ -645,21 +605,18 @@ type Workspace struct {
 	PrivacyRegion        PrivacyRegion
 }
 
-type AccountSort int
+type OrganizationSort int
 
 const (
-	SortByName AccountSort = iota
-	SortByEmail
+	SortByName OrganizationSort = iota
 )
 
-func (s AccountSort) String() string {
+func (s OrganizationSort) String() string {
 	switch s {
 	case SortByName:
 		return "name"
-	case SortByEmail:
-		return "email"
 	}
-	panic("invalid account sort")
+	panic("invalid organization sort")
 }
 
 // AnonymousIdentifiers represents the anonymous identifiers of a workspace.

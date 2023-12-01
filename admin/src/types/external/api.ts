@@ -124,6 +124,25 @@ interface ObservedEvent {
 	Err: string;
 }
 
+interface MemberAvatar {
+	Image: string;
+	MimeType: string;
+}
+
+interface Member {
+	ID: number;
+	Name: string;
+	Avatar: MemberAvatar;
+	Email: string;
+}
+
+interface MemberToSet {
+	Name: string;
+	Image: string;
+	Email: string;
+	Password?: string;
+}
+
 export type {
 	authCodeURLResponse,
 	UIResponse,
@@ -147,4 +166,7 @@ export type {
 	userTraitsResponse,
 	EventPreviewResponse,
 	ObservedEvent,
+	Member,
+	MemberToSet,
+	MemberAvatar,
 };

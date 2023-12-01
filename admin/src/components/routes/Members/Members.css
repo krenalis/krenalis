@@ -1,0 +1,123 @@
+.members__content {
+	height: calc(100% - 70px);
+	background-color: var(--bg-gray);
+}
+
+.members {
+	max-width: 900px;
+	margin: 0px auto;
+	padding: 30px;
+	animation: fade-in-entrance 0.5s;
+}
+
+.members sl-spinner {
+	display: block;
+	margin: 20px auto;
+}
+
+.members .members__title {
+	display: flex;
+	margin-bottom: 15px;
+	justify-content: space-between;
+	align-items: end;
+}
+
+.members .members__title-text {
+	font-size: 23px;
+	font-weight: 600;
+}
+
+.members .members__member {
+	margin-bottom: 15px;
+	background-color: var(--bg-primary);
+}
+
+.members .members__member .tileContent {
+	grid-template-columns: 55px 1fr;
+}
+
+.members .members__member .tileIcon sl-avatar::part(base) {
+	width: 40px;
+	height: 40px;
+}
+
+.members .members__member:last-child {
+	margin-bottom: 0;
+}
+
+.members .members__member .members__member-actions {
+	display: flex;
+	gap: 15px;
+}
+
+.members__add-dialog sl-input {
+	margin-bottom: 15px;
+}
+
+.members__add-dialog sl-input::part(form-control-label)::after {
+	color: var(--sl-color-danger-500);
+}
+
+.members__add-dialog .members__add-dialog-avatar-box {
+	display: flex;
+	align-items: start;
+	gap: 30px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.members__add-dialog .members__add-dialog-avatar-box sl-avatar::part(base) {
+	width: 60px;
+	height: 60px;
+}
+
+.members__add-dialog .members__add-dialog-avatar-label {
+	font-weight: 600;
+	padding-bottom: 5px;
+}
+
+.members__add-dialog .members__add-dialog-add-avatar,
+.members__add-dialog .members__add-dialog-remove-avatar {
+	max-width: 150px;
+	background-color: var(--bg-gray);
+	color: var(--sl-color-neutral-700);
+	border-radius: var(--radius);
+	border: 1px solid var(--sl-color-neutral-300);
+	padding: 8px 25px;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.members__add-dialog .members__add-dialog-remove-avatar {
+	margin-top: 10px;
+	background-color: var(--sl-color-danger-500);
+	color: var(--text-onaccent);
+	border: 0;
+}
+
+.members__add-dialog .members__add-dialog-avatar-box img {
+	max-height: 180px;
+	width: auto;
+	border-radius: 5px;
+}
+
+.members__add-dialog .members__add-dialog-avatar-box input[type='file'] {
+	display: none;
+}
+
+.members__add-dialog-error {
+	color: var(--sl-color-danger-600);
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.members__add-dialog-error sl-icon {
+	color: var(--sl-color-danger-600);
+}
+
+.members__add-dialog sl-button {
+	display: block;
+	margin: auto;
+	margin-top: 30px;
+}

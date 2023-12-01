@@ -61,3 +61,8 @@ POST    /api/expressions-properties                                             
 GET     /api/transformation-languages                                            Return the supported transformation languages.
 POST    /api/transform-data                                                      Transform data, using a mapping or a transformation, and returns it.
 POST    /api/validate-expression                                                 Validate an expression.
+GET     /api/members                                                             List the members.
+POST    /api/members                                                             Add a new member and returns its id.
+GET     /api/members/{id}                                                        Get the member.
+PUT     /api/members/{id}                                                        Update the member.
+DELETE  /api/members/{id}                                                        Delete the member.

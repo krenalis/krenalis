@@ -40,8 +40,8 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	telemetry.IncrementCounter(ctx, "apis.ServeHTTP", 1)
 
-	// Read the account.
-	account, err := s.apis.Account(ctx, 1)
+	// Read the organization.
+	organization, err := s.apis.Organization(ctx, 1)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -60,7 +60,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request (invalid workspace id)", http.StatusBadRequest)
 				return
 			}
-			workspace, err = account.Workspace(workspaceID)
+			workspace, err = organization.Workspace(workspaceID)
 			if err != nil {
 				http.NotFound(w, r)
 				return
@@ -70,7 +70,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		router.Route("/api/workspaces", func(router chi.Router) {
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(account.Workspaces())
+				_ = json.NewEncoder(w).Encode(organization.Workspaces())
 			})
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				req := struct {
@@ -82,7 +82,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				id, err := account.AddWorkspace(ctx, req.Name, req.PrivacyRegion)
+				id, err := organization.AddWorkspace(ctx, req.Name, req.PrivacyRegion)
 				w.Header().Add("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(map[string]int{"id": id})
 				respond(w, err)
@@ -1052,6 +1052,95 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"data": json.RawMessage(data)})
+	})
+	router.Route("/api/members", func(router chi.Router) {
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			members, err := organization.Members(ctx)
+			if err != nil {
+				respond(w, err)
+				return
+			}
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(members)
+		})
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				MemberToSet struct {
+					Name     string
+					Image    *[]byte
+					Email    string
+					Password string
+				}
+			}
+			err = json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				respond(w, err)
+				return
+			}
+			memberToSet := apis.MemberToSet{
+				Name:     req.MemberToSet.Name,
+				Email:    req.MemberToSet.Email,
+				Password: req.MemberToSet.Password,
+			}
+			if req.MemberToSet.Image != nil {
+				fileType := http.DetectContentType(*req.MemberToSet.Image)
+				avatar := &apis.Avatar{
+					Image:    *req.MemberToSet.Image,
+					MimeType: fileType,
+				}
+				memberToSet.Avatar = avatar
+			}
+			err := organization.AddMember(ctx, memberToSet)
+			respond(w, err)
+		})
+		router.Route("/{memberID}", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
+				member, err := organization.Member(ctx, id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(member)
+			})
+			router.Put("/", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
+				var req struct {
+					MemberToSet struct {
+						Name     string
+						Image    *[]byte
+						Email    string
+						Password string
+					}
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				memberToSet := apis.MemberToSet{
+					Name:     req.MemberToSet.Name,
+					Email:    req.MemberToSet.Email,
+					Password: req.MemberToSet.Password,
+				}
+				if req.MemberToSet.Image != nil {
+					fileType := http.DetectContentType(*req.MemberToSet.Image)
+					avatar := &apis.Avatar{
+						Image:    *req.MemberToSet.Image,
+						MimeType: fileType,
+					}
+					memberToSet.Avatar = avatar
+				}
+				err := organization.SetMember(ctx, id, memberToSet)
+				respond(w, err)
+			})
+			router.Delete("/", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
+				err := organization.DeleteMember(ctx, id)
+				respond(w, err)
+			})
+		})
 	})
 
 	router.ServeHTTP(w, r)

@@ -11,14 +11,18 @@ import TransformedConnection, {
 import { Location } from 'react-router-dom';
 import { adminBasePath } from '../constants/path';
 import { Connection } from '../types/external/connection';
-import { checkSessionCookie } from '../lib/helpers/auth';
 import Workspace from '../types/external/workspace';
 import { Warehouse } from '../types/internal/app';
 import { WarehouseResponse } from '../types/external/warehouse';
+import { Member } from '../types/external/api';
+import { NotFoundError } from '../lib/api/errors';
+import { TransformedMember, transformMember } from '../lib/helpers/transformedMember';
 
 const useApp = (showError: (err: Error | string) => void, redirect: (url: string) => void, location: Location) => {
 	const [isLoadingState, setIsLoadingState] = useState<boolean>(true);
 	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+	const [member, setMember] = useState<TransformedMember | null>();
+	const [isLoadingMember, setIsLoadingMember] = useState<boolean>(false);
 	const [connectors, setConnectors] = useState<TransformedConnector[] | null>(null);
 	const [connections, setConnections] = useState<TransformedConnection[] | null>(null);
 	const [isLoadingConnections, setIsLoadingConnections] = useState<boolean>(false);
@@ -79,10 +83,10 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			}
 			setConnectors(transformedConnectors);
 
-			const isLogged = checkSessionCookie();
-			if (!isLogged) {
-				// the user must log in.
+			const memberID = sessionStorage.getItem('chichi-member');
+			if (memberID == null) {
 				setTimeout(() => {
+					setIsLoggedIn(false);
 					setIsLoadingState(false);
 					if (location.pathname !== adminBasePath) {
 						redirect('');
@@ -91,6 +95,32 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 				return;
 			}
 			setIsLoggedIn(true);
+
+			let member: Member;
+			try {
+				member = await api.member(Number(memberID));
+			} catch (err) {
+				if (err instanceof NotFoundError) {
+					showError('The current logged in member does not exist anymore');
+					try {
+						await api.logout();
+					} catch (err) {
+						showError(err);
+						return;
+					}
+					setTimeout(() => {
+						sessionStorage.removeItem('chichi-member');
+						setSelectedWorkspace(0);
+						setIsLoggedIn(false);
+						setIsLoadingState(false);
+						redirect('');
+					}, 300);
+					return;
+				}
+				showError(err);
+				return;
+			}
+			setMember(transformMember(member));
 
 			if (selectedWorkspace === 0) {
 				// the user must choose a workspace.
@@ -240,6 +270,41 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 	}, [isLoadingWorkspaces]);
 
 	useEffect(() => {
+		const loadMember = async () => {
+			let m: Member;
+			try {
+				m = await api.member(member.ID);
+			} catch (err) {
+				if (err instanceof NotFoundError) {
+					showError('The current logged in member does not exist anymore');
+					try {
+						await api.logout();
+					} catch (err) {
+						showError(err);
+						return;
+					}
+					sessionStorage.removeItem('chichi-member');
+					setSelectedWorkspace(0);
+					setIsLoggedIn(false);
+					setIsLoadingMember(false);
+					redirect('');
+					return;
+				}
+				showError(err);
+				return;
+			}
+			setMember(transformMember(m));
+		};
+
+		if (isLoadingState || !isLoadingMember) {
+			return;
+		}
+
+		loadMember();
+		setIsLoadingMember(false);
+	}, [isLoadingMember]);
+
+	useEffect(() => {
 		if (selectedWorkspace === 0) {
 			localStorage.removeItem('chichi_workspace_id');
 		} else {
@@ -247,25 +312,13 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 		}
 	}, [selectedWorkspace]);
 
-	useEffect(() => {
-		if (isLoadingState) {
-			return;
-		}
-		// check if the session is still active.
-		const isLogged = checkSessionCookie();
-		if (!isLogged) {
-			setIsLoggedIn(false);
-			if (location.pathname !== adminBasePath) {
-				redirect('');
-			}
-		}
-	}, [location]);
-
 	return {
 		isLoadingState,
 		setIsLoadingState,
 		isLoggedIn,
 		setIsLoggedIn,
+		member,
+		setIsLoadingMember,
 		connectors,
 		connections,
 		setIsLoadingConnections,

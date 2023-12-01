@@ -1,15 +1,4 @@
 
-CREATE TABLE accounts (
-    id SERIAL,
-    name varchar(45) NOT NULL DEFAULT '',
-    email varchar(120) NOT NULL DEFAULT '',
-    password varchar(60) NOT NULL DEFAULT '',
-    internal_ips VARCHAR(160) NOT NULL DEFAULT '',
-    PRIMARY KEY (id)
-);
-
-INSERT INTO accounts (name, email, password) VALUES
-    ('ACME inc', 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); -- Password: foopass2
 
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Stream', 'Website');
 CREATE TYPE action_target AS ENUM ('Events', 'Users', 'Groups');
@@ -54,12 +43,20 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('PHP', 'Server', '', ''),
     ('Python', 'Server', '', '');
 
+CREATE TABLE organizations (
+    id SERIAL,
+    name varchar(45) NOT NULL DEFAULT '',
+    PRIMARY KEY (id)
+);
+
+INSERT INTO organizations (name) VALUES ('ACME inc');
+
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');
 
 CREATE TABLE workspaces (
     id integer NOT NULL,
-    account integer NOT NULL REFERENCES accounts ON DELETE CASCADE,
+    organization integer NOT NULL REFERENCES organizations ON DELETE CASCADE,
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
@@ -70,7 +67,7 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings, anonymous_identifiers_priority, anonymous_identifiers_mapping)
+INSERT INTO workspaces (id, organization, name, warehouse_type, warehouse_settings, anonymous_identifiers_priority, anonymous_identifiers_mapping)
 VALUES (1, 1, 'Workspace', NULL, '', '{}', '{}');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
@@ -193,16 +190,24 @@ CREATE TABLE event_processed (
     error varchar(1000) NOT NULL DEFAULT ''
 );
 
-CREATE TABLE properties (
+CREATE TYPE avatar_mime_type AS ENUM ('image/jpeg', 'image/png');
+
+CREATE TYPE avatar AS (
+    image bytea,
+    mime_type avatar_mime_type
+);
+
+CREATE TABLE members (
     id SERIAL,
-    code char(10) NOT NULL UNIQUE,
-    account integer NOT NULL,
+    organization integer NOT NULL REFERENCES organizations ON DELETE CASCADE,
+    name varchar(45) NOT NULL DEFAULT '',
+    avatar avatar,
+    email varchar(120) NOT NULL DEFAULT '',
+    password varchar(72) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
-CREATE INDEX ON properties (account);
-
-INSERT INTO properties VALUES (1, '1234567890', 1);
+INSERT INTO members (organization, name, avatar, email, password) VALUES (1, 'ACME inc', NULL, 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); -- Password: foopass2
 
 CREATE TABLE resources (
     id SERIAL,

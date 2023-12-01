@@ -1,0 +1,223 @@
+import React, { useContext, useState, useEffect, useRef } from 'react';
+import './Member.css';
+import appContext from '../../../context/AppContext';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { useParams } from 'react-router-dom';
+import * as variants from '../../../constants/variants';
+import * as icons from '../../../constants/icons';
+import { MemberAvatar, Member as MemberInterface, MemberToSet } from '../../../types/external/api';
+import { toBase64 } from '../../../lib/utils/toBase64';
+import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
+import { validateMemberToSet } from '../../../lib/helpers/transformedMember';
+
+const Member = () => {
+	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
+	const [name, setName] = useState<string>('');
+	const [email, setEmail] = useState<string>('');
+	const [password, setPassword] = useState<string | null>(null);
+	const [isSaving, setIsSaving] = useState<boolean>(false);
+	const [error, setError] = useState<string>('');
+
+	const { api, member, showError, showStatus, setIsLoadingMember, setTitle, redirect } = useContext(appContext);
+
+	const fileInputRef = useRef<any>();
+
+	const { id } = useParams();
+
+	useEffect(() => {
+		const fetchMember = async () => {
+			const memberID = Number(id);
+			if (memberID === member.ID) {
+				setTitle(member.Name);
+				setAvatar(member.Avatar);
+				setName(member.Name);
+				setEmail(member.Email);
+			} else {
+				let member: MemberInterface;
+				try {
+					member = await api.member(memberID);
+				} catch (err) {
+					showError(err);
+					return;
+				}
+				setTitle(member.Name);
+				setAvatar(member.Avatar);
+				setName(member.Name);
+				setEmail(member.Email);
+			}
+		};
+
+		fetchMember();
+	}, []);
+
+	const onUpdateAvatar = async (e) => {
+		setError('');
+		const f: File = Array.from(e.target.files)[0] as File;
+		if (f == null) {
+			return;
+		}
+		if (f.type !== 'image/jpeg' && f.type !== 'image/png') {
+			e.target.value = '';
+			setTimeout(() => {
+				setError('image must be in jpeg or png format');
+			}, 300);
+			return;
+		}
+		if (f.size > 200 * 1024) {
+			e.target.value = '';
+			setTimeout(() => {
+				setError('image must be smaller than 200KB');
+			}, 300);
+			return;
+		}
+		const base64: string = await toBase64(f);
+		setAvatar({ Image: base64, MimeType: f.type });
+	};
+
+	const onDeleteAvatar = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setError('');
+		fileInputRef.current.value = '';
+		setAvatar(null);
+	};
+
+	const onUpdateName = (e) => {
+		const value = e.target.value;
+		setName(value);
+	};
+
+	const onUpdateEmail = (e) => {
+		const value = e.target.value;
+		setEmail(value);
+	};
+
+	const onPasswordEnable = () => {
+		setPassword('');
+	};
+
+	const onUpdatePassword = (e) => {
+		const value = e.target.value;
+		setPassword(value);
+	};
+
+	const onSave = async () => {
+		setError('');
+		setIsSaving(true);
+		const memberToSet: MemberToSet = {
+			Name: name,
+			Image: avatar ? avatar.Image : null,
+			Email: email,
+		};
+		if (password != null) {
+			memberToSet.Password = password;
+		}
+		const err = validateMemberToSet(memberToSet, false);
+		if (err !== '') {
+			setTimeout(() => {
+				setIsSaving(false);
+				setError(err);
+			}, 300);
+			return;
+		}
+		try {
+			await api.updateMember(Number(id), memberToSet);
+		} catch (err) {
+			if (err instanceof UnprocessableError) {
+				setTimeout(() => {
+					setIsSaving(false);
+					setError(err.message);
+				}, 300);
+			} else if (err instanceof NotFoundError) {
+				if (Number(id) === member.ID) {
+					setTimeout(() => {
+						setIsLoadingMember(true);
+					}, 300);
+				} else {
+					setTimeout(() => {
+						showError('This member does not exist anymore');
+						redirect('members');
+					}, 300);
+				}
+			} else {
+				setTimeout(() => {
+					setIsSaving(false);
+					showError(err);
+				}, 300);
+			}
+			return;
+		}
+		setTimeout(() => {
+			setIsSaving(false);
+			setIsLoadingMember(true);
+			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Member information saved succesfully' });
+		}, 300);
+	};
+
+	const onCancel = () => {
+		redirect('members');
+	};
+
+	return (
+		<div className='member__content'>
+			<div className='member'>
+				<div className='member__name'>
+					<SlInput label='Name' value={name} onSlInput={onUpdateName} />
+				</div>
+				<div className='member__email'>
+					<SlInput label='Email' value={email} onSlInput={onUpdateEmail} />
+				</div>
+				<div className='member__password'>
+					<SlInput
+						type='password'
+						label='Password'
+						disabled={password === null}
+						onSlInput={onUpdatePassword}
+						value={password === null ? '••••••••••••••••' : password}
+						password-toggle
+					/>
+					{password === null && <SlButton onClick={onPasswordEnable}>Change</SlButton>}
+				</div>
+				<label className='member__avatar'>
+					<div className='member__avatar-label'>Avatar</div>
+					<div className='member__avatar-box'>
+						<div className='member__avatar-buttons'>
+							<div className='member__add-avatar'>Upload</div>
+							{avatar && (
+								<div className='member__remove-avatar' onClick={onDeleteAvatar}>
+									Delete
+								</div>
+							)}
+						</div>
+						<SlAvatar image={avatar ? `data:${avatar.MimeType};base64, ${avatar.Image}` : ''} />
+						<input
+							ref={fileInputRef}
+							type='file'
+							accept='image/jpeg, image/png'
+							onChange={onUpdateAvatar}
+						/>
+					</div>
+				</label>
+				{error && (
+					<div className='member__error'>
+						<SlIcon slot='icon' name='exclamation-octagon' />
+						{error}
+					</div>
+				)}
+				<div className='member__buttons'>
+					<SlButton className='member__cancel-button' onClick={onCancel}>
+						Cancel
+					</SlButton>
+					<SlButton className='member__save-button' variant='primary' loading={isSaving} onClick={onSave}>
+						Save
+					</SlButton>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export default Member;
