@@ -805,12 +805,12 @@ const FullscreenTransformation = ({
 					}
 					let res: FindUsersResponse;
 					try {
-						res = await api.workspaces.users.find(null, properties, 0, 20);
+						res = await api.workspaces.users.find(properties, null, 0, 20);
 					} catch (err) {
 						showError(err);
 						return;
 					}
-					if (res.count === 0) {
+					if (res.users.length === 0) {
 						return;
 					}
 					const smpls: Sample[] = [];

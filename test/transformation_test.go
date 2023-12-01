@@ -68,11 +68,11 @@ def transform(user: dict) -> dict:
 	c.WaitActionsToFinish(dummyID)
 
 	// Retrieve the users.
-	ret := c.Users([]string{"email", "first_name", "gender"}, 0, 2)
+	const expectedTotalCount = 10
+	ret := c.Users([]string{"email", "first_name", "gender"}, "", 0, expectedTotalCount)
 
 	// Validate the total count of the users.
-	totalCount := int(ret["count"].(float64))
-	const expectedTotalCount = 10
+	totalCount := len(ret["users"].([]any))
 	if expectedTotalCount != totalCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedTotalCount, totalCount)
 	}
@@ -82,6 +82,14 @@ def transform(user: dict) -> dict:
 	expectedUsers := [][]any{
 		{"kbuessen0@example.com", "Kinsley", "female"},
 		{"jdebrett9@example.com", "Jerad", "male"},
+		{"emoakes2r@example.com", "Edyth", "female"},
+		{"lwhitesonrr@example.com", "Leann", "female"},
+		{"sattestone2s@example.com", "Susanne", "female"},
+		{"aquittonden2t@example.com", "Aimil", "female"},
+		{"tbrayson2u@example.com", "Teodora", "female"},
+		{"csifflett2v@example.com", "Cristiano", "female"},
+		{"mpordal2w@example.com", "Mona", "female"},
+		{"aniece2x@example.com", "Ashil", "female"},
 	}
 	if len(expectedUsers) != len(users) {
 		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))

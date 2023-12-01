@@ -892,31 +892,25 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				router.Route("/users", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						var req struct {
-							Filter     *apis.Filter
 							Properties []string
-							Start      int
-							End        int
+							Filter     *apis.Filter
+							Order      string
+							First      int
+							Limit      int
 						}
 						err := json.NewDecoder(r.Body).Decode(&req)
 						if err != nil {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						schema, users, err := workspace.Users(ctx, req.Properties, req.Filter, "", 0, 1000)
+						users, schema, err := workspace.Users(ctx, req.Properties, req.Filter, req.Order, req.First, req.Limit)
 						if err != nil {
 							respond(w, err)
 							return
 						}
-						var end int
-						if len(users) < req.End {
-							end = len(users)
-						} else {
-							end = req.End
-						}
 						w.Header().Add("Content-Type", "application/json")
 						_ = json.NewEncoder(w).Encode(map[string]any{
-							"count":  len(users),
-							"users":  users[req.Start:end],
+							"users":  users,
 							"schema": schema,
 						})
 					})

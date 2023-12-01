@@ -351,12 +351,12 @@ class Users {
 		this.apiURL = url;
 	}
 
-	find = async (filter: Filter, properties: string[], start: number, end: number): Promise<FindUsersResponse> => {
+	find = async (properties: string[], filter: Filter, first: number, limit: number): Promise<FindUsersResponse> => {
 		return await call(`${this.apiURL}/users`, http.POST, {
-			filter: filter,
 			properties: properties,
-			start: start,
-			end: end,
+			filter: filter,
+			first: first,
+			limit: limit,
 		});
 	};
 

@@ -78,8 +78,8 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.WaitActionsToFinish(csvID)
 
 	// Retrieve the users.
-	ret := c.Users([]string{"email"}, 0, 100)
-	count := int(ret["count"].(float64))
+	ret := c.Users([]string{"email"}, "", 0, 100)
+	count := len(ret["users"].([]any))
 	if count != 2 {
 		t.Fatalf("expecting %d users, got %d", 2, count)
 	}

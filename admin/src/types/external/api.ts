@@ -87,9 +87,8 @@ interface Filter {
 }
 
 interface FindUsersResponse {
-	count: number;
-	schema: ObjectType;
 	users: any[][];
+	schema: ObjectType;
 }
 
 interface AppUsersResponse {

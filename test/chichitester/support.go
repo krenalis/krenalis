@@ -223,11 +223,12 @@ func (c *Chichi) UserEvents(user int) []apis.Event {
 	return events
 }
 
-func (c *Chichi) Users(properties []string, start, end int) map[string]any {
+func (c *Chichi) Users(properties []string, order string, first, limit int) map[string]any {
 	req := map[string]any{
 		"Properties": properties,
-		"Start":      start,
-		"End":        end,
+		"Order":      order,
+		"First":      first,
+		"Limit":      limit,
 	}
 	return c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/users", req).(map[string]any)
 }

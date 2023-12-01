@@ -118,7 +118,7 @@ func TestIdentityResolution(t *testing.T) {
 	expectUsers := func(expected []map[string]any) {
 
 		// Retrieve the users from the APIs and convert their format.
-		rawUsers := c.Users(allProps, 0, 1000)["users"].([]any)
+		rawUsers := c.Users(allProps, "", 0, 1000)["users"].([]any)
 		gotUsers := make([]map[string]any, len(rawUsers))
 		for i := range rawUsers {
 			u := map[string]any{}

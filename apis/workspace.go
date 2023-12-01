@@ -1109,7 +1109,7 @@ func (this *Workspace) User(id int) (*User, error) {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, first, limit int) (types.Type, [][]any, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, first, limit int) ([][]any, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1117,7 +1117,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	// Verify that the workspace has a data store.
 	if this.store == nil {
-		return types.Type{}, nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", ws.ID)
+		return nil, types.Type{}, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", ws.ID)
 	}
 
 	// Read the schema.
@@ -1128,16 +1128,16 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	//
 	schemas, err := this.store.Schemas(ctx)
 	if err != nil {
-		return types.Type{}, nil, err
+		return nil, types.Type{}, err
 	}
 	usersSchema, ok := schemas["users"]
 	if !ok {
-		return types.Type{}, nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
+		return nil, types.Type{}, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
 	}
 
 	// Validate the arguments.
 	if len(properties) == 0 {
-		return types.Type{}, nil, errors.BadRequest("properties is empty")
+		return nil, types.Type{}, errors.BadRequest("properties is empty")
 	}
 	propertyByName := map[string]types.Property{}
 	for _, p := range usersSchema.Properties() {
@@ -1146,12 +1146,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	for _, name := range properties {
 		if _, ok := propertyByName[name]; !ok {
 			if name == "" {
-				return types.Type{}, nil, errors.BadRequest("a property name is empty")
+				return nil, types.Type{}, errors.BadRequest("a property name is empty")
 			}
 			if !types.IsValidPropertyName(name) {
-				return types.Type{}, nil, errors.BadRequest("property name %q is not valid", name)
+				return nil, types.Type{}, errors.BadRequest("property name %q is not valid", name)
 			}
-			return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
+			return nil, types.Type{}, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
 	var where expr.Expr
@@ -1159,32 +1159,32 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		_, err := validateFilter(filter, usersSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
-				return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
+				return nil, types.Type{}, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
-			return types.Type{}, nil, errors.BadRequest("filter is not valid: %w", err)
+			return nil, types.Type{}, errors.BadRequest("filter is not valid: %w", err)
 		}
 		where, _ = convertFilterToExpr(filter, usersSchema)
 	}
 	var orderProperty types.Property
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
-			return types.Type{}, nil, errors.BadRequest("order %q is not a valid property name", order)
+			return nil, types.Type{}, errors.BadRequest("order %q is not a valid property name", order)
 		}
 		orderProperty, ok := propertyByName[order]
 		if !ok {
-			return types.Type{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
+			return nil, types.Type{}, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.Kind() {
 		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return types.Type{}, nil, errors.Unprocessable(OrderTypeNotSortable,
+			return nil, types.Type{}, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	}
 	if first < 0 || first > maxInt32 {
-		return types.Type{}, nil, errors.BadRequest("first %d in not valid", first)
+		return nil, types.Type{}, errors.BadRequest("first %d in not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
-		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
+		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	// Create the schema to return, with only the requested properties.
@@ -1200,12 +1200,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
-			return types.Type{}, nil, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
+			return nil, types.Type{}, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
 		}
-		return types.Type{}, nil, err
+		return nil, types.Type{}, err
 	}
 
-	return schema.Unflatten(), users, err
+	return users, schema.Unflatten(), err
 }
 
 // WarehouseSettings returns the type and settings of the data warehouse for the

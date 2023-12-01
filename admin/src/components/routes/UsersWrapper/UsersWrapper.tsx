@@ -37,12 +37,12 @@ const UsersWrapper = () => {
 	const fetchUsers = async (page: number) => {
 		setIsLoading(true);
 
-		let lim = DEFAULT_USER_LIMIT;
+		let limit = DEFAULT_USER_LIMIT;
 		const storageLimit = localStorage.getItem('usersLimit');
 		if (storageLimit != null) {
-			lim = Number(JSON.parse(storageLimit));
+			limit = Number(JSON.parse(storageLimit));
 		}
-		setLimit(lim);
+		setLimit(limit);
 
 		let schema: ObjectType;
 		try {
@@ -85,10 +85,10 @@ const UsersWrapper = () => {
 			}
 		}
 
-		const start = page * lim - lim;
+		const first = page * limit - limit;
 		let res: FindUsersResponse;
 		try {
-			res = await api.workspaces.users.find(null, propertiesNames, start, start + lim);
+			res = await api.workspaces.users.find(propertiesNames, null, first, limit);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);
@@ -116,10 +116,11 @@ const UsersWrapper = () => {
 			return;
 		}
 
-		const { count, users } = res;
+		const { users } = res;
+		const count = users.length;
 
 		setUsersCount(count);
-		setPagination({ current: page, last: Math.ceil(count / lim) });
+		setPagination({ current: page, last: Math.ceil(count / limit) });
 
 		// find the index of the id property. We should use it for the
 		// navigation but also remove it from the rows if the user has manually
