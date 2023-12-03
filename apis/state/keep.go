@@ -534,8 +534,12 @@ func (state *State) addWorkspace(n notification) {
 
 // DeleteAction is the event sent when an action is deleted.
 type DeleteAction struct {
-	Connection int
-	ID         int
+	ID     int
+	action *Action
+}
+
+func (n DeleteAction) Action() *Action {
+	return n.action
 }
 
 // deleteAction deletes an action.
@@ -544,10 +548,11 @@ func (state *State) deleteAction(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
+	e.action = state.actions[e.ID]
 	state.mu.Lock()
 	delete(state.actions, e.ID)
 	state.mu.Unlock()
-	c := state.connections[e.Connection]
+	c := e.action.connection
 	c.mu.Lock()
 	delete(c.actions, e.ID)
 	c.mu.Unlock()
@@ -558,7 +563,12 @@ func (state *State) deleteAction(n notification) {
 
 // DeleteConnection is the event sent when a connection is deleted.
 type DeleteConnection struct {
-	ID int
+	ID         int
+	connection *Connection
+}
+
+func (n DeleteConnection) Connection() *Connection {
+	return n.connection
 }
 
 // deleteConnection deletes a connection.
@@ -567,22 +577,22 @@ func (state *State) deleteConnection(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	connection := state.connections[e.ID]
+	e.connection = state.connections[e.ID]
 	// Update connections and keys.
 	state.mu.Lock()
 	delete(state.connections, e.ID)
-	for _, key := range connection.Keys {
+	for _, key := range e.connection.Keys {
 		delete(state.connectionsByKey, key)
 	}
 	state.mu.Unlock()
 	// Update the workspace.
-	ws := connection.workspace
+	ws := e.connection.workspace
 	ws.mu.Lock()
 	delete(ws.connections, e.ID)
 	ws.mu.Unlock()
 	// Update the connections.
-	for _, c := range connection.workspace.connections {
-		if c.storage == connection {
+	for _, c := range e.connection.workspace.connections {
+		if c.storage == e.connection {
 			c.mu.Lock()
 			c.storage = nil
 			c.mu.Unlock()
@@ -590,7 +600,7 @@ func (state *State) deleteConnection(n notification) {
 	}
 	// Update the actions.
 	state.mu.Lock()
-	for _, a := range connection.actions {
+	for _, a := range e.connection.actions {
 		delete(state.actions, a.ID)
 	}
 	state.mu.Unlock()
@@ -624,7 +634,12 @@ func (state *State) endActionExecution(n notification) {
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
 type DeleteWorkspace struct {
-	ID int
+	ID        int
+	workspace *Workspace
+}
+
+func (n DeleteWorkspace) Workspace() *Workspace {
+	return n.workspace
 }
 
 // deleteWorkspace deletes a workspace.
@@ -633,21 +648,21 @@ func (state *State) deleteWorkspace(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	ws := state.workspaces[e.ID]
-	organization := state.organizations[ws.organization.ID]
+	e.workspace = state.workspaces[e.ID]
+	organization := e.workspace.organization
 	state.mu.Lock()
 	// Delete the workspace.
 	delete(state.workspaces, e.ID)
 	delete(organization.workspaces, e.ID)
 	// Delete the connections.
-	for _, c := range ws.connections {
+	for _, c := range e.workspace.connections {
 		for _, key := range c.Keys {
 			delete(state.connectionsByKey, key)
 		}
 		delete(state.connections, c.ID)
 	}
 	// Delete the resources.
-	for _, r := range ws.resources {
+	for _, r := range e.workspace.resources {
 		delete(state.resources, r.ID)
 	}
 	state.mu.Unlock()

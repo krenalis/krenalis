@@ -222,8 +222,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 func (this *Action) Delete(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	n := state.DeleteAction{
-		Connection: this.action.Connection().ID,
-		ID:         this.action.ID,
+		ID: this.action.ID,
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM actions WHERE id = $1", n.ID)
