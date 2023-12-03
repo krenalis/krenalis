@@ -39,7 +39,7 @@ func (this *Action) addExecution(ctx context.Context, reimport bool) error {
 		n.Storage = storage.ID
 	}
 
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		err := tx.QueryVoid(ctx, "SELECT FROM actions_executions WHERE action = $1 AND end_time IS NULL", n.Action)
 		if err != sql.ErrNoRows {
 			if err == nil {
@@ -130,7 +130,7 @@ func (this *Action) exec(ctx context.Context) {
 	txCtx := context.Background()
 
 	// TODO(marco) retry if the transaction fails.
-	err = this.apis.db.Transaction(txCtx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(txCtx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
 			endTime, errorMessage, n.ID)
 		if err != nil {

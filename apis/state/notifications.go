@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package postgres
+package state
 
 import (
 	"bytes"
@@ -23,30 +23,30 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"chichi/apis/postgres"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const maxIDLen = len("@9223372036854775807")
 
-type Notification struct {
+type notification struct {
 	PID     uint32
 	Name    string
 	Payload string
 	Ack     chan<- struct{}
 }
 
-// Notify sends a notification.
-func (db *DB) Notify(ctx context.Context, payload any) error {
-	return notify(ctx, db, payload)
+type Tx struct {
+	*postgres.Tx
+	acks *acks
+	ack  <-chan struct{}
 }
 
-// Notify sends a notification.
-func (tx *Tx) Notify(ctx context.Context, payload any) error {
-	return notify(ctx, tx, payload)
-}
-
-// notify sends a notification on the connection conn.
-func notify(ctx context.Context, conn Connection, payload any) error {
-	t := reflect.TypeOf(payload)
+// Notify sends a notification on the transaction.
+func (tx *Tx) Notify(ctx context.Context, n any) error {
+	t := reflect.TypeOf(n)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
@@ -54,7 +54,7 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	b.WriteString(t.Name())
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
-	err := enc.Encode(payload)
+	err := enc.Encode(n)
 	if err != nil {
 		return err
 	}
@@ -62,12 +62,6 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	s := b.String()
 	s = escape(s)
 	if len(s) > 8000-maxIDLen-2 {
-		if db, ok := conn.(*DB); ok {
-			// Send within a transaction.
-			return db.Transaction(ctx, func(tx *Tx) error {
-				return notify(ctx, tx, payload)
-			})
-		}
 		var z strings.Builder
 		bw := base64.NewEncoder(base64.RawStdEncoding, &z)
 		zw := gzip.NewWriter(bw)
@@ -86,27 +80,86 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 		s = z.String()
 		for len(s) > 8000-maxIDLen-2 {
 			const k = 8000 - maxIDLen - 3
-			_, err = conn.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
+			_, err = tx.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
 			if err != nil {
 				return err
 			}
 			s = s[k:]
 		}
 	}
-	if tx, ok := conn.(*Tx); ok {
-		id, ack := tx.acks.create()
-		tx.ack = ack
+	if _, ok := n.(SeeLeader); !ok {
+		var id int
+		id, tx.ack = tx.acks.create()
 		s += "@" + strconv.Itoa(id)
 	}
-	_, err = conn.Exec(ctx, "NOTIFY chichi, '"+s+"'")
+	_, err = tx.Exec(ctx, "NOTIFY chichi, '"+s+"'")
 	return err
+}
+
+// Transaction executes f in a transaction.
+func (state *State) Transaction(ctx context.Context, f func(tx *Tx) error) error {
+	tx := &Tx{acks: state.notifications.acks}
+	var err error
+	tx.Tx, err = state.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := recover(); err != nil {
+			_ = tx.Tx.Rollback(ctx)
+			panic(err)
+		}
+	}()
+	err = f(tx)
+	if err != nil {
+		_ = tx.Tx.Rollback(ctx)
+		return err
+	}
+	err = tx.Tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	if tx.ack != nil {
+		<-tx.ack
+	}
+	return nil
+}
+
+// parsePayload parses a notification payload and returns the identifier, name,
+// and effective payload of the notification. If there is no identifier, it
+// returns 0 as identifier.
+func parsePayload(s string) (id int, name, payload string, err error) {
+	i := strings.IndexByte(s, '{')
+	if i == -1 {
+		return 0, "", "", errors.New("missing payload")
+	}
+	if i == 0 {
+		return 0, "", "", errors.New("missing name")
+	}
+	name, s = s[:i], s[i:]
+	i = strings.LastIndexByte(s, '}')
+	if i == -1 {
+		return 0, "", "", errors.New("invalid payload")
+	}
+	payload, s = s[:i+1], s[i+1:]
+	if s == "" {
+		return
+	}
+	if s[0] != '@' {
+		return 0, "", "", errors.New("invalid identifier")
+	}
+	id, _ = strconv.Atoi(s[1:])
+	if id < 1 {
+		return 0, "", "", errors.New("invalid identifier")
+	}
+	return
 }
 
 // ListenToNotifications listens to notifications in its goroutine and sends
 // them on the returned channel. Call stop to halt the listening and close the
 // channel.
-func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop func()) {
-	ch := make(chan Notification)
+func (state *State) listenToNotifications() (notifications <-chan notification, stop func()) {
+	ch := make(chan notification)
 	ctx, cancel := context.WithCancel(context.Background())
 	stopped := make(chan struct{})
 	stop = func() {
@@ -133,8 +186,8 @@ func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop f
 				sleep = 0
 			}
 			b.Reset()
-			var conn *Conn
-			conn, err = db.Conn(ctx)
+			var conn *pgxpool.Conn
+			conn, err = state.db.Acquire(ctx)
 			if err != nil {
 				sleep = 10 * time.Millisecond
 				continue
@@ -145,7 +198,7 @@ func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop f
 			}
 			err = func() error {
 				for {
-					n, err := conn.conn.Conn().WaitForNotification(ctx)
+					n, err := conn.Conn().WaitForNotification(ctx)
 					if err != nil {
 						return err
 					}
@@ -187,49 +240,19 @@ func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop f
 					}
 					var ack chan<- struct{}
 					if id > 0 {
-						ack = db.acks.pop(id)
+						ack = state.notifications.acks.pop(id)
 					}
-					ch <- Notification{n.PID, name, payload, ack}
+					ch <- notification{n.PID, name, payload, ack}
 				}
 			}()
 			if err != nil {
 				_, _ = conn.Exec(ctx, "UNLISTEN chichi")
 				continue
 			}
-			err = conn.Close(ctx)
+			conn.Release()
 		}
 	}()
 	return ch, stop
-}
-
-// parsePayload parses a notification payload and returns the identifier, name,
-// and effective payload of the notification. If there is no identifier, it
-// returns 0 as identifier.
-func parsePayload(s string) (id int, name, payload string, err error) {
-	i := strings.IndexByte(s, '{')
-	if i == -1 {
-		return 0, "", "", errors.New("missing payload")
-	}
-	if i == 0 {
-		return 0, "", "", errors.New("missing name")
-	}
-	name, s = s[:i], s[i:]
-	i = strings.LastIndexByte(s, '}')
-	if i == -1 {
-		return 0, "", "", errors.New("invalid payload")
-	}
-	payload, s = s[:i+1], s[i+1:]
-	if s == "" {
-		return
-	}
-	if s[0] != '@' {
-		return 0, "", "", errors.New("invalid identifier")
-	}
-	id, _ = strconv.Atoi(s[1:])
-	if id < 1 {
-		return 0, "", "", errors.New("invalid identifier")
-	}
-	return
 }
 
 // acks contains channels used by transactions for which a notification has
@@ -272,4 +295,8 @@ func (acks *acks) pop(id int) chan<- struct{} {
 	}
 	acks.Unlock()
 	return ack
+}
+
+func escape(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
 }

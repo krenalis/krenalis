@@ -84,7 +84,6 @@ var (
 // Connectors allows to interact with the apps, databases, files, mobile,
 // servers, storage, streams, and websites connectors.
 type Connectors struct {
-	db    *postgres.DB
 	state *state.State
 	http  *httpclient.HTTP
 }
@@ -93,7 +92,7 @@ type Connectors struct {
 func New(db *postgres.DB, state *state.State) *Connectors {
 	h := httpclient.New(db, state, http.DefaultTransport)
 	h.SetTrace(os.Stdout)
-	return &Connectors{db: db, state: state, http: h}
+	return &Connectors{state: state, http: h}
 }
 
 // Authorization represents a granted OAuth authorization.
@@ -182,7 +181,7 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	inner, err := _connector.RegisteredApp(connector.Name).New(&_connector.AppConfig{
 		Role:        _connector.Role(connection.Role),
 		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.db, connection),
+		SetSettings: setSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
 		HTTPClient:  connectors.http.ConnectionClient(connection.ID),
 		Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),
@@ -327,15 +326,15 @@ type webhookReceiver interface {
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
 // settings for the connection.
-func setSettingsFunc(db *postgres.DB, c *state.Connection) _connector.SetSettingsFunc {
+func setSettingsFunc(st *state.State, c *state.Connection) _connector.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
-		return setSettings(ctx, db, c.ID, settings)
+		return setSettings(ctx, st, c.ID, settings)
 	}
 }
 
 // setSettings sets the settings of the provided connection.
 // It is a copy of the apis.setSettings function, so keep in sync.
-func setSettings(ctx context.Context, db *postgres.DB, connection int, settings []byte) error {
+func setSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
 	}
@@ -346,7 +345,7 @@ func setSettings(ctx context.Context, db *postgres.DB, connection int, settings 
 		Connection: connection,
 		Settings:   settings,
 	}
-	err := db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := st.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
 		if err != nil {
 			return err

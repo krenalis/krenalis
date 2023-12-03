@@ -46,7 +46,8 @@ type State struct {
 	actions          map[int]*Action
 	resources        map[int]*Resource
 	notifications    struct {
-		channel <-chan postgres.Notification
+		channel <-chan notification
+		acks    *acks
 		stop    func()
 	}
 	listeners struct {
@@ -93,7 +94,8 @@ func New(db *postgres.DB) (*State, error) {
 	}
 
 	// Listen to notifications.
-	state.notifications.channel, state.notifications.stop = db.ListenToNotifications()
+	state.notifications.acks = newAcks()
+	state.notifications.channel, state.notifications.stop = state.listenToNotifications()
 
 	state.close.ctx, state.close.CancelCtx = context.WithCancel(context.Background())
 

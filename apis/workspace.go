@@ -221,7 +221,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		if n.Resource.Code != "" {
 			if n.Resource.ID == 0 {
 				// Insert a new resource.
@@ -386,7 +386,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 		},
 	}
 
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
 			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
 		if err != nil {
@@ -535,7 +535,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 		},
 	}
 
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2"+
 			"  WHERE id = $3 AND warehouse_type IS NULL",
 			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
@@ -572,7 +572,7 @@ func (this *Workspace) Delete(ctx context.Context) error {
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND warehouse_type IS NULL", n.ID)
 		if err != nil {
 			return err
@@ -608,7 +608,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 		Workspace: ws.ID,
 		Warehouse: nil,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		var typ *state.WarehouseType
 		err := tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
 		if err != nil {
@@ -796,7 +796,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 		Workspace: this.workspace.ID,
 		Name:      name,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
 		if err != nil {
 			return err
@@ -959,7 +959,7 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string,
 	if err != nil {
 		return err
 	}
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE workspaces\n"+
 			"SET identifiers = $1, anonymous_identifiers_priority = $2, anonymous_identifiers_mapping = $3\n"+
 			"WHERE id = $4", n.Identifiers, n.AnonymousIdentifiers.Priority, mapping, n.Workspace)
@@ -991,7 +991,7 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 		Name:          name,
 		PrivacyRegion: state.PrivacyRegion(region),
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2 WHERE id = $3",
 			n.Name, n.PrivacyRegion, n.Workspace)
 		if err != nil {
@@ -1038,7 +1038,7 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 			Settings: warehouse.Settings(),
 		},
 	}
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
 			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
 		if err != nil {

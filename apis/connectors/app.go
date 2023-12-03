@@ -53,7 +53,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 	app.inner, app.err = _connector.RegisteredApp(app.name).New(&_connector.AppConfig{
 		Role:        _connector.Role(connection.Role),
 		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.db, connection),
+		SetSettings: setSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
 		HTTPClient:  connectors.http.ConnectionClient(connection.ID),
 		Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),

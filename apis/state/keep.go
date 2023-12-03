@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/postgres"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -64,7 +63,7 @@ func (state *State) AddListener(listener any) {
 // goroutine.
 func (state *State) keepState() {
 
-	var n postgres.Notification
+	var n notification
 
 	done := state.close.ctx.Done()
 
@@ -145,7 +144,7 @@ func (state *State) keepState() {
 }
 
 // decodeNotification decodes a notification.
-func decodeNotification(n postgres.Notification, e any) bool {
+func decodeNotification(n notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
 		slog.Error("cannot unmarshal notification", "name", n.Name, "pid", n.PID, "err", err)
@@ -303,7 +302,7 @@ type AddAction struct {
 }
 
 // addAction adds a new action.
-func (state *State) addAction(n postgres.Notification) {
+func (state *State) addAction(n notification) {
 	e := AddAction{}
 	if !decodeNotification(n, &e) {
 		return
@@ -367,7 +366,7 @@ type AddConnection struct {
 }
 
 // addConnection adds a new connection.
-func (state *State) addConnection(n postgres.Notification) {
+func (state *State) addConnection(n notification) {
 	e := AddConnection{}
 	if !decodeNotification(n, &e) {
 		return
@@ -451,7 +450,7 @@ type AddConnectionKey struct {
 }
 
 // addConnectionKey adds a new connection key.
-func (state *State) addConnectionKey(n postgres.Notification) {
+func (state *State) addConnectionKey(n notification) {
 	e := AddConnectionKey{}
 	if !decodeNotification(n, &e) {
 		return
@@ -477,7 +476,7 @@ type ExecuteAction struct {
 }
 
 // executeAction executes an action.
-func (state *State) executeAction(n postgres.Notification) {
+func (state *State) executeAction(n notification) {
 	e := ExecuteAction{}
 	if !decodeNotification(n, &e) {
 		return
@@ -511,7 +510,7 @@ type AddWorkspace struct {
 }
 
 // addWorkspace adds a workspace.
-func (state *State) addWorkspace(n postgres.Notification) {
+func (state *State) addWorkspace(n notification) {
 	e := AddWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
@@ -540,7 +539,7 @@ type DeleteAction struct {
 }
 
 // deleteAction deletes an action.
-func (state *State) deleteAction(n postgres.Notification) {
+func (state *State) deleteAction(n notification) {
 	e := DeleteAction{}
 	if !decodeNotification(n, &e) {
 		return
@@ -563,7 +562,7 @@ type DeleteConnection struct {
 }
 
 // deleteConnection deletes a connection.
-func (state *State) deleteConnection(n postgres.Notification) {
+func (state *State) deleteConnection(n notification) {
 	e := DeleteConnection{}
 	if !decodeNotification(n, &e) {
 		return
@@ -607,7 +606,7 @@ type EndActionExecution struct {
 }
 
 // endActionExecution ends an action execution in progress.
-func (state *State) endActionExecution(n postgres.Notification) {
+func (state *State) endActionExecution(n notification) {
 	e := EndActionExecution{}
 	if !decodeNotification(n, &e) {
 		return
@@ -629,7 +628,7 @@ type DeleteWorkspace struct {
 }
 
 // deleteWorkspace deletes a workspace.
-func (state *State) deleteWorkspace(n postgres.Notification) {
+func (state *State) deleteWorkspace(n notification) {
 	e := DeleteWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
@@ -664,7 +663,7 @@ type ElectLeader struct {
 }
 
 // electLeader elects a leader.
-func (state *State) electLeader(n postgres.Notification) {
+func (state *State) electLeader(n notification) {
 	e := ElectLeader{}
 	if !decodeNotification(n, &e) {
 		return
@@ -692,7 +691,7 @@ type LoadState struct {
 }
 
 // loadState loads the state.
-func (state *State) loadState(n postgres.Notification) {
+func (state *State) loadState(n notification) {
 	e := LoadState{}
 	if !decodeNotification(n, &e) {
 		return
@@ -713,7 +712,7 @@ type RenameConnection struct {
 }
 
 // renameConnection renames a connection.
-func (state *State) renameConnection(n postgres.Notification) {
+func (state *State) renameConnection(n notification) {
 	e := RenameConnection{}
 	if !decodeNotification(n, &e) {
 		return
@@ -730,7 +729,7 @@ type RenameWorkspace struct {
 }
 
 // renameWorkspace renames a workspace.
-func (state *State) renameWorkspace(n postgres.Notification) {
+func (state *State) renameWorkspace(n notification) {
 	e := RenameWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
@@ -747,7 +746,7 @@ type RevokeConnectionKey struct {
 }
 
 // revokeConnectionKey revokes a connection key.
-func (state *State) revokeConnectionKey(n postgres.Notification) {
+func (state *State) revokeConnectionKey(n notification) {
 	e := RevokeConnectionKey{}
 	if !decodeNotification(n, &e) {
 		return
@@ -774,7 +773,7 @@ type SeeLeader struct {
 }
 
 // seeLeader sees the leader.
-func (state *State) seeLeader(n postgres.Notification) {
+func (state *State) seeLeader(n notification) {
 	e := SeeLeader{}
 	if !decodeNotification(n, &e) {
 		return
@@ -808,7 +807,7 @@ type SetAction struct {
 }
 
 // setAction sets an action.
-func (state *State) setAction(n postgres.Notification) {
+func (state *State) setAction(n notification) {
 	e := SetAction{}
 	if !decodeNotification(n, &e) {
 		return
@@ -843,7 +842,7 @@ type SetActionSchedulePeriod struct {
 }
 
 // setActionSchedulePeriod sets the schedule period of an action.
-func (state *State) setActionSchedulePeriod(n postgres.Notification) {
+func (state *State) setActionSchedulePeriod(n notification) {
 	e := SetActionSchedulePeriod{}
 	if !decodeNotification(n, &e) {
 		return
@@ -863,7 +862,7 @@ type SetActionStatus struct {
 }
 
 // setActionStatus sets the status of an action.
-func (state *State) setActionStatus(n postgres.Notification) {
+func (state *State) setActionStatus(n notification) {
 	e := SetActionStatus{}
 	if !decodeNotification(n, &e) {
 		return
@@ -881,7 +880,7 @@ type SetActionUserCursor struct {
 }
 
 // setActionUserCursor sets the user cursor of an action.
-func (state *State) setActionUserCursor(n postgres.Notification) {
+func (state *State) setActionUserCursor(n notification) {
 	e := SetActionUserCursor{}
 	if !decodeNotification(n, &e) {
 		return
@@ -902,7 +901,7 @@ type SetConnection struct {
 }
 
 // setConnection sets a connection.
-func (state *State) setConnection(n postgres.Notification) {
+func (state *State) setConnection(n notification) {
 	e := SetConnection{}
 	if !decodeNotification(n, &e) {
 		return
@@ -927,7 +926,7 @@ type SetConnectionSettings struct {
 }
 
 // setConnectionSettings sets the settings of a connection.
-func (state *State) setConnectionSettings(n postgres.Notification) {
+func (state *State) setConnectionSettings(n notification) {
 	e := SetConnectionSettings{}
 	if !decodeNotification(n, &e) {
 		return
@@ -949,7 +948,7 @@ type SetResource struct {
 }
 
 // setResource sets a resource.
-func (state *State) setResource(n postgres.Notification) {
+func (state *State) setResource(n notification) {
 	e := SetResource{}
 	if !decodeNotification(n, &e) {
 		return
@@ -969,7 +968,7 @@ type SetWarehouse struct {
 }
 
 // setWarehouse sets the settings of a data warehouse.
-func (state *State) setWarehouse(n postgres.Notification) {
+func (state *State) setWarehouse(n notification) {
 	e := SetWarehouse{}
 	if !decodeNotification(n, &e) {
 		return
@@ -991,7 +990,7 @@ type SetWorkspace struct {
 }
 
 // setWorkspace sets the name and the privacy region of a workspace.
-func (state *State) setWorkspace(n postgres.Notification) {
+func (state *State) setWorkspace(n notification) {
 	e := SetWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
@@ -1015,7 +1014,7 @@ type SetWorkspaceIdentifiers struct {
 
 // setWorkspaceIdentifiers sets the identifiers and the anonymous identifier of
 // a workspace.
-func (state *State) setWorkspaceIdentifiers(n postgres.Notification) {
+func (state *State) setWorkspaceIdentifiers(n notification) {
 	e := SetWorkspaceIdentifiers{}
 	if !decodeNotification(n, &e) {
 		return

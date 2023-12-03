@@ -17,7 +17,6 @@ import (
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
@@ -226,7 +225,7 @@ func (this *Action) Delete(ctx context.Context) error {
 		Connection: this.action.Connection().ID,
 		ID:         this.action.ID,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM actions WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -421,7 +420,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		var function state.TransformationFunction
 		if n.Transformation.Function != nil {
 			var current state.TransformationFunction
@@ -469,7 +468,7 @@ func (this *Action) setUserCursor(ctx context.Context, cursor state.Cursor) erro
 		ID:         this.action.ID,
 		UserCursor: cursor,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions\n"+
 			"SET user_cursor.id = $1, user_cursor.timestamp = $2 WHERE id = $3",
 			n.UserCursor.ID, n.UserCursor.Timestamp, n.ID)
@@ -503,7 +502,7 @@ func (this *Action) SetSchedulePeriod(ctx context.Context, period SchedulePeriod
 		ID:             this.action.ID,
 		SchedulePeriod: int16(period),
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
 		if err != nil {
 			return err
@@ -526,7 +525,7 @@ func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
 		ID:      this.action.ID,
 		Enabled: enabled,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return err

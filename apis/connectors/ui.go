@@ -38,7 +38,6 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		resourceCode = r.Code
 	}
 	role := _connector.Role(connection.Role)
-	db := connectors.db
 	var inner any
 	var err error
 	switch c := connection.Connector(); c.Type {
@@ -46,7 +45,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		inner, err = _connector.RegisteredApp(c.Name).New(&_connector.AppConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 			Resource:    resourceCode,
 			HTTPClient:  connectors.http.ConnectionClient(connection.ID),
 			Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),
@@ -56,7 +55,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		database, err = _connector.RegisteredDatabase(c.Name).New(&_connector.DatabaseConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 		defer database.Close()
 		inner = database
@@ -64,37 +63,37 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		inner, err = _connector.RegisteredFile(c.Name).New(&_connector.FileConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 	case state.MobileType:
 		inner, err = _connector.RegisteredMobile(c.Name).New(&_connector.MobileConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 	case state.ServerType:
 		inner, err = _connector.RegisteredServer(c.Name).New(&_connector.ServerConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 	case state.StorageType:
 		inner, err = _connector.RegisteredStorage(c.Name).New(&_connector.StorageConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 	case state.StreamType:
 		inner, err = _connector.RegisteredStream(c.Name).New(&_connector.StreamConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 	case state.WebsiteType:
 		inner, err = _connector.RegisteredWebsite(c.Name).New(&_connector.WebsiteConfig{
 			Role:        role,
 			Settings:    connection.Settings,
-			SetSettings: setSettingsFunc(db, connection),
+			SetSettings: setSettingsFunc(connectors.state, connection),
 		})
 	}
 	if err != nil {

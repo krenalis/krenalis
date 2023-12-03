@@ -113,9 +113,8 @@ var (
 )
 
 type DB struct {
-	db   *pgxpool.Pool
-	acks *acks
-	log  io.Writer
+	db  *pgxpool.Pool
+	log io.Writer
 }
 
 type Options struct {
@@ -156,7 +155,7 @@ func Open(opts *Options) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DB{db: conn, acks: newAcks()}, nil
+	return &DB{db: conn}, nil
 }
 
 func (db *DB) Close() {
@@ -279,11 +278,13 @@ func (db *DB) QueryVoid(ctx context.Context, query string, args ...any) error {
 }
 
 func (db *DB) Begin(ctx context.Context) (*Tx, error) {
+	ctx, span := telemetry.TraceSpan(ctx, "DB.Transaction")
+	defer span.End()
 	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{tx, db.acks, db.log, false, false, nil}, nil
+	return &Tx{tx, db.log, false, false, nil}, nil
 }
 
 func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
@@ -300,7 +301,7 @@ func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
 				panic(err)
 			}
 		}()
-		tx := &Tx{pqTx, db.acks, db.log, true, false, nil}
+		tx := &Tx{pqTx, db.log, true, false, nil}
 		err := f(tx)
 		if err != nil {
 			_ = pqTx.Rollback(ctx)
@@ -342,6 +343,10 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 		conn: conn,
 		log:  db.log,
 	}, nil
+}
+
+func (db *DB) Acquire(ctx context.Context) (*pgxpool.Conn, error) {
+	return db.db.Acquire(ctx)
 }
 
 func (db *DB) Tables(ctx context.Context, database string) ([]string, error) {
@@ -548,7 +553,6 @@ func (c *Conn) Close(ctx context.Context) error {
 
 type Tx struct {
 	tx            pgx.Tx
-	acks          *acks
 	log           io.Writer
 	wrapped       bool
 	preparedQuery bool

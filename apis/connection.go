@@ -448,7 +448,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Add the action.
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		switch n.Target {
 		case state.Events:
 			switch typ := this.connection.Connector().Type; typ {
@@ -638,7 +638,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 		ID: this.connection.ID,
 	}
 	connector := this.connection.Connector()
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -807,7 +807,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 		Value:        value,
 		CreationTime: time.Now().UTC(),
 	}
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -926,7 +926,7 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 		Connection: this.connection.ID,
 		Name:       name,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
 		if err != nil {
 			return err
@@ -968,7 +968,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 		Connection: c.ID,
 		Value:      key,
 	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -1232,7 +1232,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		}
 	}
 
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2, storage = NULLIF($3, 0), compression = $4, website_host = $5 WHERE id = $6",
 			n.Name, n.Enabled, n.Storage, n.Compression, n.WebsiteHost, n.Connection)
 		if err != nil {

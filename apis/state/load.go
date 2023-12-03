@@ -34,7 +34,7 @@ func (state *State) Load() error {
 
 	ctx := state.close.ctx
 
-	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := state.Transaction(ctx, func(tx *Tx) error {
 
 		// Read the latest election.
 		err := state.db.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").

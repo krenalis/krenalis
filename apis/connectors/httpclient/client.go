@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"chichi/apis/errors"
-	"chichi/apis/postgres"
 	"chichi/apis/state"
 
 	"github.com/open2b/nuts/capture"
@@ -73,7 +72,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 		ExpiresIn:    expiresIn,
 	}
 
-	err = c.http.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = c.http.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err = tx.Exec(ctx,
 			"UPDATE resources SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
 			n.AccessToken, n.RefreshToken, n.ExpiresIn, n.ID)

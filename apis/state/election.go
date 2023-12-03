@@ -17,8 +17,6 @@ import (
 	"math/rand"
 	"os"
 	"time"
-
-	"chichi/apis/postgres"
 )
 
 var debugElection = false
@@ -65,7 +63,9 @@ func (state *State) keepElections() {
 		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
-			err := state.db.Notify(state.close.ctx, SeeLeader{Election: election.number})
+			err := state.Transaction(state.close.ctx, func(tx *Tx) error {
+				return tx.Notify(state.close.ctx, SeeLeader{Election: election.number})
+			})
 			if err == nil {
 				break
 			}
@@ -169,7 +169,7 @@ func (state *State) electAsLeader(election int) error {
 		prevElection = math.MaxInt32
 	}
 	ctx := state.close.ctx
-	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := state.Transaction(ctx, func(tx *Tx) error {
 		var t bool
 		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+

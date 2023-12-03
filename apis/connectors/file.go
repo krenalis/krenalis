@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
@@ -33,7 +32,7 @@ import (
 
 // File represents the file of a file connection.
 type File struct {
-	db         *postgres.DB
+	state      *state.State
 	connection *state.Connection
 	inner      _connector.FileConnection
 	err        error
@@ -43,13 +42,13 @@ type File struct {
 // file's method is called. It panics if connection is not a file connections.
 func (connectors *Connectors) File(connection *state.Connection) *File {
 	file := &File{
-		db:         connectors.db,
+		state:      connectors.state,
 		connection: connection,
 	}
 	file.inner, file.err = _connector.RegisteredFile(connection.Connector().Name).New(&_connector.FileConfig{
 		Role:        _connector.Role(connection.Role),
 		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.db, connection),
+		SetSettings: setSettingsFunc(connectors.state, connection),
 	})
 	return file
 }
@@ -264,7 +263,7 @@ func (file *File) storage() (_connector.StorageConnection, error) {
 	return _connector.RegisteredStorage(storage.Name).New(&_connector.StorageConfig{
 		Role:        _connector.Role(storage.Role),
 		Settings:    storage.Settings,
-		SetSettings: setSettingsFunc(file.db, storage),
+		SetSettings: setSettingsFunc(file.state, storage),
 	})
 }
 

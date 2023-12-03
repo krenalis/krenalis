@@ -119,7 +119,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		return 0, err
 	}
 
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name, privacy_region) VALUES ($1, $2, $3, $4)",
 			n.ID, n.Organization, n.Name, n.PrivacyRegion)
 		if err != nil {
