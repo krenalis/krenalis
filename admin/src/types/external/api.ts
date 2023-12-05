@@ -132,8 +132,8 @@ interface MemberAvatar {
 interface Member {
 	ID: number;
 	Name: string;
-	Avatar: MemberAvatar;
 	Email: string;
+	Avatar: MemberAvatar;
 }
 
 interface MemberToSet {

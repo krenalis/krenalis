@@ -3,8 +3,8 @@ import { Member, MemberAvatar, MemberToSet } from '../../types/external/api';
 interface TransformedMember {
 	ID: number;
 	Name: string;
-	Avatar: MemberAvatar;
 	Email: string;
+	Avatar: MemberAvatar;
 	Initials: string;
 }
 

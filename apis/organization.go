@@ -36,25 +36,26 @@ type Organization struct {
 	Name         string
 }
 
+// Member represents a member of an organization.
+type Member struct {
+	ID     int
+	Name   string
+	Email  string
+	Avatar *Avatar
+}
+
+// Avatar represents an avatar of a member.
 type Avatar struct {
 	Image    []byte // Image, in range [1, 200000]
 	MimeType string // Mime type, must be `image/jpeg` or `image/png`
 }
 
-// Member represents a member of an organization.
-type Member struct {
-	ID     int
-	Name   string
-	Avatar *Avatar
-	Email  string
-}
-
 // MemberToSet represents a member to set with the SetMember method.
 type MemberToSet struct {
 	Name     string // Name, in range [1, 60]
-	Avatar   *Avatar
 	Email    string // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
 	Password string // Password, at least 8 characters long
+	Avatar   *Avatar
 }
 
 // AddMember adds a new member to the organization. If a member with the same
@@ -71,7 +72,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 		return err
 	}
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE email = $1 AND organization = $2", member.Email, this.organization.ID)
+		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
@@ -79,12 +80,12 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 			return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
 		}
 		if member.Avatar != nil {
-			_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, avatar.image, avatar.mime_type, email, password) VALUES ($1, $2, $3, $4, $5, $6)",
-				this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, string(password))
+			_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar.image, avatar.mime_type) VALUES ($1, $2, $3, $4, $5, $6)",
+				this.organization.ID, member.Name, member.Email, string(password), member.Avatar.Image, member.Avatar.MimeType)
 			return err
 		}
-		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, avatar, email, password) VALUES ($1, $2, $3, $4, $5)",
-			this.organization.ID, member.Name, nil, member.Email, string(password))
+		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar) VALUES ($1, $2, $3, $4, $5)",
+			this.organization.ID, member.Name, member.Email, string(password), nil)
 		return err
 	})
 	return err
@@ -220,8 +221,8 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 	var member Member
 	var avatarImage []byte
 	var avatarMimeType *string
-	err := this.apis.db.QueryRow(ctx, "SELECT id, name, (avatar).image, (avatar).mime_type, email FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID).Scan(
-		&member.ID, &member.Name, &avatarImage, &avatarMimeType, &member.Email)
+	err := this.apis.db.QueryRow(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID).Scan(
+		&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("member %d does not exist", id)
@@ -241,13 +242,13 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	this.apis.mustBeOpen()
 	members := []*Member{}
-	err := this.apis.db.QueryScan(ctx, "SELECT id, name, (avatar).image, (avatar).mime_type, email FROM members WHERE organization = $1 ORDER BY name", this.organization.ID, func(rows *postgres.Rows) error {
+	err := this.apis.db.QueryScan(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type FROM members WHERE organization = $1 ORDER BY name", this.organization.ID, func(rows *postgres.Rows) error {
 		var err error
 		for rows.Next() {
 			var member Member
 			var avatarImage []byte
 			var avatarMimeType *string
-			if err = rows.Scan(&member.ID, &member.Name, &avatarImage, &avatarMimeType, &member.Email); err != nil {
+			if err = rows.Scan(&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType); err != nil {
 				return err
 			}
 			if len(avatarImage) > 0 {
@@ -287,7 +288,7 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 		}
 	}
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE id <> $1 AND email = $2 AND organization = $3", id, member.Email, this.organization.ID)
+		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}

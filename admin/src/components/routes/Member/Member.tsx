@@ -109,8 +109,8 @@ const Member = () => {
 		setIsSaving(true);
 		const memberToSet: MemberToSet = {
 			Name: name,
-			Image: avatar ? avatar.Image : null,
 			Email: email,
+			Image: avatar ? avatar.Image : null,
 		};
 		if (password != null) {
 			memberToSet.Password = password;
