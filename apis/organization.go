@@ -66,25 +66,27 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	if err != nil {
 		return err
 	}
-	var id int
-	err = this.apis.db.QueryRow(ctx, "SELECT id FROM members WHERE email = $1", member.Email).Scan(&id)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-	if err == nil {
-		return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
-	}
 	password, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	if member.Avatar != nil {
-		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, avatar.image, avatar.mime_type, email, password) VALUES ($1, $2, $3, $4, $5, $6)",
-			this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, string(password))
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE email = $1 AND organization = $2", member.Email, this.organization.ID)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if err == nil {
+			return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
+		}
+		if member.Avatar != nil {
+			_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, avatar.image, avatar.mime_type, email, password) VALUES ($1, $2, $3, $4, $5, $6)",
+				this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, string(password))
+			return err
+		}
+		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, avatar, email, password) VALUES ($1, $2, $3, $4, $5)",
+			this.organization.ID, member.Name, nil, member.Email, string(password))
 		return err
-	}
-	_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, avatar, email, password) VALUES ($1, $2, $3, $4, $5)",
-		this.organization.ID, member.Name, nil, member.Email, string(password))
+	})
 	return err
 }
 
@@ -277,48 +279,43 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 	if err != nil {
 		return err
 	}
-	var memberID int
-	err = this.apis.db.QueryRow(ctx, "SELECT id FROM members WHERE email = $1", member.Email).Scan(&memberID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.NotFound("member %d does not exist", id)
-		}
-		return err
-	}
-	if memberID != id {
-		return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
-	}
-	_, err = this.apis.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",
-		member.Name, member.Email, id, this.organization.ID)
-	if err != nil {
-		return err
-	}
-	if member.Avatar != nil {
-		_, err = this.apis.db.Exec(ctx, "UPDATE members SET avatar.image = $1, avatar.mime_type = $2 WHERE id = $3 AND organization = $4",
-			member.Avatar.Image, member.Avatar.MimeType, id, this.organization.ID)
-		if err != nil {
-			return err
-		}
-
-	} else {
-		_, err = this.apis.db.Exec(ctx, "UPDATE members SET avatar = $1 WHERE id = $2 AND organization = $3",
-			nil, id, this.organization.ID)
-		if err != nil {
-			return err
-		}
-	}
+	var password []byte
 	if member.Password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return err
-		}
-		_, err = this.apis.db.Exec(ctx, "UPDATE members SET password = $1 WHERE id = $2 AND organization = $3",
-			string(hashedPassword), id, this.organization.ID)
+		password, err = bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE id <> $1 AND email = $2 AND organization = $3", id, member.Email, this.organization.ID)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if err != sql.ErrNoRows {
+			return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
+		}
+		_, err = this.apis.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",
+			member.Name, member.Email, id, this.organization.ID)
+		if err != nil {
+			return err
+		}
+		if member.Avatar != nil {
+			_, err = this.apis.db.Exec(ctx, "UPDATE members SET avatar.image = $1, avatar.mime_type = $2 WHERE id = $3 AND organization = $4",
+				member.Avatar.Image, member.Avatar.MimeType, id, this.organization.ID)
+		} else {
+			_, err = this.apis.db.Exec(ctx, "UPDATE members SET avatar = $1 WHERE id = $2 AND organization = $3",
+				nil, id, this.organization.ID)
+		}
+		if err != nil {
+			return err
+		}
+		if password != nil {
+			_, err = this.apis.db.Exec(ctx, "UPDATE members SET password = $1 WHERE id = $2 AND organization = $3",
+				string(password), id, this.organization.ID)
+		}
+		return err
+	})
+	return err
 }
 
 // Workspace returns the organization's workspace with identifier id.
