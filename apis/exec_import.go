@@ -82,6 +82,9 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		// Set the identities into the data warehouse.
 		for _, user := range users {
+			if user.Err != nil {
+				continue
+			}
 			err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
 			if err != nil {
 				return actionExecutionError{err}
