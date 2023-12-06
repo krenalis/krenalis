@@ -22,8 +22,8 @@ import (
 )
 
 type (
-	SettingsError      = warehouses.SettingsError
 	DataWarehouseError = warehouses.DataWarehouseError
+	SettingsError      = warehouses.SettingsError
 )
 
 // InvalidSettings is the error returned when the data warehouse settings are
