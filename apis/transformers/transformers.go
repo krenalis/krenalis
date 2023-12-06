@@ -21,10 +21,11 @@ type Transformer struct {
 	action              int
 }
 
-// New returns a new transformer that transforms properties of inSchema to
-// outSchema using the given mapping and, in case a transformation is provided,
-// also uses such transformation. layouts represents, if not null, the layouts
-// used to format DateTime, Date, and Time values as strings.
+// New returns a new transformer that transforms properties from inSchema to
+// outSchema using the given transformation for the action with the provided
+// identifier. function is the transformer function to use for function
+// transformations and is nil for mappings. If not nil, layouts represent the
+// layouts used to format DateTime, Date, and Time values as strings.
 func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, function Function, layouts *state.Layouts) (*Transformer, error) {
 
 	if !outSchema.Valid() {
