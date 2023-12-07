@@ -1122,11 +1122,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Read the schema.
-	//
-	// TODO(Gianluca): should the users / users_identities / events schema be
-	// handled by Chichi, or internally by the data warehouse? See the issue
-	// https://github.com/open2b/chichi/issues/392.
-	//
 	schemas, err := this.store.Schemas(ctx)
 	if err != nil {
 		return nil, types.Type{}, err
@@ -1188,15 +1183,13 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	// Create the schema to return, with only the requested properties.
-	requestedProperties := make([]types.Property, len(properties))
-	for i, name := range properties {
-		requestedProperties[i] = propertyByName[name]
+	toSelect := []types.Path{}
+	for _, p := range properties {
+		toSelect = append(toSelect, types.Path{p})
 	}
-	schema := types.Object(requestedProperties)
 
 	// Read the users.
-	users, err := this.store.Users(ctx, requestedProperties, where, orderProperty, first, limit)
+	records, err := this.store.Users(ctx, usersSchema, toSelect, where, orderProperty, first, limit)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -1205,7 +1198,27 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		return nil, types.Type{}, err
 	}
+	users := []map[string]any{}
+	err = records.For(func(user warehouses.Record) error {
+		if user.Err != nil {
+			return err
+		}
+		users = append(users, user.Properties)
+		return nil
+	})
+	if err != nil {
+		return nil, types.Type{}, err
+	}
+	if err = records.Err(); err != nil {
+		return nil, types.Type{}, err
+	}
 
+	// Create the schema to return, with only the requested properties.
+	requestedProperties := make([]types.Property, len(properties))
+	for i, name := range properties {
+		requestedProperties[i] = propertyByName[name]
+	}
+	schema := types.Object(requestedProperties)
 	schema = schema.Unflatten()
 	marshaledUsers, err := encoding.MarshalSlice(schema, users)
 	if err != nil {

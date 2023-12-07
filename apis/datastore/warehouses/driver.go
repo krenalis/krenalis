@@ -95,11 +95,62 @@ type Warehouse interface {
 	// during the users synchronization.
 	ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error
 
-	// Select returns the rows from the given table that satisfies the where
-	// condition with only the given columns, ordered by order if order is not the
-	// zero Property, and in range [first,first+limit] with first >= 0 and
-	// 0 < limit <= 1000.
-	Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error)
+	// Select returns a Records iterator on the records of the given table which
+	// satisfy the where condition, ordered by order (if it's not the zero
+	// Property).
+	//
+	// In each record, the returned properties are those specified in toSelect and
+	// are normalized with the schema. As a special case, if toSelect is nil then
+	// every property of schema is returned.
+	//
+	// schema must contain both the properties to select and the properties
+	// referenced in the where clause. As a special case, if the schema is the
+	// invalid schema, then the schema of the specified table is used.
+	//
+	// key is the key of the table and it is used to the determine the ID of each
+	// record.
+	//
+	// Returned records are in range [first, first + limit], with first >= 0 and
+	// limit > 0. As a special case, a zero limit means that every record is
+	// returned.
+	//
+	// If an error occurs with the data warehouse, it returns a DataWarehouseError
+	// error.
+	//
+	// If schema is not conform to the schema of the table in the data warehouse, a
+	// SchemaError is returned.
+	//
+	// As a simplification, it is currently assumed that the table schema does not
+	// change in the data warehouse during the execution of this method.
+	Select(ctx context.Context, table string, schema types.Type, toSelect []types.Path, key types.Property, where expr.Expr, order types.Property, first, limit int) (Records, error)
+}
+
+// Records is the iterator interface used to iterate over the records read from
+// a data warehouse.
+type Records interface {
+
+	// Close closes the iterator. It is automatically called by the For method
+	// before returning. Close is idempotent and does not impact the result of Err.
+	Close() error
+
+	// Err returns any error encountered during iteration, excluding errors returned
+	// by the yield function, which may have occurred after an explicit or implicit
+	// Close.
+	Err() error
+
+	// For calls the yield function for each record (r) in the sequence. If yield
+	// returns an error, For stops and returns the error. After For completes, it
+	// is also necessary to check the result of Err for any potential errors.
+	For(yield func(Record) error) error
+}
+
+// Record represents a record.
+type Record struct {
+	ID         int            // Identifier.
+	Properties map[string]any // Properties.
+	// Err reports an error that occurred while reading the record.
+	// If Err is not nil, only the ID field is significant.
+	Err error
 }
 
 // Table represents a table.
@@ -406,4 +457,60 @@ func isValidJSON(src any) bool {
 		return json.Valid(src)
 	}
 	return false
+}
+
+type SchemaError struct {
+	Msg string
+}
+
+func (err SchemaError) Error() string {
+	return err.Msg
+}
+
+// CheckConformity checks whether the schema t1 conforms to the new schema t2
+// and returns a SchemaError error if it does not conform.
+//
+// The conformity check must take into account:
+//
+// - the possibility that there exists a value of one type that is also a valid
+// value for another type, deferring the check to runtime with actual values;
+// otherwise, if this can never occur, the two types can be considered
+// non-conform.
+//
+// - the real user use case of modifying a column of a certain type in the
+// database
+//
+// - the impact of changing the type on the operation of the 'where' clause
+// (does it return errors? does it behave unexpectedly?)
+func CheckConformity(name string, t1, t2 types.Type) error {
+	if t1.EqualTo(t2) {
+		return nil
+	}
+	pt1 := t1.Kind()
+	pt2 := t2.Kind()
+	if pt1 != pt2 {
+		return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
+	}
+	switch pt1 {
+	case types.ArrayKind:
+		return CheckConformity(name, t1.Elem(), t2.Elem())
+	case types.ObjectKind:
+		for _, p1 := range t1.Properties() {
+			path := p1.Name
+			if name != "" {
+				path = name + "." + path
+			}
+			p2, ok := t2.Property(p1.Name)
+			if !ok {
+				return &SchemaError{Msg: fmt.Sprintf(`"%s" property no longer exists`, path)}
+			}
+			err := CheckConformity(path, p1.Type, p2.Type)
+			if err != nil {
+				return err
+			}
+		}
+	case types.MapKind:
+		return CheckConformity(name, t1.Elem(), t2.Elem())
+	}
+	return nil
 }

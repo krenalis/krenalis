@@ -26,10 +26,10 @@ import (
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
@@ -1384,7 +1384,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if len(columns) == 0 {
 		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q only has the \"id\" column and no additional columns", table)
 	}
-	properties, err := datastore.ColumnsToProperties(columns)
+	properties, err := warehouses.ColumnsToProperties(columns)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -2202,23 +2202,6 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 }
 
 var defaultLayout = &state.Layouts{}
-
-func normalize(values map[string]any, schema types.Type) (map[string]any, error) {
-	out := make(map[string]any, len(values))
-	for name, value := range values {
-		prop, ok := schema.Property(name)
-		if !ok {
-			return nil, fmt.Errorf("property %q not found", name)
-		}
-		// TODO(Gianluca): call the proper normalization function.
-		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable, defaultLayout)
-		if err != nil {
-			return nil, err
-		}
-		out[name] = v
-	}
-	return out, nil
-}
 
 // onlyForMatching returns a schema which contains only the properties of schema
 // which can be used for the apps export matching.

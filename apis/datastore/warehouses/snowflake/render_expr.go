@@ -24,9 +24,9 @@ import (
 	"github.com/open2b/nuts/decimal"
 )
 
-// renderExpr renders the expression expr returning a fragment of a query
-// representing a boolean expression.
-func renderExpr(exp expr.Expr) (string, error) {
+// renderExpr renders the expression expr, which refers to the properties in
+// schema, returning a fragment of a query representing a boolean expression.
+func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 
 	s := strings.Builder{}
 
@@ -49,7 +49,7 @@ func renderExpr(exp expr.Expr) (string, error) {
 			if isMultiExpr {
 				s.WriteByte('(')
 			}
-			e, err := renderExpr(operand)
+			e, err := renderExpr(schema, operand)
 			if err != nil {
 				return "", err
 			}
@@ -65,12 +65,17 @@ func renderExpr(exp expr.Expr) (string, error) {
 	baseExpr := exp.(*expr.BaseExpr)
 
 	// Validate the column name.
-	if !warehouses.IsValidIdentifier(baseExpr.Column.Name) {
-		return "", fmt.Errorf("invalid column name %q", baseExpr.Column.Name)
+	if !warehouses.IsValidIdentifier(baseExpr.Property) {
+		return "", fmt.Errorf("invalid property name %q", baseExpr.Property)
+	}
+
+	column, err := warehouses.PropertyPathToColumn(schema, baseExpr.Property)
+	if err != nil {
+		return "", fmt.Errorf("property %q not found", baseExpr.Property)
 	}
 
 	// Render the column identifier.
-	s.WriteString(postgres.QuoteIdent(baseExpr.Column.Name))
+	s.WriteString(postgres.QuoteIdent(column.Name))
 	s.WriteString(" ")
 
 	// Render the operator and, if necessary, the value.
@@ -98,7 +103,12 @@ func renderExpr(exp expr.Expr) (string, error) {
 			s.WriteString("<= ")
 		}
 
-		switch k := baseExpr.Column.Type; k {
+		property, err := schema.PropertyByPath(types.Path{baseExpr.Property})
+		if err != nil {
+			return "", fmt.Errorf("property %q not found", baseExpr.Property)
+		}
+
+		switch k := property.Type.Kind(); k {
 		case
 			types.BooleanKind:
 			v, ok := baseExpr.Value.(bool)

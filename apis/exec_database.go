@@ -11,7 +11,7 @@ import (
 	"context"
 	"log/slog"
 
-	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
 )
@@ -19,7 +19,7 @@ import (
 // exportUsersToDatabase exports the users to the database of the action.
 func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 
-	users, err := this.readUsersFromDataWarehouse(ctx, nil)
+	users, err := this.readUsersFromDataWarehouse(ctx, nil, this.action.InSchema)
 	if err != nil {
 		return err
 	}
@@ -59,13 +59,6 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 			props[p.Name] = user.Properties[p.Name]
 		}
 
-		// Normalize the user properties (read from the data warehouse) using
-		// the action's mapping input schema.
-		props, err = normalize(props, this.action.InSchema)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
 		// Transform the user.
 		props, err = transformer.Transform(ctx, props)
 		if err != nil {
@@ -76,7 +69,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		}
 
 		// Serialize the props into column values.
-		datastore.SerializeRow(props, this.action.OutSchema)
+		warehouses.SerializeRow(props, this.action.OutSchema)
 		row := make([]any, len(outSchemaProps)+1)
 		row[0] = user.ID
 		for i, p := range outSchemaProps {
@@ -86,7 +79,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	}
 
 	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}},
-		datastore.PropertiesToColumns(outSchemaProps)...)
+		warehouses.PropertiesToColumns(outSchemaProps)...)
 
 	database := this.database()
 	defer database.Close()

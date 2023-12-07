@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/netip"
 	"reflect"
+	"strings"
 	"time"
 
 	"chichi/apis/datastore/warehouses"
@@ -299,6 +300,9 @@ func (sv scanValue) scanArray(src any) (any, error) {
 
 // normalize normalizes a value returned by PostgreSQL and returns its
 // normalized form. If the value is not valid it returns an error.
+//
+// This function must make assumptions based on the behavior of the
+// 'warehouses.CheckConformity' function.
 func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 	if v == nil {
 		if !nullable {
@@ -345,7 +349,16 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 		}
 	case types.InetKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateInet(name, v)
+			// IP addresses are parsed directly here, without calling the
+			// validation function inside warehouses, because the IP addresses
+			// returned by PostgreSQL include the subnet mask, which must be
+			// removed.
+			rawIP, _, _ := strings.Cut(v, "/") // "127.0.0.1/32" -> "127.0.0.1"
+			ip, err := netip.ParseAddr(rawIP)
+			if err != nil {
+				return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an Inet type", v, name)
+			}
+			return ip.String(), nil
 		}
 	case types.TextKind:
 		if v, ok := v.(string); ok {

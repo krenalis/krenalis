@@ -7,10 +7,6 @@
 
 package expr
 
-import (
-	"chichi/connector/types"
-)
-
 // Expr represents a subset of SQL expressions.
 type Expr interface {
 	expr()
@@ -40,10 +36,10 @@ const (
 	LogicalOperatorOr  LogicalOperator = "Or"
 )
 
-// BaseExpr represents an SQL expression that refers to a column, on which an
+// BaseExpr represents an SQL expression that refers to a property, on which an
 // operator is applied, an eventually an operand, if the operator is binary.
 type BaseExpr struct {
-	Column   Column
+	Property string
 	Operator Operator
 	Value    any // may be nil for unary expressions.
 }
@@ -51,10 +47,10 @@ type BaseExpr struct {
 func (*BaseExpr) expr() {}
 
 // NewBaseExpr returns a new BaseExpr expression that applies to the given
-// column with the given operand and value.
+// property with the given operand and value.
 // If the operator is unary, value should be nil.
-func NewBaseExpr(column Column, operator Operator, value any) *BaseExpr {
-	return &BaseExpr{Column: column, Operator: operator, Value: value}
+func NewBaseExpr(property string, operator Operator, value any) *BaseExpr {
+	return &BaseExpr{Property: property, Operator: operator, Value: value}
 }
 
 // Operator presents a unary or binary operator of a BaseExpr.
@@ -70,9 +66,3 @@ const (
 	OperatorIsNull       Operator = "IsNull"
 	OperatorIsNotNull    Operator = "IsNotNull"
 )
-
-// Column represents a column within an expression.
-type Column struct {
-	Name string
-	Type types.Kind
-}

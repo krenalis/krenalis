@@ -98,7 +98,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 
 	}
 
-	users, err := this.readUsersFromDataWarehouse(ctx, nil)
+	users, err := this.readUsersFromDataWarehouse(ctx, nil, this.action.InSchema)
 	if err != nil {
 		return err
 	}
@@ -164,13 +164,6 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		props := make(map[string]any, len(properties))
 		for _, name := range properties {
 			props[name] = user.Properties[name]
-		}
-
-		// Normalize the user properties (read from the data warehouse) using
-		// the action's mapping input schema.
-		props, err = normalize(props, this.action.InSchema)
-		if err != nil {
-			return actionExecutionError{err}
 		}
 
 		// Transform the user.

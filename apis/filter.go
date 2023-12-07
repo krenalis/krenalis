@@ -181,10 +181,6 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 		if err != nil {
 			return nil, fmt.Errorf("property path %s does not exist", cond.Property)
 		}
-		column := expr.Column{
-			Name: cond.Property,
-			Type: property.Type.Kind(),
-		}
 		var op expr.Operator
 		switch cond.Operator {
 		case "is":
@@ -195,7 +191,7 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 			return nil, errors.New("invalid operator")
 		}
 		var value any
-		switch column.Type {
+		switch property.Type.Kind() {
 		case types.BooleanKind:
 			value = false
 			if cond.Value == "true" {
@@ -226,9 +222,9 @@ func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
 		case types.TextKind:
 			value = cond.Value
 		default:
-			return nil, fmt.Errorf("unexpected type %s", column.Type)
+			return nil, fmt.Errorf("unexpected type %s", property.Type)
 		}
-		exp.Operands[i] = expr.NewBaseExpr(column, op, value)
+		exp.Operands[i] = expr.NewBaseExpr(cond.Property, op, value)
 	}
 	return exp, nil
 }

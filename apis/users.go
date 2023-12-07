@@ -16,7 +16,9 @@ import (
 
 	"chichi/apis/datastore"
 	"chichi/apis/datastore/expr"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/state"
 	"chichi/connector/types"
 
@@ -148,72 +150,6 @@ type EventContextSession struct {
 	Start bool  `json:"start"`
 }
 
-var eventColumns = []types.Property{
-	{Name: "anonymous_id", Type: types.Text()},
-	{Name: "category", Type: types.Text()},
-	{Name: "app_name", Type: types.Text()},
-	{Name: "app_version", Type: types.Text()},
-	{Name: "app_build", Type: types.Text()},
-	{Name: "app_namespace", Type: types.Text()},
-	{Name: "browser_name", Type: types.Text()},
-	{Name: "browser_other", Type: types.Text()},
-	{Name: "browser_version", Type: types.Text()},
-	{Name: "campaign_name", Type: types.Text()},
-	{Name: "campaign_source", Type: types.Text()},
-	{Name: "campaign_medium", Type: types.Text()},
-	{Name: "campaign_term", Type: types.Text()},
-	{Name: "campaign_content", Type: types.Text()},
-	{Name: "device_id", Type: types.Text()},
-	{Name: "device_advertising_id", Type: types.Text()},
-	{Name: "device_ad_tracking_enabled", Type: types.Boolean()},
-	{Name: "device_manufacturer", Type: types.Text()},
-	{Name: "device_model", Type: types.Text()},
-	{Name: "device_name", Type: types.Text()},
-	{Name: "device_type", Type: types.Text()},
-	{Name: "device_token", Type: types.Text()},
-	{Name: "ip", Type: types.Inet()},
-	{Name: "library_name", Type: types.Text()},
-	{Name: "library_version", Type: types.Text()},
-	{Name: "locale", Type: types.Text()},
-	{Name: "location_city", Type: types.Text()},
-	{Name: "location_country", Type: types.Text()},
-	{Name: "location_latitude", Type: types.Float(64)},
-	{Name: "location_longitude", Type: types.Float(64)},
-	{Name: "location_speed", Type: types.Float(64)},
-	{Name: "network_bluetooth", Type: types.Boolean()},
-	{Name: "network_carrier", Type: types.Text()},
-	{Name: "network_cellular", Type: types.Boolean()},
-	{Name: "network_wifi", Type: types.Boolean()},
-	{Name: "os_name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
-	{Name: "os_version", Type: types.Text()},
-	{Name: "page_path", Type: types.Text()},
-	{Name: "page_referrer", Type: types.Text()},
-	{Name: "page_search", Type: types.Text()},
-	{Name: "page_title", Type: types.Text()},
-	{Name: "page_url", Type: types.Text()},
-	{Name: "referrer_id", Type: types.Text()},
-	{Name: "referrer_type", Type: types.Text()},
-	{Name: "screen_width", Type: types.Int(16)},
-	{Name: "screen_height", Type: types.Int(16)},
-	{Name: "screen_density", Type: types.Decimal(3, 2)},
-	{Name: "session_id", Type: types.Int(64)},
-	{Name: "session_start", Type: types.Boolean()},
-	{Name: "timezone", Type: types.Text()},
-	{Name: "user_agent", Type: types.Text()},
-	{Name: "event", Type: types.Text()},
-	{Name: "group_id", Type: types.Text()},
-	{Name: "message_id", Type: types.Text()},
-	{Name: "name", Type: types.Text()},
-	{Name: "properties", Type: types.JSON()},
-	{Name: "received_at", Type: types.DateTime()},
-	{Name: "sent_at", Type: types.DateTime()},
-	{Name: "source", Type: types.Int(32)},
-	{Name: "timestamp", Type: types.DateTime()},
-	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
-	{Name: "user_id", Type: types.Text()},
-}
-
 // Events returns the events of the user. limit is the maximum number of events
 // to return, it must be in range [1, 200].
 //
@@ -234,206 +170,244 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Read the schema.
-	//
-	//TODO(Gianluca): should the users / users_identities / events schema be
-	// handled by Chichi, or internally by the data warehouse? See the issue
-	// https://github.com/open2b/chichi/issues/392.
-	//
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return nil, err
-	}
-	schema, ok := schemas["events"]
-	if !ok {
-		return nil, errors.Unprocessable(NoEventsSchema, "workspace %d does not have events schema", ws.ID)
-	}
-
-	gid, ok := schema.Property("gid")
-	if !ok {
-		return nil, fmt.Errorf("events schema has no property 'gid'")
-	}
+	// Build the "where" expression.
+	gid := types.Property{Name: "gid", Type: types.Int(32)}
 	where := whereExpr(gid, this.id)
 	if where == nil {
-		return nil, fmt.Errorf("property 'gid' of the events schema has an unexpected type %s", gid.Type.Kind())
+		return nil, errors.New("unexpected nil where")
 	}
 
-	// Read the events.
-	rows, err := this.store.Events(ctx, eventColumns, where, types.Property{}, 0, limit)
+	// Determine the property paths to select.
+	var toSelect []types.Path
+	for _, p := range events.Schema.PropertiesNames() {
+		toSelect = append(toSelect, types.Path{p})
+	}
+
+	// Determine the schema of the events, which should include the ID, as such.
+	// property is referenced in the "where".
+	var schema types.Type
+	{
+		props := events.Schema.Properties()
+		props = append([]types.Property{gid}, props...)
+		schema = types.Object(props)
+	}
+
+	// Retrieve the events records.
+	records, err := this.store.Events(ctx, schema, toSelect, where, types.Property{}, 0, limit)
 	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get a user from the data warehouse", "workspace", ws.ID, "err", err)
-			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
-		}
 		return nil, err
 	}
 
-	events := make([]Event, len(rows))
-	for i, row := range rows {
-
+	events := []Event{}
+	err = records.For(func(r warehouses.Record) error {
 		var e Event
 
-		e.AnonymousId = row[0].(string)
-		e.Category = row[1].(string)
+		e.AnonymousId = r.Properties["anonymousId"].(string)
+
+		e.Category = r.Properties["category"].(string)
+
+		context := r.Properties["context"].(map[string]any)
 
 		// App.
-		app := EventContextApp{
-			Name:      row[2].(string),
-			Version:   row[3].(string),
-			Build:     row[4].(string),
-			Namespace: row[5].(string),
-		}
-		if app != (EventContextApp{}) {
-			e.Context.App = &app
+		{
+			app := context["app"].(map[string]any)
+			a := EventContextApp{
+				Name:      app["name"].(string),
+				Version:   app["version"].(string),
+				Build:     app["build"].(string),
+				Namespace: app["namespace"].(string),
+			}
+			if a != (EventContextApp{}) {
+				e.Context.App = &a
+			}
 		}
 
 		// Browser.
-		browser := EventContextBrowser{
-			Name:    row[6].(string),
-			Other:   row[7].(string),
-			Version: row[8].(string),
-		}
-		if browser != (EventContextBrowser{}) {
-			e.Context.Browser = &browser
+		{
+			browser := context["browser"].(map[string]any)
+			b := EventContextBrowser{
+				Name:    browser["name"].(string),
+				Other:   browser["other"].(string),
+				Version: browser["version"].(string),
+			}
+			if b != (EventContextBrowser{}) {
+				e.Context.Browser = &b
+			}
 		}
 
 		// Campaign.
-		campaign := EventContextCampaign{
-			Name:    row[9].(string),
-			Source:  row[10].(string),
-			Medium:  row[11].(string),
-			Term:    row[12].(string),
-			Content: row[13].(string),
-		}
-		if campaign != (EventContextCampaign{}) {
-			e.Context.Campaign = &campaign
+		{
+			campaign := context["campaign"].(map[string]any)
+			c := EventContextCampaign{
+				Name:    campaign["name"].(string),
+				Source:  campaign["source"].(string),
+				Medium:  campaign["medium"].(string),
+				Term:    campaign["term"].(string),
+				Content: campaign["content"].(string),
+			}
+			if c != (EventContextCampaign{}) {
+				e.Context.Campaign = &c
+			}
 		}
 
 		// Device.
-		device := EventContextDevice{
-			Id:                row[14].(string),
-			AdvertisingId:     row[15].(string),
-			AdTrackingEnabled: row[16].(bool),
-			Manufacturer:      row[17].(string),
-			Model:             row[18].(string),
-			Name:              row[19].(string),
-			Type:              row[20].(string),
-			Token:             row[21].(string),
-		}
-		if device != (EventContextDevice{}) {
-			e.Context.Device = &device
+		{
+			device := context["device"].(map[string]any)
+			d := EventContextDevice{
+				Id:                device["id"].(string),
+				AdvertisingId:     device["advertisingId"].(string),
+				AdTrackingEnabled: device["adTrackingEnabled"].(bool),
+				Manufacturer:      device["manufacturer"].(string),
+				Model:             device["model"].(string),
+				Name:              device["name"].(string),
+				Type:              device["type"].(string),
+				Token:             device["token"].(string),
+			}
+			if d != (EventContextDevice{}) {
+				e.Context.Device = &d
+			}
 		}
 
 		// IP.
-		e.Context.IP = row[22].(string)
+		e.Context.IP = context["ip"].(string)
 
 		// Library.
-		library := EventContextLibrary{
-			Name:    row[23].(string),
-			Version: row[24].(string),
-		}
-		if library != (EventContextLibrary{}) {
-			e.Context.Library = &library
+		{
+			library := context["library"].(map[string]any)
+			l := EventContextLibrary{
+				Name:    library["name"].(string),
+				Version: library["version"].(string),
+			}
+			if l != (EventContextLibrary{}) {
+				e.Context.Library = &l
+			}
 		}
 
 		// Locale.
-		e.Context.Locale = row[25].(string)
+		e.Context.Locale = context["locale"].(string)
 
 		// Location.
-		location := EventContextLocation{
-			City:      row[26].(string),
-			Country:   row[27].(string),
-			Latitude:  row[28].(float64),
-			Longitude: row[29].(float64),
-			Speed:     row[30].(float64),
-		}
-		if location != (EventContextLocation{}) {
-			e.Context.Location = &location
+		{
+			location := context["location"].(map[string]any)
+			l := EventContextLocation{
+				City:      location["city"].(string),
+				Country:   location["country"].(string),
+				Latitude:  location["latitude"].(float64),
+				Longitude: location["longitude"].(float64),
+				Speed:     location["speed"].(float64),
+			}
+			if l != (EventContextLocation{}) {
+				e.Context.Location = &l
+			}
 		}
 
 		// Network.
-		network := EventContextNetwork{
-			Bluetooth: row[31].(bool),
-			Carrier:   row[32].(string),
-			Cellular:  row[33].(bool),
-			WiFi:      row[34].(bool),
-		}
-		if network != (EventContextNetwork{}) {
-			e.Context.Network = &network
+		{
+			network := context["network"].(map[string]any)
+			n := EventContextNetwork{
+				Bluetooth: network["bluetooth"].(bool),
+				Carrier:   network["carrier"].(string),
+				Cellular:  network["cellular"].(bool),
+				WiFi:      network["wifi"].(bool),
+			}
+			if n != (EventContextNetwork{}) {
+				e.Context.Network = &n
+			}
 		}
 
 		// OS.
-		os := EventContextOS{
-			Name:    row[35].(string),
-			Version: row[36].(string),
-		}
-		if os != (EventContextOS{}) {
-			e.Context.OS = &os
+		{
+			os := context["os"].(map[string]any)
+			o := EventContextOS{
+				Name:    os["name"].(string),
+				Version: os["version"].(string),
+			}
+			if o != (EventContextOS{}) {
+				e.Context.OS = &o
+			}
 		}
 
 		// Page.
-		page := EventContextPage{
-			Path:     row[37].(string),
-			Referrer: row[38].(string),
-			Search:   row[39].(string),
-			Title:    row[40].(string),
-			URL:      row[41].(string),
-		}
-		if page != (EventContextPage{}) {
-			e.Context.Page = &page
+		{
+			page := context["page"].(map[string]any)
+			p := EventContextPage{
+				Path:     page["path"].(string),
+				Referrer: page["referrer"].(string),
+				Search:   page["search"].(string),
+				Title:    page["title"].(string),
+				URL:      page["url"].(string),
+			}
+			if p != (EventContextPage{}) {
+				e.Context.Page = &p
+			}
 		}
 
 		// Referrer.
-		referrer := EventContextReferrer{
-			Id:   row[42].(string),
-			Type: row[43].(string),
-		}
-		if referrer != (EventContextReferrer{}) {
-			e.Context.Referrer = &referrer
+		{
+			referrer := context["referrer"].(map[string]any)
+			r := EventContextReferrer{
+				Id:   referrer["id"].(string),
+				Type: referrer["type"].(string),
+			}
+			if r != (EventContextReferrer{}) {
+				e.Context.Referrer = &r
+			}
 		}
 
 		// Screen.
-		screen := EventContextScreen{
-			Width:   row[44].(int),
-			Height:  row[45].(int),
-			Density: row[46].(decimal.Decimal),
-		}
-		if screen != (EventContextScreen{}) {
-			e.Context.Screen = &screen
+		{
+			screen := context["screen"].(map[string]any)
+			s := EventContextScreen{
+				Width:   screen["width"].(int),
+				Height:  screen["height"].(int),
+				Density: screen["density"].(decimal.Decimal),
+			}
+			if s != (EventContextScreen{}) {
+				e.Context.Screen = &s
+			}
 		}
 
 		// Session.
-		session := EventContextSession{
-			Id:    int64(row[47].(int)),
-			Start: row[48].(bool),
-		}
-		if session != (EventContextSession{}) {
-			e.Context.Session = &session
+		{
+			session := context["session"].(map[string]any)
+			s := EventContextSession{
+				Id:    int64(session["id"].(int)),
+				Start: session["start"].(bool),
+			}
+			if s != (EventContextSession{}) {
+				e.Context.Session = &s
+			}
 		}
 
-		e.Context.Timezone = row[49].(string)
-		e.Context.UserAgent = row[50].(string)
+		e.Context.Timezone = context["timezone"].(string)
+		e.Context.UserAgent = context["userAgent"].(string)
 
-		e.Event = row[51].(string)
-		e.GroupId = row[52].(string)
-		e.MessageId = row[53].(string)
-		e.Name = row[54].(string)
+		e.Event = r.Properties["event"].(string)
+		e.GroupId = r.Properties["groupId"].(string)
+		e.MessageId = r.Properties["messageId"].(string)
+		e.Name = r.Properties["name"].(string)
 		// TODO(Gianluca): this is a temporary workaround for
 		// the issue https://github.com/open2b/chichi/issues/403.
-		// e.Properties = json.RawMessage(row[55].(string))
-		e.ReceivedAt = row[56].(time.Time).Format(time.RFC3339)
-		e.SentAt = row[57].(time.Time).Format(time.RFC3339)
-		e.Source = row[58].(int)
-		e.Timestamp = row[59].(time.Time).Format(time.RFC3339)
+		// e.Properties = json.RawMessage(r.Properties["properties"].(string))
+		e.ReceivedAt = r.Properties["receivedAt"].(time.Time).Format(time.RFC3339)
+		e.SentAt = r.Properties["sentAt"].(time.Time).Format(time.RFC3339)
+		e.Source = r.Properties["source"].(int)
+		e.Timestamp = r.Properties["timestamp"].(time.Time).Format(time.RFC3339)
 		// TODO(Gianluca): this is a temporary workaround for
 		// the issue https://github.com/open2b/chichi/issues/403.
-		// e.Traits = json.RawMessage(row[60].(string))
-		e.Type = row[61].(string)
-		e.UserId = row[62].(string)
+		// e.Traits = json.RawMessage(r.Properties["traits"].(string))
+		e.Type = r.Properties["type"].(string)
+		e.UserId = r.Properties["userId"].(string)
 
-		events[i] = e
+		events = append(events, e)
+		return nil
 
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err = records.Err(); err != nil {
+		return nil, fmt.Errorf("an error occurred closing the database: %s", err)
 	}
 
 	return events, nil
@@ -444,7 +418,6 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 // It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
-//   - NoUsersSchema, if the data warehouse does not have users schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *User) Traits(ctx context.Context) (map[string]any, error) {
@@ -458,55 +431,47 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Read the schema.
-	//
-	//TODO(Gianluca): should the users / users_identities / events schema be
-	// handled by Chichi, or internally by the data warehouse? See the issue
-	// https://github.com/open2b/chichi/issues/392.
-	//
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return nil, err
-	}
-	schema, ok := schemas["users"]
-	if !ok {
-		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
-	}
-
-	id, ok := schema.Property("id")
-	if !ok {
-		return nil, fmt.Errorf("users schema has no property 'id'")
-	}
+	// Build the "where" expression.
+	id := types.Property{Name: "id", Type: types.Int(32)}
 	where := whereExpr(id, this.id)
 	if where == nil {
-		return nil, fmt.Errorf("property 'id' of the users schema has an unexpected type %s", id.Type.Kind())
+		return nil, errors.New("unexpected nil where")
 	}
 
-	rows, err := this.store.Users(ctx, schema.Properties(), where, types.Property{}, 0, 1)
+	// Retrieve the user traits as records.
+	records, err := this.store.Users(ctx, types.Type{}, nil, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get a user from the data warehouse", "workspace", ws.ID, "err", err)
-			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
+			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
 		}
 		return nil, err
 	}
-	if len(rows) == 0 {
+	var traits map[string]any
+	err = records.For(func(user warehouses.Record) error {
+		if user.Err != nil {
+			return err
+		}
+		traits = user.Properties
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err = records.Err(); err != nil {
+		return nil, err
+	}
+	if traits == nil {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
-
-	traits := rows[0]
 
 	return traits, nil
 }
 
 func whereExpr(property types.Property, value int) *expr.BaseExpr {
-	where := expr.NewBaseExpr(
-		expr.Column{Name: property.Name, Type: property.Type.Kind()},
-		expr.OperatorEqual,
-		nil,
-	)
-	switch where.Column.Type {
+	where := expr.NewBaseExpr(property.Name, expr.OperatorEqual, nil)
+	switch property.Type.Kind() {
 	case types.IntKind:
 		where.Value = value
 	case types.DecimalKind:

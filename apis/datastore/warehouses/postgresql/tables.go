@@ -18,6 +18,7 @@ import (
 	"chichi/connector/types"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // NOTE. This file must be kept in sync with 'connectors/postgresql/tables.go'.
@@ -39,6 +40,7 @@ type pgTypeInfo struct {
 type tableSchema struct {
 	name    string
 	columns []types.Property
+	fds     []pgconn.FieldDescription
 }
 
 // tablesSchemas returns the schemas for the existing tables in the schema
@@ -206,6 +208,16 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+
+	// Read the field descriptions of the tables.
+	for _, table := range tables {
+		rows, err := tx.Query(ctx, "SELECT * FROM "+table.name+" LIMIT 0")
+		if err != nil {
+			return nil, err
+		}
+		table.fds = rows.FieldDescriptions()
+		rows.Close()
 	}
 
 	return tables, nil

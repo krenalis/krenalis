@@ -14,12 +14,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"chichi/connector/types"
 )
 
 // exportUsersToFile exports the users to the file.
 func (this *Action) exportUsersToFile(ctx context.Context) error {
 
-	users, err := this.readUsersFromDataWarehouse(ctx, nil)
+	users, err := this.readUsersFromDataWarehouse(ctx, nil, types.Type{})
 	if err != nil {
 		return err
 	}

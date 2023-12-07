@@ -23,6 +23,7 @@ import (
 
 type (
 	DataWarehouseError = warehouses.DataWarehouseError
+	SchemaError        = warehouses.SchemaError
 	SettingsError      = warehouses.SettingsError
 )
 

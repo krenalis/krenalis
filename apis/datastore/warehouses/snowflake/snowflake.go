@@ -376,86 +376,37 @@ func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int,
 	panic("not implemented")
 }
 
-// Select returns the rows from the given table that satisfies the where
-// condition with only the given columns, ordered by order if order is not the
-// zero Property, and in range [first,first+limit] with first >= 0 and
-// 0 < limit <= 1000.
-func (warehouse *Snowflake) Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
-
-	if !warehouses.IsValidIdentifier(table) {
-		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
-	}
-
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the query.
-	var query strings.Builder
-	query.WriteString(`SELECT `)
-	for i, c := range columns {
-		if i > 0 {
-			query.WriteString(", ")
-		}
-		if !types.IsValidPropertyName(c.Name) {
-			return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
-		}
-		query.WriteByte('"')
-		query.WriteString(c.Name)
-		query.WriteByte('"')
-	}
-	query.WriteString(` FROM "`)
-	query.WriteString(table)
-	query.WriteByte('"')
-
-	if where != nil {
-		query.WriteString(` WHERE `)
-		expr, err := renderExpr(where)
-		if err != nil {
-			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
-		}
-		query.WriteString(expr)
-	}
-
-	if order.Name != "" {
-		if !types.IsValidPropertyName(order.Name) {
-			return nil, fmt.Errorf("column name %q is not a valid property name", order.Name)
-		}
-		query.WriteString(" ORDER BY ")
-		query.WriteString(order.Name)
-	}
-	query.WriteString(" LIMIT ")
-	query.WriteString(strconv.Itoa(limit))
-	if first > 0 {
-		query.WriteString(" OFFSET ")
-		query.WriteString(strconv.Itoa(first))
-	}
-
-	// Execute the query.
-	rawRows, err := db.QueryContext(ctx, query.String())
-	if err != nil {
-		return nil, warehouses.Error(err)
-	}
-	defer rawRows.Close()
-	var rows [][]any
-	values := newScanValues(columns, &rows)
-	for rawRows.Next() {
-		if err = rawRows.Scan(values...); err != nil {
-			return nil, warehouses.Error(err)
-		}
-	}
-	if err = rawRows.Close(); err != nil {
-		return nil, warehouses.Error(err)
-	}
-	if err = rawRows.Err(); err != nil {
-		return nil, warehouses.Error(err)
-	}
-	if rows == nil {
-		rows = [][]any{}
-	}
-
-	return rows, nil
+// Select returns a Records iterator on the records of the given table which
+// satisfy the where condition, ordered by order (if it's not the zero
+// Property).
+//
+// In each record, the returned properties are those specified in toSelect and
+// are normalized with the schema. As a special case, if toSelect is nil then
+// every property of schema is returned.
+//
+// schema must contain both the properties to select and the properties
+// referenced in the where clause. As a special case, if the schema is the
+// invalid schema, then the schema of the specified table is used.
+//
+// key is the key of the table and it is used to the determine the ID of each
+// record.
+//
+// Returned records are in range [first, first + limit], with first >= 0 and
+// limit > 0. As a special case, a zero limit means that every record is
+// returned.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
+//
+// If schema is not conform to the schema of the table in the data warehouse, a
+// SchemaError is returned.
+//
+// As a simplification, it is currently assumed that the table schema does not
+// change in the data warehouse during the execution of this method.
+func (warehouse *Snowflake) Select(ctx context.Context, table string, schema types.Type,
+	toSelect []types.Path, key types.Property, where expr.Expr, order types.Property,
+	first, limit int) (warehouses.Records, error) {
+	panic("not implemented")
 }
 
 // SetDestinationUser sets the destination user relative to the action, with the

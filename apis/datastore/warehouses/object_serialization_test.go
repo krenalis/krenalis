@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package datastore
+package warehouses
 
 import (
 	"testing"

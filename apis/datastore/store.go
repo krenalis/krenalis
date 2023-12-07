@@ -78,15 +78,31 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 	return store.warehouse.DestinationUser(ctx, action, property)
 }
 
-// Events returns the events that satisfy the where condition with only the
-// given columns, ordered by order if order is not the zero Property, and in
-// range [first,first+limit] with first >= 0 and 0 < limit <= 1000.
+// Events returns a Records iterator on the events of the "events" table which
+// satisfy the where condition, ordered by order (if it's not the zero
+// Property).
+//
+// In each record, the returned properties are those specified in toSelect and
+// are normalized with the schema.
+//
+// schema must contain both the properties to select and the properties
+// referenced in the where clause. As a special case, if the schema is the
+// invalid schema, then the schema of the "events" table is used.
+//
+// Returned records are in range [first, first + limit], with first >= 0 and
+// limit > 0. As a special case, a zero limit means that every record is
+// returned.
 //
 // If an error occurs with the data warehouse, it returns a DataWarehouseError
 // error.
-func (store *Store) Events(ctx context.Context, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
+//
+// If schema is not conform to the schema of the table in the data warehouse, a
+// SchemaError is returned.
+func (store *Store) Events(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, error) {
 	store.mustBeOpen()
-	return store.warehouse.Select(ctx, "events", columns, where, order, first, limit)
+	key := types.Property{Name: "gid", Type: types.Int(32)}
+	records, err := store.warehouse.Select(ctx, "events", schema, toSelect, key, where, order, first, limit)
+	return records, err
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -137,7 +153,7 @@ func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) 
 	for _, table := range tables {
 		switch table.Name {
 		case "users", "users_identities", "groups", "groups_identities", "events":
-			properties, err := ColumnsToProperties(table.Columns)
+			properties, err := warehouses.ColumnsToProperties(table.Columns)
 			if err != nil {
 				return nil, err
 			}
@@ -186,7 +202,7 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 	identifiersColumns = make([]types.Property, count)
 	for i, ident := range append(ws.Identifiers, ws.AnonymousIdentifiers.Priority...) {
 		var err error
-		identifiersColumns[i], err = PropertyPathToColumn(usersIdentities, ident)
+		identifiersColumns[i], err = warehouses.PropertyPathToColumn(usersIdentities, ident)
 		if err != nil {
 			return err
 		}
@@ -198,46 +214,37 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		return errors.New("missing 'users' schema")
 	}
 
-	usersColumns := PropertiesToColumns(usersSchema.Properties())
+	usersColumns := warehouses.PropertiesToColumns(usersSchema.Properties())
 	return store.warehouse.ResolveSyncUsers(ctx, actions, identifiersColumns, usersColumns)
 }
 
-// Users returns the users that satisfy the where condition with only the given
-// properties, ordered by order if order is not the zero Property, and in range
-// [first,first+limit] with first >= 0 and 0 < limit <= 1000.
-//
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
-// error.
-func (store *Store) Users(ctx context.Context, properties []types.Property, where expr.Expr, order types.Property, first, limit int) ([]map[string]any, error) {
-	store.mustBeOpen()
-	columns := PropertiesToColumns(properties)
-	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
-	if err != nil {
-		return nil, err
-	}
-	users := make([]map[string]any, len(rows))
-	for i, row := range rows {
-		users[i], _ = deserializeRowAsMap(properties, row)
-	}
-	return users, nil
-}
+type Records = warehouses.Records
 
-// UsersSlice is like Users but returns the users as a slice.
+// Users returns a Records iterator on the users of the "users" table which
+// satisfy the where condition, ordered by order (if it's not the zero
+// Property).
+//
+// In each record, the returned properties are those specified in toSelect and
+// are normalized with the schema.
+//
+// schema must contain both the properties to select and the properties
+// referenced in the where clause. As a special case, if the schema is the
+// invalid schema, then the schema of the "users" table is used.
+//
+// Returned records are in range [first, first + limit], with first >= 0 and
+// limit > 0. As a special case, a zero limit means that every record is
+// returned.
 //
 // If an error occurs with the data warehouse, it returns a DataWarehouseError
 // error.
-func (store *Store) UsersSlice(ctx context.Context, properties []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
+//
+// If schema is not conform to the schema of the table in the data warehouse, a
+// SchemaError is returned.
+func (store *Store) Users(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, error) {
 	store.mustBeOpen()
-	columns := PropertiesToColumns(properties)
-	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
-	if err != nil {
-		return nil, err
-	}
-	users := make([][]any, len(rows))
-	for i, row := range rows {
-		users[i] = deserializeRowAsSlice(properties, row)
-	}
-	return users, nil
+	key := types.Property{Name: "id", Type: types.Int(32)}
+	records, err := store.warehouse.Select(ctx, "users", schema, toSelect, key, where, order, first, limit)
+	return records, err
 }
 
 // close closes the store.

@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ import (
 	"chichi/connector/types"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/exp/maps"
 )
 
@@ -39,10 +41,18 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 type PostgreSQL struct {
-	mu       sync.Mutex // for the db and closed fields
-	db       *postgres.DB
-	closed   bool
-	settings *psSettings
+	mu           sync.Mutex // for the db and closed fields
+	db           *postgres.DB
+	closed       bool
+	settings     *psSettings
+	tableInfos   map[string]tableInfo
+	tableInfosMu sync.Mutex
+}
+
+// A tableInfo holds information about a table.
+type tableInfo struct {
+	schema types.Type
+	fds    []pgconn.FieldDescription
 }
 
 type psSettings struct {
@@ -437,19 +447,166 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	return nil
 }
 
-// Select returns the rows from the given table that satisfies the where
-// condition with only the given columns, ordered by order if order is not the
-// zero Property, and in range [first,first+limit] with first >= 0 and
-// 0 < limit <= 1000.
-func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
+// Select returns a Records iterator on the records of the given table which
+// satisfy the where condition, ordered by order (if it's not the zero
+// Property).
+//
+// In each record, the returned properties are those specified in toSelect and
+// are normalized with the schema. As a special case, if toSelect is nil then
+// every property of schema is returned.
+//
+// schema must contain both the properties to select and the properties
+// referenced in the where clause. As a special case, if the schema is the
+// invalid schema, then the schema of the specified table is used.
+//
+// key is the key of the table and it is used to the determine the ID of each
+// record.
+//
+// Returned records are in range [first, first + limit], with first >= 0 and
+// limit > 0. As a special case, a zero limit means that every record is
+// returned.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
+//
+// If schema is not conform to the schema of the table in the data warehouse, a
+// SchemaError is returned.
+//
+// As a simplification, it is currently assumed that the table schema does not
+// change in the data warehouse during the execution of this method.
+func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema types.Type,
+	toSelect []types.Path, key types.Property, where expr.Expr, order types.Property,
+	first, limit int) (warehouses.Records, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
 
+	if !key.Type.Valid() {
+		return nil, errors.New("invalid key type")
+	}
+	if key.Type.Kind() != types.IntKind {
+		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
+		return nil, fmt.Errorf("expecting key with Int kind, got %s", key.Type.Kind())
+	}
+
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
+	}
+
+	// If the schema is the invalid schema, use the entire schema of the table.
+	if !schema.Valid() {
+		ti, err := warehouse.tableInfo(ctx, table, true)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		schema = ti.schema
+	}
+
+	// Add the order and the key to the schema, as conformity checks must also
+	// be performed for these properties against the schema of the table
+	// currently in the data warehouse.
+	{
+		props := schema.Properties()
+		var hasOrder, hasKey bool
+		for _, p := range props {
+			switch p.Name {
+			case order.Name:
+				hasOrder = true
+			case key.Name:
+				hasKey = true
+			}
+			if (hasOrder || order.Name == "") && hasKey {
+				break
+			}
+		}
+		if !hasOrder && order.Name != "" {
+			props = append(props, order)
+		}
+		if !hasKey && order.Name != key.Name {
+			props = append(props, key)
+		}
+		schema = types.Object(props)
+	}
+
+	// Build and execute the "LIMIT 0" query to retrieve the field descriptions
+	// for every column pointed in schema.
+	//
+	// This is necessary to check if one of the columns in the schema have
+	// changed on the database.
+	var fds []pgconn.FieldDescription
+	{
+		columns := warehouses.PropertiesToColumns(schema.Properties())
+		var b strings.Builder
+		b.WriteString(`SELECT `)
+		for i, c := range columns {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			if !types.IsValidPropertyName(c.Name) {
+				return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
+			}
+			b.WriteByte('"')
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		}
+		b.WriteString(` FROM "`)
+		b.WriteString(table)
+		b.WriteString(`" LIMIT 0`)
+		rows, err := db.Query(ctx, b.String())
+		if err != nil {
+			if isUndefinedColumnErr(err) {
+				// Return a more specific conformity error instead of an SQL
+				// error.
+				ti, err2 := warehouse.tableInfo(ctx, table, true)
+				if err2 != nil {
+					return nil, warehouses.Error(err2)
+				}
+				err2 = warehouses.CheckConformity("", schema, ti.schema)
+				if err2 != nil {
+					return nil, warehouses.Error(err2)
+				}
+			}
+			return nil, err
+		}
+		defer rows.Close()
+		fds = rows.FieldDescriptions()
+		if fds == nil {
+			return nil, errors.New("unexpected nil field descriptions returned by the PostgreSQL driver")
+		}
+		rows.Close()
+	}
+
+	// Determine the columns for the query.
+	var columns []types.Property
+	if toSelect == nil {
+		columns = warehouses.PropertiesToColumns(schema.Properties())
+	} else {
+		props := []types.Property{}
+		for _, path := range toSelect {
+			p, err := schema.PropertyByPath(path)
+			if err != nil {
+				return nil, err
+			}
+			props = append(props, p)
+		}
+		columns = warehouses.PropertiesToColumns(props)
+	}
+	hasKey := false
+	for _, c := range columns {
+		if c.Name == key.Name {
+			hasKey = true
+			break
+		}
+	}
+	removeKeyFromRecords := false
+	if !hasKey {
+		columns = append([]types.Property{key}, columns...)
+		// Since the key has been added to the columns just to determine the
+		// records IDs, and it is now explicitly requested by the user, it must
+		// be removed from the returned properties.
+		removeKeyFromRecords = true
 	}
 
 	// Build the query.
@@ -462,16 +619,9 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 		if !types.IsValidPropertyName(c.Name) {
 			return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
 		}
-		switch c.Type.Kind() {
-		default:
-			query.WriteByte('"')
-			query.WriteString(c.Name)
-			query.WriteByte('"')
-		case types.InetKind:
-			query.WriteString(`host("`)
-			query.WriteString(c.Name)
-			query.WriteString(`")`)
-		}
+		query.WriteByte('"')
+		query.WriteString(c.Name)
+		query.WriteByte('"')
 	}
 	query.WriteString(` FROM "`)
 	query.WriteString(table)
@@ -479,7 +629,7 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 
 	if where != nil {
 		query.WriteString(` WHERE `)
-		expr, err := renderExpr(where)
+		expr, err := renderExpr(schema, where)
 		if err != nil {
 			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
@@ -493,35 +643,124 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 		query.WriteString(" ORDER BY ")
 		query.WriteString(order.Name)
 	}
-	query.WriteString(" LIMIT ")
-	query.WriteString(strconv.Itoa(limit))
+	if limit > 0 {
+		query.WriteString(" LIMIT ")
+		query.WriteString(strconv.Itoa(limit))
+	}
 	if first > 0 {
 		query.WriteString(" OFFSET ")
 		query.WriteString(strconv.Itoa(first))
 	}
 
 	// Execute the query.
-	rawRows, err := db.Query(ctx, query.String())
+	rows, err := db.Query(ctx, query.String())
+	if err != nil {
+		if mayBeRelatedToSchemaError(err) {
+			// Return a more specific conformity error instead of an SQL error.
+			ti, err2 := warehouse.tableInfo(ctx, table, true)
+			if err2 != nil {
+				return nil, warehouses.Error(err2)
+			}
+			err2 = warehouses.CheckConformity("", schema, ti.schema)
+			if err2 != nil {
+				return nil, warehouses.Error(err2)
+			}
+		}
+		return nil, warehouses.Error(err)
+	}
+
+	// Ignore these field descriptions, as we suppose that the table schema has
+	// not changed since the execution of this method.
+	_ = rows.FieldDescriptions()
+
+	// Ensure conformity of the cached schema.
+	// This is necessary to retrieve an up-to-date schema of the table, which
+	// will be used later for the conformity check with the schema passed as
+	// parameter.
+	ti, err := warehouse.tableInfo(ctx, table, false)
 	if err != nil {
 		return nil, warehouses.Error(err)
 	}
-	defer rawRows.Close()
-	var rows [][]any
-	values := newScanValues(columns, &rows)
-	for rawRows.Next() {
-		if err = rawRows.Scan(values...); err != nil {
+	err = checkFieldDescriptions(fds, ti.fds)
+	if err != nil {
+		// Take a fresh tableInfo and check the conformity again.
+		ti, err = warehouse.tableInfo(ctx, table, true)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		err = checkFieldDescriptions(fds, ti.fds)
+		if err != nil {
+			// The field descriptions are still not conform, so just return
+			// error.
 			return nil, warehouses.Error(err)
 		}
 	}
-	rawRows.Close()
-	if err = rawRows.Err(); err != nil {
+
+	// Check if the action schema conforms to the schema of the table.
+	//
+	// Since the Select method must ensure that the returned rows are consistent
+	// with those of the schema passed as a parameter, in case there is no
+	// conformity with the schema of the table read from the data warehouse, an
+	// error is returned.
+	err = warehouses.CheckConformity("", schema, ti.schema)
+	if err != nil {
 		return nil, warehouses.Error(err)
 	}
-	if rows == nil {
-		rows = [][]any{}
+
+	records, err := newRecords(rows, columns, key.Name, removeKeyFromRecords)
+	if err != nil {
+		return nil, err
 	}
 
-	return rows, nil
+	return records, nil
+}
+
+// tableInfo returns the table info for the table. The 'fresh' parameter
+// controls whether the returned 'tableInfo' should be reloaded from the
+// database or if it is not necessary.
+func (warehouse *PostgreSQL) tableInfo(ctx context.Context, table string, fresh bool) (tableInfo, error) {
+
+	// Determine if there is the need to refresh.
+	warehouse.tableInfosMu.Lock()
+	fresh = fresh || warehouse.tableInfos == nil
+	warehouse.tableInfosMu.Unlock()
+
+	// Read a fresh tableInfos, if necessary.
+	if fresh {
+		tables, err := warehouse.tables(ctx)
+		if err != nil {
+			return tableInfo{}, err
+		}
+		tableInfos := map[string]tableInfo{}
+		for _, table := range tables {
+			props, err := warehouses.ColumnsToProperties(table.columns)
+			if err != nil {
+				return tableInfo{}, err
+			}
+			schema, err := types.ObjectOf(props)
+			if err != nil {
+				return tableInfo{}, err
+			}
+			tableInfos[table.name] = tableInfo{
+				schema: schema,
+				fds:    table.fds,
+			}
+		}
+		warehouse.tableInfosMu.Lock()
+		warehouse.tableInfos = tableInfos
+		warehouse.tableInfosMu.Unlock()
+	}
+
+	// Take the tableInfo for the given table.
+	warehouse.tableInfosMu.Lock()
+	ti, ok := warehouse.tableInfos[table]
+	warehouse.tableInfosMu.Unlock()
+	if !ok {
+		// TODO(Gianluca): see the issue https://github.com/open2b/chichi/issues/413.
+		return tableInfo{}, fmt.Errorf("schema '%s' not loaded from data warehouse", table)
+	}
+
+	return ti, nil
 }
 
 // SetDestinationUser sets the destination user relative to the action, with the
@@ -716,7 +955,21 @@ func (warehouse *PostgreSQL) Settings() []byte {
 // It returns only the tables 'users', 'users_identities', 'groups',
 // 'groups_identities' and 'events'.
 func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
+	tables, err := warehouse.tables(ctx)
+	if err != nil {
+		return nil, err
+	}
+	whTables := make([]*warehouses.Table, len(tables))
+	for i, t := range tables {
+		whTables[i] = &warehouses.Table{
+			Name:    t.name,
+			Columns: t.columns,
+		}
+	}
+	return whTables, nil
+}
 
+func (warehouse *PostgreSQL) tables(ctx context.Context) ([]*tableSchema, error) {
 	// Get the connection.
 	db, err := warehouse.connection()
 	if err != nil {
@@ -738,15 +991,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 	if err != nil {
 		return nil, err
 	}
-	whTables := make([]*warehouses.Table, len(tables))
-	for i := range tables {
-		whTables[i] = &warehouses.Table{
-			Name:    tables[i].name,
-			Columns: tables[i].columns,
-		}
-	}
-
-	return whTables, nil
+	return tables, nil
 }
 
 // connection returns the database connection.
@@ -814,4 +1059,52 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 
 func (c *copyForDeleteFrom) Err() error {
 	return nil
+}
+
+// checkFieldDescriptions checks whether all field descriptions defined in the
+// query are also defined in the same way within the field descriptions of the
+// table.
+func checkFieldDescriptions(query, table []pgconn.FieldDescription) error {
+	for _, fd := range query {
+		if !slices.Contains(table, fd) {
+			return fmt.Errorf("column %q not found or not conform", fd.Name)
+		}
+	}
+	return nil
+}
+
+// isUndefinedColumnErr reports whether e is a PostgreSQL error about an
+// undefined column.
+func isUndefinedColumnErr(e error) bool {
+	pgErr, ok := e.(*pgconn.PgError)
+	if !ok {
+		return false
+	}
+	// See https://www.postgresql.org/docs/current/errcodes-appendix.html for
+	// more details about error codes.
+	return pgErr.Code == "42703"
+}
+
+// mayBeRelatedToSchemaError returns true if e may be related to a schema error
+// (for example a missing column, or a type mismatch), false otherwise.
+func mayBeRelatedToSchemaError(e error) bool {
+	pgErr, ok := e.(*pgconn.PgError)
+	if !ok {
+		return false
+	}
+	// For now, limit this to the "undefined_column" error only, which is
+	// possible to encounter in the case of referencing a column that no longer
+	// exists, perhaps because the schema of the action is outdated.
+	//
+	// Before adding other errors to this switch, ensure the cases where such
+	// errors can actually occur.
+	//
+	// See https://www.postgresql.org/docs/current/errcodes-appendix.html for
+	// more details about error codes.
+	switch pgErr.Code {
+	case "42703": // undefined_column
+		return true
+	default:
+		return false
+	}
 }

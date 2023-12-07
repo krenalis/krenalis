@@ -17,9 +17,11 @@ import (
 
 	"chichi/apis/datastore"
 	"chichi/apis/datastore/expr"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/transformers/mappings"
 	"chichi/connector"
 	"chichi/connector/types"
 )
@@ -166,66 +168,90 @@ type userToExport struct {
 // readUsersFromDataWarehouse reads the users with the given IDs from the data
 // warehouse.
 //
-// TODO(Gianluca): this method returns at most 1000 users. This is wrong. We
-// should find an alternative way to implement this; maybe we could read one
-// user at a time.
-func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) ([]userToExport, error) {
-
-	// Read the schema.
-	//
-	//TODO(Gianluca): should the users / users_identities / events schema be
-	// handled by Chichi, or internally by the data warehouse? See the issue
-	// https://github.com/open2b/chichi/issues/392.
-	//
-	schema, err := this.connection.schema(ctx, "users")
-	if err != nil {
-		return nil, err
-	}
-	if !schema.Valid() {
-		return nil, errors.New("users schema not found")
-	}
-
-	// Read the users.
+// TODO(Gianluca): this method is limited to export at most 1000 users.
+// Probably, this method will be removed, and the code responsible for exporting
+// should operate directly on the iterator. See the issue
+// https://github.com/open2b/chichi/issues/412 for more details.
+func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int, usersSchema types.Type) ([]userToExport, error) {
 
 	var where expr.Expr
 	if len(ids) > 0 {
 		operands := make([]expr.Expr, len(ids))
 		for i := range ids {
-			operands[i] = expr.NewBaseExpr(
-				expr.Column{Name: "id", Type: types.IntKind},
-				expr.OperatorEqual,
-				ids[i],
-			)
+			operands[i] = expr.NewBaseExpr("id", expr.OperatorEqual, ids[i])
 		}
 		where = expr.NewMultiExpr(expr.LogicalOperatorOr, operands)
 	}
-	idProperty, ok := schema.Property("id")
-	if !ok {
-		return nil, errors.New("property 'id' not found in schema")
+
+	// Determine the properties to select from the data warehouse.
+	var toSelect []types.Path
+	if this.action.Transformation.Mapping != nil {
+		inSchema := this.action.InSchema
+		outSchema := this.action.OutSchema
+		mapping, err := mappings.New(this.action.Transformation.Mapping, inSchema, outSchema, nil)
+		if err != nil {
+			return nil, err
+		}
+		toSelect = mapping.Properties()
+	} else {
+		toSelect = nil // every property of the usersSchema.
+	}
+
+	// Add the internal property name, if necessary, that is used for the user
+	// matching.
+	if matchProps := this.action.MatchingProperties; matchProps != nil {
+		internal := matchProps.Internal
+		// Adds the property only if it is not already present in toSelect, as
+		// it has been mapped.
+		found := false
+		for _, path := range toSelect {
+			if path[0] == internal.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toSelect = append(toSelect, types.Path{internal.Name})
+			usersSchemaProps := usersSchema.Properties()
+			usersSchemaProps = append(usersSchemaProps, internal)
+			usersSchema = types.Object(usersSchemaProps)
+		}
 	}
 
 	store := this.connection.store
-	users, err := store.Users(ctx, schema.Properties(), where, idProperty, 0, 1000)
+
+	order := types.Property{Name: "id", Type: types.Int(32)}
+	records, err := store.Users(ctx, usersSchema, toSelect, where, order, 0, 1000)
 	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
+		switch err := err.(type) {
+		case *datastore.DataWarehouseError:
 			// TODO(marco): log the error in a log specific of the workspace.
 			ws := this.action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
+		case *datastore.SchemaError:
+			err.Msg += ". Please review and update the action before attempting to export the users."
+			return nil, err
 		}
 		return nil, err
 	}
 
-	exportUsers := make([]userToExport, len(users))
-	for i, user := range users {
-		gid, ok := user["id"].(int)
-		if !ok {
-			return nil, errors.New("missing or invalid GID")
+	exportUsers := []userToExport{}
+	err = records.For(func(user warehouses.Record) error {
+		if user.Err != nil {
+			return err
 		}
-		exportUsers[i] = userToExport{
-			ID:         gid,
-			Properties: user,
-		}
+		exportUsers = append(exportUsers, userToExport{
+			ID:         user.ID,
+			Properties: user.Properties,
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err = records.Err(); err != nil {
+		return nil, err
 	}
 
 	return exportUsers, nil

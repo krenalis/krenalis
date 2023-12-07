@@ -5,14 +5,13 @@
 // Copyright (c) 2023 Open2b
 //
 
-package datastore
+package warehouses
 
 import (
 	"errors"
 	"fmt"
 	"strings"
 
-	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 )
 
@@ -66,7 +65,7 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 		}
 		for _, p := range properties {
 			if p.Name == property.Name {
-				return nil, warehouses.Errorf("column %s results in a repeated property named %s", c.Name, p.Name)
+				return nil, Errorf("column %s results in a repeated property named %s", c.Name, p.Name)
 			}
 		}
 		properties = append(properties, property)
@@ -172,13 +171,13 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 	return property, nil
 }
 
-// deserializeRowAsSlice deserializes a row returned by a data warehouse as
+// DeserializeRowAsSlice deserializes a row returned by a data warehouse as
 // slice.
-func deserializeRowAsSlice(properties []types.Property, row []any) []any {
+func DeserializeRowAsSlice(properties []types.Property, row []any) []any {
 	values := make([]any, len(properties))
 	for i, p := range properties {
 		if p.Flat {
-			values[i], row = deserializeRowAsMap(p.Type.Properties(), row)
+			values[i], row = DeserializeRowAsMap(p.Type.Properties(), row)
 			continue
 		}
 		values[i] = row[0]
@@ -187,13 +186,13 @@ func deserializeRowAsSlice(properties []types.Property, row []any) []any {
 	return values
 }
 
-// deserializeRowAsMap deserializes a row returned by a data warehouse as map.
+// DeserializeRowAsMap deserializes a row returned by a data warehouse as map.
 // It returns the deserialized row and the remaining row values to read.
-func deserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
+func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
 	values := make(map[string]any, len(properties))
 	for _, p := range properties {
 		if p.Flat {
-			values[p.Name], row = deserializeRowAsMap(p.Type.Properties(), row)
+			values[p.Name], row = DeserializeRowAsMap(p.Type.Properties(), row)
 			continue
 		}
 		values[p.Name] = row[0]
