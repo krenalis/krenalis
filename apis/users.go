@@ -200,6 +200,11 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 
 	events := []Event{}
 	err = records.For(func(r warehouses.Record) error {
+
+		if r.Err != nil {
+			return err
+		}
+
 		var e Event
 
 		e.AnonymousId = r.Properties["anonymousId"].(string)
