@@ -62,7 +62,7 @@ func (stream *Stream) Close() error {
 //
 // Receive can be used by multiple goroutines at the same time.
 func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), err error) {
-	return stream.Receive(ctx)
+	return stream.inner.Receive(ctx)
 }
 
 // Send sends an event to the stream. If ack is not nil, the stream calls ack
@@ -73,5 +73,5 @@ func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), er
 //
 // Send can be used by multiple goroutines at the same time.
 func (stream *Stream) Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error {
-	return stream.Send(ctx, event, options, ack)
+	return stream.inner.Send(ctx, event, options, ack)
 }
