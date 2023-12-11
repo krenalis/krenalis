@@ -40,7 +40,7 @@ var (
 func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, layouts *state.Layouts) (any, error) {
 	if src == nil {
 		if !nullable {
-			return nil, fmt.Errorf("property %s is non-nullable, but the app returned a nil value", name)
+			return nil, newValidationErrorf(name, "has value null but it is not nullable")
 		}
 		return nil, nil
 	}
@@ -74,8 +74,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("app returned a value of %d for property %s which is not within the expected range of [%d, %d]",
-					v, name, min, max)
+				return nil, newValidationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
 			}
 			value = int(v)
 		}
@@ -101,8 +100,8 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		if valid {
 			min, max := typ.UintRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("app returned a value of %d for property %s which is not within the expected range of [%d, %d]",
-					v, name, min, max)
+
+				return nil, newValidationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
 			}
 			value = uint(v)
 		}
@@ -120,13 +119,12 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		if valid {
 			if math.IsNaN(v) {
 				if typ.IsReal() {
-					return nil, fmt.Errorf("app returned NaN for property %s but its type does not allow it", name)
+					return nil, newValidationErrorf(name, "has a value of NaN, which is not allowed")
 				}
 			} else {
 				min, max := typ.FloatRange()
 				if v < min || v > max {
-					return nil, fmt.Errorf("app returned a value of %f for property %s which is not within the expected range of [%f, %f]",
-						v, name, min, max)
+					return nil, newValidationErrorf(name, "has a value %f that is not in the range [%f, %f]", v, min, max)
 				}
 			}
 			value = v
@@ -152,8 +150,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		if valid {
 			min, max := typ.DecimalRange()
 			if v.LessThan(min) || v.GreaterThan(max) {
-				return nil, fmt.Errorf("app returned a value of %s for property %s which is not within the expected range of [%s, %s]",
-					v, name, min, max)
+				return nil, newValidationErrorf(name, "has a value %s that is not in range [%s, %s]", v, min, max)
 			}
 			value = v
 		}
@@ -191,7 +188,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		if valid {
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+				return nil, newValidationErrorf(name, "has date and time %q with a year not in range [1, 9999]", src)
 			}
 			value = t
 		}
@@ -213,7 +210,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		if valid {
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+				return nil, newValidationErrorf(name, "has date %q with a year not in range [1, 9999]", src)
 			}
 			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 		}
@@ -260,7 +257,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		}
 	case types.JSONKind:
 		if !validJSON(src) {
-			return nil, fmt.Errorf("app returned an invalid JSON for property %s", name)
+			return nil, fmt.Errorf("app has returned an invalid JSON for property %q", name)
 		}
 		value = src
 		valid = true
@@ -276,25 +273,22 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 		v, valid = src.(string)
 		if valid {
 			if !utf8.ValidString(v) {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, which does not contain valid UTF-8 characters",
-					abbreviate(v, 20), name)
+				return nil, fmt.Errorf("app has returned a text with invalid UTF-8 characters for property %q", name)
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
-					return nil, fmt.Errorf("app returned a value of %q for property %s, which is not valid", v, name)
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
 				}
 			} else if rx := typ.Regexp(); rx != nil {
 				if !rx.MatchString(v) {
-					return nil, fmt.Errorf("app returned a value of %q for property %s, which is not valid", v, name)
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
 				}
 			} else {
 				if l, ok := typ.ByteLen(); ok && len(v) > l {
-					return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d bytes",
-						abbreviate(v, 20), name, l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d bytes", abbreviate(v, 20), l)
 				}
 				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-					return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
-						abbreviate(v, 20), name, l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d characters", abbreviate(v, 20), l)
 				}
 			}
 			value = v
@@ -305,8 +299,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			var err error
 			n := rv.Len()
 			if n < typ.MinItems() || n > typ.MaxItems() {
-				return nil, fmt.Errorf("app returned an array with %d items for property %s, which is not within the expected range of [%d, %d]",
-					n, name, typ.MinItems(), typ.MaxItems())
+				return nil, newValidationErrorf(name, "is an array with %d items, but they must be in range [%d, %d]", n, typ.MinItems(), typ.MaxItems())
 			}
 			a := make([]any, n)
 			t := typ.Elem()
@@ -381,7 +374,7 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullable bool) (any, error) {
 	if src == nil {
 		if !nullable {
-			return nil, fmt.Errorf("column %s is non-nullable, but the database returned a NULL value", name)
+			return nil, newValidationErrorf(name, "has value null but it is not nullable")
 		}
 		return nil, nil
 	}
@@ -419,8 +412,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("database returned a value of %d for column %s which is not within the expected range of [%d, %d]",
-					v, name, min, max)
+				return nil, newValidationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
 			}
 			value = int(v)
 		}
@@ -450,8 +442,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if valid {
 			min, max := typ.UintRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("database returned a value of %d for column %s which is not within the expected range of [%d, %d]",
-					v, name, min, max)
+				return nil, newValidationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
 			}
 			value = uint(v)
 		}
@@ -472,13 +463,12 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if valid {
 			if math.IsNaN(v) {
 				if typ.IsReal() {
-					return nil, fmt.Errorf("database returned NaN for property %s but its type does not allow it", name)
+					return nil, newValidationErrorf(name, "has a value of NaN, which is not allowed")
 				}
 			} else {
 				min, max := typ.FloatRange()
 				if v < min || v > max {
-					return nil, fmt.Errorf("database returned a value of %f for column %s which is not within the expected range of [%f, %f]",
-						v, name, min, max)
+					return nil, newValidationErrorf(name, "has a value %f that is not in the range [%f, %f]", v, min, max)
 				}
 			}
 			value = v
@@ -507,8 +497,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if valid {
 			min, max := typ.DecimalRange()
 			if v.LessThan(min) || v.GreaterThan(max) {
-				return nil, fmt.Errorf("database returned a value of %s for column %s which is not within the expected range of [%s, %s]",
-					v, name, min, max)
+				return nil, newValidationErrorf(name, "has a value %s that is not in range [%s, %s]", v, min, max)
 			}
 			value = v
 		}
@@ -516,7 +505,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if t, ok := src.(time.Time); ok {
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, fmt.Errorf("database returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+				return nil, newValidationErrorf(name, "has date and time %q with a year not in range [1, 9999]", src)
 			}
 			value = t
 			valid = true
@@ -525,7 +514,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if t, ok := src.(time.Time); ok {
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, fmt.Errorf("database returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+				return nil, newValidationErrorf(name, "has date %q with a year not in range [1, 9999]", src)
 			}
 			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 			valid = true
@@ -599,20 +588,18 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
-					return nil, fmt.Errorf("database returned a value of %q for property %s, which is not valid", v, name)
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
 				}
 			} else if rx := typ.Regexp(); rx != nil {
 				if !rx.MatchString(v) {
-					return nil, fmt.Errorf("database returned a value of %q for property %s, which is not valid", v, name)
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
 				}
 			} else {
 				if l, ok := typ.ByteLen(); ok && len(v) > l {
-					return nil, fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
-						abbreviate(v, 20), name, l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d bytes", abbreviate(v, 20), l)
 				}
 				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-					return nil, fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
-						abbreviate(v, 20), name, l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d characters", abbreviate(v, 20), l)
 				}
 			}
 			value = v
@@ -632,8 +619,7 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 				var err error
 				n := rv.Len()
 				if n < typ.MinItems() || n > typ.MaxItems() {
-					return nil, fmt.Errorf("database returned an array with %d items for property %s, which is not within the expected range of [%d, %d]",
-						n, name, typ.MinItems(), typ.MaxItems())
+					return nil, newValidationErrorf(name, "is an array with %d items, but they must be in range [%d, %d]", n, typ.MinItems(), typ.MaxItems())
 				}
 				a := make([]any, n)
 				t := typ.Elem()
@@ -693,12 +679,10 @@ func validateStringProperty(p types.Property, s string) error {
 			abbreviate(s, 20), p.Name)
 	}
 	if l, ok := p.Type.ByteLen(); ok && len(s) > l {
-		return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
-			abbreviate(s, 20), p.Name, l)
+		return newValidationErrorf(p.Name, "has value %q that is longer than %d bytes", abbreviate(s, 20), l)
 	}
 	if l, ok := p.Type.CharLen(); ok && utf8.RuneCountInString(s) > l {
-		return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
-			abbreviate(s, 20), p.Name, l)
+		return newValidationErrorf(p.Name, "has value %q that is longer than %d characters", abbreviate(s, 20), l)
 	}
 	return nil
 }

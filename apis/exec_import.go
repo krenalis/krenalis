@@ -14,6 +14,7 @@ import (
 
 	"chichi/apis/connectors"
 	"chichi/apis/state"
+	"chichi/apis/statistics"
 	"chichi/apis/transformers"
 )
 
@@ -22,6 +23,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 	action := this.action
 	connector := action.Connection().Connector()
+
+	stats := this.apis.statistics.Action(action.ID)
 
 	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
 		this.apis.functionTransformer, nil)
@@ -83,12 +86,22 @@ func (this *Action) importUsers(ctx context.Context) error {
 		// Set the identities into the data warehouse.
 		for _, user := range users {
 			if user.Err != nil {
+				if _, ok := user.Err.(ValidationError); ok {
+					stats.Passed(statistics.TransformedStep)
+					stats.Failed(statistics.OutputValidatedStep, user.ID, err)
+					continue
+				}
+				stats.Failed(statistics.TransformedStep, user.ID, err)
 				continue
 			}
+			stats.Passed(statistics.TransformedStep)
+			stats.Passed(statistics.OutputValidatedStep)
 			err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
 			if err != nil {
+				stats.Failed(statistics.ImportedStep, user.ID, err)
 				return actionExecutionError{err}
 			}
+			stats.Passed(statistics.ImportedStep)
 		}
 
 		// Update the connection stats.
@@ -114,8 +127,16 @@ func (this *Action) importUsers(ctx context.Context) error {
 	// Read the users.
 	err = records.For(func(user connectors.Record) error {
 		if user.Err != nil {
-			return actionExecutionError{user.Err}
+			if _, ok := user.Err.(ValidationError); ok {
+				stats.Passed(statistics.ReceivedStep)
+				stats.Failed(statistics.InputValidatedStep, user.ID, err)
+				return nil
+			}
+			stats.Failed(statistics.ReceivedStep, user.ID, err)
+			return nil
 		}
+		stats.Passed(statistics.ReceivedStep)
+		stats.Passed(statistics.InputValidatedStep)
 		users = append(users, user)
 		if len(users) == 100 {
 			err := processUsers(users)

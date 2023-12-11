@@ -20,6 +20,20 @@ import (
 	"chichi/connector/types"
 )
 
+// validationError implements the ValidationError interface of apis.
+type validationError struct {
+	path string
+	msg  string
+}
+
+func (err *validationError) Error() string {
+	return err.msg
+}
+
+func (err *validationError) PropertyPath() string {
+	return err.path
+}
+
 // Void represents the void value.
 var Void = struct{}{}
 
@@ -297,11 +311,20 @@ func (mapping *Mapping) Properties() []types.Path {
 // schema, and returns the result that conforms to the expression's output
 // schema. If the evaluation of an expression results in a void value, the
 // corresponding property will not be present in the returned value.
+//
+// If the resulting value cannot be converted to the destination type, it
+// returns an error value implementing the ValidationError interface of apis.
 func (mapping *Mapping) Transform(value map[string]any) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, t := range mapping.expressions {
 		v, err := t.expr.Eval(value)
 		if err != nil {
+			if err, ok := err.(*invalidConversionError); ok {
+				return nil, &validationError{
+					path: t.path.String(),
+					msg:  err.Error(),
+				}
+			}
 			return nil, err
 		}
 		if v != Void {

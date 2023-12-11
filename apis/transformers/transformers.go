@@ -80,12 +80,12 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 
 // TransformRecords transforms the properties of the records. The records are
 // expected to conform to the input schema. If an error occurs during the
-// transformation of a single record, or the result of a record transformation
-// does not conform to the output schema, the error is stored in its Err field.
+// transformation of a single record, the error is stored in its Err field. If
+// the error is a validation error, Err implements ValidationError of apis.
 //
 // For function transformers, it returns the ErrFunctionNotExist error if the
-// function does not exist, and an FunctionExecutionError error if an error
-// occurs in the function execution.
+// function does not exist, and a FunctionExecutionError error if an error
+// occurs during function execution.
 func (transformer *Transformer) TransformRecords(ctx context.Context, records []connector.Record) error {
 
 	// Transform using the mapping.

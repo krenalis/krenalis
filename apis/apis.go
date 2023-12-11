@@ -26,6 +26,7 @@ import (
 	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/statistics"
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/lambda"
 	"chichi/apis/transformers/local"
@@ -38,11 +39,18 @@ import (
 
 const TransformationFailed errors.Code = "TransformationFailed"
 
+// ValidationError is the interface implemented by validation errors.
+type ValidationError interface {
+	error
+	PropertyPath() string
+}
+
 type APIs struct {
 	db                  *postgres.DB
 	state               *state.State
 	datastore           *datastore.Datastore
 	connectors          *connectors.Connectors
+	statistics          *statistics.Collector
 	events              *events.Events
 	functionTransformer transformers.Function
 	mu                  sync.Mutex // for the scheduler field
@@ -156,6 +164,10 @@ func New(conf *Config) (*APIs, error) {
 	// Init the connectors.
 	apis.connectors = connectors.New(db, apis.state)
 
+	// Init the statistics.
+	apis.statistics = statistics.New(db)
+
+	// Init the events.
 	apis.events, err = events.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.connectors)
 	if err != nil {
 		apis.datastore.Close()
@@ -251,8 +263,9 @@ func (apis *APIs) Close() {
 	apis.mu.Unlock()
 	// Wait for the completion of actions initiated via API.
 	apis.close.Wait()
-	// Close events, datastore and state.
+	// Close events, statistics, datastore and state.
 	apis.events.Close()
+	apis.statistics.Close()
 	apis.datastore.Close()
 	apis.state.Close()
 }

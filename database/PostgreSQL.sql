@@ -143,6 +143,24 @@ CREATE TABLE actions_executions (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE actions_executions_stats (
+    timeslot integer NOT NULL,
+    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
+    passed_0 integer NOT NULL,
+    passed_1 integer NOT NULL,
+    passed_2 integer NOT NULL,
+    passed_3 integer NOT NULL,
+    passed_4 integer NOT NULL,
+    passed_5 integer NOT NULL,
+    failed_0 integer NOT NULL,
+    failed_1 integer NOT NULL,
+    failed_2 integer NOT NULL,
+    failed_3 integer NOT NULL,
+    failed_4 integer NOT NULL,
+    failed_5 integer NOT NULL,
+    PRIMARY KEY (timeslot, action)
+);
+
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
     value char(32) NOT NULL,

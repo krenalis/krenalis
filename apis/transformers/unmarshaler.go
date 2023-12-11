@@ -31,41 +31,27 @@ import (
 // unmarshaled is not valid JSON, or does not conform to the expected structure.
 var errSyntaxInvalid = errors.New("syntax is not valid")
 
-// schemaValidationError represents a validation error related to the output
+// functionValidationError represents a validation error related to the output
 // schema. It can be returned by Unmarshal for each single result in the
-// Result.Error field.
-type schemaValidationError struct {
-	kind  schemaValidationKind
-	msg   string
-	path  string
-	terms map[string]string
+// Result.Err field. It implements the ValidationError interface of apis.
+type functionValidationError struct {
+	path string
+	msg  string
 }
 
-type schemaValidationKind int
-
-const (
-	propertyNotExist schemaValidationKind = iota
-	missingProperty
-	invalidValue
-)
-
-func (err *schemaValidationError) Error() string {
-	switch err.kind {
-	case propertyNotExist:
-		return fmt.Sprintf("%s %q does not exist", err.terms["property"], err.path)
-	case missingProperty:
-		return fmt.Sprintf("required %s %q is missing", err.terms["property"], err.path)
-	case invalidValue:
-		return fmt.Sprintf("%s %q %s", err.terms["property"], err.path, err.msg)
-	}
-	panic("invalid schemaValidationError's kind")
+func (err *functionValidationError) Error() string {
+	return fmt.Sprintf(err.msg, err.path)
 }
 
-func (err *schemaValidationError) appendIndexToPath(i int) {
+func (err *functionValidationError) PropertyPath() string {
+	return err.path
+}
+
+func (err *functionValidationError) appendIndexToPath(i int) {
 	err.path = "[" + strconv.Itoa(i) + "]." + err.path
 }
 
-func (err *schemaValidationError) appendNameToPath(name string) {
+func (err *functionValidationError) appendNameToPath(name string) {
 	if err.path == "" {
 		err.path = name
 	} else if err.path[0] == '[' {
@@ -75,22 +61,31 @@ func (err *schemaValidationError) appendNameToPath(name string) {
 	}
 }
 
-// newErrPropertyNotExist returns a new schemaValidationError with kind
-// propertyNotExist.
+// newErrPropertyNotExist returns a new functionValidationError for a
+// nonexistent property.
 func newErrPropertyNotExist(path string, terms map[string]string) error {
-	return &schemaValidationError{kind: propertyNotExist, path: path, terms: terms}
+	return &functionValidationError{
+		path: path,
+		msg:  terms["property"] + " %q does not exist",
+	}
 }
 
-// newErrMissingProperty returns a new schemaValidationError with kind
-// missingProperty.
+// newErrMissingProperty returns a new functionValidationError indicating a
+// missing property.
 func newErrMissingProperty(path string, terms map[string]string) error {
-	return &schemaValidationError{kind: missingProperty, path: path, terms: terms}
+	return &functionValidationError{
+		path: path,
+		msg:  "required " + terms["property"] + " %q is missing",
+	}
 }
 
-// newErrInvalidValue returns a new schemaValidationError with kind
-// invalidValue.
+// newErrInvalidValue returns a new functionValidationError indicating an
+// invalid value.
 func newErrInvalidValue(msg, path string, terms map[string]string) error {
-	return &schemaValidationError{kind: invalidValue, msg: msg, path: path, terms: terms}
+	return &functionValidationError{
+		path: path,
+		msg:  terms["property"] + " %q " + strings.ReplaceAll(msg, "%", "%%"),
+	}
 }
 
 // decoder implements a decoder for the JSON code returned by JavaScript or
@@ -308,7 +303,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		// Unmarshal an array.
 		defer func() {
 			// Consume the remaining items.
-			if _, ok := err.(*schemaValidationError); ok {
+			if _, ok := err.(*functionValidationError); ok {
 				for {
 					if d.peekKind() == ']' {
 						_, err2 := d.readToken()
@@ -339,7 +334,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 			}
 			item, err := d.unmarshal(t.Elem())
 			if err != nil {
-				if err, ok := err.(*schemaValidationError); ok {
+				if err, ok := err.(*functionValidationError); ok {
 					err.appendIndexToPath(i)
 				}
 				return nil, err
@@ -358,7 +353,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		// Unmarshal an object.
 		defer func() {
 			// Consume the remaining key/value pairs.
-			if _, ok := err.(*schemaValidationError); ok {
+			if _, ok := err.(*functionValidationError); ok {
 				var er error
 				for er == nil && d.peekKind() != '}' {
 					_, er = d.readValue()
@@ -409,7 +404,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				} else {
 					value, err = d.unmarshal(p.Type)
 					if err != nil {
-						if err, ok := err.(*schemaValidationError); ok {
+						if err, ok := err.(*functionValidationError); ok {
 							err.appendNameToPath(name)
 						}
 						return nil, err

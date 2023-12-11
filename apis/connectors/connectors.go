@@ -28,8 +28,37 @@ import (
 	"chichi/connector/types"
 )
 
+// validationError represents a record validation error. It implements the
+// ValidationError interface of apis.
+type validationError struct {
+	path string
+	msg  string
+}
+
+func (err *validationError) Error() string {
+	return err.msg
+}
+
+func (err *validationError) PropertyPath() string {
+	return err.path
+}
+
+// newValidationErrorf returns a *validationError error based on a format
+// specifier. The error message can report the invalid value and should complete
+// the sentence "property foo ".
+func newValidationErrorf(path string, format string, a ...any) error {
+	return &validationError{
+		path: path,
+		msg:  fmt.Sprintf("property %q ", path) + " " + fmt.Sprintf(format, a...),
+	}
+}
+
 type Event = _connector.Event
 type EventType = _connector.EventType
+
+// Record represents a record. If an error occurs during the reading or
+// validation of the record, the Err field contains the specific error,
+// which type implements the ValidationError interface of apis.
 type Record = _connector.Record
 
 // Records is the iterator interface used to iterate over the records read from
