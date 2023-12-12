@@ -60,7 +60,10 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 	url := "https://" + testsSettings.ChichiHost + "/" + method
 
 	data := &bytes.Buffer{}
-	json.NewEncoder(data).Encode(body)
+	err := json.NewEncoder(data).Encode(body)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequest(httpMethod, url, data)
 	if err != nil {
 		return nil, err
