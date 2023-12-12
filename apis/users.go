@@ -44,6 +44,10 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
+	if limit < 1 || limit > 200 {
+		return nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+
 	ws := this.workspace
 
 	// Verify that the workspace has a data warehouse.
