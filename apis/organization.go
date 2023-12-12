@@ -195,8 +195,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 }
 
 // DeleteMember deletes a member of the organization with identifier id.
-// If the member to delete does not exist, it returns an UnprocessableError with
-// code MemberNotExist.
+// If the member does not exist anymore, it returns an errors.NotFound error.
 func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {
@@ -207,12 +206,13 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 		return err
 	}
 	if result.RowsAffected() == 0 {
-		return errors.Unprocessable(MemberNotExist, "member %d does not exist", id)
+		return errors.NotFound("member %d does not exist", id)
 	}
 	return nil
 }
 
 // Member returns the organization's member with identifier id.
+// If the member does not exist anymore, it returns an errors.NotFound error.
 func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {
@@ -268,9 +268,11 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 }
 
 // SetMember sets a member of the organization with identifier id. If password
-// is empty, it does not change the password. If the member to set has an email
-// that is already used by another member, it returns an UnprocessableError with
-// code MemberEmailAlreadyExists.
+// is empty, it does not change the password.
+//
+// If the member does not exist anymore, it returns an errors.NotFound error. If
+// the member to set has an email that is already used by another member, it
+// returns an UnprocessableError with code MemberEmailAlreadyExists.
 func (this *Organization) SetMember(ctx context.Context, id int, member MemberToSet) error {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {
@@ -288,7 +290,14 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 		}
 	}
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
+		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.NotFound("member %d does not exist", id)
+			}
+			return err
+		}
+		err = this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}

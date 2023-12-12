@@ -11,7 +11,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import API from '../../../lib/api/api';
-import { UnprocessableError } from '../../../lib/api/errors';
+import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { toBase64 } from '../../../lib/utils/toBase64';
 import { TransformedMember, transformMember, validateMemberToSet } from '../../../lib/helpers/transformedMember';
 
@@ -72,8 +72,10 @@ const Members = () => {
 		try {
 			await api.deleteMember(pendingDeletedMember.current);
 		} catch (err) {
-			showError(err);
-			return;
+			if (!(err instanceof NotFoundError)) {
+				showError(err);
+				return;
+			}
 		}
 		setIsRemoveAlertOpen(false);
 		setIsLoadingMembers(true);
