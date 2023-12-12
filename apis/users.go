@@ -53,19 +53,22 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Determine the property paths to select.
-	var toSelect []types.Path
-	for _, p := range events.Schema.PropertiesNames() {
-		toSelect = append(toSelect, types.Path{p})
-	}
+	// Read the event schema's properties.
+	properties := events.Schema.Properties()
 
 	// Determine the schema of the events, which should include the ID, as such.
 	// property is referenced in the "where".
 	var schema types.Type
 	{
-		props := events.Schema.Properties()
-		props = append([]types.Property{{Name: "gid", Type: types.Int(32)}}, props...)
-		schema = types.Object(props)
+		props := make([]types.Property, 1, 1+len(properties))
+		props[0] = types.Property{Name: "gid", Type: types.Int(32)}
+		schema = types.Object(append(props, properties...))
+	}
+
+	// Determine the property paths to select.
+	toSelect := make([]types.Path, len(properties))
+	for i, p := range properties {
+		toSelect[i] = types.Path{p.Name}
 	}
 
 	// Retrieve the events records.
