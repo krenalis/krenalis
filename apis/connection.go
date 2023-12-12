@@ -66,7 +66,6 @@ var (
 	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
 	NoColumns            errors.Code = "NoColumns"
-	NoEventsSchema       errors.Code = "NoEventsSchema"
 	NoGroupsSchema       errors.Code = "NoGroupsSchema"
 	NoStorage            errors.Code = "NoStorage"
 	NoUsersSchema        errors.Code = "NoUsersSchema"
