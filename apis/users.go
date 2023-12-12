@@ -19,8 +19,6 @@ import (
 	"chichi/apis/events"
 	"chichi/apis/state"
 	"chichi/connector/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // User represents a user.
@@ -55,13 +53,6 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Build the "where" expression.
-	gid := types.Property{Name: "gid", Type: types.Int(32)}
-	where := whereExpr(gid, this.id)
-	if where == nil {
-		return nil, errors.New("unexpected nil where")
-	}
-
 	// Determine the property paths to select.
 	var toSelect []types.Path
 	for _, p := range events.Schema.PropertiesNames() {
@@ -73,11 +64,12 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	var schema types.Type
 	{
 		props := events.Schema.Properties()
-		props = append([]types.Property{gid}, props...)
+		props = append([]types.Property{{Name: "gid", Type: types.Int(32)}}, props...)
 		schema = types.Object(props)
 	}
 
 	// Retrieve the events records.
+	where := expr.NewBaseExpr("gid", expr.OperatorEqual, this.id)
 	records, err := this.store.Events(ctx, schema, toSelect, where, types.Property{}, 0, limit)
 	if err != nil {
 		return nil, err
@@ -124,14 +116,8 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Build the "where" expression.
-	id := types.Property{Name: "id", Type: types.Int(32)}
-	where := whereExpr(id, this.id)
-	if where == nil {
-		return nil, errors.New("unexpected nil where")
-	}
-
 	// Retrieve the user traits as records.
+	where := expr.NewBaseExpr("id", expr.OperatorEqual, this.id)
 	records, err := this.store.Users(ctx, types.Type{}, nil, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
@@ -160,17 +146,4 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	}
 
 	return traits, nil
-}
-
-func whereExpr(property types.Property, value int) *expr.BaseExpr {
-	where := expr.NewBaseExpr(property.Name, expr.OperatorEqual, nil)
-	switch property.Type.Kind() {
-	case types.IntKind:
-		where.Value = value
-	case types.DecimalKind:
-		where.Value = decimal.NewFromInt(int64(value))
-	default:
-		return nil
-	}
-	return where
 }
