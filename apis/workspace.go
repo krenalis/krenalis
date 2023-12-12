@@ -1189,7 +1189,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Read the users.
-	records, err := this.store.Users(ctx, usersSchema, toSelect, where, orderProperty, first, limit)
+	records, _, err := this.store.Users(ctx, usersSchema, toSelect, where, orderProperty, first, limit)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

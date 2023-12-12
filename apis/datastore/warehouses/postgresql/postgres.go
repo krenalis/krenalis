@@ -449,7 +449,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 
 // Select returns a Records iterator on the records of the given table which
 // satisfy the where condition, ordered by order (if it's not the zero
-// Property).
+// Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
 // are normalized with the schema. As a special case, if toSelect is nil then
@@ -476,30 +476,30 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 // change in the data warehouse during the execution of this method.
 func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema types.Type,
 	toSelect []types.Path, key types.Property, where expr.Expr, order types.Property,
-	first, limit int) (warehouses.Records, error) {
+	first, limit int) (warehouses.Records, types.Type, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
-		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
+		return nil, types.Type{}, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
 
 	if !key.Type.Valid() {
-		return nil, errors.New("invalid key type")
+		return nil, types.Type{}, errors.New("invalid key type")
 	}
 	if key.Type.Kind() != types.IntKind {
 		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
-		return nil, fmt.Errorf("expecting key with Int kind, got %s", key.Type.Kind())
+		return nil, types.Type{}, fmt.Errorf("expecting key with Int kind, got %s", key.Type.Kind())
 	}
 
 	db, err := warehouse.connection()
 	if err != nil {
-		return nil, err
+		return nil, types.Type{}, err
 	}
 
 	// If the schema is the invalid schema, use the entire schema of the table.
 	if !schema.Valid() {
 		ti, err := warehouse.tableInfo(ctx, table, true)
 		if err != nil {
-			return nil, warehouses.Error(err)
+			return nil, types.Type{}, warehouses.Error(err)
 		}
 		schema = ti.schema
 	}
@@ -545,7 +545,7 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 				b.WriteString(", ")
 			}
 			if !types.IsValidPropertyName(c.Name) {
-				return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
+				return nil, types.Type{}, fmt.Errorf("column name %q is not a valid property name", c.Name)
 			}
 			b.WriteByte('"')
 			b.WriteString(c.Name)
@@ -561,19 +561,19 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 				// error.
 				ti, err2 := warehouse.tableInfo(ctx, table, true)
 				if err2 != nil {
-					return nil, warehouses.Error(err2)
+					return nil, types.Type{}, warehouses.Error(err2)
 				}
 				err2 = warehouses.CheckConformity("", schema, ti.schema)
 				if err2 != nil {
-					return nil, warehouses.Error(err2)
+					return nil, types.Type{}, warehouses.Error(err2)
 				}
 			}
-			return nil, err
+			return nil, types.Type{}, err
 		}
 		defer rows.Close()
 		fds = rows.FieldDescriptions()
 		if fds == nil {
-			return nil, errors.New("unexpected nil field descriptions returned by the PostgreSQL driver")
+			return nil, types.Type{}, errors.New("unexpected nil field descriptions returned by the PostgreSQL driver")
 		}
 		rows.Close()
 	}
@@ -587,7 +587,7 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 		for _, path := range toSelect {
 			p, err := schema.PropertyByPath(path)
 			if err != nil {
-				return nil, err
+				return nil, types.Type{}, err
 			}
 			props = append(props, p)
 		}
@@ -617,7 +617,7 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 			query.WriteString(", ")
 		}
 		if !types.IsValidPropertyName(c.Name) {
-			return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
+			return nil, types.Type{}, fmt.Errorf("column name %q is not a valid property name", c.Name)
 		}
 		query.WriteByte('"')
 		query.WriteString(c.Name)
@@ -631,14 +631,14 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 		query.WriteString(` WHERE `)
 		expr, err := renderExpr(schema, where)
 		if err != nil {
-			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
+			return nil, types.Type{}, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
 		query.WriteString(expr)
 	}
 
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
-			return nil, fmt.Errorf("column name %q is not a valid property name", order.Name)
+			return nil, types.Type{}, fmt.Errorf("column name %q is not a valid property name", order.Name)
 		}
 		query.WriteString(" ORDER BY ")
 		query.WriteString(order.Name)
@@ -659,14 +659,14 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 			// Return a more specific conformity error instead of an SQL error.
 			ti, err2 := warehouse.tableInfo(ctx, table, true)
 			if err2 != nil {
-				return nil, warehouses.Error(err2)
+				return nil, types.Type{}, warehouses.Error(err2)
 			}
 			err2 = warehouses.CheckConformity("", schema, ti.schema)
 			if err2 != nil {
-				return nil, warehouses.Error(err2)
+				return nil, types.Type{}, warehouses.Error(err2)
 			}
 		}
-		return nil, warehouses.Error(err)
+		return nil, types.Type{}, warehouses.Error(err)
 	}
 
 	// Ignore these field descriptions, as we suppose that the table schema has
@@ -679,20 +679,20 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 	// parameter.
 	ti, err := warehouse.tableInfo(ctx, table, false)
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, types.Type{}, warehouses.Error(err)
 	}
 	err = checkFieldDescriptions(fds, ti.fds)
 	if err != nil {
 		// Take a fresh tableInfo and check the conformity again.
 		ti, err = warehouse.tableInfo(ctx, table, true)
 		if err != nil {
-			return nil, warehouses.Error(err)
+			return nil, types.Type{}, warehouses.Error(err)
 		}
 		err = checkFieldDescriptions(fds, ti.fds)
 		if err != nil {
 			// The field descriptions are still not conform, so just return
 			// error.
-			return nil, warehouses.Error(err)
+			return nil, types.Type{}, warehouses.Error(err)
 		}
 	}
 
@@ -704,15 +704,15 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, schema ty
 	// error is returned.
 	err = warehouses.CheckConformity("", schema, ti.schema)
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, types.Type{}, warehouses.Error(err)
 	}
 
 	records, err := newRecords(rows, columns, key.Name, removeKeyFromRecords)
 	if err != nil {
-		return nil, err
+		return nil, types.Type{}, err
 	}
 
-	return records, nil
+	return records, schema, nil
 }
 
 // tableInfo returns the table info for the table. The 'fresh' parameter

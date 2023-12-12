@@ -73,7 +73,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 
 	// Retrieve the events records.
 	where := expr.NewBaseExpr("gid", expr.OperatorEqual, this.id)
-	records, err := this.store.Events(ctx, schema, toSelect, where, types.Property{}, 0, limit)
+	records, _, err := this.store.Events(ctx, schema, toSelect, where, types.Property{}, 0, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 
 	// Retrieve the user traits as records.
 	where := expr.NewBaseExpr("id", expr.OperatorEqual, this.id)
-	records, err := this.store.Users(ctx, types.Type{}, nil, where, types.Property{}, 0, 1)
+	records, _, err := this.store.Users(ctx, types.Type{}, nil, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

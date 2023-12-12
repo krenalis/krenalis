@@ -238,7 +238,7 @@ func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actions []int
 
 // Select returns a Records iterator on the records of the given table which
 // satisfy the where condition, ordered by order (if it's not the zero
-// Property).
+// Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
 // are normalized with the schema. As a special case, if toSelect is nil then
@@ -265,7 +265,7 @@ func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actions []int
 // change in the data warehouse during the execution of this method.
 func (warehouse *ClickHouse) Select(ctx context.Context, table string, schema types.Type,
 	toSelect []types.Path, key types.Property, where expr.Expr, order types.Property,
-	first, limit int) (warehouses.Records, error) {
+	first, limit int) (warehouses.Records, types.Type, error) {
 	panic("not implemented")
 }
 

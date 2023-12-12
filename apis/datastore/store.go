@@ -80,7 +80,7 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 
 // Events returns a Records iterator on the events of the "events" table which
 // satisfy the where condition, ordered by order (if it's not the zero
-// Property).
+// Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
 // are normalized with the schema.
@@ -98,11 +98,11 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
 // SchemaError is returned.
-func (store *Store) Events(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, error) {
+func (store *Store) Events(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error) {
 	store.mustBeOpen()
 	key := types.Property{Name: "gid", Type: types.Int(32)}
-	records, err := store.warehouse.Select(ctx, "events", schema, toSelect, key, where, order, first, limit)
-	return records, err
+	records, schema, err := store.warehouse.Select(ctx, "events", schema, toSelect, key, where, order, first, limit)
+	return records, schema, err
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -222,7 +222,7 @@ type Records = warehouses.Records
 
 // Users returns a Records iterator on the users of the "users" table which
 // satisfy the where condition, ordered by order (if it's not the zero
-// Property).
+// Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
 // are normalized with the schema.
@@ -240,11 +240,11 @@ type Records = warehouses.Records
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
 // SchemaError is returned.
-func (store *Store) Users(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, error) {
+func (store *Store) Users(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error) {
 	store.mustBeOpen()
 	key := types.Property{Name: "id", Type: types.Int(32)}
-	records, err := store.warehouse.Select(ctx, "users", schema, toSelect, key, where, order, first, limit)
-	return records, err
+	records, schema, err := store.warehouse.Select(ctx, "users", schema, toSelect, key, where, order, first, limit)
+	return records, schema, err
 }
 
 // close closes the store.

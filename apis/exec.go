@@ -221,7 +221,7 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int, u
 	store := this.connection.store
 
 	order := types.Property{Name: "id", Type: types.Int(32)}
-	records, err := store.Users(ctx, usersSchema, toSelect, where, order, 0, 1000)
+	records, _, err := store.Users(ctx, usersSchema, toSelect, where, order, 0, 1000)
 	if err != nil {
 		switch err := err.(type) {
 		case *datastore.DataWarehouseError:
