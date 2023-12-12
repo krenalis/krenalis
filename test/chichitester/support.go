@@ -10,6 +10,7 @@ package chichitester
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -33,22 +34,34 @@ func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) m
 }
 
 func (c *Chichi) AddAction(connection int, data map[string]any) int {
-	id := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data).(float64)
-	return int(id)
+	n := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data)
+	id, err := strconv.Atoi(string(n.(json.Number)))
+	if err != nil {
+		c.t.Fatalf("ID %q is not integer", n)
+	}
+	return id
 }
 
 // AddActionErr is like AddAction but returns an error instead of panicking.
 func (c *Chichi) AddActionErr(connection int, data map[string]any) (int, error) {
-	id, err := c.Call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data)
+	n, err := c.Call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data)
 	if err != nil {
 		return 0, err
 	}
-	return int(id.(float64)), nil
+	id, err := strconv.Atoi(string(n.(json.Number)))
+	if err != nil {
+		return 0, fmt.Errorf("ID %q is not integer", string(n.(json.Number)))
+	}
+	return id, nil
 }
 
 func (c *Chichi) AddConnection(data map[string]any) int {
-	id := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/add-connection", data).(float64)
-	return int(id)
+	n := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/add-connection", data)
+	id, err := strconv.Atoi(string(n.(json.Number)))
+	if err != nil {
+		c.t.Fatalf("ID %q is not integer", n)
+	}
+	return id
 }
 
 func (c *Chichi) AddDestinationPostgreSQL() int {
@@ -242,9 +255,9 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 			// If the action execution ended with an error,
 			// make the test fail.
 			if err := e["Error"].(string); err != "" {
-				actionID := int(e["Action"].(float64))
-				connID := int(e["ID"].(float64))
-				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", actionID, connID, err)
+				actionID := string(e["Action"].(json.Number))
+				connID := string(e["ID"].(json.Number))
+				c.t.Fatalf("an error occurred when running action %q on connection %q: %s", actionID, connID, err)
 			}
 			if e["EndTime"] == nil {
 				stillRunning = true

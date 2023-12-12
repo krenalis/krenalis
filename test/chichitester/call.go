@@ -88,8 +88,10 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 		return nil, &StatusCodeError{Code: resp.StatusCode, ResponseText: string(text)}
 	}
 
+	dec := json.NewDecoder(resp.Body)
+	dec.UseNumber()
 	var out any
-	err = json.NewDecoder(resp.Body).Decode(&out)
+	err = dec.Decode(&out)
 	if err != nil {
 		if err == io.EOF {
 			return nil, nil
