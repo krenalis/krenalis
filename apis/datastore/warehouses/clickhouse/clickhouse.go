@@ -255,7 +255,7 @@ func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actions []int
 // limit > 0. As a special case, a zero limit means that every record is
 // returned.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 //
 // If schema is not conform to the schema of the table in the data warehouse, a

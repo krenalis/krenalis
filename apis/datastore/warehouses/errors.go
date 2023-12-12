@@ -20,13 +20,13 @@ func (e *DataWarehouseError) Error() string {
 	return fmt.Sprintf("data warehouse error: %s", e.Err)
 }
 
-// Error returns a new DataWarehouseError error.
+// Error returns a new *DataWarehouseError error.
 func Error(err error) error {
 	return &DataWarehouseError{Err: err}
 }
 
-// Errorf returns a new DataWarehouseError error with a fmt.Errorf(format, a...)
-// error.
+// Errorf returns a new *DataWarehouseError error with a
+// fmt.Errorf(format, a...) error.
 func Errorf(format string, a ...any) error {
 	return &DataWarehouseError{Err: fmt.Errorf(format, a...)}
 }

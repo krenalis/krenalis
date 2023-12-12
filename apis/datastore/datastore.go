@@ -120,7 +120,7 @@ func (ds *Datastore) NormalizeWarehouseSettings(typ state.WarehouseType, setting
 // the given settings.
 //
 // It returns a SettingsError error if the settings are not valid, and a
-// DataWarehouseError error if an error occurs with the data warehouse.
+// *DataWarehouseError error if an error occurs with the data warehouse.
 func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType, settings []byte) error {
 	ds.mustBeOpen()
 	dw, err := openWarehouse(typ, settings)

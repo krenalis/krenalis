@@ -36,7 +36,7 @@ type MergeTable struct {
 
 // Warehouse is the interface implemented by data warehouses.
 //
-// Methods return a DataWarehouseError error if an error occurs with the data
+// Methods return a *DataWarehouseError error if an error occurs with the data
 // warehouse.
 type Warehouse interface {
 
@@ -114,7 +114,7 @@ type Warehouse interface {
 	// limit > 0. As a special case, a zero limit means that every record is
 	// returned.
 	//
-	// If an error occurs with the data warehouse, it returns a DataWarehouseError
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	//
 	// If schema is not conform to the schema of the table in the data warehouse, a
@@ -180,7 +180,7 @@ func (row Row) Scan(dest ...any) error {
 }
 
 // Rows represents the result of a query. Its methods, on error, return a
-// DataWarehouseError error.
+// *DataWarehouseError error.
 type Rows struct {
 	Rows *postgres.Rows
 }
@@ -210,7 +210,7 @@ func (rows Rows) Scan(dest ...any) error {
 }
 
 // Result implements the sql.Result interface but on error it returns a
-// DataWarehouseError error.
+// *DataWarehouseError error.
 type Result struct {
 	Result *postgres.Result
 }

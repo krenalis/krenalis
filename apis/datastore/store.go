@@ -71,7 +71,7 @@ func (store *Store) AddEvents(events [][]any) {
 // action that matches with the corresponding property. If it cannot be
 // found, then the empty string and false are returned.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 func (store *Store) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
 	store.mustBeOpen()
@@ -93,7 +93,7 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 // limit > 0. As a special case, a zero limit means that every record is
 // returned.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
@@ -108,7 +108,7 @@ func (store *Store) Events(ctx context.Context, schema types.Type, toSelect []ty
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
@@ -118,7 +118,7 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 // SetDestinationUser sets the destination user relative to the action, with
 // the given external user ID and external property.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
@@ -141,7 +141,7 @@ func (store *Store) SetIdentity(ctx context.Context, identity map[string]any, id
 // Schemas returns the schemas of users, groups, and events for the relative
 // tables. If a table doesn't exist, it won't be included in returned schemas.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) {
 	store.mustBeOpen()
@@ -235,7 +235,7 @@ type Records = warehouses.Records
 // limit > 0. As a special case, a zero limit means that every record is
 // returned.
 //
-// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
