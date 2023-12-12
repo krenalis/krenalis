@@ -9,10 +9,11 @@ package test
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 	"testing"
 	"time"
 
-	"chichi/apis"
 	"chichi/backoff"
 	"chichi/connector"
 	"chichi/connector/types"
@@ -124,7 +125,7 @@ func TestEvents(t *testing.T) {
 	}
 
 	// Retrieve the first event for the user.
-	var event apis.Event
+	var event map[string]any
 	{
 		events := c.UserEvents(userGID)
 		if len(events) != expectedEventsCount {
@@ -143,26 +144,26 @@ func TestEvents(t *testing.T) {
 			expectedType        = "track"
 			expectedUserId      = "f4ca124298"
 		)
-		if event.AnonymousId != expectedAnonymousId {
-			t.Fatalf("expected anonymous ID %q, got %q", expectedAnonymousId, event.AnonymousId)
+		if event["anonymousId"] != expectedAnonymousId {
+			t.Fatalf("expected anonymous ID %q, got %#v", expectedAnonymousId, event["anonymousId"])
 		}
-		if event.Context.IP != expectedIP {
-			t.Fatalf("expected IP %q, got %q", expectedIP, event.Context.IP)
+		if ip := event["context"].(map[string]any)["ip"]; ip != expectedIP {
+			t.Fatalf("expected IP %q, got %#v", expectedIP, ip)
 		}
-		if event.Context.UserAgent != expectedUserAgent {
-			t.Fatalf("expected user agent %q, got %q", expectedUserAgent, event.Context.UserAgent)
+		if ua := event["context"].(map[string]any)["userAgent"]; ua != expectedUserAgent {
+			t.Fatalf("expected user agent %q, got %#v", expectedUserAgent, ua)
 		}
-		if event.Event != expectedEvent {
-			t.Fatalf("expected event %q, got %q", expectedEvent, event.Event)
+		if event["event"] != expectedEvent {
+			t.Fatalf("expected event %q, got %#v", expectedEvent, event["event"])
 		}
-		if event.Source != websiteID {
-			t.Fatalf("expected source %d, got %d", websiteID, event.Source)
+		if source, err := strconv.Atoi(string(event["source"].(json.Number))); err != nil || source != websiteID {
+			t.Fatalf("expected source %d, got %#v", websiteID, event["source"])
 		}
-		if event.Type != expectedType {
-			t.Fatalf("expected event type %q, got %q", expectedType, event.Type)
+		if event["type"] != expectedType {
+			t.Fatalf("expected event type %q, got %#v", expectedType, event["type"])
 		}
-		if event.UserId != expectedUserId {
-			t.Fatalf("expected user ID %q, got %q", expectedUserId, event.UserId)
+		if event["userId"] != expectedUserId {
+			t.Fatalf("expected user ID %q, got %#v", expectedUserId, event["userId"])
 		}
 	}
 

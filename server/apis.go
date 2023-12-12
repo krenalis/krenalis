@@ -928,7 +928,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 						w.Header().Set("Content-Type", "application/json")
 						_ = json.NewEncoder(w).Encode(map[string]any{
-							"events": events,
+							"events": json.RawMessage(events),
 						})
 					})
 					router.Get("/{userID}/traits", func(w http.ResponseWriter, r *http.Request) {

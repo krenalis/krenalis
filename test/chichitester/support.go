@@ -220,18 +220,12 @@ func (c *Chichi) TableSchema(connection int, table string) types.Type {
 	return schema
 }
 
-func (c *Chichi) UserEvents(user int) []apis.Event {
+func (c *Chichi) UserEvents(user int) []map[string]any {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/users/" + strconv.Itoa(user) + "/events"
 	response := c.MustCall("GET", url, nil).(map[string]any)
-	rawEvents := response["events"]
-	data, err := json.Marshal(rawEvents)
-	if err != nil {
-		c.t.Fatal(err)
-	}
-	var events []apis.Event
-	err = json.Unmarshal(data, &events)
-	if err != nil {
-		c.t.Fatal(err)
+	events := make([]map[string]any, len(response["events"].([]any)))
+	for i, event := range response["events"].([]any) {
+		events[i] = event.(map[string]any)
 	}
 	return events
 }
