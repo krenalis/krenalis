@@ -151,55 +151,6 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	return records, nil
 }
 
-// fileRecords implements the Records interface for files.
-type fileRecords struct {
-	ctx    context.Context
-	rw     *recordWriter
-	rc     io.ReadCloser
-	sheet  string
-	inner  _connector.FileConnection
-	err    error
-	closed bool
-}
-
-func (r *fileRecords) Close() error {
-	if r.closed {
-		return nil
-	}
-	r.closed = true
-	err := r.rc.Close()
-	if err != nil && r.err == nil {
-		r.err = err
-	}
-	return err
-}
-
-func (r *fileRecords) Err() error {
-	return r.err
-}
-
-func (r *fileRecords) For(yield func(Record) error) error {
-	if r.closed {
-		r.err = errors.New("connectors: For called on a closed Records")
-		return nil
-	}
-	defer func() {
-		_ = r.Close()
-		if r.err == nil && r.rw.properties == nil {
-			r.err = ErrNoColumns
-		}
-	}()
-	r.rw.yield = yield
-	err := r.inner.Read(r.ctx, r.rc, r.sheet, r.rw)
-	if err != nil && err != errRecordStop {
-		if err, ok := err.(yieldError); ok {
-			return err.err
-		}
-		r.err = err
-	}
-	return nil
-}
-
 // Sheets returns the sheets of the file with the provided name. It returns the
 // ErrNoStorage error if the file does not have a storage.
 // It panics if the file connector does not support sheets.
@@ -265,6 +216,55 @@ func (file *File) storage() (_connector.StorageConnection, error) {
 		Settings:    storage.Settings,
 		SetSettings: setSettingsFunc(file.state, storage),
 	})
+}
+
+// fileRecords implements the Records interface for files.
+type fileRecords struct {
+	ctx    context.Context
+	rw     *recordWriter
+	rc     io.ReadCloser
+	sheet  string
+	inner  _connector.FileConnection
+	err    error
+	closed bool
+}
+
+func (r *fileRecords) Close() error {
+	if r.closed {
+		return nil
+	}
+	r.closed = true
+	err := r.rc.Close()
+	if err != nil && r.err == nil {
+		r.err = err
+	}
+	return err
+}
+
+func (r *fileRecords) Err() error {
+	return r.err
+}
+
+func (r *fileRecords) For(yield func(Record) error) error {
+	if r.closed {
+		r.err = errors.New("connectors: For called on a closed Records")
+		return nil
+	}
+	defer func() {
+		_ = r.Close()
+		if r.err == nil && r.rw.properties == nil {
+			r.err = ErrNoColumns
+		}
+	}()
+	r.rw.yield = yield
+	err := r.inner.Read(r.ctx, r.rc, r.sheet, r.rw)
+	if err != nil && err != errRecordStop {
+		if err, ok := err.(yieldError); ok {
+			return err.err
+		}
+		r.err = err
+	}
+	return nil
 }
 
 var (
