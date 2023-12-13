@@ -14,7 +14,6 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"unicode/utf8"
@@ -460,10 +459,12 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			inPaths = append(inPaths, expr.Properties()...)
 		}
 		if props := unmappedProperties(inSchema, inPaths); props != nil {
-			return nil, errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
+			// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
+			// return nil, errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
 		if props := unmappedProperties(outSchema, outPaths); props != nil {
-			return nil, errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
+			// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
+			// return nil, errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
 	case transformation.Function != nil:
 		if transformation.Function.Source == "" {

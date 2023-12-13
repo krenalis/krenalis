@@ -1858,12 +1858,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	if action.Transformation.Function == nil {
 		if inPaths != nil {
 			if props := unmappedProperties(action.InSchema, inPaths); props != nil {
-				return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
+				// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
+				// return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
 			}
 		}
 		if outPaths != nil {
 			if props := unmappedProperties(action.OutSchema, outPaths); props != nil {
-				return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
+				// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
+				// return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 			}
 		}
 	}
