@@ -2013,6 +2013,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check the column for the identity and for the timestamp.
 	if connector.Type == state.FileType && c.Role == state.Source {
+		// Validate the identity column.
 		if action.IdentityColumn == "" {
 			return errors.BadRequest("column name for the identity is mandatory")
 		}
@@ -2022,6 +2023,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if utf8.RuneCountInString(action.IdentityColumn) > 1024 {
 			return errors.BadRequest("column name for the identity is longer than 1024 runes")
 		}
+		// Validate the timestamp column and format.
 		if action.TimestampColumn != "" {
 			if !types.IsValidPropertyName(action.TimestampColumn) {
 				return errors.BadRequest("column name for the timestamp has a not valid property name")
