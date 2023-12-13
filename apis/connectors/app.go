@@ -182,23 +182,17 @@ func (app *App) UpdateUser(ctx context.Context, id string, user map[string]any) 
 	return app.inner.(_connector.AppUsersConnection).UpdateUser(ctx, id, user)
 }
 
-type SchemaError struct {
-	Msg string
-}
-
-func (err SchemaError) Error() string {
-	return err.Msg
-}
-
-// Users returns a Records to iterate over the app's users starting from the
-// provided cursor. The returned users conform to the provided schema, which
-// must be compatible with the source users schema.
+// Users returns an iterator to iterate over the app's users, conforming to the
+// provided schema, starting from a cursor.
 //
-// It returns a SchemaError error if the provided schema does not conform to the
-// source users schema.
+// If the provided schema, that must be valid, does not conform with the app's
+// source users schema, it returns a *SchemaError error.
 func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Cursor) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
+	}
+	if !schema.Valid() {
+		return nil, fmt.Errorf("schema is not valid")
 	}
 	// Check that the schema conforms to the source users schema.
 	usersSchema, err := app.usersSchema(ctx, types.SourceRole)

@@ -28,6 +28,15 @@ import (
 	"chichi/connector/types"
 )
 
+// SchemaError represents an error with a schema.
+type SchemaError struct {
+	Msg string
+}
+
+func (err *SchemaError) Error() string {
+	return err.Msg
+}
+
 // validationError represents a record validation error. It implements the
 // ValidationError interface of apis.
 type validationError struct {
@@ -308,7 +317,8 @@ func (err yieldError) Error() string {
 }
 
 // checkConformity checks whether the schema t1 conforms to the new schema t2
-// and returns a SchemaError error if it does not conform.
+// and returns a *SchemaError error if it does not conform.
+// It panics if a schema is not valid.
 func checkConformity(name string, t1, t2 types.Type) error {
 	if t1.EqualTo(t2) {
 		return nil
@@ -332,7 +342,7 @@ func checkConformity(name string, t1, t2 types.Type) error {
 			}
 			p2, ok := t2.Property(p1.Name)
 			if !ok {
-				return &SchemaError{Msg: fmt.Sprintf(`"%s" property no longer exists`, path)}
+				return &SchemaError{Msg: fmt.Sprintf(`%q property no longer exists`, path)}
 			}
 			err := checkConformity(path, p1.Type, p2.Type)
 			if err != nil {

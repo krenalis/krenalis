@@ -78,17 +78,22 @@ func (database *Database) Query(ctx context.Context, query string) (*Rows, error
 	return newRows(rows, columns), nil
 }
 
-// Records executes a query and returns a Records to iterate over the database's
-// records. The returned records conform to the provided schema, which must be
-// valid and compatible with the query's schema.
+// Records executes a query and returns an iterator to iterate over the
+// database's records, conforming to the provided schema.
 //
-// The query execution must return a column named "id", the identity column,
-// with type Int, Uint, UUID, or Text. If the query execution returns a column
-// named "timestamp," that column is considered the timestamp column and must
-// have the DateTime type.
+// The query must be such that its execution returns a column named "id" (the
+// identity column) with type Int, Uint, UUID, or Text. Additionally, if the
+// query execution returns a column named "timestamp", that column is considered
+// the timestamp column and must have the DateTime type.
+//
+// If the provided schema, which must be valid, does not conform to the query's
+// results schema, it returns a *SchemaError error.
 func (database *Database) Records(ctx context.Context, query string, schema types.Type) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
+	}
+	if !schema.Valid() {
+		return nil, fmt.Errorf("schema is not valid")
 	}
 	// Execute the query.
 	rows, columns, err := database.inner.Query(ctx, query)

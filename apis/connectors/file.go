@@ -120,16 +120,19 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 	return rw.properties, rw.records, nil
 }
 
-// Records reads the records from the file at the provided path name and returns
-// a Records to iterate over the database's records The returned records conform
-// to the provided schema, which must be valid and compatible with the file's
-// schema.
+// Records returns an iterator to iterate over the records, conforming to
+// the provided schema, of the file at the provided path name.
 //
-// It returns the ErrNoStorage error if the file does not have a storage, and
-// it returns the ErrNoColumns error if the file has no columns.
+// If the file does not have a storage, it returns the ErrNoStorage error. If
+// the file has no columns, it returns the ErrNoColumns error. If the provided
+// schema, that must be valid, does not conform with the file's schema, it
+// returns a *SchemaError error.
 func (file *File) Records(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
+	}
+	if !schema.Valid() {
+		return nil, fmt.Errorf("schema is not valid")
 	}
 	storage, err := file.storage()
 	if err != nil {
