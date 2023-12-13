@@ -71,11 +71,20 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
+	var (
+		users  = make([]connectors.Record, 0, 100)
+		values = make([]map[string]any, 0, 100)
+	)
+
 	// processUsers does a bach processing of users.
 	processUsers := func(users []connectors.Record) error {
 
 		// Transform the users.
-		err := transformer.TransformRecords(ctx, users)
+		values = values[0:len(users)]
+		for i, user := range users {
+			values[i] = user.Properties
+		}
+		results, err := transformer.TransformValues(ctx, values)
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return actionExecutionError{err}
@@ -84,9 +93,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 		}
 
 		// Set the identities into the data warehouse.
-		for _, user := range users {
-			if user.Err != nil {
-				if _, ok := user.Err.(ValidationError); ok {
+		for i, result := range results {
+			user := users[i]
+			if result.Err != nil {
+				if _, ok := result.Err.(ValidationError); ok {
 					stats.Passed(statistics.TransformedStep)
 					stats.Failed(statistics.OutputValidatedStep, user.ID, err)
 					continue
@@ -94,6 +104,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 				stats.Failed(statistics.TransformedStep, user.ID, err)
 				continue
 			}
+			user.Properties = result.Value
 			stats.Passed(statistics.TransformedStep)
 			stats.Passed(statistics.OutputValidatedStep)
 			err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
@@ -121,8 +132,6 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		return nil
 	}
-
-	users := make([]connectors.Record, 0, 100)
 
 	// Read the users.
 	err = records.For(func(user connectors.Record) error {

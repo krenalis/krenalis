@@ -8,7 +8,6 @@ import (
 
 	"chichi/apis/state"
 	"chichi/apis/transformers/mappings"
-	"chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -78,58 +77,50 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 	return out, nil
 }
 
-// TransformRecords transforms the properties of the records. The records are
-// expected to conform to the input schema. If an error occurs during the
-// transformation of a single record, the error is stored in its Err field. If
-// the error is a validation error, Err implements ValidationError of apis.
+// TransformValues transforms the provided values and returns the results. The
+// values are expected to conform to the input schema. If an error occurs during
+// the transformation of a single value, the error is stored in the Err field of
+// the corresponding result. If the error is a validation error, it implements
+// ValidationError of apis.
 //
 // For function transformers, it returns the ErrFunctionNotExist error if the
 // function does not exist, and a FunctionExecutionError error if an error
 // occurs during function execution.
-func (transformer *Transformer) TransformRecords(ctx context.Context, records []connector.Record) error {
+func (transformer *Transformer) TransformValues(ctx context.Context, values []map[string]any) ([]Result, error) {
 
 	// Transform using the mapping.
 	if transformer.mapping != nil {
-		for i, record := range records {
-			properties, err := transformer.mapping.Transform(record.Properties)
+		results := make([]Result, len(values))
+		for i, value := range values {
+			value, err := transformer.mapping.Transform(value)
 			if err != nil {
-				records[i].Err = err
+				results[i].Err = err
 				continue
 			}
-			records[i].Properties = properties
+			results[i].Value = value
 			if i%100 != 0 {
 				continue
 			}
 			select {
 			case <-ctx.Done():
-				return ctx.Err()
+				return nil, ctx.Err()
 			default:
 			}
 		}
-		return nil
+		return results, nil
 	}
 
 	// Transform using a function.
-	values := make([]map[string]any, len(records))
-	for i, record := range records {
-		values[i] = record.Properties
-	}
 	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
 	results, err := transformer.function.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, values)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
-			return FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
+			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
 		}
-		return err
-	}
-	for i, result := range results {
-		if err := result.Err; err != nil {
-			records[i].Err = err
-		}
-		records[i].Properties = result.Value
+		return nil, err
 	}
 
-	return nil
+	return results, nil
 }
 
 // transformationFunctionName returns the name the transformation function for
