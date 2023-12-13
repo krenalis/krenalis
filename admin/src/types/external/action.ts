@@ -25,7 +25,7 @@ interface ExpressionToBeExtracted {
 }
 
 interface MatchingProperties {
-	Internal: Property | null;
+	Internal: string;
 	External: Property | null;
 }
 

@@ -20,7 +20,7 @@ const ActionMatchingProperties = () => {
 		const value = e.target.value;
 		if (type === 'Internal') {
 			const property = flatInputMatchingSchema[value];
-			a.MatchingProperties!.Internal = property ? property.full : null;
+			a.MatchingProperties!.Internal = property ? value : '';
 		} else {
 			const property = flatOutputMatchingSchema[value];
 			a.MatchingProperties!.External = property ? property.full : null;
@@ -33,7 +33,7 @@ const ActionMatchingProperties = () => {
 		const type = input.dataset.type;
 		if (type === 'Internal') {
 			const property = flatInputMatchingSchema[value];
-			a.MatchingProperties!.Internal = property ? property.full : null;
+			a.MatchingProperties!.Internal = property ? value : '';
 		} else {
 			const property = flatOutputMatchingSchema[value];
 			a.MatchingProperties!.External = property ? property.full : null;
@@ -51,7 +51,7 @@ const ActionMatchingProperties = () => {
 				<ComboBoxInput
 					comboBoxListRef={internalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}
-					value={action.MatchingProperties!.Internal ? action.MatchingProperties!.Internal.name : ''}
+					value={action.MatchingProperties!.Internal}
 					label='Golden record property'
 					data-type='Internal'
 					className='inputProperty'

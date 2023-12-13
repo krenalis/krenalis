@@ -317,8 +317,14 @@ const transformInActionToSet = async (
 	}
 
 	if (action.MatchingProperties != null) {
-		if (action.MatchingProperties.Internal == null || action.MatchingProperties.External == null) {
+		const internal = action.MatchingProperties.Internal;
+		if (internal === '' || action.MatchingProperties.External == null) {
 			throw 'Matching properties cannot be empty';
+		}
+		const isInternalAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === internal) !== -1;
+		if (!isInternalAlreadyInSchema) {
+			const flattenedInputMatchingSchema = flattenSchema(actionType.InputMatchingSchema);
+			inSchema.properties.push(flattenedInputMatchingSchema[internal].full);
 		}
 	}
 
