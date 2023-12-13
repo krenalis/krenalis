@@ -19,24 +19,9 @@ import (
 // exportUsersToDatabase exports the users to the database of the action.
 func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 
-	users, err := this.readUsersFromDataWarehouse(ctx, nil, this.action.InSchema)
+	users, err := this.readUsersFromDataWarehouse(ctx, this.action.InSchema)
 	if err != nil {
 		return err
-	}
-
-	// Filter the users.
-	if this.action.Filter != nil {
-		filteredUsers := []userToExport{}
-		for _, user := range users {
-			ok, err := filterApplies(this.action.Filter, user.Properties)
-			if err != nil {
-				return err
-			}
-			if ok {
-				filteredUsers = append(filteredUsers, user)
-			}
-		}
-		users = filteredUsers
 	}
 
 	// Instantiate a new transformer.

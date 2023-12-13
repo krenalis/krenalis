@@ -10,8 +10,11 @@ package apis
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +27,9 @@ import (
 	"chichi/apis/transformers/mappings"
 	"chichi/connector"
 	"chichi/connector/types"
+
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 var ExecutionInProgress errors.Code = "ExecutionInProgress"
@@ -165,22 +171,23 @@ type userToExport struct {
 	Properties map[string]any
 }
 
-// readUsersFromDataWarehouse reads the users with the given IDs from the data
-// warehouse.
+// readUsersFromDataWarehouse reads the users from the data warehouse according
+// to the action's filter, if any.
 //
 // TODO(Gianluca): this method is limited to export at most 1000 users.
 // Probably, this method will be removed, and the code responsible for exporting
 // should operate directly on the iterator. See the issue
 // https://github.com/open2b/chichi/issues/412 for more details.
-func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int, usersSchema types.Type) ([]userToExport, error) {
+func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema types.Type) ([]userToExport, error) {
 
+	// Build the where expression from the filter, if any.
 	var where expr.Expr
-	if len(ids) > 0 {
-		operands := make([]expr.Expr, len(ids))
-		for i := range ids {
-			operands[i] = expr.NewBaseExpr("id", expr.OperatorEqual, ids[i])
+	if this.action.Filter != nil {
+		var err error
+		where, err = convertActionFilterToExpr(this.action.Filter, this.action.InSchema)
+		if err != nil {
+			return nil, err
 		}
-		where = expr.NewMultiExpr(expr.LogicalOperatorOr, operands)
 	}
 
 	// Determine the properties to select from the data warehouse.
@@ -245,39 +252,6 @@ func (err actionExecutionError) Error() string {
 	return err.err.Error()
 }
 
-// filterApplies reports whether the filter applies to props, which can be an
-// event or a user. Returns error if one of the properties of the filter are not
-// found within props.
-func filterApplies(filter *state.Filter, props map[string]any) (bool, error) {
-	if filter == nil {
-		return true, nil
-	}
-	for _, cond := range filter.Conditions {
-		value, ok := readPropertyFrom(props, strings.Split(cond.Property, "."))
-		if !ok {
-			return false, fmt.Errorf("property %q not found", cond.Property)
-		}
-		var conditionApplies bool
-		switch cond.Operator {
-		case "is":
-			conditionApplies = value == cond.Value
-		case "is not":
-			conditionApplies = value != cond.Value
-		}
-		if conditionApplies && filter.Logical == "any" {
-			return true, nil
-		}
-		if !conditionApplies && filter.Logical == "all" {
-			return false, nil
-		}
-	}
-	if filter.Logical == "any" {
-		return false, nil // none of the conditions applied.
-	}
-	// All the conditions applied.
-	return true, nil
-}
-
 // readPropertyFrom reads the property with the given path from m, returning its
 // value (if found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.
@@ -295,4 +269,68 @@ func readPropertyFrom(m map[string]any, path types.Path) (any, bool) {
 		return nil, false
 	}
 	return readPropertyFrom(obj, path[1:])
+}
+
+// convertActionFilterToExpr converts a well-formed action filter to an
+// expr.Expr expression. schema defines the types of properties referenced
+// within the filter.
+//
+// Take in sync with the convertFilterToExpr function.
+func convertActionFilterToExpr(filter *state.Filter, schema types.Type) (expr.Expr, error) {
+	op := expr.LogicalOperatorAnd
+	if filter.Logical == "any" {
+		op = expr.LogicalOperatorOr
+	}
+	exp := expr.NewMultiExpr(op, make([]expr.Expr, len(filter.Conditions)))
+	for i, cond := range filter.Conditions {
+		property, err := schema.PropertyByPath(strings.Split(cond.Property, "."))
+		if err != nil {
+			return nil, fmt.Errorf("property path %s does not exist", cond.Property)
+		}
+		var op expr.Operator
+		switch cond.Operator {
+		case "is":
+			op = expr.OperatorEqual
+		case "is not":
+			op = expr.OperatorNotEqual
+		default:
+			return nil, errors.New("invalid operator")
+		}
+		var value any
+		switch property.Type.Kind() {
+		case types.BooleanKind:
+			value = false
+			if cond.Value == "true" {
+				value = true
+			}
+		case types.IntKind:
+			value, _ = strconv.ParseInt(cond.Value, 10, 64)
+		case types.UintKind:
+			value, _ = strconv.ParseUint(cond.Value, 10, 64)
+		case types.FloatKind:
+			value, _ = strconv.ParseFloat(cond.Value, 64)
+		case types.DecimalKind:
+			value = decimal.RequireFromString(cond.Value)
+		case types.DateTimeKind:
+			value, _ = time.Parse(time.DateTime, cond.Value)
+		case types.DateKind:
+			value, _ = time.Parse(time.DateOnly, cond.Value)
+		case types.TimeKind:
+			value, _ = time.Parse("15:04:05.999999999", cond.Value)
+		case types.YearKind:
+			value, _ = strconv.Atoi(cond.Value)
+		case types.UUIDKind:
+			value, _ = uuid.Parse(cond.Value)
+		case types.JSONKind:
+			value = json.RawMessage(cond.Value)
+		case types.InetKind:
+			value, _ = netip.ParseAddr(cond.Value)
+		case types.TextKind:
+			value = cond.Value
+		default:
+			return nil, fmt.Errorf("unexpected type %s", property.Type)
+		}
+		exp.Operands[i] = expr.NewBaseExpr(cond.Property, op, value)
+	}
+	return exp, nil
 }

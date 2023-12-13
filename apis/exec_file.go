@@ -21,24 +21,9 @@ import (
 // exportUsersToFile exports the users to the file.
 func (this *Action) exportUsersToFile(ctx context.Context) error {
 
-	users, err := this.readUsersFromDataWarehouse(ctx, nil, types.Type{})
+	users, err := this.readUsersFromDataWarehouse(ctx, types.Type{})
 	if err != nil {
 		return err
-	}
-
-	// Filter the users.
-	if this.action.Filter != nil {
-		filteredUsers := []userToExport{}
-		for _, user := range users {
-			ok, err := filterApplies(this.action.Filter, user.Properties)
-			if err != nil {
-				return err
-			}
-			if ok {
-				filteredUsers = append(filteredUsers, user)
-			}
-		}
-		users = filteredUsers
 	}
 
 	// Determine the columns of the exported file from the "users" schema.
