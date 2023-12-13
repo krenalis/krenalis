@@ -1921,20 +1921,23 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 	if action.MatchingProperties != nil {
 		props := *action.MatchingProperties
-		if !types.IsValidPropertyName(props.Internal.Name) {
-			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal.Name)
+		// Validate the internal matching property.
+		if !types.IsValidPropertyName(props.Internal) {
+			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
 		}
+		internal, ok := action.InSchema.Property(props.Internal)
+		if !ok {
+			return errors.BadRequest("internal matching property %q not found within the input schema", props.Internal)
+		}
+		if !canBeUsedAsAsMatchingProp(internal.Type.Kind()) {
+			return errors.BadRequest("type %s cannot be used as matching property", internal.Type)
+		}
+		// Validate the external matching property.
 		if !types.IsValidPropertyName(props.External.Name) {
 			return errors.BadRequest("external matching property %q is not a valid property name", props.External.Name)
 		}
-		if !props.Internal.Type.Valid() {
-			return errors.BadRequest("internal matching property type is not valid")
-		}
 		if !props.External.Type.Valid() {
 			return errors.BadRequest("external matching property type is not valid")
-		}
-		if !canBeUsedAsAsMatchingProp(props.Internal.Type.Kind()) {
-			return errors.BadRequest("type %s cannot be used as matching property", props.Internal.Type)
 		}
 		if !canBeUsedAsAsMatchingProp(props.External.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)

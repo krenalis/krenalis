@@ -197,27 +197,6 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int, u
 		toSelect = nil // every property of the usersSchema.
 	}
 
-	// Add the internal property name, if necessary, that is used for the user
-	// matching.
-	if matchProps := this.action.MatchingProperties; matchProps != nil {
-		internal := matchProps.Internal
-		// Adds the property only if it is not already present in toSelect, as
-		// it has been mapped.
-		found := false
-		for _, path := range toSelect {
-			if path[0] == internal.Name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			toSelect = append(toSelect, types.Path{internal.Name})
-			usersSchemaProps := usersSchema.Properties()
-			usersSchemaProps = append(usersSchemaProps, internal)
-			usersSchema = types.Object(usersSchemaProps)
-		}
-	}
-
 	store := this.connection.store
 
 	order := types.Property{Name: "id", Type: types.Int(32)}

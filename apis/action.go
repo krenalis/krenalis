@@ -649,7 +649,7 @@ type ActionToSet struct {
 // match identities of users in the data warehouse with users on the external
 // app, during export.
 type MatchingProperties struct {
-	Internal types.Property
+	Internal string // the corresponding property is stored within the action's input schema.
 	External types.Property
 }
 

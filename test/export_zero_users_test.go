@@ -55,12 +55,9 @@ func TestExportZeroUsers(t *testing.T) {
 					},
 				},
 				"ExportMode": "CreateOrUpdate",
-				"MatchingProperties": map[string]types.Property{
-					"Internal": {
-						Name: "email",
-						Type: types.Text(),
-					},
-					"External": {
+				"MatchingProperties": map[string]any{
+					"Internal": "email",
+					"External": types.Property{
 						Name: "email",
 						Type: types.Text(),
 					},
