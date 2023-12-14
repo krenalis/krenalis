@@ -187,6 +187,20 @@ func TestActionsCreation(t *testing.T) {
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
+					"Name":            "Import users from CSV on Filesystem",
+					"Path":            "users.csv",
+					"IdentityColumn":  "email",
+					"TimestampColumn": "timestamp",
+					"TimestampFormat": "2006-01-02 15:04:05",
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be valid"}}`,
+		},
+		{
+			conn: csvConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
 					"Name": "Import users from CSV on Filesystem",
 					"Path": "users.csv",
 					"InSchema": types.Object([]types.Property{

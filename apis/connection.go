@@ -1927,6 +1927,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !types.IsValidPropertyName(props.Internal) {
 			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
 		}
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema must be valid")
+		}
 		internal, ok := action.InSchema.Property(props.Internal)
 		if !ok {
 			return errors.BadRequest("internal matching property %q not found within the input schema", props.Internal)
@@ -2015,6 +2018,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check the column for the identity and for the timestamp.
 	if connector.Type == state.FileType && c.Role == state.Source {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema must be valid")
+		}
 		// Validate the identity column.
 		if action.IdentityColumn == "" {
 			return errors.BadRequest("column name for the identity is mandatory")
