@@ -223,7 +223,11 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 		b.WriteByte(')')
 	}
 	b.WriteString(` ON CONFLICT ("id") DO UPDATE SET `)
-	for i, column := range columns {
+	i := 0
+	for _, column := range columns {
+		if column.Name == "id" {
+			continue
+		}
 		if i > 0 {
 			b.WriteString(", ")
 		}
@@ -232,6 +236,7 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 		b.WriteString(`" = EXCLUDED."`)
 		b.WriteString(column.Name)
 		b.WriteByte('"')
+		i++
 	}
 	query := b.String()
 

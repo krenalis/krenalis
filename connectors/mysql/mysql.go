@@ -181,7 +181,11 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 		b.WriteByte(')')
 	}
 	b.WriteString(` ON DUPLICATE KEY UPDATE `)
-	for i, column := range columns {
+	i := 0
+	for _, column := range columns {
+		if column.Name == "id" {
+			continue
+		}
 		if i > 0 {
 			b.WriteString(", ")
 		}
@@ -190,6 +194,7 @@ func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, col
 		b.WriteString("` = VALUES(`")
 		b.WriteString(column.Name)
 		b.WriteString("`)")
+		i++
 	}
 	query := b.String()
 
