@@ -215,7 +215,6 @@ func TestActionsCreation(t *testing.T) {
 							"Email": "email",
 						},
 					},
-
 					"IdentityColumn":  "email",
 					"TimestampColumn": "timestamp",
 					"TimestampFormat": "2006-01-02 15:04:05",
