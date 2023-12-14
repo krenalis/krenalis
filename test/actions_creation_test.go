@@ -57,6 +57,7 @@ func TestActionsCreation(t *testing.T) {
 					"Name": "Import users from CSV on Filesystem",
 					"Path": "users.csv",
 					"InSchema": types.Object([]types.Property{
+						{Name: "identity", Type: types.Text()},
 						{Name: "email", Type: types.Text()},
 						{Name: "timestamp", Type: types.Text()},
 					}),
@@ -84,6 +85,7 @@ func TestActionsCreation(t *testing.T) {
 					"Name": "Import users from CSV on Filesystem",
 					"Path": "users.csv",
 					"InSchema": types.Object([]types.Property{
+						{Name: "identity", Type: types.Text()},
 						{Name: "email", Type: types.Text()},
 						{Name: "timestamp", Type: types.Text()},
 					}),
@@ -101,7 +103,7 @@ func TestActionsCreation(t *testing.T) {
 					"TimestampColumn": "timestamp",
 				},
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp format is mandatory when a timestamp column name is provided"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp format is required"}}`,
 		},
 		{
 			conn: csvConnection,
@@ -155,6 +157,57 @@ func TestActionsCreation(t *testing.T) {
 				},
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity has not a valid property name"}}`,
+		},
+		{
+			conn: csvConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name": "Import users from CSV on Filesystem",
+					"Path": "users.csv",
+					"InSchema": types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+						{Name: "timestamp", Type: types.DateTime()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email": "email",
+						},
+					},
+					"IdentityColumn":  "email",
+					"TimestampColumn": "timestamp",
+				},
+			},
+		},
+		{
+			conn: csvConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name": "Import users from CSV on Filesystem",
+					"Path": "users.csv",
+					"InSchema": types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+						{Name: "timestamp", Type: types.DateTime()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email": "email",
+						},
+					},
+
+					"IdentityColumn":  "email",
+					"TimestampColumn": "timestamp",
+					"TimestampFormat": "2006-01-02 15:04:05",
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"action cannot specify a timestamp format"}}`,
 		},
 	}
 	for _, test := range tests {

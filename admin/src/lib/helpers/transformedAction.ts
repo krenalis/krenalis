@@ -328,6 +328,30 @@ const transformInActionToSet = async (
 		}
 	}
 
+	if (action.IdentityColumn != null && action.IdentityColumn !== '') {
+		const isPropertyAlreadyInSchema =
+			inSchema.properties!.findIndex((p) => p.name === action.IdentityColumn) !== -1;
+		if (!isPropertyAlreadyInSchema) {
+			const identityColumnProperty = flattenedInputSchema[action.IdentityColumn];
+			if (identityColumnProperty == null) {
+				throw 'Identity must be a valid property';
+			}
+			inSchema.properties.push(identityColumnProperty.full);
+		}
+	}
+
+	if (action.TimestampColumn != null && action.TimestampColumn !== '') {
+		const isPropertyAlreadyInSchema =
+			inSchema.properties!.findIndex((p) => p.name === action.TimestampColumn) !== -1;
+		if (!isPropertyAlreadyInSchema) {
+			const timestampColumnProperty = flattenedInputSchema[action.TimestampColumn];
+			if (timestampColumnProperty == null) {
+				throw 'Timestamp must be a valid property';
+			}
+			inSchema.properties.push(timestampColumnProperty.full);
+		}
+	}
+
 	if (action.Query != null) {
 		query = action.Query.trim();
 	}
@@ -470,6 +494,25 @@ const isIdentifierProperty = (name: string, identifiers: string[] | null): boole
 	return false;
 };
 
+const doesTimestampNeedFormat = (timestampColumn: string, schema: ObjectType): boolean => {
+	let needFormat = true;
+	if (timestampColumn == null || timestampColumn === '') {
+		needFormat = false;
+	} else {
+		const flatInputSchema = flattenSchema(schema);
+		const timestampProperty = flatInputSchema[timestampColumn];
+		if (timestampProperty == null) {
+			needFormat = false;
+		} else {
+			const timestampType = timestampProperty.type;
+			if (timestampType !== 'JSON' && timestampType !== 'Text') {
+				needFormat = false;
+			}
+		}
+	}
+	return needFormat;
+};
+
 export {
 	SCHEDULE_PERIODS,
 	EXPORT_MODE_OPTIONS,
@@ -480,6 +523,7 @@ export {
 	transformAction,
 	transformInActionToSet,
 	isIdentifierProperty,
+	doesTimestampNeedFormat,
 };
 
 export type { TransformedMapping, TransformedActionType, TransformedAction, ActionTypeField };

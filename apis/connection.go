@@ -2025,7 +2025,17 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if utf8.RuneCountInString(action.IdentityColumn) > 1024 {
 			return errors.BadRequest("column name for the identity is longer than 1024 runes")
 		}
+		identityColumn, ok := action.InSchema.Property(action.IdentityColumn)
+		if !ok {
+			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
+		}
+		switch k := identityColumn.Type.Kind(); k {
+		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
+		default:
+			return fmt.Errorf("identity column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityColumn, k)
+		}
 		// Validate the timestamp column and format.
+		var requiresTimestampFormat bool
 		if action.TimestampColumn != "" {
 			if !types.IsValidPropertyName(action.TimestampColumn) {
 				return errors.BadRequest("column name for the timestamp has a not valid property name")
@@ -2033,19 +2043,28 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
 				return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
 			}
-			if action.TimestampFormat == "" {
-				return errors.BadRequest("timestamp format is mandatory when a timestamp column name is provided")
-			}
 			if !utf8.ValidString(action.TimestampFormat) {
 				return errors.BadRequest("timestamp format must be UTF-8 valid")
 			}
 			if utf8.RuneCountInString(action.TimestampFormat) > 64 {
 				return errors.BadRequest("timestamp format is longer than 64 runes")
 			}
-		} else {
-			if action.TimestampFormat != "" {
-				return errors.BadRequest("action cannot specify a timestamp format")
+			timestampColumn, ok := action.InSchema.Property(action.TimestampColumn)
+			if !ok {
+				return errors.BadRequest("timestamp column %q not found within input schema", action.TimestampColumn)
 			}
+			switch k := timestampColumn.Type.Kind(); k {
+			case types.DateTimeKind, types.DateKind:
+			case types.JSONKind, types.TextKind:
+				requiresTimestampFormat = true
+			default:
+				return fmt.Errorf("timestamp column %q has kind %s instead of DateTime, Date, JSON, or Text", action.TimestampColumn, k)
+			}
+		}
+		if !requiresTimestampFormat && action.TimestampFormat != "" {
+			return errors.BadRequest("action cannot specify a timestamp format")
+		} else if requiresTimestampFormat && action.TimestampFormat == "" {
+			return errors.BadRequest("timestamp format is required")
 		}
 	} else {
 		if action.IdentityColumn != "" {

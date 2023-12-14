@@ -1,10 +1,11 @@
-import React, { useState, useRef, useContext, useEffect, forwardRef, ReactNode } from 'react';
+import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
 import { updateMappingProperty, autocompleteExpression } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import {
 	TransformedAction,
 	TransformedActionType,
 	TransformedMapping,
+	doesTimestampNeedFormat,
 	flattenSchema,
 	isIdentifierProperty,
 	transformInActionToSet,
@@ -160,6 +161,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	}, [selectedLanguage]);
 
+	const needFormat: boolean = useMemo(
+		() => doesTimestampNeedFormat(action.TimestampColumn, actionType.InputSchema),
+		[action],
+	);
+
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
 		a.Transformation.Function = {
@@ -220,7 +226,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		} else if (input.name === 'timestampColumn') {
 			const a = { ...action };
 			a.TimestampColumn = value;
-			if (value === '') {
+			if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
 				a.TimestampFormat = '';
 			}
 			setAction(a);
@@ -242,7 +248,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		let { value } = target;
 		const a = { ...action };
 		a.TimestampColumn = value;
-		if (value === '') {
+		if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
 			a.TimestampFormat = '';
 		}
 		setAction(a);
@@ -340,7 +346,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 											: ''
 									}
 									name='timestampFormat'
-									disabled={action.TimestampColumn == null || action.TimestampColumn === ''}
+									disabled={!needFormat}
 									size='small'
 								>
 									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>
