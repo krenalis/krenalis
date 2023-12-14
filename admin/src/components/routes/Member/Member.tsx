@@ -50,6 +50,13 @@ const Member = () => {
 			}
 		};
 
+		const isLoggedMember = Number(id) === member.ID;
+		if (!isLoggedMember) {
+			// Members can only edit themselves.
+			redirect('members');
+			return;
+		}
+
 		fetchMember();
 	}, []);
 

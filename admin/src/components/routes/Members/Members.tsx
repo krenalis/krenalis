@@ -21,7 +21,7 @@ const Members = () => {
 	const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<TransformedMember[]>();
 
-	const { setTitle, api, handleError, redirect } = useContext(AppContext);
+	const { setTitle, api, handleError, redirect, member: loggedMember } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
 
@@ -126,9 +126,11 @@ const Members = () => {
 									}
 									action={
 										<div className='members__member-actions'>
-											<SlButton size='small' onClick={() => onEditMember(member.ID)}>
-												Edit
-											</SlButton>
+											{member.ID === loggedMember.ID && (
+												<SlButton size='small' onClick={() => onEditMember(member.ID)}>
+													Edit
+												</SlButton>
+											)}
 											<SlButton
 												size='small'
 												variant='danger'

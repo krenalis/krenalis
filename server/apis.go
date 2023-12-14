@@ -1148,6 +1148,14 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Put("/", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
+				if id < 0 || id > math.MaxInt32 {
+					respond(w, errors.BadRequest("identifier %d is not a valid member identifier", id))
+					return
+				}
+				if id != session.Member {
+					respond(w, errors.BadRequest("members can only modify their own information"))
+					return
+				}
 				var req struct {
 					MemberToSet struct {
 						Name     string
