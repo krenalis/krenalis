@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import './Workspaces.css';
 import ListTile from '../../shared/ListTile/ListTile';
 import API from '../../../lib/api/api';
@@ -8,29 +8,17 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import AppContext from '../../../context/AppContext';
 
-interface WorkspacesProps {
-	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
-	workspaces: Workspace[];
-	api: API;
-	showError: (err: Error | string) => void;
-	redirect: (url: string) => void;
-	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const Workspaces = ({
-	setSelectedWorkspace,
-	workspaces,
-	api,
-	showError,
-	redirect,
-	setIsLoadingState,
-}: WorkspacesProps) => {
+const Workspaces = () => {
 	const [isAddWorkspaceDialogOpen, setIsAddWorkspaceDialogOpen] = useState(false);
+
+	const { setSelectedWorkspace, workspaces, api, handleError, redirect, setIsLoadingState } = useContext(AppContext);
 
 	const onWorkspaceClick = (id: number) => {
 		setSelectedWorkspace(id);
 		setIsLoadingState(true);
+		redirect('connections');
 	};
 
 	const onAddNewWorkspace = () => setIsAddWorkspaceDialogOpen(true);
@@ -99,7 +87,7 @@ const Workspaces = ({
 					isAddWorkspaceDialogOpen={isAddWorkspaceDialogOpen}
 					setIsAddWorkspaceDialogOpen={setIsAddWorkspaceDialogOpen}
 					api={api}
-					showError={showError}
+					handleError={handleError}
 					redirect={redirect}
 					setIsLoadingState={setIsLoadingState}
 				/>
@@ -113,7 +101,7 @@ interface NewWorkspaceDialogProps {
 	isAddWorkspaceDialogOpen: boolean;
 	setIsAddWorkspaceDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 	api: API;
-	showError: (err: Error | string) => void;
+	handleError: (err: Error | string) => void;
 	redirect: (url: string) => void;
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -123,7 +111,7 @@ const NewWorkspaceDialog = ({
 	isAddWorkspaceDialogOpen,
 	setIsAddWorkspaceDialogOpen,
 	api,
-	showError,
+	handleError,
 	redirect,
 	setIsLoadingState,
 }: NewWorkspaceDialogProps) => {
@@ -141,7 +129,7 @@ const NewWorkspaceDialog = ({
 			const res = await api.workspaces.add(name, privacyRegion);
 			id = res.id;
 		} catch (err) {
-			showError(err);
+			handleError(err);
 		}
 		setIsAddWorkspaceDialogOpen(false);
 		setName('');

@@ -24,12 +24,33 @@ import (
 	"chichi/telemetry"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/securecookie"
 )
+
+// sessionMaxAge contains the max age property for the session cookie (6 hours).
+const sessionMaxAge = 6 * 60 * 60
+
+// LoginRequired is the error code returned by the API when login is required.
+const LoginRequired errors.Code = "LoginRequired"
 
 var workspacePathRegExp = regexp.MustCompile(`^/api/workspaces(/.*)?$`)
 
 type apisServer struct {
-	apis *apis.APIs
+	apis         *apis.APIs
+	secureCookie *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+}
+
+// newAPIsServer returns an APIs server that handles requests for the given
+// APIs. sessionKey is the key used to encrypt the session cookie.
+// It panics if the session key is not at least 64 bytes long.
+func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
+	if len(sessionKey) != 64 {
+		panic("sessionKey is not 64 bytes long")
+	}
+	hashKey, blockKey := sessionKey[:32], sessionKey[32:]
+	sc := securecookie.New(hashKey, blockKey)
+	sc.MaxAge(sessionMaxAge)
+	return &apisServer{apis: apis, secureCookie: sc}
 }
 
 // ServeHTTP servers the API methods from HTTP.
@@ -40,10 +61,31 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	telemetry.IncrementCounter(ctx, "apis.ServeHTTP", 1)
 
+	switch r.URL.Path {
+	case "/api/members/login":
+		s.login(w, r)
+		return
+	case "/api/members/logout":
+		s.logout(w, r)
+		return
+	}
+
+	session := s.getSession(r)
+	if session == nil {
+		respond(w, errors.Unprocessable(LoginRequired, "login is required"))
+		return
+	}
+
 	// Read the organization.
 	organization, err := s.apis.Organization(ctx, 1)
 	if err != nil {
+		s.removeSession(w, r)
 		http.NotFound(w, r)
+		return
+	}
+	if _, err = organization.Member(ctx, session.Member); err != nil {
+		s.removeSession(w, r)
+		respond(w, errors.Unprocessable(LoginRequired, "login is required"))
 		return
 	}
 

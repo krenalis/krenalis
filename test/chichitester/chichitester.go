@@ -10,12 +10,15 @@ package chichitester
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
 	"math"
 	"net"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -45,6 +48,7 @@ type Chichi struct {
 	t                      *testing.T
 	done                   chan struct{}
 	transformationsTempDir string
+	httpClient             *http.Client
 	workspace              int
 }
 
@@ -87,6 +91,21 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t:         t,
 		done:      make(chan struct{}),
 		workspace: 1,
+	}
+
+	// Create the HTTP client.
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatalf("cannot create a cookie jar: %s", err)
+	}
+	c.httpClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return errors.New("redirect")
+		},
+		Jar: jar,
 	}
 
 	// In case of an error during the test initialization, stop Chichi.
@@ -215,6 +234,12 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		break
 	}
 
+	// Login.
+	err = c.login()
+	if err != nil {
+		t.Fatalf("cannot log in into the API: %s", err)
+	}
+
 	// Connect the data warehouse.
 	err = c.connectWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
 	if err != nil {
@@ -322,6 +347,15 @@ func (c *Chichi) initWarehouse() error {
 		return err
 	}
 	return nil
+}
+
+func (c *Chichi) login() error {
+	body := map[string]any{
+		"Email":    "acme@open2b.com",
+		"Password": "foopass2",
+	}
+	_, err := c.call("POST", "/api/members/login", body)
+	return err
 }
 
 func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {

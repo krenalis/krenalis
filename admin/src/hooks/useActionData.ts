@@ -34,7 +34,7 @@ const useActionData = (
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 
-	const { api, showError, showStatus, redirect } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect } = useContext(AppContext);
 
 	const isEditing = providedAction != null;
 	const isImport = connection.role === 'Source';
@@ -92,7 +92,7 @@ const useActionData = (
 					}
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 
@@ -132,7 +132,7 @@ const useActionData = (
 						}
 						return;
 					}
-					showError(err);
+					handleError(err);
 					return;
 				}
 				inputSchema = res.Schema;
@@ -171,7 +171,7 @@ const useActionData = (
 						}
 						return;
 					}
-					showError(err);
+					handleError(err);
 					return;
 				}
 				inputSchema = res.schema;
@@ -184,7 +184,7 @@ const useActionData = (
 				try {
 					schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
 				} catch (err) {
-					showError(err);
+					handleError(err);
 					return;
 				}
 				outputSchema = schema;

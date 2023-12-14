@@ -31,7 +31,7 @@ const Identifiers = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, showError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace, redirect } =
+	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace, redirect } =
 		useContext(AppContext);
 
 	const identifiersListRef = useRef(null);
@@ -46,7 +46,7 @@ const Identifiers = () => {
 			try {
 				eventSchema = await api.eventsSchema();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setEventSchema(eventSchema);
@@ -54,7 +54,7 @@ const Identifiers = () => {
 			try {
 				userSchema = await api.workspaces.userSchema();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setUserSchema(userSchema);
@@ -128,7 +128,7 @@ const Identifiers = () => {
 		if (errorMessage) {
 			setTimeout(() => {
 				setIsSaving(false);
-				showError(errorMessage);
+				handleError(errorMessage);
 			}, 500);
 			return;
 		}
@@ -138,7 +138,7 @@ const Identifiers = () => {
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
-				showError(err);
+				handleError(err);
 			}, 500);
 			return;
 		}

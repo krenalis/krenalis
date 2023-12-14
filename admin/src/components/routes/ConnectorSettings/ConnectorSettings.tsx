@@ -35,7 +35,7 @@ const ConnectorSettings = () => {
 
 	const {
 		api,
-		showError,
+		handleError,
 		showStatus,
 		redirect,
 		connectors,
@@ -108,13 +108,13 @@ const ConnectorSettings = () => {
 						console.error(
 							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`,
 						);
-						showError(
+						handleError(
 							'An unexpected error has occurred. Please contact the administrator for more information.',
 						);
 					}
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setFields(ui.Form.Fields);
@@ -168,7 +168,7 @@ const ConnectorSettings = () => {
 				if (hasConfirmationButton) {
 					confirmationButton!.stop();
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			if (hasConfirmationButton) {
@@ -194,13 +194,13 @@ const ConnectorSettings = () => {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
-					showError(
+					handleError(
 						'An unexpected error has occurred. Please contact the administrator for more information.',
 					);
 				}
 				return;
 			}
-			showError(err);
+			handleError(err);
 			if (hasConfirmationButton) {
 				confirmationButton!.stop();
 			}
@@ -253,7 +253,7 @@ const ConnectorSettings = () => {
 					redirect('connectors');
 				}
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 		setNewConnectionID(id);

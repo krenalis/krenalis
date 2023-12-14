@@ -9,7 +9,7 @@ import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.
 const ConnectionSnippet = () => {
 	const [keys, setKeys] = useState<string[]>([]);
 
-	const { api, showStatus, showError, redirect } = useContext(AppContext);
+	const { api, showStatus, handleError, redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
 	useEffect(() => {
@@ -23,7 +23,7 @@ const ConnectionSnippet = () => {
 					showStatus(statuses.connectionDoesNotExistAnymore);
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setKeys(keys);

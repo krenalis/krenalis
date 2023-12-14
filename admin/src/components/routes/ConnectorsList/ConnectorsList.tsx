@@ -12,7 +12,7 @@ const ConnectorsList = () => {
 	const [goToConnectorSettings, setGoToConnectorSettings] = useState<number>(0);
 	const [searchTerm, setSearchTerm] = useState<string>('');
 
-	const { redirect, api, showError, connectors, setTitle } = useContext(AppContext);
+	const { redirect, api, handleError, connectors, setTitle } = useContext(AppContext);
 
 	const connectionRole = useMemo(() => {
 		const roleParam = new URL(document.location.href).searchParams.get('role');
@@ -40,7 +40,7 @@ const ConnectorsList = () => {
 		try {
 			res = await api.connectors.authCodeURL(connectorID);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			return;
 		}
 		window.location.href = res.url;

@@ -8,7 +8,7 @@ import { TransformedMember } from '../lib/helpers/transformedMember';
 
 interface AppContext {
 	api: API;
-	showError: (err: Error | string) => void;
+	handleError: (err: Error | string) => void;
 	showStatus: (status: Status) => void;
 	showNotFound: () => void;
 	setTitle: React.Dispatch<React.SetStateAction<ReactNode>>;
@@ -25,6 +25,9 @@ interface AppContext {
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 	isFullscreen: boolean;
+	title: ReactNode;
+	logout: () => void;
+	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);

@@ -20,7 +20,7 @@ const User = () => {
 	const [user, setUser] = useState<UserInterface | null>(null);
 
 	const { userIDList } = useContext(UsersContext);
-	const { api, showError, showStatus, redirect, setTitle, connections } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect, setTitle, connections } = useContext(AppContext);
 
 	const fetchTimeoutID = useRef<number | undefined>();
 
@@ -79,7 +79,7 @@ const User = () => {
 					return;
 				}
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 
@@ -119,7 +119,7 @@ const User = () => {
 					return;
 				}
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 

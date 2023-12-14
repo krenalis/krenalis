@@ -14,7 +14,7 @@ const ConnectionContext = createContext<ConnectionContextInterface>({} as Connec
 const ConnectionProvider = () => {
 	const [connection, setConnection] = useState<TransformedConnection>();
 
-	const { api, showError, showNotFound, connections } = useContext(AppContext);
+	const { api, handleError, showNotFound, connections } = useContext(AppContext);
 
 	const urlFragments = String(window.location).split('/');
 	const fragmentIndex = urlFragments.findIndex((f) => f === 'connections');
@@ -30,7 +30,7 @@ const ConnectionProvider = () => {
 					showNotFound();
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			const providedConnection = connections.find((c) => c.id === connectionID);

@@ -114,9 +114,9 @@ func Run(ctx context.Context, settings *Settings) error {
 	}
 	defer apis.Close()
 
-	admin := admin.New(apis, sessionKey)
+	admin := admin.New(apis)
 
-	apisServer := &apisServer{apis}
+	apisServer := newAPIsServer(apis, sessionKey)
 
 	addr := settings.Main.Host
 	if addr == "" {

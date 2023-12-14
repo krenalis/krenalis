@@ -9,7 +9,7 @@ import { ObjectType } from '../../../types/external/types';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
 
 const ActionTable = () => {
-	const { showError, api } = useContext(AppContext);
+	const { handleError, api } = useContext(AppContext);
 	const { connection, action, setAction, actionType, setActionType, mappingSectionRef, setIsTableChanged } =
 		useContext(ActionContext);
 
@@ -49,7 +49,7 @@ const ActionTable = () => {
 			schema = await api.workspaces.connections.tableSchema(connection.id, action.Table);
 		} catch (err) {
 			tableConfirmationButtonRef.current!.stop();
-			showError(err);
+			handleError(err);
 			return;
 		}
 		tableConfirmationButtonRef.current!.confirm();

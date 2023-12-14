@@ -23,12 +23,12 @@ const UsersWrapper = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [limit, setLimit] = useState<number>(0);
 
-	const { api, showError, showStatus, redirect, selectedWorkspace, warehouse } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect, selectedWorkspace, warehouse } = useContext(AppContext);
 
 	useEffect(() => {
 		if (warehouse == null) {
 			redirect('settings');
-			showError('Please connect to a data warehouse before proceeding');
+			handleError('Please connect to a data warehouse before proceeding');
 			return;
 		}
 		fetchUsers(1);
@@ -51,7 +51,7 @@ const UsersWrapper = () => {
 			setTimeout(() => {
 				setIsLoading(false);
 			}, 300);
-			showError(err);
+			handleError(err);
 			return;
 		}
 
@@ -112,7 +112,7 @@ const UsersWrapper = () => {
 				}
 				return;
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 

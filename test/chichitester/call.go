@@ -9,7 +9,6 @@ package chichitester
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,12 +69,8 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 	}
 	req.Header.Add("X-Workspace", "1")
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
 	c.t.Logf("[info] %s %s", httpMethod, url)
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

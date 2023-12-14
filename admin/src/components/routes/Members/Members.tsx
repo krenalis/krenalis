@@ -21,7 +21,7 @@ const Members = () => {
 	const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<TransformedMember[]>();
 
-	const { setTitle, api, showError, redirect } = useContext(AppContext);
+	const { setTitle, api, handleError, redirect } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
 
@@ -35,7 +35,7 @@ const Members = () => {
 			try {
 				members = await api.members();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				setTimeout(() => setIsLoadingMembers(false), 300);
 				return;
 			}
@@ -73,7 +73,7 @@ const Members = () => {
 			await api.deleteMember(pendingDeletedMember.current);
 		} catch (err) {
 			if (!(err instanceof NotFoundError)) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 		}
@@ -162,7 +162,7 @@ const Members = () => {
 				<AddMemberDialog
 					isOpen={isAddMemberDialogOpen}
 					setIsOpen={setIsAddMemberDialogOpen}
-					showError={showError}
+					handleError={handleError}
 					setIsLoadingMembers={setIsLoadingMembers}
 					api={api}
 				/>
@@ -174,12 +174,12 @@ const Members = () => {
 interface AddMemberDialogProps {
 	isOpen: boolean;
 	setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-	showError: (err: Error | string) => void;
+	handleError: (err: Error | string) => void;
 	setIsLoadingMembers: React.Dispatch<React.SetStateAction<boolean>>;
 	api: API;
 }
 
-const AddMemberDialog = ({ isOpen, setIsOpen, showError, setIsLoadingMembers, api }: AddMemberDialogProps) => {
+const AddMemberDialog = ({ isOpen, setIsOpen, handleError, setIsLoadingMembers, api }: AddMemberDialogProps) => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
 	const [name, setName] = useState<string>('');
 	const [email, setEmail] = useState<string>('');
@@ -275,7 +275,7 @@ const AddMemberDialog = ({ isOpen, setIsOpen, showError, setIsLoadingMembers, ap
 					setIsSaving(false);
 					setIsOpen(false);
 					setTimeout(() => {
-						showError(err);
+						handleError(err);
 					}, 150);
 				}, 300);
 			}

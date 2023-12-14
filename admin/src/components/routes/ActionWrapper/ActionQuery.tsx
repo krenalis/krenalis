@@ -23,7 +23,7 @@ const ActionQuery = () => {
 	const [queryPreviewRows, setQueryPreviewRows] = useState<GridRow[] | null>(null);
 	const [showPreview, setShowPreview] = useState<boolean>(false);
 
-	const { redirect, showError, showStatus, api } = useContext(AppContext);
+	const { redirect, handleError, showStatus, api } = useContext(AppContext);
 	const { connection, action, setAction, actionType, setActionType, mappingSectionRef, setIsQueryChanged } =
 		useContext(ActionContext);
 
@@ -100,11 +100,11 @@ const ActionQuery = () => {
 	const query = async (limit: number, isConfirmation: boolean) => {
 		const q = action.Query!.trim();
 		if (q.length > queryMaxSize) {
-			showError('The query is too long');
+			handleError('The query is too long');
 			return;
 		}
 		if (!/\${\s*limit\s*}/i.test(q)) {
-			showError('The query does not contain the ${limit} placeholder');
+			handleError('The query does not contain the ${limit} placeholder');
 			return;
 		}
 		let res: ExecQueryResponse;
@@ -122,11 +122,11 @@ const ActionQuery = () => {
 				}
 				return;
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 		if (res.Schema.properties!.length === 0) {
-			showError('The query execution did not yield any columns');
+			handleError('The query execution did not yield any columns');
 			return;
 		}
 		if (isConfirmation) {

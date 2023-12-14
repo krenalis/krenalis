@@ -14,7 +14,7 @@ const useEventListener = (
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
 	const [eventID, setEventID] = useState<number>(1);
 
-	const { api, showError, showStatus, redirect } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		if (isListenerNotFound) {
@@ -39,7 +39,7 @@ const useEventListener = (
 					}
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			listenerID = listener.id;
@@ -52,7 +52,7 @@ const useEventListener = (
 						setIsListenerNotFound(true);
 						return;
 					}
-					showError(err);
+					handleError(err);
 					return;
 				}
 				const newly: EventListenerEvent[] = [];
@@ -82,7 +82,7 @@ const useEventListener = (
 				try {
 					await api.workspaces.eventlisteners.remove(listenerID);
 				} catch (err) {
-					showError(err);
+					handleError(err);
 					return;
 				}
 			};

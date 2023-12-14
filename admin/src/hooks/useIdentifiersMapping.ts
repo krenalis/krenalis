@@ -16,7 +16,7 @@ const useIdentifiersMapping = (
 	outputSchema: ObjectType,
 	onRemoveIdentifier?: (identifier: string) => void,
 ) => {
-	const { api, showError } = useContext(AppContext);
+	const { api, handleError } = useContext(AppContext);
 
 	const flatOutputSchema = useMemo(() => flattenSchema(outputSchema), [outputSchema]);
 
@@ -65,7 +65,7 @@ const useIdentifiersMapping = (
 					destinationProperty.nullable,
 				);
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 		}

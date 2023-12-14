@@ -13,7 +13,7 @@ interface ActionHeaderProps {
 const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
 
-	const { showError } = useContext(AppContext);
+	const { handleError } = useContext(AppContext);
 
 	const {
 		connection,
@@ -38,7 +38,7 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 		if (err == null) {
 			onClose();
 		} else {
-			showError(err);
+			handleError(err);
 		}
 	};
 

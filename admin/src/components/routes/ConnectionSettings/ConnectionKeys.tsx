@@ -15,7 +15,7 @@ interface KeysProps {
 const ConnectionKeys = ({ connection: c }: KeysProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
 
-	const { api, showStatus, showError, redirect } = useContext(AppContext);
+	const { api, showStatus, handleError, redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		const fetchKeys = async () => {
@@ -28,7 +28,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 					showStatus(statuses.connectionDoesNotExistAnymore);
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setKeys(keys);
@@ -53,7 +53,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 				}
 				return;
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 		const ks = [...keys, key];
@@ -76,7 +76,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 				return;
 			}
 			if (err.code !== 'KeyNotExist') {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			// if the error code is 'KeyNotExist', const the key be removed from

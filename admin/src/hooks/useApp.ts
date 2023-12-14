@@ -18,9 +18,13 @@ import { Member } from '../types/external/api';
 import { NotFoundError } from '../lib/api/errors';
 import { TransformedMember, transformMember } from '../lib/helpers/transformedMember';
 
-const useApp = (showError: (err: Error | string) => void, redirect: (url: string) => void, location: Location) => {
+const useApp = (
+	handleError: (err: Error | string) => void,
+	redirect: (url: string) => void,
+	logout: () => void,
+	location: Location,
+) => {
 	const [isLoadingState, setIsLoadingState] = useState<boolean>(true);
-	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 	const [member, setMember] = useState<TransformedMember | null>();
 	const [isLoadingMember, setIsLoadingMember] = useState<boolean>(false);
 	const [connectors, setConnectors] = useState<TransformedConnector[] | null>(null);
@@ -33,7 +37,7 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 		Number(localStorage.getItem('chichi_workspace_id')),
 	);
 
-	const api = new API(window.location.origin, selectedWorkspace);
+	let api = new API(window.location.origin, selectedWorkspace);
 
 	useEffect(() => {
 		const loadAppState = async () => {
@@ -42,14 +46,23 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			try {
 				ws = await api.workspaces.list();
 			} catch (err) {
-				showError(err);
+				handleError(err);
+				setIsLoadingState(false);
 				return;
 			}
 			setWorkspaces(ws);
 
 			const isDeleted = workspaces != null && ws.length < workspaces.length;
-			if (selectedWorkspace === 0 && ws.length === 1 && !isDeleted) {
-				setSelectedWorkspace(ws[0].ID);
+			if (selectedWorkspace === 0) {
+				if (ws.length === 1 && !isDeleted) {
+					setSelectedWorkspace(ws[0].ID);
+					api = new API(window.location.origin, ws[0].ID);
+				} else {
+					// the user must choose a workspace.
+					redirect('workspaces');
+					setIsLoadingState(false);
+					return;
+				}
 			}
 
 			// get the connectors list.
@@ -57,7 +70,7 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			try {
 				connectors = await api.connectors.find();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			const transformedConnectors: TransformedConnector[] = [];
@@ -86,49 +99,28 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			const memberID = sessionStorage.getItem('chichi-member');
 			if (memberID == null) {
 				setTimeout(() => {
-					setIsLoggedIn(false);
+					logout();
 					setIsLoadingState(false);
-					if (location.pathname !== adminBasePath) {
-						redirect('');
-					}
 				}, 300);
 				return;
 			}
-			setIsLoggedIn(true);
 
 			let member: Member;
 			try {
 				member = await api.member(Number(memberID));
 			} catch (err) {
 				if (err instanceof NotFoundError) {
-					showError('The current logged in member does not exist anymore');
-					try {
-						await api.logout();
-					} catch (err) {
-						showError(err);
-						return;
-					}
+					handleError('The current logged in member does not exist anymore');
 					setTimeout(() => {
-						sessionStorage.removeItem('chichi-member');
-						setSelectedWorkspace(0);
-						setIsLoggedIn(false);
+						logout();
 						setIsLoadingState(false);
-						redirect('');
 					}, 300);
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setMember(transformMember(member));
-
-			if (selectedWorkspace === 0) {
-				// the user must choose a workspace.
-				setTimeout(() => {
-					setIsLoadingState(false);
-				}, 300);
-				return;
-			}
 
 			// if the user is logged in and has a selected workspace, but they
 			// are currently at the base path, redirect to the connections map
@@ -143,7 +135,7 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			try {
 				connections = await api.workspaces.connections.find();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			const transformedConnections: TransformedConnection[] = [];
@@ -184,7 +176,7 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 				if (err.code === 'NotConnected') {
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setWarehouse({
@@ -209,7 +201,7 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			try {
 				connections = await api.workspaces.connections.find();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			const transformedConnections: TransformedConnection[] = [];
@@ -255,7 +247,7 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 			try {
 				ws = await api.workspaces.list();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setWorkspaces(ws);
@@ -276,21 +268,12 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 				m = await api.member(member.ID);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
-					showError('The current logged in member does not exist anymore');
-					try {
-						await api.logout();
-					} catch (err) {
-						showError(err);
-						return;
-					}
-					sessionStorage.removeItem('chichi-member');
-					setSelectedWorkspace(0);
-					setIsLoggedIn(false);
+					handleError('The current logged in member does not exist anymore');
 					setIsLoadingMember(false);
-					redirect('');
+					logout();
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setMember(transformMember(m));
@@ -315,8 +298,6 @@ const useApp = (showError: (err: Error | string) => void, redirect: (url: string
 	return {
 		isLoadingState,
 		setIsLoadingState,
-		isLoggedIn,
-		setIsLoggedIn,
 		member,
 		setIsLoadingMember,
 		connectors,

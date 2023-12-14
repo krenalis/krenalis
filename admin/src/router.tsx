@@ -1,6 +1,8 @@
 import React from 'react';
 import { adminBasePath } from './constants/path';
 import App from './App';
+import AppLayout from './components/routes/AppLayout/AppLayout';
+import Login from './components/routes/Login/Login';
 import ConnectorsList from './components/routes/ConnectorsList/ConnectorsList';
 import ConnectorSettings from './components/routes/ConnectorSettings/ConnectorSettings';
 import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
@@ -27,6 +29,7 @@ import Settings from './components/routes/Settings/Settings';
 import Members from './components/routes/Members/Members';
 import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
+import Workspaces from './components/routes/Workspaces/Workspaces';
 
 const router = createBrowserRouter([
 	{
@@ -34,78 +37,85 @@ const router = createBrowserRouter([
 		element: <App />,
 		errorElement: <RootError />,
 		children: [
-			{ path: 'connectors/:id', element: <ConnectorSettings /> },
-			{ path: 'connectors', element: <ConnectorsList /> },
-			{ path: 'connections/sources', element: <ConnectionsList /> },
-			{ path: 'connections/destinations', element: <ConnectionsList /> },
+			{ path: '', element: <Login /> },
+			{ path: 'workspaces', element: <Workspaces /> },
 			{
-				element: <ConnectionProvider />,
+				element: <AppLayout />,
 				children: [
+					{ path: 'connectors/:id', element: <ConnectorSettings /> },
+					{ path: 'connectors', element: <ConnectorsList /> },
+					{ path: 'connections/sources', element: <ConnectionsList /> },
+					{ path: 'connections/destinations', element: <ConnectionsList /> },
 					{
-						path: 'connections/:id',
-						element: <ConnectionWrapper />,
+						element: <ConnectionProvider />,
 						children: [
 							{
-								path: 'actions',
-								element: <ConnectionActions />,
+								path: 'connections/:id',
+								element: <ConnectionWrapper />,
 								children: [
-									{ path: 'edit/:action', element: <ActionWrapper /> },
-									{ path: 'add/event/:eventType', element: <ActionWrapper /> },
-									{ path: 'add/event', element: <ActionWrapper /> },
-									{ path: 'add/:actionTarget', element: <ActionWrapper /> },
+									{
+										path: 'actions',
+										element: <ConnectionActions />,
+										children: [
+											{ path: 'edit/:action', element: <ActionWrapper /> },
+											{ path: 'add/event/:eventType', element: <ActionWrapper /> },
+											{ path: 'add/event', element: <ActionWrapper /> },
+											{ path: 'add/:actionTarget', element: <ActionWrapper /> },
+										],
+									},
+									{ path: 'overview', element: <ConnectionOverview /> },
+									{ path: 'events', element: <ConnectionEvents /> },
+									{ path: 'settings', element: <ConnectionSettings /> },
 								],
 							},
-							{ path: 'overview', element: <ConnectionOverview /> },
-							{ path: 'events', element: <ConnectionEvents /> },
-							{ path: 'settings', element: <ConnectionSettings /> },
 						],
 					},
-				],
-			},
-			{ path: 'connections', element: <ConnectionsMap /> },
-			{ path: 'oauth/authorize', element: <OAuth /> },
-			{
-				element: <UsersWrapper />,
-				children: [
-					{ path: 'users/:id', element: <User /> },
-					{ path: 'users', element: <UsersList /> },
-				],
-			},
-			{
-				path: 'schema',
-				element: <Schema />,
-			},
-			{
-				path: 'settings',
-				element: <Settings />,
-				children: [
+					{ path: 'connections', element: <ConnectionsMap /> },
+					{ path: 'oauth/authorize', element: <OAuth /> },
 					{
-						path: 'general',
-						element: <GeneralSettings />,
+						element: <UsersWrapper />,
+						children: [
+							{ path: 'users/:id', element: <User /> },
+							{ path: 'users', element: <UsersList /> },
+						],
 					},
 					{
-						path: 'identifiers',
-						element: <Identifiers />,
+						path: 'schema',
+						element: <Schema />,
 					},
 					{
-						path: 'data-warehouse',
-						element: <DataWarehouse />,
+						path: 'settings',
+						element: <Settings />,
+						children: [
+							{
+								path: 'general',
+								element: <GeneralSettings />,
+							},
+							{
+								path: 'identifiers',
+								element: <Identifiers />,
+							},
+							{
+								path: 'data-warehouse',
+								element: <DataWarehouse />,
+							},
+						],
 					},
+					{
+						path: 'organization',
+						element: <Organization />,
+					},
+					{
+						path: 'members/:id',
+						element: <Member />,
+					},
+					{
+						path: 'members',
+						element: <Members />,
+					},
+					{ path: '*', element: <NotFound /> },
 				],
 			},
-			{
-				path: 'organization',
-				element: <Organization />,
-			},
-			{
-				path: 'members/:id',
-				element: <Member />,
-			},
-			{
-				path: 'members',
-				element: <Members />,
-			},
-			{ path: '*', element: <NotFound /> },
 		],
 	},
 ]);

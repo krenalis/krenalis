@@ -27,7 +27,7 @@ const ConnectionOverview = () => {
 	const [selectedExecution, setSelectedExecution] = useState<Execution>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { api, showStatus, showError, redirect } = useContext(AppContext);
+	const { api, showStatus, handleError, redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
 	useEffect(() => {
@@ -53,7 +53,7 @@ const ConnectionOverview = () => {
 					stopLoading();
 					return;
 				}
-				showError(err);
+				handleError(err);
 				stopLoading();
 				return;
 			}
@@ -73,7 +73,7 @@ const ConnectionOverview = () => {
 			try {
 				executions = await api.workspaces.connections.executions(c.id);
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				stopLoading();
 				return;
 			}

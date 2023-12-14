@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError, UnprocessableError } from './errors';
+import { NotFoundError, BadRequestError, UnprocessableError, LoginRequiredError } from './errors';
 
 const call = async (url: string, method: string, body?: any) => {
 	const request: RequestInit = {
@@ -28,7 +28,11 @@ const call = async (url: string, method: string, body?: any) => {
 				} else if (res.status === 404) {
 					throw new NotFoundError(message);
 				} else if (res.status === 422) {
-					throw new UnprocessableError(code, message, cause);
+					if (code === 'LoginRequired') {
+						throw new LoginRequiredError();
+					} else {
+						throw new UnprocessableError(code, message, cause);
+					}
 				}
 				break;
 			default:

@@ -58,11 +58,11 @@ class API {
 	}
 
 	login = async (email: string, password: string): Promise<[number, string]> => {
-		return await call(`${adminBasePath}`, http.POST, { email, password });
+		return await call(`${this.apiURL}/members/login`, http.POST, { email, password });
 	};
 
 	logout = async (): Promise<void> => {
-		return await call(`${adminBasePath}logout`, http.POST);
+		return await call(`${this.apiURL}/members/logout`, http.POST);
 	};
 
 	eventsSchema = async (): Promise<ObjectType> => {

@@ -9,7 +9,6 @@ package admin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -18,31 +17,19 @@ import (
 	"strings"
 
 	"chichi/apis"
-	"chichi/apis/errors"
 	"chichi/telemetry"
 
 	"github.com/evanw/esbuild/pkg/api"
-	"github.com/gorilla/securecookie"
 )
 
-// sessionMaxAge contains the max age property for the session cookie (6 hours).
-const sessionMaxAge = 6 * 60 * 60
-
 type admin struct {
-	apis         *apis.APIs
-	secureCookie *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+	apis *apis.APIs
 }
 
-func New(apis *apis.APIs, sessionKey []byte) *admin {
+func New(apis *apis.APIs) *admin {
 	a := &admin{
 		apis: apis,
 	}
-	if len(sessionKey) != 64 {
-		panic("sessionKey is not 64 bytes long")
-	}
-	hashKey, blockKey := sessionKey[:32], sessionKey[32:]
-	a.secureCookie = securecookie.New(hashKey, blockKey)
-	a.secureCookie.MaxAge(sessionMaxAge)
 	return a
 }
 
@@ -53,52 +40,9 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	telemetry.IncrementCounter(ctx, "admin.ServeHTTP", 1)
 
-	rpath := r.URL.Path[6:]
-
-	if rpath == "/logout" && r.Method == "POST" {
-		admin.logout(w, r)
-		return
-	}
-
-	// handle requests to login page.
-	if rpath == "/" {
-		if r.Method == "POST" {
-			admin.login(w, r)
-			return
-		}
-		http.ServeFile(w, r, "./admin/public/index.html")
-		return
-	}
-
-	// check the session cookie.
-	var isLoggedIn bool
-	session := admin.getSession(r)
-	if session == nil {
-		isLoggedIn = false
-	} else {
-		organization, err := admin.apis.Organization(ctx, 1)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			slog.Error("cannot retrieve organization", "err", err)
-			return
-		}
-		_, err = organization.Member(ctx, session.Member)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			slog.Error("cannot retrieve member", "err", err)
-			return
-		}
-		isLoggedIn = true
-		_ = admin.storeSession(session, w)
-	}
-
-	if strings.HasPrefix(rpath, "/src/") {
+	if strings.HasPrefix(r.URL.Path[6:], "/src/") {
 		admin.serveWithESBuild(ctx, w, r)
 		return
-	}
-
-	if !isLoggedIn {
-		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
 	}
 
 	http.ServeFile(w, r, "./admin/public/index.html")
@@ -165,62 +109,4 @@ func (admin *admin) serveWithESBuild(ctx context.Context, w http.ResponseWriter,
 		}
 	}
 	http.NotFound(w, r)
-}
-
-func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
-	loginData := struct {
-		Email    string
-		Password string
-	}{}
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&loginData)
-	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-
-	enc := json.NewEncoder(w)
-	organization, err := admin.apis.Organization(r.Context(), 1)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		slog.Error("cannot read organization", "err", err)
-		return
-	}
-	memberID, err := organization.AuthenticateMember(r.Context(), loginData.Email, loginData.Password)
-	if err != nil {
-		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.AuthenticationFailed {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			enc.Encode([]any{0, "AuthenticationFailed"})
-			return
-		}
-		if err, ok := err.(errors.ResponseWriterTo); ok {
-			_ = err.WriteTo(w)
-			return
-		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		slog.Error("cannot log member", "err", err)
-		return
-	}
-
-	err = admin.addSession(organization.ID, w, r)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		slog.Error("cannot add session", "err", err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	enc.Encode([]any{memberID, nil})
-}
-
-// logout logs the user out from the admin.
-func (admin *admin) logout(res http.ResponseWriter, req *http.Request) {
-	// Remove the session cookie (settings its MaxAge property to -1).
-	err := admin.removeSession(res, req)
-	if err != nil {
-		http.Error(res, "Internal Server Error", http.StatusInternalServerError)
-		slog.Error("cannot log out member", "err", err)
-		return
-	}
 }

@@ -1,21 +1,30 @@
-import React, { FormEvent, useState } from 'react';
+import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
-import API from '../../../lib/api/api';
-import { Status } from '../../../types/internal/app';
+import AppContext from '../../../context/AppContext';
 
-interface LoginProps {
-	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
-	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
-	api: API;
-	showStatus: (status: Status) => void;
-	showError: (err: Error | string) => void;
-}
-
-const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError }: LoginProps) => {
+const Login = () => {
 	const [email, setEmail] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
+
+	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout } = useContext(AppContext);
+
+	useEffect(() => {
+		const removeCookieAndLogout = async () => {
+			try {
+				// remove the session cookie.
+				await api.logout();
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			// ensure user is logged out even when they navigate to this route
+			// via the back/forward button of the browser.
+			logout();
+		};
+		removeCookieAndLogout();
+	}, []);
 
 	const onLogin = async (e: FormEvent) => {
 		e.preventDefault();
@@ -26,7 +35,7 @@ const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError }:
 			[memberID, authError] = await api.login(email, password);
 		} catch (err) {
 			setIsLoading(false);
-			showError(err);
+			handleError(err);
 			return;
 		}
 		if (authError) {
@@ -35,11 +44,12 @@ const Login = ({ setIsLoggedIn, setIsLoadingState, api, showStatus, showError }:
 				showStatus({ variant: 'danger', icon: 'lock', text: 'Your email or password are incorrect' });
 				return;
 			}
+			return;
 		}
 		sessionStorage.setItem('chichi-member', String(memberID));
+		setIsLoggedIn(true);
 		setIsLoading(false);
 		setIsLoadingState(true);
-		setIsLoggedIn(true);
 	};
 
 	const onEmailChange = (e) => {

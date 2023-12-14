@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
 import Toast from './components/shared/Toast/Toast';
-import Sidebar from './components/layout/Sidebar/Sidebar';
-import Header from './components/layout/Header/Header';
-import Login from './components/routes/Login/Login';
-import Workspaces from './components/routes/Workspaces/Workspaces';
 import * as variants from './constants/variants';
 import * as icons from './constants/icons';
 import { Status } from './types/internal/app';
@@ -18,6 +14,7 @@ import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './hooks/useApp';
+import { LoginRequiredError } from './lib/api/errors';
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/dist/');
 
@@ -25,6 +22,7 @@ const App = () => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
+	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
 
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
@@ -39,7 +37,17 @@ const App = () => {
 		}, 300);
 	};
 
-	const showError = (err: Error | string) => {
+	const logout = () => {
+		setSelectedWorkspace(0);
+		sessionStorage.removeItem('chichi-member');
+		setIsLoggedIn(false);
+	};
+
+	const handleError = (err: Error | string) => {
+		if (err instanceof LoginRequiredError) {
+			logout();
+			return;
+		}
 		if (toastRef.current == null) return;
 		toastRef.current.hide();
 		setTimeout(() => {
@@ -71,8 +79,6 @@ const App = () => {
 	const {
 		isLoadingState,
 		setIsLoadingState,
-		isLoggedIn,
-		setIsLoggedIn,
 		member,
 		setIsLoadingMember,
 		connectors,
@@ -84,7 +90,13 @@ const App = () => {
 		selectedWorkspace,
 		setSelectedWorkspace,
 		api,
-	} = useApp(showError, redirect, location);
+	} = useApp(handleError, redirect, logout, location);
+
+	useEffect(() => {
+		if (!isLoggedIn && location.pathname !== adminBasePath) {
+			redirect('');
+		}
+	}, [isLoggedIn, location]);
 
 	useEffect(() => {
 		// Determine whether the current route spans the entire viewport or
@@ -105,7 +117,7 @@ const App = () => {
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (isLoadingState) {
+	if (isLoadingState || (!isLoggedIn && location.pathname !== adminBasePath)) {
 		content = (
 			<SlSpinner
 				className='globalSpinner'
@@ -117,64 +129,35 @@ const App = () => {
 				}
 			/>
 		);
-	} else if (isLoggedIn) {
-		if (selectedWorkspace === 0) {
-			content = (
-				<Workspaces
-					setSelectedWorkspace={setSelectedWorkspace}
-					workspaces={workspaces}
-					api={api}
-					showError={showError}
-					redirect={redirect}
-					setIsLoadingState={setIsLoadingState}
-				/>
-			);
-		} else {
-			content = (
-				<AppContext.Provider
-					value={{
-						api,
-						showError,
-						showStatus,
-						showNotFound,
-						redirect,
-						setTitle,
-						member,
-						setIsLoadingMember,
-						workspaces,
-						setIsLoadingWorkspaces,
-						warehouse,
-						selectedWorkspace,
-						setSelectedWorkspace,
-						connectors,
-						connections,
-						setIsLoadingConnections,
-						setIsLoadingState,
-						isFullscreen,
-					}}
-				>
-					<div className='app'>
-						<Sidebar
-							workspaces={workspaces}
-							warehouse={warehouse}
-							selectedWorkspace={selectedWorkspace}
-							setSelectedWorkspace={setSelectedWorkspace}
-						/>
-						<Header title={title} member={member} />
-						<Outlet />
-					</div>
-				</AppContext.Provider>
-			);
-		}
 	} else {
 		content = (
-			<Login
-				setIsLoggedIn={setIsLoggedIn}
-				setIsLoadingState={setIsLoadingState}
-				api={api}
-				showStatus={showStatus}
-				showError={showError}
-			/>
+			<AppContext.Provider
+				value={{
+					api,
+					handleError,
+					showStatus,
+					showNotFound,
+					redirect,
+					setTitle,
+					member,
+					setIsLoadingMember,
+					workspaces,
+					setIsLoadingWorkspaces,
+					warehouse,
+					selectedWorkspace,
+					setSelectedWorkspace,
+					connectors,
+					connections,
+					setIsLoadingConnections,
+					setIsLoadingState,
+					isFullscreen,
+					title,
+					logout,
+					setIsLoggedIn,
+				}}
+			>
+				<Outlet />
+			</AppContext.Provider>
 		);
 	}
 

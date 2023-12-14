@@ -30,7 +30,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, showError, showStatus, redirect, setIsLoadingConnections, connections } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect, setIsLoadingConnections, connections } = useContext(AppContext);
 
 	const onNameChange = async (e) => {
 		const value = e.target.value;
@@ -78,7 +78,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				showStatus(statuses.connectionDoesNotExistAnymore);
 				return;
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 		setAskDeletionConfirmation(false);
@@ -92,7 +92,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			await api.workspaces.connections.set(connection.id, connectionToSet);
 		} catch (err) {
 			setTimeout(() => {
-				showError(err);
+				handleError(err);
 				setIsSaving(false);
 			}, 500);
 			return;

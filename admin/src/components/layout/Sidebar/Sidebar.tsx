@@ -63,18 +63,10 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
-	const { api, showError, redirect, connections, warehouse, setIsLoadingState } = useContext(AppContext);
+	const { redirect, connections, warehouse, setIsLoadingState, logout } = useContext(AppContext);
 
 	const onLogout = async () => {
-		try {
-			await api.logout();
-		} catch (err) {
-			showError(err);
-			return;
-		}
-		sessionStorage.removeItem('chichi-member');
-		setSelectedWorkspace(0);
-		setIsLoadingState(true);
+		logout();
 	};
 
 	const location = useLocation();
@@ -146,6 +138,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 						workspaces={workspaces}
 						selectedWorkspace={selectedWorkspace}
 						setIsLoadingState={setIsLoadingState}
+						redirect={redirect}
 					/>
 					{items}
 				</div>
@@ -165,6 +158,7 @@ interface WorkspaceSelectorProps {
 	workspaces: Workspace[];
 	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
+	redirect: (url: string) => void;
 }
 
 const WorkspaceSelector = ({
@@ -172,6 +166,7 @@ const WorkspaceSelector = ({
 	selectedWorkspace,
 	workspaces,
 	setIsLoadingState,
+	redirect,
 }: WorkspaceSelectorProps) => {
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [searchTerm, setSearchTerm] = useState<string>('');
@@ -194,6 +189,7 @@ const WorkspaceSelector = ({
 
 	const onViewAllWorkspaces = () => {
 		setSelectedWorkspace(0);
+		redirect('workspaces');
 	};
 
 	const onWorkspaceSelectorClick = (e) => {

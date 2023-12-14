@@ -20,7 +20,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	const [actions, setActions] = useState<ConnectorAction[]>([]);
 	const [values, setValues] = useState<UIValues>({});
 
-	const { api, showError, showStatus, redirect } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect } = useContext(AppContext);
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
@@ -40,13 +40,13 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 						console.error(
 							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`,
 						);
-						showError(
+						handleError(
 							'An unexpected error has occurred. Please contact the administrator for more information.',
 						);
 					}
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setFields(ui.Form.Fields);
@@ -91,13 +91,13 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
-					showError(
+					handleError(
 						'An unexpected error has occurred. Please contact the administrator for more information',
 					);
 				}
 				return;
 			}
-			showError(err);
+			handleError(err);
 			if (hasConfirmationButton) {
 				confirmationButton!.stop();
 			}

@@ -9,7 +9,7 @@ const Schema = () => {
 	const [properties, setProperties] = useState<Property[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { api, redirect, showError, setTitle, selectedWorkspace, warehouse } = useContext(AppContext);
+	const { api, redirect, handleError, setTitle, selectedWorkspace, warehouse } = useContext(AppContext);
 
 	useLayoutEffect(() => {
 		setTitle('Schema');
@@ -21,7 +21,7 @@ const Schema = () => {
 			try {
 				schema = await api.workspaces.userSchema();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setProperties(schema.properties);
@@ -29,7 +29,7 @@ const Schema = () => {
 		};
 		if (warehouse == null) {
 			redirect('settings');
-			showError('Please connect to a data warehouse before proceeding');
+			handleError('Please connect to a data warehouse before proceeding');
 			return;
 		}
 		fetchSchema();

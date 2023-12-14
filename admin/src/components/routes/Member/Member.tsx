@@ -21,7 +21,7 @@ const Member = () => {
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [error, setError] = useState<string>('');
 
-	const { api, member, showError, showStatus, setIsLoadingMember, setTitle, redirect } = useContext(appContext);
+	const { api, member, handleError, showStatus, setIsLoadingMember, setTitle, redirect } = useContext(appContext);
 
 	const fileInputRef = useRef<any>();
 
@@ -40,7 +40,7 @@ const Member = () => {
 				try {
 					member = await api.member(memberID);
 				} catch (err) {
-					showError(err);
+					handleError(err);
 					return;
 				}
 				setTitle(member.Name);
@@ -138,14 +138,14 @@ const Member = () => {
 					}, 300);
 				} else {
 					setTimeout(() => {
-						showError('This member does not exist anymore');
+						handleError('This member does not exist anymore');
 						redirect('members');
 					}, 300);
 				}
 			} else {
 				setTimeout(() => {
 					setIsSaving(false);
-					showError(err);
+					handleError(err);
 				}, 300);
 			}
 			return;

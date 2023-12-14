@@ -19,7 +19,7 @@ const DataWarehouse = () => {
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [hasError, setHasError] = useState<boolean>();
 
-	const { api, showError, selectedWorkspace } = useContext(appContext);
+	const { api, handleError, selectedWorkspace } = useContext(appContext);
 
 	useEffect(() => {
 		const fetchWarehouse = async () => {
@@ -34,7 +34,7 @@ const DataWarehouse = () => {
 					return;
 				}
 				setHasError(true);
-				showError(err);
+				handleError(err);
 			}
 		};
 		fetchWarehouse();
@@ -95,7 +95,7 @@ const WarehouseInfo = ({
 	const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState<boolean>(false);
 	const [isDisconnectButtonLoading, setIsDisconnectButtonLoading] = useState<boolean>(false);
 
-	const { api, showError, setIsLoadingState } = useContext(appContext);
+	const { api, handleError, setIsLoadingState } = useContext(appContext);
 
 	const warehouse = warehouses.find((w) => w.label === warehouseName)!;
 
@@ -125,7 +125,7 @@ const WarehouseInfo = ({
 			await api.workspaces.disconnectWarehouse();
 		} catch (err) {
 			setIsDisconnectButtonLoading(false);
-			showError(err);
+			handleError(err);
 			return;
 		}
 		setConnectedWarehouse(undefined);

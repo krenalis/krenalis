@@ -22,7 +22,7 @@ const GeneralSettings = () => {
 
 	const {
 		api,
-		showError,
+		handleError,
 		showStatus,
 		redirect,
 		workspaces,
@@ -51,7 +51,7 @@ const GeneralSettings = () => {
 		try {
 			await api.workspaces.update(name, privacyRegion);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 		}
 		showStatus({ variant: 'success', icon: icons.OK, text: 'Workspace updated succesfully' });
 		setIsLoadingWorkspaces(true);
@@ -87,14 +87,14 @@ const GeneralSettings = () => {
 			setTimeout(() => {
 				deleteButtonRef.current!.stop();
 				setIsDeleteConfirmationDialogOpen(false);
-				showError(err);
+				handleError(err);
 			}, CONFIRM_ANIMATION_DURATION);
 			return;
 		}
 		deleteButtonRef.current!.confirm();
 		setTimeout(() => {
-			setIsLoadingState(true);
 			setSelectedWorkspace(0);
+			setIsLoadingState(true);
 		}, CONFIRM_ANIMATION_DURATION);
 	};
 

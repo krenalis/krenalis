@@ -4,7 +4,7 @@
 // Copyright (c) 2021 Open2b
 //
 
-package admin
+package server
 
 import (
 	"net/http"
@@ -15,19 +15,22 @@ type sessionCookie struct {
 	Member int
 }
 
-const sessionCookieName = "admin"
+const (
+	sessionCookieName = "api"
+	sessionCookiePath = "/api/"
+)
 
-func (admin *admin) removeSession(w http.ResponseWriter, r *http.Request) error {
-	session := admin.getSession(r)
+func (s *apisServer) removeSession(w http.ResponseWriter, r *http.Request) {
+	session := s.getSession(r)
 	if session == nil {
-		return nil
+		return
 	}
 
 	// Remove the Go session.
 	c := &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    "",
-		Path:     "/admin",
+		Path:     sessionCookiePath,
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -40,33 +43,33 @@ func (admin *admin) removeSession(w http.ResponseWriter, r *http.Request) error 
 			for i, cookie := range cookies {
 				if strings.HasPrefix(cookie, prefix) {
 					cookies[i] = v + "; Priority=High"
-					return nil
+					return
 				}
 			}
 		}
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
-	return nil
+	return
 }
 
 // getSession returns the session cookie from the request. If the request has no
 // session cookie, returns nil.
-func (admin *admin) getSession(r *http.Request) *sessionCookie {
+func (s *apisServer) getSession(r *http.Request) *sessionCookie {
 	cookie, _ := r.Cookie(sessionCookieName)
 	if cookie == nil {
 		return nil
 	}
-	s := &sessionCookie{}
-	err := admin.secureCookie.Decode(sessionCookieName, cookie.Value, s)
+	sc := &sessionCookie{}
+	err := s.secureCookie.Decode(sessionCookieName, cookie.Value, sc)
 	if err != nil {
 		return nil
 	}
-	return s
+	return sc
 }
 
 // addSession creates the session and stores it inside the client.
-func (admin *admin) addSession(member int, w http.ResponseWriter, r *http.Request) error {
-	err := admin.storeSession(&sessionCookie{Member: member}, w)
+func (s *apisServer) addSession(member int, w http.ResponseWriter, r *http.Request) error {
+	err := s.storeSession(&sessionCookie{Member: member}, w)
 	if err != nil {
 		return err
 	}
@@ -74,15 +77,15 @@ func (admin *admin) addSession(member int, w http.ResponseWriter, r *http.Reques
 }
 
 // storeSession stores s in w.
-func (admin *admin) storeSession(s *sessionCookie, w http.ResponseWriter) error {
-	value, err := admin.secureCookie.Encode(sessionCookieName, s)
+func (s *apisServer) storeSession(sc *sessionCookie, w http.ResponseWriter) error {
+	value, err := s.secureCookie.Encode(sessionCookieName, sc)
 	if err != nil {
 		return err
 	}
 	c := &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    value,
-		Path:     "/admin",
+		Path:     sessionCookiePath,
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,

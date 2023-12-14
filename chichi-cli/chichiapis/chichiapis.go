@@ -13,12 +13,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 )
 
 var chichiAPIs struct {
 	url         string
 	workspaceID int
+	httpClient  *http.Client
 }
 
 var initialized bool
@@ -54,11 +56,28 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 		panic("package 'chichiapis' not initialized")
 	}
 
-	// Create an HTTP client which does not follow redirects.
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return errors.New("redirect")
-		},
+	// Get or initialize the HTTP client.
+	httpClient := chichiAPIs.httpClient
+	if httpClient == nil {
+		// Create an HTTP client which does not follow redirects and accepts cookies.
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			panic(fmt.Sprintf("cannot create a cookie jar: %s", err))
+		}
+		httpClient = &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return errors.New("redirect")
+			},
+			Jar: jar,
+		}
+		chichiAPIs.httpClient = httpClient
+		// Log in.
+		err = callAPI("POST", "api/members/login", strings.NewReader(`{"Email":"acme@open2b.com","Password":"foopass2"}`), nil)
+		if err != nil {
+			err = fmt.Errorf("cannot login: %s", err)
+			chichiAPIs.httpClient = nil
+			return err
+		}
 	}
 
 	// Call the APIs.
@@ -68,7 +87,7 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 		return err
 	}
 	req.Header.Set("X-Workspace", "1")
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot POST on %q: %s", url, err)
 	}

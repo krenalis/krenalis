@@ -68,7 +68,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 
-	const { api, showError, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 	const {
 		isMappingSectionDisabled,
@@ -90,7 +90,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			try {
 				response = await api.transformationLanguages();
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 			const languages = response.languages;
@@ -187,7 +187,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					action.Transformation.Mapping![name].full.nullable,
 				);
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 		}
@@ -738,7 +738,7 @@ const FullscreenTransformation = ({
 	const [outputError, setOutputError] = useState<string>('');
 	const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
-	const { showError, api, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { handleError, api, workspaces, selectedWorkspace } = useContext(AppContext);
 	const { action, actionType, connection } = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
@@ -763,7 +763,7 @@ const FullscreenTransformation = ({
 					try {
 						res = await api.workspaces.connections.records(connection.id, action.Path, action.Sheet, 20);
 					} catch (err) {
-						showError(err);
+						handleError(err);
 						return;
 					}
 					const smpls: Sample[] = [];
@@ -788,7 +788,7 @@ const FullscreenTransformation = ({
 					try {
 						res = await api.workspaces.connections.appUsers(connection.id, inputSchema);
 					} catch (err) {
-						showError(err);
+						handleError(err);
 						return;
 					}
 					const smpls: Sample[] = [];
@@ -813,7 +813,7 @@ const FullscreenTransformation = ({
 					try {
 						res = await api.workspaces.users.find(properties, null, 0, 20);
 					} catch (err) {
-						showError(err);
+						handleError(err);
 						return;
 					}
 					if (res.users.length === 0) {
@@ -951,7 +951,7 @@ const FullscreenTransformation = ({
 			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
 		} catch (err) {
 			setTimeout(() => {
-				showError(err);
+				handleError(err);
 				setIsExecuting(false);
 			}, 300);
 			return;
@@ -978,7 +978,7 @@ const FullscreenTransformation = ({
 				}, 300);
 			} else {
 				setTimeout(() => {
-					showError(err);
+					handleError(err);
 					setIsExecuting(false);
 				}, 300);
 			}
@@ -1003,7 +1003,7 @@ const FullscreenTransformation = ({
 			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
 		} catch (err) {
 			setTimeout(() => {
-				showError(err);
+				handleError(err);
 				setIsExecuting(false);
 			}, 300);
 			return;
@@ -1026,7 +1026,7 @@ const FullscreenTransformation = ({
 				}, 300);
 			} else {
 				setTimeout(() => {
-					showError(err);
+					handleError(err);
 					setIsExecuting(false);
 				}, 300);
 			}
@@ -1041,7 +1041,7 @@ const FullscreenTransformation = ({
 		try {
 			res = await api.workspaces.connections.query(connection.id, action.Query, 20);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			return;
 		}
 		const smpls: Sample[] = [];

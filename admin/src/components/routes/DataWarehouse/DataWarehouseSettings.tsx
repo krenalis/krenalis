@@ -24,7 +24,7 @@ const DataWarehouseSettings = ({
 	const [isPingLoading, setIsPingLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
-	const { setTitle, api, showError, showStatus, setIsLoadingState } = useContext(appContext);
+	const { setTitle, api, handleError, showStatus, setIsLoadingState } = useContext(appContext);
 
 	useLayoutEffect(() => {
 		setTitle(`${selectedWarehouse.label} settings`);
@@ -37,7 +37,7 @@ const DataWarehouseSettings = ({
 		try {
 			await api.workspaces.pingWarehouse(selectedWarehouse.label, settings);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			clearTimeout(timeout);
 			setIsPingLoading(false);
 			return;
@@ -56,7 +56,7 @@ const DataWarehouseSettings = ({
 		try {
 			await api.workspaces.connectWarehouse(selectedWarehouse.label, settings);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			setIsActionButtonLoading(false);
 			return;
 		}
@@ -72,7 +72,7 @@ const DataWarehouseSettings = ({
 		try {
 			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, settings);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			setIsActionButtonLoading(false);
 			return;
 		}

@@ -30,7 +30,7 @@ const ActionPath = () => {
 	const [filePreviewRows, setFilePreviewRows] = useState<GridRow[] | null>(null);
 	const [showFilePreviewContent, setShowFilePreviewContent] = useState<boolean>(false);
 
-	const { showStatus, showError, api, setIsLoadingConnections } = useContext(AppContext);
+	const { showStatus, handleError, api, setIsLoadingConnections } = useContext(AppContext);
 	const { connection, action, setAction, actionType, setActionType, isImport, mappingSectionRef, setIsFileChanged } =
 		useContext(ActionContext);
 
@@ -68,9 +68,9 @@ const ActionPath = () => {
 				res = await api.workspaces.connections.sheets(connection.id, action.Path!);
 			} catch (err) {
 				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
-					showError(err.message);
+					handleError(err.message);
 				} else {
-					showError(err);
+					handleError(err);
 				}
 				setHasSheetsError(true);
 				return;
@@ -120,7 +120,7 @@ const ActionPath = () => {
 					setIsLoadingConnections(true);
 					return;
 				}
-				showError(err);
+				handleError(err);
 				return;
 			}
 			setCompletePath(res.path);
@@ -157,9 +157,9 @@ const ActionPath = () => {
 		} catch (err) {
 			setTimeout(() => {
 				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
-					showError(err.message);
+					handleError(err.message);
 				} else {
-					showError(err);
+					handleError(err);
 				}
 				sheetsSelectRef.current.classList.remove('hideListbox');
 				setHasSheetsError(true);
@@ -191,11 +191,11 @@ const ActionPath = () => {
 
 	const onFilePreview = async () => {
 		if (actionType.Fields.includes('Path') && action.Path === '') {
-			showError('Please enter a path');
+			handleError('Please enter a path');
 			return;
 		}
 		if (actionType.Fields.includes('Sheet') && action.Sheet === '') {
-			showError('Please enter a sheet');
+			handleError('Please enter a sheet');
 			return;
 		}
 		const res = await records(action.Path!, action.Sheet, 20);
@@ -233,11 +233,11 @@ const ActionPath = () => {
 
 	const onConfirmFile = async () => {
 		if (actionType.Fields.includes('Path') && action.Path === '') {
-			showError('Please enter a path');
+			handleError('Please enter a path');
 			return;
 		}
 		if (actionType.Fields.includes('Sheet') && action.Sheet === '') {
-			showError('Please enter a sheet');
+			handleError('Please enter a sheet');
 			return;
 		}
 		fileConfirmButtonRef.current!.load();
@@ -281,11 +281,11 @@ const ActionPath = () => {
 						showStatus(statuses.linkedStorageDoesNotExistAnymore);
 						break;
 					default:
-						showError(err);
+						handleError(err);
 				}
 				return;
 			}
-			showError(err);
+			handleError(err);
 			return;
 		}
 		if (isConfirmation) {

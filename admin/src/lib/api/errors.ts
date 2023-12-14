@@ -30,4 +30,11 @@ class UnprocessableError extends Error {
 	}
 }
 
-export { NotFoundError, BadRequestError, UnprocessableError };
+class LoginRequiredError extends Error {
+	constructor() {
+		super();
+		this.name = 'LoginRequiredError';
+	}
+}
+
+export { NotFoundError, BadRequestError, UnprocessableError, LoginRequiredError };

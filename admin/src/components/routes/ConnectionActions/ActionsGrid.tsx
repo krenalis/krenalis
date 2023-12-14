@@ -30,7 +30,7 @@ interface ActionsGridProps {
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
 	const [runningActions, setRunningActions] = useState<number[]>([]);
-	const { api, showError, setIsLoadingConnections, redirect } = useContext(AppContext);
+	const { api, handleError, setIsLoadingConnections, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const runButtonRefs = useRef<{
@@ -59,7 +59,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		try {
 			await api.workspaces.connections.setActionStatus(connection.id, actionID, !enabledValue);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			return;
 		}
 		setIsLoadingConnections(true);
@@ -70,7 +70,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		try {
 			await api.workspaces.connections.deleteAction(connection.id, actionID);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			return;
 		}
 		setIsLoadingConnections(true);
@@ -106,7 +106,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				return;
 			}
 			runButtonRefs.current[actionID].current!.stop();
-			showError(err);
+			handleError(err);
 			return;
 		}
 
@@ -116,7 +116,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			try {
 				executions = await api.workspaces.connections.executions(connection.id);
 			} catch (err) {
-				showError(err);
+				handleError(err);
 				return;
 			}
 
@@ -156,7 +156,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		try {
 			await api.workspaces.connections.setActionSchedulePeriod(connection.id, actionID, period);
 		} catch (err) {
-			showError(err);
+			handleError(err);
 			return;
 		}
 		setIsLoadingConnections(true);
