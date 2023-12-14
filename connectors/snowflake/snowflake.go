@@ -140,8 +140,9 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // Upsert creates or updates the provided rows in the specified table.
 // The columns parameter specifies the columns of the rows, including a column
-// named "id" that serves as the table's key.
-func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, columns []types.Property) error {
+// named "id" that serves as the table's key. If a column's value is not
+// specified in a row, the default column value is used.
+func (c *connection) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 	return errors.New("not implemented")
 }
 

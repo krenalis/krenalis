@@ -34,18 +34,18 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	inSchemaProps := this.action.InSchema.Properties()
 	outSchemaProps := this.action.OutSchema.Properties()
 
-	var rows [][]any
+	var rows []map[string]any
 
 	for _, user := range users {
 
 		// Take only the necessary properties.
-		props := make(map[string]any, len(inSchemaProps))
+		row := make(map[string]any, len(inSchemaProps))
 		for _, p := range inSchemaProps {
-			props[p.Name] = user.Properties[p.Name]
+			row[p.Name] = user.Properties[p.Name]
 		}
 
 		// Transform the user.
-		props, err = transformer.Transform(ctx, props)
+		row, err = transformer.Transform(ctx, row)
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return actionExecutionError{err}
@@ -53,14 +53,11 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 			return err
 		}
 
-		// Serialize the props into column values.
-		warehouses.SerializeRow(props, this.action.OutSchema)
-		row := make([]any, len(outSchemaProps)+1)
-		row[0] = user.ID
-		for i, p := range outSchemaProps {
-			row[i+1] = props[p.Name]
-		}
+		// Serialize the properties as columns.
+		warehouses.SerializeRow(row, this.action.OutSchema)
+		row["id"] = user.ID
 		rows = append(rows, row)
+
 	}
 
 	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}},

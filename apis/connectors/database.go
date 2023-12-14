@@ -142,8 +142,9 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 
 // Upsert creates or updates the provided rows in the specified table.
 // The columns parameter specifies the columns of the rows, including a column
-// named "id" that serves as the table's key.
-func (database *Database) Upsert(ctx context.Context, table string, rows [][]any, columns []types.Property) error {
+// named "id" that serves as the table's key. If a column's value is not
+// specified in a row, the default column value is used.
+func (database *Database) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 	if database.err != nil {
 		return database.err
 	}
