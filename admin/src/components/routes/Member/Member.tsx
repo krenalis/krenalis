@@ -8,7 +8,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useParams } from 'react-router-dom';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
-import { MemberAvatar, Member as MemberInterface, MemberToSet } from '../../../types/external/api';
+import { MemberAvatar, MemberToSet } from '../../../types/external/api';
 import { toBase64 } from '../../../lib/utils/toBase64';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberToSet } from '../../../lib/helpers/transformedMember';
@@ -28,36 +28,16 @@ const Member = () => {
 	const { id } = useParams();
 
 	useEffect(() => {
-		const fetchMember = async () => {
-			const memberID = Number(id);
-			if (memberID === member.ID) {
-				setTitle(member.Name);
-				setAvatar(member.Avatar);
-				setName(member.Name);
-				setEmail(member.Email);
-			} else {
-				let member: MemberInterface;
-				try {
-					member = await api.member(memberID);
-				} catch (err) {
-					handleError(err);
-					return;
-				}
-				setTitle(member.Name);
-				setAvatar(member.Avatar);
-				setName(member.Name);
-				setEmail(member.Email);
-			}
-		};
-
 		const isLoggedMember = Number(id) === member.ID;
 		if (!isLoggedMember) {
 			// Members can only edit themselves.
 			redirect('members');
 			return;
 		}
-
-		fetchMember();
+		setTitle(member.Name);
+		setAvatar(member.Avatar);
+		setName(member.Name);
+		setEmail(member.Email);
 	}, []);
 
 	const onUpdateAvatar = async (e) => {
@@ -139,16 +119,9 @@ const Member = () => {
 					setError(err.message);
 				}, 300);
 			} else if (err instanceof NotFoundError) {
-				if (Number(id) === member.ID) {
-					setTimeout(() => {
-						setIsLoadingMember(true);
-					}, 300);
-				} else {
-					setTimeout(() => {
-						handleError('This member does not exist anymore');
-						redirect('members');
-					}, 300);
-				}
+				setTimeout(() => {
+					setIsLoadingMember(true);
+				}, 300);
 			} else {
 				setTimeout(() => {
 					setIsSaving(false);
@@ -161,6 +134,7 @@ const Member = () => {
 			setIsSaving(false);
 			setIsLoadingMember(true);
 			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Member information saved succesfully' });
+			redirect('members');
 		}, 300);
 	};
 
