@@ -230,14 +230,14 @@ func TestActionsCreation(t *testing.T) {
 			case test.err == "" && err == nil:
 				// Ok.
 			case test.err == "" && err != nil:
-				t.Fatalf("expecting no errors, got err: %s", err)
+				t.Fatalf("expecting no errors, got err: %q", err)
 			case test.err != "" && err == nil:
 				t.Fatalf("expecting error %q, got no errors", test.err)
 			case test.err != "" && err != nil:
 				if test.err == err.Error() {
 					// Ok.
 				} else {
-					t.Fatalf("expecting error %q, got: %s", test.err, err)
+					t.Fatalf("expecting error %q, got: %q", test.err, err)
 				}
 			}
 		})
