@@ -328,7 +328,7 @@ const ActionPath = () => {
 							className='sheetsSelect'
 							ref={sheetsSelectRef}
 							name='sheet'
-							value={action.Sheet == null ? undefined : action.Sheet}
+							value={action.Sheet == null ? undefined : action.Sheet.toLowerCase()}
 							label='Sheet'
 							onSlChange={onUpdateSheet}
 							disabled={
