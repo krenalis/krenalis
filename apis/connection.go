@@ -1905,13 +1905,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 	}
 	// Validate the sheet.
-	if action.Sheet != "" {
-		if !utf8.ValidString(action.Sheet) {
-			return errors.BadRequest("sheet is not UTF-8 encoded")
-		}
-		if n := utf8.RuneCountInString(action.Sheet); n > 100 {
-			return errors.BadRequest("sheet is longer than 100 runes")
-		}
+	if action.Sheet != "" && !connectors.IsValidSheetName(action.Sheet) {
+		return errors.BadRequest("sheet name is not valid")
 	}
 	// Validate the export options.
 	if action.ExportMode != nil {

@@ -120,7 +120,7 @@ CREATE TABLE actions (
     query text NOT NULL DEFAULT '',
     path varchar(1024) NOT NULL DEFAULT '',
     table_name varchar(1024) NOT NULL DEFAULT '',
-    sheet varchar(100) NOT NULL DEFAULT '',
+    sheet varchar(31) NOT NULL DEFAULT '',
     identity_column varchar(1024) NOT NULL DEFAULT '',
     timestamp_column varchar(1024) NOT NULL DEFAULT '',
     timestamp_format varchar(64) NOT NULL DEFAULT '',

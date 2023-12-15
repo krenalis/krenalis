@@ -19,9 +19,11 @@ import (
 	"math"
 	"os"
 	pathPkg "path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -81,9 +83,12 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // the columns and the records. name must be UTF-8 encoded with a length in
 // range [1, 1024].
 //
-// If the file connection supports multiple sheets, sheet is the
-// sheet name and must be UTF-8 encoded with a length in range [1, 100],
-// otherwise must be an empty string. limit restricts the number of records to
+// If the file connection supports multiple sheets, sheet is a valid sheet name;
+// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
+// has a length in the range [1, 31], does not start or end with "'", and does
+// not contain any of "*", "/", ":", "?", "[", "\", and "`".
+//
+// limit restricts the number of records to
 // return and should not exceed 100. If limit is negative, there is no upper
 // limit on the number of records returned.
 //
@@ -178,6 +183,12 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 	}
 	if err = r.Close(); err != nil {
 		return nil, err
+	}
+	sheets = slices.DeleteFunc(sheets, func(name string) bool {
+		return !IsValidSheetName(name)
+	})
+	if len(sheets) == 0 {
+		return nil, errors.New("file does not contain any valid sheet names")
 	}
 	return sheets, nil
 }
@@ -594,6 +605,24 @@ func (rw *recordWriter) RecordString(record []string) error {
 		return errRecordStop
 	}
 	return nil
+}
+
+// IsValidSheetName reports whether name is a valid sheet name.
+func IsValidSheetName(name string) bool {
+	const maxLength = 31
+	if !utf8.ValidString(name) {
+		return false
+	}
+	if length := utf8.RuneCountInString(name); length < 1 || length > maxLength {
+		return false
+	}
+	if name[0] == '\'' || name[len(name)-1] == '\'' {
+		return false
+	}
+	if strings.ContainsAny(name, `*/:?[\]`) {
+		return false
+	}
+	return true
 }
 
 // parseIdentityColumn parses an identity column value.
