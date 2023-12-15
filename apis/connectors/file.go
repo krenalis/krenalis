@@ -128,6 +128,11 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // Records returns an iterator to iterate over the records, conforming to
 // the provided schema, of the file at the provided path name.
 //
+// If the file connection supports multiple sheets, sheet is a valid sheet name;
+// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
+// has a length in the range [1, 31], does not start or end with "'", and does
+// not contain any of "*", "/", ":", "?", "[", "\", and "`".
+//
 // If the file does not have a storage, it returns the ErrNoStorage error. If
 // the file has no columns, it returns the ErrNoColumns error. If the provided
 // schema, that must be valid, does not conform with the file's schema, it
