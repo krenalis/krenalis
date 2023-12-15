@@ -220,6 +220,10 @@ func (c *connection) Write(ctx context.Context, w io.Writer, sheet string, recor
 
 	f := excelize.NewFile()
 	defer f.Close()
+	err := f.SetSheetName("Sheet1", sheet)
+	if err != nil {
+		return err
+	}
 	sw, err := f.NewStreamWriter(sheet)
 	if err != nil {
 		return err
