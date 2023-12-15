@@ -86,7 +86,8 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
 // has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "`".
+// not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
+// case-insensitive.
 //
 // limit restricts the number of records to
 // return and should not exceed 100. If limit is negative, there is no upper
@@ -131,7 +132,8 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
 // has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "`".
+// not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
+// // case-insensitive.
 //
 // If the file does not have a storage, it returns the ErrNoStorage error. If
 // the file has no columns, it returns the ErrNoColumns error. If the provided
@@ -164,9 +166,9 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	return records, nil
 }
 
-// Sheets returns the sheets of the file with the provided name. It returns the
-// ErrNoStorage error if the file does not have a storage.
-// It panics if the file connector does not support sheets.
+// Sheets returns the sheets of the file with the provided name. Sheet names are
+// case-insensitive. It returns the ErrNoStorage error if the file does not have
+// a storage. It panics if the file connector does not support sheets.
 func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -204,7 +206,8 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
 // has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "`".
+// not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
+// case-insensitive.
 //
 // It returns the ErrNoStorage error if the file does not have a storage.
 func (file *File) Write(ctx context.Context, name, sheet string, columns []types.Property, records [][]any) error {

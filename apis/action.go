@@ -619,7 +619,8 @@ type ActionToSet struct {
 	// Sheet is the sheet name for multiple sheets file actions. It must be UTF-8
 	// encoded, have a length in the range [1, 31], should not start or end with
 	// "'", and cannot contain any of "*", "/", ":", "?", "[", "\", and "`". It is
-	// empty for non-file and non-multipart sheets actions.
+	// empty for non-file and non-multipart sheets actions. Sheet names are
+	// case-insensitive.
 	Sheet string
 
 	// IdentityColumn is the column name used as identity in source file
