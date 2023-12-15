@@ -135,6 +135,15 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
 // // case-insensitive.
 //
+// identityColumn is the name of the column to use as an identity. schema must
+// have a property with this name, and if the kind of the file's column is
+// different from the type of this property, the iterator returns an error.
+//
+// timestampColumn contains the name and format of the column to use as a
+// timestamp, if any. If the name is not empty, schema must have a property with
+// this name, and if the kind of the file's column is different from the type of
+// this property, the iterator returns an error.
+//
 // If the file does not have a storage, it returns the ErrNoStorage error. If
 // the file has no columns, it returns the ErrNoColumns error. If the provided
 // schema, that must be valid, does not conform with the file's schema, it
@@ -348,9 +357,17 @@ func newRecordWriter(connector int, schema types.Type, identityColumn string, ti
 		textColumnsOnly: true,
 		records:         []map[string]any{},
 	}
-	rw.identityColumn.name = identityColumn
-	rw.timestampColumn.name = timestamp.Name
-	rw.timestampColumn.format = timestamp.Format
+	if identityColumn != "" {
+		rw.identityColumn.name = identityColumn
+		typ, _ := schema.Property(identityColumn)
+		rw.identityColumn.typ = typ.Type
+	}
+	if timestamp.Name != "" {
+		rw.timestampColumn.name = timestamp.Name
+		typ, _ := schema.Property(timestamp.Name)
+		rw.timestampColumn.typ = typ.Type
+		rw.timestampColumn.format = timestamp.Format
+	}
 	return &rw
 }
 
@@ -406,10 +423,8 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if !ok {
 			return fmt.Errorf("there is no identity column %q", name)
 		}
-		switch k := c.Type.Kind(); k {
-		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
-		default:
-			return fmt.Errorf("identity column %q has type %s instead of Int, Uint, UUID, JSON, or Text", c.Name, k)
+		if typ := rw.identityColumn.typ; c.Type.Kind() != typ.Kind() {
+			return fmt.Errorf("identity column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
 		}
 		rw.identityColumn.typ = c.Type
 		rw.identityColumn.index = columnIndex[c.Name]
@@ -420,10 +435,8 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if !ok {
 			return fmt.Errorf("there is no timestamp column %q", name)
 		}
-		switch k := c.Type.Kind(); k {
-		case types.DateTimeKind, types.DateKind, types.JSONKind, types.TextKind:
-		default:
-			return fmt.Errorf("timestamp column %q has type %s instead of DateTime, Date, JSON, or Text", c.Name, k)
+		if typ := rw.timestampColumn.typ; c.Type.Kind() != typ.Kind() {
+			return fmt.Errorf("timestamp column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
 		}
 		rw.timestampColumn.typ = c.Type
 		rw.timestampColumn.index = columnIndex[c.Name]
