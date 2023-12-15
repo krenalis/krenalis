@@ -246,6 +246,7 @@ const transformInActionToSet = async (
 	actionType: TransformedActionType,
 	api: API,
 	anonymousIdentifiers: AnonymousIdentifiers,
+	connection: TransformedConnection,
 ): Promise<ActionToSet> => {
 	let mapping: Mapping;
 	let inSchema: ObjectType;
@@ -314,6 +315,26 @@ const transformInActionToSet = async (
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
 		};
+	}
+
+	if (connection.isSource && connection.isDatabase && actionType.Target === 'Users') {
+		const idProperty = actionType.InputSchema.properties.find((property) => property.name === 'id');
+		if (idProperty == null) {
+			throw 'Schema must contain the "id" property';
+		} else {
+			const isIDPropertyAlreadyInSchema = inSchema.properties.findIndex((p) => p.name === 'id') !== -1;
+			if (!isIDPropertyAlreadyInSchema) {
+				inSchema.properties.push(idProperty);
+			}
+		}
+		const timestampProperty = actionType.InputSchema.properties.find((property) => property.name === 'timestamp');
+		if (timestampProperty != null) {
+			const isTimestampPropertyAlreadyInSchema =
+				inSchema.properties.findIndex((p) => p.name === 'timestamp') !== -1;
+			if (!isTimestampPropertyAlreadyInSchema) {
+				inSchema.properties.push(timestampProperty);
+			}
+		}
 	}
 
 	if (action.MatchingProperties != null) {

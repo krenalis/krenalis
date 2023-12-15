@@ -2084,6 +2084,30 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 	}
 
+	// When importing from databases, check if the "id" and (eventually) the
+	// "timestamp" columns are defined and have a correct type.
+	if connector.Type == state.DatabaseType && c.Role == state.Source {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema must be valid")
+		}
+		// Validate the identity column "id".
+		id, ok := action.InSchema.Property("id")
+		if !ok {
+			return errors.BadRequest("identity column \"id\" not found within input schema")
+		}
+		switch k := id.Type.Kind(); k {
+		case types.IntKind, types.UintKind, types.UUIDKind, types.TextKind:
+		default:
+			return errors.BadRequest("identity column \"id\" has kind %s instead of Int, Uint, UUID or Text", k)
+		}
+		// Validate the timestamp column "timestamp", if present.
+		if timestamp, ok := action.InSchema.Property("timestamp"); ok {
+			if k := timestamp.Type.Kind(); k != types.DateTimeKind {
+				return errors.BadRequest("timestamp column \"timestamp\" has kind %s instead of DateTime", k)
+			}
+		}
+	}
+
 	// Check if the table name is allowed.
 	needsTableName := connector.Type == state.DatabaseType && c.Role == state.Destination
 	if needsTableName && action.TableName == "" {

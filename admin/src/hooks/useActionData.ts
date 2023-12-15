@@ -219,7 +219,13 @@ const useActionData = (
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
+			actionToSet = await transformInActionToSet(
+				action,
+				actionType,
+				api,
+				workspace.AnonymousIdentifiers,
+				connection,
+			);
 		} catch (err) {
 			return err;
 		}

@@ -137,6 +137,24 @@ func (c *Chichi) AddSourceJSON(filesystem int) int {
 	})
 }
 
+func (c *Chichi) AddSourcePostgreSQL() int {
+	return c.AddConnection(map[string]any{
+		"Connection": map[string]any{
+			"Name":      "PostgreSQL (destination)",
+			"Role":      apis.Source,
+			"Enabled":   true,
+			"Connector": 10, // PostgreSQL.
+			"Settings": map[string]any{
+				"Host":     testsSettings.Database.Host,
+				"Port":     testsSettings.Database.Port,
+				"Username": testsSettings.Database.Username,
+				"Password": testsSettings.Database.Password,
+				"Database": testsSettings.Database.Database,
+			},
+		},
+	})
+}
+
 func (c *Chichi) AddWebsiteSource(name, host string) int {
 	return c.AddConnection(map[string]any{
 		"Connection": map[string]any{

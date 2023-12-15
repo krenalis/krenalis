@@ -948,7 +948,13 @@ const FullscreenTransformation = ({
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
+			actionToSet = await transformInActionToSet(
+				action,
+				actionType,
+				api,
+				workspace.AnonymousIdentifiers,
+				connection,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
@@ -1000,7 +1006,13 @@ const FullscreenTransformation = ({
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, actionType, api, workspace.AnonymousIdentifiers);
+			actionToSet = await transformInActionToSet(
+				action,
+				actionType,
+				api,
+				workspace.AnonymousIdentifiers,
+				connection,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);

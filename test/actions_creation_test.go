@@ -26,7 +26,10 @@ func TestActionsCreation(t *testing.T) {
 	defer c.Stop()
 
 	// Create some connections that will be used by the actions.
-	var csvConnection int
+	var (
+		csvConnection        int
+		postgreSQLConnection int
+	)
 	{
 		// CSV connection.
 		storageDir, err := filepath.Abs("testdata/storage")
@@ -42,6 +45,10 @@ func TestActionsCreation(t *testing.T) {
 		}
 		fsID := c.AddSourceFilesystem(storageDir)
 		csvConnection = c.AddSourceCSV(fsID)
+	}
+	{
+		// PostgreSQL connection.
+		postgreSQLConnection = c.AddSourcePostgreSQL()
 	}
 
 	tests := []struct {
@@ -221,6 +228,97 @@ func TestActionsCreation(t *testing.T) {
 				},
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"action cannot specify a timestamp format"}}`,
+		},
+		{
+			conn: postgreSQLConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name":  "Import users from PostgreSQL",
+					"Query": `SELECT "email" FROM "my_table"`,
+					"InSchema": types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email": "email",
+						},
+					},
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"identity column \"id\" not found within input schema"}}`,
+		},
+		{
+			conn: postgreSQLConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name":  "Import users from PostgreSQL",
+					"Query": `SELECT "id", "email" FROM "my_table"`,
+					"InSchema": types.Object([]types.Property{
+						{Name: "id", Type: types.Int(32)},
+						{Name: "email", Type: types.Text()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email": "email",
+						},
+					},
+				},
+			},
+		},
+		{
+			conn: postgreSQLConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name":  "Import users from PostgreSQL",
+					"Query": `SELECT "id", "email", "timestamp" FROM "my_table"`,
+					"InSchema": types.Object([]types.Property{
+						{Name: "id", Type: types.Int(32)},
+						{Name: "email", Type: types.Text()},
+						{Name: "timestamp", Type: types.Text()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email": "email",
+						},
+					},
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp column \"timestamp\" has kind Text instead of DateTime"}}`,
+		},
+		{
+			conn: postgreSQLConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name":  "Import users from PostgreSQL",
+					"Query": `SELECT "id", "email", "timestamp" FROM "my_table"`,
+					"InSchema": types.Object([]types.Property{
+						{Name: "id", Type: types.Int(32)},
+						{Name: "email", Type: types.Text()},
+						{Name: "timestamp", Type: types.DateTime()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"Email": "email",
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, test := range tests {

@@ -81,6 +81,12 @@ const ActionQuery = () => {
 			queryConfirmButtonRef.current.stop();
 			return;
 		}
+		const hasIDColumn = res.Schema.properties.findIndex((property) => property.name === 'id') !== -1;
+		if (!hasIDColumn) {
+			queryConfirmButtonRef.current.stop();
+			handleError(`Schema must contain the "id" property`);
+			return;
+		}
 		queryConfirmButtonRef.current.confirm();
 		setTimeout(() => {
 			const actionTyp = { ...actionType };
