@@ -836,9 +836,12 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 // Records returns the records and the schema of the file with the given path
 // for the connection, that must be a file connection. path must be UTF-8
 // encoded with a length in range [1, 1024]. If the connection supports sheets,
-// sheet is the sheet name and must be UTF-8 encoded with a length in range
-// [1, 100], otherwise must be an empty string. limit limits the number of
-// records to return and must be in range [0, 100].
+// sheet must be a valid sheet name; otherwise, it must be an empty string.
+// limit limits the number of records to return and must be in range [0, 100].
+//
+// A valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
+// not start or end with "'", and does not contain any of "*", "/", ":", "?",
+// "[", "\", and "`".
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -871,11 +874,8 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 		if sheet == "" {
 			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
 		}
-		if !utf8.ValidString(sheet) {
-			return nil, types.Type{}, errors.BadRequest("sheet is not UTF-8 encoded")
-		}
-		if n := utf8.RuneCountInString(sheet); n > 100 {
-			return nil, types.Type{}, errors.BadRequest("sheet is longer than 100 runes")
+		if !connectors.IsValidSheetName(sheet) {
+			return nil, types.Type{}, errors.BadRequest("sheet is not valid")
 		}
 	} else {
 		if sheet != "" {

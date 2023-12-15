@@ -200,6 +200,12 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 
 // Write writes the provided records into the file located at the specified
 // path. columns represents the columns of the records to be written.
+//
+// If the file connection supports multiple sheets, sheet is a valid sheet name;
+// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
+// has a length in the range [1, 31], does not start or end with "'", and does
+// not contain any of "*", "/", ":", "?", "[", "\", and "`".
+//
 // It returns the ErrNoStorage error if the file does not have a storage.
 func (file *File) Write(ctx context.Context, name, sheet string, columns []types.Property, records [][]any) error {
 	if file.err != nil {
