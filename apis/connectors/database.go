@@ -201,12 +201,29 @@ func (rs *Rows) Next() bool {
 func (rs *Rows) Scan() (map[string]any, error) {
 	row := make(map[string]any, len(rs.columns))
 	for i, c := range rs.columns {
-		rs.dst[i] = databaseScanValue{property: c, record: &Record{Properties: row}}
+		rs.dst[i] = queryScanValue{column: c, row: row}
 	}
 	if err := rs.rows.Scan(rs.dst...); err != nil {
 		return nil, err
 	}
 	return row, nil
+}
+
+// queryScanValue implements the sql.Scanner interface to read the database
+// values from a database connector.
+type queryScanValue struct {
+	column types.Property
+	row    map[string]any
+}
+
+func (sv queryScanValue) Scan(src any) error {
+	c := sv.column
+	value, err := normalizeDatabaseFileProperty(c.Name, c.Type, src, c.Nullable)
+	if err != nil {
+		return err
+	}
+	sv.row[c.Name] = value
+	return nil
 }
 
 // databaseRecords implements the Records interface for databases.
@@ -259,15 +276,10 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 			Properties: make(map[string]any, len(r.propertyOf)),
 		}
 		for i, c := range r.columns {
-			sv := databaseScanValue{
+			r.dst[i] = recordsScanValue{
 				property: r.propertyOf[c.Name],
 				record:   &record,
 			}
-			sv.property.Name = c.Name
-			if c.Name == "id" {
-				sv.identityType = c.Type
-			}
-			r.dst[i] = sv
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
 			r.err = err
@@ -283,47 +295,40 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 	return nil
 }
 
-// databaseScanValue implements the sql.Scanner interface to read the database
+// recordsScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
-type databaseScanValue struct {
-	property     types.Property
-	identityType types.Type
-	record       *Record
+type recordsScanValue struct {
+	property types.Property
+	record   *Record
 }
 
-func (sv databaseScanValue) Scan(src any) error {
+func (sv recordsScanValue) Scan(src any) error {
 	p := sv.property
-	if p.Name == "" {
+	if !p.Type.Valid() {
 		return nil
-	}
-	if p.Type.Valid() {
-		value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
-		if err != nil {
-			return err
-		}
-		sv.record.Properties[p.Name] = value
 	}
 	switch p.Name {
 	case "id":
-		if !sv.identityType.Valid() {
-			return nil
-		}
 		if src == nil {
 			return errors.New("identity value is NULL")
 		}
-		value, err := parseIdentityColumn(p.Name, sv.identityType, src)
+		id, err := parseIdentityColumn(p.Name, p.Type, src)
 		if err != nil {
 			return err
 		}
-		sv.record.ID = value
+		sv.record.ID = id
+		return nil
 	case "timestamp":
 		if src == nil {
 			return errors.New("timestamp value is NULL")
 		}
-		value, err := normalizeDatabaseFileProperty(p.Name, types.DateTime(), src, false)
-		if err != nil {
-			return err
-		}
+	}
+	value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
+	if err != nil {
+		return err
+	}
+	sv.record.Properties[p.Name] = value
+	if p.Name == "timestamp" {
 		sv.record.Timestamp = value.(time.Time)
 	}
 	return nil
