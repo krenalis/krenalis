@@ -156,7 +156,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			clear(users)
 			users = users[0:0]
 		}
-		return err
+		return nil
 	})
 	if err != nil {
 		return err
