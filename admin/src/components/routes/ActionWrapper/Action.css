@@ -456,7 +456,7 @@ inherit the disabled style */
 	padding: 30px;
 }
 
-.action .transformation-box--mappings .transformation-box__body .mappings {
+.action .fullscreenTransformation .transformation-box--mappings .transformation-box__body .mappings {
 	padding-bottom: 30px;
 }
 
