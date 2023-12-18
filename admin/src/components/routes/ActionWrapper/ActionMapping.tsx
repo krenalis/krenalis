@@ -161,10 +161,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	}, [selectedLanguage]);
 
-	const needFormat: boolean = useMemo(
-		() => doesTimestampNeedFormat(action.TimestampColumn, actionType.InputSchema),
-		[action],
-	);
+	const needFormat: boolean = useMemo(() => {
+		if (action.TimestampColumn && !isMappingDisabled) {
+			return doesTimestampNeedFormat(action.TimestampColumn, actionType.InputSchema);
+		}
+		return false;
+	}, [action, actionType, isMappingDisabled]);
 
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
