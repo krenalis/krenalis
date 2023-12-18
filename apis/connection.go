@@ -2044,12 +2044,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
 				return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
 			}
-			if !utf8.ValidString(action.TimestampFormat) {
-				return errors.BadRequest("timestamp format must be UTF-8 valid")
-			}
-			if utf8.RuneCountInString(action.TimestampFormat) > 64 {
-				return errors.BadRequest("timestamp format is longer than 64 runes")
-			}
 			timestampColumn, ok := action.InSchema.Property(action.TimestampColumn)
 			if !ok {
 				return errors.BadRequest("timestamp column %q not found within input schema", action.TimestampColumn)
@@ -2066,6 +2060,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			return errors.BadRequest("action cannot specify a timestamp format")
 		} else if requiresTimestampFormat && action.TimestampFormat == "" {
 			return errors.BadRequest("timestamp format is required")
+		}
+		if requiresTimestampFormat {
+			if err := validateTimestampFormat(action.TimestampFormat); err != nil {
+				return errors.BadRequest(err.Error())
+			}
 		}
 	} else {
 		if action.IdentityColumn != "" {
@@ -2197,6 +2196,35 @@ type ConnectionToSet struct {
 func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
+}
+
+// validateTimestampFormat validates the given timestamp format for importing
+// files, returning an error in case the format is not valid.
+//
+// NOTE: keep in sync with the function 'apis/connectors.parseTimestamp'.
+func validateTimestampFormat(format string) error {
+	if !utf8.ValidString(format) {
+		return errors.New("timestamp format must be UTF-8 valid")
+	}
+	if utf8.RuneCountInString(format) > 64 {
+		return errors.New("timestamp format is longer than 64 runes")
+	}
+	switch format {
+	case
+		"ISO8601",
+		"Excel":
+		return nil
+	default:
+		f, ok := strings.CutPrefix(format, "'")
+		if !ok {
+			return fmt.Errorf("invalid timestamp format %q", format)
+		}
+		_, ok = strings.CutSuffix(f, "'")
+		if !ok {
+			return fmt.Errorf("invalid timestamp format %q", format)
+		}
+		return nil
+	}
 }
 
 // replacePlaceholders replaces the placeholders in s with the values read

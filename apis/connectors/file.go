@@ -747,6 +747,8 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 //     stored in a Excel cell representing a date / datetime.
 //   - a strptime format, enclosed by single quote characters, compatible with
 //     the standard C89 functions strptime/strftime.
+//
+// NOTE: keep in sync with the function 'apis.validateTimestampFormat'.
 func parseTimestamp(format, timestamp string) (time.Time, error) {
 	switch format {
 	case "ISO8601":

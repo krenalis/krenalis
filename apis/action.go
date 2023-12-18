@@ -635,9 +635,21 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	TimestampColumn string
 
-	// TimestampFormat indicates the timestamp format (in the Go format) for
-	// parsing the timestamp. Contains a format when a TimestampColumn is
-	// provided, otherwise is nil.
+	// TimestampFormat indicates the timestamp format for parsing the timestamp.
+	//
+	// Represents a format when a TimestampColumn is provided and its
+	// corresponding property kind is JSON or Text, otherwise it is the empty
+	// string.
+	//
+	// In case it is provided, accepted values are:
+	//
+	//   - "ISO8601", to parse timestamps as a ISO 8601 timestamps.
+	//   - "Excel", to parse timestamps as strings representing a float value
+	//     stored in a Excel cell representing a date / datetime.
+	//   - a strptime format, enclosed by single quote characters, compatible
+	//     with the standard C89 functions strptime/strftime.
+	//
+	// It cannot be longer than 64 runes.
 	TimestampFormat string
 
 	// ExportMode is the export mode, if it has one.
