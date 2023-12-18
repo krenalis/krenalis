@@ -57,10 +57,10 @@ const defaultTransformationParameterByTarget = {
 };
 
 const timestampFormats = {
-	standard: '2006-01-02 15:04:05',
-	rfc3339: '2006-01-02T15:04:05Z07:00',
-	rfc3339WithNanoseconds: '2006-01-02T15:04:05.999999999Z07:00',
-	dateOnly: '2006-01-02',
+	standard: "'%Y-%m-%d %H:%M:%S'",
+	dateOnly: "'%Y-%m-%d'",
+	iso8601: 'ISO8601',
+	excel: 'Excel',
 };
 
 const ActionMapping = forwardRef<any>((_, ref) => {
@@ -350,11 +350,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									size='small'
 								>
 									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>
-									<SlOption value='rfc3339'>2006-01-02T15:04:05Z07:00</SlOption>
-									<SlOption value='rfc3339WithNanoseconds'>
-										2006-01-02T15:04:05.999999999Z07:00
-									</SlOption>
 									<SlOption value='dateOnly'>2006-01-02</SlOption>
+									<SlOption value='iso8601'>ISO 8601</SlOption>
+									<SlOption value='excel'>Excel</SlOption>
+									<SlOption value='(custom)'>Custom (not supported in the UI)</SlOption>
 								</SlSelect>
 							</div>
 						</div>

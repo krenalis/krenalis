@@ -1002,6 +1002,7 @@ func parseUint(s string) int {
 }
 
 func isSimpleFloat(s string) bool {
+	// NOTE: keep in sync with the function within 'apis/connectors'.
 	if len(s) < 3 {
 		return false
 	}

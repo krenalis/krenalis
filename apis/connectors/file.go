@@ -30,6 +30,8 @@ import (
 	"chichi/connector/types"
 
 	"github.com/golang/snappy"
+	"github.com/itchyny/timefmt-go"
+	"github.com/relvacode/iso8601"
 )
 
 // File represents the file of a file connection.
@@ -700,6 +702,9 @@ func parseIdentityColumn(name string, typ types.Type, value any) (string, error)
 }
 
 // parseTimestampColumn parses a timestamp column value.
+//
+// To see a list of accepted format values, see the documentation of
+// 'parseTimestamp'.
 func parseTimestampColumn(name string, typ types.Type, format string, value any) (time.Time, error) {
 	timestamp, err := normalizeDatabaseFileProperty(name, typ, value, false)
 	if err != nil {
@@ -711,24 +716,104 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any)
 	case time.Time:
 		return timestamp, nil
 	case string:
-		ts, err := time.Parse(format, value.(string))
+		ts, err := parseTimestamp(format, value.(string))
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
-		return ts.UTC(), nil
+		return ts, nil
 	case json.RawMessage:
 		var s string
 		err := json.Unmarshal(timestamp, &s)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 		}
-		ts, err := time.Parse(format, value.(string))
+		ts, err := parseTimestamp(format, value.(string))
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
-		return ts.UTC(), nil
+		return ts, nil
 	}
 	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+}
+
+var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
+
+// parseTimestamp parses a timestamp with the given format.
+//
+// Accepted values for format are:
+//
+//   - "ISO8601", to parse the timestamp as a ISO 8601 timestamp.
+//   - "Excel", to parse the timestamp as a string representing a float value
+//     stored in a Excel cell representing a date / datetime.
+//   - a strptime format, enclosed by single quote characters, compatible with
+//     the standard C89 functions strptime/strftime.
+func parseTimestamp(format, timestamp string) (time.Time, error) {
+	switch format {
+	case "ISO8601":
+		dt, err := iso8601.ParseString(timestamp)
+		if err != nil {
+			return time.Time{}, errors.New("timestamp format is not compatible with ISO 8601")
+		}
+		return dt.UTC(), err
+	case "Excel":
+		if !isExcelSimpleFloat(timestamp) {
+			return time.Time{}, errors.New("invalid timestamp for Excel")
+		}
+		// Parse as Excel serial date-time.
+		// https://support.microsoft.com/en-us/office/datetime-function-812ad674-f7dd-4f31-9245-e79cfa358a4e
+		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
+		days, err := strconv.ParseFloat(timestamp, 64)
+		if err != nil {
+			return time.Time{}, errors.New("invalid timestamp for Excel")
+		}
+		if days == 60 {
+			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
+			return time.Time{}, errors.New("invalid timestamp for Excel")
+		}
+		if days > 60 {
+			days--
+		}
+		d := time.Duration(days * 24 * 3600 * 1e9)
+		t := excelEpoch.Add(d)
+		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
+	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
+		f, ok := strings.CutPrefix(format, "'")
+		if !ok {
+			return time.Time{}, fmt.Errorf("invalid format %q", format)
+		}
+		f, ok = strings.CutSuffix(f, "'")
+		if !ok {
+			return time.Time{}, fmt.Errorf("invalid format %q", format)
+		}
+		t, err := timefmt.Parse(timestamp, f)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return t.UTC(), nil
+	}
+}
+
+// isExcelSimpleFloat reports whether s is a string representing a float value
+// encoding an Excel date / datetime value.
+func isExcelSimpleFloat(s string) bool {
+	// NOTE: keep in sync with the function within 'apis/transformers/mappings'.
+	if len(s) < 3 {
+		return false
+	}
+	var dot bool
+	for i, c := range []byte(s) {
+		if c == '.' {
+			if dot || i == 0 || i == len(s)-1 {
+				return false
+			}
+			dot = true
+			continue
+		}
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // compressorStorage implements a storage capable of compressing and
