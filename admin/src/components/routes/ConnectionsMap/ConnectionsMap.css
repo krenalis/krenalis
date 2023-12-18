@@ -164,7 +164,7 @@
 	width: 100%;
 	display: grid;
 	align-items: center;
-	grid-template-columns: 90% 10%;
+	grid-template-columns: calc(100% - 15px) 15px;
 }
 
 .connectionsMap .connectionBlock.new {
@@ -177,6 +177,16 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	text-wrap: nowrap;
+}
+
+.connectionsMap .connectionBlock .statusDot {
+	display: flex;
+	justify-content: end;
+}
+
+.connectionsMap .connectionBlock .statusDot .hoverArea {
+	width: 15px;
+	height: 15px;
 }
 
 .connectionsMap .linkedConnectionBlocks.hasSecondaryConnections {
