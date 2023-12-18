@@ -69,27 +69,7 @@ const useActionData = (
 				);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
-					switch (err.code) {
-						case 'NoUsersSchema':
-							showStatus({
-								variant: variants.DANGER,
-								icon: icons.NOT_FOUND,
-								text: 'The user schema is not currently defined',
-							});
-							break;
-						case 'NoGroupsSchema':
-							showStatus({
-								variant: variants.DANGER,
-								icon: icons.NOT_FOUND,
-								text: 'The groups schema is not currently defined',
-							});
-							break;
-						case 'EventTypeNotExist':
-							showStatus({ variant: variants.DANGER, icon: icons.NOT_FOUND, text: err.message });
-							break;
-						default:
-							break;
-					}
+					handleError(err.message);
 					return;
 				}
 				handleError(err);
@@ -151,24 +131,7 @@ const useActionData = (
 					);
 				} catch (err) {
 					if (err instanceof UnprocessableError) {
-						switch (err.code) {
-							case 'ReadFileFailed':
-								showStatus({
-									variant: variants.DANGER,
-									icon: icons.INVALID_INSERTED_VALUE,
-									text: err.message,
-								});
-								break;
-							case 'NoStorage':
-								showStatus({
-									variant: variants.DANGER,
-									icon: icons.NOT_FOUND,
-									text: 'The storage of this file connection does not exist anymore',
-								});
-								break;
-							default:
-								break;
-						}
+						handleError(err.message);
 						return;
 					}
 					handleError(err);
