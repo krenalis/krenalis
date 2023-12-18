@@ -95,8 +95,9 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // return and should not exceed 100. If limit is negative, there is no upper
 // limit on the number of records returned.
 //
-// It returns the ErrNoStorage error if the file does not have a storage, and
-// it returns the ErrNoColumns error if the file has no columns.
+// If the file does not have a storage, it returns the ErrNoStorage error. If
+// the file has no columns, it returns the ErrNoColumns error. If the file does
+// not have the provided sheet, it returns the ErrSheetNotExist error.
 func (file *File) Read(ctx context.Context, name, sheet string, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if file.err != nil {
 		return nil, nil, file.err
@@ -117,6 +118,9 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, limit)
 	err = file.inner.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
+		if err == _connector.ErrSheetNotExist {
+			err = ErrSheetNotExist
+		}
 		return nil, nil, err
 	}
 	if err = r.Close(); err != nil {
@@ -147,9 +151,13 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // this property, the iterator returns an error.
 //
 // If the file does not have a storage, it returns the ErrNoStorage error. If
-// the file has no columns, it returns the ErrNoColumns error. If the provided
-// schema, that must be valid, does not conform with the file's schema, it
-// returns a *SchemaError error.
+// the provided schema, that must be valid, does not conform with the file's
+// schema, it returns a *SchemaError error.
+//
+// If the specified sheet is not found in the file, the For method of the
+// iterator returns immediately, and a subsequent call to the Err method will
+// return the ErrSheetNotExist error. The same occurs if the file has no
+// columns; in this case, the error is ErrNoColumns.
 func (file *File) Records(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -161,12 +169,12 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	if err != nil {
 		return nil, err
 	}
-	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, math.MaxInt)
 	s := newCompressedStorage(storage, file.connection.Compression)
 	rc, _, err := s.Reader(ctx, name)
 	if err != nil {
 		return nil, err
 	}
+	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -300,6 +308,9 @@ func (r *fileRecords) For(yield func(Record) error) error {
 	if err != nil && err != errRecordStop {
 		if err, ok := err.(yieldError); ok {
 			return err.err
+		}
+		if err == _connector.ErrSheetNotExist {
+			err = ErrSheetNotExist
 		}
 		r.err = err
 	}

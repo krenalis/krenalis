@@ -70,6 +70,7 @@ var (
 	NoStorage            errors.Code = "NoStorage"
 	NoUsersSchema        errors.Code = "NoUsersSchema"
 	ReadFileFailed       errors.Code = "ReadFileFailed"
+	SheetNotExist        errors.Code = "SheetNotExist"
 	StorageNotExist      errors.Code = "StorageNotExist"
 	TargetAlreadyExist   errors.Code = "TargetAlreadyExist"
 	TooManyKeys          errors.Code = "TooManyKeys"
@@ -848,6 +849,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 //   - NoColumns, if the file has no columns.
 //   - NoStorage, if the connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
+//   - SheetNotExist, if the file does not contain the provided sheet.
 func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
@@ -890,10 +892,12 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	columns, records, err := this.file().Read(ctx, path, sheet, limit)
 	if err != nil {
 		switch err {
-		case connectors.ErrNoColumns:
-			return nil, types.Type{}, errors.Unprocessable(NoColumns, "file does not have columns")
 		case connectors.ErrNoStorage:
 			return nil, types.Type{}, errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
+		case connectors.ErrSheetNotExist:
+			return nil, types.Type{}, errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
+		case connectors.ErrNoColumns:
+			return nil, types.Type{}, errors.Unprocessable(NoColumns, "file does not have columns")
 		}
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", connector.Name, err)
 	}

@@ -9,6 +9,7 @@ package apis
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"strconv"
 
@@ -161,6 +162,9 @@ func (this *Action) importUsers(ctx context.Context) error {
 		return err
 	}
 	if err = records.Err(); err != nil {
+		if err == connectors.ErrSheetNotExist {
+			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
+		}
 		return actionExecutionError{err}
 	}
 

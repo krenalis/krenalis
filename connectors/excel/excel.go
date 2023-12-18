@@ -66,8 +66,9 @@ func (c *connection) ContentType(ctx context.Context) string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
-// Read reads the records from r and writes them to records.
-// sheet is the name of the sheet to be read.
+// Read reads the records from r and writes them to records. sheet is the name
+// of the sheet to be read. If the provided sheet does not exist, it returns the
+// connector.ErrSheetNotExist error.
 func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, records connector.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
@@ -83,6 +84,9 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 	defer f.Close()
 	rows, err := f.Rows(sheet)
 	if err != nil {
+		if _, ok := err.(excelize.ErrSheetNotExist); ok {
+			return connector.ErrSheetNotExist
+		}
 		return err
 	}
 	defer rows.Close()

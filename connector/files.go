@@ -9,11 +9,15 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"io"
 	"reflect"
 
 	"chichi/connector/types"
 )
+
+// ErrSheetNotExist indicates that a file does not contain a sheet.
+var ErrSheetNotExist = errors.New("sheet does not exist")
 
 // File represents a file connector.
 type File struct {
@@ -59,6 +63,7 @@ type FileConnection interface {
 
 	// Read reads the records from r and writes them to records. If the connection
 	// has multiple sheets, sheet is the name of the sheet to be read.
+	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
 	Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 
 	// Write writes to w the records read from records. If the connection has

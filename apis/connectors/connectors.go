@@ -116,6 +116,7 @@ var (
 	ErrNoStorage           = errors.New("file has no storage")
 	ErrNoUserInterface     = errors.New("connector has no user interface")
 	ErrNoWebhooks          = errors.New("app has no webhooks")
+	ErrSheetNotExist       = errors.New("sheet does not exist")
 	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
 )
 
