@@ -55,6 +55,7 @@ const ActionTable = () => {
 		tableConfirmationButtonRef.current!.confirm();
 		setTimeout(() => {
 			tableRef.current.lastConfirmation = action.Table;
+			setIsTableChanged(false);
 			const actionTyp = { ...actionType };
 			actionTyp.OutputSchema = schema;
 			setActionType(actionTyp);

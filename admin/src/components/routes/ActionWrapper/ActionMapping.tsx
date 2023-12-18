@@ -71,8 +71,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 	const {
-		isMappingSectionDisabled,
-		disabledReason,
+		isMappingDisabled,
+		mappingDisabledReason,
 		isTransformationAllowed,
 		action,
 		setAction,
@@ -282,8 +282,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			setAction={setAction}
 			propertiesListRef={propertiesListRef}
 			onUpdateProperty={onUpdateProperty}
-			isMappingSectionDisabled={isMappingSectionDisabled}
-			disabledReason={disabledReason}
+			isMappingSectionDisabled={isMappingDisabled}
+			disabledReason={mappingDisabledReason}
 			transformationLanguages={transformationLanguages}
 			selectedLanguage={selectedLanguage}
 			setSelectedLanguage={setSelectedLanguage}
@@ -316,7 +316,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								onInput={onUpdateIdentityColumn}
 								value={action.IdentityColumn!}
 								name='identityColumn'
-								disabled={isMappingSectionDisabled}
+								disabled={isMappingDisabled}
 								className='inputProperty'
 								size='small'
 							/>
@@ -329,7 +329,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									onInput={onUpdateTimestampColumn}
 									value={action.TimestampColumn!}
 									name='timestampColumn'
-									disabled={isMappingSectionDisabled}
+									disabled={isMappingDisabled}
 									className='inputProperty'
 									size='small'
 								/>

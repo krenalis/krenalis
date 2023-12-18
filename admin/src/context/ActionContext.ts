@@ -16,8 +16,8 @@ interface ActionContext {
 	isTransformationAllowed: boolean;
 	onClose: () => void;
 	mappingSectionRef: React.MutableRefObject<any>;
-	isMappingSectionDisabled: boolean;
-	disabledReason: string;
+	isMappingDisabled: boolean;
+	mappingDisabledReason: string;
 	isSaveButtonLoading: boolean;
 	setIsQueryChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsFileChanged: React.Dispatch<React.SetStateAction<boolean>>;

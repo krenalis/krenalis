@@ -11,7 +11,6 @@ import {
 	TransformationFunction,
 } from '../../types/external/action';
 import { Filter } from '../../types/external/api';
-import { ActionSchemasResponse } from '../../types/external/api';
 import { AnonymousIdentifiers } from '../../types/external/identifiers';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
 import API from '../api/api';
@@ -165,11 +164,11 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 
 const transformActionType = (
 	actionType: ActionType,
+	fields: ActionTypeField[],
 	inputSchema: ObjectType,
 	outputSchema: ObjectType,
 	inputMatchingSchema: ObjectType,
 	outputMatchingSchema: ObjectType,
-	fields: ActionTypeField[],
 ): TransformedActionType => {
 	return {
 		Name: actionType.Name,
@@ -442,11 +441,7 @@ const computeDefaultAction = (
 	return action;
 };
 
-const computeActionTypeFields = (
-	connection: TransformedConnection,
-	actionType: ActionType,
-	schemas: ActionSchemasResponse,
-) => {
+const computeActionTypeFields = (connection: TransformedConnection, actionType: ActionType) => {
 	const fields: ActionTypeField[] = [];
 	if (
 		(connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') ||
@@ -455,7 +450,7 @@ const computeActionTypeFields = (
 		fields.push('Filter');
 	}
 	if (
-		(connection.type === 'App' && schemas.In != null && schemas.Out != null) ||
+		connection.type === 'App' ||
 		connection.type === 'Database' ||
 		(connection.type === 'File' && connection.role === 'Source') ||
 		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&

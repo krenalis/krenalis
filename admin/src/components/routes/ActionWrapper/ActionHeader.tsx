@@ -21,7 +21,7 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 		actionType,
 		setAction,
 		saveAction,
-		isMappingSectionDisabled,
+		isMappingDisabled,
 		isEditing,
 		isSaveButtonLoading,
 		isSaveHidden,
@@ -78,7 +78,7 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 				<SlButton
 					className='saveAction'
 					variant='primary'
-					disabled={isMappingSectionDisabled}
+					disabled={isMappingDisabled}
 					onClick={onSave}
 					loading={isSaveButtonLoading}
 				>

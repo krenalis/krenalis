@@ -8,7 +8,7 @@ import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
 import ActionMatchingProperties from './ActionMatchingProperties';
 import ActionTable from './ActionTable';
-import useActionData from '../../../hooks/useActionData';
+import { useAction } from '../../../hooks/useActionData';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import appContext from '../../../context/AppContext';
@@ -45,10 +45,10 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setIsFileChanged,
 		setIsTableChanged,
 		setIsQueryChanged,
-		isMappingSectionDisabled,
-		disabledReason,
-		mustComputeSchema,
-	} = useActionData(connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
+		isMappingHidden,
+		isMappingDisabled,
+		mappingDisabledReason,
+	} = useAction(connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
 
 	if (isLoading) {
 		return (
@@ -83,8 +83,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				isTransformationAllowed,
 				onClose,
 				mappingSectionRef,
-				isMappingSectionDisabled,
-				disabledReason,
+				isMappingDisabled,
+				mappingDisabledReason,
 				isSaveButtonLoading,
 				setIsQueryChanged,
 				setIsFileChanged,
@@ -102,7 +102,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.Fields.includes('Table') && <ActionTable />}
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
-					{actionType!.Fields.includes('Mapping') && !mustComputeSchema && (
+					{actionType!.Fields.includes('Mapping') && !isMappingHidden && (
 						<ActionMapping ref={mappingSectionRef} />
 					)}
 				</div>

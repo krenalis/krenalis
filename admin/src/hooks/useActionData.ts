@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useMemo } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import {
 	computeDefaultAction,
 	computeActionTypeFields,
@@ -9,8 +9,6 @@ import {
 	transformInActionToSet,
 } from '../lib/helpers/transformedAction';
 import AppContext from '../context/AppContext';
-import * as variants from '../constants/variants';
-import * as icons from '../constants/icons';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
 import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../types/external/action';
@@ -18,8 +16,9 @@ import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../ty
 import { ObjectType } from '../types/external/types';
 import Workspace from '../types/external/workspace';
 import { sleep } from '../lib/utils/sleep';
+import { FullscreenContext } from '../context/FullscreenContext';
 
-const useActionData = (
+const useAction = (
 	connection: TransformedConnection,
 	providedActionType: ActionType,
 	providedAction: Action,
@@ -30,17 +29,18 @@ const useActionData = (
 	const [action, setAction] = useState<TransformedAction>();
 	const [actionType, setActionType] = useState<TransformedActionType>();
 	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
+	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
-	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, redirect } = useContext(AppContext);
+	const { api, handleError, setIsLoadingState } = useContext(AppContext);
+	const { closeFullscreen } = useContext(FullscreenContext);
 
 	const isEditing = providedAction != null;
 	const isImport = connection.role === 'Source';
 
 	useEffect(() => {
-		const fetchData = async () => {
+		const setupAction = async () => {
 			// Get the action type.
 			let actionType: ActionType;
 			if (isEditing) {
@@ -59,107 +59,94 @@ const useActionData = (
 				actionType = { ...providedActionType };
 			}
 
-			// Get the action type schemas.
-			let schemas: ActionSchemasResponse;
+			// Compute which fields are supported by the action type.
+			const fields = computeActionTypeFields(connection, actionType);
+
+			// Compute the action schemas.
+			let inputSchema: ObjectType;
+			let outputSchema: ObjectType;
+			let inputMatchingSchema: ObjectType;
+			let outputMatchingSchema: ObjectType;
 			try {
+				let schemas: ActionSchemasResponse;
 				schemas = await api.workspaces.connections.actionSchemas(
 					connection.id,
 					actionType.Target,
 					actionType.EventType,
 				);
-			} catch (err) {
-				if (err instanceof UnprocessableError) {
-					handleError(err.message);
-					return;
-				}
-				handleError(err);
-				return;
-			}
 
-			let inputSchema = schemas.In;
-			let outputSchema = schemas.Out;
-			let inputMatchingSchema = schemas.Matchings ? schemas.Matchings.Internal : null;
-			let outputMatchingSchema = schemas.Matchings ? schemas.Matchings.External : null;
+				inputSchema = schemas.In;
+				outputSchema = schemas.Out;
+				inputMatchingSchema = schemas.Matchings ? schemas.Matchings.Internal : null;
+				outputMatchingSchema = schemas.Matchings ? schemas.Matchings.External : null;
 
-			// Compute which fields are supported by the action type.
-			const fields = computeActionTypeFields(connection, actionType, schemas);
-
-			// If the action type is an import from a database source, the input
-			// schema is the schema of the database table itself.
-			if (fields.includes('Query') && isEditing) {
-				let res: ExecQueryResponse;
-				try {
+				// If the action type is an import from a database source, the
+				// input schema is the schema of the database table itself.
+				if (fields.includes('Query') && isEditing) {
+					let res: ExecQueryResponse;
 					res = await api.workspaces.connections.query(connection.id, providedAction.Query!, 0);
-				} catch (err) {
-					if (err instanceof NotFoundError) {
-						redirect('connections');
-						showStatus({
-							variant: variants.DANGER,
-							icon: icons.NOT_FOUND,
-							text: 'The connection does not exist anymore',
-						});
-						return;
-					}
-					if (err instanceof UnprocessableError) {
-						if (err.code === 'DatabaseFailed') {
-							let statusMessage: string;
-							if (err.cause && err.cause !== '') {
-								statusMessage = err.cause;
-							} else {
-								statusMessage = err.message;
-							}
-							showStatus({ variant: variants.DANGER, icon: icons.CODE_ERROR, text: statusMessage });
-						}
-						return;
-					}
-					handleError(err);
-					return;
+					inputSchema = res.Schema;
 				}
-				inputSchema = res.Schema;
-			}
 
-			// If the action type is an import from a file source, the input
-			// schema is the schema of the file itself.
-			if (fields.includes('Path') && isEditing && isImport) {
-				let res: RecordsResponse;
-				try {
+				// If the action type is an import from a file source, the input
+				// schema is the schema of the file itself.
+				if (fields.includes('Path') && isEditing && isImport) {
+					let res: RecordsResponse;
 					res = await api.workspaces.connections.records(
 						connection.id,
 						providedAction.Path!,
 						providedAction.Sheet,
 						0,
 					);
-				} catch (err) {
-					if (err instanceof UnprocessableError) {
-						handleError(err.message);
-						return;
-					}
-					handleError(err);
-					return;
+					inputSchema = res.schema;
 				}
-				inputSchema = res.schema;
-			}
 
-			// If the action type is an exrpot to a database destination, the
-			// output schema is the schema of the database table itself.
-			if (fields.includes('Table') && isEditing) {
-				let schema: ObjectType;
-				try {
+				// If the action type is an exrpot to a database destination, the
+				// output schema is the schema of the database table itself.
+				if (fields.includes('Table') && isEditing) {
+					let schema: ObjectType;
 					schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
-				} catch (err) {
+					outputSchema = schema;
+				}
+			} catch (err) {
+				if (err instanceof UnprocessableError) {
+					let message: string;
+					if (err.code === 'DatabaseFailed') {
+						let errorMessage: string;
+						if (err.cause && err.cause !== '') {
+							errorMessage = err.cause;
+						} else {
+							errorMessage = err.message;
+						}
+						message = errorMessage;
+					} else {
+						message = err.message;
+					}
+					handleError(message);
+					// continue execution so that user can fix the action.
+				} else if (err instanceof NotFoundError) {
+					setIsLoading(false);
+					closeFullscreen();
+					setIsLoadingState(true);
+					// exit action route and reload the state.
+					return;
+				} else {
+					setIsLoading(false);
+					closeFullscreen();
 					handleError(err);
+					// something unexpected happened, user cannot fix the
+					// action.
 					return;
 				}
-				outputSchema = schema;
 			}
 
 			const transformedActionType = transformActionType(
 				actionType,
+				fields,
 				inputSchema,
 				outputSchema,
 				inputMatchingSchema,
 				outputMatchingSchema,
-				fields,
 			);
 			setActionType(transformedActionType);
 
@@ -172,7 +159,7 @@ const useActionData = (
 			setAction(transformedAction);
 			setIsLoading(false);
 		};
-		fetchData();
+		setupAction();
 	}, [providedActionType, providedAction]);
 
 	const saveAction = async () => {
@@ -216,21 +203,15 @@ const useActionData = (
 		return null;
 	};
 
-	const isTransformationAllowed: boolean = useMemo(
-		() => connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server',
-		[connection, providedActionType, providedAction],
-	);
+	const isTransformationAllowed =
+		connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server';
 
-	const { mustComputeSchema, isMappingSectionDisabled, disabledReason } = useMemo(() => {
-		let mustComputeSchema = false;
-		let isMappingSectionDisabled = false;
-		let disabledReason = '';
+	let isMappingHidden = false;
+	let isMappingDisabled = false;
+	let mappingDisabledReason = '';
 
-		if (isLoading) {
-			return { mustComputeSchema, isMappingSectionDisabled, disabledReason };
-		}
-
-		mustComputeSchema =
+	if (!isLoading) {
+		isMappingHidden =
 			((connection.type === 'Database' || connection.type === 'File') &&
 				actionType!.InputSchema == null &&
 				!isEditing) ||
@@ -244,46 +225,31 @@ const useActionData = (
 			connection.role === 'Source' &&
 			actionType!.InputSchema == null &&
 			isEditing;
-
-		const hasRecordsError =
-			connection.type === 'File' &&
-			connection.role === 'Destination' &&
-			actionType!.InputSchema == null &&
-			isEditing;
-
+		const hasRecordsError = connection.type === 'File' && actionType!.InputSchema == null && isEditing;
 		const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
 
-		isMappingSectionDisabled =
-			hasQueryError ||
-			isQueryChanged ||
-			hasRecordsError ||
-			(isFileChanged && isImport) ||
-			hasTableError ||
-			isTableChanged ||
-			mustComputeSchema;
+		isMappingDisabled =
+			hasQueryError || isQueryChanged || hasRecordsError || isFileChanged || hasTableError || isTableChanged;
 
-		disabledReason = '';
 		if (hasQueryError) {
-			disabledReason =
-				'Mappings are disabled since the query returned an error. Fix the query before proceeding to mappings.';
+			mappingDisabledReason =
+				'Mapping is disabled since the query execution returned an error. Please fix the query before proceeding to mapping.';
 		} else if (hasRecordsError) {
-			disabledReason =
-				'Mappings are disabled due to an error in the file fetch. Please resolve the file information issue before proceeding with the mappings.';
+			mappingDisabledReason =
+				'Mapping is disabled due to an error in the file information. Please fix the file information before proceeding to mapping.';
 		} else if (hasTableError) {
-			disabledReason = `Mappings are disabled because the table couldn't be retrieved. Please resolve this issue before proceeding with the mappings.`;
+			mappingDisabledReason = `Mapping is disabled because the provided table could not be retrieved. Please fix the table name before proceeding to mapping.`;
 		} else if (connection.type === 'Database' && connection.role === 'Source') {
-			disabledReason =
-				'Mappings are disabled since the query has been modified. Please confirm the query or revert the changes before proceeding with mappings.';
+			mappingDisabledReason =
+				'Mapping is disabled since the query has been modified. Please confirm the query or revert the changes before proceeding to mapping.';
 		} else if (connection.type === 'Database' && connection.role === 'Destination') {
-			disabledReason =
-				'Mappings are disabled since the table name has been modified. Please confirm the table name or revert the changes before proceeding with mappings.';
-		} else {
-			disabledReason =
-				'Mappings are disabled since the file information has been modified . Please confirm the new information or revert the changes before proceeding with mappings.';
+			mappingDisabledReason =
+				'Mapping is disabled since the table name has been modified. Please confirm the table name or revert the changes before proceeding to mapping.';
+		} else if (connection.type === 'File') {
+			mappingDisabledReason =
+				'Mapping is disabled since the file information has been modified. Please confirm the new file information or revert the changes before proceeding to mapping.';
 		}
-
-		return { mustComputeSchema, isMappingSectionDisabled, disabledReason };
-	}, [isLoading, isQueryChanged, isFileChanged, isTableChanged, connection, actionType, isEditing, isImport]);
+	}
 
 	return {
 		isEditing,
@@ -300,10 +266,10 @@ const useActionData = (
 		setIsFileChanged,
 		setIsTableChanged,
 		setIsQueryChanged,
-		isMappingSectionDisabled,
-		disabledReason,
-		mustComputeSchema,
+		isMappingHidden,
+		isMappingDisabled,
+		mappingDisabledReason,
 	};
 };
 
-export default useActionData;
+export { useAction };

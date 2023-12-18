@@ -293,6 +293,7 @@ const ActionPath = () => {
 			if (sheet != null) {
 				sheetRef.current.lastConfirmation = sheet;
 			}
+			setIsFileChanged(false);
 		}
 		return res;
 	};
