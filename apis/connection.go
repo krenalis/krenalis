@@ -841,7 +841,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 //
 // A valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
 // not start or end with "'", and does not contain any of "*", "/", ":", "?",
-// "[", "\", and "`". Sheet names are case-insensitive.
+// "[", "\", and "]". Sheet names are case-insensitive.
 //
 // It returns an errors.UnprocessableError error with code
 //

@@ -88,7 +88,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
 // has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
+// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // case-insensitive.
 //
 // limit restricts the number of records to
@@ -134,7 +134,7 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
 // has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
+// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // // case-insensitive.
 //
 // identityColumn is the name of the column to use as an identity. schema must
@@ -217,7 +217,7 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
 // has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "`". Sheet names are
+// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // case-insensitive.
 //
 // It returns the ErrNoStorage error if the file does not have a storage.
