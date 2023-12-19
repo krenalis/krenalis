@@ -262,7 +262,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 
 	// Write the records.
 	for {
-		record, err := records.Record()
+		record, err := records.Record(ctx)
 		if err == io.EOF {
 			break
 		}

@@ -88,7 +88,7 @@ type RecordReader interface {
 
 	// Record returns the next record as a slice of any.
 	// It returns nil and io.EOF if there are no more records.
-	Record() ([]any, error)
+	Record(ctx context.Context) ([]any, error)
 }
 
 // A RecordWriter interface is used by file connections to write read records.

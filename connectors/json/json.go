@@ -243,7 +243,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 	}
 	t := types.Object(records.Columns())
 	for {
-		record, err = records.Record()
+		record, err = records.Record(ctx)
 		if err != nil {
 			if err == io.EOF {
 				break

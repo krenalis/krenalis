@@ -350,7 +350,7 @@ func (rr *recordReader) Columns() []types.Property {
 
 // Record returns the next record as a slice of any. It returns nil and io.EOF
 // if there are no more records.
-func (rr *recordReader) Record() ([]any, error) {
+func (rr *recordReader) Record(ctx context.Context) ([]any, error) {
 	if rr.cursor >= len(rr.records) {
 		return nil, io.EOF
 	}
