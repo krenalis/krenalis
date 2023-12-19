@@ -372,6 +372,23 @@ const transformInActionToSet = async (
 		}
 	}
 
+	if (action.Filter != null) {
+		if (inSchema == null) {
+			inSchema = { name: 'Object', properties: [] };
+		}
+		for (const condition of action.Filter.Conditions) {
+			const propertyName = condition.Property;
+			const isPropertyAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === propertyName) !== -1;
+			if (!isPropertyAlreadyInSchema) {
+				const property = flattenedInputSchema[propertyName];
+				if (property == null) {
+					throw 'Filter property must be a valid property';
+				}
+				inSchema.properties.push(property.full);
+			}
+		}
+	}
+
 	if (action.Query != null) {
 		query = action.Query.trim();
 	}
