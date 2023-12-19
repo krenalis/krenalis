@@ -585,12 +585,23 @@ type ActionToSet struct {
 	// Filter is the filter of the action, if it has one, otherwise is nil.
 	Filter *Filter
 
-	// InSchema is the input schema of the action, which may contain the
-	// properties used in the transformation and the internal matching property.
+	// InSchema is the input schema of the action.
+	//
+	// It must contain exclusively:
+	//
+	// - the input properties used in the transformation, if this action has a
+	//   transformation.
+	// - the internal matching property, if this action has matching
+	//   properties.
+	// - the properties referred in the filters, if this action has filters.
+	// - the id and timestamp properties, if this action specifies an id and a
+	//   timestamp property.
 	InSchema types.Type
 
-	// OutSchema is the output schema of the action, which may contain the
-	// properties used in the transformation.
+	// OutSchema is the output schema of the action.
+	//
+	// It must contain exclusively the output properties used in the
+	// transformation, if this action has a transformation.
 	OutSchema types.Type
 
 	// Transformation is the mapping or function transformation, if it has one.

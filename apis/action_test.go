@@ -14,7 +14,7 @@ import (
 	"chichi/connector/types"
 )
 
-func Test_unmappedProperties(t *testing.T) {
+func Test_unusedProperties(t *testing.T) {
 	cases := []struct {
 		schema   types.Type
 		paths    []types.Path
@@ -53,7 +53,7 @@ func Test_unmappedProperties(t *testing.T) {
 		},
 	}
 	for _, cas := range cases {
-		got := unmappedProperties(cas.schema, cas.paths)
+		got := unusedProperties(cas.schema, cas.paths)
 		if !reflect.DeepEqual(cas.expected, got) {
 			t.Fatalf("expecting %#v, got %#v", cas.expected, got)
 		}

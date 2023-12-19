@@ -439,32 +439,20 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 	switch {
 	case transformation.Mapping != nil:
-		var inPaths []types.Path
-		var outPaths []types.Path
 		for path, expr := range transformation.Mapping {
 			outPath, err := types.ParsePropertyPath(path)
 			if err != nil {
 				return nil, errors.BadRequest("output mapped property %q is not valid", path)
 			}
-			outPaths = append(outPaths, outPath)
 			p, err := outSchema.PropertyByPath(outPath)
 			if err != nil {
 				err := err.(types.PathNotExistError)
 				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 			}
-			expr, err := mappings.Compile(expr, inSchema, p.Type, p.Required, p.Nullable, nil)
+			_, err = mappings.Compile(expr, inSchema, p.Type, p.Required, p.Nullable, nil)
 			if err != nil {
 				return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 			}
-			inPaths = append(inPaths, expr.Properties()...)
-		}
-		if props := unmappedProperties(inSchema, inPaths); props != nil {
-			// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
-			// return nil, errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
-		}
-		if props := unmappedProperties(outSchema, outPaths); props != nil {
-			// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
-			// return nil, errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
 	case transformation.Function != nil:
 		if transformation.Function.Source == "" {

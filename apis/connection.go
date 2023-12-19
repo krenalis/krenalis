@@ -1799,7 +1799,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		return errors.BadRequest("out schema, if provided, must be an object")
 	}
 	// Validate the filter.
-	var inPaths []types.Path
+	var usedInPaths []types.Path
 	if action.Filter != nil {
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
@@ -1808,14 +1808,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
-		inPaths = properties
+		usedInPaths = properties
 	}
 	// An action cannot have both mappings and transformations.
 	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
 		return errors.BadRequest("action cannot have both mappings and transformation")
 	}
 	// Validate the mapping.
-	var outPaths []types.Path
+	var usedOutPaths []types.Path
 	if mapping := action.Transformation.Mapping; mapping != nil && len(mapping) > 0 {
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the mapping")
@@ -1827,7 +1827,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
-		inPaths = append(inPaths, transformer.Properties()...)
+		usedInPaths = append(usedInPaths, transformer.Properties()...)
+		for m := range mapping {
+			path, err := types.ParsePropertyPath(m)
+			if err != nil {
+				return errors.BadRequest("invalid property path %q", m)
+			}
+			usedOutPaths = append(usedOutPaths, path)
+		}
 	}
 	// Validate the transformation.
 	if function := action.Transformation.Function; function != nil {
@@ -1854,23 +1861,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			return errors.BadRequest("transformation language is empty")
 		default:
 			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
-		}
-	}
-	// Ensure that every property in the input and output schemas have been
-	// mapped, unless the action has a transformation; in that case, we do not
-	// know which properties have been mapped, so this check cannot be done.
-	if action.Transformation.Function == nil {
-		if inPaths != nil {
-			if props := unmappedProperties(action.InSchema, inPaths); props != nil {
-				// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
-				// return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
-			}
-		}
-		if outPaths != nil {
-			if props := unmappedProperties(action.OutSchema, outPaths); props != nil {
-				// TODO(Gianluca): see https://github.com/open2b/chichi/issues/429.
-				// return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
-			}
 		}
 	}
 	// Validate the path.
@@ -1936,6 +1926,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !canBeUsedAsAsMatchingProp(internal.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", internal.Type)
 		}
+		usedInPaths = append(usedInPaths, types.Path{props.Internal})
 		// Validate the external matching property.
 		if !types.IsValidPropertyName(props.External.Name) {
 			return errors.BadRequest("external matching property %q is not a valid property name", props.External.Name)
@@ -2039,6 +2030,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		default:
 			return fmt.Errorf("identity column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityColumn, k)
 		}
+		usedInPaths = append(usedInPaths, types.Path{action.IdentityColumn})
 		// Validate the timestamp column and format.
 		var requiresTimestampFormat bool
 		if action.TimestampColumn != "" {
@@ -2059,6 +2051,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			default:
 				return fmt.Errorf("timestamp column %q has kind %s instead of DateTime, Date, JSON, or Text", action.TimestampColumn, k)
 			}
+			usedInPaths = append(usedInPaths, types.Path{action.TimestampColumn})
 		}
 		if !requiresTimestampFormat && action.TimestampFormat != "" {
 			return errors.BadRequest("action cannot specify a timestamp format")
@@ -2093,6 +2086,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !ok {
 			return errors.BadRequest("identity column \"id\" not found within input schema")
 		}
+		usedInPaths = append(usedInPaths, types.Path{"id"})
 		switch k := id.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.TextKind:
 		default:
@@ -2103,6 +2097,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			if k := timestamp.Type.Kind(); k != types.DateTimeKind {
 				return errors.BadRequest("timestamp column \"timestamp\" has kind %s instead of DateTime", k)
 			}
+			usedInPaths = append(usedInPaths, types.Path{"timestamp"})
 		}
 	}
 
@@ -2164,6 +2159,25 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 	if !transformationIsAllowed && action.Transformation.Function != nil {
 		return errors.BadRequest("transformation is not allowed")
+	}
+
+	// Ensure that every property in the input and output schemas have been used
+	// (by the mappings, by the filters, etc...).
+	if action.Transformation.Function != nil {
+		// The action has a transformation function, so we do not know which
+		// properties are used; consequently, this check would always pass
+		// because we would consider every property of the schema as used.
+	} else {
+		if usedInPaths != nil {
+			if props := unusedProperties(action.InSchema, usedInPaths); props != nil {
+				return errors.BadRequest("input schema contains unused properties: %s", strings.Join(props, ", "))
+			}
+		}
+		if usedOutPaths != nil {
+			if props := unusedProperties(action.OutSchema, usedOutPaths); props != nil {
+				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
+			}
+		}
 	}
 
 	return nil
@@ -2309,22 +2323,21 @@ func statsTimeSlot(t time.Time) int {
 	return epoc / (60 * 60)
 }
 
-// unmappedProperties returns the names of the unmapped properties in schema, if
-// there is at least one, otherwise returns nil.
-// schema must be valid.
-func unmappedProperties(schema types.Type, mapped []types.Path) []string {
+// unusedProperties returns the names of the unused properties in schema, if
+// there is at least one, otherwise returns nil. schema must be valid.
+func unusedProperties(schema types.Type, used []types.Path) []string {
 	schemaProps := schema.PropertiesNames()
-	notMapped := make(map[string]struct{}, len(schemaProps))
+	notUsed := make(map[string]struct{}, len(schemaProps))
 	for _, p := range schemaProps {
-		notMapped[p] = struct{}{}
+		notUsed[p] = struct{}{}
 	}
-	for _, path := range mapped {
-		delete(notMapped, path[0])
+	for _, path := range used {
+		delete(notUsed, path[0])
 	}
-	if len(notMapped) == 0 {
+	if len(notUsed) == 0 {
 		return nil
 	}
-	props := maps.Keys(notMapped)
+	props := maps.Keys(notUsed)
 	slices.Sort(props)
 	return props
 }
