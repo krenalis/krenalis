@@ -452,12 +452,10 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 // Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema. As a special case, if toSelect is nil then
-// every property of schema is returned.
+// are normalized with the schema.
 //
 // schema must contain both the properties to select and the properties
-// referenced in the where clause. As a special case, if the schema is the
-// invalid schema, then the schema of the specified table is used.
+// referenced in the where clause.
 //
 // key is the key of the table and it is used to the determine the ID of each
 // record.
@@ -482,6 +480,14 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 		return nil, types.Type{}, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
 
+	if !schema.Valid() {
+		return nil, types.Type{}, errors.New("schema must be valid")
+	}
+
+	if len(toSelect) == 0 {
+		return nil, types.Type{}, errors.New("toSelect cannot be empty")
+	}
+
 	if !key.Type.Valid() {
 		return nil, types.Type{}, errors.New("invalid key type")
 	}
@@ -493,15 +499,6 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, types.Type{}, err
-	}
-
-	// If the schema is the invalid schema, use the entire schema of the table.
-	if !schema.Valid() {
-		ti, err := warehouse.tableInfo(ctx, table, true)
-		if err != nil {
-			return nil, types.Type{}, warehouses.Error(err)
-		}
-		schema = ti.schema
 	}
 
 	// Add the order and the key to the schema, as conformity checks must also
@@ -580,9 +577,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 
 	// Determine the columns for the query.
 	var columns []types.Property
-	if toSelect == nil {
-		columns = warehouses.PropertiesToColumns(schema.Properties())
-	} else {
+	{
 		props := []types.Property{}
 		for _, path := range toSelect {
 			p, err := schema.PropertyByPath(path)

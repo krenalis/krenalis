@@ -101,8 +101,9 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 // It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - NoUsersSchema, if the data warehouse does not have users schema.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Traits(ctx context.Context) ([]byte, error) {
 
 	this.apis.mustBeOpen()
@@ -114,9 +115,23 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
+	// Read the users schema and determine the properties to select.
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		return nil, err
+	}
+	usersSchema := schemas["users"]
+	if !usersSchema.Valid() {
+		return nil, errors.Unprocessable(NoUsersSchema, "missing users schema")
+	}
+	toSelect := []types.Path{}
+	for _, p := range usersSchema.PropertiesNames() {
+		toSelect = append(toSelect, types.Path{p})
+	}
+
 	// Retrieve the user traits as records.
 	where := expr.NewBaseExpr("id", expr.OperatorEqual, this.id)
-	records, schema, err := this.store.Users(ctx, types.Type{}, nil, where, types.Property{}, 0, 1)
+	records, schema, err := this.store.Users(ctx, usersSchema, toSelect, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

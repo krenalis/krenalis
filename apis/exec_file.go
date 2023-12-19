@@ -14,17 +14,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"chichi/connector/types"
 )
 
 // exportUsersToFile exports the users to the file.
 func (this *Action) exportUsersToFile(ctx context.Context) error {
-
-	users, err := this.readUsersFromDataWarehouse(ctx, types.Type{})
-	if err != nil {
-		return err
-	}
 
 	// Determine the columns of the exported file from the "users" schema.
 	usersSchema, err := this.connection.schema(ctx, "users")
@@ -35,6 +28,12 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 		return actionExecutionError{errors.New("'users' schema not found")}
 	}
 	columns := usersSchema.Properties()
+
+	// Read the users schema.
+	users, err := this.readUsersFromDataWarehouse(ctx, usersSchema)
+	if err != nil {
+		return err
+	}
 
 	// Prepare the users.
 	rows := make([][]any, len(users))

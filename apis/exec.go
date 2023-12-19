@@ -201,7 +201,9 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema 
 		}
 		toSelect = mapping.Properties()
 	} else {
-		toSelect = nil // every property of the usersSchema.
+		for _, p := range usersSchema.PropertiesNames() {
+			toSelect = append(toSelect, types.Path{p})
+		}
 	}
 
 	store := this.connection.store

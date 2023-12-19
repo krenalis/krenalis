@@ -83,12 +83,10 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 // Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema. As a special case, if toSelect is nil then
-// every property of schema is returned.
+// are normalized with the schema.
 //
 // schema must contain both the properties to select and the properties
-// referenced in the where clause. As a special case, if the schema is the
-// invalid schema, then the schema of the "events" table is used.
+// referenced in the where clause.
 //
 // Returned records are in range [first, first + limit], with first >= 0 and
 // limit > 0. As a special case, a zero limit means that every record is
@@ -226,12 +224,10 @@ type Records = warehouses.Records
 // Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema. As a special case, if toSelect is nil then
-// every property of schema is returned.
+// are normalized with the schema.
 //
 // schema must contain both the properties to select and the properties
-// referenced in the where clause. As a special case, if the schema is the
-// invalid schema, then the schema of the "users" table is used.
+// referenced in the where clause.
 //
 // Returned records are in range [first, first + limit], with first >= 0 and
 // limit > 0. As a special case, a zero limit means that every record is

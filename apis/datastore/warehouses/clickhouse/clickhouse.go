@@ -241,12 +241,10 @@ func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actions []int
 // Property), and the schema of the records.
 //
 // In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema. As a special case, if toSelect is nil then
-// every property of schema is returned.
+// are normalized with the schema.
 //
 // schema must contain both the properties to select and the properties
-// referenced in the where clause. As a special case, if the schema is the
-// invalid schema, then the schema of the specified table is used.
+// referenced in the where clause.
 //
 // key is the key of the table and it is used to the determine the ID of each
 // record.
