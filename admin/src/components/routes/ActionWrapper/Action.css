@@ -897,6 +897,7 @@ inherit the disabled style */
 	position: relative;
 	overflow: auto;
 	max-height: 100%;
+	background-color: var(--bg-gray);
 }
 
 .action .fullscreenTransformation .editorPanel {
