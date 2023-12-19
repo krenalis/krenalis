@@ -376,7 +376,7 @@ func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int,
 	panic("not implemented")
 }
 
-// Select returns a Records iterator on the records of the given table which
+// Records returns a Records iterator on the records of the given table which
 // satisfy the where condition, ordered by order (if it's not the zero
 // Property), and the schema of the records.
 //
@@ -403,7 +403,7 @@ func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int,
 //
 // As a simplification, it is currently assumed that the table schema does not
 // change in the data warehouse during the execution of this method.
-func (warehouse *Snowflake) Select(ctx context.Context, table string, schema types.Type,
+func (warehouse *Snowflake) Records(ctx context.Context, table string, schema types.Type,
 	toSelect []types.Path, key types.Property, where expr.Expr, order types.Property,
 	first, limit int) (warehouses.Records, types.Type, error) {
 	panic("not implemented")

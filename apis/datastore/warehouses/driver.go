@@ -95,7 +95,7 @@ type Warehouse interface {
 	// during the users synchronization.
 	ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error
 
-	// Select returns a Records iterator on the records of the given table which
+	// Records returns a Records iterator on the records of the given table which
 	// satisfy the where condition, ordered by order (if it's not the zero
 	// Property), and the schema of the records.
 	//
@@ -122,7 +122,7 @@ type Warehouse interface {
 	//
 	// As a simplification, it is currently assumed that the table schema does not
 	// change in the data warehouse during the execution of this method.
-	Select(ctx context.Context, table string, schema types.Type, toSelect []types.Path, key types.Property, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error)
+	Records(ctx context.Context, table string, schema types.Type, toSelect []types.Path, key types.Property, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error)
 }
 
 // Records is the iterator interface used to iterate over the records read from
