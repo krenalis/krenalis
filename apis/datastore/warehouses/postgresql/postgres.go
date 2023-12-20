@@ -478,29 +478,29 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		return nil, types.Type{}, err
 	}
 
-	// Add the Order and the ID property to the schema, as conformity checks
+	// Add the ID and the Order properties to the schema, as conformity checks
 	// must also be performed for these properties against the schema of the
 	// table currently in the data warehouse.
 	var schema types.Type
 	{
 		props := query.Schema.Properties()
-		var hasOrder, hasID bool
+		var hasID, hasOrder bool
 		for _, p := range props {
-			switch p.Name {
-			case query.Order.Name:
-				hasOrder = true
-			case query.ID.Name:
+			if p.Name == query.ID.Name {
 				hasID = true
 			}
-			if (hasOrder || query.Order.Name == "") && hasID {
+			if p.Name == query.Order.Name {
+				hasOrder = true
+			}
+			if hasID && (hasOrder || query.Order.Name == "") {
 				break
 			}
 		}
-		if !hasOrder && query.Order.Name != "" {
-			props = append(props, query.Order)
-		}
-		if !hasID && query.Order.Name != query.ID.Name {
+		if !hasID {
 			props = append(props, query.ID)
+		}
+		if !hasOrder && query.Order.Name != "" && query.Order.Name != query.ID.Name {
+			props = append(props, query.Order)
 		}
 		schema = types.Object(props)
 	}
