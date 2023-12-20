@@ -96,7 +96,7 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 // error.
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
-// SchemaError is returned.
+// *SchemaError is returned.
 func (store *Store) Events(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error) {
 	store.mustBeOpen()
 	key := types.Property{Name: "gid", Type: types.Int(32)}
@@ -237,7 +237,7 @@ type Records = warehouses.Records
 // error.
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
-// SchemaError is returned.
+// *SchemaError is returned.
 func (store *Store) Users(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error) {
 	store.mustBeOpen()
 	key := types.Property{Name: "id", Type: types.Int(32)}

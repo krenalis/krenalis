@@ -397,7 +397,7 @@ func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int,
 // error.
 //
 // If schema is not conform to the schema of the table in the data warehouse, a
-// SchemaError is returned.
+// *SchemaError is returned.
 //
 // As a simplification, it is currently assumed that the table schema does not
 // change in the data warehouse during the execution of this method.

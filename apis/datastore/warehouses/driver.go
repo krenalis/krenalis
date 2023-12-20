@@ -466,7 +466,7 @@ func (err *SchemaError) Error() string {
 }
 
 // CheckConformity checks whether the schema t1 conforms to the new schema t2
-// and returns a SchemaError error if it does not conform.
+// and returns a *SchemaError error if it does not conform.
 //
 // The conformity check must take into account:
 //
