@@ -542,7 +542,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 					return nil, warehouses.Error(err2)
 				}
 			}
-			return nil, err
+			return nil, warehouses.Error(err)
 		}
 		defer rows.Close()
 		fds = rows.FieldDescriptions()
