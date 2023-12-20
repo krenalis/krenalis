@@ -127,8 +127,13 @@ func Run(ctx context.Context, settings *Settings) error {
 		// Handle panics.
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Error("a panic occurred, Chichi will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r)
-				f, err := os.OpenFile("panics.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+				panicsFilename, err := filepath.Abs("panics.log")
+				if err != nil {
+					slog.Error("cannot get absolute filepath of 'panics.log': %s", err)
+					return
+				}
+				slog.Error("a panic occurred, Chichi will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r, "panics.log filename", panicsFilename)
+				f, err := os.OpenFile(panicsFilename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 				if err != nil {
 					slog.Error("cannot open panic file", "err", err)
 					return
