@@ -461,7 +461,7 @@ type SchemaError struct {
 	Msg string
 }
 
-func (err SchemaError) Error() string {
+func (err *SchemaError) Error() string {
 	return err.Msg
 }
 
