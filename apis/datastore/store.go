@@ -78,30 +78,49 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 	return store.warehouse.DestinationUser(ctx, action, property)
 }
 
-// Events returns a Records iterator on the events of the "events" table which
-// satisfy the where condition, ordered by order (if it's not the zero
-// Property), and the schema of the records.
-//
-// In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema.
-//
-// schema must contain both the properties to select and the properties
-// referenced in the where clause.
-//
-// Returned records are in range [first, first + limit], with first >= 0 and
-// limit > 0. As a special case, a zero limit means that every record is
-// returned.
+// Events returns an iterator over the results of the query on the 'events'
+// table of the data warehouse.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-//
-// If schema is not conform to the schema of the table in the data warehouse, a
-// *SchemaError is returned.
-func (store *Store) Events(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error) {
+// error. If the schema specified in the query is not conform to the schema of
+// the 'events' table, it returns a *SchemaError error.
+func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, types.Type, error) {
 	store.mustBeOpen()
-	key := types.Property{Name: "gid", Type: types.Int(32)}
-	records, schema, err := store.warehouse.Records(ctx, "events", schema, toSelect, key, where, order, first, limit)
+	records, schema, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
+		Table:      "events",
+		Schema:     query.Schema,
+		Properties: query.Properties,
+		ID:         types.Property{Name: "gid", Type: types.Int(32)},
+		Where:      query.Where,
+		Order:      query.Order,
+		First:      query.First,
+		Limit:      query.Limit,
+	})
 	return records, schema, err
+}
+
+// EventsQuery represents a query for the Events method.
+type EventsQuery struct {
+
+	// Properties are the properties to return for each record in the
+	// Record.Properties field.
+	Properties []types.Path
+
+	// Where, when not nil, filters the records to return.
+	Where expr.Expr
+
+	// Order, when provided, is the order of the returned records.
+	Order types.Property
+
+	// Schema contains the types of the properties in Properties and Where.
+	Schema types.Type
+
+	// First is the index of the first returned record and must be >= 0.
+	First int
+
+	// Limit controls how many records should be returned and must be >= 0. If
+	// 0, it means that there is no limit.
+	Limit int
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -219,30 +238,49 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 
 type Records = warehouses.Records
 
-// Users returns a Records iterator on the users of the "users" table which
-// satisfy the where condition, ordered by order (if it's not the zero
-// Property), and the schema of the records.
-//
-// In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema.
-//
-// schema must contain both the properties to select and the properties
-// referenced in the where clause.
-//
-// Returned records are in range [first, first + limit], with first >= 0 and
-// limit > 0. As a special case, a zero limit means that every record is
-// returned.
+// Users returns an iterator over the results of the query on the 'users' table
+// of the data warehouse.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-//
-// If schema is not conform to the schema of the table in the data warehouse, a
-// *SchemaError is returned.
-func (store *Store) Users(ctx context.Context, schema types.Type, toSelect []types.Path, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error) {
+// error. If the schema specified in the query is not conform to the schema of
+// the 'users' table, it returns a *SchemaError error.
+func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, types.Type, error) {
 	store.mustBeOpen()
-	key := types.Property{Name: "id", Type: types.Int(32)}
-	records, schema, err := store.warehouse.Records(ctx, "users", schema, toSelect, key, where, order, first, limit)
+	records, schema, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
+		Table:      "users",
+		Schema:     query.Schema,
+		Properties: query.Properties,
+		ID:         types.Property{Name: "id", Type: types.Int(32)},
+		Where:      query.Where,
+		Order:      query.Order,
+		First:      query.First,
+		Limit:      query.Limit,
+	})
 	return records, schema, err
+}
+
+// UsersQuery represents a query for the Users method.
+type UsersQuery struct {
+
+	// Properties are the properties to return for each record in the
+	// Record.Properties field.
+	Properties []types.Path
+
+	// Where, when not nil, filters the records to return.
+	Where expr.Expr
+
+	// Order, when provided, is the order of the returned records.
+	Order types.Property
+
+	// Schema contains the types of the properties in Properties and Where.
+	Schema types.Type
+
+	// First is the index of the first returned record and must be >= 0.
+	First int
+
+	// Limit controls how many records should be returned and must be >= 0. If
+	// 0, it means that there is no limit.
+	Limit int
 }
 
 // close closes the store.

@@ -65,15 +65,17 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		schema = types.Object(append(props, properties...))
 	}
 
-	// Determine the property paths to select.
-	toSelect := make([]types.Path, len(properties))
-	for i, p := range properties {
-		toSelect[i] = types.Path{p.Name}
-	}
-
 	// Retrieve the events records.
-	where := expr.NewBaseExpr("gid", expr.OperatorEqual, this.id)
-	records, _, err := this.store.Events(ctx, schema, toSelect, where, types.Property{}, 0, limit)
+	propsPaths := make([]types.Path, len(properties))
+	for i, p := range properties {
+		propsPaths[i] = types.Path{p.Name}
+	}
+	records, _, err := this.store.Events(ctx, datastore.EventsQuery{
+		Properties: propsPaths,
+		Where:      expr.NewBaseExpr("gid", expr.OperatorEqual, this.id),
+		Schema:     schema,
+		Limit:      limit,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -124,14 +126,18 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	if !usersSchema.Valid() {
 		return nil, errors.Unprocessable(NoUsersSchema, "missing users schema")
 	}
-	toSelect := []types.Path{}
+	properties := []types.Path{}
 	for _, p := range usersSchema.PropertiesNames() {
-		toSelect = append(toSelect, types.Path{p})
+		properties = append(properties, types.Path{p})
 	}
 
 	// Retrieve the user traits as records.
-	where := expr.NewBaseExpr("id", expr.OperatorEqual, this.id)
-	records, schema, err := this.store.Users(ctx, usersSchema, toSelect, where, types.Property{}, 0, 1)
+	records, schema, err := this.store.Users(ctx, datastore.UsersQuery{
+		Schema:     usersSchema,
+		Properties: properties,
+		Where:      expr.NewBaseExpr("id", expr.OperatorEqual, this.id),
+		Limit:      1,
+	})
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

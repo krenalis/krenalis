@@ -190,8 +190,8 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema 
 		}
 	}
 
-	// Determine the properties to select from the data warehouse.
-	var toSelect []types.Path
+	// Determine the properties to retrieve from the data warehouse.
+	var properties []types.Path
 	if this.action.Transformation.Mapping != nil {
 		inSchema := this.action.InSchema
 		outSchema := this.action.OutSchema
@@ -199,17 +199,20 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema 
 		if err != nil {
 			return nil, err
 		}
-		toSelect = mapping.Properties()
+		properties = mapping.Properties()
 	} else {
 		for _, p := range usersSchema.PropertiesNames() {
-			toSelect = append(toSelect, types.Path{p})
+			properties = append(properties, types.Path{p})
 		}
 	}
 
-	store := this.connection.store
-
-	order := types.Property{Name: "id", Type: types.Int(32)}
-	records, _, err := store.Users(ctx, usersSchema, toSelect, where, order, 0, 1000)
+	records, _, err := this.connection.store.Users(ctx, datastore.UsersQuery{
+		Schema:     usersSchema,
+		Properties: properties,
+		Where:      where,
+		Order:      types.Property{Name: "id", Type: types.Int(32)},
+		Limit:      1_000,
+	})
 	if err != nil {
 		switch err := err.(type) {
 		case *datastore.DataWarehouseError:

@@ -1183,13 +1183,19 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	toSelect := []types.Path{}
-	for _, p := range properties {
-		toSelect = append(toSelect, types.Path{p})
-	}
-
 	// Read the users.
-	records, _, err := this.store.Users(ctx, usersSchema, toSelect, where, orderProperty, first, limit)
+	propsPaths := []types.Path{}
+	for _, p := range properties {
+		propsPaths = append(propsPaths, types.Path{p})
+	}
+	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
+		Schema:     usersSchema,
+		Properties: propsPaths,
+		Where:      where,
+		Order:      orderProperty,
+		First:      first,
+		Limit:      limit,
+	})
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

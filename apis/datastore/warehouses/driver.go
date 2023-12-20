@@ -95,32 +95,47 @@ type Warehouse interface {
 	// during the users synchronization.
 	ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error
 
-	// Records returns a Records iterator on the records of the given table which
-	// satisfy the where condition, ordered by order (if it's not the zero
-	// Property), and the schema of the records.
-	//
-	// In each record, the returned properties are those specified in toSelect and
-	// are normalized with the schema.
-	//
-	// schema must contain both the properties to select and the properties
-	// referenced in the where clause.
-	//
-	// key is the key of the table and it is used to the determine the ID of each
-	// record.
-	//
-	// Returned records are in range [first, first + limit], with first >= 0 and
-	// limit > 0. As a special case, a zero limit means that every record is
-	// returned.
+	// Records returns an iterator over the results of the query, and the schema
+	// of the records.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
-	//
-	// If schema is not conform to the schema of the table in the data warehouse, a
-	// SchemaError is returned.
+	// error. If the schema specified in the query is not conform to the schema of
+	// the table in the data warehouse, it returns a *SchemaError error.
 	//
 	// As a simplification, it is currently assumed that the table schema does not
 	// change in the data warehouse during the execution of this method.
-	Records(ctx context.Context, table string, schema types.Type, toSelect []types.Path, key types.Property, where expr.Expr, order types.Property, first, limit int) (Records, types.Type, error)
+	Records(ctx context.Context, query RecordsQuery) (Records, types.Type, error)
+}
+
+// RecordsQuery represents the query for the Records method.
+
+type RecordsQuery struct {
+
+	// ID is the property to return for each record in the Record.ID field.
+	ID types.Property
+
+	// Properties are the properties to return for each record in the
+	// Record.Properties field.
+	Properties []types.Path
+
+	// Table is the table from which the records are read.
+	Table string
+
+	// Where, when not nil, filters the records to return.
+	Where expr.Expr
+
+	// Order, when provided, is the order of the returned records.
+	Order types.Property
+
+	// Schema contains the types of the properties in Properties and Where.
+	Schema types.Type
+
+	// First is the index of the first returned record and must be >= 0.
+	First int
+
+	// Limit controls how many records should be returned and must be >= 0. If
+	// 0, it means that there is no limit.
+	Limit int
 }
 
 // Records is the iterator interface used to iterate over the records read from

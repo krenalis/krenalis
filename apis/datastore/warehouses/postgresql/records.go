@@ -17,34 +17,35 @@ import (
 )
 
 type records struct {
-	columns              []types.Property
-	properties           []types.Property
-	rows                 *postgres.Rows
-	key                  string
-	dst                  []any
-	err                  error
-	closed               bool
-	removeKeyFromRecords bool
+	columns           []types.Property
+	properties        []types.Property
+	rows              *postgres.Rows
+	id                string
+	dst               []any
+	err               error
+	closed            bool
+	removeIDFromProps bool
 }
 
 var _ warehouses.Records = (*records)(nil)
 
 // newRecords return a new records.
 // It could change the columns slice and the column names.
-// removeKeyFromRecords controls whether the key property should be removed by
-// the returned records.
-func newRecords(rows *postgres.Rows, columns []types.Property, key string, removeKeyFromRecords bool) (*records, error) {
+// id is the name of the property used as Record.ID.
+// removeIDFromProps controls whether the ID property should be removed from the
+// Record.Properties.
+func newRecords(rows *postgres.Rows, columns []types.Property, id string, removeIDFromProps bool) (*records, error) {
 	properties, err := warehouses.ColumnsToProperties(columns)
 	if err != nil {
 		return nil, err
 	}
 	records := records{
-		columns:              columns,
-		properties:           properties,
-		rows:                 rows,
-		key:                  key,
-		dst:                  make([]any, len(columns)),
-		removeKeyFromRecords: removeKeyFromRecords,
+		columns:           columns,
+		properties:        properties,
+		rows:              rows,
+		id:                id,
+		dst:               make([]any, len(columns)),
+		removeIDFromProps: removeIDFromProps,
 	}
 	return &records, nil
 }
@@ -77,14 +78,14 @@ func (r *records) For(yield func(warehouses.Record) error) error {
 		}
 		var record warehouses.Record
 		props, _ := warehouses.DeserializeRowAsMap(r.properties, rows[len(rows)-1])
-		id, ok := props[r.key].(int)
+		id, ok := props[r.id].(int)
 		if !ok {
-			r.err = fmt.Errorf("row has no integer key %q", r.key)
+			r.err = fmt.Errorf("row has no integer ID %q", r.id)
 			return nil
 		}
 		record.ID = id
-		if r.removeKeyFromRecords {
-			delete(props, r.key)
+		if r.removeIDFromProps {
+			delete(props, r.id)
 		}
 		record.Properties = props
 		if err := yield(record); err != nil {

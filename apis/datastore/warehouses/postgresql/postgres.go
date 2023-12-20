@@ -21,7 +21,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
@@ -447,53 +446,31 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	return nil
 }
 
-// Records returns a Records iterator on the records of the given table which
-// satisfy the where condition, ordered by order (if it's not the zero
-// Property), and the schema of the records.
-//
-// In each record, the returned properties are those specified in toSelect and
-// are normalized with the schema.
-//
-// schema must contain both the properties to select and the properties
-// referenced in the where clause.
-//
-// key is the key of the table and it is used to the determine the ID of each
-// record.
-//
-// Returned records are in range [first, first + limit], with first >= 0 and
-// limit > 0. As a special case, a zero limit means that every record is
-// returned.
+// Records returns an iterator over the results of the query, and the schema
+// of the records.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-//
-// If schema is not conform to the schema of the table in the data warehouse, a
-// *SchemaError is returned.
+// error. If the schema specified in the query is not conform to the schema of
+// the table in the data warehouse, it returns a *SchemaError error.
 //
 // As a simplification, it is currently assumed that the table schema does not
 // change in the data warehouse during the execution of this method.
-func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema types.Type,
-	toSelect []types.Path, key types.Property, where expr.Expr, order types.Property,
-	first, limit int) (warehouses.Records, types.Type, error) {
-
-	if !warehouses.IsValidIdentifier(table) {
-		return nil, types.Type{}, fmt.Errorf("table name %q is not a valid identifier", table)
+func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, types.Type, error) {
+	if !query.ID.Type.Valid() {
+		return nil, types.Type{}, errors.New("invalid ID type")
 	}
-
-	if !schema.Valid() {
+	if query.ID.Type.Kind() != types.IntKind {
+		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
+		return nil, types.Type{}, fmt.Errorf("expecting ID with Int kind, got %s", query.ID.Type.Kind())
+	}
+	if !warehouses.IsValidIdentifier(query.Table) {
+		return nil, types.Type{}, fmt.Errorf("table name %q is not a valid identifier", query.Table)
+	}
+	if !query.Schema.Valid() {
 		return nil, types.Type{}, errors.New("schema must be valid")
 	}
-
-	if len(toSelect) == 0 {
+	if len(query.Properties) == 0 {
 		return nil, types.Type{}, errors.New("toSelect cannot be empty")
-	}
-
-	if !key.Type.Valid() {
-		return nil, types.Type{}, errors.New("invalid key type")
-	}
-	if key.Type.Kind() != types.IntKind {
-		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
-		return nil, types.Type{}, fmt.Errorf("expecting key with Int kind, got %s", key.Type.Kind())
 	}
 
 	db, err := warehouse.connection()
@@ -501,28 +478,29 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 		return nil, types.Type{}, err
 	}
 
-	// Add the order and the key to the schema, as conformity checks must also
-	// be performed for these properties against the schema of the table
-	// currently in the data warehouse.
+	// Add the Order and the ID property to the schema, as conformity checks
+	// must also be performed for these properties against the schema of the
+	// table currently in the data warehouse.
+	var schema types.Type
 	{
-		props := schema.Properties()
-		var hasOrder, hasKey bool
+		props := query.Schema.Properties()
+		var hasOrder, hasID bool
 		for _, p := range props {
 			switch p.Name {
-			case order.Name:
+			case query.Order.Name:
 				hasOrder = true
-			case key.Name:
-				hasKey = true
+			case query.ID.Name:
+				hasID = true
 			}
-			if (hasOrder || order.Name == "") && hasKey {
+			if (hasOrder || query.Order.Name == "") && hasID {
 				break
 			}
 		}
-		if !hasOrder && order.Name != "" {
-			props = append(props, order)
+		if !hasOrder && query.Order.Name != "" {
+			props = append(props, query.Order)
 		}
-		if !hasKey && order.Name != key.Name {
-			props = append(props, key)
+		if !hasID && query.Order.Name != query.ID.Name {
+			props = append(props, query.ID)
 		}
 		schema = types.Object(props)
 	}
@@ -549,14 +527,14 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 			b.WriteByte('"')
 		}
 		b.WriteString(` FROM "`)
-		b.WriteString(table)
+		b.WriteString(query.Table)
 		b.WriteString(`" LIMIT 0`)
 		rows, err := db.Query(ctx, b.String())
 		if err != nil {
 			if isUndefinedColumnErr(err) {
 				// Return a more specific conformity error instead of an SQL
 				// error.
-				ti, err2 := warehouse.tableInfo(ctx, table, true)
+				ti, err2 := warehouse.tableInfo(ctx, query.Table, true)
 				if err2 != nil {
 					return nil, types.Type{}, warehouses.Error(err2)
 				}
@@ -579,7 +557,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 	var columns []types.Property
 	{
 		props := []types.Property{}
-		for _, path := range toSelect {
+		for _, path := range query.Properties {
 			p, err := schema.PropertyByPath(path)
 			if err != nil {
 				return nil, types.Type{}, err
@@ -588,71 +566,71 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 		}
 		columns = warehouses.PropertiesToColumns(props)
 	}
-	hasKey := false
+	hasID := false
 	for _, c := range columns {
-		if c.Name == key.Name {
-			hasKey = true
+		if c.Name == query.ID.Name {
+			hasID = true
 			break
 		}
 	}
-	removeKeyFromRecords := false
-	if !hasKey {
-		columns = append([]types.Property{key}, columns...)
-		// Since the key has been added to the columns just to determine the
+	removeIDFromProps := false
+	if !hasID {
+		columns = append([]types.Property{query.ID}, columns...)
+		// Since the ID has been added to the columns just to determine the
 		// records IDs, and it is now explicitly requested by the user, it must
 		// be removed from the returned properties.
-		removeKeyFromRecords = true
+		removeIDFromProps = true
 	}
 
-	// Build the query.
-	var query strings.Builder
-	query.WriteString(`SELECT `)
+	// Build the b.
+	var b strings.Builder
+	b.WriteString(`SELECT `)
 	for i, c := range columns {
 		if i > 0 {
-			query.WriteString(", ")
+			b.WriteString(", ")
 		}
 		if !types.IsValidPropertyName(c.Name) {
 			return nil, types.Type{}, fmt.Errorf("column name %q is not a valid property name", c.Name)
 		}
-		query.WriteByte('"')
-		query.WriteString(c.Name)
-		query.WriteByte('"')
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteByte('"')
 	}
-	query.WriteString(` FROM "`)
-	query.WriteString(table)
-	query.WriteByte('"')
+	b.WriteString(` FROM "`)
+	b.WriteString(query.Table)
+	b.WriteByte('"')
 
-	if where != nil {
-		query.WriteString(` WHERE `)
-		expr, err := renderExpr(schema, where)
+	if query.Where != nil {
+		b.WriteString(` WHERE `)
+		expr, err := renderExpr(schema, query.Where)
 		if err != nil {
 			return nil, types.Type{}, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
-		query.WriteString(expr)
+		b.WriteString(expr)
 	}
 
-	if order.Name != "" {
-		if !types.IsValidPropertyName(order.Name) {
-			return nil, types.Type{}, fmt.Errorf("column name %q is not a valid property name", order.Name)
+	if query.Order.Name != "" {
+		if !types.IsValidPropertyName(query.Order.Name) {
+			return nil, types.Type{}, fmt.Errorf("column name %q is not a valid property name", query.Order.Name)
 		}
-		query.WriteString(" ORDER BY ")
-		query.WriteString(order.Name)
+		b.WriteString(" ORDER BY ")
+		b.WriteString(query.Order.Name)
 	}
-	if limit > 0 {
-		query.WriteString(" LIMIT ")
-		query.WriteString(strconv.Itoa(limit))
+	if query.Limit > 0 {
+		b.WriteString(" LIMIT ")
+		b.WriteString(strconv.Itoa(query.Limit))
 	}
-	if first > 0 {
-		query.WriteString(" OFFSET ")
-		query.WriteString(strconv.Itoa(first))
+	if query.First > 0 {
+		b.WriteString(" OFFSET ")
+		b.WriteString(strconv.Itoa(query.First))
 	}
 
 	// Execute the query.
-	rows, err := db.Query(ctx, query.String())
+	rows, err := db.Query(ctx, b.String())
 	if err != nil {
 		if mayBeRelatedToSchemaError(err) {
 			// Return a more specific conformity error instead of an SQL error.
-			ti, err2 := warehouse.tableInfo(ctx, table, true)
+			ti, err2 := warehouse.tableInfo(ctx, query.Table, true)
 			if err2 != nil {
 				return nil, types.Type{}, warehouses.Error(err2)
 			}
@@ -672,14 +650,14 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 	// This is necessary to retrieve an up-to-date schema of the table, which
 	// will be used later for the conformity check with the schema passed as
 	// parameter.
-	ti, err := warehouse.tableInfo(ctx, table, false)
+	ti, err := warehouse.tableInfo(ctx, query.Table, false)
 	if err != nil {
 		return nil, types.Type{}, warehouses.Error(err)
 	}
 	err = checkFieldDescriptions(fds, ti.fds)
 	if err != nil {
 		// Take a fresh tableInfo and check the conformity again.
-		ti, err = warehouse.tableInfo(ctx, table, true)
+		ti, err = warehouse.tableInfo(ctx, query.Table, true)
 		if err != nil {
 			return nil, types.Type{}, warehouses.Error(err)
 		}
@@ -702,7 +680,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, table string, schema t
 		return nil, types.Type{}, warehouses.Error(err)
 	}
 
-	records, err := newRecords(rows, columns, key.Name, removeKeyFromRecords)
+	records, err := newRecords(rows, columns, query.ID.Name, removeIDFromProps)
 	if err != nil {
 		return nil, types.Type{}, err
 	}
