@@ -84,9 +84,9 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error. If the schema specified in the query is not conform to the schema of
 // the 'events' table, it returns a *SchemaError error.
-func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, types.Type, error) {
+func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, error) {
 	store.mustBeOpen()
-	records, schema, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
+	records, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
 		Table:      "events",
 		Schema:     query.Schema,
 		Properties: query.Properties,
@@ -96,7 +96,7 @@ func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, typ
 		First:      query.First,
 		Limit:      query.Limit,
 	})
-	return records, schema, err
+	return records, err
 }
 
 // EventsQuery represents a query for the Events method.
@@ -244,9 +244,9 @@ type Records = warehouses.Records
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error. If the schema specified in the query is not conform to the schema of
 // the 'users' table, it returns a *SchemaError error.
-func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, types.Type, error) {
+func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, error) {
 	store.mustBeOpen()
-	records, schema, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
+	records, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
 		Table:      "users",
 		Schema:     query.Schema,
 		Properties: query.Properties,
@@ -256,7 +256,7 @@ func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, types
 		First:      query.First,
 		Limit:      query.Limit,
 	})
-	return records, schema, err
+	return records, err
 }
 
 // UsersQuery represents a query for the Users method.

@@ -375,8 +375,7 @@ func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int,
 	panic("not implemented")
 }
 
-// Records returns an iterator over the results of the query, and the schema
-// of the records.
+// Records returns an iterator over the results of the query.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error. If the schema specified in the query is not conform to the schema of
@@ -384,7 +383,7 @@ func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int,
 //
 // As a simplification, it is currently assumed that the table schema does not
 // change in the data warehouse during the execution of this method.
-func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, types.Type, error) {
+func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, error) {
 	panic("not implemented")
 }
 

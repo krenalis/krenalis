@@ -1188,7 +1188,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	for _, p := range properties {
 		propsPaths = append(propsPaths, types.Path{p})
 	}
-	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
+	records, err := this.store.Users(ctx, datastore.UsersQuery{
 		Schema:     usersSchema,
 		Properties: propsPaths,
 		Where:      where,

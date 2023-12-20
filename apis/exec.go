@@ -206,7 +206,7 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema 
 		}
 	}
 
-	records, _, err := this.connection.store.Users(ctx, datastore.UsersQuery{
+	records, err := this.connection.store.Users(ctx, datastore.UsersQuery{
 		Schema:     usersSchema,
 		Properties: properties,
 		Where:      where,

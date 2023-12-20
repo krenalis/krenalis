@@ -70,7 +70,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	for i, p := range properties {
 		propsPaths[i] = types.Path{p.Name}
 	}
-	records, _, err := this.store.Events(ctx, datastore.EventsQuery{
+	records, err := this.store.Events(ctx, datastore.EventsQuery{
 		Properties: propsPaths,
 		Where:      expr.NewBaseExpr("gid", expr.OperatorEqual, this.id),
 		Schema:     schema,
@@ -132,7 +132,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	}
 
 	// Retrieve the user traits as records.
-	records, schema, err := this.store.Users(ctx, datastore.UsersQuery{
+	records, err := this.store.Users(ctx, datastore.UsersQuery{
 		Schema:     usersSchema,
 		Properties: properties,
 		Where:      expr.NewBaseExpr("id", expr.OperatorEqual, this.id),
@@ -164,5 +164,5 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
 
-	return encoding.Marshal(schema, traits)
+	return encoding.Marshal(usersSchema, traits)
 }
