@@ -314,7 +314,7 @@ type yieldError struct {
 }
 
 func (err yieldError) Error() string {
-	return err.Error()
+	return err.err.Error()
 }
 
 // checkConformity checks whether the schema t1 conforms to the new schema t2
