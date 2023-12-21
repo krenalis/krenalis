@@ -557,9 +557,11 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	{
 		props := []types.Property{}
 		for _, path := range query.Properties {
-			p, err := schema.PropertyByPath(path)
-			if err != nil {
-				return nil, err
+			// TODO(Gianluca): this can be optimized to avoid fetching
+			// unnecessary sub-properties from the data warehouse.
+			p, ok := schema.Property(path[0])
+			if !ok {
+				return nil, fmt.Errorf("property %q not found within query.Schema", path[0])
 			}
 			props = append(props, p)
 		}
