@@ -462,14 +462,14 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
 		return nil, fmt.Errorf("expecting ID with Int kind, got %s", query.ID.Type.Kind())
 	}
+	if len(query.Properties) == 0 {
+		return nil, errors.New("toSelect cannot be empty")
+	}
 	if !warehouses.IsValidIdentifier(query.Table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", query.Table)
 	}
 	if !query.Schema.Valid() {
 		return nil, errors.New("schema must be valid")
-	}
-	if len(query.Properties) == 0 {
-		return nil, errors.New("toSelect cannot be empty")
 	}
 
 	db, err := warehouse.connection()
