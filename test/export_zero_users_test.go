@@ -110,6 +110,12 @@ func TestExportZeroUsers(t *testing.T) {
 			"Action": map[string]any{
 				"Name": "Export users to the CSV on Filesystem",
 				"Path": exportedFilename,
+				"OutSchema": types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+					{Name: "last_name", Type: types.Text()},
+					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+				}),
 			},
 		})
 
@@ -146,7 +152,7 @@ func TestExportZeroUsers(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		const expected = "id,dummy_id,anonymous_id,android,ios,first_name,last_name,email,gender,food_preferences,phone_numbers,favorite_movie\n"
+		const expected = "email,first_name,last_name,gender\n"
 
 		if !bytes.Equal(content, []byte(expected)) {
 			t.Fatalf("file content not matching expected content. Expected %q, got %q", expected, string(content))

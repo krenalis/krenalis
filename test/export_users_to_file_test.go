@@ -108,6 +108,12 @@ func TestExportUsersToFile(t *testing.T) {
 		"Action": map[string]any{
 			"Name": "Export users to the CSV on Filesystem",
 			"Path": exportedFilename,
+			"OutSchema": types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.Text()},
+				{Name: "last_name", Type: types.Text()},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+			}),
 		},
 	})
 
@@ -186,14 +192,20 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expectedStrings := []string{
-			"id,dummy_id,anonymous_id,android,ios,first_name,last_name,email,gender,food_preferences,phone_numbers,favorite_movie",
-			`Kinsley,Buessen,kbuessen0@example.com,male,"{""drink"":null,""fruit"":null}",,`,
-		}
-		for _, expected := range expectedStrings {
-			if !bytes.Contains(content, []byte(expected)) {
-				t.Fatalf("string %q not found in file %q", expected, exportFilePath)
-			}
+		expected := `email,first_name,last_name,gender
+kbuessen0@example.com,Kinsley,Buessen,male
+jdebrett9@example.com,Jerad,Debrett,male
+emoakes2r@example.com,Edyth,Moakes,male
+lwhitesonrr@example.com,Leann,Whiteson,male
+sattestone2s@example.com,Susanne,Atte-Stone,male
+aquittonden2t@example.com,Aimil,Quittonden,male
+tbrayson2u@example.com,Teodora,Brayson,male
+csifflett2v@example.com,Cristiano,Sifflett,male
+mpordal2w@example.com,Mona,Pordal,male
+aniece2x@example.com,Ashil,Niece,male` + "\n"
+
+		if !bytes.EqualFold([]byte(expected), content) {
+			t.Fatalf("expecting content %q, got %q", expected, string(content))
 		}
 
 	}

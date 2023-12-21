@@ -600,8 +600,12 @@ type ActionToSet struct {
 
 	// OutSchema is the output schema of the action.
 	//
-	// It must contain exclusively the output properties used in the
-	// transformation, if this action has a transformation.
+	// It must contain exclusively:
+	//
+	// - the output properties used in the transformation, if this action has a
+	//   transformation.
+	// - the schema of the users that will be exported to a file, it this action
+	//   exports users to a file.
 	OutSchema types.Type
 
 	// Transformation is the mapping or function transformation, if it has one.

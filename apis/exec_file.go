@@ -9,7 +9,6 @@ package apis
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -19,23 +18,14 @@ import (
 // exportUsersToFile exports the users to the file.
 func (this *Action) exportUsersToFile(ctx context.Context) error {
 
-	// Determine the columns of the exported file from the "users" schema.
-	usersSchema, err := this.connection.schema(ctx, "users")
-	if err != nil {
-		return actionExecutionError{err}
-	}
-	if !usersSchema.Valid() {
-		return actionExecutionError{errors.New("'users' schema not found")}
-	}
-	columns := usersSchema.Properties()
-
-	// Read the users schema.
-	users, err := this.readUsersFromDataWarehouse(ctx, usersSchema)
+	// Read the users from the data warehouse.
+	users, err := this.readUsersFromDataWarehouse(ctx, this.action.OutSchema)
 	if err != nil {
 		return err
 	}
 
 	// Prepare the users.
+	columns := this.action.OutSchema.Properties()
 	rows := make([][]any, len(users))
 	for i, u := range users {
 		userSlice := make([]any, len(columns))

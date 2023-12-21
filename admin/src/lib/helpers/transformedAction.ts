@@ -336,6 +336,10 @@ const transformInActionToSet = async (
 		}
 	}
 
+	if (connection.isDestination && connection.isFile && actionType.Target === 'Users') {
+		outSchema = actionType.InputSchema;
+	}
+
 	if (action.MatchingProperties != null) {
 		const internal = action.MatchingProperties.Internal;
 		if (internal === '' || action.MatchingProperties.External == null) {

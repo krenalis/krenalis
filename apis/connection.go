@@ -2101,6 +2101,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 	}
 
+	// When exporting users to file, ensure that the output schema is valid, as
+	// it contains the properties that will be exported to the file.
+	if connector.Type == state.FileType && c.Role == state.Destination && target == state.Users {
+		if !action.OutSchema.Valid() {
+			return errors.BadRequest("output schema cannot be empty when exporting users to file")
+		}
+	}
+
 	// Check if the table name is allowed.
 	needsTableName := connector.Type == state.DatabaseType && c.Role == state.Destination
 	if needsTableName && action.TableName == "" {
