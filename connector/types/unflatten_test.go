@@ -13,6 +13,11 @@ import (
 
 func TestUnflatten(t *testing.T) {
 
+	// TODO(Gianluca): this test have been skipped as Unflatten() has been
+	// rendered ineffective as a workaround for the issue
+	// https://github.com/open2b/chichi/issues/448.
+	t.Skip()
+
 	tests := []struct {
 		Flatten   Type
 		Unflatten Type

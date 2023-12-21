@@ -1047,6 +1047,13 @@ func (t Type) HasFlatProperties() bool {
 // Unflatten returns t but with all properties as not flat.
 // It returns t if t has no flat properties.
 func (t Type) Unflatten() Type {
+
+	// TODO(Gianluca): the unflattening have been disabled as a workaround for
+	// the issue https://github.com/open2b/chichi/issues/448.
+	if true {
+		return t
+	}
+
 	if !t.flat {
 		return t
 	}

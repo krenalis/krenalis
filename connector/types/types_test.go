@@ -315,16 +315,21 @@ func TestHasFlatProperties(t *testing.T) {
 				{Name: "City", Type: Text()},
 			}), Flat: true},
 		}))), true},
-		{Map(Array(Object([]Property{
-			{Name: "email", Type: Text()},
-			{Name: "address", Type: Object([]Property{
-				{Name: "street", Type: Object([]Property{
-					{Name: "line1", Type: Text()},
-					{Name: "line2", Type: Text()},
-				}), Flat: true},
-				{Name: "City", Type: Text()},
-			}), Flat: true},
-		}))).Unflatten(), false},
+
+		// TODO(Gianluca): this test have been commented as Unflatten() has been
+		// rendered ineffective as a workaround for the issue
+		// https://github.com/open2b/chichi/issues/448.
+
+		// {Map(Array(Object([]Property{
+		//  {Name: "email", Type: Text()},
+		//  {Name: "address", Type: Object([]Property{
+		//      {Name: "street", Type: Object([]Property{
+		//          {Name: "line1", Type: Text()},
+		//          {Name: "line2", Type: Text()},
+		//      }), Flat: true},
+		//      {Name: "City", Type: Text()},
+		//  }), Flat: true},
+		// }))).Unflatten(), false},
 	}
 
 	for i, test := range tests {
