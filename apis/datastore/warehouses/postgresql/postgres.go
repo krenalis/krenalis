@@ -468,6 +468,9 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	if !warehouses.IsValidIdentifier(query.Table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", query.Table)
 	}
+	if query.Order.Name != "" && !types.IsValidPropertyName(query.Order.Name) {
+		return nil, fmt.Errorf("order property name %q is not a valid property name", query.Order.Name)
+	}
 	if !query.Schema.Valid() {
 		return nil, errors.New("schema must be valid")
 	}
@@ -611,9 +614,6 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	}
 
 	if query.Order.Name != "" {
-		if !types.IsValidPropertyName(query.Order.Name) {
-			return nil, fmt.Errorf("column name %q is not a valid property name", query.Order.Name)
-		}
 		b.WriteString(" ORDER BY ")
 		b.WriteString(query.Order.Name)
 	}
