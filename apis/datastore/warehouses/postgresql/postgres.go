@@ -583,7 +583,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		removeIDFromProps = true
 	}
 
-	// Build the b.
+	// Build the query.
 	var b strings.Builder
 	b.WriteString(`SELECT `)
 	for i, c := range columns {
