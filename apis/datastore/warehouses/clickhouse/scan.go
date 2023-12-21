@@ -178,5 +178,5 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 		}
 		return m, nil
 	}
-	return fmt.Errorf("Clickhouse has returned an unsopported type %T for column %s", v, name), nil
+	return fmt.Errorf("Clickhouse has returned an unsupported type %T for column %s", v, name), nil
 }
