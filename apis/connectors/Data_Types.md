@@ -1,5 +1,5 @@
 
-# Data Types
+# Connectors Data Types
 
 | Kind      | Go              | json.Unmarshal               | ClickHouse      | PostgreSQL | MySQL     | Snowflake   | Parquet      | JSON            | CSV    | Excel  |
 | --------- | --------------- | ---------------------------- | --------------- | ---------- | --------- | ----------- | ------------ | --------------- | ------ | ------ |
