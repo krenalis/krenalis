@@ -937,6 +937,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							Properties []string
 							Filter     *apis.Filter
 							Order      string
+							OrderDesc  bool
 							First      int
 							Limit      int
 						}
@@ -945,7 +946,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						users, schema, err := workspace.Users(ctx, req.Properties, req.Filter, req.Order, req.First, req.Limit)
+						users, schema, err := workspace.Users(ctx, req.Properties, req.Filter, req.Order, req.OrderDesc, req.First, req.Limit)
 						if err != nil {
 							respond(w, err)
 							return

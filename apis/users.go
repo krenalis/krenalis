@@ -29,8 +29,9 @@ type User struct {
 	id        int
 }
 
-// Events returns the events of the user. limit is the maximum number of events
-// to return, it must be in range [1, 200].
+// Events returns the events of the user, ordered from the most recent to the
+// oldest. limit is the maximum number of events to return, it must be in range
+// [1, 200].
 //
 // It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code

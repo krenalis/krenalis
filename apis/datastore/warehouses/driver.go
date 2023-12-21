@@ -123,8 +123,13 @@ type RecordsQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where expr.Expr
 
-	// Order, when provided, is the order of the returned records.
-	Order types.Property
+	// OrderBy, when provided, is the property for which the returned records
+	// are ordered.
+	OrderBy types.Property
+
+	// OrderDesc, when true and OrderBy is provided, orders the returned records
+	// in descending order instead of ascending order.
+	OrderDesc bool
 
 	// Schema contains the types of the properties in Properties and Where.
 	Schema types.Type

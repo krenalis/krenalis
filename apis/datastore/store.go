@@ -79,7 +79,7 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 }
 
 // Events returns an iterator over the results of the query on the 'events'
-// table of the data warehouse.
+// table of the data warehouse, ordered from the most recent to the oldest.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error. If the schema specified in the query is not conform to the schema of
@@ -92,7 +92,8 @@ func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, err
 		Properties: query.Properties,
 		ID:         types.Property{Name: "gid", Type: types.Int(32)},
 		Where:      query.Where,
-		Order:      query.Order,
+		OrderBy:    types.Property{Name: "timestamp", Type: types.DateTime()},
+		OrderDesc:  true,
 		First:      query.First,
 		Limit:      query.Limit,
 	})
@@ -108,9 +109,6 @@ type EventsQuery struct {
 
 	// Where, when not nil, filters the records to return.
 	Where expr.Expr
-
-	// Order, when provided, is the order of the returned records.
-	Order types.Property
 
 	// Schema contains the types of the properties in Properties and Where.
 	Schema types.Type
@@ -252,7 +250,8 @@ func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, error
 		Properties: query.Properties,
 		ID:         types.Property{Name: "id", Type: types.Int(32)},
 		Where:      query.Where,
-		Order:      query.Order,
+		OrderBy:    query.OrderBy,
+		OrderDesc:  query.OrderDesc,
 		First:      query.First,
 		Limit:      query.Limit,
 	})
@@ -269,8 +268,13 @@ type UsersQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where expr.Expr
 
-	// Order, when provided, is the order of the returned records.
-	Order types.Property
+	// OrderBy, when provided, is the property for which the returned records
+	// are ordered.
+	OrderBy types.Property
+
+	// OrderDesc, when true and OrderBy is provided, orders the returned records
+	// in descending order instead of ascending order.
+	OrderDesc bool
 
 	// Schema contains the types of the properties in Properties and Where.
 	Schema types.Type

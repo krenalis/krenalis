@@ -468,8 +468,8 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	if !warehouses.IsValidIdentifier(query.Table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", query.Table)
 	}
-	if query.Order.Name != "" && !types.IsValidPropertyName(query.Order.Name) {
-		return nil, fmt.Errorf("order property name %q is not a valid property name", query.Order.Name)
+	if query.OrderBy.Name != "" && !types.IsValidPropertyName(query.OrderBy.Name) {
+		return nil, fmt.Errorf("order property name %q is not a valid property name", query.OrderBy.Name)
 	}
 	if !query.Schema.Valid() {
 		return nil, errors.New("schema must be valid")
@@ -480,29 +480,29 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		return nil, err
 	}
 
-	// Add the ID and the Order properties to the schema, as conformity checks
+	// Add the ID and the OrderBy properties to the schema, as conformity checks
 	// must also be performed for these properties against the schema of the
 	// table currently in the data warehouse.
 	var schema types.Type
 	{
 		props := query.Schema.Properties()
-		var hasID, hasOrder bool
+		var hasID, hasOrderBy bool
 		for _, p := range props {
 			if p.Name == query.ID.Name {
 				hasID = true
 			}
-			if p.Name == query.Order.Name {
-				hasOrder = true
+			if p.Name == query.OrderBy.Name {
+				hasOrderBy = true
 			}
-			if hasID && (hasOrder || query.Order.Name == "") {
+			if hasID && (hasOrderBy || query.OrderBy.Name == "") {
 				break
 			}
 		}
 		if !hasID {
 			props = append(props, query.ID)
 		}
-		if !hasOrder && query.Order.Name != "" && query.Order.Name != query.ID.Name {
-			props = append(props, query.Order)
+		if !hasOrderBy && query.OrderBy.Name != "" && query.OrderBy.Name != query.ID.Name {
+			props = append(props, query.OrderBy)
 		}
 		schema = types.Object(props)
 	}
@@ -613,9 +613,12 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		b.WriteString(expr)
 	}
 
-	if query.Order.Name != "" {
+	if query.OrderBy.Name != "" {
 		b.WriteString(" ORDER BY ")
-		b.WriteString(query.Order.Name)
+		b.WriteString(query.OrderBy.Name)
+		if query.OrderDesc {
+			b.WriteString(" DESC")
+		}
 	}
 	if query.Limit > 0 {
 		b.WriteString(" LIMIT ")

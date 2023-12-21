@@ -1098,7 +1098,10 @@ func (this *Workspace) User(id int) (*User, error) {
 // properties. properties cannot be empty.
 //
 // order is the property by which to sort the returned users and cannot have
-// type JSON, Array, Object, or Map.
+// type JSON, Array, Object, or Map; it defaults to the "id" property.
+//
+// orderDesc control whether the returned users should be ordered in descending
+// order instead of ascending, which is the default.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore.
@@ -1110,7 +1113,7 @@ func (this *Workspace) User(id int) (*User, error) {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, first, limit int) ([]byte, types.Type, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1175,6 +1178,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			return nil, types.Type{}, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
+	} else {
+		orderProperty = types.Property{Name: "id", Type: types.Int(32)}
 	}
 	if first < 0 || first > maxInt32 {
 		return nil, types.Type{}, errors.BadRequest("first %d in not valid", first)
@@ -1192,7 +1197,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		Schema:     usersSchema,
 		Properties: propsPaths,
 		Where:      where,
-		Order:      orderProperty,
+		OrderBy:    orderProperty,
+		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
 	})

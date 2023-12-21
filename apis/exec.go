@@ -210,7 +210,7 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema 
 		Schema:     usersSchema,
 		Properties: properties,
 		Where:      where,
-		Order:      types.Property{Name: "id", Type: types.Int(32)},
+		OrderBy:    types.Property{Name: "id", Type: types.Int(32)},
 		Limit:      1_000,
 	})
 	if err != nil {
