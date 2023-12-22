@@ -10,6 +10,7 @@ package test
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -85,7 +86,7 @@ func TestEvents(t *testing.T) {
 			Event:       "Signed Up",
 			Properties: analytics.Properties{
 				"plan":       "Enterprise",
-				"some-index": i,
+				"some-index": 42 + i,
 			},
 			Context: &analytics.Context{
 				Page: analytics.PageInfo{
@@ -131,7 +132,7 @@ func TestEvents(t *testing.T) {
 		if len(events) != expectedEventsCount {
 			t.Fatalf("expecting %d events, got %d", expectedEventsCount, len(events))
 		}
-		event = events[0]
+		event = events[0] // most recent event.
 	}
 
 	// Validate some fields of the event.
@@ -141,6 +142,8 @@ func TestEvents(t *testing.T) {
 			expectedIP          = "127.0.0.1"
 			expectedUserAgent   = "analytics-go (version: 3.0.0)"
 			expectedEvent       = "Signed Up"
+			expectedProperties  = `{"plan":"Enterprise","some-index":44}` // TODO(Gianluca): see https://github.com/open2b/chichi/issues/451.
+			expectedTraits      = "{}"                                    // TODO(Gianluca): see https://github.com/open2b/chichi/issues/451.
 			expectedType        = "track"
 			expectedUserId      = "f4ca124298"
 		)
@@ -156,8 +159,14 @@ func TestEvents(t *testing.T) {
 		if event["event"] != expectedEvent {
 			t.Fatalf("expected event %q, got %#v", expectedEvent, event["event"])
 		}
+		if !reflect.DeepEqual(event["properties"], expectedProperties) {
+			t.Fatalf("expected properties %#v, got %#v", expectedProperties, event["properties"])
+		}
 		if source, err := strconv.Atoi(string(event["source"].(json.Number))); err != nil || source != websiteID {
 			t.Fatalf("expected source %d, got %#v", websiteID, event["source"])
+		}
+		if !reflect.DeepEqual(event["traits"], expectedTraits) {
+			t.Fatalf("expected traits %#v, got %#v", expectedTraits, event["traits"])
 		}
 		if event["type"] != expectedType {
 			t.Fatalf("expected event type %q, got %#v", expectedType, event["type"])

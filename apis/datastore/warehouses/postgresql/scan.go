@@ -344,8 +344,9 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 			return warehouses.ValidateUUID(name, v)
 		}
 	case types.JSONKind:
-		if v, ok := v.([]byte); ok {
-			return warehouses.ValidateJSONRaw(name, v)
+		// Go type is string for both the PostgreSQL types "json" and "jsonb".
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateJSONRaw(name, []byte(v))
 		}
 	case types.InetKind:
 		if v, ok := v.(string); ok {
