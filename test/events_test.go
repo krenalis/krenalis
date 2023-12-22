@@ -142,8 +142,8 @@ func TestEvents(t *testing.T) {
 			expectedIP          = "127.0.0.1"
 			expectedUserAgent   = "analytics-go (version: 3.0.0)"
 			expectedEvent       = "Signed Up"
-			expectedProperties  = `{"plan":"Enterprise","some-index":44}` // TODO(Gianluca): see https://github.com/open2b/chichi/issues/451.
-			expectedTraits      = "{}"                                    // TODO(Gianluca): see https://github.com/open2b/chichi/issues/451.
+			expectedProperties  = `{"plan":"Enterprise","some-index":44}`
+			expectedTraits      = "{}"
 			expectedType        = "track"
 			expectedUserId      = "f4ca124298"
 		)
