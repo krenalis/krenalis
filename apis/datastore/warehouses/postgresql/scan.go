@@ -387,5 +387,5 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 		}
 		return a, nil
 	}
-	return fmt.Errorf("PostgreSQL has returned an unsupported type %T for column %s", v, name), nil
+	return nil, fmt.Errorf("PostgreSQL has returned an unsupported type %T for column %s", v, name)
 }

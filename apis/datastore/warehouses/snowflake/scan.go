@@ -139,5 +139,5 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 		}
 		return m, nil
 	}
-	return fmt.Errorf("Snowflake has returned an unsupported type %T for column %s", v, name), nil
+	return nil, fmt.Errorf("Snowflake has returned an unsupported type %T for column %s", v, name)
 }
