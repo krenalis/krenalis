@@ -219,8 +219,8 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 	return sheets, nil
 }
 
-// Write writes the provided records into the file located at the specified
-// path. columns represents the columns of the records to be written.
+// Writer returns a Writer for writing records into the file located at the
+// specified path. schema contains the properties of the records to be written.
 //
 // If the file connection supports multiple sheets, sheet is a valid sheet name;
 // otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
@@ -229,26 +229,106 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 // case-insensitive.
 //
 // It returns the ErrNoStorage error if the file does not have a storage.
-func (file *File) Write(ctx context.Context, name, sheet string, columns []types.Property, records [][]any) error {
+func (file *File) Writer(ctx context.Context, path, sheet string, schema types.Type, ack AckFunc) (Writer, error) {
 	if file.err != nil {
-		return file.err
+		return nil, file.err
+	}
+	if ack == nil {
+		return nil, errors.New("ack function is missing")
 	}
 	storage, err := file.storage()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
 	extension := file.connection.Connector().FileExtension
-	w, err := s.Writer(ctx, name, file.inner.ContentType(ctx), extension)
+	sw, err := s.Writer(ctx, path, file.inner.ContentType(ctx), extension)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	r := newRecordReader(columns, records)
-	err = file.inner.Write(ctx, w, sheet, r)
-	if err2 := w.CloseWithError(err); err2 != nil && err == nil {
-		err = err2
+	columns := schema.Properties()
+	records := make(chan fileRecord, 100)
+	result := make(chan error, 1)
+	writeCtx, cancelWrite := context.WithCancel(context.Background())
+	// Call the connector's Write method in its own goroutine.
+	go func() {
+		r := newRecordReader(columns, records, ack)
+		err = file.inner.Write(writeCtx, sw, sheet, r)
+		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
+			err = err2
+		}
+		result <- err
+	}()
+	fw := &fileWriter{
+		cancelWrite: cancelWrite,
+		columns:     columns,
+		records:     records,
+		result:      result,
 	}
+	return fw, nil
+}
+
+// fileWriter implements the Writer interface for files.
+type fileWriter struct {
+	cancelWrite context.CancelFunc
+	columns     []types.Property
+	records     chan<- fileRecord
+	result      <-chan error
+	closed      bool
+	err         error
+}
+
+func (w *fileWriter) Close(ctx context.Context) error {
+	if w.closed {
+		return w.err
+	}
+	w.cancelWrite()
+	w.closed = true
+	return nil
+}
+
+func (w *fileWriter) Commit(ctx context.Context) error {
+	if w.closed {
+		panic("connectors: Commit called on a closed writer")
+	}
+	close(w.records)
+	var err error
+	select {
+	case err = <-w.result:
+		// The connector has terminated with or without an error.
+	case <-ctx.Done():
+		// The context has been canceled.
+		w.cancelWrite()
+		err = <-w.result
+	}
+	w.closed = true
 	return err
+}
+
+func (w *fileWriter) Write(ctx context.Context, gid int, record Record) bool {
+	if w.closed {
+		panic("connectors: Write called on a closed writer")
+	}
+	r := fileRecord{
+		gid:    gid,
+		record: make([]any, len(w.columns)),
+	}
+	for i, c := range w.columns {
+		r.record[i] = record.Properties[c.Name]
+	}
+	select {
+	case w.records <- r:
+		// The row has been sent to the connector.
+		return true
+	case err := <-w.result:
+		// The connector has returned early with an error.
+		w.err = err
+		return false
+	case <-ctx.Done():
+		// The context has been canceled.
+		w.err = ctx.Err()
+		return false
+	}
 }
 
 // storage returns the inner storage connection of the file. If the file does
@@ -329,18 +409,30 @@ var (
 )
 
 // newRecordReader returns a new record reader that read records.
-func newRecordReader(columns []types.Property, records [][]any) *recordReader {
+func newRecordReader(columns []types.Property, records <-chan fileRecord, ack AckFunc) *recordReader {
 	return &recordReader{
 		columns: columns,
 		records: records,
+		ack:     ack,
 	}
+}
+
+type fileRecord struct {
+	gid    int
+	record []any
 }
 
 // recordReader implements the connector.RecordReader interface.
 type recordReader struct {
 	columns []types.Property
-	records [][]any
-	cursor  int
+	records <-chan fileRecord
+	ack     AckFunc
+}
+
+// Ack acknowledges the processing of the record with the given GID.
+// err is the error occurred processing the record, if any.
+func (rr *recordReader) Ack(gid int, err error) {
+	rr.ack(err, []int{gid})
 }
 
 // Columns returns the columns of the records.
@@ -350,13 +442,16 @@ func (rr *recordReader) Columns() []types.Property {
 
 // Record returns the next record as a slice of any. It returns nil and io.EOF
 // if there are no more records.
-func (rr *recordReader) Record(ctx context.Context) ([]any, error) {
-	if rr.cursor >= len(rr.records) {
-		return nil, io.EOF
+func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
+	select {
+	case r, ok := <-rr.records:
+		if !ok {
+			return 0, nil, io.EOF
+		}
+		return r.gid, r.record, nil
+	case <-ctx.Done():
+		return 0, nil, ctx.Err()
 	}
-	record := rr.records[rr.cursor]
-	rr.cursor++
-	return record, nil
 }
 
 // newRecordWriter returns a new record writer that writes at most limit
@@ -675,6 +770,7 @@ func parseIdentityColumn(name string, typ types.Type, value any) (string, error)
 	case nil:
 		return "", fmt.Errorf("identify value is null")
 	case int:
+
 		return strconv.FormatInt(int64(id), 10), nil
 	case uint:
 		return strconv.FormatUint(uint64(id), 10), nil

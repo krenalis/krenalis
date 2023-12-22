@@ -19,6 +19,8 @@ import (
 	"chichi/backoff"
 )
 
+const numSteps = 7
+
 // timeslotBase is the time, in minutes, from the epoch, considered as the
 // timeslot 0.
 var timeslotBase int64 = 1701388800 / 60 // minutes from epoch to 2023-12-01 00:00:00 UTC
@@ -33,6 +35,7 @@ const (
 	TransformedStep
 	OutputValidatedStep
 	ImportedStep
+	ExportStep
 )
 
 // Collector is a statistics collector.
@@ -99,8 +102,8 @@ func (c *Collector) Shutdown(ctx context.Context) {
 // collectedStats represents collected statistics that have to be stored.
 type collectedStats struct {
 	action int
-	passed [6]int
-	failed [6]int
+	passed [numSteps]int
+	failed [numSteps]int
 }
 
 // process processes the collected statistics.
@@ -127,12 +130,12 @@ func (c *Collector) process() {
 			for id, action := range c.actions {
 				d := collectedStats{}
 				action.mu.Lock()
-				isZero := action.passed == [6]int{} && action.failed == [6]int{}
+				isZero := action.passed == [numSteps]int{} && action.failed == [numSteps]int{}
 				if !isZero {
 					d.passed = action.passed
 					d.failed = action.failed
-					action.passed = [6]int{}
-					action.failed = [6]int{}
+					action.passed = [numSteps]int{}
+					action.failed = [numSteps]int{}
 				}
 				action.mu.Unlock()
 				if !isZero {
@@ -226,12 +229,12 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 // ActionCollector collects the statistics for an action execution.
 type ActionCollector struct {
 	mu     sync.Mutex
-	passed [6]int
-	failed [6]int
+	passed [numSteps]int
+	failed [numSteps]int
 }
 
 // Failed increases the failed count for the provided step.
-func (stats *ActionCollector) Failed(step ActionStep, id string, err error) {
+func (stats *ActionCollector) Failed(step ActionStep, gid int, err error) {
 	stats.mu.Lock()
 	stats.failed[step]++
 	stats.mu.Unlock()

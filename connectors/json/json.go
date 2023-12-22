@@ -233,6 +233,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
 	var record []any
+	var gid int
 	var comma bool
 	b := make([]byte, 0, 4096)
 	if s.Indent {
@@ -243,7 +244,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 	}
 	t := types.Object(records.Columns())
 	for {
-		record, err = records.Record(ctx)
+		gid, record, err = records.Record(ctx)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -266,6 +267,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 			}
 			b = b[0:0]
 		}
+		records.Ack(gid, nil)
 	}
 	if s.Indent {
 		b = append(b, "\n\t]\n}"...)

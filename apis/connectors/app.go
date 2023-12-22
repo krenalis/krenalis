@@ -62,15 +62,6 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 	return app
 }
 
-// CreateUser creates a user with the provided properties.
-// It panics if the app does not support the users target.
-func (app *App) CreateUser(ctx context.Context, user map[string]any) error {
-	if app.err != nil {
-		return app.err
-	}
-	return app.inner.(_connector.AppUsersConnection).CreateUser(ctx, user)
-}
-
 // EventTypes returns the app's event types.
 // It panics if the app does not support the events target.
 func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
@@ -171,17 +162,6 @@ func (app *App) SendEvent(ctx context.Context, eventType string, event *Event, d
 	return err
 }
 
-// UpdateUser updates the user with identifier id setting the provided
-// properties.
-//
-// It panics if the app does not support the users target.
-func (app *App) UpdateUser(ctx context.Context, id string, user map[string]any) error {
-	if app.err != nil {
-		return app.err
-	}
-	return app.inner.(_connector.AppUsersConnection).UpdateUser(ctx, id, user)
-}
-
 // Users returns an iterator to iterate over the app's users, conforming to the
 // provided schema, starting from a cursor.
 //
@@ -212,6 +192,53 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Curso
 		inner:   app.inner,
 	}
 	return records, nil
+}
+
+// Writer returns a Writer to create and update users. target can only be
+// state.Users.
+//
+// It panics if the app does not support the users target.
+func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
+	if app.err != nil {
+		return nil, app.err
+	}
+	if target != state.Users {
+		return nil, errors.New("invalid target")
+	}
+	if ack == nil {
+		return nil, errors.New("ack function is missing")
+	}
+	w := appWriter{
+		ack:   ack,
+		users: app.inner.(_connector.AppUsersConnection),
+	}
+	return &w, nil
+}
+
+// appWriter implements the Writer interface for apps.
+type appWriter struct {
+	ack    AckFunc
+	closed bool
+	users  _connector.AppUsersConnection
+}
+
+func (w *appWriter) Close(ctx context.Context) error {
+	w.closed = true
+	return nil
+}
+
+func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
+	if w.closed {
+		panic("connectors: Write called on a closed writer")
+	}
+	var err error
+	if record.ID == "" {
+		err = w.users.CreateUser(ctx, record.Properties)
+	} else {
+		err = w.users.UpdateUser(ctx, record.ID, record.Properties)
+	}
+	w.ack(err, []int{gid})
+	return true
 }
 
 // appRecords implements the Records interface for apps.

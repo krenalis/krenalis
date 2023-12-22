@@ -262,7 +262,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 
 	// Write the records.
 	for {
-		record, err := records.Record(ctx)
+		gid, record, err := records.Record(ctx)
 		if err == io.EOF {
 			break
 		}
@@ -276,6 +276,7 @@ func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records c
 		if err != nil {
 			return err
 		}
+		records.Ack(gid, err)
 	}
 
 	v.Flush()

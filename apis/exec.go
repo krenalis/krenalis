@@ -83,7 +83,6 @@ func (this *Action) exec(ctx context.Context) {
 
 	connection := this.action.Connection()
 	execution, _ := this.action.Execution()
-	c := connection.Connector()
 
 	var err error
 
@@ -97,14 +96,7 @@ func (this *Action) exec(ctx context.Context) {
 		if connection.Role == state.Source {
 			err = this.importUsers(ctx)
 		} else {
-			switch c.Type {
-			case state.AppType:
-				err = this.exportUsersToApp(ctx)
-			case state.DatabaseType:
-				err = this.exportUsersToDatabase(ctx)
-			case state.FileType:
-				err = this.exportUsersToFile(ctx)
-			}
+			err = this.exportUsers(ctx)
 		}
 	}
 	endTime := time.Now().UTC()

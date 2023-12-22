@@ -89,6 +89,52 @@ type Records interface {
 	For(yield func(Record) error) error
 }
 
+// AckFunc is the function called when a write of one or more records
+// terminates. The parameter err represents the error that occurred while
+// writing the records, if any, and ids represents the identifiers of the
+// records.
+//
+// TODO: ids should be []string if ids represents the data warehouse identifiers.
+type AckFunc func(err error, ids []int)
+
+// Writer is the interface implemented by app, database, and file connectors to
+// write records.
+type Writer interface {
+
+	// Close closes the writer. For non-committable writers, it ensures the
+	// completion of all pending or ongoing write operations. In the event of a
+	// canceled context, it interrupts ongoing writes, discards pending ones, and
+	// returns. For committable writers, it discards all writes, including those
+	// already executed.
+	//
+	// If the writer is already closed, it does nothing and returns immediately.
+	Close(ctx context.Context) error
+
+	// Write writes a record. Typically, Write returns immediately, deferring the
+	// actual write operation to a later time. If it returns false, no further Write
+	// operations can be performed, and a call to Close will return an error.
+	//
+	// If the record is successfully written, the ack function is invoked with a nil
+	// error and the record's ID as arguments. If writing the record fails, the ack
+	// function is invoked with a non-nil error and the record's ID as arguments.
+	// The ack function is invoked even if Write returns false.
+	//
+	// It panics if called on a closed writer.
+	Write(ctx context.Context, gid int, record Record) bool
+}
+
+// CommittableWriter is the interface implemented by writers that support
+// committable writes.
+type CommittableWriter interface {
+
+	// Commit commits executed, ongoing, and pending write operations, ensuring
+	// their completion. If the commit fails, no records are written.
+	// Commit always closes the writer.
+	//
+	// It panics if called on a closed writer.
+	Commit(ctx context.Context) error
+}
+
 // TimestampColumn represents the timestamp column passed to the
 // (*File).ReadFunc method.
 type TimestampColumn struct {

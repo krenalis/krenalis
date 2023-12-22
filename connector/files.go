@@ -83,12 +83,19 @@ type Sheets interface {
 // be written.
 type RecordReader interface {
 
+	// Ack acknowledges the processing of the record with the given GID.
+	// err is the error occurred processing the record, if any.
+	Ack(gid int, err error)
+
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
-	// Record returns the next record as a slice of any.
-	// It returns nil and io.EOF if there are no more records.
-	Record(ctx context.Context) ([]any, error)
+	// Record returns the next record as a slice of any with its GID.
+	// It returns 0, nil, and io.EOF if there are no more records.
+	//
+	// After a record has been read and processed, the caller should call Ack
+	// to acknowledge the processing of the record.
+	Record(ctx context.Context) (gid int, record []any, err error)
 }
 
 // A RecordWriter interface is used by file connections to write read records.

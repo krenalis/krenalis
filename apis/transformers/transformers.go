@@ -51,6 +51,16 @@ func New(inSchema, outSchema types.Type, transformation state.Transformation, ac
 	return &m, nil
 }
 
+// Properties returns the properties in the mapping expressions. It calls the
+// Properties method of the mapping. See this method for documentation.
+// It panics if the transformation is not a mapping but a function.
+func (transformer *Transformer) Properties() []types.Path {
+	if transformer.mapping == nil {
+		panic("cannot get properties of a function transformation")
+	}
+	return transformer.mapping.Properties()
+}
+
 // Transform transforms values and returns the result or an error if values
 // cannot be transformed.
 func (transformer *Transformer) Transform(ctx context.Context, values map[string]any) (map[string]any, error) {

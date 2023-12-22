@@ -99,10 +99,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 			if result.Err != nil {
 				if _, ok := result.Err.(ValidationError); ok {
 					stats.Passed(statistics.TransformedStep)
-					stats.Failed(statistics.OutputValidatedStep, user.ID, err)
+					stats.Failed(statistics.OutputValidatedStep, 0, err)
 					continue
 				}
-				stats.Failed(statistics.TransformedStep, user.ID, err)
+				stats.Failed(statistics.TransformedStep, 0, err)
 				continue
 			}
 			user.Properties = result.Value
@@ -110,7 +110,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.OutputValidatedStep)
 			err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
 			if err != nil {
-				stats.Failed(statistics.ImportedStep, user.ID, err)
+				stats.Failed(statistics.ImportedStep, 0, err)
 				return actionExecutionError{err}
 			}
 			stats.Passed(statistics.ImportedStep)
@@ -139,10 +139,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if user.Err != nil {
 			if _, ok := user.Err.(ValidationError); ok {
 				stats.Passed(statistics.ReceivedStep)
-				stats.Failed(statistics.InputValidatedStep, user.ID, err)
+				stats.Failed(statistics.InputValidatedStep, 0, err)
 				return nil
 			}
-			stats.Failed(statistics.ReceivedStep, user.ID, err)
+			stats.Failed(statistics.ReceivedStep, 0, err)
 			return nil
 		}
 		stats.Passed(statistics.ReceivedStep)
