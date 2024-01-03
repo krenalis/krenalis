@@ -142,7 +142,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				valid = err != nil && types.MinYear <= year && year <= types.MaxYear
 			}
 		case types.UUIDKind:
-			_, err := uuid.Parse(cond.Value)
+			err := uuid.Validate(cond.Value)
 			valid = err != nil
 		case types.JSONKind:
 			valid = json.Valid(json.RawMessage(cond.Value))
