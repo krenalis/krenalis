@@ -18,13 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/datastore"
 	"chichi/apis/datastore/expr"
-	"chichi/apis/datastore/warehouses"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/transformers/mappings"
 	"chichi/connector"
 	"chichi/connector/types"
 
@@ -156,88 +153,6 @@ func (this *Action) exec(ctx context.Context) {
 		)
 	}
 
-}
-
-type userToExport struct {
-	ID         int
-	Properties map[string]any
-}
-
-// readUsersFromDataWarehouse reads the users from the data warehouse according
-// to the action's filter, if any.
-//
-// TODO(Gianluca): this method is limited to export at most 1000 users.
-// Probably, this method will be removed, and the code responsible for exporting
-// should operate directly on the iterator. See the issue
-// https://github.com/open2b/chichi/issues/412 for more details.
-func (this *Action) readUsersFromDataWarehouse(ctx context.Context, usersSchema types.Type) ([]userToExport, error) {
-
-	// Build the where expression from the filter, if any.
-	var where expr.Expr
-	if this.action.Filter != nil {
-		var err error
-		where, err = convertActionFilterToExpr(this.action.Filter, this.action.InSchema)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Determine the properties to retrieve from the data warehouse.
-	var properties []types.Path
-	if this.action.Transformation.Mapping != nil {
-		inSchema := this.action.InSchema
-		outSchema := this.action.OutSchema
-		mapping, err := mappings.New(this.action.Transformation.Mapping, inSchema, outSchema, nil)
-		if err != nil {
-			return nil, err
-		}
-		properties = mapping.Properties()
-	} else {
-		for _, p := range usersSchema.PropertiesNames() {
-			properties = append(properties, types.Path{p})
-		}
-	}
-
-	records, err := this.connection.store.Users(ctx, datastore.UsersQuery{
-		Schema:     usersSchema,
-		Properties: properties,
-		Where:      where,
-		OrderBy:    types.Property{Name: "id", Type: types.Int(32)},
-		Limit:      1_000,
-	})
-	if err != nil {
-		switch err := err.(type) {
-		case *datastore.DataWarehouseError:
-			// TODO(marco): log the error in a log specific of the workspace.
-			ws := this.action.Connection().Workspace()
-			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
-			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
-		case *datastore.SchemaError:
-			err.Msg += ". Please review and update the action before attempting to export the users."
-			return nil, err
-		}
-		return nil, err
-	}
-
-	exportUsers := []userToExport{}
-	err = records.For(func(user warehouses.Record) error {
-		if user.Err != nil {
-			return err
-		}
-		exportUsers = append(exportUsers, userToExport{
-			ID:         user.ID,
-			Properties: user.Properties,
-		})
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err = records.Err(); err != nil {
-		return nil, err
-	}
-
-	return exportUsers, nil
 }
 
 // actionExecutionError represents a non-internal error during action execution.
