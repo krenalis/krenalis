@@ -28,6 +28,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 
@@ -126,6 +127,18 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 		}
 		ws := action.Connection().Workspace()
 		store := c.datastore.Store(ws.ID)
+
+		// Instantiate an IdentitiesWriter for writing the users identities.
+		ack := func(err error, ids []string) {
+			if err != nil {
+				slog.Warn("cannot import users traits", "action", action.ID, "ids", ids, "err", err)
+				return
+			}
+			slog.Warn("users traits imported successfully", "action", action.ID, "ids", ids)
+		}
+		iw := store.IdentitiesWriter(ctx, action.ID, true, ack)
+		defer iw.Close(ctx)
+
 		// Import the user traits for this event, if provided.
 		for _, event := range eventsBatch {
 			if len(event.Traits) == 0 && len(event.Context.Traits) == 0 {
@@ -151,15 +164,23 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			if err != nil {
 				return err
 			}
-			// Set the user into the data warehouse.
-			store := c.datastore.Store(ws.ID)
-			err = store.SetIdentity(ctx, properties, event.UserId, event.AnonymousId, action.ID, true, event.timestamp)
-			if err != nil {
-				return err
+			// Write the user identity on the data warehouse.
+			ok := iw.Write(ctx, warehouses.Identity{
+				ID:          event.UserId,
+				Properties:  properties,
+				AnonymousID: event.AnonymousId,
+				Timestamp:   event.timestamp,
+			})
+			if !ok {
+				return iw.Close(ctx)
 			}
 		}
+		err := iw.Close(ctx)
+		if err != nil {
+			return err
+		}
 		// Resolve and sync the users.
-		err := store.ResolveSyncUsers(ctx)
+		err = store.ResolveSyncUsers(ctx)
 		if err != nil {
 			return fmt.Errorf("cannot resolve and sync users: %s", err)
 		}

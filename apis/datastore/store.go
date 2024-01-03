@@ -121,6 +121,18 @@ type EventsQuery struct {
 	Limit int
 }
 
+type IdentitiesWriter = warehouses.IdentitiesWriter
+
+// IdentitiesWriter returns an IdentitiesWriter for writing user identities,
+// relative to the action, on the data warehouse.
+// fromEvent indicates if the user identities are imported from an event or not.
+// ack is the ack function (see the documentation of IdentitiesWriter for more
+// details about it).
+func (store *Store) IdentitiesWriter(ctx context.Context, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) IdentitiesWriter {
+	store.mustBeOpen()
+	return store.warehouse.IdentitiesWriter(ctx, action, fromEvent, ack)
+}
+
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 //
@@ -139,19 +151,6 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
 	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
-}
-
-// SetIdentity sets the identity id (which may have an anonymous ID) imported
-// from the action. fromEvents indicates if the identity has been imported from
-// an event or not.
-// timestamp, when not zero, is the timestamp that will be associated to the
-// imported identity, otherwise the current UTC time is used.
-func (store *Store) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
-	store.mustBeOpen()
-	if timestamp.IsZero() {
-		timestamp = time.Now().UTC()
-	}
-	return store.warehouse.SetIdentity(ctx, identity, id, anonID, action, fromEvent, timestamp)
 }
 
 // Schemas returns the schemas of users, groups, and events for the relative

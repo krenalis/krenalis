@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"chichi/apis/connectors"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/state"
 	"chichi/apis/statistics"
 	"chichi/apis/transformers"
@@ -72,6 +73,20 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
+	// Instantiate an IdentitiesWriter.
+	ack := func(err error, ids []string) {
+		for _, id := range ids {
+			if err != nil {
+				_ = id // TODO: see https://github.com/open2b/chichi/issues/456.
+				stats.Failed(statistics.ImportedStep, 0, err)
+				return
+			}
+			stats.Passed(statistics.ImportedStep)
+		}
+	}
+	iw := this.connection.store.IdentitiesWriter(ctx, this.action.ID, false, ack)
+	defer iw.Close(ctx)
+
 	var (
 		users  = make([]connectors.Record, 0, 100)
 		values = make([]map[string]any, 0, 100)
@@ -108,12 +123,19 @@ func (this *Action) importUsers(ctx context.Context) error {
 			user.Properties = result.Value
 			stats.Passed(statistics.TransformedStep)
 			stats.Passed(statistics.OutputValidatedStep)
-			err = this.connection.store.SetIdentity(ctx, user.Properties, user.ID, "", action.ID, false, user.Timestamp)
-			if err != nil {
-				stats.Failed(statistics.ImportedStep, 0, err)
+			ok := iw.Write(ctx, warehouses.Identity{
+				ID:         user.ID,
+				Properties: user.Properties,
+				Timestamp:  user.Timestamp,
+			})
+			if !ok {
+				err := iw.Close(ctx)
 				return actionExecutionError{err}
 			}
-			stats.Passed(statistics.ImportedStep)
+		}
+		err = iw.Close(ctx)
+		if err != nil {
+			return actionExecutionError{err}
 		}
 
 		// Update the connection stats.

@@ -49,6 +49,13 @@ type Warehouse interface {
 	// found, then the empty string and false are returned.
 	DestinationUser(ctx context.Context, action int, property string) (string, bool, error)
 
+	// IdentitiesWriter returns an IdentitiesWriter for writing user identities,
+	// relative to the action, on the data warehouse.
+	// fromEvent indicates if the user identities are imported from an event or not.
+	// ack is the ack function; see the documentation of IdentitiesWriter for more
+	// details about it.
+	IdentitiesWriter(ctx context.Context, action int, fromEvent bool, ack IdentitiesAckFunc) IdentitiesWriter
+
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
 
@@ -66,12 +73,6 @@ type Warehouse interface {
 	// SetDestinationUser sets the destination user relative to the action, with
 	// the given external user ID and external property.
 	SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error
-
-	// SetIdentity sets the identity id (which may have an anonymous ID) imported
-	// from the action. fromEvents indicates if the identity has been imported from
-	// an event or not.
-	// timestamp is the timestamp that will be associated to the imported identity.
-	SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte
@@ -137,6 +138,49 @@ type RecordsQuery struct {
 	// Limit controls how many records should be returned and must be >= 0. If
 	// 0, it means that there is no limit.
 	Limit int
+}
+
+// IdentitiesAckFunc is the function called when the writing of one or more user
+// identities terminates. The parameter err represents the error that occurred
+// while writing the identities, if any, and ids holds the identifiers of such
+// identities.
+type IdentitiesAckFunc func(err error, ids []string)
+
+// IdentitiesWriter is the interface implemented by the data warehouse drivers
+// to write user identities on the data warehouse.
+type IdentitiesWriter interface {
+
+	// Close closes the IdentitiesWriter, ensuring the completion of all pending or
+	// ongoing write operations. In the event of a canceled context, it interrupts
+	// ongoing writes, discards pending ones, and returns.
+	//
+	// In case an error occurs with the data warehouse, a DataWarehouseError error
+	// is returned.
+	//
+	// If the IdentitiesWriter is already closed, it does nothing and returns
+	// immediately.
+	Close(ctx context.Context) error
+
+	// Write writes a user identity. Typically, Write returns immediately, deferring
+	// the actual write operation to a later time. If it returns false, no further
+	// Write operations can be performed, and a call to Close will return an error.
+	//
+	// If the user identity is successfully written, the ack function is invoked
+	// with a nil error and the record's ID as arguments. If writing the record
+	// fails, the ack function is invoked with a non-nil error and the user
+	// identity's ID as arguments. The ack function is invoked even if Write returns
+	// false.
+	//
+	// It panics if called on a closed writer.
+	Write(ctx context.Context, identity Identity) bool
+}
+
+// Identity is a user identity to be written on the data warehouse.
+type Identity struct {
+	ID          string // external ID.
+	Properties  map[string]any
+	AnonymousID string    // empty string if not present.
+	Timestamp   time.Time // in UTC.
 }
 
 // Records is the iterator interface used to iterate over the records read from

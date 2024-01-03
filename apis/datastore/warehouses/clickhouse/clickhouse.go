@@ -97,6 +97,15 @@ func (warehouse *ClickHouse) DestinationUser(ctx context.Context, action int, pr
 	panic("TODO: not implemented")
 }
 
+// IdentitiesWriter returns an IdentitiesWriter for writing user identities,
+// relative to the action, on the data warehouse.
+// fromEvent indicates if the user identities are imported from an event or not.
+// ack is the ack function (see the documentation of IdentitiesWriter for more
+// details about it).
+func (warehouse *ClickHouse) IdentitiesWriter(ctx context.Context, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
+	panic("not implemented")
+}
+
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	conn, err := warehouse.connection()
@@ -136,14 +145,6 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 // SetDestinationUser sets the destination user relative to the action, with the
 // given external user ID and external property.
 func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
-	panic("TODO: not implemented")
-}
-
-// SetIdentity sets the identity id (which may have an anonymous ID) imported
-// from the action. fromEvents indicates if the identity has been imported from
-// an event or not.
-// timestamp is the timestamp that will be associated to the imported identity.
-func (warehouse *ClickHouse) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
 	panic("TODO: not implemented")
 }
 

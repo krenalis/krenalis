@@ -111,6 +111,15 @@ func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, pro
 	return "", false, errors.New("not implemented")
 }
 
+// IdentitiesWriter returns an IdentitiesWriter for writing user identities,
+// relative to the action, on the data warehouse.
+// fromEvent indicates if the user identities are imported from an event or not.
+// ack is the ack function (see the documentation of IdentitiesWriter for more
+// details about it).
+func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
+	panic("not implemented")
+}
+
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *Snowflake) Init(ctx context.Context) error {
 	return nil
@@ -389,12 +398,6 @@ func (warehouse *Snowflake) SetDestinationUser(ctx context.Context, action int, 
 }
 
 // SetIdentity sets the identity id (which may have an anonymous ID) imported
-// from the action. fromEvents indicates if the identity has been imported from
-// an event or not.
-// timestamp is the timestamp that will be associated to the imported identity.
-func (warehouse *Snowflake) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
-	panic("not implemented")
-}
 
 // Settings returns the data warehouse settings.
 func (warehouse *Snowflake) Settings() []byte {
