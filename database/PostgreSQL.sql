@@ -239,16 +239,3 @@ CREATE TABLE resources (
 );
 
 CREATE INDEX ON resources (connector);
-
-CREATE TYPE task_status AS ENUM ('pending', 'running', 'completed', 'failed');
-
-CREATE TABLE tasks (
-  id          SERIAL PRIMARY KEY,
-  type        VARCHAR(255) NOT NULL,
-  data        JSONB NOT NULL,
-  status      task_status NOT NULL,
-  created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
-  started_at  TIMESTAMP,
-  completed_at TIMESTAMP,
-  result      JSONB
-);
