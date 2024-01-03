@@ -510,9 +510,9 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 	return nil
 }
 
-// SetIdentity sets the identity id (which may have an anonymous ID) imported from
-// the action. fromEvents indicates if the identity has been imported from an
-// event or not.
+// SetIdentity sets the identity id (which may have an anonymous ID) imported
+// from the action. fromEvents indicates if the identity has been imported from
+// an event or not.
 // timestamp is the timestamp that will be associated to the imported identity.
 func (warehouse *PostgreSQL) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
 
