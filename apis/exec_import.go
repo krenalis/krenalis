@@ -77,7 +77,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
-	// processUsers does a bach processing of users.
+	// processUsers does a batch processing of users.
 	processUsers := func(users []connectors.Record) error {
 
 		// Transform the users.
