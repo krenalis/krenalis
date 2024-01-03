@@ -148,19 +148,6 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 	return externalID, externalID != "", nil
 }
 
-// Exec executes a query without returning any rows. args are the placeholders.
-func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return warehouses.Result{}, err
-	}
-	r, err := db.Exec(ctx, query, args...)
-	if err != nil {
-		return warehouses.Result{}, warehouses.Error(err)
-	}
-	return warehouses.Result{Result: r}, nil
-}
-
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	conn, err := warehouse.connection()

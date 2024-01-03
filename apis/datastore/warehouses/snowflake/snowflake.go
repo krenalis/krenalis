@@ -111,11 +111,6 @@ func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, pro
 	return "", false, errors.New("not implemented")
 }
 
-// Exec executes a query without returning any rows. args are the placeholders.
-func (warehouse *Snowflake) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
-	return warehouses.Result{}, errors.New("not implemented")
-}
-
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *Snowflake) Init(ctx context.Context) error {
 	return nil

@@ -49,9 +49,6 @@ type Warehouse interface {
 	// found, then the empty string and false are returned.
 	DestinationUser(ctx context.Context, action int, property string) (string, bool, error)
 
-	// Exec executes a query without returning any rows. args are the placeholders.
-	Exec(ctx context.Context, query string, args ...any) (Result, error)
-
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
 

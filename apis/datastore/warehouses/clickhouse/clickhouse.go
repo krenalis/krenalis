@@ -97,11 +97,6 @@ func (warehouse *ClickHouse) DestinationUser(ctx context.Context, action int, pr
 	panic("TODO: not implemented")
 }
 
-// Exec executes a query without returning any rows. args are the placeholders.
-func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
-	return warehouses.Result{}, nil
-}
-
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	conn, err := warehouse.connection()
