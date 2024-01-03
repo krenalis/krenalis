@@ -147,13 +147,13 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Transform the event.
-			mappedUser, err := transformer.Transform(ctx, event.MapEvent())
+			properties, err := transformer.Transform(ctx, event.MapEvent())
 			if err != nil {
 				return err
 			}
 			// Set the user into the data warehouse.
 			store := c.datastore.Store(ws.ID)
-			err = store.SetIdentity(ctx, mappedUser, event.UserId, event.AnonymousId, action.ID, true, event.timestamp)
+			err = store.SetIdentity(ctx, properties, event.UserId, event.AnonymousId, action.ID, true, event.timestamp)
 			if err != nil {
 				return err
 			}
