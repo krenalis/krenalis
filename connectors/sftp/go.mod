@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/pkg/sftp v1.13.5
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 )
 
 require (
