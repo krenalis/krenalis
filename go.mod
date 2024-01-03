@@ -70,7 +70,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/itchyny/timefmt-go v0.1.5
-	github.com/jackc/pgx/v5 v5.5.0
+	github.com/jackc/pgx/v5 v5.5.1
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/useragent v1.0.0
 	github.com/open2b/nuts v1.5.3
