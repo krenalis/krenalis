@@ -38,7 +38,6 @@ type ClickHouse struct {
 	conn     chDriver.Conn
 	closed   bool
 	settings *chSettings
-	err      error
 }
 
 type chSettings struct {
