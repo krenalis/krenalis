@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/exp/maps"
-
 	"chichi/apis/datastore/warehouses"
+
+	"golang.org/x/exp/maps"
 )
 
 // SetIdentity sets the identity id (which may have an anonymous ID) imported
