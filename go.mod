@@ -62,7 +62,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.43
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.40.0
 	github.com/aws/smithy-go v1.15.0
-	github.com/evanw/esbuild v0.19.5
+	github.com/evanw/esbuild v0.19.11
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-json-experiment/json v0.0.0-20231013223334-54c864be5b8d
 	github.com/golang/snappy v0.0.4
