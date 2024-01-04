@@ -117,7 +117,7 @@ const UsersWrapper = () => {
 		}
 
 		const users = res.users;
-		const count = users.length;
+		const count = res.count;
 
 		setUsersCount(count);
 		setPagination({ current: page, last: Math.ceil(count / limit) });
