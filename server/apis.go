@@ -946,7 +946,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						users, schema, err := workspace.Users(ctx, req.Properties, req.Filter, req.Order, req.OrderDesc, req.First, req.Limit)
+						users, schema, count, err := workspace.Users(ctx, req.Properties, req.Filter, req.Order, req.OrderDesc, req.First, req.Limit)
 						if err != nil {
 							respond(w, err)
 							return
@@ -955,6 +955,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						_ = json.NewEncoder(w).Encode(map[string]any{
 							"users":  json.RawMessage(users),
 							"schema": schema,
+							"count":  count,
 						})
 					})
 					router.Get("/{userID}/events", func(w http.ResponseWriter, r *http.Request) {

@@ -133,7 +133,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	}
 
 	// Retrieve the user traits as records.
-	records, err := this.store.Users(ctx, datastore.UsersQuery{
+	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
 		Schema:     usersSchema,
 		Properties: properties,
 		Where:      expr.NewBaseExpr("id", expr.OperatorEqual, this.id),

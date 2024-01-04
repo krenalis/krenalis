@@ -22,7 +22,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Records returns an iterator over the results of the query.
+// Records returns an iterator over the results of the query and an estimated
+// count of the records that would be returned if First and Limit were not
+// provided in the query.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error. If the schema specified in the query is not conform to the schema of
@@ -30,30 +32,30 @@ import (
 //
 // As a simplification, it is currently assumed that the table schema does not
 // change in the data warehouse during the execution of this method.
-func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, error) {
+func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, int, error) {
 	if !query.ID.Type.Valid() {
-		return nil, errors.New("invalid ID type")
+		return nil, 0, errors.New("invalid ID type")
 	}
 	if query.ID.Type.Kind() != types.IntKind {
 		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
-		return nil, fmt.Errorf("expecting ID with Int kind, got %s", query.ID.Type.Kind())
+		return nil, 0, fmt.Errorf("expecting ID with Int kind, got %s", query.ID.Type.Kind())
 	}
 	if len(query.Properties) == 0 {
-		return nil, errors.New("toSelect cannot be empty")
+		return nil, 0, errors.New("toSelect cannot be empty")
 	}
 	if !warehouses.IsValidIdentifier(query.Table) {
-		return nil, fmt.Errorf("table name %q is not a valid identifier", query.Table)
+		return nil, 0, fmt.Errorf("table name %q is not a valid identifier", query.Table)
 	}
 	if query.OrderBy.Name != "" && !types.IsValidPropertyName(query.OrderBy.Name) {
-		return nil, fmt.Errorf("order property name %q is not a valid property name", query.OrderBy.Name)
+		return nil, 0, fmt.Errorf("order property name %q is not a valid property name", query.OrderBy.Name)
 	}
 	if !query.Schema.Valid() {
-		return nil, errors.New("schema must be valid")
+		return nil, 0, errors.New("schema must be valid")
 	}
 
 	db, err := warehouse.connection()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Add the ID and the OrderBy properties to the schema, as conformity checks
@@ -98,7 +100,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 				b.WriteString(", ")
 			}
 			if !types.IsValidPropertyName(c.Name) {
-				return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
+				return nil, 0, fmt.Errorf("column name %q is not a valid property name", c.Name)
 			}
 			b.WriteByte('"')
 			b.WriteString(c.Name)
@@ -114,19 +116,19 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 				// error.
 				ti, err2 := warehouse.tableInfo(ctx, query.Table, true)
 				if err2 != nil {
-					return nil, warehouses.Error(err2)
+					return nil, 0, warehouses.Error(err2)
 				}
 				err2 = warehouses.CheckConformity("", schema, ti.schema)
 				if err2 != nil {
-					return nil, warehouses.Error(err2)
+					return nil, 0, warehouses.Error(err2)
 				}
 			}
-			return nil, warehouses.Error(err)
+			return nil, 0, warehouses.Error(err)
 		}
 		defer rows.Close()
 		fds = rows.FieldDescriptions()
 		if fds == nil {
-			return nil, errors.New("unexpected nil field descriptions returned by the PostgreSQL driver")
+			return nil, 0, errors.New("unexpected nil field descriptions returned by the PostgreSQL driver")
 		}
 		rows.Close()
 	}
@@ -140,7 +142,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 			// unnecessary sub-properties from the data warehouse.
 			p, ok := schema.Property(path[0])
 			if !ok {
-				return nil, fmt.Errorf("property %q not found within query.Schema", path[0])
+				return nil, 0, fmt.Errorf("property %q not found within query.Schema", path[0])
 			}
 			props = append(props, p)
 		}
@@ -162,15 +164,39 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		removeIDFromProps = true
 	}
 
-	// Build the query.
+	// Build the WHERE expression, if necessary.
+	var whereExpr string
+	if query.Where != nil {
+		whereExpr, err = renderExpr(schema, query.Where)
+		if err != nil {
+			return nil, 0, fmt.Errorf("cannot build WHERE expression: %s", err)
+		}
+	}
+
+	// Build and execute the COUNT query to determine the count of records.
+	var count int
 	var b strings.Builder
+	b.WriteString(`SELECT COUNT(*) FROM "`)
+	b.WriteString(query.Table)
+	b.WriteByte('"')
+	if query.Where != nil {
+		b.WriteString(` WHERE `)
+		b.WriteString(whereExpr)
+	}
+	err = db.QueryRow(ctx, b.String()).Scan(&count)
+	if err != nil {
+		return nil, 0, warehouses.Error(err)
+	}
+
+	// Build the query.
+	b.Reset()
 	b.WriteString(`SELECT `)
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteString(", ")
 		}
 		if !types.IsValidPropertyName(c.Name) {
-			return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
+			return nil, 0, fmt.Errorf("column name %q is not a valid property name", c.Name)
 		}
 		b.WriteByte('"')
 		b.WriteString(c.Name)
@@ -179,14 +205,9 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	b.WriteString(` FROM "`)
 	b.WriteString(query.Table)
 	b.WriteByte('"')
-
 	if query.Where != nil {
 		b.WriteString(` WHERE `)
-		expr, err := renderExpr(schema, query.Where)
-		if err != nil {
-			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
-		}
-		b.WriteString(expr)
+		b.WriteString(whereExpr)
 	}
 
 	if query.OrderBy.Name != "" {
@@ -212,14 +233,14 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 			// Return a more specific conformity error instead of an SQL error.
 			ti, err2 := warehouse.tableInfo(ctx, query.Table, true)
 			if err2 != nil {
-				return nil, warehouses.Error(err2)
+				return nil, 0, warehouses.Error(err2)
 			}
 			err2 = warehouses.CheckConformity("", schema, ti.schema)
 			if err2 != nil {
-				return nil, warehouses.Error(err2)
+				return nil, 0, warehouses.Error(err2)
 			}
 		}
-		return nil, warehouses.Error(err)
+		return nil, 0, warehouses.Error(err)
 	}
 
 	// Ignore these field descriptions, as we suppose that the table schema has
@@ -232,20 +253,20 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	// parameter.
 	ti, err := warehouse.tableInfo(ctx, query.Table, false)
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, 0, warehouses.Error(err)
 	}
 	err = checkFieldDescriptions(fds, ti.fds)
 	if err != nil {
 		// Take a fresh tableInfo and check the conformity again.
 		ti, err = warehouse.tableInfo(ctx, query.Table, true)
 		if err != nil {
-			return nil, warehouses.Error(err)
+			return nil, 0, warehouses.Error(err)
 		}
 		err = checkFieldDescriptions(fds, ti.fds)
 		if err != nil {
 			// The field descriptions are still not conform, so just return
 			// error.
-			return nil, warehouses.Error(err)
+			return nil, 0, warehouses.Error(err)
 		}
 	}
 
@@ -257,15 +278,15 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	// error is returned.
 	err = warehouses.CheckConformity("", schema, ti.schema)
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, 0, warehouses.Error(err)
 	}
 
 	records, err := newRecords(rows, columns, query.ID.Name, removeIDFromProps)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return records, nil
+	return records, count, nil
 }
 
 // checkFieldDescriptions checks whether all field descriptions defined in the

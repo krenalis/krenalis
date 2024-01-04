@@ -93,7 +93,9 @@ type Warehouse interface {
 	// during the users synchronization.
 	ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error
 
-	// Records returns an iterator over the results of the query.
+	// Records returns an iterator over the results of the query and an estimated
+	// count of the records that would be returned if First and Limit were not
+	// provided in the query.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error. If the schema specified in the query is not conform to the schema of
@@ -101,7 +103,7 @@ type Warehouse interface {
 	//
 	// As a simplification, it is currently assumed that the table schema does not
 	// change in the data warehouse during the execution of this method.
-	Records(ctx context.Context, query RecordsQuery) (Records, error)
+	Records(ctx context.Context, query RecordsQuery) (Records, int, error)
 }
 
 // RecordsQuery represents the query for the Records method.

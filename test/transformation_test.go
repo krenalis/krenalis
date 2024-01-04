@@ -8,6 +8,7 @@
 package test
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -71,10 +72,16 @@ def transform(user: dict) -> dict:
 	const expectedTotalCount = 10
 	ret := c.Users([]string{"email", "first_name", "gender"}, "", 0, expectedTotalCount)
 
-	// Validate the total count of the users.
-	totalCount := len(ret["users"].([]any))
-	if expectedTotalCount != totalCount {
-		t.Fatalf("expecting a total of %d users, got %d", expectedTotalCount, totalCount)
+	// Validate the users count.
+	count, _ := ret["count"].(json.Number).Int64()
+	if count != expectedTotalCount {
+		t.Fatalf("expected \"count\" to be %d, got %d", expectedTotalCount, count)
+	}
+
+	// Validate the count of the returned users.
+	usersLen := len(ret["users"].([]any))
+	if expectedTotalCount != usersLen {
+		t.Fatalf("expecting %d users, got %d", expectedTotalCount, usersLen)
 	}
 
 	// Validate the users.

@@ -37,7 +37,7 @@ GET     /api/connectors/{id}/auth-code-url                                      
 PUT     /api/workspaces/{id}/event-listeners/                                    Add a new event listener.
 DELETE  /api/workspaces/{id}/event-listeners/{id}                                Remove an event listener.
 GET     /api/workspaces/{id}/event-listeners/{id}/events                         Return the processed events.
-POST    /api/workspaces/{id}/users                                               List the Golden Records of the users and their schema.
+POST    /api/workspaces/{id}/users                                               List the Golden Records of the users, their schema and an estimated count.
 GET     /api/workspaces/{id}/users/{id}/events                                   List the events of a user.
 GET     /api/workspaces/{id}/users/{id}/traits                                   List the traits of a user.
 GET     /api/workspaces/{id}                                                     Get the workspace.

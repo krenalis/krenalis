@@ -92,7 +92,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 
 	// Read the users.
-	records, err := store.Users(ctx, datastore.UsersQuery{
+	records, _, err := store.Users(ctx, datastore.UsersQuery{
 		Properties: properties,
 		Where:      where,
 		OrderBy:    types.Property{Name: "id", Type: types.Int(32)},
