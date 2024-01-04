@@ -184,6 +184,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 
 	// Validate the settings.
 	if c.HasSettings {
+		settings := connection.Settings
+		if settings == nil {
+			settings = json.RawMessage("{}")
+		}
 		var clientSecret string
 		if c.OAuth != nil {
 			clientSecret = c.OAuth.ClientSecret
@@ -196,12 +200,18 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			Region:       state.PrivacyRegion(this.PrivacyRegion),
 		}
 		var err error
-		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, c, conf, connection.Settings)
+		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, c, conf, settings)
 		if err != nil {
-			if err == connectors.ErrNoUserInterface {
-				err = errors.BadRequest("connector %d does not have a UI", connection.Connector)
+			if err != connectors.ErrNoUserInterface {
+				return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 			}
-			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+			if connection.Settings != nil {
+				return 0, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
+					strings.ToLower(connection.Role.String()), c.Name)
+			}
+		} else if connection.Settings == nil {
+			return 0, errors.BadRequest("settings must be provided because %s connector %s has a UI",
+				strings.ToLower(connection.Role.String()), c.Name)
 		}
 	}
 
@@ -1289,7 +1299,8 @@ type ConnectionToAdd struct {
 	// cannot be longer than 261 runes.
 	WebsiteHost string
 
-	// Settings represents the settings.
+	// Settings represents the settings. It must be nil if the connection does
+	// not have settings.
 	Settings json.RawMessage
 }
 
