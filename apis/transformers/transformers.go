@@ -96,7 +96,7 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 // values are expected to conform to the input schema. If an error occurs during
 // the transformation of a single value, the error is stored in the Err field of
 // the corresponding result. If the error is a validation error, it implements
-// ValidationError of apis.
+// ValidationError of apis; otherwise it is a FunctionExecutionError error.
 //
 // For function transformers, it returns the ErrFunctionNotExist error if the
 // function does not exist, and a FunctionExecutionError error if an error

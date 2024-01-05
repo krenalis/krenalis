@@ -248,7 +248,7 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 			if tok.Kind() != '"' {
 				return nil, errSyntaxInvalid
 			}
-			result.Err = errors.New(tok.String())
+			result.Err = FunctionExecutionError(tok.String())
 		default:
 			return nil, errSyntaxInvalid
 		}
