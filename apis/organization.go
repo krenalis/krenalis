@@ -25,12 +25,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/jordan-wright/email"
-	"golang.org/x/crypto/bcrypt"
-
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+
+	"github.com/jordan-wright/email"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
