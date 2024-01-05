@@ -610,6 +610,9 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		if err, ok := err.(transformers.FunctionExecutionError); ok {
 			return nil, errors.Unprocessable(TransformationFailed, err.Error())
 		}
+		if err, ok := err.(ValidationError); ok {
+			return nil, errors.Unprocessable(TransformationFailed, err.Error())
+		}
 		return nil, err
 	}
 
