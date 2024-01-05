@@ -171,21 +171,6 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 	return property, nil
 }
 
-// DeserializeRowAsSlice deserializes a row returned by a data warehouse as
-// slice.
-func DeserializeRowAsSlice(properties []types.Property, row []any) []any {
-	values := make([]any, len(properties))
-	for i, p := range properties {
-		if p.Flat {
-			values[i], row = DeserializeRowAsMap(p.Type.Properties(), row)
-			continue
-		}
-		values[i] = row[0]
-		row = row[1:]
-	}
-	return values
-}
-
 // DeserializeRowAsMap deserializes a row returned by a data warehouse as map.
 // It returns the deserialized row and the remaining row values to read.
 func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
