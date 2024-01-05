@@ -447,7 +447,13 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 			}
 			return m, nil
 		}
-		return nil, newErrInvalidValue("cannot be a "+d.opts.terms["object"], "", d.opts.terms)
+		msg := "cannot be a"
+		if term := d.opts.terms["object"]; term == "object" {
+			msg += "n object"
+		} else {
+			msg += term
+		}
+		return nil, newErrInvalidValue(msg, "", d.opts.terms)
 	default:
 		value, err := d.readValue()
 		if err != nil {
