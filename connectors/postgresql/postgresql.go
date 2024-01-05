@@ -371,7 +371,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 			return types.Type{}, errors.New("cannot get decimal size")
 		}
 		if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
-			return types.Type{}, fmt.Errorf("PostreSQL type %s(%d,%d) is not supported",
+			return types.Type{}, fmt.Errorf("PostgreSQL type %s(%d,%d) is not supported",
 				t.DatabaseTypeName(), precision, scale)
 		}
 		return types.Decimal(int(precision), int(scale)), nil
