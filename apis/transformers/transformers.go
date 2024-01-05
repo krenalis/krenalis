@@ -61,8 +61,13 @@ func (transformer *Transformer) Properties() []types.Path {
 	return transformer.mapping.Properties()
 }
 
-// Transform transforms values and returns the result or an error if values
-// cannot be transformed.
+// Transform transforms the values and returns the result. values is expected to
+// conform to the input schema. If a validation error occurs during the
+// transformation, it returns an error implementing ValidationError of apis.
+//
+// For function transformers, it returns the ErrFunctionNotExist error if the
+// function does not exist, and a FunctionExecutionError error if an error
+// occurs during function execution.
 func (transformer *Transformer) Transform(ctx context.Context, values map[string]any) (map[string]any, error) {
 
 	// Transform using the mapping.
