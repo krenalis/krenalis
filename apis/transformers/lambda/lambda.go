@@ -108,26 +108,27 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 			Payload:      payload,
 			Qualifier:    &version,
 		})
-		status, ok := httpStatusCode(err)
-		if !ok {
+		if err != nil {
+			if status, ok := httpStatusCode(err); ok {
+				if status == 404 {
+					return nil, transformers.ErrFunctionNotExist
+				}
+				if status == 409 {
+					// The function is pending.
+					// Set the base with a greater value and retry.
+					bo.SetBase(300)
+					continue
+				}
+				if 500 <= status && status <= 599 {
+					// There was an internal error.
+					// Set the base with the default value and retry.
+					bo.SetBase(100)
+					continue
+				}
+			}
 			return nil, err
 		}
-		if status == 404 {
-			return nil, transformers.ErrFunctionNotExist
-		}
-		if status == 409 {
-			// The function is pending.
-			// Set the base with a greater value and retry.
-			bo.SetBase(300)
-			continue
-		}
-		if 500 <= status && status <= 599 {
-			// There was an internal error.
-			// Set the base with the default value and retry.
-			bo.SetBase(100)
-			continue
-		}
-		return nil, err
+		break
 	}
 	if err = ctx.Err(); err != nil {
 		return nil, err
