@@ -18,7 +18,7 @@ const Header = ({ title, member }: HeaderProps) => {
 	};
 
 	const onMemberClick = () => {
-		redirect(`members/${member.ID}`);
+		redirect(`members/current`);
 	};
 
 	return (

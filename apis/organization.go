@@ -10,12 +10,22 @@ package apis
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"encoding/base64"
+	"html"
 	"math"
 	"math/big"
+	"net/smtp"
+	"net/textproto"
 	"regexp"
+	"strconv"
+	"strings"
+	"time"
 	"unicode/utf8"
 
+	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
 
 	"chichi/apis/errors"
@@ -23,10 +33,16 @@ import (
 	"chichi/apis/state"
 )
 
-var AuthenticationFailed errors.Code = "AuthenticationFailed"
-var MemberEmailAlreadyExists errors.Code = "MemberEmailAlreadyExists"
+var (
+	AuthenticationFailed     errors.Code = "AuthenticationFailed"
+	MemberEmailAlreadyExists errors.Code = "MemberEmailAlreadyExists"
+	CannotSendEmails         errors.Code = "CannotSendEmails"
+)
 
 var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`)
+
+// invitationTokenMaxAge represents the max age of an invitation token (3 days).
+const invitationTokenMaxAge = 3 * 24 * 60 * 60
 
 // Organization represents an organization.
 type Organization struct {
@@ -38,10 +54,12 @@ type Organization struct {
 
 // Member represents a member of an organization.
 type Member struct {
-	ID     int
-	Name   string
-	Email  string
-	Avatar *Avatar
+	ID         int
+	Name       string
+	Email      string
+	Avatar     *Avatar
+	Invitation string // If the member has been invited, it is "Invited or "Expired"
+	CreatedAt  time.Time
 }
 
 // Avatar represents an avatar of a member.
@@ -58,36 +76,61 @@ type MemberToSet struct {
 	Avatar   *Avatar
 }
 
-// AddMember adds a new member to the organization. If a member with the same
-// email already exists it returns an UnprocessableError with code
-// MemberEmailAlreadyExists.
-func (this *Organization) AddMember(ctx context.Context, member MemberToSet) error {
+// emailToSend represents an email.
+type emailToSend struct {
+	RealName string
+	From     string
+	Subject  string
+	To       string
+	Cc       []string
+	Bcc      []string
+	BodyText []byte
+	BodyHTML []byte
+}
+
+// InviteMember sends an invitation email to the given email address using the
+// given template. It then creates a new invited member. If the email address
+// has already been invited, it returns an UnprocessableError with code
+// MemberEmailAlreadyExists. If SMTP is not configured, it returns an
+// UnprocessableError with code CannotSendEmails.
+func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
 	this.apis.mustBeOpen()
-	err := validateMemberToSet(member, true)
+	err := validateMemberEmail(email)
+	if err != nil {
+		return errors.BadRequest(err.Error())
+	}
+	invitationToken, err := generateInvitationToken()
 	if err != nil {
 		return err
 	}
-	password, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
+	if this.apis.smtp == nil {
+		return errors.Unprocessable(CannotSendEmails, "server cannot send emails")
 	}
+	now := time.Now().UTC()
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
+		err := this.apis.db.QueryVoid(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
 		if err == nil {
 			return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
 		}
-		if member.Avatar != nil {
-			_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar.image, avatar.mime_type) VALUES ($1, $2, $3, $4, $5, $6)",
-				this.organization.ID, member.Name, member.Email, string(password), member.Avatar.Image, member.Avatar.MimeType)
-			return err
-		}
-		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar) VALUES ($1, $2, $3, $4, $5)",
-			this.organization.ID, member.Name, member.Email, string(password), nil)
+		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
+			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
+			this.organization.ID, "", email, "", nil, invitationToken, now)
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
+	emailToSend := &emailToSend{
+		From:     this.apis.smtp.User,
+		Subject:  "You have been invited to Chichi",
+		To:       email,
+		BodyHTML: []byte(t),
+	}
+	err = sendMail(emailToSend, this.apis.smtp)
 	return err
 }
 
@@ -221,8 +264,9 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 	var member Member
 	var avatarImage []byte
 	var avatarMimeType *string
-	err := this.apis.db.QueryRow(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID).Scan(
-		&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType)
+	var invitationToken string
+	err := this.apis.db.QueryRow(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type, invitation_token, created_at FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID).Scan(
+		&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType, &invitationToken, &member.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("member %d does not exist", id)
@@ -235,6 +279,12 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 			MimeType: *avatarMimeType,
 		}
 	}
+	if invitationToken != "" {
+		member.Invitation = "Invited"
+		if isInvitationTokenExpired(member.CreatedAt) {
+			member.Invitation = "Expired"
+		}
+	}
 	return &member, nil
 }
 
@@ -242,19 +292,26 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	this.apis.mustBeOpen()
 	members := []*Member{}
-	err := this.apis.db.QueryScan(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type FROM members WHERE organization = $1 ORDER BY name", this.organization.ID, func(rows *postgres.Rows) error {
+	err := this.apis.db.QueryScan(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type, invitation_token, created_at FROM members WHERE organization = $1 ORDER BY name", this.organization.ID, func(rows *postgres.Rows) error {
 		var err error
 		for rows.Next() {
 			var member Member
 			var avatarImage []byte
 			var avatarMimeType *string
-			if err = rows.Scan(&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType); err != nil {
+			var invitationToken string
+			if err = rows.Scan(&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType, &invitationToken, &member.CreatedAt); err != nil {
 				return err
 			}
 			if len(avatarImage) > 0 {
 				member.Avatar = &Avatar{
 					Image:    avatarImage,
 					MimeType: *avatarMimeType,
+				}
+			}
+			if invitationToken != "" {
+				member.Invitation = "Invited"
+				if isInvitationTokenExpired(member.CreatedAt) {
+					member.Invitation = "Expired"
 				}
 			}
 			members = append(members, &member)
@@ -278,9 +335,9 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 	if id < 0 || id > math.MaxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
-	err := validateMemberToSet(member, false)
+	err := validateMemberToSet(member, true, false)
 	if err != nil {
-		return err
+		return errors.BadRequest(err.Error())
 	}
 	var password []byte
 	if member.Password != "" {
@@ -325,6 +382,51 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 		}
 		return err
 	})
+	return err
+}
+
+func sendMail(mail *emailToSend, config *SMTPConfig) error {
+	e := email.NewEmail()
+	if mail.RealName != "" {
+		e.From = mail.RealName + "<" + mail.From + ">"
+	} else {
+		e.From = mail.From
+	}
+	e.To = []string{mail.To}
+	e.Subject = mail.Subject
+	if len(mail.Cc) > 0 {
+		e.Cc = mail.Cc
+	}
+	if len(mail.Bcc) > 0 {
+		e.Bcc = mail.Bcc
+	}
+	if mail.BodyText != nil {
+		e.Text = mail.BodyText
+	}
+	if mail.BodyHTML != nil {
+		e.HTML = mail.BodyHTML
+	}
+	e.Headers = textproto.MIMEHeader{"X-Mailer": []string{"Open2b"}}
+	var auth smtp.Auth
+	if config.User != "" {
+		auth = smtp.PlainAuth("", config.User, config.Pass, config.Host)
+	}
+	conf := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         config.Host,
+	}
+	var err error
+	if config.Port == 465 {
+		err = e.SendWithTLS(config.Host+":"+strconv.Itoa(config.Port), auth, conf)
+	} else {
+		err = e.SendWithStartTLS(config.Host+":"+strconv.Itoa(config.Port), auth, conf)
+		if err2, ok := err.(x509.HostnameError); ok {
+			if len(err2.Certificate.DNSNames) > 0 {
+				hostname := err2.Certificate.DNSNames[0]
+				err = e.SendWithStartTLS(hostname+":"+strconv.Itoa(config.Port), auth, conf)
+			}
+		}
+	}
 	return err
 }
 
@@ -389,53 +491,83 @@ func generateRandomID() (int, error) {
 
 // validateMemberToSet validates a member to add or set and returns an error
 // if the member is not valid.
-func validateMemberToSet(member MemberToSet, isPasswordRequired bool) error {
+func validateMemberToSet(member MemberToSet, validateEmail bool, validatePassword bool) error {
 	// Validate name.
 	if member.Name == "" {
-		return errors.BadRequest("name is empty")
+		return errors.New("name is empty")
 	}
 	if !utf8.ValidString(member.Name) {
-		return errors.BadRequest("name is not UTF-8 encoded")
+		return errors.New("name is not UTF-8 encoded")
 	}
 	if n := utf8.RuneCountInString(member.Name); n > 45 {
-		return errors.BadRequest("name is longer than 45 runes")
+		return errors.New("name is longer than 45 runes")
 	}
 	// Validate avatar.
 	if member.Avatar != nil {
 		if member.Avatar.MimeType != "image/jpeg" && member.Avatar.MimeType != "image/png" {
-			return errors.BadRequest("image must be in jpeg or png format")
+			return errors.New("image must be in jpeg or png format")
 		}
 		if len(member.Avatar.Image) > 200*1024 {
-			return errors.BadRequest("image is bigger than 200kb")
+			return errors.New("image is bigger than 200kb")
 		}
 	}
 	// Validate email.
-	if member.Email == "" {
-		return errors.BadRequest("email is empty")
-	}
-	if !utf8.ValidString(member.Email) {
-		return errors.BadRequest("email is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(member.Email); n > 120 {
-		return errors.BadRequest("email is longer than 120 runes")
-	}
-	if !emailRegExp.MatchString(member.Email) {
-		return errors.BadRequest("email is not a valid email address")
+	if validateEmail {
+		err := validateMemberEmail(member.Email)
+		if err != nil {
+			return err
+		}
 	}
 	// Validate password.
-	if isPasswordRequired && member.Password == "" {
-		return errors.BadRequest("password is empty")
+	if validatePassword && member.Password == "" {
+		return errors.New("password is empty")
 	}
 	if member.Password != "" {
 		if !utf8.ValidString(member.Password) {
-			return errors.BadRequest("password is not UTF-8 encoded")
+			return errors.New("password is not UTF-8 encoded")
 		}
 		if n := utf8.RuneCountInString(member.Password); n < 8 {
-			return errors.BadRequest("password must be at least 8 characters long")
+			return errors.New("password must be at least 8 characters long")
 		}
 		if n := utf8.RuneCountInString(member.Password); n > 72 {
-			return errors.BadRequest("password is longer than 72 runes")
+			return errors.New("password is longer than 72 runes")
 		}
 	}
 	return nil
+}
+
+// validateMemberEmail validates a member's email and returns an error if it is
+// not valid.
+func validateMemberEmail(email string) error {
+	if email == "" {
+		return errors.New("email is empty")
+	}
+	if !utf8.ValidString(email) {
+		return errors.New("email is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(email); n > 120 {
+		return errors.New("email is longer than 120 runes")
+	}
+	if !emailRegExp.MatchString(email) {
+		return errors.New("email is not a valid email address")
+	}
+	return nil
+}
+
+// generateInvitationToken generates a token.
+func generateInvitationToken() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+// isInvitationTokenExpired checks if the invitation token of a member is expired, given
+// the member's creation time.
+func isInvitationTokenExpired(createdAt time.Time) bool {
+	tokenExpiration := createdAt.Add(time.Duration(invitationTokenMaxAge) * time.Second)
+	now := time.Now()
+	return now.After(tokenExpiration)
 }

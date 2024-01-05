@@ -135,6 +135,8 @@ interface Member {
 	Name: string;
 	Email: string;
 	Avatar: MemberAvatar;
+	Invitation: '' | 'Invited' | 'Expired';
+	CreatedAt: string;
 }
 
 interface MemberToSet {
@@ -142,6 +144,11 @@ interface MemberToSet {
 	Image: string;
 	Email: string;
 	Password?: string;
+}
+
+interface MemberInvitationResponse {
+	email: string;
+	organization: string;
 }
 
 export type {
@@ -170,4 +177,5 @@ export type {
 	Member,
 	MemberToSet,
 	MemberAvatar,
+	MemberInvitationResponse,
 };

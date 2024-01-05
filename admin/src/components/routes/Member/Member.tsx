@@ -5,7 +5,6 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { useParams } from 'react-router-dom';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../types/external/api';
@@ -25,15 +24,7 @@ const Member = () => {
 
 	const fileInputRef = useRef<any>();
 
-	const { id } = useParams();
-
 	useEffect(() => {
-		const isLoggedMember = Number(id) === member.ID;
-		if (!isLoggedMember) {
-			// Members can only edit themselves.
-			redirect('members');
-			return;
-		}
 		setTitle(member.Name);
 		setAvatar(member.Avatar);
 		setName(member.Name);
@@ -111,7 +102,7 @@ const Member = () => {
 			return;
 		}
 		try {
-			await api.updateMember(Number(id), memberToSet);
+			await api.updateMember(memberToSet);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				setTimeout(() => {

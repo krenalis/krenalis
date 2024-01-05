@@ -96,18 +96,9 @@ const useApp = (
 			}
 			setConnectors(transformedConnectors);
 
-			const memberID = sessionStorage.getItem('chichi-member');
-			if (memberID == null) {
-				setTimeout(() => {
-					logout();
-					setIsLoadingState(false);
-				}, 300);
-				return;
-			}
-
 			let member: Member;
 			try {
-				member = await api.member(Number(memberID));
+				member = await api.member();
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					handleError('The current logged in member does not exist anymore');
@@ -123,10 +114,10 @@ const useApp = (
 			setMember(transformMember(member));
 
 			// if the user is logged in and has a selected workspace, but they
-			// are currently at the base path, redirect to the connections map
+			// are currently on the login route, redirect to the connections map
 			// path.
-			let isBasePath = location.pathname === adminBasePath;
-			if (isBasePath) {
+			let isOnLogin = location.pathname === adminBasePath;
+			if (isOnLogin) {
 				redirect('connections');
 			}
 
@@ -265,7 +256,7 @@ const useApp = (
 		const loadMember = async () => {
 			let m: Member;
 			try {
-				m = await api.member(member.ID);
+				m = await api.member();
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					handleError('The current logged in member does not exist anymore');

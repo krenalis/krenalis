@@ -51,8 +51,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) {
 		slog.Error("cannot log member", "err", err)
 		return
 	}
-
-	err = s.addSession(organization.ID, w, r)
+	err = s.addSession(organization.ID, memberID, w, r)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		slog.Error("cannot add session", "err", err)

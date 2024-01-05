@@ -3,22 +3,21 @@ import './Members.css';
 import AppContext from '../../../context/AppContext';
 import ListTile from '../../shared/ListTile/ListTile';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
-import { Member, MemberAvatar, MemberToSet } from '../../../types/external/api';
+import { Member } from '../../../types/external/api';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import API from '../../../lib/api/api';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { toBase64 } from '../../../lib/utils/toBase64';
-import { TransformedMember, transformMember, validateMemberToSet } from '../../../lib/helpers/transformedMember';
+import { TransformedMember, transformMember, validateMemberEmail } from '../../../lib/helpers/transformedMember';
 
 const Members = () => {
 	const [isLoadingMembers, setIsLoadingMembers] = useState<boolean>(true);
 	const [isRemoveAlertOpen, setIsRemoveAlertOpen] = useState<boolean>(false);
-	const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState<boolean>(false);
+	const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<TransformedMember[]>();
 
 	const { setTitle, api, handleError, redirect, member: loggedMember } = useContext(AppContext);
@@ -54,8 +53,8 @@ const Members = () => {
 		fetchMembers();
 	}, [isLoadingMembers]);
 
-	const onEditMember = (id: number) => {
-		redirect(`members/${id}`);
+	const onEditMember = () => {
+		redirect(`members/current`);
 	};
 
 	const onDeleteMember = (id: number) => {
@@ -102,8 +101,8 @@ const Members = () => {
 				<div className='members'>
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
-						<SlButton size='small' variant='primary' onClick={() => setIsAddMemberDialogOpen(true)}>
-							Add a new member
+						<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
+							Invite a new member
 						</SlButton>
 					</div>
 					<div className='members__list'>
@@ -112,7 +111,15 @@ const Members = () => {
 								<ListTile
 									key={member.ID}
 									className='members__member'
-									name={member.Name}
+									name={
+										<div className='members__member-name'>
+											{member.Name}
+											{member.Invitation !== '' && <SlBadge variant='neutral'>Invited</SlBadge>}
+											{member.Invitation === 'Expired' && (
+												<SlBadge variant='danger'>Invitation expired</SlBadge>
+											)}
+										</div>
+									}
 									description={member.Email}
 									icon={
 										<SlAvatar
@@ -127,7 +134,7 @@ const Members = () => {
 									action={
 										<div className='members__member-actions'>
 											{member.ID === loggedMember.ID && (
-												<SlButton size='small' onClick={() => onEditMember(member.ID)}>
+												<SlButton size='small' onClick={onEditMember}>
 													Edit
 												</SlButton>
 											)}
@@ -161,102 +168,48 @@ const Members = () => {
 				>
 					If you delete the member they will no longer have access to your organization
 				</AlertDialog>
-				<AddMemberDialog
-					isOpen={isAddMemberDialogOpen}
-					setIsOpen={setIsAddMemberDialogOpen}
-					handleError={handleError}
+				<InviteMemberDialog
+					isOpen={isInviteMemberDialogOpen}
+					setIsOpen={setIsInviteMemberDialogOpen}
 					setIsLoadingMembers={setIsLoadingMembers}
-					api={api}
 				/>
 			</div>
 		);
 	}
 };
 
-interface AddMemberDialogProps {
+interface InviteMemberDialogProps {
 	isOpen: boolean;
 	setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-	handleError: (err: Error | string) => void;
 	setIsLoadingMembers: React.Dispatch<React.SetStateAction<boolean>>;
-	api: API;
 }
 
-const AddMemberDialog = ({ isOpen, setIsOpen, handleError, setIsLoadingMembers, api }: AddMemberDialogProps) => {
-	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
-	const [name, setName] = useState<string>('');
+const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMemberDialogProps) => {
 	const [email, setEmail] = useState<string>('');
-	const [password, setPassword] = useState<string>('');
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [error, setError] = useState<string>('');
 
-	const fileInputRef = useRef<any>();
-	const nameInputRef = useRef<any>();
+	const { handleError, api } = useContext(AppContext);
+
+	const inputRef = useRef<any>();
 
 	useEffect(() => {
 		if (isOpen) {
 			setTimeout(() => {
-				nameInputRef.current.focus();
+				inputRef.current.focus();
 			}, 100);
 		}
 	}, [isOpen]);
-
-	const onUpdateAvatar = async (e: any) => {
-		setError('');
-		const f: File = Array.from(e.target.files)[0] as File;
-		if (f == null) {
-			return;
-		}
-		if (f.type !== 'image/jpeg' && f.type !== 'image/png') {
-			e.target.value = '';
-			setTimeout(() => {
-				setError('image must be in jpeg or png format');
-			}, 300);
-			return;
-		}
-		if (f.size > 200 * 1024) {
-			e.target.value = '';
-			setTimeout(() => {
-				setError('image must be smaller than 200KB');
-			}, 300);
-			return;
-		}
-		const base64: string = await toBase64(f);
-		setAvatar({ Image: base64, MimeType: f.type });
-	};
-
-	const onDeleteAvatar = (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setError('');
-		fileInputRef.current.value = '';
-		setAvatar(null);
-	};
-
-	const onUpdateName = (e) => {
-		const value = e.target.value;
-		setName(value);
-	};
 
 	const onUpdateEmail = (e) => {
 		const value = e.target.value;
 		setEmail(value);
 	};
 
-	const onUpdatePassword = (e) => {
-		const value = e.target.value;
-		setPassword(value);
-	};
-
-	const onAddMember = async () => {
+	const onInviteMember = async () => {
 		setError('');
 		setIsSaving(true);
-		const memberToSet: MemberToSet = {
-			Name: name,
-			Image: avatar ? avatar.Image : null,
-			Email: email,
-			Password: password,
-		};
-		const err = validateMemberToSet(memberToSet, true);
+		const err = validateMemberEmail(email);
 		if (err !== '') {
 			setTimeout(() => {
 				setIsSaving(false);
@@ -265,9 +218,9 @@ const AddMemberDialog = ({ isOpen, setIsOpen, handleError, setIsLoadingMembers, 
 			return;
 		}
 		try {
-			await api.addMember(memberToSet);
+			await api.inviteMember(email);
 		} catch (err) {
-			if (err instanceof UnprocessableError) {
+			if (err instanceof UnprocessableError && err.code !== 'CannotSendEmails') {
 				setTimeout(() => {
 					setIsSaving(false);
 					setError(err.message);
@@ -277,6 +230,7 @@ const AddMemberDialog = ({ isOpen, setIsOpen, handleError, setIsLoadingMembers, 
 					setIsSaving(false);
 					setIsOpen(false);
 					setTimeout(() => {
+						setEmail('');
 						handleError(err);
 					}, 150);
 				}, 300);
@@ -287,6 +241,7 @@ const AddMemberDialog = ({ isOpen, setIsOpen, handleError, setIsLoadingMembers, 
 			setIsSaving(false);
 			setIsOpen(false);
 			setTimeout(() => {
+				setEmail('');
 				setIsLoadingMembers(true);
 			}, 300);
 		}, 300);
@@ -294,44 +249,20 @@ const AddMemberDialog = ({ isOpen, setIsOpen, handleError, setIsLoadingMembers, 
 
 	return (
 		<SlDialog
-			className='members__add-dialog'
-			label='Add new member'
+			className='members__invite-dialog'
+			label='Invite new member'
 			open={isOpen}
 			onSlAfterHide={() => setIsOpen(false)}
 		>
-			<SlInput ref={nameInputRef} required label='Name' value={name} onSlInput={onUpdateName} />
-			<SlInput required label='Email' value={email} onSlInput={onUpdateEmail} />
-			<SlInput
-				required
-				type='password'
-				label='Password'
-				value={password}
-				onSlInput={onUpdatePassword}
-				password-toggle
-			/>
-			<label>
-				<div className='members__add-dialog-avatar-label'>Avatar</div>
-				<div className='members__add-dialog-avatar-box'>
-					<div className='members__dialog-avatar-buttons'>
-						<div className='members__add-dialog-add-avatar'>Upload</div>
-						{avatar && (
-							<div className='members__add-dialog-remove-avatar' onClick={onDeleteAvatar}>
-								Delete
-							</div>
-						)}
-					</div>
-					<SlAvatar image={avatar ? `data:${avatar.MimeType};base64, ${avatar.Image}` : ''} />
-					<input ref={fileInputRef} type='file' accept='image/jpeg, image/png' onChange={onUpdateAvatar} />
-				</div>
-			</label>
+			<SlInput ref={inputRef} label='Email' value={email} onSlInput={onUpdateEmail} />
 			{error && (
-				<div className='members__add-dialog-error'>
+				<div className='members__invite-dialog-error'>
 					<SlIcon slot='icon' name='exclamation-octagon' />
 					{error}
 				</div>
 			)}
-			<SlButton loading={isSaving} className='members__add' variant='primary' onClick={onAddMember}>
-				Add
+			<SlButton loading={isSaving} className='members__invite' variant='primary' onClick={onInviteMember}>
+				Invite
 			</SlButton>
 		</SlDialog>
 	);

@@ -10,12 +10,15 @@ package apis
 import (
 	"bytes"
 	"context"
+	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unicode/utf8"
 
 	"chichi/apis/connectors"
@@ -34,9 +37,13 @@ import (
 	"chichi/telemetry"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
-const TransformationFailed errors.Code = "TransformationFailed"
+const (
+	TransformationFailed   errors.Code = "TransformationFailed"
+	InvitationTokenExpired errors.Code = "InvitationTokenExpired"
+)
 
 // ValidationError is the interface implemented by validation errors.
 type ValidationError interface {
@@ -55,6 +62,7 @@ type APIs struct {
 	mu                  sync.Mutex // for the scheduler field
 	scheduler           *scheduler
 	eventProcessor      *events.Processor
+	smtp                *SMTPConfig
 	close               struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
@@ -68,6 +76,7 @@ var hasBeenCalled bool
 type Config struct {
 	PostgreSQL  PostgreSQLConfig
 	Transformer any // must be a LambdaConfig or LocalConfig value
+	SMTP        SMTPConfig
 }
 
 type PostgreSQLConfig struct {
@@ -100,6 +109,13 @@ type LocalConfig struct {
 	FunctionsDir     string
 }
 
+type SMTPConfig struct {
+	Host string
+	Port int
+	User string
+	Pass string
+}
+
 type ExpressionToBeExtracted struct {
 	Value string
 	Type  types.Type
@@ -127,7 +143,12 @@ func New(conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	apis := &APIs{db: db}
+	var smtp *SMTPConfig
+	if conf.SMTP.Host != "" {
+		smtp = &conf.SMTP
+	}
+
+	apis := &APIs{db: db, smtp: smtp}
 
 	// Create a transformer.
 	switch c := conf.Transformer.(type) {
@@ -344,6 +365,50 @@ func (apis *APIs) CountOrganizations(ctx context.Context) int {
 	return len(apis.state.Organizations())
 }
 
+// AcceptInvitation accepts the invitation with the given invitation token. It
+// sets the member's name and password and removes its token. name's length must
+// be in range [1, 60]. password's length must be at least 8 character long.
+//
+// If an invitation with the given token does not exist, it returns a
+// NotFoundError error. If the token is expired it returns an UnprocessableError
+// with code InvitationTokenExpired.
+func (apis *APIs) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
+	apis.mustBeOpen()
+	if !isValidInvitationToken(token) {
+		return errors.NotFound("invitation token %q does not exist", token)
+	}
+	m := MemberToSet{
+		Name:     name,
+		Password: password,
+	}
+	err := validateMemberToSet(m, false, true)
+	if err != nil {
+		return errors.BadRequest(err.Error())
+	}
+	pass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	err = apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		var id int
+		var createdAt time.Time
+		err := apis.db.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.NotFound("invitation token %q does not exist", token)
+			}
+			return err
+		}
+		if isInvitationTokenExpired(createdAt) {
+			return errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+		}
+		_, err = apis.db.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
+			name, string(pass), id)
+		return err
+	})
+	return err
+}
+
 // AddOrganization adds a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 45 runes.
 func (apis *APIs) AddOrganization(ctx context.Context, name string) (int, error) {
@@ -390,6 +455,35 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 		uniqueProperties = append(uniqueProperties, s)
 	}
 	return uniqueProperties, nil
+}
+
+// MemberInvitation returns the organization's name and email of the member
+// invited with the given invitation token. If an invitation with the given
+// token does not exist, it returns a NotFoundError error. If the token is
+// expired it returns an UnprocessableError with code InvitationTokenExpired.
+func (apis *APIs) MemberInvitation(ctx context.Context, token string) (string, string, error) {
+	apis.mustBeOpen()
+	if !isValidInvitationToken(token) {
+		return "", "", errors.NotFound("invitation token %q does not exist", token)
+	}
+	var organizationID int
+	var email string
+	var createdAt time.Time
+	err := apis.db.QueryRow(ctx, "SELECT organization, email, created_at FROM members WHERE invitation_token = $1", token).Scan(&organizationID, &email, &createdAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", errors.NotFound("invitation token %q does not exist", token)
+		}
+		return "", "", err
+	}
+	if isInvitationTokenExpired(createdAt) {
+		return "", "", errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+	}
+	organization, ok := apis.state.Organization(organizationID)
+	if !ok {
+		return "", "", errors.NotFound("invitation token %q does not exist", token)
+	}
+	return organization.Name, email, nil
 }
 
 // ServeEvents serves the events sent via HTTP.
@@ -592,6 +686,14 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 		defer apis.close.Done()
 		a.exec(apis.close.ctx)
 	}()
+}
+
+func isValidInvitationToken(token string) bool {
+	if len(token) != 44 {
+		return false
+	}
+	_, err := base64.URLEncoding.DecodeString(token)
+	return err == nil
 }
 
 // Workspace represents a workspace.

@@ -30,6 +30,7 @@ import Members from './components/routes/Members/Members';
 import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
 import Workspaces from './components/routes/Workspaces/Workspaces';
+import SignUp from './components/routes/SignUp/SignUp';
 
 const router = createBrowserRouter([
 	{
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
 		errorElement: <RootError />,
 		children: [
 			{ path: '', element: <Login /> },
+			{ path: 'sign-up/:token', element: <SignUp /> },
 			{ path: 'workspaces', element: <Workspaces /> },
 			{
 				element: <AppLayout />,
@@ -106,7 +108,7 @@ const router = createBrowserRouter([
 						element: <Organization />,
 					},
 					{
-						path: 'members/:id',
+						path: 'members/current',
 						element: <Member />,
 					},
 					{

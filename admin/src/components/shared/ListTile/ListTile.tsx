@@ -3,8 +3,8 @@ import './ListTile.css';
 
 interface ListTileProps {
 	icon: ReactNode;
-	name: string;
-	description?: string;
+	name: ReactNode;
+	description?: ReactNode;
 	disabled?: boolean;
 	disablingReason?: string;
 	action?: ReactNode;

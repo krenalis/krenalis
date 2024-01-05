@@ -8,7 +8,9 @@
 package server
 
 import (
+	_ "embed"
 	"encoding/json"
+	"html"
 	"log/slog"
 	"math"
 	"net/http"
@@ -26,6 +28,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/securecookie"
 )
+
+//go:embed invite-member-email.html
+var inviteMemberEmail string
 
 // sessionMaxAge contains the max age property for the session cookie (6 hours).
 const sessionMaxAge = 6 * 60 * 60
@@ -70,23 +75,36 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := s.getSession(r)
-	if session == nil {
-		respond(w, errors.Unprocessable(LoginRequired, "login is required"))
-		return
-	}
-
-	// Read the organization.
-	organization, err := s.apis.Organization(ctx, 1)
-	if err != nil {
-		s.removeSession(w, r)
-		http.NotFound(w, r)
-		return
-	}
-	if _, err = organization.Member(ctx, session.Member); err != nil {
-		s.removeSession(w, r)
-		respond(w, errors.Unprocessable(LoginRequired, "login is required"))
-		return
+	var session *sessionCookie
+	var organization *apis.Organization
+	var member *apis.Member
+	var err error
+	if requiresLogin(r.URL.Path, r.Method) {
+		session = s.getSession(r)
+		if session == nil {
+			respond(w, errors.Unprocessable(LoginRequired, "login is required"))
+			return
+		}
+		// Read the organization.
+		organization, err = s.apis.Organization(ctx, session.Organization)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				s.removeSession(w, r)
+				respond(w, errors.Unprocessable(LoginRequired, "login is required"))
+				return
+			}
+			respond(w, err)
+			return
+		}
+		if member, err = organization.Member(ctx, session.Member); err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				s.removeSession(w, r)
+				respond(w, errors.Unprocessable(LoginRequired, "login is required"))
+				return
+			}
+			respond(w, err)
+			return
+		}
 	}
 
 	router := chi.NewRouter()
@@ -1107,61 +1125,56 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(members)
 		})
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				MemberToSet struct {
-					Name     string
-					Image    *[]byte
-					Email    string
-					Password string
+		router.Route("/invitations", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				var req struct {
+					Email string
 				}
-			}
-			err = json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				emailTemplate := strings.ReplaceAll(inviteMemberEmail, "${invitationFrom}", html.EscapeString(member.Email))
+				emailTemplate = strings.ReplaceAll(emailTemplate, "${organization}", html.EscapeString(organization.Name))
+				err = organization.InviteMember(ctx, req.Email, emailTemplate)
 				respond(w, err)
-				return
-			}
-			memberToSet := apis.MemberToSet{
-				Name:     req.MemberToSet.Name,
-				Email:    req.MemberToSet.Email,
-				Password: req.MemberToSet.Password,
-			}
-			if req.MemberToSet.Image != nil {
-				fileType := http.DetectContentType(*req.MemberToSet.Image)
-				avatar := &apis.Avatar{
-					Image:    *req.MemberToSet.Image,
-					MimeType: fileType,
-				}
-				memberToSet.Avatar = avatar
-			}
-			err := organization.AddMember(ctx, memberToSet)
-			respond(w, err)
-		})
-		router.Route("/{memberID}", func(router chi.Router) {
-			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
-				member, err := organization.Member(ctx, id)
+			})
+			router.Get("/{token}", func(w http.ResponseWriter, r *http.Request) {
+				invitationToken := chi.URLParam(r, "token")
+				organizationName, email, err := s.apis.MemberInvitation(r.Context(), invitationToken)
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"email": email, "organization": organizationName})
+			})
+			router.Put("/{token}", func(w http.ResponseWriter, r *http.Request) {
+				invitationToken := chi.URLParam(r, "token")
+				var req struct {
+					Name     string
+					Password string
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = s.apis.AcceptInvitation(r.Context(), invitationToken, req.Name, req.Password)
+				respond(w, err)
+			})
+		})
+		router.Route("/current", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(member)
 			})
 			router.Put("/", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
-				if id < 0 || id > math.MaxInt32 {
-					respond(w, errors.BadRequest("identifier %d is not a valid member identifier", id))
-					return
-				}
-				if id != session.Member {
-					respond(w, errors.BadRequest("members can only modify their own information"))
-					return
-				}
 				var req struct {
 					MemberToSet struct {
 						Name     string
-						Image    *[]byte
+						Image    []byte
 						Email    string
 						Password string
 					}
@@ -1177,18 +1190,20 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					Password: req.MemberToSet.Password,
 				}
 				if req.MemberToSet.Image != nil {
-					fileType := http.DetectContentType(*req.MemberToSet.Image)
+					fileType := http.DetectContentType(req.MemberToSet.Image)
 					avatar := &apis.Avatar{
-						Image:    *req.MemberToSet.Image,
+						Image:    req.MemberToSet.Image,
 						MimeType: fileType,
 					}
 					memberToSet.Avatar = avatar
 				}
-				err := organization.SetMember(ctx, id, memberToSet)
+				err := organization.SetMember(ctx, session.Member, memberToSet)
 				respond(w, err)
 			})
+		})
+		router.Route("/{id}", func(router chi.Router) {
 			router.Delete("/", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "memberID"))
+				id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 				err := organization.DeleteMember(ctx, id)
 				respond(w, err)
 			})
@@ -1211,4 +1226,12 @@ func respond(w http.ResponseWriter, err error) {
 	}
 	slog.Error("error occurred serving APIs:", "err", err)
 	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+}
+
+// requiresLogin checks if path requires login.
+func requiresLogin(path string, method string) bool {
+	if strings.HasPrefix(path, "/api/members/invitations/") && path != "/api/members/invitations/" && (method == http.MethodGet || method == http.MethodPut) {
+		return false
+	}
+	return true
 }

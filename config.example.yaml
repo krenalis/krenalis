@@ -15,6 +15,12 @@ postgreSQL:
     database:
     schema:
 
+smtp:
+    host:
+    port:
+    user:
+    pass:
+
 transformer:
 
     # Configure just one between "lambda" and "local".

@@ -35,7 +35,13 @@ type Settings struct {
 	ESBuild struct {
 		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
 	}
-	PostgreSQL  apis.PostgreSQLConfig `yaml:"postgreSQL"`
+	PostgreSQL apis.PostgreSQLConfig `yaml:"postgreSQL"`
+	SMTP       struct {
+		Host string
+		Port int
+		User string
+		Pass string
+	}
 	Transformer struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
@@ -80,6 +86,7 @@ func Run(ctx context.Context, settings *Settings) error {
 
 	config := apis.Config{
 		PostgreSQL: settings.PostgreSQL,
+		SMTP:       settings.SMTP,
 	}
 
 	// Choose the transformer setting.

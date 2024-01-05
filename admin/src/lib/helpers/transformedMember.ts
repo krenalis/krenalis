@@ -6,6 +6,8 @@ interface TransformedMember {
 	Email: string;
 	Avatar: MemberAvatar;
 	Initials: string;
+	Invitation: '' | 'Invited' | 'Expired';
+	CreatedAt: string;
 }
 
 const transformMember = (member: Member): TransformedMember => {
@@ -21,6 +23,16 @@ const transformMember = (member: Member): TransformedMember => {
 	return transformed;
 };
 
+const validateMemberEmail = (email: string): string => {
+	if (email === '') {
+		return 'email must not be empty';
+	}
+	if (email.length > 120) {
+		return 'email must be shorter than 120 characters';
+	}
+	return '';
+};
+
 const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): string => {
 	if (member.Name === '') {
 		return 'name must not be empty';
@@ -28,11 +40,9 @@ const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): 
 	if (member.Name.length > 45) {
 		return 'name must be shorter than 45 characters';
 	}
-	if (member.Email === '') {
-		return 'email must not be empty';
-	}
-	if (member.Email.length > 120) {
-		return 'email must be shorter than 120 characters';
+	const error = validateMemberEmail(member.Email);
+	if (error !== '') {
+		return error;
 	}
 	if (isPasswordRequired && member.Password === '') {
 		return 'password must not be empty';
@@ -48,4 +58,4 @@ const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): 
 	return '';
 };
 
-export { transformMember, TransformedMember, validateMemberToSet };
+export { transformMember, TransformedMember, validateMemberToSet, validateMemberEmail };

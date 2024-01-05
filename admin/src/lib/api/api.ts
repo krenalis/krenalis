@@ -43,6 +43,7 @@ import {
 	Execution,
 	MemberToSet,
 	Member,
+	MemberInvitationResponse,
 } from '../../types/external/api';
 
 class API {
@@ -114,18 +115,29 @@ class API {
 		return await call(`${this.apiURL}/members`, http.GET);
 	};
 
-	addMember = async (memberToSet: MemberToSet): Promise<void> => {
-		return await call(`${this.apiURL}/members`, http.POST, {
-			memberToSet: memberToSet,
+	inviteMember = async (email: string): Promise<void> => {
+		return await call(`${this.apiURL}/members/invitations`, http.POST, {
+			email,
 		});
 	};
 
-	member = async (member: number): Promise<Member> => {
-		return await call(`${this.apiURL}/members/${member}`, http.GET);
+	memberInvitation = async (token: string): Promise<MemberInvitationResponse> => {
+		return await call(`${this.apiURL}/members/invitations/${token}`, http.GET);
 	};
 
-	updateMember = async (member: number, memberToSet: MemberToSet): Promise<void> => {
-		return await call(`${this.apiURL}/members/${member}`, http.PUT, {
+	acceptInvitation = async (token: string, name: string, password: string): Promise<void> => {
+		return await call(`${this.apiURL}/members/invitations/${token}`, http.PUT, {
+			name: name,
+			password: password,
+		});
+	};
+
+	member = async (): Promise<Member> => {
+		return await call(`${this.apiURL}/members/current`, http.GET);
+	};
+
+	updateMember = async (memberToSet: MemberToSet): Promise<void> => {
+		return await call(`${this.apiURL}/members/current`, http.PUT, {
 			memberToSet: memberToSet,
 		});
 	};

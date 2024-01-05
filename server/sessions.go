@@ -12,7 +12,8 @@ import (
 )
 
 type sessionCookie struct {
-	Member int
+	Organization int
+	Member       int
 }
 
 const (
@@ -68,8 +69,8 @@ func (s *apisServer) getSession(r *http.Request) *sessionCookie {
 }
 
 // addSession creates the session and stores it inside the client.
-func (s *apisServer) addSession(member int, w http.ResponseWriter, r *http.Request) error {
-	err := s.storeSession(&sessionCookie{Member: member}, w)
+func (s *apisServer) addSession(organization int, member int, w http.ResponseWriter, r *http.Request) error {
+	err := s.storeSession(&sessionCookie{Organization: organization, Member: member}, w)
 	if err != nil {
 		return err
 	}

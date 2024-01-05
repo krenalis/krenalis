@@ -5,7 +5,7 @@ import * as variants from './constants/variants';
 import * as icons from './constants/icons';
 import { Status } from './types/internal/app';
 import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
-import { adminBasePath } from './constants/path';
+import { adminBasePath, signUpPath } from './constants/path';
 import AppContext from './context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
@@ -39,7 +39,6 @@ const App = () => {
 
 	const logout = () => {
 		setSelectedWorkspace(0);
-		sessionStorage.removeItem('chichi-member');
 		setIsLoggedIn(false);
 	};
 
@@ -93,7 +92,7 @@ const App = () => {
 	} = useApp(handleError, redirect, logout, location);
 
 	useEffect(() => {
-		if (!isLoggedIn && location.pathname !== adminBasePath) {
+		if (!isLoggedIn && location.pathname !== adminBasePath && !location.pathname.startsWith(signUpPath)) {
 			redirect('');
 		}
 	}, [isLoggedIn, location]);
@@ -117,7 +116,10 @@ const App = () => {
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (isLoadingState || (!isLoggedIn && location.pathname !== adminBasePath)) {
+	if (
+		isLoadingState ||
+		(!isLoggedIn && location.pathname !== adminBasePath && !location.pathname.startsWith(signUpPath))
+	) {
 		content = (
 			<SlSpinner
 				className='globalSpinner'

@@ -62,9 +62,11 @@ GET     /api/transformation-languages                                           
 POST    /api/transform-data                                                      Transform data, using a mapping or a transformation, and returns it.
 POST    /api/validate-expression                                                 Validate an expression.
 GET     /api/members                                                             List the members.
-POST    /api/members                                                             Add a new member and returns its id.
+POST    /api/members/invitations                                                 Create an invited member and send the invitation email.
+GET     /api/members/invitations/{token}                                         Get the organization's name and email of the invited member.
+PUT     /api/members/invitations/{token}                                         Accept an invitation and set the name and password of the invited member.
 POST    /api/members/login                                                       Authenticate a member given his email and password.
 POST    /api/members/logout                                                      Authenticate a member given his email and password.
-GET     /api/members/{id}                                                        Get the member.
-PUT     /api/members/{id}                                                        Update the member.
+GET     /api/members/current                                                     Get the current member.
+PUT     /api/members/current                                                     Update the current member.
 DELETE  /api/members/{id}                                                        Delete the member.

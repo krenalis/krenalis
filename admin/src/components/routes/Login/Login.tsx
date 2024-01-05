@@ -29,10 +29,9 @@ const Login = () => {
 	const onLogin = async (e: FormEvent) => {
 		e.preventDefault();
 		setIsLoading(true);
-		let memberID: number;
 		let authError: string;
 		try {
-			[memberID, authError] = await api.login(email, password);
+			[, authError] = await api.login(email, password);
 		} catch (err) {
 			setIsLoading(false);
 			handleError(err);
@@ -46,7 +45,6 @@ const Login = () => {
 			}
 			return;
 		}
-		sessionStorage.setItem('chichi-member', String(memberID));
 		setIsLoggedIn(true);
 		setIsLoading(false);
 		setIsLoadingState(true);

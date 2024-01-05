@@ -1,0 +1,38 @@
+.signup {
+	width: 500px;
+	margin: auto;
+	padding-top: 60px;
+}
+
+.signup .signup__logo {
+	font-size: 12px;
+	background-color: var(--color-primary-600);
+	color: var(--text-onaccent);
+	width: 80px;
+	height: 80px;
+	border-radius: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-weight: 600;
+	font-family: monospace;
+	margin: auto;
+}
+
+.signup h1 {
+	text-align: center;
+	font-weight: 600;
+	margin-bottom: 30px;
+	font-size: 24px;
+}
+
+.signup .signup__name,
+.signup .signup__email,
+.signup .signup__password {
+	margin-bottom: 30px;
+}
+
+.signup sl-button {
+	display: block;
+	margin-top: 50px;
+}
