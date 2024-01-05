@@ -33,7 +33,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
+const (
 	AuthenticationFailed     errors.Code = "AuthenticationFailed"
 	MemberEmailAlreadyExists errors.Code = "MemberEmailAlreadyExists"
 	CannotSendEmails         errors.Code = "CannotSendEmails"

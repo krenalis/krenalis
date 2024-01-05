@@ -29,7 +29,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var ExecutionInProgress errors.Code = "ExecutionInProgress"
+const ExecutionInProgress errors.Code = "ExecutionInProgress"
 
 // addExecution adds an execution to the action.
 func (this *Action) addExecution(ctx context.Context, reimport bool) error {

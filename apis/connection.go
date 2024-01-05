@@ -54,7 +54,7 @@ const (
 	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
 
-var (
+const (
 	ConnectionNotExist   errors.Code = "ConnectionNotExist"
 	ConnectorNotExist    errors.Code = "ConnectorNotExist"
 	EventNotExist        errors.Code = "EventNotExist"

@@ -23,7 +23,7 @@ import (
 	"chichi/telemetry"
 )
 
-var (
+const (
 	MappingOverAnonymousIdentifier errors.Code = "MappingOverAnonymousIdentifier"
 	DatabaseFailed                 errors.Code = "DatabaseFailed"
 )
