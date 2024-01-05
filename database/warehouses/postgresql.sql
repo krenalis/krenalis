@@ -5,19 +5,6 @@ CREATE TYPE fruit AS ENUM ('apple', 'orange', 'mango', 'peach', 'lime');
 
 CREATE TYPE music_genre AS ENUM('pop', 'rock', 'blues', 'classical');
 
-CREATE TYPE music AS (
-    "title" text,
-    "author" text,
-    "length" double precision,
-    "genre" music_genre
-);
-
-CREATE TYPE movie AS (
-    "title" text,
-    "length" double precision,
-    "soundtrack" music
-);
-
 CREATE TABLE users_identities (
 
     "__identity_id__"   serial,
@@ -28,44 +15,54 @@ CREATE TABLE users_identities (
     "__timestamp__"     timestamp NOT NULL DEFAULT now(),
 
     -- User properties.
-    "dummy_id"               text,
-    "anonymous_id"           text,
-    "android_id"             text,
-    "android_idfa"           text,
-    "android_push_token"     text,
-    "ios_id"                 text,
-    "ios_idfa"               text,
-    "ios_push_token"         text,
-    "first_name"             varchar(300),
-    "last_name"              varchar(300),
-    "email"                  varchar(300),
-    "gender"                 gender,
-    "food_preferences_drink" drink,
-    "food_preferences_fruit" fruit,
-    "phone_numbers"          varchar(300)[],
-    "favorite_movie"         movie,
+    "dummy_id"                          text,
+    "anonymous_id"                      text,
+    "android_id"                        text,
+    "android_idfa"                      text,
+    "android_push_token"                text,
+    "ios_id"                            text,
+    "ios_idfa"                          text,
+    "ios_push_token"                    text,
+    "first_name"                        varchar(300),
+    "last_name"                         varchar(300),
+    "email"                             varchar(300),
+    "gender"                            gender,    
+    "food_preferences_drink"            drink,
+    "food_preferences_fruit"            fruit,
+    "phone_numbers"                     varchar(300)[],
+    "favorite_movie_title"              text,
+    "favorite_movie_length"             double precision,
+    "favorite_movie_soundtrack_title"   text,
+    "favorite_movie_soundtrack_author"  text,
+    "favorite_movie_soundtrack_length"  double precision,
+    "favorite_movie_soundtrack_genre"   music_genre,
     
     PRIMARY KEY ("__identity_id__")
 );
 
 CREATE TABLE users (
-    id                       SERIAL,
-    "dummy_id"               text,
-    "anonymous_id"           text,
-    "android_id"             text,
-    "android_idfa"           text,
-    "android_push_token"     text,
-    "ios_id"                 text,
-    "ios_idfa"               text,
-    "ios_push_token"         text,
-    "first_name"             varchar(300),
-    "last_name"              varchar(300),
-    "email"                  varchar(300),
-    "gender"                 gender,
-    "food_preferences_drink" drink,
-    "food_preferences_fruit" fruit,
-    "phone_numbers"          varchar(300)[],
-    "favorite_movie"         movie,
+    id                                  SERIAL,
+    "dummy_id"                          text,
+    "anonymous_id"                      text,
+    "android_id"                        text,
+    "android_idfa"                      text,
+    "android_push_token"                text,
+    "ios_id"                            text,
+    "ios_idfa"                          text,
+    "ios_push_token"                    text,
+    "first_name"                        varchar(300),
+    "last_name"                         varchar(300),
+    "email"                             varchar(300),
+    "gender"                            gender,    
+    "food_preferences_drink"            drink,
+    "food_preferences_fruit"            fruit,
+    "phone_numbers"                     varchar(300)[],
+    "favorite_movie_title"              text,
+    "favorite_movie_length"             double precision,
+    "favorite_movie_soundtrack_title"   text,
+    "favorite_movie_soundtrack_author"  text,
+    "favorite_movie_soundtrack_length"  double precision,
+    "favorite_movie_soundtrack_genre"   music_genre,
     PRIMARY KEY (id)
 );
 
