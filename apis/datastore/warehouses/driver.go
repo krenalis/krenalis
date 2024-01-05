@@ -167,6 +167,11 @@ type IdentitiesWriter interface {
 	// the actual write operation to a later time. If it returns false, no further
 	// Write operations can be performed, and a call to Close will return an error.
 	//
+	// The values of the Identity Properties must comply with the schema of the
+	// table of the identities in the data warehouse (note that "internal columns",
+	// starting and ending with "__", shall not be included in Properties since they
+	// are not included in the schema).
+	//
 	// If the user identity is successfully written, the ack function is invoked
 	// with a nil error and the record's ID as arguments. If writing the record
 	// fails, the ack function is invoked with a non-nil error and the user
