@@ -139,9 +139,51 @@ func (fn *function) create(name string, version int, source string) error {
 BigInt.prototype.toJSON = function() { return this.toString(); }
 const results = [];
 const event = Function("return " + process.argv[2])();
+function normalize(obj, set = new WeakSet()) {
+	if (set.has(obj)) {
+		throw new Error("transformed value contains a circular reference");
+	}
+    set.add(obj);
+	if (Array.isArray(obj)) {
+		const len = obj.length;
+		for (let i = 0; i < len; i++) {
+			const v = obj[i];
+			if (v === undefined) {
+				obj[i] = null;
+			} else if (typeof v === "object" && v !== null) {
+				normalize(v, set);
+			}
+		}
+	} else {
+		for (const k in obj) {
+			if (obj.hasOwnProperty(k)) {
+				const v = obj[k];
+				if (v === undefined) {
+					obj[k] = null;
+				} else if (typeof v === "object" && v !== null) {
+					normalize(v, set);
+				}
+			}
+		}
+	}
+	set.delete(obj);
+}
 for ( let i = 0; i < event.length; i++ ) {
 	try {
 		let value = transform(event[i]);
+		if (value === undefined) {
+			throw new Error("transformed value is undefined");
+		}
+		if (value === null) {
+			throw new Error("transformed value is null");
+		}
+		if (Array.isArray(value)) {
+			throw new Error("transformed value is array");
+		}
+		if (typeof value !== "object") {
+			throw new Error("transformed value is "+(typeof value)+", not object");
+		}
+		normalize(value);
 		results[i] = { value: value };
 	} catch (error) {
 		if (error instanceof Error) {
