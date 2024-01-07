@@ -136,7 +136,6 @@ func (fn *function) create(name string, version int, source string) error {
 	switch ext {
 	case ".js":
 		source += `
-BigInt.prototype.toJSON = function() { return this.toString(); }
 const results = [];
 const event = Function("return " + process.argv[2])();
 function normalize(obj, set = new WeakSet()) {
@@ -152,6 +151,8 @@ function normalize(obj, set = new WeakSet()) {
 				obj[i] = null;
 			} else if (typeof v === "object" && v !== null) {
 				normalize(v, set);
+			} else if (typeof v === "bigint") {
+				obj[i] = v.toString();
 			}
 		}
 	} else {
@@ -162,6 +163,8 @@ function normalize(obj, set = new WeakSet()) {
 					obj[k] = null;
 				} else if (typeof v === "object" && v !== null) {
 					normalize(v, set);
+				} else if (typeof v === "bigint") {
+					obj[k] = v.toString();
 				}
 			}
 		}

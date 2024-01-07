@@ -309,7 +309,6 @@ func (fn *function) code(source string, ext string) ([]byte, error) {
 	case ".js":
 		filename = "index.mjs"
 		source += `
-BigInt.prototype.toJSON = function() { return this.toString(); }
 export const _handler = async (event) => {
 	function normalize(obj, set = new WeakSet()) {
 		if (set.has(obj)) {
@@ -324,6 +323,8 @@ export const _handler = async (event) => {
 					obj[i] = null;
 				} else if (typeof v === "object" && v !== null) {
 					normalize(v, set);
+				} else if (typeof v === "bigint") {
+					obj[i] = v.toString();
 				}
 			}
 		} else {
@@ -334,6 +335,8 @@ export const _handler = async (event) => {
 						obj[k] = null;
 					} else if (typeof v === "object" && v !== null) {
 						normalize(v, set);
+					} else if (typeof v === "bigint") {
+						obj[k] = v.toString();
 					}
 				}
 			}

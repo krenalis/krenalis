@@ -143,12 +143,7 @@ var pythonDecoderOptions = decoderOptions{
 // according to the schema of its elements, which must be an Object or invalid.
 // An invalid schema is treated as an object with no properties.
 //
-// For JavaScript, it assumes that the JSON code has been marshaled by a
-// JavaScript JSON.stringify(v) call after executing:
-//
-//	BigInt.prototype.toJSON = function() { return this.toString(); }
-//
-// The following are the expected JSON for each schema type:
+// For JavaScript, the following are the expected JSON for each schema type:
 //   - Boolean: true or false
 //   - Int (8, 16, 24, and 32 bits): a Number representing an integer
 //   - Int (64 bits): a String representing an integer
@@ -167,10 +162,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - Object: an object
 //   - Map: an object
 //
-// For Python, it assumes that the JSON code has been marshaled by a Python
-// json.dumps(v, default=str) call.
-//
-// The following are the expected JSON for each schema type:
+// For Python, the following are the expected JSON for each schema type:
 //   - Boolean: true or false
 //   - Int: a Number representing an integer
 //   - Uint: a Number representing an integer
