@@ -399,8 +399,6 @@ func (warehouse *Snowflake) SetDestinationUser(ctx context.Context, action int, 
 	return errors.New("not implemented")
 }
 
-// SetIdentity sets the identity id (which may have an anonymous ID) imported
-
 // Settings returns the data warehouse settings.
 func (warehouse *Snowflake) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
