@@ -21,6 +21,7 @@ import (
 
 	"chichi/apis/state"
 	"chichi/apis/transformers"
+	"chichi/apis/transformers/embed"
 	"chichi/backoff"
 	"chichi/connector/types"
 
@@ -310,56 +311,12 @@ func (fn *function) code(source string, ext string) ([]byte, error) {
 		filename = "index.mjs"
 		source += `
 export const _handler = async (event) => {
-	function normalize(obj, set = new WeakSet()) {
-		if (set.has(obj)) {
-			throw new Error("transformed value contains a circular reference");
-		}
-		set.add(obj);
-		if (Array.isArray(obj)) {
-			const len = obj.length;
-			for (let i = 0; i < len; i++) {
-				const v = obj[i];
-				if (v === undefined) {
-					obj[i] = null;
-				} else if (typeof v === "object" && v !== null) {
-					normalize(v, set);
-				} else if (typeof v === "bigint") {
-					obj[i] = v.toString();
-				}
-			}
-		} else {
-			for (const k in obj) {
-				if (obj.hasOwnProperty(k)) {
-					const v = obj[k];
-					if (v === undefined) {
-						obj[k] = null;
-					} else if (typeof v === "object" && v !== null) {
-						normalize(v, set);
-					} else if (typeof v === "bigint") {
-						obj[k] = v.toString();
-					}
-				}
-			}
-		}
-		set.delete(obj);
-	}
+` + embed.JavaScriptNormalizeFunc + `
 	event = Function("return " + event)();
 	const results = [];
 	for ( let i = 0; i < event.length; i++ ) {
 		try {
 			let value = transform(event[i]);
-			if (value === undefined) {
-				throw new Error("transformed value is undefined");
-			}
-			if (value === null) {
-				throw new Error("transformed value is null");
-			}
-			if (Array.isArray(value)) {
-				throw new Error("transformed value is array");
-			}
-			if (typeof value !== "object") {
-				throw new Error("transformed value is "+(typeof value)+", not object");
-			}
 			normalize(value);
 			results[i] = { value: value };
 		} catch (error) {
