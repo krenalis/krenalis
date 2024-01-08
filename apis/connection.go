@@ -1389,6 +1389,14 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if len(columns) == 0 {
 		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q only has the \"id\" column and no additional columns", table)
 	}
+	// Unlike what happens with data warehouses, which directly return
+	// properties, here we transform columns into properties to simplify
+	// connectors. This can be done because we do not support multiple
+	// representations for Objects in connectors (as can happen in data
+	// warehouse drivers).
+	//
+	// TODO(Gianluca) this is not yet fully implemented for data warehouses. See
+	// the issue https://github.com/open2b/chichi/issues/465 for more details.
 	properties, err := warehouses.ColumnsToProperties(columns)
 	if err != nil {
 		return types.Type{}, err
