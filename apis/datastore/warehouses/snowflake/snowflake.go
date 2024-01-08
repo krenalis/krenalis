@@ -111,12 +111,12 @@ func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, pro
 	return "", false, errors.New("not implemented")
 }
 
-// IdentitiesWriter returns an IdentitiesWriter for writing user identities,
-// relative to the action, on the data warehouse.
+// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
+// the given schema, relative to the action, on the data warehouse.
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
-func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
+func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	panic("not implemented")
 }
 

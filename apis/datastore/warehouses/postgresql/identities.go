@@ -15,21 +15,23 @@ import (
 
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
+	"chichi/connector/types"
 
 	"golang.org/x/exp/maps"
 )
 
-// IdentitiesWriter returns an IdentitiesWriter for writing user identities,
-// relative to the action, on the data warehouse.
+// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
+// the given schema, relative to the action, on the data warehouse.
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
-func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
+func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	if ack == nil {
 		panic("ack function is missing")
 	}
 	return &identitiesWriter{
 		warehouse: warehouse,
+		schema:    schema,
 		action:    action,
 		fromEvent: fromEvent,
 		ack:       ack,
@@ -38,6 +40,7 @@ func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, action int, f
 
 type identitiesWriter struct {
 	warehouse *PostgreSQL
+	schema    types.Type
 	action    int
 	fromEvent bool
 	ack       warehouses.IdentitiesAckFunc
@@ -85,7 +88,7 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 	// after buffering the user identities to be written all together, directly
 	// calls the underlying data warehouse to write. This needs to be optimized
 	// for bulk writing rather than writing individual users.
-	err = writeUserIdentity(ctx, db, identity.Properties, identity.ID, identity.AnonymousID, iw.action, iw.fromEvent, identity.Timestamp)
+	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID, identity.AnonymousID, iw.action, iw.fromEvent, identity.Timestamp)
 	iw.ack(err, []string{identity.ID})
 	if err != nil {
 		iw.err = err
@@ -94,7 +97,8 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 	return true
 }
 
-func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string]any, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
+func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string]any,
+	schema types.Type, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
 
 	// Query the matching user identities, which can be 0 (the identity is a new
 	// identity), 1 (the identity already exists and must be updated) or more
@@ -136,15 +140,22 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Create the new identity.
 	var newIdentityID int
-	identity["__action__"] = action
-	identity["__external_id__"] = id
-	identity["__timestamp__"] = timestamp.Format(time.DateTime)
+
+	newIdentity := make(map[string]any, len(identity)+3)
+	maps.Copy(newIdentity, identity)
+
+	warehouses.SerializeRow(newIdentity, schema)
+
+	newIdentity["__action__"] = action
+	newIdentity["__external_id__"] = id
+	newIdentity["__timestamp__"] = timestamp.Format(time.DateTime)
 	if anonID != "" {
-		identity["__anonymous_ids__"] = []string{anonID}
+		newIdentity["__anonymous_ids__"] = []string{anonID}
 	}
+
 	b := strings.Builder{}
 	b.WriteString("INSERT INTO users_identities (")
-	properties := maps.Keys(identity)
+	properties := maps.Keys(newIdentity)
 	for i, name := range properties {
 		if i > 0 {
 			b.WriteByte(',')
@@ -161,7 +172,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		}
 		b.WriteByte('$')
 		b.WriteString(strconv.Itoa(i + 1))
-		values[i] = identity[name]
+		values[i] = newIdentity[name]
 	}
 	b.WriteString(") RETURNING __identity_id__")
 	err = db.QueryRow(ctx, b.String(), values...).Scan(&newIdentityID)

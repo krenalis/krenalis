@@ -1,0 +1,95 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2024 Open2b
+//
+
+package test
+
+import (
+	"encoding/json"
+	"reflect"
+	"testing"
+
+	"chichi/connector"
+	"chichi/connector/types"
+	"chichi/test/chichitester"
+)
+
+func TestImportObjectsIntoWarehouse(t *testing.T) {
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := chichitester.InitAndLaunch(t)
+	defer c.Stop()
+
+	dummy := c.AddDummy("Dummy (source)", connector.Source)
+	importUsersID := c.AddAction(dummy, map[string]any{
+		"Target": "Users",
+		"Action": map[string]any{
+			"Name": "Import users from Dummy",
+			"InSchema": types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+			}),
+			"OutSchema": types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "ios", Type: types.Object([]types.Property{
+					{Name: "id", Type: types.Text()},
+					{Name: "idfa", Type: types.Text()},
+				})},
+			}),
+			"Transformation": map[string]any{
+				"Function": map[string]any{
+					"Source": `
+def transform(user: dict) -> dict:
+	email = user["email"]
+	return {
+		"email": email,
+		"ios": {
+			"id": email + "-id",
+			"idfa": email + "-idfa",
+		}
+	}`,
+					"Language": "Python",
+				},
+			},
+		},
+	})
+	c.ExecuteAction(dummy, importUsersID, true)
+	c.WaitActionsToFinish(dummy)
+
+	// Check if the users have been imported - and then returned - correctly.
+
+	ret := c.Users([]string{"email", "ios"}, "", 0, 1)
+
+	// Validate the users count.
+	count, _ := ret["count"].(json.Number).Int64()
+	const expectedTotalCount = 10
+	if count != expectedTotalCount {
+		t.Fatalf("expected \"count\" to be %d, got %d", expectedTotalCount, count)
+	}
+
+	// Validate the users.
+	users := ret["users"].([]any)
+	expectedUsers := []map[string]any{
+		{"email": "kbuessen0@example.com",
+			"ios": map[string]any{
+				"id":         "kbuessen0@example.com-id",
+				"idfa":       "kbuessen0@example.com-idfa",
+				"push_token": nil},
+		},
+	}
+	if len(expectedUsers) != len(users) {
+		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))
+	}
+	for i, user := range users {
+		expected := expectedUsers[i]
+		if !reflect.DeepEqual(expected, user) {
+			t.Fatalf("expecting %#v, got %#v", expected, user)
+		}
+	}
+
+}
