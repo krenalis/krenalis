@@ -41,7 +41,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		return nil, 0, fmt.Errorf("expecting ID with Int kind, got %s", query.ID.Type.Kind())
 	}
 	if len(query.Properties) == 0 {
-		return nil, 0, errors.New("toSelect cannot be empty")
+		return nil, 0, errors.New("properties cannot be empty")
 	}
 	if !warehouses.IsValidIdentifier(query.Table) {
 		return nil, 0, fmt.Errorf("table name %q is not a valid identifier", query.Table)
