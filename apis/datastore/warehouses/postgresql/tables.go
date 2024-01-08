@@ -21,7 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// NOTE. This file must be kept in sync with 'apis/datastore/warehouses/postgresql/tables.go'.
+// NOTE. This file must be kept in sync with 'connectors/postgresql/tables.go'.
 
 // pgTypeInfo holds information about a PostgreSQL type, as read from the
 // PostgreSQL information tables (as 'information_schema.columns' and
