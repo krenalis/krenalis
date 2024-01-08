@@ -168,11 +168,7 @@ func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) 
 	for _, table := range tables {
 		switch table.Name {
 		case "users", "users_identities", "groups", "groups_identities", "events":
-			properties, err := warehouses.ColumnsToProperties(table.Columns)
-			if err != nil {
-				return nil, err
-			}
-			schemas[table.Name] = types.Object(properties)
+			schemas[table.Name] = table.Schema
 		}
 	}
 	return schemas, nil

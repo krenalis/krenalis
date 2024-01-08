@@ -172,8 +172,13 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') )\n" +
 		"ORDER BY c.table_name, c.ordinal_position"
 
-	var table *warehouses.Table
-	var tables []*warehouses.Table
+	type clickHouseTable struct {
+		Name    string
+		Columns []types.Property
+	}
+
+	var table *clickHouseTable
+	var tables []*clickHouseTable
 
 	rows, err := conn.Query(ctx, query)
 	if err != nil {
@@ -200,7 +205,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 			return nil, warehouses.Errorf("type %q of column %s is not supported", typ, column.Name)
 		}
 		if table == nil || tableName != table.Name {
-			table = &warehouses.Table{Name: tableName}
+			table = &clickHouseTable{Name: tableName}
 			tables = append(tables, table)
 		}
 		table.Columns = append(table.Columns, column)
@@ -212,7 +217,24 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		return nil, warehouses.Error(err)
 	}
 
-	return tables, nil
+	// Transform the ClickHouse columns in properties.
+	whTables := make([]*warehouses.Table, len(tables))
+	for i, t := range tables {
+		props, err := warehouses.ColumnsToProperties(t.Columns)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		schema, err := types.ObjectOf(props)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		whTables[i] = &warehouses.Table{
+			Name:   t.Name,
+			Schema: schema,
+		}
+	}
+
+	return whTables, nil
 }
 
 // QueryRow executes a query that should return at most one row.

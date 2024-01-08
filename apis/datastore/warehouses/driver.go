@@ -78,6 +78,13 @@ type Warehouse interface {
 	Settings() []byte
 
 	// Tables returns the tables of the data warehouse.
+	//
+	// The returned tables shall contain properties instead of columns, as each
+	// driver should be free to represent and support multiple representations
+	// for objects, not just the one that uses underscores, so the
+	// transformation between columns and properties must happen within the
+	// driver.
+	//
 	// It returns only the tables 'users', 'users_identities', 'groups',
 	// 'groups_identities' and 'events'.
 	Tables(ctx context.Context) ([]*Table, error)
@@ -220,8 +227,8 @@ type Record struct {
 
 // Table represents a table.
 type Table struct {
-	Name    string
-	Columns []types.Property
+	Name   string
+	Schema types.Type
 }
 
 // Row returns a single row as a result of calling QueryRow.

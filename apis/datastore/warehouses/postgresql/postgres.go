@@ -512,9 +512,17 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 	}
 	whTables := make([]*warehouses.Table, len(tables))
 	for i, t := range tables {
+		props, err := warehouses.ColumnsToProperties(t.columns)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		schema, err := types.ObjectOf(props)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
 		whTables[i] = &warehouses.Table{
-			Name:    t.name,
-			Columns: t.columns,
+			Name:   t.name,
+			Schema: schema,
 		}
 	}
 	return whTables, nil

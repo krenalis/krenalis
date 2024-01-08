@@ -416,8 +416,13 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		return nil, err
 	}
 
-	var table *warehouses.Table
-	var tables []*warehouses.Table
+	type snowflakeTable struct {
+		Name    string
+		Columns []types.Property
+	}
+
+	var table *snowflakeTable
+	var tables []*snowflakeTable
 
 	// Read the columns.
 	var b strings.Builder
@@ -527,7 +532,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 			column.Description = *comment
 		}
 		if table == nil || *tableName != table.Name {
-			table = &warehouses.Table{Name: *tableName}
+			table = &snowflakeTable{Name: *tableName}
 			tables = append(tables, table)
 		}
 		table.Columns = append(table.Columns, column)
@@ -539,7 +544,24 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		return nil, warehouses.Error(err)
 	}
 
-	return tables, nil
+	// Transform the Snowflake columns in properties.
+	whTables := make([]*warehouses.Table, len(tables))
+	for i, t := range tables {
+		props, err := warehouses.ColumnsToProperties(t.Columns)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		schema, err := types.ObjectOf(props)
+		if err != nil {
+			return nil, warehouses.Error(err)
+		}
+		whTables[i] = &warehouses.Table{
+			Name:   t.Name,
+			Schema: schema,
+		}
+	}
+
+	return whTables, nil
 }
 
 // connection returns the database connection.
