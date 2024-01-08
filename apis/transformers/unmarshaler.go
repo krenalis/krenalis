@@ -8,10 +8,12 @@
 package transformers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/netip"
 	"slices"
 	"strconv"
@@ -25,6 +27,12 @@ import (
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+)
+
+var (
+	nan         = []byte(`"NaN"`)
+	posInfinity = []byte(`"Infinity"`)
+	negInfinity = []byte(`"-Infinity"`)
 )
 
 // errSyntaxInvalid is the error returned by Unmarshal when the data being
@@ -149,7 +157,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - Int (64 bits): a String representing an integer
 //   - Uint (8, 16, 24, and 32 bits): a Number representing an integer
 //   - Uint (64 bits): a String representing an integer
-//   - Float: a Number
+//   - Float: a Number or one of "NaN", "Infinity", and "-Infinity"
 //   - Decimal: a String representing a number
 //   - DateTime, Date, and Time: a String representing a time formatted as
 //     "2006-01-02T15:04:05.000Z07:00"
@@ -166,7 +174,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - Boolean: true or false
 //   - Int: a Number representing an integer
 //   - Uint: a Number representing an integer
-//   - Float: a Number
+//   - Float: a Number or one of "NaN", "Infinity", and "-Infinity"
 //   - Decimal: a String representing a number
 //   - DateTime: a String representing a time formatted as "2006-01-02
 //     15:04:05.999999"
@@ -508,12 +516,26 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 			}
 		}
 	case types.FloatKind:
-		if v.Kind() == '0' {
+		switch v.Kind() {
+		case '0':
 			if n, err := strconv.ParseFloat(string(v), t.BitSize()); err == nil {
 				if min, max := t.FloatRange(); n < min || n > max {
 					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n), "", d.opts.terms)
 				}
 				return n, nil
+			}
+		case '"':
+			if t.IsReal() {
+				return nil, newErrInvalidValue(fmt.Sprintf("is not a real number: %s", string(v)), "", d.opts.terms)
+			}
+			if bytes.Equal(v, nan) {
+				return math.NaN(), nil
+			}
+			if bytes.Equal(v, posInfinity) {
+				return math.Inf(1), nil
+			}
+			if bytes.Equal(v, negInfinity) {
+				return math.Inf(-1), nil
 			}
 		}
 	case types.DecimalKind:

@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"slices"
@@ -78,6 +79,18 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			Name: "Float64",
+			Type: types.Float(64),
+		},
+		{
+			Name: "Float64_NaN",
+			Type: types.Float(64),
+		},
+		{
+			Name: "Float64_Infinity",
+			Type: types.Float(64),
+		},
+		{
+			Name: "Float64_NegInfinity",
 			Type: types.Float(64),
 		},
 		{
@@ -165,34 +178,37 @@ func Test_Unmarshal(t *testing.T) {
 	results := []Result{
 		{
 			Value: map[string]any{
-				"Boolean":   true,
-				"Int8":      -12,
-				"Int16":     8023,
-				"Int24":     -2880217,
-				"Int32":     1307298102,
-				"Int64":     927041163082605,
-				"Uint8":     uint(12),
-				"Uint16":    uint(8023),
-				"Uint24":    uint(2880217),
-				"Uint32":    uint(1307298102),
-				"Uint64":    uint(927041163082605),
-				"Float32":   float64(float32(57.16038)),
-				"Float64":   18372.36240184391,
-				"Decimal":   decimal.RequireFromString("1752.064"),
-				"DateTime":  time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
-				"Date":      time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
-				"Time":      time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
-				"Year":      2023,
-				"UUID":      "550e8400-e29b-41d4-a716-446655440000",
-				"JSON":      json.RawMessage(`{"foo":5,"boo":true}`),
-				"JSON_null": json.RawMessage(`null`),
-				"JSON_nil":  nil,
-				"Inet":      "192.158.1.38",
-				"Text":      "some text",
-				"Text_nil":  nil,
-				"Array":     []any{"foo", "boo"},
-				"Object":    map[string]any{"a": 9, "b": false},
-				"Map":       map[string]any{"a": 1, "b": 2, "c": 3},
+				"Boolean":             true,
+				"Int8":                -12,
+				"Int16":               8023,
+				"Int24":               -2880217,
+				"Int32":               1307298102,
+				"Int64":               927041163082605,
+				"Uint8":               uint(12),
+				"Uint16":              uint(8023),
+				"Uint24":              uint(2880217),
+				"Uint32":              uint(1307298102),
+				"Uint64":              uint(927041163082605),
+				"Float32":             float64(float32(57.16038)),
+				"Float64":             18372.36240184391,
+				"Float64_NaN":         math.NaN(),
+				"Float64_Infinity":    math.Inf(1),
+				"Float64_NegInfinity": math.Inf(-1),
+				"Decimal":             decimal.RequireFromString("1752.064"),
+				"DateTime":            time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
+				"Date":                time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
+				"Time":                time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
+				"Year":                2023,
+				"UUID":                "550e8400-e29b-41d4-a716-446655440000",
+				"JSON":                json.RawMessage(`{"foo":5,"boo":true}`),
+				"JSON_null":           json.RawMessage(`null`),
+				"JSON_nil":            nil,
+				"Inet":                "192.158.1.38",
+				"Text":                "some text",
+				"Text_nil":            nil,
+				"Array":               []any{"foo", "boo"},
+				"Object":              map[string]any{"a": 9, "b": false},
+				"Map":                 map[string]any{"a": 1, "b": 2, "c": 3},
 			},
 		},
 	}
@@ -212,14 +228,14 @@ func Test_Unmarshal(t *testing.T) {
 			language:     state.JavaScript,
 			schema:       schema,
 			timeTruncate: time.Millisecond,
-			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
 			results:      results,
 		},
 		{
 			language:     state.Python,
 			schema:       schema,
 			timeTruncate: time.Microsecond,
-			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}}]`,
 			results:      results,
 		},
 		{
@@ -451,17 +467,43 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 	}
 	switch t.Kind() {
 	case types.FloatKind:
-		if t.BitSize() == 32 {
-			f2, ok := v2.(float64)
-			if !ok {
-				return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
+		f2, ok := v2.(float64)
+		if !ok {
+			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
+		}
+		f1 := v1.(float64)
+		switch {
+		case math.IsNaN(f1):
+			if !math.IsNaN(f2) {
+				if t.BitSize() == 32 {
+					return fmt.Errorf("expected value NaN, got %f", float32(f2))
+				}
+				return fmt.Errorf("expected value NaN, got %f", f2)
 			}
-			f1 := v1.(float64)
+		case math.IsInf(f1, 1):
+			if !math.IsInf(f2, 1) {
+				if t.BitSize() == 32 {
+					return fmt.Errorf("expected value +Inf, got %f", float32(f2))
+				}
+				return fmt.Errorf("expected value +Inf, got %f", f2)
+			}
+		case math.IsInf(f1, -1):
+			if !math.IsInf(f2, -1) {
+				if t.BitSize() == 32 {
+					return fmt.Errorf("expected value -Inf, got %f", float32(f2))
+				}
+				return fmt.Errorf("expected value -Inf, got %f", f2)
+			}
+		case t.BitSize() == 32:
 			if float32(f1) != float32(f2) {
 				return fmt.Errorf("expected value %f, got %f", float32(f1), float32(f2))
 			}
-			return nil
+		default:
+			if f1 != f2 {
+				return fmt.Errorf("expected value %f, got %f", f1, f2)
+			}
 		}
+		return nil
 	case types.DecimalKind:
 		d2, ok := v2.(decimal.Decimal)
 		if !ok {

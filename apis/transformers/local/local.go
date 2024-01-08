@@ -156,6 +156,7 @@ for ( let i = 0; i < event.length; i++ ) {
 }
 process.stdout.write(JSON.stringify(results))`
 	case ".py":
+		source += "\n\n" + embed.PythonNormalizeFunc + "\n\n"
 		source += `
 def main():
 	import json
@@ -168,6 +169,7 @@ def main():
 	for event in eval(sys.argv[1]):
 		try:
 			value = transform(event)
+			_Norm.normalize(value)
 		except Exception as ex:
 			name = type(ex).__name__
 			results.append({"error": f"{name}: {ex}"})

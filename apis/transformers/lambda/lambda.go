@@ -333,6 +333,7 @@ export const _handler = async (event) => {
 `
 	case ".py":
 		filename = "index.py"
+		source += "\n\n" + embed.PythonNormalizeFunc + "\n\n"
 		source += `
 def _handler(event, context):
 	import json
@@ -344,6 +345,7 @@ def _handler(event, context):
 	for e in eval(event):
 		try:
 			value = transform(e)
+			_Norm.normalize(value)
 		except Exception as ex:
 			name = type(ex).__name__
 			results.append({"error": f"{name}: {ex}"})

@@ -20,8 +20,16 @@ function normalize(obj) {
 			const len = obj.length;
 			for (let i = 0; i < len; i++) {
 				const v = obj[i];
-				if (v === undefined) {
+				if (typeof v === "number") {
+					if (!Number.isFinite(v)) {
+						obj[i] = String(v);
+					}
+				} else if (v === undefined) {
 					obj[i] = null;
+				} else if (typeof v === "number") {
+					if (!Number.isFinite(v)) {
+						obj[i] = String(v);
+					}
 				} else if (typeof v === "object" && v !== null) {
 					normalize(v, set);
 				} else if (typeof v === "bigint") {
@@ -32,7 +40,11 @@ function normalize(obj) {
 			for (const k in obj) {
 				if (obj.hasOwnProperty(k)) {
 					const v = obj[k];
-					if (v === undefined) {
+					if (typeof v === "number") {
+						if (!Number.isFinite(v)) {
+							obj[k] = String(v);
+						}
+					} else if (v === undefined) {
 						obj[k] = null;
 					} else if (typeof v === "object" && v !== null) {
 						normalize(v, set);

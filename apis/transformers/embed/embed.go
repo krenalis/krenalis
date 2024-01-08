@@ -11,3 +11,6 @@ import _ "embed"
 
 //go:embed normalize.js
 var JavaScriptNormalizeFunc string
+
+//go:embed normalize.py
+var PythonNormalizeFunc string
