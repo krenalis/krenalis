@@ -17,11 +17,9 @@ var Schema = types.Object([]types.Property{
 	{Name: "category", Type: types.Text()},
 	{
 		Name: "context",
-		Flat: true,
 		Type: types.Object([]types.Property{
 			{
 				Name: "app",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text()},
 					{Name: "version", Type: types.Text()},
@@ -31,7 +29,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "browser",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
 					{Name: "other", Type: types.Text()},
@@ -40,7 +37,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "campaign",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text()},
 					{Name: "source", Type: types.Text()},
@@ -51,7 +47,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "device",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "id", Type: types.Text()},
 					{Name: "advertisingId", Type: types.Text()},
@@ -66,7 +61,6 @@ var Schema = types.Object([]types.Property{
 			{Name: "ip", Type: types.Inet()},
 			{
 				Name: "library",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text()},
 					{Name: "version", Type: types.Text()},
@@ -75,7 +69,6 @@ var Schema = types.Object([]types.Property{
 			{Name: "locale", Type: types.Text()},
 			{
 				Name: "location",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "city", Type: types.Text()},
 					{Name: "country", Type: types.Text()},
@@ -86,7 +79,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "network",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "bluetooth", Type: types.Boolean()},
 					{Name: "carrier", Type: types.Text()},
@@ -96,7 +88,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "os",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 					{Name: "version", Type: types.Text()},
@@ -104,7 +95,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "page",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "path", Type: types.Text()},
 					{Name: "referrer", Type: types.Text()},
@@ -115,7 +105,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "referrer",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "id", Type: types.Text()},
 					{Name: "type", Type: types.Text()},
@@ -123,7 +112,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "screen",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "width", Type: types.Int(32)},
 					{Name: "height", Type: types.Int(32)},
@@ -132,7 +120,6 @@ var Schema = types.Object([]types.Property{
 			},
 			{
 				Name: "session",
-				Flat: true,
 				Type: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(64)},
 					{Name: "start", Type: types.Boolean()},

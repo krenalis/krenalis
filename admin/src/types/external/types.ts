@@ -13,7 +13,6 @@ interface Property {
 	type: Type;
 	required: boolean;
 	nullable: boolean;
-	flat: boolean;
 }
 
 type Type =

@@ -175,7 +175,6 @@ type Property struct {
 	Type        Type
 	Required    bool
 	Nullable    bool
-	Flat        bool
 }
 
 var _ interface {
@@ -212,7 +211,6 @@ type Type struct {
 
 	unique bool // unique reports whether the items of an Array must be unique.
 	real   bool // real reports whether NaN, +Inf and -Inf are allowed for Float.
-	flat   bool // flat reports whether contains, at any level, a flat property.
 
 	// p represents
 	//   - minimum value for Int with 8, 16, 24, and 32 bits
@@ -383,7 +381,7 @@ func Text() Type {
 
 // Array returns an Array type with items of type t.
 func Array(t Type) Type {
-	return Type{kind: ArrayKind, flat: t.flat, s: MaxItems, vl: t}
+	return Type{kind: ArrayKind, s: MaxItems, vl: t}
 }
 
 // Object returns an Object type with the given properties.
@@ -400,7 +398,7 @@ func Object(properties []Property) Type {
 
 // Map returns a Map type with value type t.
 func Map(t Type) Type {
-	return Type{kind: MapKind, flat: t.flat, vl: t}
+	return Type{kind: MapKind, vl: t}
 }
 
 // ObjectOf is like Object but returns an error instead of panicking if any.
@@ -410,7 +408,6 @@ func ObjectOf(properties []Property) (Type, error) {
 	}
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]Property, len(properties))
-	flat := false
 	for i, property := range properties {
 		if property.Name == "" {
 			return Type{}, errors.New("property name is empty")
@@ -440,9 +437,6 @@ func ObjectOf(properties []Property) (Type, error) {
 		if err != nil {
 			return Type{}, err
 		}
-		if property.Flat && property.Type.kind != ObjectKind {
-			return Type{}, errors.New("invalid property flat")
-		}
 		ps[i] = Property{
 			Name:        property.Name,
 			Label:       label,
@@ -452,11 +446,9 @@ func ObjectOf(properties []Property) (Type, error) {
 			Type:        property.Type,
 			Required:    property.Required,
 			Nullable:    property.Nullable,
-			Flat:        property.Flat,
 		}
-		flat = flat || property.Flat || property.Type.flat
 	}
-	return Type{kind: ObjectKind, flat: flat, vl: ps}, nil
+	return Type{kind: ObjectKind, vl: ps}, nil
 }
 
 // IsValidPropertyName reports whether name is a valid property name.
@@ -1039,39 +1031,6 @@ func (t Type) WithMaxItems(max int) Type {
 	return t
 }
 
-// HasFlatProperties reports whether t contains flat properties.
-func (t Type) HasFlatProperties() bool {
-	return t.flat
-}
-
-// Unflatten returns t but with all properties as not flat.
-// It returns t if t has no flat properties.
-func (t Type) Unflatten() Type {
-
-	// TODO(Gianluca): the unflattening have been disabled as a workaround for
-	// the issue https://github.com/open2b/chichi/issues/448.
-	if true {
-		return t
-	}
-
-	if !t.flat {
-		return t
-	}
-	switch t.kind {
-	case ObjectKind:
-		pp := t.Properties()
-		for i := 0; i < len(pp); i++ {
-			pp[i].Type = pp[i].Type.Unflatten()
-			pp[i].Flat = false
-		}
-		t.vl = pp
-	case ArrayKind, MapKind:
-		t.vl = t.Elem().Unflatten()
-	}
-	t.flat = false
-	return t
-}
-
 // Unique reports whether the items of t are unique.
 // Panics if t is not an Array.
 func (t Type) Unique() bool {
@@ -1185,7 +1144,7 @@ func (t Type) Elem() Type {
 
 // EqualTo reports whether t is equals to t2.
 func (t Type) EqualTo(t2 Type) bool {
-	almostEqual := t.kind == t2.kind && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.flat == t2.flat && t.p == t2.p
+	almostEqual := t.kind == t2.kind && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.p == t2.p
 	if !almostEqual {
 		return false
 	}
@@ -1214,7 +1173,6 @@ func (t Type) EqualTo(t2 Type) bool {
 				p1.Role != p2.Role ||
 				p1.Required != p2.Required ||
 				p1.Nullable != p2.Nullable ||
-				p1.Flat != p2.Flat ||
 				!p1.Type.EqualTo(p2.Type) {
 				return false
 			}

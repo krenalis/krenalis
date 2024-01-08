@@ -1053,7 +1053,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(events.Schema.Unflatten())
+		_ = json.NewEncoder(w).Encode(events.Schema)
 	})
 	router.Post("/api/validate-expression", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {

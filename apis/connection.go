@@ -192,7 +192,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, err
 			}
 			actionSchemas := &ActionSchemas{
-				In:  usersIdentities.Unflatten(),
+				In:  usersIdentities,
 				Out: schema,
 			}
 			actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -212,12 +212,12 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 			}
 			if c.Role == state.Source {
-				return &ActionSchemas{In: schema, Out: grSchema.Unflatten()}, nil
+				return &ActionSchemas{In: schema, Out: grSchema}, nil
 			} else {
-				return &ActionSchemas{In: grSchema.Unflatten(), Out: schema}, nil
+				return &ActionSchemas{In: grSchema, Out: schema}, nil
 			}
 		case Events:
-			return &ActionSchemas{In: events.Schema.Unflatten(), Out: eventTypeSchema}, nil
+			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
 		}
 
 	case state.DatabaseType:
@@ -228,14 +228,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
-				out := usersIdentities.Unflatten()
+				out := usersIdentities
 				return &ActionSchemas{Out: out}, nil
 			} else {
 				users, ok := schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
-				in := users.Unflatten()
+				in := users
 				return &ActionSchemas{In: in}, nil
 			}
 		case Groups:
@@ -244,14 +244,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
-				out := groupsIdentities.Unflatten()
+				out := groupsIdentities
 				return &ActionSchemas{Out: out}, nil
 			} else {
 				groups, ok := schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
-				in := groups.Unflatten()
+				in := groups
 				return &ActionSchemas{In: in}, nil
 			}
 		}
@@ -264,14 +264,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
-				out := usersIdentities.Unflatten()
+				out := usersIdentities
 				return &ActionSchemas{Out: out}, nil
 			} else {
 				users, ok := schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
-				in := users.Unflatten()
+				in := users
 				return &ActionSchemas{In: in}, nil
 			}
 		case Groups:
@@ -280,14 +280,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
-				out := groupsIdentities.Unflatten()
+				out := groupsIdentities
 				return &ActionSchemas{Out: out}, nil
 			} else {
 				groups, ok := schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
-				in := groups.Unflatten()
+				in := groups
 				return &ActionSchemas{In: in}, nil
 			}
 		}
@@ -302,15 +302,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
-			out := usersIdentities.Unflatten()
-			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
+			out := usersIdentities
+			return &ActionSchemas{In: events.Schema, Out: out}, nil
 		case Groups:
 			groupsIdentities, ok := schemas["groups_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
-			out := groupsIdentities.Unflatten()
-			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
+			out := groupsIdentities
+			return &ActionSchemas{In: events.Schema, Out: out}, nil
 		}
 		return &ActionSchemas{}, nil
 

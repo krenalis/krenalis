@@ -837,7 +837,7 @@ func (this *Workspace) Schema(ctx context.Context, name string) (types.Type, err
 	if !ok {
 		return types.Type{}, nil
 	}
-	return schema.Unflatten(), nil
+	return schema, nil
 }
 
 // ServeUI serves the user interface for the given connector, with the given
@@ -1247,7 +1247,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		requestedProperties[i] = propertyByName[name]
 	}
 	schema := types.Object(requestedProperties)
-	schema = schema.Unflatten()
 	marshaledUsers, err := encoding.MarshalSlice(schema, users)
 	if err != nil {
 		return nil, types.Type{}, 0, err

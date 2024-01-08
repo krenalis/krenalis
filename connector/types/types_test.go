@@ -263,83 +263,6 @@ func TestAsRole(t *testing.T) {
 
 }
 
-func TestHasFlatProperties(t *testing.T) {
-
-	tests := []struct {
-		Type     Type
-		Expected bool
-	}{
-		{Boolean(), false},
-		{Object([]Property{{Name: "email", Type: Text()}}), false},
-		{Object([]Property{
-			{Name: "address", Type: Object([]Property{
-				{Name: "street1", Type: Text()},
-				{Name: "street2", Type: Text()},
-			})},
-		}), false},
-		{Object([]Property{
-			{Name: "address", Type: Object([]Property{
-				{Name: "street1", Type: Text()},
-				{Name: "street2", Type: Text()},
-			}), Flat: true},
-		}), true},
-		{Array(Float(64)), false},
-		{Array(Object([]Property{{Name: "email", Type: Text()}})), false},
-		{Array(Object([]Property{
-			{Name: "name", Type: Object([]Property{
-				{Name: "first", Type: Text()},
-			})},
-		})), false},
-		{Array(Object([]Property{
-			{Name: "address", Type: Object([]Property{
-				{Name: "street1", Type: Text()},
-				{Name: "street2", Type: Text()},
-			}), Flat: true},
-		})), true},
-		{Map(Int(32)), false},
-		{Map(Object([]Property{{Name: "email", Type: Text()}})), false},
-		{Map(Object([]Property{
-			{Name: "email", Type: Text()},
-			{Name: "address", Type: Object([]Property{
-				{Name: "street1", Type: Text()},
-				{Name: "street2", Type: Text()},
-			}), Flat: true},
-		})), true},
-		{Map(Array(Object([]Property{
-			{Name: "email", Type: Text()},
-			{Name: "address", Type: Object([]Property{
-				{Name: "street", Type: Object([]Property{
-					{Name: "line1", Type: Text()},
-					{Name: "line2", Type: Text()},
-				}), Flat: true},
-				{Name: "City", Type: Text()},
-			}), Flat: true},
-		}))), true},
-
-		// TODO(Gianluca): this test have been commented as Unflatten() has been
-		// rendered ineffective as a workaround for the issue
-		// https://github.com/open2b/chichi/issues/448.
-
-		// {Map(Array(Object([]Property{
-		//  {Name: "email", Type: Text()},
-		//  {Name: "address", Type: Object([]Property{
-		//      {Name: "street", Type: Object([]Property{
-		//          {Name: "line1", Type: Text()},
-		//          {Name: "line2", Type: Text()},
-		//      }), Flat: true},
-		//      {Name: "City", Type: Text()},
-		//  }), Flat: true},
-		// }))).Unflatten(), false},
-	}
-
-	for i, test := range tests {
-		if got := test.Type.HasFlatProperties(); got != test.Expected {
-			t.Errorf("test %d: expected %t, got %t", i, test.Expected, got)
-		}
-	}
-
-}
-
 func Test_IsValidPropertyPath(t *testing.T) {
 	tests := []struct {
 		path     string
@@ -525,7 +448,6 @@ func sameType(t1, t2 Type) error {
 		t1.size == t2.size &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
-		t1.flat == t2.flat &&
 		t1.p == t2.p &&
 		t1.vl == nil && t2.vl == nil {
 		return nil
@@ -732,9 +654,6 @@ func sameProperty(p1, p2 Property) error {
 	}
 	if p1.Nullable != p2.Nullable {
 		return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
-	}
-	if p1.Flat != p2.Flat {
-		return fmt.Errorf("expected property key 'flat' with value %t, got %t", p1.Flat, p2.Flat)
 	}
 	return nil
 }

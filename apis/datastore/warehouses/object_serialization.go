@@ -55,7 +55,6 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 			property = types.Property{
 				Name: strings.TrimSuffix(prefix, "_"),
 				Type: types.Object(props),
-				Flat: true,
 			}
 		} else {
 			if c.Name[0] == '_' {
@@ -123,7 +122,7 @@ Columns:
 func PropertiesToColumns(properties []types.Property) []types.Property {
 	columns := make([]types.Property, 0, len(properties))
 	for _, p := range properties {
-		if p.Flat {
+		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range PropertiesToColumns(p.Type.Properties()) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
@@ -135,18 +134,11 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	return columns
 }
 
-// ErrNoFlat is an error returned by PropertyPathToColumn, indicating that a
-// property path refers to a non-flat property.
-var ErrNoFlat = errors.New("property path refers to a non-flat property")
-
 // PropertyPathToColumn returns the column for the property path in schema.
-// If one of the properties in path is not flat (except the last one), the
-// ErrNoFlat error is returned.
 func PropertyPathToColumn(schema types.Type, path string) (column types.Property, err error) {
 	typ := schema
 	var name strings.Builder
 	parts := strings.Split(path, ".")
-	last := len(parts) - 1
 	for i, part := range parts {
 		if i > 0 {
 			name.WriteByte('_')
@@ -157,9 +149,6 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 		prop, ok := typ.Property(part)
 		if !ok {
 			return types.Property{}, fmt.Errorf("property %q does not exist", part)
-		}
-		if i < last && !prop.Flat {
-			return types.Property{}, ErrNoFlat
 		}
 		typ = prop.Type
 		name.WriteString(prop.Name)
@@ -176,7 +165,7 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
 	values := make(map[string]any, len(properties))
 	for _, p := range properties {
-		if p.Flat {
+		if p.Type.Kind() == types.ObjectKind {
 			values[p.Name], row = DeserializeRowAsMap(p.Type.Properties(), row)
 			continue
 		}
@@ -205,7 +194,7 @@ func serialize(v any, t types.Type) {
 			if !ok {
 				continue
 			}
-			if p.Flat {
+			if p.Type.Kind() == types.ObjectKind {
 				delete(v, p.Name)
 				flattenInto(v, value.(map[string]any), p.Name, p.Type)
 				continue
@@ -231,7 +220,7 @@ func serialize(v any, t types.Type) {
 func flattenInto(dst, obj map[string]any, prefix string, t types.Type) {
 	for name, value := range obj {
 		p, _ := t.Property(name)
-		if p.Flat {
+		if p.Type.Kind() == types.ObjectKind {
 			flattenInto(dst, value.(map[string]any), prefix+"_"+name, p.Type)
 			continue
 		}

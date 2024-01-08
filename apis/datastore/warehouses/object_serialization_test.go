@@ -52,30 +52,30 @@ func TestColumnsToProperties(t *testing.T) {
 			{Name: "a", Type: typ},
 			{Name: "b", Type: typ},
 			{Name: "d", Type: typ},
-		}), Flat: true},
+		})},
 		{Name: "dd", Type: types.Object([]types.Property{
 			{Name: "ee_f", Type: typ},
 			{Name: "ed_g", Type: typ},
-		}), Flat: true},
+		})},
 		{Name: "e_f", Type: types.Object([]types.Property{
 			{Name: "g_h", Type: typ},
 			{Name: "i", Type: typ},
-		}), Flat: true},
+		})},
 		{Name: "f", Type: types.Object([]types.Property{
 			{Name: "g", Type: typ},
 			{Name: "i", Type: typ},
 			{Name: "j_k", Type: typ},
-		}), Flat: true},
+		})},
 		{Name: "h", Type: types.Object([]types.Property{
 			{Name: "b", Type: typ},
-		}), Flat: true},
+		})},
 		{Name: "i", Type: types.Object([]types.Property{
 			{Name: "a", Type: types.Object([]types.Property{
 				{Name: "b", Type: typ},
 				{Name: "c", Type: typ},
-			}), Flat: true},
+			})},
 			{Name: "b_c", Type: typ},
-		}), Flat: true},
+		})},
 		{Name: "k", Type: typ},
 		{Name: "k_", Type: typ},
 		{Name: "k_a", Type: typ},
@@ -154,9 +154,9 @@ func Test_PropertyPathToColumn(t *testing.T) {
 		col  types.Property
 		err  string
 	}{
-		{path: "b.c", err: ErrNoFlat.Error()},
-		{path: "b.i.j", err: ErrNoFlat.Error()},
 		{path: "a", col: types.Property{Name: "a", Type: types.Int(32)}},
+		{path: "b.c", col: types.Property{Name: "b_c", Type: types.Text()}},
+		{path: "b.i.j", err: "path refers to a non-object type"},
 		{path: "v.z", col: types.Property{Name: "v_z", Type: types.Float(32)}},
 	}
 	for _, test := range tests {
@@ -199,9 +199,9 @@ var testSchema = types.Object([]types.Property{
 		{Name: "h", Type: types.Array(types.Array(types.Text()))},
 		{Name: "i", Type: types.Array(types.Object([]types.Property{
 			{Name: "j", Type: types.Uint(32)},
-			{Name: "k", Flat: true, Type: types.Object([]types.Property{
+			{Name: "k", Type: types.Object([]types.Property{
 				{Name: "l", Type: types.Text()},
-				{Name: "m", Flat: true, Type: types.Object([]types.Property{
+				{Name: "m", Type: types.Object([]types.Property{
 					{Name: "n", Type: types.Text()},
 					{Name: "o", Type: types.Text()},
 				}),
@@ -210,13 +210,13 @@ var testSchema = types.Object([]types.Property{
 		{Name: "p", Type: types.Map(types.Text())},
 		{Name: "q", Type: types.Map(types.Object([]types.Property{
 			{Name: "r", Type: types.Text()},
-			{Name: "s", Flat: true, Type: types.Object([]types.Property{
+			{Name: "s", Type: types.Object([]types.Property{
 				{Name: "t", Type: types.Int(32)},
 				{Name: "u", Type: types.Int(32)},
 			})},
 		}))},
 	})},
-	{Name: "v", Flat: true, Type: types.Object([]types.Property{
+	{Name: "v", Type: types.Object([]types.Property{
 		{Name: "z", Type: types.Float(32)},
 	})},
 })
@@ -267,38 +267,34 @@ func TestSerializeRow(t *testing.T) {
 	}
 
 	expected := map[string]any{
-		"a": 56,
-		"b": map[string]any{
-			"c": "foo",
-			"d": map[string]any{
-				"e": true,
-				"f": "boo",
+		"a":     56,
+		"b_c":   "foo",
+		"b_d_e": true,
+		"b_d_f": "boo",
+		"b_g":   []any{1.22, -5.96},
+		"b_h":   []any{[]any{"foo", "boo"}, []any{"faa", "baa"}},
+		"b_i": []any{
+			map[string]any{
+				"j":     uint(84103),
+				"k_l":   "foo",
+				"k_m_n": "foo",
+				"k_m_o": "boo",
 			},
-			"g": []any{1.22, -5.96},
-			"h": []any{[]any{"foo", "boo"}, []any{"faa", "baa"}},
-			"i": []any{
-				map[string]any{
-					"j":     uint(84103),
-					"k_l":   "foo",
-					"k_m_n": "foo",
-					"k_m_o": "boo",
-				},
+		},
+		"b_p": map[string]any{
+			"boo": "foo",
+			"foo": "boo",
+		},
+		"b_q": map[string]any{
+			"boo": map[string]any{
+				"r":   "boo",
+				"s_t": 3,
+				"s_u": -2,
 			},
-			"p": map[string]any{
-				"boo": "foo",
-				"foo": "boo",
-			},
-			"q": map[string]any{
-				"boo": map[string]any{
-					"r":   "boo",
-					"s_t": 3,
-					"s_u": -2,
-				},
-				"foo": map[string]any{
-					"r":   "foo",
-					"s_t": 5,
-					"s_u": 3,
-				},
+			"foo": map[string]any{
+				"r":   "foo",
+				"s_t": 5,
+				"s_u": 3,
 			},
 		},
 		"v_z": 3.14,

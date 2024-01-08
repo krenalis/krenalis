@@ -79,10 +79,10 @@ func TestPropertySerialization(t *testing.T) {
 			Property: Property{
 				Name: "a", Label: "a label", Description: "some description",
 				Placeholder: "<placeholder>", Role: DestinationRole, Type: Text(),
-				Required: true, Nullable: true, Flat: true},
+				Required: true, Nullable: true},
 			Expected: `{"name":"a","label":"a label","description":"some description",` +
 				`"placeholder":"<placeholder>","type":{"name":"Text"},"required":true,` +
-				`"nullable":true,"flat":true}`,
+				`"nullable":true}`,
 		},
 	}
 	for _, test := range tests {

@@ -402,7 +402,7 @@ func (sv recordsScanValue) Scan(src any) error {
 func flattenInto(dst, obj map[string]any, prefix string, t types.Type) {
 	for name, value := range obj {
 		p, _ := t.Property(name)
-		if p.Flat {
+		if p.Type.Kind() == types.ObjectKind {
 			flattenInto(dst, value.(map[string]any), prefix+"_"+name, p.Type)
 			continue
 		}
@@ -430,7 +430,7 @@ func serialize(v any, t types.Type) {
 			if !ok {
 				continue
 			}
-			if p.Flat {
+			if p.Type.Kind() == types.ObjectKind {
 				delete(v, p.Name)
 				flattenInto(v, value.(map[string]any), p.Name, p.Type)
 				continue
@@ -455,7 +455,7 @@ func serialize(v any, t types.Type) {
 func propertiesToColumns(properties []types.Property) []types.Property {
 	columns := make([]types.Property, 0, len(properties))
 	for _, p := range properties {
-		if p.Flat {
+		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range propertiesToColumns(p.Type.Properties()) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
