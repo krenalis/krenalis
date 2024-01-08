@@ -57,7 +57,7 @@ func TestTypes(t *testing.T) {
 			radix:      test.radix,
 			scale:      test.scale,
 		}
-		got, err := columnType(row, nil, nil, nil)
+		got, err := columnType(row, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -87,7 +87,7 @@ func TestUnsupportedTypes(t *testing.T) {
 		row := pgTypeInfo{
 			dataType: test,
 		}
-		got, err := columnType(row, nil, nil, nil)
+		got, err := columnType(row, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
