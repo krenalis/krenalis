@@ -89,9 +89,6 @@ type Warehouse interface {
 	// 'groups_identities' and 'events'.
 	Tables(ctx context.Context) ([]*Table, error)
 
-	// QueryRow executes a query that should return at most one row.
-	QueryRow(ctx context.Context, query string, args ...any) Row
-
 	// ResolveSyncUsers resolves and sync the users.
 	// actions holds the identifiers of the actions of the workspace and must always
 	// contain at least one action; identifiers are the columns of the
