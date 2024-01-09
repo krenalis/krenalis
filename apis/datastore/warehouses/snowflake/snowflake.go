@@ -365,12 +365,13 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actions holds the identifiers of the actions of the workspace and must
-// always contain at least one action; identifiers are the columns of the
-// 'users_identities' table which are identifiers, ordered by priority;
-// usersColumns are the columns of the 'users' table which will be populated
+// actions holds the identifiers of the actions of the workspace and must always
+// contain at least one action.
+// identifiers are the properties of the 'users_identities' schema which are
+// identifiers, ordered by priority.
+// usersSchema is the schema of the 'users' table, which will be populated
 // during the users synchronization.
-func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error {
+func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int, identifiers []types.Property, usersSchema types.Type) error {
 	panic("not implemented")
 }
 

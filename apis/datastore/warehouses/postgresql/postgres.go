@@ -308,12 +308,13 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actions holds the identifiers of the actions of the workspace and must
-// always contain at least one action; identifiers are the columns of the
-// 'users_identities' table which are identifiers, ordered by priority;
-// usersColumns are the columns of the 'users' table which will be populated
+// actions holds the identifiers of the actions of the workspace and must always
+// contain at least one action.
+// identifiers are the properties of the 'users_identities' schema which are
+// identifiers, ordered by priority.
+// usersSchema is the schema of the 'users' table, which will be populated
 // during the users synchronization.
-func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int, identifiersColumns, usersColumns []types.Property) error {
+func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int, identifiers []types.Property, usersSchema types.Type) error {
 
 	if len(actions) == 0 {
 		panic("invalid empty actions")
@@ -342,6 +343,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	}
 
 	// Generate the SQL matching expression.
+	identifiersColumns := warehouses.PropertiesToColumns(identifiers)
 	var matchingExpr strings.Builder
 	if len(identifiersColumns) > 0 {
 		matchingExpr.WriteString("matching_func(")
@@ -361,6 +363,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	}
 
 	// Generate the SQL queries that will perform the users synchronization.
+	usersColumns := warehouses.PropertiesToColumns(usersSchema.Properties())
 	var usersSyncQueries strings.Builder
 	usersSyncQueries.WriteString(`TRUNCATE users; INSERT INTO users (`)
 	comma := false

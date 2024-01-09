@@ -203,30 +203,27 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		return err
 	}
 
-	// Determine the columns for the identifiers.
-	var identifiersColumns []types.Property
+	// Determine the identifiers properties.
 	usersIdentities, ok := schemas["users_identities"]
 	if !ok {
 		return errors.New("missing 'users_identities' schema")
 	}
 	count := len(ws.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
-	identifiersColumns = make([]types.Property, count)
+	identifiers := make([]types.Property, count)
 	for i, ident := range append(ws.Identifiers, ws.AnonymousIdentifiers.Priority...) {
-		var err error
-		identifiersColumns[i], err = warehouses.PropertyPathToColumn(usersIdentities, ident)
-		if err != nil {
-			return err
+		identifiers[i], ok = usersIdentities.Property(ident)
+		if !ok {
+			return fmt.Errorf("identifier %q not found within 'users_identities' schema", ident)
 		}
 	}
 
-	// Determine the user schema.
+	// Take the 'users' schema.
 	usersSchema, ok := schemas["users"]
 	if !ok {
 		return errors.New("missing 'users' schema")
 	}
 
-	usersColumns := warehouses.PropertiesToColumns(usersSchema.Properties())
-	return store.warehouse.ResolveSyncUsers(ctx, actions, identifiersColumns, usersColumns)
+	return store.warehouse.ResolveSyncUsers(ctx, actions, identifiers, usersSchema)
 }
 
 type Records = warehouses.Records
