@@ -1627,6 +1627,10 @@ func generateWriteKey() (string, error) {
 // abbreviate abbreviates s to almost n runes. If s is longer than n runes,
 // the abbreviated string terminates with "...".
 func abbreviate(s string, n int) string {
+
+	// NOTE: keep this implementation in sync with the other implementations of
+	// 'abbreviate' copy-pasted in other files.
+
 	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
 	s = strings.TrimRight(s, spaces)
 	if len(s) <= n {
