@@ -433,12 +433,12 @@ func (c *Conn) Query(ctx context.Context, query string, args ...any) (*Rows, err
 	return &Rows{rows}, nil
 }
 
-func (conn *Conn) QueryScan(ctx context.Context, query string, args ...any) error {
+func (c *Conn) QueryScan(ctx context.Context, query string, args ...any) error {
 	// TODO(Gianluca): it's not clear which of the functions called here can, in
 	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
 	// to ensure that it always catch, it is checked everywhere.
-	if conn.log != nil {
-		fmt.Fprint(conn.log, query, "\n\n")
+	if c.log != nil {
+		fmt.Fprint(c.log, query, "\n\n")
 	}
 	if len(args) == 0 {
 		return fmt.Errorf("sql: missing scan function")
@@ -450,10 +450,10 @@ func (conn *Conn) QueryScan(ctx context.Context, query string, args ...any) erro
 	default:
 		return fmt.Errorf("sql: cannot use a %T value as scan function", arg)
 	}
-	if conn.log != nil && len(args) > 0 {
-		fmt.Fprintf(conn.log, "> args: %v\n", args)
+	if c.log != nil && len(args) > 0 {
+		fmt.Fprintf(c.log, "> args: %v\n", args)
 	}
-	rows, err := conn.Query(ctx, query, args...)
+	rows, err := c.Query(ctx, query, args...)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			err = sql.ErrNoRows
