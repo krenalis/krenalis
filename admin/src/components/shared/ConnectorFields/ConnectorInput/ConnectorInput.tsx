@@ -35,8 +35,11 @@ const ConnectorInput = ({
 	}, [val]);
 
 	const onInputChange = (e) => {
-		const v = e.currentTarget.value;
-		setValue(type === 'number' ? Number(v) : v);
+		let v = e.currentTarget.value;
+		if (type === 'number') {
+			v = Number(v);
+		}
+		setValue(v);
 		onChange(name, v, e);
 	};
 
