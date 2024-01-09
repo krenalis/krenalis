@@ -1605,18 +1605,6 @@ func (this *Connection) file() *connectors.File {
 	return this.apis.connectors.File(this.connection)
 }
 
-// schema returns the schema with the given name, if the corresponding table
-// exists in the data warehouse, otherwise returns the invalid schema.
-func (this *Connection) schema(ctx context.Context, name string) (types.Type, error) {
-	this.apis.mustBeOpen()
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return types.Type{}, err
-	}
-	schema := schemas[name]
-	return schema, nil
-}
-
 // isWriteKey reports whether key can be a write key.
 func isWriteKey(key string) bool {
 	if len(key) != 32 {
