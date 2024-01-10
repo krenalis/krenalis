@@ -13,6 +13,9 @@ import (
 
 // Schema is the schema of an event.
 var Schema = types.Object([]types.Property{
+
+	// NOTE: keep this in sync with 'datastore.eventsMergeTable'.
+
 	{Name: "anonymousId", Type: types.Text()},
 	{Name: "category", Type: types.Text()},
 	{

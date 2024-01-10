@@ -173,6 +173,8 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		return err
 	}
 
+	columns := warehouses.PropertiesToColumns(table.Properties)
+
 	var b strings.Builder
 
 	// Create the temporary table.
@@ -180,7 +182,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString(`CREATE UNLOGGED TABLE "`)
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
-	for _, c := range table.Columns {
+	for _, c := range columns {
 		b.WriteByte('"')
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
@@ -201,8 +203,8 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
-		columnNames := make([]string, len(table.Columns))
-		for i, c := range table.Columns {
+		columnNames := make([]string, len(columns))
+		for i, c := range columns {
 			columnNames[i] = c.Name
 		}
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
@@ -212,13 +214,14 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	}
 
 	// Copy the rows to delete into the temporary table.
+	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 	if len(deleted) > 0 {
-		columnNames := make([]string, len(table.PrimaryKeys)+1)
-		for i, c := range table.PrimaryKeys {
+		columnNames := make([]string, len(primaryKeysColumns)+1)
+		for i, c := range primaryKeysColumns {
 			columnNames[i] = c.Name
 		}
 		columnNames[len(columnNames)-1] = "$deleted"
-		rowSrc := newCopyForDeleteFrom(len(table.PrimaryKeys), deleted)
+		rowSrc := newCopyForDeleteFrom(len(primaryKeysColumns), deleted)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
 			return warehouses.Error(err)
@@ -232,7 +235,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString("\" d\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString("\" s\nON ")
-	for i, key := range table.PrimaryKeys {
+	for i, key := range primaryKeysColumns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
@@ -246,8 +249,8 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
 		i := 0
 	Set:
-		for _, c := range table.Columns {
-			for _, key := range table.PrimaryKeys {
+		for _, c := range columns {
+			for _, key := range primaryKeysColumns {
 				if c.Name == key.Name {
 					continue Set
 				}
@@ -263,7 +266,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			i++
 		}
 		b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
-		for i, c := range table.Columns {
+		for i, c := range columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}
@@ -272,7 +275,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			b.WriteByte('"')
 		}
 		b.WriteString(")\n  VALUES (")
-		for i, c := range table.Columns {
+		for i, c := range columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}

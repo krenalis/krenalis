@@ -137,26 +137,29 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		return err
 	}
 
+	columns := warehouses.PropertiesToColumns(table.Properties)
+
 	// Serialize the rows in CSV format.
 	var rowsCSV io.Reader
 	if len(rows) > 0 {
 		var err error
-		rowsCSV, err = serializeRowsToCSV(table.Columns, rows, false)
+		rowsCSV, err = serializeRowsToCSV(columns, rows, false)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Serialize the deleted rows in CSV format.
+	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 	var deletedCSV io.Reader
 	if len(deleted) > 0 {
-		n := len(table.PrimaryKeys)
+		n := len(primaryKeysColumns)
 		rows := make([][]any, 0, len(deleted)/n)
 		for i := 0; i < len(deleted); i += n {
 			rows = append(rows, deleted[i:i+n])
 		}
 		var err error
-		deletedCSV, err = serializeRowsToCSV(table.PrimaryKeys, rows, true)
+		deletedCSV, err = serializeRowsToCSV(primaryKeysColumns, rows, true)
 		if err != nil {
 			return err
 		}
@@ -168,7 +171,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	q.WriteString(`CREATE TEMPORARY TABLE "`)
 	q.WriteString(tempTableName)
 	q.WriteString("\" (\n")
-	for _, c := range table.Columns {
+	for _, c := range columns {
 		q.WriteByte('"')
 		q.WriteString(c.Name)
 		q.WriteString(`" `)
@@ -289,7 +292,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	q.WriteString(" d\nUSING \"")
 	q.WriteString(tempTableName)
 	q.WriteString("\" s\nON ")
-	for i, key := range table.PrimaryKeys {
+	for i, key := range primaryKeysColumns {
 		if i > 0 {
 			q.WriteByte(',')
 		}
@@ -303,8 +306,8 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		q.WriteString("\nWHEN MATCHED AND NOT s.\"$deleted\" THEN\n  UPDATE SET ")
 		i := 0
 	Set:
-		for _, c := range table.Columns {
-			for _, key := range table.PrimaryKeys {
+		for _, c := range columns {
+			for _, key := range primaryKeysColumns {
 				if c.Name == key.Name {
 					continue Set
 				}
@@ -320,7 +323,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			i++
 		}
 		q.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$deleted\" THEN\n  INSERT (")
-		for i, c := range table.Columns {
+		for i, c := range columns {
 			if i > 0 {
 				q.WriteByte(',')
 			}
@@ -329,7 +332,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			q.WriteByte('"')
 		}
 		q.WriteString(")\n  VALUES (")
-		for i, c := range table.Columns {
+		for i, c := range columns {
 			if i > 0 {
 				q.WriteByte(',')
 			}

@@ -21,59 +21,127 @@ const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Even
 
 var eventsMergeTable = warehouses.MergeTable{
 	Name: "events",
-	Columns: []types.Property{
-		{Name: "gid", Type: types.Int(32)},
+
+	// NOTE: keep this in sync with 'events.Schema'.
+
+	Properties: []types.Property{
+		{Name: "gid", Type: types.Int(32)}, // TODO(Gianluca): https://github.com/open2b/chichi/issues/476.
 		{Name: "anonymousId", Type: types.Text()},
 		{Name: "category", Type: types.Text()},
-		{Name: "context_app_name", Type: types.Text()},
-		{Name: "context_app_version", Type: types.Text()},
-		{Name: "context_app_build", Type: types.Text()},
-		{Name: "context_app_namespace", Type: types.Text()},
-		{Name: "context_browser_name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
-		{Name: "context_browser_other", Type: types.Text()},
-		{Name: "context_browser_version", Type: types.Text()},
-		{Name: "context_campaign_name", Type: types.Text()},
-		{Name: "context_campaign_source", Type: types.Text()},
-		{Name: "context_campaign_medium", Type: types.Text()},
-		{Name: "context_campaign_term", Type: types.Text()},
-		{Name: "context_campaign_content", Type: types.Text()},
-		{Name: "context_device_id", Type: types.Text()},
-		{Name: "context_device_advertisingId", Type: types.Text()},
-		{Name: "context_device_adTrackingEnabled", Type: types.Boolean()},
-		{Name: "context_device_manufacturer", Type: types.Text()},
-		{Name: "context_device_model", Type: types.Text()},
-		{Name: "context_device_name", Type: types.Text()},
-		{Name: "context_device_type", Type: types.Text()},
-		{Name: "context_device_token", Type: types.Text()},
-		{Name: "context_ip", Type: types.Inet()},
-		{Name: "context_library_name", Type: types.Text()},
-		{Name: "context_library_version", Type: types.Text()},
-		{Name: "context_locale", Type: types.Text()},
-		{Name: "context_location_city", Type: types.Text()},
-		{Name: "context_location_country", Type: types.Text()},
-		{Name: "context_location_latitude", Type: types.Float(64)},
-		{Name: "context_location_longitude", Type: types.Float(64)},
-		{Name: "context_location_speed", Type: types.Float(64)},
-		{Name: "context_network_bluetooth", Type: types.Boolean()},
-		{Name: "context_network_carrier", Type: types.Text()},
-		{Name: "context_network_cellular", Type: types.Boolean()},
-		{Name: "context_network_wifi", Type: types.Boolean()},
-		{Name: "context_os_name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
-		{Name: "context_os_version", Type: types.Text()},
-		{Name: "context_page_path", Type: types.Text()},
-		{Name: "context_page_referrer", Type: types.Text()},
-		{Name: "context_page_search", Type: types.Text()},
-		{Name: "context_page_title", Type: types.Text()},
-		{Name: "context_page_url", Type: types.Text()},
-		{Name: "context_referrer_id", Type: types.Text()},
-		{Name: "context_referrer_type", Type: types.Text()},
-		{Name: "context_screen_width", Type: types.Int(32)},
-		{Name: "context_screen_height", Type: types.Int(32)},
-		{Name: "context_screen_density", Type: types.Decimal(3, 2)},
-		{Name: "context_session_id", Type: types.Int(64)},
-		{Name: "context_session_start", Type: types.Boolean()},
-		{Name: "context_timezone", Type: types.Text()},
-		{Name: "context_userAgent", Type: types.Text()},
+		{
+			Name: "context",
+			Type: types.Object([]types.Property{
+				{
+					Name: "app",
+					Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text()},
+						{Name: "version", Type: types.Text()},
+						{Name: "build", Type: types.Text()},
+						{Name: "namespace", Type: types.Text()},
+					}),
+				},
+				{
+					Name: "browser",
+					Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+						{Name: "other", Type: types.Text()},
+						{Name: "version", Type: types.Text()},
+					}),
+				},
+				{
+					Name: "campaign",
+					Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text()},
+						{Name: "source", Type: types.Text()},
+						{Name: "medium", Type: types.Text()},
+						{Name: "term", Type: types.Text()},
+						{Name: "content", Type: types.Text()},
+					}),
+				},
+				{
+					Name: "device",
+					Type: types.Object([]types.Property{
+						{Name: "id", Type: types.Text()},
+						{Name: "advertisingId", Type: types.Text()},
+						{Name: "adTrackingEnabled", Type: types.Boolean()},
+						{Name: "manufacturer", Type: types.Text()},
+						{Name: "model", Type: types.Text()},
+						{Name: "name", Type: types.Text()},
+						{Name: "type", Type: types.Text()},
+						{Name: "token", Type: types.Text()},
+					}),
+				},
+				{Name: "ip", Type: types.Inet()},
+				{
+					Name: "library",
+					Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text()},
+						{Name: "version", Type: types.Text()},
+					}),
+				},
+				{Name: "locale", Type: types.Text()},
+				{
+					Name: "location",
+					Type: types.Object([]types.Property{
+						{Name: "city", Type: types.Text()},
+						{Name: "country", Type: types.Text()},
+						{Name: "latitude", Type: types.Float(64)},
+						{Name: "longitude", Type: types.Float(64)},
+						{Name: "speed", Type: types.Float(64)},
+					}),
+				},
+				{
+					Name: "network",
+					Type: types.Object([]types.Property{
+						{Name: "bluetooth", Type: types.Boolean()},
+						{Name: "carrier", Type: types.Text()},
+						{Name: "cellular", Type: types.Boolean()},
+						{Name: "wifi", Type: types.Boolean()},
+					}),
+				},
+				{
+					Name: "os",
+					Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+						{Name: "version", Type: types.Text()},
+					}),
+				},
+				{
+					Name: "page",
+					Type: types.Object([]types.Property{
+						{Name: "path", Type: types.Text()},
+						{Name: "referrer", Type: types.Text()},
+						{Name: "search", Type: types.Text()},
+						{Name: "title", Type: types.Text()},
+						{Name: "url", Type: types.Text()},
+					}),
+				},
+				{
+					Name: "referrer",
+					Type: types.Object([]types.Property{
+						{Name: "id", Type: types.Text()},
+						{Name: "type", Type: types.Text()},
+					}),
+				},
+				{
+					Name: "screen",
+					Type: types.Object([]types.Property{
+						{Name: "width", Type: types.Int(32)},
+						{Name: "height", Type: types.Int(32)},
+						{Name: "density", Type: types.Decimal(3, 2)},
+					}),
+				},
+				{
+					Name: "session",
+					Type: types.Object([]types.Property{
+						{Name: "id", Type: types.Int(64)},
+						{Name: "start", Type: types.Boolean()},
+					}),
+				},
+				{Name: "timezone", Type: types.Text()},
+				{Name: "userAgent", Type: types.Text()},
+			}),
+		},
 		{Name: "event", Type: types.Text()},
 		{Name: "groupId", Type: types.Text()},
 		{Name: "messageId", Type: types.Text()},

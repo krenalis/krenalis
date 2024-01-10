@@ -30,7 +30,7 @@ import (
 // MergeTable represents a table in which rows will be merged.
 type MergeTable struct {
 	Name        string           // Name of the table
-	Columns     []types.Property // Columns to merge
+	Properties  []types.Property // Properties to merge
 	PrimaryKeys []types.Property // Primary keys
 }
 
