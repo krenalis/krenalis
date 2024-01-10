@@ -23,6 +23,7 @@ var eventsMergeTable = warehouses.MergeTable{
 	Name: "events",
 
 	// NOTE: keep this in sync with 'events.Schema'.
+	// See https://github.com/open2b/chichi/issues/477.
 
 	Properties: []types.Property{
 		{Name: "gid", Type: types.Int(32)}, // TODO(Gianluca): https://github.com/open2b/chichi/issues/476.

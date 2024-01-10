@@ -15,6 +15,7 @@ import (
 var Schema = types.Object([]types.Property{
 
 	// NOTE: keep this in sync with 'datastore.eventsMergeTable'.
+	// See https://github.com/open2b/chichi/issues/477.
 
 	{Name: "anonymousId", Type: types.Text()},
 	{Name: "category", Type: types.Text()},
