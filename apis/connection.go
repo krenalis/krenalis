@@ -1624,46 +1624,6 @@ func generateWriteKey() (string, error) {
 	return base62.EncodeToString(key)[0:32], nil
 }
 
-// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
-// the abbreviated string terminates with "...".
-func abbreviate(s string, n int) string {
-
-	// NOTE: keep this implementation in sync with the other implementations of
-	// 'abbreviate' copy-pasted in other files.
-
-	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
-	s = strings.TrimRight(s, spaces)
-	if len(s) <= n {
-		return s
-	}
-	if n < 3 {
-		return ""
-	}
-	p := 0
-	n2 := 0
-	for i := range s {
-		switch p {
-		case n - 2:
-			n2 = i
-		case n:
-			break
-		}
-		p++
-	}
-	if p < n {
-		return s
-	}
-	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
-		s = strings.TrimRight(s[:p], spaces)
-	} else {
-		s = ""
-	}
-	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
-		s = s[:l]
-	}
-	return s + "..."
-}
-
 // Compression represents the compression of a file connection.
 type Compression string
 

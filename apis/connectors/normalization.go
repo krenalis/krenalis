@@ -20,6 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/errors"
 	"chichi/apis/state"
 	"chichi/connector/types"
 
@@ -277,18 +278,18 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
-					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
 				}
 			} else if rx := typ.Regexp(); rx != nil {
 				if !rx.MatchString(v) {
-					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
 				}
 			} else {
 				if l, ok := typ.ByteLen(); ok && len(v) > l {
-					return nil, newValidationErrorf(name, "has value %q that is longer than %d bytes", abbreviate(v, 20), l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d bytes", errors.Abbreviate(v, 20), l)
 				}
 				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-					return nil, newValidationErrorf(name, "has value %q that is longer than %d characters", abbreviate(v, 20), l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d characters", errors.Abbreviate(v, 20), l)
 				}
 			}
 			value = v
@@ -584,22 +585,22 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		if valid {
 			if !utf8.ValidString(v) {
 				return nil, fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
-					abbreviate(v, 20), name)
+					errors.Abbreviate(v, 20), name)
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
-					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
 				}
 			} else if rx := typ.Regexp(); rx != nil {
 				if !rx.MatchString(v) {
-					return nil, newValidationErrorf(name, "has a not allowed value of %q", abbreviate(v, 20))
+					return nil, newValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
 				}
 			} else {
 				if l, ok := typ.ByteLen(); ok && len(v) > l {
-					return nil, newValidationErrorf(name, "has value %q that is longer than %d bytes", abbreviate(v, 20), l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d bytes", errors.Abbreviate(v, 20), l)
 				}
 				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-					return nil, newValidationErrorf(name, "has value %q that is longer than %d characters", abbreviate(v, 20), l)
+					return nil, newValidationErrorf(name, "has value %q that is longer than %d characters", errors.Abbreviate(v, 20), l)
 				}
 			}
 			value = v
@@ -676,13 +677,13 @@ func normalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 func validateStringProperty(p types.Property, s string) error {
 	if !utf8.ValidString(s) {
 		return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
-			abbreviate(s, 20), p.Name)
+			errors.Abbreviate(s, 20), p.Name)
 	}
 	if l, ok := p.Type.ByteLen(); ok && len(s) > l {
-		return newValidationErrorf(p.Name, "has value %q that is longer than %d bytes", abbreviate(s, 20), l)
+		return newValidationErrorf(p.Name, "has value %q that is longer than %d bytes", errors.Abbreviate(s, 20), l)
 	}
 	if l, ok := p.Type.CharLen(); ok && utf8.RuneCountInString(s) > l {
-		return newValidationErrorf(p.Name, "has value %q that is longer than %d characters", abbreviate(s, 20), l)
+		return newValidationErrorf(p.Name, "has value %q that is longer than %d characters", errors.Abbreviate(s, 20), l)
 	}
 	return nil
 }
@@ -762,46 +763,6 @@ func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 		}
 	}
 	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
-}
-
-// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
-// the abbreviated string terminates with "...".
-func abbreviate(s string, n int) string {
-
-	// NOTE: keep this implementation in sync with the other implementations of
-	// 'abbreviate' copy-pasted in other files.
-
-	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
-	s = strings.TrimRight(s, spaces)
-	if len(s) <= n {
-		return s
-	}
-	if n < 3 {
-		return ""
-	}
-	p := 0
-	n2 := 0
-	for i := range s {
-		switch p {
-		case n - 2:
-			n2 = i
-		case n:
-			break
-		}
-		p++
-	}
-	if p < n {
-		return s
-	}
-	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
-		s = strings.TrimRight(s[:p], spaces)
-	} else {
-		s = ""
-	}
-	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
-		s = s[:l]
-	}
-	return s + "..."
 }
 
 // validJSON reports whether src is a valid JSON value as returned by a

@@ -108,7 +108,7 @@ func (this *Action) exec(ctx context.Context) {
 			errorMessage = "execution has been cancelled"
 		default:
 			if e, ok := err.(actionExecutionError); ok {
-				errorMessage = abbreviate(e.Error(), 1000)
+				errorMessage = errors.Abbreviate(e.Error(), 1000)
 				if _, ok := e.err.(*connector.AccessDeniedError); ok {
 					health = state.AccessDenied
 				}

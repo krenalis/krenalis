@@ -15,11 +15,11 @@ import (
 	"math"
 	"net/netip"
 	"slices"
-	"strings"
 	"time"
 	"unicode/utf8"
 
 	"chichi/apis/datastore/expr"
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
 
@@ -435,7 +435,7 @@ func ValidateInet(name string, s string) (any, error) {
 // ValidateText validates a Text value.
 func ValidateText(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which contains invalid UTF-8 characters", abbreviate(s, 20), name)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which contains invalid UTF-8 characters", errors.Abbreviate(s, 20), name)
 	}
 	if values := t.Values(); values != nil {
 		if !slices.Contains(values, s) {
@@ -450,52 +450,12 @@ func ValidateText(name string, t types.Type, s string) (any, error) {
 		return s, nil
 	}
 	if max, ok := t.ByteLen(); ok && len(s) > max {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d bytes", abbreviate(s, 20), name, max)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d bytes", errors.Abbreviate(s, 20), name, max)
 	}
 	if max, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > max {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d characters", abbreviate(s, 20), name, max)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d characters", errors.Abbreviate(s, 20), name, max)
 	}
 	return s, nil
-}
-
-// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
-// the abbreviated string terminates with "...".
-func abbreviate(s string, n int) string {
-
-	// NOTE: keep this implementation in sync with the other implementations of
-	// 'abbreviate' copy-pasted in other files.
-
-	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
-	s = strings.TrimRight(s, spaces)
-	if len(s) <= n {
-		return s
-	}
-	if n < 3 {
-		return ""
-	}
-	p := 0
-	n2 := 0
-	for i := range s {
-		switch p {
-		case n - 2:
-			n2 = i
-		case n:
-			break
-		}
-		p++
-	}
-	if p < n {
-		return s
-	}
-	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
-		s = strings.TrimRight(s[:p], spaces)
-	} else {
-		s = ""
-	}
-	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
-		s = s[:l]
-	}
-	return s + "..."
 }
 
 // isValidJSON reports whether src is a valid JSON value.
