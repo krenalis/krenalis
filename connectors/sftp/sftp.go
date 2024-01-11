@@ -88,12 +88,18 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 	if err != nil {
 		return nil, time.Time{}, err
 	}
+	var r io.ReadCloser
+	defer func() {
+		// Close the connection if there was an error or a panic.
+		if r == nil && sshClient != nil {
+			_ = closeConnection(sshClient, sftpClient)
+		}
+	}()
 	if name[0] != '/' {
 		name = "/" + name
 	}
 	f, err := sftpClient.Open(name)
 	if err != nil {
-		_ = closeConnection(sshClient, sftpClient)
 		return nil, time.Time{}, err
 	}
 	st, err := f.Stat()
@@ -101,7 +107,8 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 		return nil, time.Time{}, err
 	}
 	ts := st.ModTime().UTC()
-	return reader{ssh: sshClient, sftp: sftpClient, fi: f}, ts, nil
+	r = reader{ssh: sshClient, sftp: sftpClient, fi: f}
+	return r, ts, nil
 }
 
 // ServeUI serves the connector's user interface.
