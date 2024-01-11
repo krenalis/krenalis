@@ -250,7 +250,7 @@ func (event *collectedEvent) MapEvent() map[string]any {
 				"content": event.Context.Campaign.Content,
 			},
 			"device": map[string]any{
-				"id":                event.Context.Device.Type,
+				"id":                event.Context.Device.Id,
 				"advertisingId":     event.Context.Device.AdvertisingId,
 				"adTrackingEnabled": event.Context.Device.AdTrackingEnabled,
 				"manufacturer":      event.Context.Device.Manufacturer,
