@@ -797,7 +797,7 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 	propertiesEnc := json.NewEncoder(&properties)
 	propertiesEnc.SetEscapeHTML(false)
 
-	rows := make([][]any, len(events))
+	rows := make([]map[string]any, len(events))
 
 	for i, e := range events {
 
@@ -835,100 +835,99 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 			groupId = e.Context.GroupId
 		}
 
-		rows[i] = []any{
-			0, // TODO: pass the correct GID.
-			e.AnonymousId,
-			e.Category,
-
-			// app.
-			e.Context.App.Name,
-			e.Context.App.Version,
-			e.Context.App.Build,
-			e.Context.App.Namespace,
-
-			// browser.
-			e.Context.browser.Name,
-			e.Context.browser.Other,
-			e.Context.browser.Version,
-
-			// campaign.
-			e.Context.Campaign.Name,
-			e.Context.Campaign.Source,
-			e.Context.Campaign.Medium,
-			e.Context.Campaign.Term,
-			e.Context.Campaign.Content,
-
-			// device.
-			e.Context.Device.Id,
-			e.Context.Device.AdvertisingId,
-			e.Context.Device.AdTrackingEnabled,
-			e.Context.Device.Manufacturer,
-			e.Context.Device.Model,
-			e.Context.Device.Name,
-			e.Context.Device.Type,
-			e.Context.Device.Token,
-
-			e.Context.IP,
-
-			// library.
-			e.Context.Library.Name,
-			e.Context.Library.Version,
-
-			e.Context.Locale,
-
-			// location.
-			e.Context.Location.City,
-			e.Context.Location.Country,
-			e.Context.Location.Latitude,
-			e.Context.Location.Longitude,
-			e.Context.Location.Speed,
-
-			// network.
-			e.Context.Network.Bluetooth,
-			e.Context.Network.Carrier,
-			e.Context.Network.Cellular,
-			e.Context.Network.WiFi,
-
-			// os.
-			e.Context.OS.Name,
-			e.Context.OS.Version,
-
-			// page.
-			e.Context.Page.Path,
-			e.Context.Page.Referrer,
-			e.Context.Page.Search,
-			e.Context.Page.Title,
-			e.Context.Page.URL,
-
-			// referrer.
-			e.Context.Referrer.Id,
-			e.Context.Referrer.Type,
-
-			// screen.
-			int16(e.Context.Screen.Width),
-			int16(e.Context.Screen.Height),
-			e.Context.Screen.Density,
-
-			// session.
-			e.Context.SessionId,
-			e.Context.SessionStart,
-
-			e.Context.Timezone,
-			e.Context.UserAgent,
-
-			e.Event,
-			groupId,
-			e.MessageId,
-			e.Name,
-			json.RawMessage(properties.Bytes()),
-			e.receivedAt,
-			e.sentAt,
-			e.source,
-			e.timestamp,
-			json.RawMessage(traits.Bytes()),
-			*e.Type,
-			e.UserId,
+		rows[i] = map[string]any{
+			"gid":         0, // TODO: set the correct GID. See https://github.com/open2b/chichi/issues/483.
+			"anonymousId": e.AnonymousId,
+			"category":    e.Category,
+			"context": map[string]any{
+				"app": map[string]any{
+					"name":      e.Context.App.Name,
+					"version":   e.Context.App.Version,
+					"build":     e.Context.App.Build,
+					"namespace": e.Context.App.Namespace,
+				},
+				"browser": map[string]any{
+					"name":    e.Context.browser.Name,
+					"other":   e.Context.browser.Other,
+					"version": e.Context.browser.Version,
+				},
+				"campaign": map[string]any{
+					"name":    e.Context.Campaign.Name,
+					"source":  e.Context.Campaign.Source,
+					"medium":  e.Context.Campaign.Medium,
+					"term":    e.Context.Campaign.Term,
+					"content": e.Context.Campaign.Content,
+				},
+				"device": map[string]any{
+					"id":                e.Context.Device.Id,
+					"advertisingId":     e.Context.Device.AdvertisingId,
+					"adTrackingEnabled": e.Context.Device.AdTrackingEnabled,
+					"manufacturer":      e.Context.Device.Manufacturer,
+					"model":             e.Context.Device.Model,
+					"name":              e.Context.Device.Name,
+					"type":              e.Context.Device.Type,
+					"token":             e.Context.Device.Token,
+				},
+				"ip": e.Context.IP,
+				"library": map[string]any{
+					"name":    e.Context.Library.Name,
+					"version": e.Context.Library.Version,
+				},
+				"locale": e.Context.Locale,
+				"location": map[string]any{
+					"city":      e.Context.Location.City,
+					"country":   e.Context.Location.Country,
+					"latitude":  e.Context.Location.Latitude,
+					"longitude": e.Context.Location.Longitude,
+					"speed":     e.Context.Location.Speed,
+				},
+				"network": map[string]any{
+					"bluetooth": e.Context.Network.Bluetooth,
+					"carrier":   e.Context.Network.Carrier,
+					"cellular":  e.Context.Network.Cellular,
+					"wifi":      e.Context.Network.WiFi,
+				},
+				"os": map[string]any{
+					"name":    e.Context.OS.Name,
+					"version": e.Context.OS.Version,
+				},
+				"page": map[string]any{
+					"path":     e.Context.Page.Path,
+					"referrer": e.Context.Page.Referrer,
+					"search":   e.Context.Page.Search,
+					"title":    e.Context.Page.Title,
+					"url":      e.Context.Page.URL,
+				},
+				"referrer": map[string]any{
+					"id":   e.Context.Referrer.Id,
+					"type": e.Context.Referrer.Type,
+				},
+				"screen": map[string]any{
+					"width":   int16(e.Context.Screen.Width),
+					"height":  int16(e.Context.Screen.Height),
+					"density": e.Context.Screen.Density,
+				},
+				"session": map[string]any{
+					"id":    e.Context.SessionId,
+					"start": e.Context.SessionStart,
+				},
+				"timezone":  e.Context.Timezone,
+				"userAgent": e.Context.UserAgent,
+			},
+			"event":      e.Event,
+			"groupId":    groupId,
+			"messageId":  e.MessageId,
+			"name":       e.Name,
+			"properties": json.RawMessage(properties.Bytes()),
+			"receivedAt": e.receivedAt,
+			"sentAt":     e.sentAt,
+			"source":     e.source,
+			"timestamp":  e.timestamp,
+			"traits":     json.RawMessage(traits.Bytes()),
+			"type":       *e.Type,
+			"userId":     e.UserId,
 		}
+
 	}
 
 	store.AddEvents(rows)

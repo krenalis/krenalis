@@ -63,8 +63,9 @@ type Warehouse interface {
 	// deletions. table specifies the target table for the merge operation, rows
 	// contains the rows to insert or update in the table, and deleted contains the
 	// key values of rows to delete, if they exist.
-	// rows or deleted can be empty but not both.
-	Merge(ctx context.Context, table MergeTable, rows [][]any, deleted []any) error
+	// rows or deleted can be empty but not both, and both may be changed by this
+	// method.
+	Merge(ctx context.Context, table MergeTable, rows []map[string]any, deleted map[string]any) error
 
 	// Ping checks whether the connection to the data warehouse is active and, if
 	// necessary, establishes a new connection.

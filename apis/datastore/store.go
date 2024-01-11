@@ -26,7 +26,7 @@ type Store struct {
 	workspace int
 	warehouse warehouses.Warehouse
 	mu        sync.Mutex // for the events field
-	events    [][]any
+	events    []map[string]any
 	closed    atomic.Bool
 }
 
@@ -60,7 +60,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 }
 
 // AddEvents adds events to the store.
-func (store *Store) AddEvents(events [][]any) {
+func (store *Store) AddEvents(events []map[string]any) {
 	store.mustBeOpen()
 	store.mu.Lock()
 	store.events = append(store.events, events...)

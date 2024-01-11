@@ -129,34 +129,40 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 // deletions. table specifies the target table for the merge operation, rows
 // contains the rows to insert or update in the table, and deleted contains the
 // key values of rows to delete, if they exist.
-// rows or deleted can be empty but not both.
-func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
+// rows or deleted can be empty but not both, and both may be changed by this
+// method.
+func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
 
+	tableSchema := types.Object(table.Properties)
+	primaryKeysSchema := types.Object(table.PrimaryKeys)
+
 	columns := warehouses.PropertiesToColumns(table.Properties)
+	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 
 	// Serialize the rows in CSV format.
 	var rowsCSV io.Reader
 	if len(rows) > 0 {
 		var err error
-		rowsCSV, err = serializeRowsToCSV(columns, rows, false)
+		rowsSlice := serializeRowsToSlice(rows, tableSchema, columns)
+		rowsCSV, err = serializeRowsToCSV(columns, rowsSlice, false)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Serialize the deleted rows in CSV format.
-	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 	var deletedCSV io.Reader
 	if len(deleted) > 0 {
+		deletedSlice := serializeRowToSlice(deleted, primaryKeysSchema, primaryKeysColumns)
 		n := len(primaryKeysColumns)
 		rows := make([][]any, 0, len(deleted)/n)
 		for i := 0; i < len(deleted); i += n {
-			rows = append(rows, deleted[i:i+n])
+			rows = append(rows, deletedSlice[i:i+n])
 		}
 		var err error
 		deletedCSV, err = serializeRowsToCSV(primaryKeysColumns, rows, true)
@@ -678,6 +684,23 @@ func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (i
 		}
 	}
 	return &b, nil
+}
+
+func serializeRowToSlice(row map[string]any, schema types.Type, columns []types.Property) []any {
+	warehouses.SerializeRow(row, schema)
+	rr := make([]any, len(columns))
+	for i, c := range columns {
+		rr[i] = row[c.Name]
+	}
+	return rr
+}
+
+func serializeRowsToSlice(rows []map[string]any, schema types.Type, columns []types.Property) [][]any {
+	rs := make([][]any, len(rows))
+	for i, r := range rows {
+		rs[i] = serializeRowToSlice(r, schema, columns)
+	}
+	return rs
 }
 
 // quoteCSVString quotes the string s for use in a CSV file and writes it to b.

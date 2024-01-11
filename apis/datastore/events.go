@@ -162,7 +162,7 @@ var eventsMergeTable = warehouses.MergeTable{
 }
 
 // flushEvents flushes a batch of events to the data warehouse.
-func (store *Store) flushEvents(events [][]any) {
+func (store *Store) flushEvents(events []map[string]any) {
 	slog.Info("flush events", "count", len(events))
 	for {
 		err := store.warehouse.Merge(context.Background(), eventsMergeTable, events, nil)

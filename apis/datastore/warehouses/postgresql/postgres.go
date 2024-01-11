@@ -165,15 +165,20 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 // deletions. table specifies the target table for the merge operation, rows
 // contains the rows to insert or update in the table, and deleted contains the
 // key values of rows to delete, if they exist.
-// rows or deleted can be empty but not both.
-func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
+// rows or deleted can be empty but not both, and both may be changed by this
+// method.
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
 
+	tableSchema := types.Object(table.Properties)
+	primaryKeysSchema := types.Object(table.PrimaryKeys)
+
 	columns := warehouses.PropertiesToColumns(table.Properties)
+	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 
 	var b strings.Builder
 
@@ -207,21 +212,22 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		for i, c := range columns {
 			columnNames[i] = c.Name
 		}
-		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
+		rowsSlice := serializeRowsToSlice(rows, tableSchema, columns)
+		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rowsSlice))
 		if err != nil {
 			return warehouses.Error(err)
 		}
 	}
 
 	// Copy the rows to delete into the temporary table.
-	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 	if len(deleted) > 0 {
 		columnNames := make([]string, len(primaryKeysColumns)+1)
 		for i, c := range primaryKeysColumns {
 			columnNames[i] = c.Name
 		}
 		columnNames[len(columnNames)-1] = "$deleted"
-		rowSrc := newCopyForDeleteFrom(len(primaryKeysColumns), deleted)
+		deletedSlice := serializeRowToSlice(deleted, primaryKeysSchema, primaryKeysColumns)
+		rowSrc := newCopyForDeleteFrom(len(primaryKeysColumns), deletedSlice)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
 			return warehouses.Error(err)
@@ -613,4 +619,21 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 
 func (c *copyForDeleteFrom) Err() error {
 	return nil
+}
+
+func serializeRowToSlice(row map[string]any, schema types.Type, columns []types.Property) []any {
+	warehouses.SerializeRow(row, schema)
+	rr := make([]any, len(columns))
+	for i, c := range columns {
+		rr[i] = row[c.Name]
+	}
+	return rr
+}
+
+func serializeRowsToSlice(rows []map[string]any, schema types.Type, columns []types.Property) [][]any {
+	rs := make([][]any, len(rows))
+	for i, r := range rows {
+		rs[i] = serializeRowToSlice(r, schema, columns)
+	}
+	return rs
 }
