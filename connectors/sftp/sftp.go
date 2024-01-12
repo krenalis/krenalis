@@ -15,10 +15,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -67,6 +70,7 @@ type settings struct {
 	Port     int
 	Username string
 	Password string
+	TempPath string
 }
 
 // CompletePath returns the complete representation of the given path name or an
@@ -153,6 +157,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 			&ui.Input{Name: "port", Label: "Port", Placeholder: "22", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
 			&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
 			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&ui.Input{Name: "tempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: ui.Destination},
 		},
 		Values: values,
 		Actions: []ui.Action{
@@ -188,6 +193,14 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
 		return nil, ui.Errorf("password length must be in range [1,200]")
 	}
+	// Validate TempPath.
+	if c.conf.Role == connector.Destination {
+		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
+			return nil, ui.Errorf("length of temporary directory path must be in range [1,1000]")
+		}
+	} else if s.TempPath != "" {
+		return nil, ui.Errorf("temporary directory path must be empty for source destinations")
+	}
 	err = testConnection(ctx, &s)
 	if err != nil {
 		return nil, err
@@ -206,21 +219,49 @@ func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) err
 	if name[0] != '/' {
 		name = "/" + name
 	}
-	f, err := client.sftp.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if c.settings.TempPath == "" {
+		var f *sftp.File
+		f, err = client.sftp.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+		if err != nil {
+			return err
+		}
+		if _, err = io.Copy(f, r); err != nil {
+			_ = f.Close()
+			return err
+		}
+		if err = f.Close(); err != nil {
+			return err
+		}
+		return client.close()
+	}
+	// Create the file atomically.
+	base := path.Base(name)
+	ext := path.Ext(name)
+	tempPath := c.settings.TempPath
+	if tempPath[0] != '/' {
+		tempPath = "/" + tempPath
+	}
+	tempName := path.Join(tempPath, strings.TrimSuffix(base, ext)) + "-" + strconv.FormatUint(rand.Uint64(), 10) + ext
+	f, err := client.sftp.OpenFile(tempName, os.O_WRONLY|os.O_CREATE|os.O_EXCL)
 	if err != nil {
-		_ = client.close()
 		return err
 	}
-	_, err = io.Copy(f, r)
-	err2 := f.Close()
-	err3 := client.close()
-	if err != nil {
+	defer func() {
+		if err != nil {
+			_ = client.sftp.Remove(tempName)
+		}
+	}()
+	if _, err = io.Copy(f, r); err != nil {
+		_ = f.Close()
 		return err
 	}
-	if err2 != nil {
-		return err2
+	if err = f.Close(); err != nil {
+		return err
 	}
-	return err3
+	if err = client.sftp.PosixRename(tempName, name); err != nil {
+		return err
+	}
+	return client.close()
 }
 
 type reader struct {
@@ -331,6 +372,11 @@ func testConnection(ctx context.Context, settings *settings) error {
 	if err != nil {
 		return err
 	}
-	_ = client.close()
+	defer client.close()
+	if settings.TempPath != "" {
+		if _, ok := client.sftp.HasExtension("posix-rename@openssh.com"); !ok {
+			ui.Errorf("temporary directory path must be empty because the server does not support posix-rename")
+		}
+	}
 	return nil
 }
