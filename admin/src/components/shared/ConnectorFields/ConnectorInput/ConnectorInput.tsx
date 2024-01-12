@@ -44,7 +44,7 @@ const ConnectorInput = ({
 	};
 
 	return (
-		<div className='connectorInput'>
+		<div className={`connectorInput`}>
 			<SlInput
 				name={name}
 				value={value}

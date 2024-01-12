@@ -183,7 +183,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		Fields: []ui.Component{
 			&ui.Input{Name: "comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
 			&ui.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: ui.Source},
-			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", Role: ui.Source},
+			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: ui.Source},
 			&ui.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: ui.Source},
 			&ui.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
 			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.Source},

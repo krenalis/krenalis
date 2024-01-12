@@ -10,6 +10,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
+import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 
 interface FormProps {
 	connection: TransformedConnection;
@@ -76,6 +77,15 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		setFields(fls);
 		if (hasConfirmationButton) {
 			confirmationButton!.load();
+		}
+		try {
+			validateConnectorSettings(values, fields);
+		} catch (err) {
+			handleError(err);
+			if (hasConfirmationButton) {
+				confirmationButton!.stop();
+			}
+			return;
 		}
 		let ui: UIResponse;
 		try {

@@ -173,7 +173,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 						Label: "Kafka",
 						Fields: []ui.Component{
 							&ui.Input{Name: "host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&ui.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", MinLength: 1, MaxLength: 5},
+							&ui.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
 							&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
 							&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
 						},

@@ -41,16 +41,17 @@ type Option struct {
 }
 
 type Input struct {
-	Name        string
-	Type        string // date|datetime-local|email|number|password|search|tel|text|time|url - default is 'text'
-	Label       string
-	Placeholder string
-	HelpText    string
-	Rows        int // if bigger than 1, the corresponding component is a textarea.
-	MinLength   int
-	MaxLength   int
-	Error       string
-	Role        Role
+	Name            string
+	Type            string // date|datetime-local|email|number|password|search|tel|text|time|url - default is 'text'
+	Label           string
+	Placeholder     string
+	HelpText        string
+	Rows            int // if bigger than 1, the corresponding component is a textarea.
+	OnlyIntegerPart bool
+	MinLength       int
+	MaxLength       int
+	Error           string
+	Role            Role
 }
 
 func (i *Input) component() {}

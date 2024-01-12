@@ -19,6 +19,7 @@ import ConnectorFieldInterface, { ConnectorAction } from '../../../types/externa
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
+import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 
 const ConnectorSettings = () => {
 	const [connector, setConnector] = useState<TransformedConnector | null>(null);
@@ -146,6 +147,15 @@ const ConnectorSettings = () => {
 			confirmationButton!.load();
 		}
 		if (eventName === 'save') {
+			try {
+				validateConnectorSettings(values, fields);
+			} catch (err) {
+				handleError(err);
+				if (hasConfirmationButton) {
+					confirmationButton!.stop();
+				}
+				return;
+			}
 			let id: number;
 			try {
 				const connection: ConnectionToAdd = {
@@ -234,6 +244,12 @@ const ConnectorSettings = () => {
 	};
 
 	const onSave = async () => {
+		try {
+			validateConnectorSettings(values, fields);
+		} catch (err) {
+			handleError(err);
+			return;
+		}
 		let id: number;
 		try {
 			const connection: ConnectionToAdd = {

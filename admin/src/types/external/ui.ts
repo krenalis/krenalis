@@ -24,6 +24,7 @@ interface InputField {
 	ComponentType: 'Input';
 	Name: string;
 	Type: InputType;
+	OnlyIntegerPart: boolean;
 	Label: string;
 	Placeholder: string;
 	HelpText: string;
