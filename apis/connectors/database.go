@@ -210,7 +210,6 @@ func (w *databaseWriter) upsert(ctx context.Context) {
 	}
 	w.ack(err, gids)
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
-	return
 }
 
 // Rows is the result of a query.
