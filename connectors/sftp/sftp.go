@@ -86,21 +86,21 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 // any subsequent Read invocations will result in an error.
 // It is the caller's responsibility to close the returned reader.
 func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	sshClient, sftpClient, err := openConnection(c.settings)
+	client, err := openClient(ctx, c.settings)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
 	var r io.ReadCloser
 	defer func() {
-		// Close the connection if there was an error or a panic.
-		if r == nil && sshClient != nil {
-			_ = closeConnection(sshClient, sftpClient)
+		// Close the client if there was an error or a panic.
+		if r == nil {
+			_ = client.close()
 		}
 	}()
 	if name[0] != '/' {
 		name = "/" + name
 	}
-	f, err := sftpClient.Open(name)
+	f, err := client.sftp.Open(name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -109,7 +109,7 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 		return nil, time.Time{}, err
 	}
 	ts := st.ModTime().UTC()
-	r = reader{ssh: sshClient, sftp: sftpClient, fi: f}
+	r = reader{client: client, fi: f}
 	return r, ts, nil
 }
 
@@ -188,7 +188,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
 		return nil, ui.Errorf("password length must be in range [1,200]")
 	}
-	err = testConnection(&s)
+	err = testConnection(ctx, &s)
 	if err != nil {
 		return nil, err
 	}
@@ -198,21 +198,22 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
 func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) error {
-	sshClient, sftpClient, err := openConnection(c.settings)
+	client, err := openClient(ctx, c.settings)
 	if err != nil {
 		return err
 	}
+	defer client.close()
 	if name[0] != '/' {
 		name = "/" + name
 	}
-	f, err := sftpClient.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	f, err := client.sftp.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
-		_ = closeConnection(sshClient, sftpClient)
+		_ = client.close()
 		return err
 	}
 	_, err = io.Copy(f, r)
 	err2 := f.Close()
-	err3 := closeConnection(sshClient, sftpClient)
+	err3 := client.close()
 	if err != nil {
 		return err
 	}
@@ -223,16 +224,19 @@ func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) err
 }
 
 type reader struct {
-	ssh  *ssh.Client
-	sftp *sftp.Client
-	fi   *sftp.File
+	client *client
+	fi     *sftp.File
 }
 
 func (r reader) Close() error {
+	if r.client == nil {
+		return nil
+	}
+	defer r.client.close()
 	err := r.fi.Close()
-	err2 := closeConnection(r.ssh, r.sftp)
-	r.ssh = nil
-	r.sftp = nil
+	r.fi = nil
+	err2 := r.client.close()
+	r.client = nil
 	if err != nil {
 		return err
 	}
@@ -243,8 +247,39 @@ func (r reader) Read(p []byte) (int, error) {
 	return r.fi.Read(p)
 }
 
-// openConnection opens the connection.
-func openConnection(s *settings) (*ssh.Client, *sftp.Client, error) {
+// client represents an SFTP client.
+type client struct {
+	ssh  *ssh.Client
+	sftp *sftp.Client
+
+	// stop stops the association of the context with the function that closes
+	// the underlying connection. It is nil if the client is closed.
+	stop func() bool
+}
+
+// close closes the client.
+// It does nothing if the client has already been closed.
+func (client *client) close() error {
+	if client.stop == nil {
+		return nil
+	}
+	defer func() {
+		client.stop()
+		client.stop = nil
+	}()
+	err := client.sftp.Close()
+	err2 := client.ssh.Close()
+	if err != nil {
+		return err
+	}
+	return err2
+}
+
+// openClient opens a client for the SFTP server based on the provided settings.
+// The returned client must be closed using the close method. If the context is
+// canceled before the client is closed, the underlying network connection, not
+// the client, will be automatically closed.
+func openClient(ctx context.Context, s *settings) (*client, error) {
 	sshConfig := &ssh.ClientConfig{
 		User: s.Username,
 		Auth: []ssh.AuthMethod{
@@ -253,35 +288,49 @@ func openConnection(s *settings) (*ssh.Client, *sftp.Client, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(marco) don't use in production
 	}
 	addr := s.Host + ":" + strconv.Itoa(s.Port)
-	sshClient, err := ssh.Dial("tcp", addr, sshConfig)
+	// The ssh package does not implement the ssh.DialContext function
+	// (see issue https://github.com/golang/go/issues/64686), and the
+	// ssh.NewClientConn function does not accept a context, so we have to close
+	// the connection passed to it to stop its execution if the context is
+	// canceled.
+	d := &net.Dialer{}
+	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+	stop := context.AfterFunc(ctx, func() {
+		_ = conn.Close()
+	})
+	// After this point, if the context is canceled, the underlying connection
+	// will be closed.
+	var cl *client
+	defer func() {
+		// Close the connection if there was an error or a panic.
+		if cl == nil {
+			stop()
+		}
+	}()
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
+	if err != nil {
+		return nil, err
+	}
+	sshClient := ssh.NewClient(c, chans, reqs)
 	sftpClient, err := sftp.NewClient(sshClient)
 	if err != nil {
 		_ = sshClient.Close()
-		return nil, nil, err
+		return nil, err
 	}
-	return sshClient, sftpClient, nil
-}
-
-// closeConnection closes the connection.
-func closeConnection(sshClient *ssh.Client, sftpClient *sftp.Client) error {
-	err := sftpClient.Close()
-	err2 := sshClient.Close()
-	if err != nil {
-		return err
-	}
-	return err2
+	cl = &client{ssh: sshClient, sftp: sftpClient, stop: stop}
+	return cl, nil
 }
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(settings *settings) error {
-	sshClient, sftpClient, err := openConnection(settings)
+func testConnection(ctx context.Context, settings *settings) error {
+	client, err := openClient(ctx, settings)
 	if err != nil {
 		return err
 	}
-	_ = closeConnection(sshClient, sftpClient)
+	_ = client.close()
 	return nil
 }
