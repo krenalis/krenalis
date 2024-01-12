@@ -76,7 +76,9 @@ type StorageConnection interface {
 	CompletePath(ctx context.Context, name string) (string, error)
 
 	// Reader opens the file at the given path name and returns a ReadCloser from
-	// which to read the file and its last update time.
+	// which to read the file and its last update time. The use of the provided
+	// context is extended to the Read method calls. After the context is canceled,
+	// any subsequent Read invocations will result in an error.
 	// It is the caller's responsibility to close the returned reader.
 	Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 
