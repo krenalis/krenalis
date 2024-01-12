@@ -41,16 +41,16 @@ func TestEvents(t *testing.T) {
 				"Name": "Import users from Dummy",
 				"InSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
 				}),
 				"OutSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
 				}),
 				"Transformation": map[string]any{
 					"Mapping": map[string]string{
-						"email":      "email",
-						"first_name": "first_name",
+						"email":     "email",
+						"firstName": "firstName",
 					},
 				},
 			},

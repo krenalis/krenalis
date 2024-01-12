@@ -17,8 +17,6 @@ import (
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
-
-	"golang.org/x/exp/maps"
 )
 
 // Database represents the database of a database connection.
@@ -150,7 +148,7 @@ func (database *Database) Writer(table string, schema types.Type, ack AckFunc) (
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}}, propertiesToColumns(schema.Properties())...)
+	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}}, schema.Properties()...)
 	w := databaseWriter{
 		ack:     ack,
 		table:   table,
@@ -187,12 +185,9 @@ func (w *databaseWriter) Write(ctx context.Context, gid int, record Record) bool
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
-	// Serialize the properties as columns.
-	row := maps.Clone(record.Properties)
-	serializeRow(row, w.schema)
-	row["id"] = gid
+	record.Properties["id"] = gid
 	// Append the row.
-	w.rows = append(w.rows, row)
+	w.rows = append(w.rows, record.Properties)
 	// Upsert the rows.
 	if len(w.rows) == 100 {
 		w.upsert(ctx)
@@ -394,74 +389,4 @@ func (sv recordsScanValue) Scan(src any) error {
 		sv.record.Timestamp = value.(time.Time)
 	}
 	return nil
-}
-
-// flattenInto flattens the properties of obj with type t into dst with names
-// prefixed by prefix.
-func flattenInto(dst, obj map[string]any, prefix string, t types.Type) {
-	for name, value := range obj {
-		p, _ := t.Property(name)
-		if p.Type.Kind() == types.ObjectKind {
-			flattenInto(dst, value.(map[string]any), prefix+"_"+name, p.Type)
-			continue
-		}
-		serialize(value, p.Type)
-		dst[prefix+"_"+name] = value
-	}
-}
-
-// serializeRow serializes a row to be passed to a data warehouse by flattening
-// fields based on the provided schema.
-func serializeRow(row map[string]any, schema types.Type) {
-	serialize(row, schema)
-}
-
-// serialize serializes v with type t.
-func serialize(v any, t types.Type) {
-	if v == nil {
-		return
-	}
-	switch t.Kind() {
-	case types.ObjectKind:
-		v := v.(map[string]any)
-		for _, p := range t.Properties() {
-			value, ok := v[p.Name]
-			if !ok {
-				continue
-			}
-			if p.Type.Kind() == types.ObjectKind {
-				delete(v, p.Name)
-				flattenInto(v, value.(map[string]any), p.Name, p.Type)
-				continue
-			}
-			serialize(value, p.Type)
-			continue
-		}
-	case types.ArrayKind:
-		itemType := t.Elem()
-		for _, value := range v.([]any) {
-			serialize(value, itemType)
-		}
-	case types.MapKind:
-		valueType := t.Elem()
-		for _, value := range v.(map[string]any) {
-			serialize(value, valueType)
-		}
-	}
-}
-
-// propertiesToColumns returns the columns of properties.
-func propertiesToColumns(properties []types.Property) []types.Property {
-	columns := make([]types.Property, 0, len(properties))
-	for _, p := range properties {
-		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range propertiesToColumns(p.Type.Properties()) {
-				column.Name = p.Name + "_" + column.Name
-				columns = append(columns, column)
-			}
-			continue
-		}
-		columns = append(columns, types.Property{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
-	}
-	return columns
 }

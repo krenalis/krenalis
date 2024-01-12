@@ -34,21 +34,21 @@ func TestExportToPostgreSQL(t *testing.T) {
 				"Name": "Import users from Dummy",
 				"InSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
-					{Name: "last_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
+					{Name: "lastName", Type: types.Text()},
 				}),
 				"OutSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
-					{Name: "last_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
+					{Name: "lastName", Type: types.Text()},
 					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 				}),
 				"Transformation": map[string]any{
 					"Mapping": map[string]string{
-						"email":      "coalesce(email, 'default.email@example.com')",
-						"first_name": "first_name",
-						"last_name":  "last_name",
-						"gender":     "'male'",
+						"email":     "coalesce(email, 'default.email@example.com')",
+						"firstName": "firstName",
+						"lastName":  "lastName",
+						"gender":    "'male'",
 					},
 				},
 			},
@@ -91,8 +91,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 			"TableName": "test_export_to_db",
 			"InSchema": types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
-				{Name: "first_name", Type: types.Text()},
-				{Name: "last_name", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
 			}),
 			"OutSchema": types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -101,7 +101,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			"Transformation": map[string]any{
 				"Mapping": map[string]string{
 					"email":     "email",
-					"full_name": `first_name " " last_name`,
+					"full_name": `firstName " " lastName`,
 				},
 			},
 		},

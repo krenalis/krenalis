@@ -36,16 +36,16 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				"Name": "Import users from Dummy",
 				"InSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
 				}),
 				"OutSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
 				}),
 				"Transformation": map[string]any{
 					"Mapping": map[string]string{
-						"email":      "email",
-						"first_name": "first_name",
+						"email":     "email",
+						"firstName": "firstName",
 					},
 				},
 			},
@@ -66,12 +66,12 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				}),
 				"OutSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "last_name", Type: types.Text()},
+					{Name: "lastName", Type: types.Text()},
 				}),
 				"Transformation": map[string]any{
 					"Mapping": map[string]string{
-						"email":     "email",
-						"last_name": "email", // this is intended.
+						"email":    "email",
+						"lastName": "email", // this is intended.
 					},
 				},
 				"ExportMode": "CreateOrUpdate",
@@ -98,33 +98,33 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				"Name": "Import users from Dummy",
 				"InSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
-					{Name: "last_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
+					{Name: "lastName", Type: types.Text()},
 				}),
 				"OutSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
-					{Name: "last_name", Type: types.Text()},
+					{Name: "firstName", Type: types.Text()},
+					{Name: "lastName", Type: types.Text()},
 				}),
 				"Transformation": map[string]any{
 					"Mapping": map[string]string{
-						"email":      "email",
-						"first_name": "first_name",
-						"last_name":  "last_name",
+						"email":     "email",
+						"firstName": "firstName",
+						"lastName":  "lastName",
 					},
 				},
 			},
 		})
 		c.ExecuteAction(dummySrc, importUsersID, true)
 		c.WaitActionsToFinish(dummySrc)
-		users := c.Users([]string{"email", "first_name", "last_name"}, "", 0, 100)["users"].([]any)
+		users := c.Users([]string{"email", "firstName", "lastName"}, "", 0, 100)["users"].([]any)
 		if len(users) == 0 {
 			t.Fatal("no users re-imported from Dummy")
 		}
 		for _, user := range users {
 			u := user.(map[string]any)
-			if u["email"] != u["last_name"] {
-				t.Fatalf("expecting 'email' to be equal to 'last_name', got '%v' != '%v'", u["email"], u["last_name"])
+			if u["email"] != u["lastName"] {
+				t.Fatalf("expecting 'email' to be equal to 'lastName', got '%v' != '%v'", u["email"], u["lastName"])
 			}
 		}
 	}

@@ -19,8 +19,9 @@ import (
 // Consecutive columns with a common prefix are grouped into a single object
 // property. It could change the columns slice and the column names.
 //
-// Columns starting with an underscore ('_'), are grouped as if the underscore
-// were not present but are not returned as properties.
+// Columns ending with an underscore ('_') are considered hidden, meaning they
+// are grouped as if the underscore were not present but are not returned as
+// properties.
 //
 // Grouping columns can result in properties with the same name. In this case,
 // it returns a RepeatedPropertyNameError error.
@@ -28,6 +29,7 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 	var properties []types.Property
 	for i := 0; i < len(columns); i++ {
 		c := columns[i]
+		name := c.Name
 		var property types.Property
 		// group the columns with the same prefix.
 		if prefix, n := columnsCommonPrefix(columns[i:]); prefix != "" {
@@ -35,8 +37,8 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 			i += n - 1
 			for j := 0; j < n; j++ {
 				column := group[j]
-				// remove from the group the columns with an underscore prefix.
-				if column.Name[0] == '_' {
+				// remove from the group the hidden columns.
+				if column.Name[len(column.Name)-1] == '_' {
 					copy(group[j:], group[j+1:])
 					j--
 					n--
@@ -53,18 +55,19 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 				return nil, err
 			}
 			property = types.Property{
-				Name: strings.TrimSuffix(prefix, "_"),
+				Name: ColumnNameToPropertyName(strings.TrimSuffix(prefix, "_")),
 				Type: types.Object(props),
 			}
 		} else {
-			if c.Name[0] == '_' {
+			if c.Name[len(c.Name)-1] == '_' { // skip if hidden
 				continue
 			}
 			property = c
+			property.Name = ColumnNameToPropertyName(c.Name)
 		}
 		for _, p := range properties {
 			if p.Name == property.Name {
-				return nil, Errorf("column %s results in a repeated property named %s", c.Name, p.Name)
+				return nil, Errorf("column %s results in a repeated property named %s", name, p.Name)
 			}
 		}
 		properties = append(properties, property)
@@ -83,9 +86,6 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 // See TestColumnsCommonPrefix for some examples.
 func columnsCommonPrefix(columns []types.Property) (string, int) {
 	first := columns[0].Name
-	if first[0] == '_' {
-		first = first[1:]
-	}
 	var prefix string
 	var n = len(columns)
 Columns:
@@ -93,9 +93,6 @@ Columns:
 		c := first[i]
 		for k := 1; k < n; k++ {
 			name := columns[k].Name
-			if name[0] == '_' {
-				name = name[1:]
-			}
 			if i < len(name)-1 && name[i] == c {
 				// continue with the next column.
 				if c == '_' {
@@ -124,14 +121,74 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range PropertiesToColumns(p.Type.Properties()) {
-				column.Name = p.Name + "_" + column.Name
+				column.Name = PropertyNameToColumnName(p.Name) + "_" + column.Name
 				columns = append(columns, column)
 			}
 			continue
 		}
-		columns = append(columns, types.Property{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
+		columns = append(columns, types.Property{
+			Name:     PropertyNameToColumnName(p.Name),
+			Type:     p.Type,
+			Nullable: p.Nullable,
+		})
 	}
 	return columns
+}
+
+// ColumnNameToPropertyName returns the given column name as property name.
+// name must be in snake case, so it cannot contain upper letters, cannot end
+// with an underscore, and cannot contain consecutive underscores.
+//
+// For example, given "a_bc_d", it returns "aBcD", and given "_eg", it returns
+// "Eg".
+func ColumnNameToPropertyName(name string) string {
+	b := strings.Builder{}
+	var start int
+	for i := 0; i < len(name); i++ {
+		if c := name[i]; c == '_' {
+			if start < i {
+				b.WriteString(name[start:i])
+			}
+			b.WriteByte(name[i+1] - ('a' - 'A'))
+			i++
+			start = i + 1
+		}
+	}
+	if start == 0 {
+		return name
+	}
+	if start != len(name) {
+		b.WriteString(name[start:])
+	}
+	return b.String()
+}
+
+// PropertyNameToColumnName returns the given property name as column name.
+// name must be in the camel case, so it cannot contain underscores, and cannot
+// contain consecutive uppercase letters.
+//
+// For example, given "aBcD", it returns "a_bc_d", and given "Eg", it returns
+// "_eg".
+func PropertyNameToColumnName(name string) string {
+	b := strings.Builder{}
+	var start int
+	for i, c := range []byte(name) {
+		if 'A' <= c && c <= 'Z' {
+			if start < i {
+				b.WriteString(name[start:i])
+			}
+			b.WriteByte('_')
+			b.WriteByte(c + ('a' - 'A'))
+			start = i + 1
+		}
+	}
+	if start == 0 {
+		return name
+	}
+	if start != len(name) {
+		b.WriteString(name[start:])
+	}
+	return b.String()
 }
 
 // PropertyPathToColumn returns the column for the property path in schema.
@@ -140,9 +197,6 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 	var name strings.Builder
 	parts := strings.Split(path, ".")
 	for i, part := range parts {
-		if i > 0 {
-			name.WriteByte('_')
-		}
 		if typ.Kind() != types.ObjectKind {
 			return types.Property{}, errors.New("path refers to a non-object type")
 		}
@@ -151,7 +205,12 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 			return types.Property{}, fmt.Errorf("property %q does not exist", part)
 		}
 		typ = prop.Type
-		name.WriteString(prop.Name)
+		if i == 0 {
+			name.WriteString(PropertyNameToColumnName(prop.Name))
+		} else {
+			name.WriteByte('_')
+			name.WriteString(prop.Name)
+		}
 	}
 	property := types.Property{
 		Name: name.String(),
@@ -196,10 +255,14 @@ func serialize(v any, t types.Type) {
 			}
 			if p.Type.Kind() == types.ObjectKind {
 				delete(v, p.Name)
-				flattenInto(v, value.(map[string]any), p.Name, p.Type)
+				flattenInto(v, value.(map[string]any), PropertyNameToColumnName(p.Name), p.Type)
 				continue
 			}
 			serialize(value, p.Type)
+			if name := PropertyNameToColumnName(p.Name); name != p.Name {
+				v[name] = v[p.Name]
+				delete(v, p.Name)
+			}
 			continue
 		}
 	case types.ArrayKind:
@@ -221,10 +284,10 @@ func flattenInto(dst, obj map[string]any, prefix string, t types.Type) {
 	for name, value := range obj {
 		p, _ := t.Property(name)
 		if p.Type.Kind() == types.ObjectKind {
-			flattenInto(dst, value.(map[string]any), prefix+"_"+name, p.Type)
+			flattenInto(dst, value.(map[string]any), prefix+"_"+PropertyNameToColumnName(name), p.Type)
 			continue
 		}
 		serialize(value, p.Type)
-		dst[prefix+"_"+name] = value
+		dst[prefix+"_"+PropertyNameToColumnName(name)] = value
 	}
 }

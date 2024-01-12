@@ -105,7 +105,7 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 	defer usersLock.Unlock()
 	u := map[string]any{}
 	id := newUserID()
-	u["dummy_id"] = id
+	u["dummyId"] = id
 	for name, value := range user {
 		u[name] = value
 	}
@@ -127,8 +127,8 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 			Description: "Send an Add to Cart event to Dummy",
 			Schema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
-				{Name: "item_name", Type: types.Text()},
-				{Name: "item_id", Type: types.Int(32)},
+				{Name: "itemName", Type: types.Text()},
+				{Name: "itemId", Type: types.Int(32)},
 			}),
 		},
 		{
@@ -291,7 +291,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 	if !ok {
 		u = map[string]any{}
 	}
-	u["dummy_id"] = id
+	u["dummyId"] = id
 	for name, value := range user {
 		u[name] = value
 	}
@@ -302,12 +302,12 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 }
 
 var userSchema = types.Object([]types.Property{
-	{Name: "dummy_id", Type: types.Text(), Role: types.SourceRole},
+	{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
 	{Name: "email", Type: types.Text()},
-	{Name: "first_name", Type: types.Text()},
-	{Name: "full_name", Type: types.Text()},
-	{Name: "last_name", Type: types.Text()},
-	{Name: "favourite_drink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
+	{Name: "firstName", Type: types.Text()},
+	{Name: "fullName", Type: types.Text()},
+	{Name: "lastName", Type: types.Text()},
+	{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
 })
 
 // UserSchema returns the user schema.
@@ -352,7 +352,7 @@ func init() {
 	allUsers = make(map[string]map[string]any, len(rawUsers))
 	usersTimestamps = make(map[string]time.Time, len(rawUsers))
 	for _, u := range rawUsers {
-		u.Properties["dummy_id"] = u.ID
+		u.Properties["dummyId"] = u.ID
 		allUsers[u.ID] = u.Properties
 		usersTimestamps[u.ID] = time.Now().UTC()
 	}

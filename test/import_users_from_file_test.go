@@ -60,13 +60,13 @@ func TestImportUsersFromFile(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 			}),
 			"OutSchema": types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
 				{Name: "email", Type: types.Text()},
 			}),
 			"Transformation": map[string]any{
 				"Mapping": map[string]string{
-					"first_name": "name",
-					"email":      "email",
+					"firstName": "name",
+					"email":     "email",
 				},
 			},
 			"IdentityColumn": "identity",
