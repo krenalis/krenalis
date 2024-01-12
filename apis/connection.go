@@ -174,32 +174,31 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
-			var ok bool
-			usersIdentities, ok := schemas["users_identities"]
-			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
-			}
 			if c.Role == state.Source {
+				usersIdentities, ok := schemas["users_identities"]
+				if !ok {
+					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
+				}
 				return &ActionSchemas{In: schema, Out: usersIdentities}, nil
+			} else {
+				users, ok := schemas["users"]
+				if !ok {
+					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+				}
+				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
+				if err != nil {
+					return nil, err
+				}
+				actionSchemas := &ActionSchemas{
+					In:  users,
+					Out: schema,
+				}
+				actionSchemas.Matchings = &ActionSchemasMatchings{
+					Internal: onlyForMatching(users),
+					External: onlyForMatching(sourceSchema),
+				}
+				return actionSchemas, nil
 			}
-			// Role is destination.
-			users, ok := schemas["users"]
-			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-			}
-			sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
-			if err != nil {
-				return nil, err
-			}
-			actionSchemas := &ActionSchemas{
-				In:  usersIdentities,
-				Out: schema,
-			}
-			actionSchemas.Matchings = &ActionSchemasMatchings{
-				Internal: onlyForMatching(users),
-				External: onlyForMatching(sourceSchema),
-			}
-			return actionSchemas, nil
 		case Groups:
 			var err error
 			schema, err := this.app().Schema(ctx, state.Groups, "")
