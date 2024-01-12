@@ -153,6 +153,7 @@ func TestColumnsCommonPrefix(t *testing.T) {
 		{[]string{"a_b_", "a_c"}, "a_", 2},
 		{[]string{"a_b", "a_c_"}, "a_", 2},
 		{[]string{"a_b_", "a_c_"}, "a_", 2},
+		{[]string{"_a_b", "_a_c", "_b"}, "_a_", 2},
 
 		// without prefix.
 		{[]string{"a"}, "", 0},
@@ -170,6 +171,7 @@ func TestColumnsCommonPrefix(t *testing.T) {
 		{[]string{"_a", "a_b"}, "", 0},
 		{[]string{"a_b", "_a"}, "", 0},
 		{[]string{"a", "a_", "a_b"}, "", 0},
+		{[]string{"_a", "_b", "_c"}, "", 0},
 	}
 
 	for _, test := range tests {

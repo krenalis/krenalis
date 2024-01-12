@@ -95,7 +95,7 @@ Columns:
 			name := columns[k].Name
 			if i < len(name)-1 && name[i] == c {
 				// continue with the next column.
-				if c == '_' {
+				if i > 0 && c == '_' {
 					prefix = first[:i+1]
 				}
 				continue
