@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"chichi/apis/connectors"
@@ -178,7 +179,10 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
-				return &ActionSchemas{In: schema, Out: usersIdentities}, nil
+				return &ActionSchemas{
+					In:  schema,
+					Out: removeMetaProperties(usersIdentities),
+				}, nil
 			} else {
 				users, ok := schemas["users"]
 				if !ok {
@@ -189,7 +193,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, err
 				}
 				actionSchemas := &ActionSchemas{
-					In:  users,
+					In:  users, // don't remove meta-properties here, they may be useful in transformations.
 					Out: schema,
 				}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -204,15 +208,33 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
-			var ok bool
-			grSchema, ok := schemas["groups"]
-			if !ok {
-				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
-			}
 			if c.Role == state.Source {
-				return &ActionSchemas{In: schema, Out: grSchema}, nil
+				groupsIdentities, ok := schemas["groups_identities"]
+				if !ok {
+					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
+				}
+				return &ActionSchemas{
+					In:  schema,
+					Out: removeMetaProperties(groupsIdentities),
+				}, nil
 			} else {
-				return &ActionSchemas{In: grSchema, Out: schema}, nil
+				groups, ok := schemas["groups"]
+				if !ok {
+					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+				}
+				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
+				if err != nil {
+					return nil, err
+				}
+				actionSchemas := &ActionSchemas{
+					In:  groups, // don't remove meta-properties here, they may be useful in transformations.
+					Out: schema,
+				}
+				actionSchemas.Matchings = &ActionSchemasMatchings{
+					Internal: onlyForMatching(groups),
+					External: onlyForMatching(sourceSchema),
+				}
+				return actionSchemas, nil
 			}
 		case Events:
 			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
@@ -226,15 +248,17 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
-				out := usersIdentities
-				return &ActionSchemas{Out: out}, nil
+				return &ActionSchemas{
+					Out: removeMetaProperties(usersIdentities),
+				}, nil
 			} else {
 				users, ok := schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
-				in := users
-				return &ActionSchemas{In: in}, nil
+				return &ActionSchemas{
+					In: users, // don't remove meta-properties here, they may be useful in transformations.
+				}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
@@ -242,15 +266,17 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
-				out := groupsIdentities
-				return &ActionSchemas{Out: out}, nil
+				return &ActionSchemas{
+					Out: removeMetaProperties(groupsIdentities),
+				}, nil
 			} else {
 				groups, ok := schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
-				in := groups
-				return &ActionSchemas{In: in}, nil
+				return &ActionSchemas{
+					In: groups, // don't remove meta-properties here, they may be useful in transformations.
+				}, nil
 			}
 		}
 
@@ -262,15 +288,17 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 				}
-				out := usersIdentities
-				return &ActionSchemas{Out: out}, nil
+				return &ActionSchemas{
+					Out: removeMetaProperties(usersIdentities),
+				}, nil
 			} else {
 				users, ok := schemas["users"]
 				if !ok {
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
-				in := users
-				return &ActionSchemas{In: in}, nil
+				return &ActionSchemas{
+					In: users, // don't remove meta-properties here, they may be useful in transformations.
+				}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
@@ -278,15 +306,17 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 				}
-				out := groupsIdentities
-				return &ActionSchemas{Out: out}, nil
+				return &ActionSchemas{
+					Out: removeMetaProperties(groupsIdentities),
+				}, nil
 			} else {
 				groups, ok := schemas["groups"]
 				if !ok {
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
-				in := groups
-				return &ActionSchemas{In: in}, nil
+				return &ActionSchemas{
+					In: groups, // don't remove meta-properties here, they may be useful in transformations.
+				}, nil
 			}
 		}
 
@@ -300,15 +330,19 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
-			out := usersIdentities
-			return &ActionSchemas{In: events.Schema, Out: out}, nil
+			return &ActionSchemas{
+				In:  events.Schema,
+				Out: removeMetaProperties(usersIdentities),
+			}, nil
 		case Groups:
 			groupsIdentities, ok := schemas["groups_identities"]
 			if !ok {
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
-			out := groupsIdentities
-			return &ActionSchemas{In: events.Schema, Out: out}, nil
+			return &ActionSchemas{
+				In:  events.Schema,
+				Out: removeMetaProperties(groupsIdentities),
+			}, nil
 		}
 		return &ActionSchemas{}, nil
 
@@ -1763,6 +1797,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
 		return errors.BadRequest("action cannot have both mappings and transformation")
 	}
+	// The output schema cannot contain meta-properties.
+	if action.OutSchema.Valid() {
+		for _, p := range action.OutSchema.Properties() {
+			if isMetaProperty(p) {
+				return errors.BadRequest("output schema cannot contain meta-properties")
+			}
+		}
+	}
 	// Validate the mapping.
 	var usedOutPaths []types.Path
 	if mapping := action.Transformation.Mapping; mapping != nil && len(mapping) > 0 {
@@ -2173,6 +2215,14 @@ func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
+// isMetaProperty reports whether p is a meta-property.
+func isMetaProperty(p types.Property) bool {
+	for _, r := range p.Name {
+		return unicode.IsUpper(r)
+	}
+	return false
+}
+
 // validateTimestampFormat validates the given timestamp format for importing
 // files, returning an error in case the format is not valid.
 //
@@ -2271,6 +2321,20 @@ func onlyForMatching(schema types.Type) types.Type {
 		return types.Type{}
 	}
 	return types.Object(props)
+}
+
+// removeMetaProperties removes the meta-properties from the schema and returns
+// it a new schema.
+func removeMetaProperties(schema types.Type) types.Type {
+	props := schema.Properties()
+	noMetaProps := make([]types.Property, 0, len(props))
+	for _, p := range props {
+		if isMetaProperty(p) {
+			continue
+		}
+		noMetaProps = append(noMetaProps, p)
+	}
+	return types.Object(noMetaProps)
 }
 
 // statsTimeSlot returns the stats time slot for the time t.

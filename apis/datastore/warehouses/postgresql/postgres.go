@@ -338,7 +338,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 
 	// Delete the orphan user identities, which are the identities that belong
 	// to actions that no longer exist.
-	b.WriteString(`DELETE FROM "users_identities" WHERE "__action__" NOT IN (`)
+	b.WriteString(`DELETE FROM "users_identities" WHERE "_action" NOT IN (`)
 	for i, action := range actions {
 		if i > 0 {
 			b.WriteByte(',')

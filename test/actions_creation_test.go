@@ -65,16 +65,16 @@ func TestActionsCreation(t *testing.T) {
 					"Path": "users.csv",
 					"InSchema": types.Object([]types.Property{
 						{Name: "identity", Type: types.Text()},
-						{Name: "email", Type: types.Text()},
+						{Name: "Email", Type: types.Text()},
 						{Name: "timestamp", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email":     "email",
+							"email":     "Email",
 							"timestamp": "timestamp",
 						},
 					},
@@ -93,7 +93,7 @@ func TestActionsCreation(t *testing.T) {
 					"Path": "users.csv",
 					"InSchema": types.Object([]types.Property{
 						{Name: "identity", Type: types.Text()},
-						{Name: "email", Type: types.Text()},
+						{Name: "Email", Type: types.Text()},
 						{Name: "timestamp", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
@@ -102,7 +102,36 @@ func TestActionsCreation(t *testing.T) {
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email":     "email",
+							"Email":     "Email",
+							"timestamp": "timestamp",
+						},
+					},
+					"IdentityColumn":  "identity",
+					"TimestampColumn": "timestamp",
+					"TimestampFormat": "'%Y-%m-%d %H:%M:%S'",
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta-properties"}}`,
+		},
+		{
+			conn: csvConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name": "Import users from CSV on Filesystem",
+					"Path": "users.csv",
+					"InSchema": types.Object([]types.Property{
+						{Name: "identity", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
+						{Name: "timestamp", Type: types.Text()},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+						{Name: "timestamp", Type: types.DateTime()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"email":     "email",
 							"timestamp": "timestamp",
 						},
 					},
@@ -124,12 +153,12 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "timestamp", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email":     "email",
+							"email":     "email",
 							"timestamp": "timestamp",
 						},
 					},
@@ -151,12 +180,12 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "timestamp", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email":     "email",
+							"email":     "email",
 							"timestamp": "timestamp",
 						},
 					},
@@ -177,11 +206,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email": "email",
+							"email": "email",
 						},
 					},
 					"IdentityColumn":  "email",
@@ -215,11 +244,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email": "email",
+							"email": "email",
 						},
 					},
 					"IdentityColumn":  "email",
@@ -240,11 +269,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "email", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email": "email",
+							"email": "email",
 						},
 					},
 				},
@@ -263,11 +292,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "email", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email": "email",
+							"email": "email",
 						},
 					},
 				},
@@ -286,11 +315,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "timestamp", Type: types.Text()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email": "email",
+							"email": "email",
 						},
 					},
 				},
@@ -310,11 +339,11 @@ func TestActionsCreation(t *testing.T) {
 						{Name: "timestamp", Type: types.DateTime()},
 					}),
 					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
+						{Name: "email", Type: types.Text()},
 					}),
 					"Transformation": map[string]any{
 						"Mapping": map[string]string{
-							"Email": "email",
+							"email": "email",
 						},
 					},
 				},

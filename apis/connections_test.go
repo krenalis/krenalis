@@ -10,7 +10,28 @@ package apis
 import (
 	"errors"
 	"testing"
+
+	"chichi/connector/types"
 )
+
+func Test_isMetaProperty(t *testing.T) {
+	tests := []struct {
+		p        types.Property
+		expected bool
+	}{
+		{types.Property{}, false}, // invalid property, shouldn't happen.
+		{types.Property{Name: "a", Type: types.Int(32)}, false},
+		{types.Property{Name: "hello", Type: types.Int(32)}, false},
+		{types.Property{Name: "Hello", Type: types.Int(32)}, true},
+		{types.Property{Name: "HeyTest", Type: types.Int(32)}, true},
+	}
+	for _, test := range tests {
+		got := isMetaProperty(test.p)
+		if test.expected != got {
+			t.Errorf("%#v: expected %t, got %t", test.p, test.expected, got)
+		}
+	}
+}
 
 func Test_ReplacePlaceHolders(t *testing.T) {
 

@@ -7,12 +7,13 @@ CREATE TYPE music_genre AS ENUM('pop', 'rock', 'blues', 'classical');
 
 CREATE TABLE users_identities (
 
-    "__identity_id__"   serial,
-    "__action__"        int,
-    "__external_id__"   text,
-    "__anonymous_ids__" text[],
+    "_identity_id"   serial,
+    "_action"        int,
+    "_external_id"   text,
+    "_anonymous_ids" text[],
+    "_timestamp"     timestamp NOT NULL DEFAULT now(),
+    
     "__cluster__"       serial,
-    "__timestamp__"     timestamp NOT NULL DEFAULT now(),
 
     -- User properties.
     "dummy_id"                          text,
@@ -37,7 +38,7 @@ CREATE TABLE users_identities (
     "favorite_movie_soundtrack_length"  double precision,
     "favorite_movie_soundtrack_genre"   music_genre,
     
-    PRIMARY KEY ("__identity_id__")
+    PRIMARY KEY ("_identity_id")
 );
 
 CREATE TABLE users (

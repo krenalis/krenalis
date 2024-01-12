@@ -32,8 +32,8 @@ AS $$
     INSERT INTO
         matchings(i1, i2, match)
     SELECT
-        i1.__identity_id__,
-        i2.__identity_id__,
+        i1._identity_id,
+        i2._identity_id,
         
         -- This placeholder will be replaced by Chichi:
         {{ matching_expr }} as match
@@ -42,7 +42,7 @@ AS $$
             CROSS JOIN
         users_identities i2
     WHERE
-        i1.__identity_id__ < i2.__identity_id__;
+        i1._identity_id < i2._identity_id;
     
     -- Do the clustering.
     DO $clustering$
@@ -61,8 +61,8 @@ AS $$
                 i2.__cluster__ c2
             FROM
                 matchings m
-                JOIN users_identities i1 ON m.i1 = i1.__identity_id__
-                JOIN users_identities i2 ON m.i2 = i2.__identity_id__
+                JOIN users_identities i1 ON m.i1 = i1._identity_id
+                JOIN users_identities i2 ON m.i2 = i2._identity_id
             WHERE
                 m.match
                 AND i1.__cluster__ <> i2.__cluster__;
@@ -94,7 +94,7 @@ AS $$
                         source
                 ) new_clusters ON new_clusters.source = identities_b.__cluster__
             WHERE
-                identities_a.__identity_id__ = identities_b.__identity_id__;
+                identities_a._identity_id = identities_b._identity_id;
 
         END LOOP;
 

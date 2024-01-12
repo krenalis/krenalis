@@ -107,17 +107,17 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	var args []any
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
-			query = "SELECT __identity_id__ FROM users_identities WHERE " +
-				"$1 IN __anonymous_ids__ ORDER BY __timestamp__, __identity_id__"
+			query = "SELECT _identity_id FROM users_identities WHERE " +
+				"$1 IN _anonymous_ids ORDER BY _timestamp, _identity_id"
 			args = []any{anonID}
 		} else {
-			query = "SELECT __identity_id__ FROM users_identities WHERE " +
-				"(__external_id__ = $1) OR ($2 = ANY(__anonymous_ids__)) ORDER BY __timestamp__, __identity_id__"
+			query = "SELECT _identity_id FROM users_identities WHERE " +
+				"(_external_id = $1) OR ($2 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
 			args = []any{id, anonID}
 		}
 	} else { // app, file or database.
-		query = "SELECT __identity_id__ FROM users_identities WHERE " +
-			"__external_id__ = $1 ORDER BY __timestamp__, __identity_id__"
+		query = "SELECT _identity_id FROM users_identities WHERE " +
+			"_external_id = $1 ORDER BY _timestamp, _identity_id"
 		args = []any{id}
 	}
 	var matchingIdentities []int
@@ -146,11 +146,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	warehouses.SerializeRow(newIdentity, schema)
 
-	newIdentity["__action__"] = action
-	newIdentity["__external_id__"] = id
-	newIdentity["__timestamp__"] = timestamp.Format(time.DateTime)
+	newIdentity["_action"] = action
+	newIdentity["_external_id"] = id
+	newIdentity["_timestamp"] = timestamp.Format(time.DateTime)
 	if anonID != "" {
-		newIdentity["__anonymous_ids__"] = []string{anonID}
+		newIdentity["_anonymous_ids"] = []string{anonID}
 	}
 
 	b := strings.Builder{}
@@ -174,7 +174,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(strconv.Itoa(i + 1))
 		values[i] = newIdentity[name]
 	}
-	b.WriteString(") RETURNING __identity_id__")
+	b.WriteString(") RETURNING _identity_id")
 	err = db.QueryRow(ctx, b.String(), values...).Scan(&newIdentityID)
 	if err != nil {
 		return warehouses.Error(err)
@@ -197,16 +197,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Merge the anonymous IDS.
 	b.Reset()
-	b.WriteString(`UPDATE users_identities SET __anonymous_ids__ = (
-		SELECT array_agg(anon_ids.ids) as __anonymous_ids__
+	b.WriteString(`UPDATE users_identities SET _anonymous_ids = (
+		SELECT array_agg(anon_ids.ids) as _anonymous_ids
 		FROM (
-			SELECT unnest("__anonymous_ids__") as ids
+			SELECT unnest("_anonymous_ids") as ids
 			FROM users_identities
-			WHERE __identity_id__ IN (`)
+			WHERE _identity_id IN (`)
 	b.WriteString(idsStr.String())
-	b.WriteString(`) AND __anonymous_ids__ IS NOT NULL
+	b.WriteString(`) AND _anonymous_ids IS NOT NULL
 			) AS anon_ids
-		) WHERE __identity_id__ = $1`)
+		) WHERE _identity_id = $1`)
 	_, err = db.Exec(ctx, b.String(), newIdentityID)
 	if err != nil {
 		return warehouses.Error(err)
@@ -217,7 +217,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	b.WriteString("UPDATE users_identities SET ")
 	comma := false
 	for _, p := range properties {
-		if p == "__action__" || p == "__anonymous_ids__" || p == "__external_id__" || p == "__timestamp__" {
+		if p == "_action" || p == "_anonymous_ids" || p == "_external_id" || p == "_timestamp" {
 			continue
 		}
 		if comma {
@@ -229,12 +229,12 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" FROM users_identities WHERE "`)
 		b.WriteString(p)
-		b.WriteString(`" IS NOT NULL AND __identity_id__ IN (`)
+		b.WriteString(`" IS NOT NULL AND _identity_id IN (`)
 		b.WriteString(idsStr.String())
-		b.WriteString(") ORDER BY __timestamp__ DESC, __identity_id__ DESC LIMIT 1)\n")
+		b.WriteString(") ORDER BY _timestamp DESC, _identity_id DESC LIMIT 1)\n")
 		comma = true
 	}
-	b.WriteString(` WHERE __identity_id__ = $1`)
+	b.WriteString(` WHERE _identity_id = $1`)
 	_, err = db.Exec(ctx, b.String(), newIdentityID)
 	if err != nil {
 		return warehouses.Error(err)
@@ -249,7 +249,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		idsToDelete.WriteString(strconv.Itoa(id))
 	}
 	b.Reset()
-	b.WriteString("DELETE FROM users_identities WHERE __identity_id__ IN (")
+	b.WriteString("DELETE FROM users_identities WHERE _identity_id IN (")
 	b.WriteString(idsToDelete.String())
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())
