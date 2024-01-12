@@ -375,7 +375,7 @@ func testConnection(ctx context.Context, settings *settings) error {
 	defer client.close()
 	if settings.TempPath != "" {
 		if _, ok := client.sftp.HasExtension("posix-rename@openssh.com"); !ok {
-			ui.Errorf("temporary directory path must be empty because the server does not support posix-rename")
+			return ui.Errorf("temporary directory path must be empty because the server does not support posix-rename")
 		}
 	}
 	return nil
