@@ -50,7 +50,7 @@ func Test_ReplacePlaceHolders(t *testing.T) {
 			got, err := replacePlaceholders(test.s, replacer)
 			if err != nil {
 				if test.err == nil {
-					t.Fatalf("exepcted no errors, got error %s", err)
+					t.Fatalf("expected no errors, got error %s", err)
 				}
 				if test.err.Error() != err.Error() {
 					t.Fatalf("expected error %q, got error %q", test.err, err)
@@ -58,10 +58,10 @@ func Test_ReplacePlaceHolders(t *testing.T) {
 				return
 			}
 			if test.err != nil {
-				t.Fatalf("exepcted error %q, got no errors", test.err)
+				t.Fatalf("expected error %q, got no errors", test.err)
 			}
 			if got != test.expected {
-				t.Fatalf("exepcted %q, got %s", test.expected, got)
+				t.Fatalf("expected %q, got %s", test.expected, got)
 			}
 		})
 	}
