@@ -49,7 +49,7 @@ var (
 
 const (
 	MaxDecimalPrecision = 76             // Maximum precision for a Decimal type
-	MaxDecimalScale     = 38             // Maximum scale for a Decimal type
+	MaxDecimalScale     = 37             // Maximum scale for a Decimal type
 	MaxItems            = math.MaxInt32  // Maximum number of items of an Array type
 	MaxTextLen          = math.MaxUint32 // Maximum length in bytes and characters for a Text type
 	MaxYear             = 9999           // Maximum year for DataTime, Date and Year types
