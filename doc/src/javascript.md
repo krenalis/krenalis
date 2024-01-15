@@ -22,5 +22,5 @@ The table below outlines the various Chichi types and their corresponding repres
 | `Inet`           | `String`             | `'172.16.254.1'`                         |
 | `Text`           | `String`             | `'123 Main Street'`                      |
 | `Array`          | `Array`              | `[472,182,604]`                          |
-| `Object`         | `Object`             | `{fistName:'Emily',lastName:'Johnson}`   |
+| `Object`         | `Object`             | `{fistName:'Emily',lastName:'Johnson'}`  |
 | `Map`            | `Object`             | `{'a':8073,'c':206}`                     |

@@ -16,7 +16,7 @@ The table below outlines the various Chichi types and their corresponding repres
 | `Time`           | `datetime.time`     | `time(8,51,49,822309)`                         |
 | `Year`           | `int`               | `2024`                                         |
 | `UUID`           | `uuid.UUID`         | `UUID('f956622d-c421-4eca-8d20-efef87f9749c')` |
-| `JSON`           | `str`               | `'{'score':10}'`                               |
+| `JSON`           | `str`               | `'{"score":10}'`                               |
 | `Inet`           | `str`               | `'172.16.254.1'`                               |
 | `Text`           | `str`               | `'123 Main Street'`                            |
 | `Array`          | `list`              | `[472,182,604]`                                |
