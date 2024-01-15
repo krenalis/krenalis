@@ -114,6 +114,9 @@ const Members = () => {
 									name={
 										<div className='members__member-name'>
 											{member.Name}
+											{member.Email === loggedMember.Email && (
+												<SlBadge variant='neutral'>You</SlBadge>
+											)}
 											{member.Invitation !== '' && <SlBadge variant='neutral'>Invited</SlBadge>}
 											{member.Invitation === 'Expired' && (
 												<SlBadge variant='danger'>Invitation expired</SlBadge>
