@@ -97,7 +97,9 @@ const ActionPath = () => {
 			setIsFileChanged(false);
 		}
 		a.Path = path;
-		a.Sheet = '';
+		if (a.Sheet != null) {
+			a.Sheet = '';
+		}
 		setAction(a);
 		setCompletePath('');
 		setCompletePathError('');
@@ -321,8 +323,8 @@ const ActionPath = () => {
 				</div>
 				<div className={`completePath${completePath !== '' ? ' visible' : ''}`}>{completePath}</div>
 			</div>
-			{actionType.Fields.includes('Sheet') && (
-				<>
+			{actionType.Fields.includes('Sheet') &&
+				(connection.role === 'Source' ? (
 					<div className='sheetsSelectWrapper'>
 						<SlSelect
 							onSlFocus={onSheetsLoad}
@@ -358,8 +360,16 @@ const ActionPath = () => {
 							Reload
 						</SlButton>
 					</div>
-				</>
-			)}
+				) : (
+					<SlInput
+						className='sheetsInput'
+						name='input'
+						value={action.Sheet!}
+						label='Sheet'
+						type='text'
+						onSlInput={onUpdateSheet}
+					/>
+				))}
 			{isImport && (
 				<div className='fileButtons'>
 					<SlButton variant='neutral' size='small' onClick={onFilePreview}>

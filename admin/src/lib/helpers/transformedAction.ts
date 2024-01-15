@@ -397,6 +397,20 @@ const transformInActionToSet = async (
 		query = action.Query.trim();
 	}
 
+	if (action.Sheet != null) {
+		const s = action.Sheet;
+		if (s.length < 1 || s.length > 31) {
+			throw 'Sheet must be in range [1, 31]';
+		}
+		if (s.startsWith("'") || s.endsWith("'")) {
+			throw 'Sheet must not start or end with a single quote';
+		}
+		const forbiddenChars = /[*\/:?[\]\\]/;
+		if (forbiddenChars.test(s)) {
+			throw 'Sheet must be valid';
+		}
+	}
+
 	const actionToSet: ActionToSet = {
 		name: action.Name,
 		enabled: action.Enabled,

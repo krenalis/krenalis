@@ -232,7 +232,7 @@ const useAction = (
 			hasQueryError ||
 			isQueryChanged ||
 			hasRecordsError ||
-			(isFileChanged && !(connection.role === 'Destination' && !connection.connector.hasSheets)) ||
+			(isFileChanged && connection.role === 'Source') ||
 			hasTableError ||
 			isTableChanged;
 
