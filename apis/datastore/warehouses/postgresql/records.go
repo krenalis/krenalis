@@ -53,6 +53,13 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		return nil, 0, errors.New("schema must be valid")
 	}
 
+	// Transform the ID and the OrderBy properties into columns.
+	idColumn := warehouses.PropertiesToColumns([]types.Property{query.ID})[0]
+	var orderByColumn types.Property
+	if query.OrderBy.Name != "" {
+		orderByColumn = warehouses.PropertiesToColumns([]types.Property{query.OrderBy})[0]
+	}
+
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, 0, err
@@ -157,7 +164,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	}
 	removeIDFromProps := false
 	if !hasID {
-		columns = append([]types.Property{query.ID}, columns...)
+		columns = append([]types.Property{idColumn}, columns...)
 		// Since the ID has been added to the columns just to determine the
 		// records IDs, and it is now explicitly requested by the user, it must
 		// be removed from the returned properties.
@@ -210,9 +217,9 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		b.WriteString(whereExpr)
 	}
 
-	if query.OrderBy.Name != "" {
+	if orderByColumn.Name != "" {
 		b.WriteString(" ORDER BY ")
-		b.WriteString(query.OrderBy.Name)
+		b.WriteString(orderByColumn.Name)
 		if query.OrderDesc {
 			b.WriteString(" DESC")
 		}
