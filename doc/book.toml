@@ -1,0 +1,6 @@
+[book]
+title = "Chichi Documentation"
+language = "en"
+
+[output.html]
+git-repository-url = "https://github.com/open2b/chichi/doc"

@@ -1,0 +1,181 @@
+# Mapping
+
+Mapping serves as an effortlessly simple data transformation method, designed with a focus on simplicity. It doesn't demand additional dependencies or mastery of programming languages like JavaScript or Python
+
+It's the quickest and most efficient method because it doesn't need to call external functions. Instead, it uses a fast expression engine built into Chichi.
+
+However, for much more complex use cases, a more powerful language is recommended, such as JavaScript and Python.
+
+## Map properties
+
+For each output property, you can provide an expression whose evaluation provides its value. In the expression you can refer the input properties.
+
+As an example, the following mapping maps the `first_name` and `last_name` properties from the input to the `firstName` and `lastName` properties of the output, respectively. The output property `email` remains unmapped.
+
+```
+┌─────────────────────────────────┐
+│ first_name                      │ ->  firstName  
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ last_name                       │ ->  lastName  
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│                                 │ ->  email  
+└─────────────────────────────────┘
+```
+
+With this mapping, the input:
+```
+first_name: "Emma"
+last_name: "Johnson"
+email: "emma.johnson@example.com"
+```
+will become:
+```
+firstName: "Emma"
+lastName: "Johnson"
+```
+
+### Constants
+
+You can use constant values such as strings, numbers, and booleans:
+```
+┌─────────────────────────────────┐
+│ "on"                            │ ->  status  
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 50                              │ ->  score  
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ true                            │ ->  active  
+└─────────────────────────────────┘
+```
+
+Strings can also be written with single quotes:
+```
+┌─────────────────────────────────┐
+│ 'on'                            │ ->  status  
+└─────────────────────────────────┘
+```
+
+To include a single or double quote within a string, simply prefix the quote with a backslash:
+```
+┌─────────────────────────────────┐
+│ 'O\'Connor'                     │ ->  lastName  
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ "123 Main Street, \"Apt 4B\""   │ ->  street  
+└─────────────────────────────────┘
+```
+
+### Concatenation
+
+Properties, strings, numbers and booleans can be concatenated by writing them one after the other.
+
+```
+┌─────────────────────────────────┐
+│ first_name " " last_name        │ ->  fullName  
+└─────────────────────────────────┘
+```
+
+With this mapping, the input:
+```
+first_name: "Emma"
+last_name: "Johnson"
+```
+will become:
+```
+fullName: "Emma Johnson"
+```
+
+### Sub-properties, map keys and JSON Object keys
+
+
+In expressions, you can reference sub-properties, map keys, and JSON object keys using either a dot or square brackets:
+```
+┌─────────────────────────────────┐
+│ address.city                    │ ->  city  
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ properties["birth day"]         │ ->  birthDay  
+└─────────────────────────────────┘
+```
+
+### Functions
+
+In expressions, you can use some functions to do slightly more complex tasks.
+
+For instance, consider a scenario where the input property `marital_status` is `null`, indicating an unknown marital status. You must map this property to the non-nullable output property `maritalStatus`. To address this situation, you could use the `coalesce` function, which returns the first non-null argument:
+```
+┌─────────────────────────────────────┐
+│ coalesce(marital_status, "Unknown") │ ->  maritalStatus  
+└─────────────────────────────────────┘
+```
+
+With this mapping, the input:
+```
+marital_status: null
+```
+will become:
+```
+maritalStatus: "Unknown"
+```
+
+Below is a list of available functions:
+
+#### and function
+
+The `and` function returns `true` only when all of its arguments are `true`; otherwise, it returns `false`. For example:
+```
+┌─────────────────────────────────┐
+│ and(active, newsletter_consent) │ ->  marketingConsent  
+└─────────────────────────────────┘
+```
+
+The arguments for `and` should be of boolean (`Boolean` type), and the returned value is also a boolean (`Boolean` type).
+
+#### array function
+
+The `array` function returns an array with the passed arguments as elements.  For example:
+```
+┌─────────────────────────────────┐
+│ array(email, company.email)     │ ->  emails  
+└─────────────────────────────────┘
+```
+
+The `array` function returns a value in the form of a JSON array (`Array(JSON)` type).
+
+#### coalesce function
+
+The `coalesce` function returns the first non-null argument, or `null` if all arguments are `null`.  For example:
+
+```
+┌───────────────────────────────────────────┐
+│ coalesce(shippingAddress, billingAddress) │ ->  shipAddress  
+└───────────────────────────────────────────┘
+```
+
+The `coalesce` function returns a value in the form of a JSON value (`JSON` type).
+
+#### eq function
+
+The `eq` function takes two values and returns `true` if they are equal; otherwise, it returns `false`. For example:
+```
+┌─────────────────────────────────┐
+│ eq(level, "VIP")                │ ->  vipCustomer
+└─────────────────────────────────┘
+```
+
+The `eq` function returns a boolean value (`Boolean` type).
+
+
+#### when function
+
+The `when` function evaluates the first boolean argument; if it is `true`, it returns the second argument; otherwise, the output property will not have a value as if it had not been mapped. For example:
+```
+┌─────────────────────────────────┐
+│ when(hasCode, code)             │ ->  code
+└─────────────────────────────────┘
+```
+
+The second argument, if the first argument is `true`, is returned in the form of a JSON value (`JSON` type).
