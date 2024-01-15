@@ -28,9 +28,9 @@ The table below provides a list of supported types in a PostgreSQL data warehous
 | `jsonb`                       | `JSON`            |
 | `T[]` [^2]                    | `Array(T's type)` |
 
-[^1] `decimal(p,s)` and `numeric(p,s)` are supported if `p` is in range [1, 76] and `s` is in range [0, 37].
+[^1]: `decimal(p,s)` and `numeric(p,s)` are supported if `p` is in range [1, 76] and `s` is in range [0, 37].
 
-[^2] `T[]` is supported if `T` is supported.
+[^2]: `T[]` is supported if `T` is supported.
 
 ## Requirements
 

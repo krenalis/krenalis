@@ -35,13 +35,13 @@ The table below provides a list of supported types in a ClickHouse data warehous
 | `IPv4`                   | `Inet`         |
 | `IPv6`                   | `Inet`         |
 
-[^1] Scale `s` must be in range [0, 37]. 
+[^1]: Scale `s` must be in range [0, 37]. 
 
-[^2] `LowCardinality(T)` is supported if `T` is supported.
+[^2]: `LowCardinality(T)` is supported if `T` is supported.
 
-[^3] `Map(key,value)` is supported only for `String` keys.
+[^3]: `Map(key,value)` is supported only for `String` keys.
 
-[^4] `Nullable(T)` is supported if `T` is supported. Properties of `Nullable(T)` columns are nullable.
+[^4]: `Nullable(T)` is supported if `T` is supported. Properties of `Nullable(T)` columns are nullable.
 
 ### Aliases
 
