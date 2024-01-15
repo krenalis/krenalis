@@ -157,7 +157,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 	}
 	hasID := false
 	for _, c := range columns {
-		if c.Name == query.ID.Name {
+		if c.Name == idColumn.Name {
 			hasID = true
 			break
 		}
