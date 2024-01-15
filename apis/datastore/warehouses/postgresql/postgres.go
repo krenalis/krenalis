@@ -167,6 +167,8 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 // key values of rows to delete, if they exist.
 // rows or deleted can be empty but not both, and both may be changed by this
 // method.
+// If the table schema is not conform to the schema of the table on the data
+// warehouse, this method returns a *SchemaError error.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
 
 	db, err := warehouse.connection()
@@ -179,6 +181,17 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	columns := warehouses.PropertiesToColumns(table.Properties)
 	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
+
+	// Check the conformity of the passed table schema with the schema of the
+	// table on the data warehouse.
+	ti, err := warehouse.tableInfo(ctx, table.Name, false)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	err = warehouses.CheckConformity("", tableSchema, ti.schema)
+	if err != nil {
+		return err
+	}
 
 	var b strings.Builder
 

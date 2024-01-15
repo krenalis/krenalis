@@ -128,6 +128,9 @@ type IdentitiesWriter = warehouses.IdentitiesWriter
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
+// If the schema specified is not conform to the schema of the table
+// 'users_identities' in the data warehouse, calls to the method 'Write' of the
+// returned 'IdentitiesWriter' return a *SchemaError error.
 func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) IdentitiesWriter {
 	store.mustBeOpen()
 	return store.warehouse.IdentitiesWriter(ctx, schema, action, fromEvent, ack)

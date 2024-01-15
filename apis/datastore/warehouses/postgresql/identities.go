@@ -25,6 +25,9 @@ import (
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
+// If the schema specified is not conform to the schema of the table
+// 'users_identities' in the data warehouse, calls to the method 'Write' of the
+// returned 'IdentitiesWriter' return a *SchemaError error.
 func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	if ack == nil {
 		panic("ack function is missing")
@@ -84,6 +87,20 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 		iw.err = err
 		return false
 	}
+
+	// Check the conformity of the incoming identity schema with the schema of
+	// the 'users_identities' table on the data warehouse.
+	ti, err := iw.warehouse.tableInfo(ctx, "users_identities", false)
+	if err != nil {
+		iw.err = warehouses.Error(err)
+		return false
+	}
+	err = warehouses.CheckConformity("", iw.schema, ti.schema)
+	if err != nil {
+		iw.err = err
+		return false
+	}
+
 	// TODO(Gianluca): This implementation, instead of returning immediately
 	// after buffering the user identities to be written all together, directly
 	// calls the underlying data warehouse to write. This needs to be optimized

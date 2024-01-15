@@ -116,6 +116,9 @@ func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, pro
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
+// If the schema specified is not conform to the schema of the table
+// 'users_identities' in the data warehouse, calls to the method 'Write' of the
+// returned 'IdentitiesWriter' return a *SchemaError error.
 func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	panic("not implemented")
 }
@@ -131,6 +134,8 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 // key values of rows to delete, if they exist.
 // rows or deleted can be empty but not both, and both may be changed by this
 // method.
+// If the table schema is not conform to the schema of the table on the data
+// warehouse, this method returns a *SchemaError error.
 func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
 
 	db, err := warehouse.connection()

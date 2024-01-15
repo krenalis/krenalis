@@ -54,6 +54,9 @@ type Warehouse interface {
 	// fromEvent indicates if the user identities are imported from an event or not.
 	// ack is the ack function (see the documentation of IdentitiesWriter for more
 	// details about it).
+	// If the schema specified is not conform to the schema of the table
+	// 'users_identities' in the data warehouse, calls to the method 'Write' of the
+	// returned 'IdentitiesWriter' return a *SchemaError error.
 	IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack IdentitiesAckFunc) IdentitiesWriter
 
 	// Init initializes the data warehouse by creating the supporting tables.
@@ -65,6 +68,8 @@ type Warehouse interface {
 	// key values of rows to delete, if they exist.
 	// rows or deleted can be empty but not both, and both may be changed by this
 	// method.
+	// If the table schema is not conform to the schema of the table on the data
+	// warehouse, this method returns a *SchemaError error.
 	Merge(ctx context.Context, table MergeTable, rows []map[string]any, deleted map[string]any) error
 
 	// Ping checks whether the connection to the data warehouse is active and, if
