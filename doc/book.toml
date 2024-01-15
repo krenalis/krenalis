@@ -3,4 +3,4 @@ title = "Chichi Documentation"
 language = "en"
 
 [output.html]
-git-repository-url = "https://github.com/open2b/chichi/doc"
+git-repository-url = "https://github.com/open2b/chichi/tree/main/doc"
