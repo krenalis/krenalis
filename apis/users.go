@@ -136,7 +136,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
 		Schema:     usersSchema,
 		Properties: properties,
-		Where:      expr.NewBaseExpr("id", expr.OperatorEqual, this.id),
+		Where:      expr.NewBaseExpr("Id", expr.OperatorEqual, this.id),
 		Limit:      1,
 	})
 	if err != nil {

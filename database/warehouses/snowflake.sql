@@ -2,7 +2,7 @@
 -- TODO: add the CREATE TABLE for "users_identities".
 
 CREATE TABLE "users" (
-    "id"                     NUMBER,
+    "_id"                    NUMBER,
     "dummy_id"               VARCHAR,
     "anonymous_id"           VARCHAR,
     "android_id"             VARCHAR,
@@ -19,7 +19,7 @@ CREATE TABLE "users" (
     "food_preferences_fruit" VARCHAR,
     "phone_numbers"          ARRAY,
     "favorite_movie"         OBJECT,
-    PRIMARY KEY ("id")
+    PRIMARY KEY ("_id")
 );
 
 -- TODO: add the CREATE TABLE for "groups_identities".

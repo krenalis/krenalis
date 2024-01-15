@@ -6,7 +6,7 @@
 
 CREATE TABLE users
 (
-    `id` Int32,
+    `_id` Int32,
     `dummy_id` String,
     `anonymous_id` String,
     "android_id" String,
@@ -24,8 +24,8 @@ CREATE TABLE users
     `phone_numbers` Array(String)
 )
 ENGINE = MergeTree
-PRIMARY KEY id
-ORDER BY id
+PRIMARY KEY `_id`
+ORDER BY `_id`
 SETTINGS index_granularity = 8192;
 
 -- TODO: add the CREATE TABLE for "groups_identities".

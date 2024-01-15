@@ -377,7 +377,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	usersSyncQueries.WriteString(`TRUNCATE users; INSERT INTO users (`)
 	comma := false
 	for _, c := range usersColumns {
-		if c.Name == "id" {
+		if c.Name == "_id" {
 			continue
 		}
 		if comma {
@@ -391,7 +391,7 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	usersSyncQueries.WriteString(") SELECT\n")
 	comma = false
 	for _, c := range usersColumns {
-		if c.Name == "id" {
+		if c.Name == "_id" {
 			continue
 		}
 		if comma {

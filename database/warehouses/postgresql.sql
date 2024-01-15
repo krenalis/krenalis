@@ -15,7 +15,6 @@ CREATE TABLE users_identities (
     
     "__cluster__"       serial,
 
-    -- User properties.
     "dummy_id"                          text,
     "anonymous_id"                      text,
     "android_id"                        text,
@@ -42,7 +41,9 @@ CREATE TABLE users_identities (
 );
 
 CREATE TABLE users (
-    id                                  SERIAL,
+
+    "_id" SERIAL,
+
     "dummy_id"                          text,
     "anonymous_id"                      text,
     "android_id"                        text,
@@ -64,7 +65,8 @@ CREATE TABLE users (
     "favorite_movie_soundtrack_author"  text,
     "favorite_movie_soundtrack_length"  double precision,
     "favorite_movie_soundtrack_genre"   music_genre,
-    PRIMARY KEY (id)
+    
+    PRIMARY KEY ("_id")
 );
 
 CREATE TABLE groups_identities (

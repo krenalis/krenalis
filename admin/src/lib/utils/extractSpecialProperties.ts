@@ -24,7 +24,7 @@ const lastNameIdentifiers = [
 
 const emailIdentifiers = ['email', 'Email', 'EMail', 'e_mail', 'E_mail', 'EMAIL'];
 
-const idIdentifiers = ['id', 'ID'];
+const idIdentifiers = ['id', 'ID', 'Id'];
 
 const extractSpecialProperties = (resources: Record<string, any>[]): SpecialProperties => {
 	let firstNameID: string, lastNameID: string, emailID: string, idID: string;

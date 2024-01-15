@@ -1109,7 +1109,7 @@ func (this *Workspace) User(id int) (*User, error) {
 // be empty.
 //
 // order is the property by which to sort the returned users and cannot have
-// type JSON, Array, Object, or Map; it defaults to the "id" property.
+// type JSON, Array, Object, or Map; it defaults to the "Id" property.
 //
 // orderDesc control whether the returned users should be ordered in descending
 // order instead of ascending, which is the default.
@@ -1190,7 +1190,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		orderProperty = types.Property{Name: "id", Type: types.Int(32)}
+		orderProperty = types.Property{Name: "Id", Type: types.Int(32)}
 	}
 	if first < 0 || first > maxInt32 {
 		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
@@ -1392,7 +1392,7 @@ func validateSchema(table string, schema types.Type) error {
 	properties := schema.Properties()
 	if table == "users" || table == "groups" {
 		idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
-			return p.Name == "id"
+			return p.Name == "Id"
 		})
 		if idIndex == -1 {
 			return fmt.Errorf("'%s' schema has no 'id' property", table)

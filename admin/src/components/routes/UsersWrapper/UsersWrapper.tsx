@@ -77,7 +77,7 @@ const UsersWrapper = () => {
 
 		const propertiesNames: string[] = [];
 		for (const p of properties) {
-			if (p.name === 'id') {
+			if (p.name === 'Id') {
 				// always fetch the id. it is needed for navigation.
 				propertiesNames.push(p.name);
 			} else if (p.isUsed) {
@@ -124,15 +124,15 @@ const UsersWrapper = () => {
 
 		// we need the id for navigation but we must remove it from the rows of
 		// the grid if the user has manually hidden it in the UI.
-		const isIDUsed = properties.find((property) => property.name === 'id').isUsed;
+		const isIDUsed = properties.find((property) => property.name === 'Id').isUsed;
 
 		const rows: GridRow[] = [];
 		const idList: number[] = [];
 		for (const user of users) {
-			const id = user.id;
+			const id = user.Id;
 			idList.push(id);
 			if (!isIDUsed) {
-				delete user.id;
+				delete user.Id;
 			}
 			const row: GridRow = {
 				onClick: () => {
