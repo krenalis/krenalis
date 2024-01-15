@@ -4,20 +4,20 @@ Data validation in Chichi occurs in various scenarios, ensuring accuracy and con
 
 Chichi validates data in the following scenarios:
 
-| Data Validation Scenarios                                                                                                   |
-|-----------------------------------------------------------------------------------------------------------------------------|
-| **Collecting data and events from a source location**, validation occurs against the connection's source schema.            |
-| **Before data transformation**, validation checks are performed against the transformation's input schema.                  |
-| **After data transformation**, the transformed data undergoes validation against the transformation's output schema.        |
-| **During storage in the data warehouse**, data is validated against the destination table's schema.                         |
-| **Sending data and events to a destination location**, validation is conducted against the connection's destination schema. |
+| Data Validation Scenarios                                                                                                                                                |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Collecting data and events from a source location**, validation occurs against the connection's source schema.                                                         |
+| **Before data transformation**, validation checks are performed against the transformation's input schema.                                                               |
+| **After data transformation**, the transformed data undergoes validation against the transformation's output schema.                                                     |
+| **During storage in the data warehouse**, data is validated against the destination table's schema ([not implemented yet](https://github.com/open2b/chichi/issues/486)). |
+| **Sending data and events to a destination location**, validation is conducted against the connection's destination schema.                                              |
 
 ## Data Types
 
 The table below provides the types that can appears in a schema:
 
 | Type           | Description                                                           |
-|----------------|-----------------------------------------------------------------------|
+| -------------- | --------------------------------------------------------------------- |
 | `Boolean`      | A boolean.                                                            |
 | `Int(n)`       | A signed integer with n bytes. n can be 8, 16, 24, 32, or 64. [^1]    |
 | `Uint(n)`      | An unsigned integer with n bytes. n can be 8, 16, 24, 32, or 64. [^1] |
