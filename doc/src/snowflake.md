@@ -4,17 +4,17 @@
 
 The table below provides a list of supported types in a Snowflake data warehouse along with their corresponding property types:
 
-| Column Type     | Property Type   |
-|-----------------|-----------------|
-| `NUMBER(p, s)`  | `Decimal(p, s)` |
-| `FLOAT`         | `Float(64)`     |
-| `VARCHAR`       | `Text`          |
-| `BOOLEAN`       | `Boolean`       |
-| `DATE`          | `Date`          |
-| `TIME`          | `Time`          |
-| `TIMESTAMP_NTZ` | `DateTime`      |
-| `VARIANT`       | `JSON`          |
-| `ARRAY`         | `Array(JSON)`   |
+| Column Type     | Property Type  |
+|-----------------|----------------|
+| `NUMBER(p,s)`   | `Decimal(p,s)` |
+| `FLOAT`         | `Float(64)`    |
+| `VARCHAR`       | `Text`         |
+| `BOOLEAN`       | `Boolean`      |
+| `DATE`          | `Date`         |
+| `TIME`          | `Time`         |
+| `TIMESTAMP_NTZ` | `DateTime`     |
+| `VARIANT`       | `JSON`         |
+| `ARRAY`         | `Array(JSON)`  |
 
 Alias types are also supported:
 
