@@ -229,7 +229,12 @@ const useAction = (
 		const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
 
 		isMappingDisabled =
-			hasQueryError || isQueryChanged || hasRecordsError || isFileChanged || hasTableError || isTableChanged;
+			hasQueryError ||
+			isQueryChanged ||
+			hasRecordsError ||
+			(isFileChanged && !(connection.role === 'Destination' && !connection.connector.hasSheets)) ||
+			hasTableError ||
+			isTableChanged;
 
 		if (hasQueryError) {
 			mappingDisabledReason =
