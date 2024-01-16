@@ -46,9 +46,9 @@ class Session {
 		return id;
 	}
 
-	// start starts a new session with identifier id that must be an integer.
-	// If id valuates to false, start uses the time in milliseconds from the
-	// epoc in UTC as identifier.
+	// start starts a new session with identifier id that must be an integer. If
+	// id valuates to false, start uses the time in milliseconds from the epoch
+	// in UTC as identifier.
 	start(id) {
 		if (id == null) {
 			id = new Date().getTime();

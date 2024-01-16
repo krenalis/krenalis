@@ -2344,8 +2344,8 @@ func removeMetaProperties(schema types.Type) types.Type {
 // statsTimeSlot returns the stats time slot for the time t.
 // t must be a UTC time.
 func statsTimeSlot(t time.Time) int {
-	epoc := int(t.Unix())
-	return epoc / (60 * 60)
+	epoch := int(t.Unix())
+	return epoch / (60 * 60)
 }
 
 // unusedProperties returns the names of the unused properties in schema, if

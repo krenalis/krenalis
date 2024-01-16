@@ -284,7 +284,7 @@ func (observer *Observer) flushStats(t time.Time) error {
 		if err != nil {
 			return err
 		}
-		hour := hoursFromEpoc(t)
+		hour := hoursFromEpoch(t)
 		for _, s := range stats {
 			_, err = stmt.Exec(ctx, hour, s.source, s.goodEvents, s.badEvents)
 			if err != nil {
@@ -298,9 +298,9 @@ func (observer *Observer) flushStats(t time.Time) error {
 	return err
 }
 
-// hoursFromEpoc returns the hours since January 1, 1970 UTC until time t.
+// hoursFromEpoch returns the hours since January 1, 1970 UTC until time t.
 // t must be a UTC time.
-func hoursFromEpoc(t time.Time) int {
-	epoc := int(t.Unix())
-	return epoc / (60 * 60)
+func hoursFromEpoch(t time.Time) int {
+	epoch := int(t.Unix())
+	return epoch / (60 * 60)
 }
