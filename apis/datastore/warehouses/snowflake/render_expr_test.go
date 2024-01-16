@@ -14,7 +14,7 @@ import (
 	"chichi/apis/datastore/expr"
 	"chichi/connector/types"
 
-	"github.com/open2b/nuts/decimal"
+	"github.com/shopspring/decimal"
 )
 
 func Test_renderExpr(t *testing.T) {
@@ -51,7 +51,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `"id" IS NOT NULL`,
 		},
 		{
-			expr:  expr.NewBaseExpr("count", expr.OperatorGreaterEqual, decimal.Int(3289)),
+			expr:  expr.NewBaseExpr("count", expr.OperatorGreaterEqual, decimal.NewFromInt(3289)),
 			query: `"count" >= 3289`,
 		},
 		{
@@ -94,9 +94,9 @@ func Test_renderExpr(t *testing.T) {
 						expr.NewBaseExpr("id", expr.OperatorEqual, "abc_60"),
 					}),
 					expr.NewMultiExpr(expr.LogicalOperatorOr, []expr.Expr{
-						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.Int(100)),
-						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.Int(200)),
-						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.Int(300)),
+						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.NewFromInt(100)),
+						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.NewFromInt(200)),
+						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.NewFromInt(300)),
 					}),
 				}),
 			query: `("id" = 'abc_42' OR "id" = 'abc_50' OR "id" = 'abc_60') AND ("count" = 100 OR "count" = 200 OR "count" = 300)`,

@@ -19,7 +19,7 @@ import (
 	"chichi/apis/postgres"
 	"chichi/connector/types"
 
-	"github.com/open2b/nuts/decimal"
+	"github.com/shopspring/decimal"
 )
 
 // renderExpr renders the expression expr, which refers to the properties in
@@ -130,7 +130,7 @@ func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 			}
 			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 		case types.DecimalKind:
-			d, ok := baseExpr.Value.(decimal.Dec)
+			d, ok := baseExpr.Value.(decimal.Decimal)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
 			}
