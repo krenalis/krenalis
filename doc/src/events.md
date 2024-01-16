@@ -7,3 +7,7 @@
 - [track call](./events/track.md)
 - [identify call](./events/identify.md)
 - [group call](./events/group.md)
+
+## Sessions
+
+- [Session Tracking](./events/session-tracking.md)

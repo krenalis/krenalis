@@ -10,6 +10,7 @@
     - [track call](events/track.md)
     - [identify call](events/identify.md)
     - [group call](events/group.md)
+    - [Session Tracking](events/session-tracking.md)
 - [Data Validation](./data-validation.md)
 - [Transformations](./transformations.md)
     - [Mapping](./mapping.md)
