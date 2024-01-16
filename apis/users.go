@@ -35,7 +35,6 @@ type User struct {
 // oldest. limit is the maximum number of events to return, it must be in range
 // [1, 200].
 //
-// It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
 //   - NoEventsSchema, if the data warehouse does not have events schema.
