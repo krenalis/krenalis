@@ -144,4 +144,23 @@ func Test_UsersIdentities(t *testing.T) {
 	}
 	t.Logf("there is a total of %d identities", totalIdentities)
 
+	// Additional test: test that a call to '/identities' for an user which does not exist
+	// returns a NotFound error.
+	{
+		url := "/api/workspaces/1/users/12345/identities"
+		req := map[string]any{
+			"First": 0,
+			"Limit": 100,
+		}
+		_, err := c.Call("POST", url, req)
+		if err == nil {
+			t.Fatalf("expecting error, got nothing")
+		}
+		errorMsg := err.Error()
+		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user 12345 does not exist"}}`
+		if expectedErr != errorMsg {
+			t.Fatalf("expected error %q, got %q", expectedErr, errorMsg)
+		}
+	}
+
 }

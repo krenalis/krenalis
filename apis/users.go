@@ -106,6 +106,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
+// It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
 //   - NoWarehouse, if the workspace does not have a data warehouse.
@@ -174,6 +175,9 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	}
 	if err = records.Err(); err != nil {
 		return nil, 0, err
+	}
+	if identities == nil {
+		return nil, 0, errors.NotFound("user %d does not exist", this.id)
 	}
 
 	// Since the count is an estimate, being counted separately from the actual
