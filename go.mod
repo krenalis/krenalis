@@ -77,7 +77,7 @@ require (
 	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.9.0
 	github.com/relvacode/iso8601 v1.3.0
-	github.com/segmentio/analytics-go v3.1.0+incompatible
+	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
 	github.com/snowflakedb/gosnowflake v1.7.0
@@ -165,7 +165,6 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/twmb/franz-go v1.14.2 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect
-	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/excelize/v2 v2.7.1 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect

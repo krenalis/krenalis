@@ -20,7 +20,7 @@ import (
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 
-	"github.com/segmentio/analytics-go"
+	"github.com/segmentio/analytics-go/v3"
 )
 
 func TestEvents(t *testing.T) {

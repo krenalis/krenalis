@@ -375,8 +375,8 @@ github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjR
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/scylladb/termtables v0.0.0-20191203121021-c4c0b6d42ff4/go.mod h1:C1a7PQSMz9NShzorzCiG2fk9+xuCgLkPeCvMHYR2OWg=
-github.com/segmentio/analytics-go v3.1.0+incompatible h1:IyiOfUgQFVHvsykKKbdI7ZsH374uv3/DfZUo9+G0Z80=
-github.com/segmentio/analytics-go v3.1.0+incompatible/go.mod h1:C7CYBtQWk4vRk2RyLu0qOcbHJ18E3F1HV2C/8JvKN48=
+github.com/segmentio/analytics-go/v3 v3.3.0 h1:8VOMaVGBW03pdBrj1CMFfY9o/rnjJC+1wyQHlVxjw5o=
+github.com/segmentio/analytics-go/v3 v3.3.0/go.mod h1:p8owAF8X+5o27jmvUognuXxdtqvSGtD0ZrfY2kcS9bE=
 github.com/segmentio/asm v1.2.0 h1:9BQrFxC+YOHJlTlHGkTrFWf59nbL3XnCoFLTwDCI7ys=
 github.com/segmentio/asm v1.2.0/go.mod h1:BqMnlJP91P8d+4ibuonYZw9mfnzI9HfxselHZr5aAcs=
 github.com/segmentio/backo-go v1.0.1 h1:68RQccglxZeyURy93ASB/2kc9QudzgIDexJ927N++y4=
@@ -421,8 +421,6 @@ github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT
 github.com/xdg-go/scram v1.1.1/go.mod h1:RaEWvsqvNKKvBPvcKeFjrG2cJqOkHTiyTpzz23ni57g=
 github.com/xdg-go/stringprep v1.0.3/go.mod h1:W3f5j4i+9rC0kuIEJL0ky1VpHXQU3ocBgklLGvcBnW8=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
-github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c h1:3lbZUMbMiGUW/LMkfsEABsc5zNT9+b1CvsJx47JzJ8g=
-github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c/go.mod h1:UrdRz5enIKZ63MEE3IF9l2/ebyx59GyGgPi+tICQdmM=
 github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 h1:6932x8ltq1w4utjmfMPVj09jdMlkY0aiA6+Skbtl3/c=
 github.com/xuri/efp v0.0.0-20220603152613-6918739fd470/go.mod h1:ybY/Jr0T0GTCnYjKqmdwxyxn2BQf2RcQIIvex5QldPI=
 github.com/xuri/excelize/v2 v2.7.1 h1:gm8q0UCAyaTt3MEF5wWMjVdmthm2EHAWesGSKS9tdVI=
