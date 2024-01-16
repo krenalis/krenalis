@@ -11,6 +11,23 @@ Chichi SDKs provide a comprehensive set of functions for session management:
 * Automatic or manual session expiration.
 * Configurable session duration.
 
+### Session in the JSON Body
+
+When a Chichi SDK sends an event, it includes two session fields in the JSON body of the request:
+
+```json
+{
+  ...
+  "sessionId": 8745632109876543,
+  "sessionStart": true,
+  ...
+}
+```
+
+`sessionId` denotes the Session ID, and `sessionStart` indicates whether the session started with this event.
+
+> The Session ID is a 64-bit integer, meaning it can be represented within the range of [-9223372036854775808, 9223372036854775807]. However, certain SDKs may restrict the generated Session IDs for sessions to a smaller interval. For example, the JavaScript SDK generates Session IDs within the range [1, 9007199254740991]. 
+
 ### Use Sessions in Transformations
 
 In transformations, access session information through the `context.session` object:
@@ -46,7 +63,9 @@ Alternatively, to promptly initiate a new session, expiring the current one if s
 chichianalytics.startSession(sessionId);
 ```
 
-#### Get the Session ID
+The Session ID passed as an argument must be an integer and should have the `Number` type.  
+
+### Get the Session ID
 
 Retrieve the Session ID of the current session with the `getSessionId` function.
 
