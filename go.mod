@@ -154,7 +154,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.19 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/pkg/sftp v1.13.6 // indirect
 	github.com/rabbitmq/amqp091-go v1.9.0 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
