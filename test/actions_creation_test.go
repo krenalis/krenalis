@@ -27,7 +27,8 @@ func TestActionsCreation(t *testing.T) {
 
 	// Create some connections that will be used by the actions.
 	var (
-		csvConnection        int
+		srcCSVConnection     int
+		dstCSVConnection     int
 		postgreSQLConnection int
 	)
 	{
@@ -43,8 +44,10 @@ func TestActionsCreation(t *testing.T) {
 		if !stat.IsDir() {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
-		fsID := c.AddSourceFilesystem(storageDir)
-		csvConnection = c.AddSourceCSV(fsID)
+		srcFsID := c.AddSourceFilesystem(storageDir)
+		srcCSVConnection = c.AddSourceCSV(srcFsID)
+		dstFsID := c.AddDestinationFilesystem(storageDir)
+		dstCSVConnection = c.AddDestinationCSV(dstFsID)
 	}
 	{
 		// PostgreSQL connection.
@@ -57,7 +60,7 @@ func TestActionsCreation(t *testing.T) {
 		err    string
 	}{
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -85,7 +88,7 @@ func TestActionsCreation(t *testing.T) {
 			},
 		},
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -114,7 +117,21 @@ func TestActionsCreation(t *testing.T) {
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta-properties"}}`,
 		},
 		{
-			conn: csvConnection,
+			conn: dstCSVConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name": "Export users to a CSV on Filesystem",
+					"Path": "users.csv",
+					"OutSchema": types.Object([]types.Property{
+						{Name: "Email", Type: types.Text()}, // allowed because this is a destination connection.
+						{Name: "timestamp", Type: types.DateTime()},
+					}),
+				},
+			},
+		},
+		{
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -142,7 +159,7 @@ func TestActionsCreation(t *testing.T) {
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp format is required"}}`,
 		},
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -169,7 +186,7 @@ func TestActionsCreation(t *testing.T) {
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity is mandatory"}}`,
 		},
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -195,7 +212,7 @@ func TestActionsCreation(t *testing.T) {
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity has not a valid property name"}}`,
 		},
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -219,7 +236,7 @@ func TestActionsCreation(t *testing.T) {
 			},
 		},
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{
@@ -233,7 +250,7 @@ func TestActionsCreation(t *testing.T) {
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be valid"}}`,
 		},
 		{
-			conn: csvConnection,
+			conn: srcCSVConnection,
 			action: map[string]any{
 				"Target": "Users",
 				"Action": map[string]any{

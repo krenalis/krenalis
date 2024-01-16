@@ -64,6 +64,36 @@ func (c *Chichi) AddConnection(data map[string]any) int {
 	return id
 }
 
+func (c *Chichi) AddDestinationCSV(filesystem int) int {
+	return c.AddConnection(map[string]any{
+		"Connection": map[string]any{
+			"Name":      "CSV",
+			"Role":      "Destination",
+			"Enabled":   true,
+			"Connector": 5, // CSV.
+			"Storage":   filesystem,
+			"Settings": map[string]any{
+				"Comma":          ",",
+				"HasColumnNames": true,
+			},
+		},
+	})
+}
+
+func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
+	return c.AddConnection(map[string]any{
+		"Connection": map[string]any{
+			"Name":      "Filesystem",
+			"Role":      "Destination",
+			"Enabled":   true,
+			"Connector": 19, // Filesystem.
+			"Settings": map[string]any{
+				"Root": storageDir,
+			},
+		},
+	})
+}
+
 func (c *Chichi) AddDestinationPostgreSQL() int {
 	return c.AddConnection(map[string]any{
 		"Connection": map[string]any{

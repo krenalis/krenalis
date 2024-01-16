@@ -1797,14 +1797,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
 		return errors.BadRequest("action cannot have both mappings and transformation")
 	}
-	// The output schema cannot contain meta-properties.
-	if action.OutSchema.Valid() {
-		for _, p := range action.OutSchema.Properties() {
-			if isMetaProperty(p) {
-				return errors.BadRequest("output schema cannot contain meta-properties")
-			}
-		}
-	}
 	// Validate the mapping.
 	var usedOutPaths []types.Path
 	if mapping := action.Transformation.Mapping; mapping != nil && len(mapping) > 0 {
@@ -1935,6 +1927,17 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	c := this.connection
 	connector := c.Connector()
 	ws := this.connection.Workspace()
+
+	// In case of a source connection, since its actions write on the data
+	// warehouse, the output schema cannot contain meta-properties because such
+	// properties are not writable by user transformations.
+	if c.Role == state.Source && action.OutSchema.Valid() {
+		for _, p := range action.OutSchema.Properties() {
+			if isMetaProperty(p) {
+				return errors.BadRequest("output schema cannot contain meta-properties")
+			}
+		}
+	}
 
 	// When importing users, ensure that there are no mappings over the
 	// anonymous identifiers of the workspace.
@@ -2215,7 +2218,8 @@ func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
-// isMetaProperty reports whether p is a meta-property.
+// isMetaProperty reports whether the property p is considered a meta-property
+// by a data warehouse.
 func isMetaProperty(p types.Property) bool {
 	for _, r := range p.Name {
 		return unicode.IsUpper(r)
@@ -2323,8 +2327,8 @@ func onlyForMatching(schema types.Type) types.Type {
 	return types.Object(props)
 }
 
-// removeMetaProperties removes the meta-properties from the schema and returns
-// it a new schema.
+// removeMetaProperties removes the properties considered meta-properties by the
+// data warehouses from the schema, and returns it as a new schema.
 func removeMetaProperties(schema types.Type) types.Type {
 	props := schema.Properties()
 	noMetaProps := make([]types.Property, 0, len(props))
