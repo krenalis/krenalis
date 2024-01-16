@@ -4,6 +4,12 @@
 
 - [Installation](./installation.md)
 - [Connections](connections.md)
+- [Events](./events.md)
+    - [page call](events/page.md)
+    - [screen call](events/screen.md)
+    - [track call](events/track.md)
+    - [identify call](events/identify.md)
+    - [group call](events/group.md)
 - [Data Validation](./data-validation.md)
 - [Transformations](./transformations.md)
     - [Mapping](./mapping.md)
