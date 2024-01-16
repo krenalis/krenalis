@@ -9,7 +9,9 @@ package apis
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"time"
 
 	"chichi/apis/datastore"
 	"chichi/apis/datastore/expr"
@@ -97,6 +99,91 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 
 	return encoding.MarshalSlice(events.Schema, evs)
+}
+
+// Identities returns the users identities of the user, and an estimate of their
+// count without applying first and limit.
+//
+// It returns the user identities in range [first,first+limit] with first >= 0
+// and 0 < limit <= 1000.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
+
+	this.apis.mustBeOpen()
+
+	if first < 0 {
+		return nil, 0, errors.BadRequest("first %d is not valid", limit)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	ws := this.workspace
+
+	if this.store == nil {
+		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+	}
+
+	schema := types.Object([]types.Property{
+		{Name: "Action", Type: types.Int(32)},
+		{Name: "ExternalId", Type: types.Text()},
+		{Name: "Timestamp", Type: types.DateTime()},
+		{Name: "Gid", Type: types.Int(32)},
+	})
+	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
+		Properties: []types.Path{{"Action"}, {"ExternalId"}, {"Timestamp"}},
+		Where:      expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
+		OrderBy:    types.Property{Name: "IdentityId", Type: types.Int(32)},
+		Schema:     schema,
+		First:      first,
+		Limit:      limit,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	type identity struct {
+		Connection int
+		ExternalId string
+		Timestamp  time.Time
+	}
+	var identities []identity
+	err = records.For(func(record warehouses.Record) error {
+		if record.Err != nil {
+			return err
+		}
+		actionID := record.Properties["Action"].(int)
+		externalID := record.Properties["ExternalId"].(string)
+		timestamp := record.Properties["Timestamp"].(time.Time)
+		action, ok := this.apis.state.Action(actionID)
+		if !ok {
+			// The action does not exist anymore, so skip this identity.
+			return nil
+		}
+		identities = append(identities, identity{
+			Connection: action.Connection().ID,
+			ExternalId: externalID,
+			Timestamp:  timestamp,
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = records.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	// Since the count is an estimate, being counted separately from the actual
+	// number of identities returned, ensure to not return a value lower than
+	// the actually returned number of identities.
+	count = max(len(identities), count)
+
+	data, err := json.Marshal(identities)
+	return data, count, err
 }
 
 // Traits returns the traits of the user.

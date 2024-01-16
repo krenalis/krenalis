@@ -12,6 +12,7 @@ CREATE TABLE users_identities (
     "_external_id"   text,
     "_anonymous_ids" text[],
     "_timestamp"     timestamp NOT NULL DEFAULT now(),
+    "_gid"           int,
     
     "__cluster__"       serial,
 
@@ -43,6 +44,8 @@ CREATE TABLE users_identities (
 CREATE TABLE users (
 
     "_id" SERIAL,
+    
+    "__identity_ids__" int[],
 
     "dummy_id"                          text,
     "anonymous_id"                      text,

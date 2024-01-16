@@ -248,6 +248,24 @@ func (c *Chichi) UserEvents(user int) []map[string]any {
 	return events
 }
 
+func (c *Chichi) UserIdentities(user int, first, limit int) ([]map[string]any, int) {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/users/" + strconv.Itoa(user) + "/identities"
+	req := map[string]any{
+		"First": first,
+		"Limit": limit,
+	}
+	response := c.MustCall("POST", url, req).(map[string]any)
+	count, err := response["count"].(json.Number).Int64()
+	if err != nil {
+		c.t.Fatalf("invalid 'count' for user identities: %s", err)
+	}
+	identities := make([]map[string]any, len(response["identities"].([]any)))
+	for i, identity := range response["identities"].([]any) {
+		identities[i] = identity.(map[string]any)
+	}
+	return identities, int(count)
+}
+
 func (c *Chichi) Users(properties []string, order string, first, limit int) map[string]any {
 	req := map[string]any{
 		"Properties": properties,

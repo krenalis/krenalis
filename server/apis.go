@@ -993,6 +993,33 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							"events": json.RawMessage(events),
 						})
 					})
+					router.Post("/{userID}/identities", func(w http.ResponseWriter, r *http.Request) {
+						id, _ := strconv.Atoi(chi.URLParam(r, "userID"))
+						var req struct {
+							First int
+							Limit int
+						}
+						err := json.NewDecoder(r.Body).Decode(&req)
+						if err != nil {
+							respond(w, errors.BadRequest("invalid JSON"))
+							return
+						}
+						user, err := workspace.User(id)
+						if err != nil {
+							respond(w, err)
+							return
+						}
+						identities, count, err := user.Identities(ctx, req.First, req.Limit)
+						if err != nil {
+							respond(w, err)
+							return
+						}
+						w.Header().Set("Content-Type", "application/json")
+						_ = json.NewEncoder(w).Encode(map[string]any{
+							"identities": json.RawMessage(identities),
+							"count":      count,
+						})
+					})
 					router.Get("/{userID}/traits", func(w http.ResponseWriter, r *http.Request) {
 						id, _ := strconv.Atoi(chi.URLParam(r, "userID"))
 						user, err := workspace.User(id)

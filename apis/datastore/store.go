@@ -283,6 +283,59 @@ type UsersQuery struct {
 	Limit int
 }
 
+// UserIdentities returns an iterator over the results of the query on the
+// 'users_identities' table of the data warehouse and an estimated count of the
+// user identities that would be returned if First and Limit were not provided
+// in the query.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error. If the schema specified in the query is not conform to the schema of
+// the 'users_identities' table, it returns a *SchemaError error.
+func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQuery) (Records, int, error) {
+	store.mustBeOpen()
+	records, count, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
+		Table:      "users_identities",
+		Schema:     query.Schema,
+		Properties: query.Properties,
+		ID:         types.Property{Name: "IdentityId", Type: types.Int(32)},
+		Where:      query.Where,
+		OrderBy:    query.OrderBy,
+		OrderDesc:  query.OrderDesc,
+		First:      query.First,
+		Limit:      query.Limit,
+	})
+	return records, count, err
+}
+
+// UsersIdentitiesQuery represents a query for the Users method.
+type UsersIdentitiesQuery struct {
+
+	// Properties are the properties to return for each record in the
+	// Record.Properties field.
+	Properties []types.Path
+
+	// Where, when not nil, filters the records to return.
+	Where expr.Expr
+
+	// OrderBy, when provided, is the property for which the returned records
+	// are ordered.
+	OrderBy types.Property
+
+	// OrderDesc, when true and OrderBy is provided, orders the returned records
+	// in descending order instead of ascending order.
+	OrderDesc bool
+
+	// Schema contains the types of the properties in Properties and Where.
+	Schema types.Type
+
+	// First is the index of the first returned record and must be >= 0.
+	First int
+
+	// Limit controls how many records should be returned and must be >= 0. If
+	// 0, it means that there is no limit.
+	Limit int
+}
+
 // close closes the store.
 // It flushes the events and closes the data warehouse.
 // It panics if it has already been called.

@@ -388,35 +388,29 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	usersColumns := warehouses.PropertiesToColumns(usersSchema.Properties())
 	var usersSyncQueries strings.Builder
 	usersSyncQueries.WriteString(`TRUNCATE users; INSERT INTO users (`)
-	comma := false
 	for _, c := range usersColumns {
 		if c.Name == "_id" {
 			continue
-		}
-		if comma {
-			usersSyncQueries.WriteByte(',')
 		}
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteString(c.Name)
 		usersSyncQueries.WriteByte('"')
-		comma = true
+		usersSyncQueries.WriteByte(',')
 	}
+	usersSyncQueries.WriteString(`"__identity_ids__"`)
 	usersSyncQueries.WriteString(") SELECT\n")
-	comma = false
 	for _, c := range usersColumns {
 		if c.Name == "_id" {
 			continue
-		}
-		if comma {
-			usersSyncQueries.WriteByte(',')
 		}
 		usersSyncQueries.WriteString(`MAX(DISTINCT "`)
 		usersSyncQueries.WriteString(c.Name)
 		usersSyncQueries.WriteString(`") AS "`)
 		usersSyncQueries.WriteString(c.Name)
 		usersSyncQueries.WriteByte('"')
-		comma = true
+		usersSyncQueries.WriteByte(',')
 	}
+	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "_identity_id")`)
 	usersSyncQueries.WriteString(" FROM users_identities GROUP BY __cluster__")
 
 	// Replace the placeholders in the stored procedure query and run it.
