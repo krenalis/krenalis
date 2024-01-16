@@ -410,19 +410,11 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 		if comma {
 			usersSyncQueries.WriteByte(',')
 		}
-		if c.Type.Kind() == types.ObjectKind {
-			usersSyncQueries.WriteString(`(ARRAY_AGG(DISTINCT "`)
-			usersSyncQueries.WriteString(c.Name)
-			usersSyncQueries.WriteString(`"))[1] AS "`)
-			usersSyncQueries.WriteString(c.Name)
-			usersSyncQueries.WriteByte('"')
-		} else {
-			usersSyncQueries.WriteString(`MAX(DISTINCT "`)
-			usersSyncQueries.WriteString(c.Name)
-			usersSyncQueries.WriteString(`") AS "`)
-			usersSyncQueries.WriteString(c.Name)
-			usersSyncQueries.WriteByte('"')
-		}
+		usersSyncQueries.WriteString(`MAX(DISTINCT "`)
+		usersSyncQueries.WriteString(c.Name)
+		usersSyncQueries.WriteString(`") AS "`)
+		usersSyncQueries.WriteString(c.Name)
+		usersSyncQueries.WriteByte('"')
 		comma = true
 	}
 	usersSyncQueries.WriteString(" FROM users_identities GROUP BY __cluster__")
