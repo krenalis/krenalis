@@ -34,6 +34,10 @@ import (
 	"github.com/relvacode/iso8601"
 )
 
+// storageTimeout represents the duration between consecutive calls to the Read
+// method of the io.Reader passed to a storage within the Write method.
+var storageTimeout = 10 * time.Second
+
 // File represents the file of a file connection.
 type File struct {
 	state      *state.State
@@ -1084,7 +1088,10 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 	}
 	ch := make(chan error)
 	go func() {
-		err := cs.storage.Write(ctx, pr, path, contentType)
+		ctx, cancel := context.WithCancel(ctx)
+		r := newTimeoutReader(pr, storageTimeout, cancel)
+		defer r.Close()
+		err := cs.storage.Write(ctx, r, path, contentType)
 		if err != nil {
 			_ = pr.CloseWithError(err)
 		} else {
@@ -1169,4 +1176,54 @@ type zipWriter struct {
 
 func (zw zipWriter) Close() error {
 	return zw.z.Close()
+}
+
+// timeoutReader implements an io.ReadCloser with a timeout between two
+// consecutive Read calls.
+type timeoutReader struct {
+	reader  io.Reader
+	timeout time.Duration
+	timer   *time.Timer
+	f       func()
+	stop    chan struct{}
+	closed  bool
+}
+
+func (r *timeoutReader) Read(p []byte) (int, error) {
+	if r.closed {
+		return 0, errors.New("read on a closed reader")
+	}
+	r.timer.Stop()
+	n, err := r.reader.Read(p)
+	r.timer.Reset(r.timeout)
+	return n, err
+}
+
+func (r *timeoutReader) Close() error {
+	if r.closed {
+		return nil
+	}
+	select {
+	case r.stop <- struct{}{}:
+	}
+	r.closed = true
+	return nil
+}
+
+// newTimeoutReader returns a TimeoutReader that reads from r. If more than
+// timeout time elapses between two Read method calls, it calls the f function.
+// The caller must close the returned reader using the Close method when no
+// further calls to the Read method are expected.
+func newTimeoutReader(r io.Reader, timeout time.Duration, f func()) io.ReadCloser {
+	stop := make(chan struct{})
+	timer := time.NewTimer(timeout)
+	go func() {
+		select {
+		case <-timer.C:
+			close(stop)
+			f()
+		case <-stop:
+		}
+	}()
+	return &timeoutReader{reader: r, timeout: timeout, timer: timer, f: f, stop: stop}
 }
