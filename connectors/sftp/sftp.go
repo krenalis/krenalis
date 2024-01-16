@@ -365,11 +365,17 @@ func openClient(ctx context.Context, s *settings) (*client, error) {
 	return cl, nil
 }
 
-// testConnection tests a connection with the given settings.
-// Returns an error if the connection cannot be established.
+// testConnection tests a connection using the provided settings. It returns an
+// error if the connection cannot be established or if the server does not
+// respond within 5 seconds.
 func testConnection(ctx context.Context, settings *settings) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	client, err := openClient(ctx, settings)
 	if err != nil {
+		if err := ctx.Err(); err != nil {
+			return errors.New("sftp: unable to establish a connection within the 5-second limit. Verify the correctness of the settings and the functionality of the server")
+		}
 		return err
 	}
 	defer client.close()
