@@ -151,7 +151,7 @@ require (
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/oschwald/maxminddb-golang v1.11.0 // indirect
 	github.com/paulmach/orb v0.9.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.18 // indirect
+	github.com/pierrec/lz4/v4 v4.1.19 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
@@ -162,8 +162,8 @@ require (
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/twmb/franz-go v1.14.2 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect
+	github.com/twmb/franz-go v1.15.4 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/xuri/efp v0.0.0-20230802181842-ad255f2331ca // indirect
 	github.com/xuri/excelize/v2 v2.8.0 // indirect
 	github.com/xuri/nfp v0.0.0-20230819163627-dc951e3ffe1a // indirect
