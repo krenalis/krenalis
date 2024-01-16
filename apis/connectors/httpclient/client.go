@@ -14,10 +14,9 @@ import (
 	"net/http"
 	"time"
 
+	"chichi/apis/capture"
 	"chichi/apis/errors"
 	"chichi/apis/state"
-
-	"github.com/open2b/nuts/capture"
 )
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")

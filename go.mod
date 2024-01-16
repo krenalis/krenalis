@@ -74,7 +74,6 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/useragent v1.0.0
-	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.9.0
 	github.com/relvacode/iso8601 v1.3.0
 	github.com/segmentio/analytics-go/v3 v3.3.0

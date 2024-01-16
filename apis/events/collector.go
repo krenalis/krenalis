@@ -27,6 +27,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/culture"
 	"chichi/apis/datastore"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/state"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"
-	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/relvacode/iso8601"
 	"github.com/segmentio/ksuid"

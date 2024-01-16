@@ -337,8 +337,6 @@ github.com/mtibben/percent v0.2.1/go.mod h1:KG9uO+SZkUp+VkRHsCdYQV3XSZrrSpR3O9ib
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/open2b/clickhouse-go/v2 v2.12.0-fix h1:h2eCfl6bbiFmXe+WqGSYBAxtHDBddZL5Z1OooWhwL6Q=
 github.com/open2b/clickhouse-go/v2 v2.12.0-fix/go.mod h1:W/UQ/GchOF+Q0k5iv6ZanLKQNukA4Oiyt4sMFDsv8QY=
-github.com/open2b/nuts v1.5.3 h1:98iQaCYoGSRbqESuolHpsLnUPerWrqu+0WqvRe5WGjI=
-github.com/open2b/nuts v1.5.3/go.mod h1:3H0bVzhUKOgpIVvN9qLj/R4rs27rDv1rL6WpeLLxmzc=
 github.com/oschwald/geoip2-golang v1.9.0 h1:uvD3O6fXAXs+usU+UGExshpdP13GAqp4GBrzN7IgKZc=
 github.com/oschwald/geoip2-golang v1.9.0/go.mod h1:BHK6TvDyATVQhKNbQBdrj9eAvuwOMi2zSFXizL3K81Y=
 github.com/oschwald/maxminddb-golang v1.11.0 h1:aSXMqYR/EPNjGE8epgqwDay+P30hCBZIveY0WZbAWh0=
