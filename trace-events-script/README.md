@@ -31,6 +31,8 @@ npm run bundle
 
 These script commands create the `dist/chichi.js` file.
 
+> As an experiment run `npm run build-swc` to build using SWC. 
+
 ## Add the snippet to an HTML page
 
 Add the content of the `snippet.js` file to the HTML page:
