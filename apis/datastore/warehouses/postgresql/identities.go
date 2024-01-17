@@ -124,18 +124,18 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	var args []any
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
-			query = "SELECT _identity_id FROM users_identities WHERE " +
-				"$1 IN _anonymous_ids ORDER BY _timestamp, _identity_id"
-			args = []any{anonID}
+			query = "SELECT _identity_id FROM users_identities WHERE _action = $1" +
+				" AND $2 IN _anonymous_ids ORDER BY _timestamp, _identity_id"
+			args = []any{action, anonID}
 		} else {
-			query = "SELECT _identity_id FROM users_identities WHERE " +
-				"(_external_id = $1) OR ($2 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
-			args = []any{id, anonID}
+			query = "SELECT _identity_id FROM users_identities WHERE _action = $1" +
+				" AND (_external_id = $2) OR ($3 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
+			args = []any{action, id, anonID}
 		}
 	} else { // app, file or database.
-		query = "SELECT _identity_id FROM users_identities WHERE " +
-			"_external_id = $1 ORDER BY _timestamp, _identity_id"
-		args = []any{id}
+		query = "SELECT _identity_id FROM users_identities WHERE _action = $1" +
+			" AND _external_id = $2 ORDER BY _timestamp, _identity_id"
+		args = []any{action, id}
 	}
 	var matchingIdentities []int
 	rows, err := db.Query(ctx, query, args...)
