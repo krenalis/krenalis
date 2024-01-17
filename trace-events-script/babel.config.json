@@ -11,7 +11,7 @@
           "ie": "10"
         },
         "useBuiltIns": "usage",
-        "corejs": "3.27.2"
+        "corejs": "3.35.0"
       }
     ]
   ]

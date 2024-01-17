@@ -8,15 +8,15 @@
     "bundle": "webpack --config webpack.config.js"
   },
   "devDependencies": {
-    "@babel/cli": "^7.20.7",
-    "@babel/core": "^7.20.12",
-    "@babel/preset-env": "^7.20.2",
-    "prettier": "^2.8.4",
-    "webpack": "^5.75.0",
-    "webpack-cli": "^5.0.1"
+    "@babel/cli": "7.23.4",
+    "@babel/core": "7.23.7",
+    "@babel/preset-env": "7.23.8",
+    "prettier": "3.2.4",
+    "webpack": "5.89.0",
+    "webpack-cli": "5.1.4"
   },
   "dependencies": {
-    "core-js": "^3.27.2",
-    "whatwg-fetch": "^3.6.2"
+    "core-js": "3.35.0",
+    "whatwg-fetch": "3.6.20"
   }
 }
