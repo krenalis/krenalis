@@ -27,13 +27,13 @@ const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 type processedEvent struct {
 	*collectedEvent
-	action           *state.Action
-	destination      int
-	eventType        string
-	endpoint         int
-	transformedEvent map[string]any
-	inEvent          *connector.Event
-	err              error
+	action      *state.Action
+	destination int
+	eventType   string
+	endpoint    int
+	data        map[string]any
+	inEvent     *connector.Event
+	err         error
 }
 
 // Processor processes events received from source streams and sent them to
@@ -84,7 +84,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 						if !ok {
 							continue
 						}
-						var transformedEvent map[string]any
+						var data map[string]any
 						// If the action's input schema is valid (which means
 						// that there is a mapping or a transformation defined),
 						// apply the mapping or the transformation.
@@ -94,18 +94,18 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
 							}
-							transformedEvent, err = transformer.Transform(ctx, mapEvent)
+							data, err = transformer.Transform(ctx, mapEvent)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
 							}
 						}
 						ev := &processedEvent{
-							collectedEvent:   event,
-							action:           action,
-							destination:      action.Connection().ID,
-							eventType:        action.EventType,
-							transformedEvent: transformedEvent,
+							collectedEvent: event,
+							action:         action,
+							destination:    action.Connection().ID,
+							eventType:      action.EventType,
+							data:           data,
 							// TODO(Gianluca): since the endpoints have been
 							// removed from the action, we do not have
 							// information about the endpoint. We should
