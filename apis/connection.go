@@ -2132,35 +2132,35 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check if the mapping (or the transformation) is mandatory, and if the
 	// transformation is allowed.
-	var mappingIsMandatory bool
-	var transformationIsAllowed bool
+	var transformationIsMandatory bool
+	var functionIsAllowed bool
 	switch connector.Type {
 	case state.AppType:
 		if c.Role == state.Destination && target == state.Events {
-			mappingIsMandatory = eventTypeSchema.Valid()
-			transformationIsAllowed = true
+			transformationIsMandatory = eventTypeSchema.Valid()
+			functionIsAllowed = true
 		} else {
-			mappingIsMandatory = targetUsersOrGroups
-			transformationIsAllowed = true
+			transformationIsMandatory = targetUsersOrGroups
+			functionIsAllowed = true
 		}
 	case state.MobileType, state.ServerType, state.WebsiteType:
-		mappingIsMandatory = targetUsersOrGroups
-		transformationIsAllowed = false
+		transformationIsMandatory = targetUsersOrGroups
+		functionIsAllowed = false
 	case state.DatabaseType:
-		mappingIsMandatory = targetUsersOrGroups
-		transformationIsAllowed = mappingIsMandatory
+		transformationIsMandatory = targetUsersOrGroups
+		functionIsAllowed = transformationIsMandatory
 	case state.FileType:
-		mappingIsMandatory = c.Role == state.Source && targetUsersOrGroups
-		transformationIsAllowed = mappingIsMandatory
+		transformationIsMandatory = c.Role == state.Source && targetUsersOrGroups
+		functionIsAllowed = transformationIsMandatory
 	}
-	if mappingIsMandatory && action.Transformation.Mapping == nil && action.Transformation.Function == nil {
-		if transformationIsAllowed {
-			return errors.BadRequest("mapping (or transformation) is required")
+	if transformationIsMandatory && action.Transformation.Mapping == nil && action.Transformation.Function == nil {
+		if functionIsAllowed {
+			return errors.BadRequest("transformation mapping or function is required")
 		}
-		return errors.BadRequest("mapping is required")
+		return errors.BadRequest("transformation mapping is required")
 	}
-	if !transformationIsAllowed && action.Transformation.Function != nil {
-		return errors.BadRequest("transformation is not allowed")
+	if !functionIsAllowed && action.Transformation.Function != nil {
+		return errors.BadRequest("transformation function is not allowed")
 	}
 
 	// Ensure that every property in the input and output schemas have been used
