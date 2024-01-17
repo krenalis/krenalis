@@ -124,16 +124,16 @@ type EventsQuery struct {
 type IdentitiesWriter = warehouses.IdentitiesWriter
 
 // IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-// the given schema, relative to the action, on the data warehouse.
+// the given schema, relative to the connection, on the data warehouse.
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
 // If the schema specified is not conform to the schema of the table
 // 'users_identities' in the data warehouse, calls to the method 'Write' of the
 // returned 'IdentitiesWriter' return a *SchemaError error.
-func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) IdentitiesWriter {
+func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) IdentitiesWriter {
 	store.mustBeOpen()
-	return store.warehouse.IdentitiesWriter(ctx, schema, action, fromEvent, ack)
+	return store.warehouse.IdentitiesWriter(ctx, schema, connection, fromEvent, ack)
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -188,14 +188,14 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		return nil
 	}
 
-	// Retrieve the workspace actions and simply return if there are none.
-	wsActions := store.ds.state.Actions()
-	if len(wsActions) == 0 {
+	// Retrieve the workspace connections and simply return if there are none.
+	wsConnections := store.ds.state.Connections()
+	if len(wsConnections) == 0 {
 		return nil
 	}
-	var actions []int
-	for _, action := range wsActions {
-		actions = append(actions, action.ID)
+	var connections []int
+	for _, action := range wsConnections {
+		connections = append(connections, action.ID)
 	}
 
 	// TODO(Gianluca): should the users / users_identities schema be handled by
@@ -226,7 +226,7 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		return errors.New("missing 'users' schema")
 	}
 
-	return store.warehouse.ResolveSyncUsers(ctx, actions, identifiers, usersSchema)
+	return store.warehouse.ResolveSyncUsers(ctx, connections, identifiers, usersSchema)
 }
 
 type Records = warehouses.Records

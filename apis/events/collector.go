@@ -136,7 +136,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			}
 			slog.Warn("users traits imported successfully", "action", action.ID, "ids", ids)
 		}
-		iw := store.IdentitiesWriter(ctx, action.OutSchema, action.ID, true, ack)
+		iw := store.IdentitiesWriter(ctx, action.OutSchema, action.Connection().ID, true, ack)
 		defer iw.Close(ctx)
 
 		// Import the user traits for this event, if provided.

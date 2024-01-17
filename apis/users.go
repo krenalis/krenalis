@@ -129,13 +129,13 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	}
 
 	schema := types.Object([]types.Property{
-		{Name: "Action", Type: types.Int(32)},
+		{Name: "Connection", Type: types.Int(32)},
 		{Name: "ExternalId", Type: types.Text()},
 		{Name: "Timestamp", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"Action"}, {"ExternalId"}, {"Timestamp"}},
+		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"Timestamp"}},
 		Where:      expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
 		OrderBy:    types.Property{Name: "IdentityId", Type: types.Int(32)},
 		Schema:     schema,
@@ -155,16 +155,11 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		if record.Err != nil {
 			return err
 		}
-		actionID := record.Properties["Action"].(int)
+		connectionID := record.Properties["Connection"].(int)
 		externalID := record.Properties["ExternalId"].(string)
 		timestamp := record.Properties["Timestamp"].(time.Time)
-		action, ok := this.apis.state.Action(actionID)
-		if !ok {
-			// The action does not exist anymore, so skip this identity.
-			return nil
-		}
 		identities = append(identities, identity{
-			Connection: action.Connection().ID,
+			Connection: connectionID,
 			ExternalId: externalID,
 			Timestamp:  timestamp,
 		})

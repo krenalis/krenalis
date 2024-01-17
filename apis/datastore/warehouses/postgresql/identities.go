@@ -21,34 +21,34 @@ import (
 )
 
 // IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-// the given schema, relative to the action, on the data warehouse.
+// the given schema, relative to the connection, on the data warehouse.
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
 // If the schema specified is not conform to the schema of the table
 // 'users_identities' in the data warehouse, calls to the method 'Write' of the
 // returned 'IdentitiesWriter' return a *SchemaError error.
-func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
+func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	if ack == nil {
 		panic("ack function is missing")
 	}
 	return &identitiesWriter{
-		warehouse: warehouse,
-		schema:    schema,
-		action:    action,
-		fromEvent: fromEvent,
-		ack:       ack,
+		warehouse:  warehouse,
+		schema:     schema,
+		connection: connection,
+		fromEvent:  fromEvent,
+		ack:        ack,
 	}
 }
 
 type identitiesWriter struct {
-	warehouse *PostgreSQL
-	schema    types.Type
-	action    int
-	fromEvent bool
-	ack       warehouses.IdentitiesAckFunc
-	err       error
-	closed    bool
+	warehouse  *PostgreSQL
+	schema     types.Type
+	connection int
+	fromEvent  bool
+	ack        warehouses.IdentitiesAckFunc
+	err        error
+	closed     bool
 }
 
 var _ warehouses.IdentitiesWriter = (*identitiesWriter)(nil)
@@ -105,7 +105,7 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 	// after buffering the user identities to be written all together, directly
 	// calls the underlying data warehouse to write. This needs to be optimized
 	// for bulk writing rather than writing individual users.
-	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID, identity.AnonymousID, iw.action, iw.fromEvent, identity.Timestamp)
+	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID, identity.AnonymousID, iw.connection, iw.fromEvent, identity.Timestamp)
 	iw.ack(err, []string{identity.ID})
 	if err != nil {
 		iw.err = err
@@ -115,7 +115,7 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 }
 
 func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string]any,
-	schema types.Type, id string, anonID string, action int, fromEvent bool, timestamp time.Time) error {
+	schema types.Type, id string, anonID string, connection int, fromEvent bool, timestamp time.Time) error {
 
 	// Query the matching user identities, which can be 0 (the identity is a new
 	// identity), 1 (the identity already exists and must be updated) or more
@@ -124,18 +124,18 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	var args []any
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
-			query = "SELECT _identity_id FROM users_identities WHERE _action = $1" +
+			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
 				" AND $2 IN _anonymous_ids ORDER BY _timestamp, _identity_id"
-			args = []any{action, anonID}
+			args = []any{connection, anonID}
 		} else {
-			query = "SELECT _identity_id FROM users_identities WHERE _action = $1" +
+			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
 				" AND (_external_id = $2) OR ($3 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
-			args = []any{action, id, anonID}
+			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
-		query = "SELECT _identity_id FROM users_identities WHERE _action = $1" +
+		query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
 			" AND _external_id = $2 ORDER BY _timestamp, _identity_id"
-		args = []any{action, id}
+		args = []any{connection, id}
 	}
 	var matchingIdentities []int
 	rows, err := db.Query(ctx, query, args...)
@@ -163,7 +163,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	warehouses.SerializeRow(newIdentity, schema)
 
-	newIdentity["_action"] = action
+	newIdentity["_connection"] = connection
 	newIdentity["_external_id"] = id
 	newIdentity["_timestamp"] = timestamp.Format(time.DateTime)
 	if anonID != "" {
@@ -234,7 +234,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	b.WriteString("UPDATE users_identities SET ")
 	comma := false
 	for _, p := range properties {
-		if p == "_action" || p == "_anonymous_ids" || p == "_external_id" || p == "_timestamp" {
+		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_timestamp" {
 			continue
 		}
 		if comma {

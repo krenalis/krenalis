@@ -112,14 +112,14 @@ func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, pro
 }
 
 // IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-// the given schema, relative to the action, on the data warehouse.
+// the given schema, relative to the connection, on the data warehouse.
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
 // If the schema specified is not conform to the schema of the table
 // 'users_identities' in the data warehouse, calls to the method 'Write' of the
 // returned 'IdentitiesWriter' return a *SchemaError error.
-func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
+func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	panic("not implemented")
 }
 
@@ -379,13 +379,13 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actions holds the identifiers of the actions of the workspace and must always
-// contain at least one action.
+// connections holds the identifiers of the connections of the workspace and
+// must always contain at least one connection.
 // identifiers are the properties of the 'users_identities' schema which are
 // identifiers, ordered by priority.
 // usersSchema is the schema of the 'users' table, which will be populated
 // during the users synchronization.
-func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actions []int, identifiers []types.Property, usersSchema types.Type) error {
+func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 	panic("not implemented")
 }
 

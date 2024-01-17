@@ -330,16 +330,16 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 }
 
 // ResolveSyncUsers resolves and sync the users.
-// actions holds the identifiers of the actions of the workspace and must always
-// contain at least one action.
+// connections holds the identifiers of the connections of the workspace and
+// must always contain at least one connection.
 // identifiers are the properties of the 'users_identities' schema which are
 // identifiers, ordered by priority.
 // usersSchema is the schema of the 'users' table, which will be populated
 // during the users synchronization.
-func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int, identifiers []types.Property, usersSchema types.Type) error {
+func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 
-	if len(actions) == 0 {
-		panic("invalid empty actions")
+	if len(connections) == 0 {
+		panic("invalid empty connections")
 	}
 
 	db, err := warehouse.connection()
@@ -350,13 +350,13 @@ func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actions []int
 	var b strings.Builder
 
 	// Delete the orphan user identities, which are the identities that belong
-	// to actions that no longer exist.
-	b.WriteString(`DELETE FROM "users_identities" WHERE "_action" NOT IN (`)
-	for i, action := range actions {
+	// to connections that no longer exist.
+	b.WriteString(`DELETE FROM "users_identities" WHERE "_connection" NOT IN (`)
+	for i, connection := range connections {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(strconv.Itoa(action))
+		b.WriteString(strconv.Itoa(connection))
 	}
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())

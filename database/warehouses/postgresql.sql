@@ -8,7 +8,7 @@ CREATE TYPE music_genre AS ENUM('pop', 'rock', 'blues', 'classical');
 CREATE TABLE users_identities (
 
     "_identity_id"   serial,
-    "_action"        int,
+    "_connection"    int,
     "_external_id"   text,
     "_anonymous_ids" text[],
     "_timestamp"     timestamp NOT NULL DEFAULT now(),

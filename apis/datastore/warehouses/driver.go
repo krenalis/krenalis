@@ -50,14 +50,14 @@ type Warehouse interface {
 	DestinationUser(ctx context.Context, action int, property string) (string, bool, error)
 
 	// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-	// the given schema, relative to the action, on the data warehouse.
+	// the given schema, relative to the connection, on the data warehouse.
 	// fromEvent indicates if the user identities are imported from an event or not.
 	// ack is the ack function (see the documentation of IdentitiesWriter for more
 	// details about it).
 	// If the schema specified is not conform to the schema of the table
 	// 'users_identities' in the data warehouse, calls to the method 'Write' of the
 	// returned 'IdentitiesWriter' return a *SchemaError error.
-	IdentitiesWriter(ctx context.Context, schema types.Type, action int, fromEvent bool, ack IdentitiesAckFunc) IdentitiesWriter
+	IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack IdentitiesAckFunc) IdentitiesWriter
 
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
@@ -96,13 +96,13 @@ type Warehouse interface {
 	Tables(ctx context.Context) ([]*Table, error)
 
 	// ResolveSyncUsers resolves and sync the users.
-	// actions holds the identifiers of the actions of the workspace and must always
-	// contain at least one action.
+	// connections holds the identifiers of the connections of the workspace and
+	// must always contain at least one connection.
 	// identifiers are the properties of the 'users_identities' schema which are
 	// identifiers, ordered by priority.
 	// usersSchema is the schema of the 'users' table, which will be populated
 	// during the users synchronization.
-	ResolveSyncUsers(ctx context.Context, actions []int, identifiers []types.Property, usersSchema types.Type) error
+	ResolveSyncUsers(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error
 
 	// Records returns an iterator over the results of the query and an estimated
 	// count of the records that would be returned if First and Limit were not
