@@ -3,9 +3,10 @@
 	if (a.load) {
 		window.console && console.error && console.error('The ChiChi snippet is included twice');
 	}
-	a.load = function (key, url) {
+	a.load = function (key, url, options) {
 		a.key = key;
 		a.url = url;
+		a.options = options;
 		var s = document.createElement('script');
 		s.async = !0;
 		s.type = 'module';

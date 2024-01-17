@@ -7,7 +7,7 @@ const undefined = void 0;
 function main() {
 	const analytics = window.chichianalytics;
 
-	const a = new Analytics(analytics.key, analytics.url);
+	const a = new Analytics(analytics.key, analytics.url, analytics.options);
 	const methods = [
 		'alias',
 		'endSession',

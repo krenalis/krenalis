@@ -7,7 +7,9 @@ Through an identify call, you can connect previous and upcoming events to a reco
 For optimal use, Chichi suggests making an identify call in the following situations:
 
 * Right after a user registers for the first time.
+
 * Once a user successfully logs in.
+
 * When there's an update to the user's information, such as a change in address or the addition of a new one.
 
 ## How to Make an Identify Call

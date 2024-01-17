@@ -1,10 +1,15 @@
 class Session {
+	#autoTrack;
 	#storage;
-	#timeout = 30 * 60000; // 30 minutes.
+	#timeout;
 
-	constructor(storage) {
+	constructor(storage, autoTrack, timeout) {
+		this.#autoTrack = autoTrack;
 		this.#storage = storage;
-		this.#init();
+		this.#timeout = timeout;
+		if (autoTrack) {
+			this.#init();
+		}
 	}
 
 	// init initializes the current session. If no section exists, or the
@@ -23,16 +28,20 @@ class Session {
 		this.#storage.setSession(null, false);
 	}
 
-	// getFresh returns the current session or, if no session exist or the
-	// current session is expired, starts a new session and returns it. The
-	// boolean return value reports whether a new session has been started
-	// after the previous call to getFresh.
+	// getFresh returns the current session and a boolean value reporting
+	// whether a new session has been started since the last call to getFresh.
+	// Returns null and false is no session exists.
+	//
+	// As a special case, when autoTrack is true, it starts a new session if
+	// none exists, or the current session is expired, and then return it.
 	getFresh() {
 		let [id, start] = this.#storage.getSession();
-		const timestamp = new Date().getTime();
-		if (id == null || id + this.#timeout < timestamp) {
-			id = timestamp;
-			start = true;
+		if (this.#autoTrack) {
+			const timestamp = new Date().getTime();
+			if (id == null || id + this.#timeout < timestamp) {
+				id = timestamp;
+				start = true;
+			}
 		}
 		if (start) {
 			this.#storage.setSession(id, false);

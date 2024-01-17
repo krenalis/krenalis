@@ -1,3 +1,4 @@
+import Options from './options';
 import Storage from './storage.js';
 import Session from './session.js';
 import Sender from './sender.js';
@@ -6,6 +7,7 @@ import { campaign, uuid, typesOf } from './utils.js';
 const version = '0.0.0';
 
 class Analytics {
+	#options;
 	#storage;
 	#session;
 	#sender;
@@ -36,9 +38,10 @@ class Analytics {
 		},
 	};
 
-	constructor(writeKey, endpoint) {
+	constructor(writeKey, endpoint, options) {
+		this.#options = new Options(options);
 		this.#storage = new Storage();
-		this.#session = new Session(this.#storage);
+		this.#session = new Session(this.#storage, this.#options.sessions.autoTrack, this.#options.sessions.timeout);
 		this.#sender = new Sender(writeKey, endpoint);
 		const onReady = this.#onReady;
 		if (onReady) {
@@ -501,12 +504,13 @@ class Analytics {
 			}
 		}
 
-		let start = false;
-		[event.context.sessionId, start] = this.#session.getFresh();
-		if (start) {
-			event.context.sessionStart = true;
+		const [sessionId, start] = this.#session.getFresh();
+		if (sessionId != null) {
+			event.context.sessionId = sessionId;
+			if (start) {
+				event.context.sessionStart = true;
+			}
 		}
-
 		this.#sender.send(event);
 
 		return event;

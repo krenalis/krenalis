@@ -6,14 +6,19 @@ Session tracking is vital for understanding user behavior and optimizing product
 
 Chichi SDKs provide a comprehensive set of functions for session management:
 
-* Automatic or manual session creation.
+* Automatic and manual session creation.
+
 * Inclusion of a session identifier with each event.
-* Automatic or manual session expiration.
+
+* Automatic and manual session expiration.
+
 * Configurable session duration.
+
+Additionally, you can start a session with a specific identifier.
 
 ### Session in the JSON Body
 
-When a Chichi SDK sends an event, it includes two session fields in the JSON body of the request:
+When a Chichi SDK sends an event, it includes two session fields. Here's an example of how a session appears in Chichi upon receiving an event:
 
 ```json
 {
@@ -71,4 +76,31 @@ Retrieve the Session ID of the current session with the `getSessionId` function.
 
 ```javascript
 let sessionId = chichianalytics.getSessionId();
+```
+
+### Disable Automatic Session Tracking
+
+With automatic session tracking, a session expires when the timeout period concludes, and a new session starts with the subsequent event.
+
+This behavior is the default setting. To disable it, set the `autoTrack` option to `false` when loading the JavaScript SDK:
+
+```javascript
+chichianalytics.load(writeKey, endpoint, {
+    sessions: {
+		autoTrack: false // disable the automatic session tracking
+    }
+});
+```
+When automatic session tracking is disabled, you can still use the `startSession` and `endSession` functions to starts and end sessions.
+
+### Change the  Session Timeout
+
+The default session timeout is 30 minutes. If you wish to set a different timeout, specify the `timeout` option with a value in milliseconds when loading the JavaScript SDK:
+
+```javascript
+chichianalytics.load(writeKey, endpoint, {
+    sessions: {
+		timeout: 15 * 60000 // set the timeout to 15 minutes
+    }
+});
 ```
