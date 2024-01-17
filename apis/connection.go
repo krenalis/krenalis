@@ -1166,7 +1166,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		if err != nil {
 			return nil, err
 		}
-		data, err = m.Transform(ctx, ev.MapEvent())
+		data, err = m.Transform(ctx, ev.ToMap())
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
@@ -1185,7 +1185,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	preview, err := this.app().PreviewSendEvent(ctx, eventType, ev.ConnectorEvent(), data)
+	preview, err := this.app().PreviewSendEvent(ctx, eventType, ev.ToConnectorEvent(), data)
 	if err != nil {
 		if err == _connector.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)

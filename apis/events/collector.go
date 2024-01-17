@@ -160,7 +160,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Transform the event.
-			properties, err := transformer.Transform(ctx, event.MapEvent())
+			properties, err := transformer.Transform(ctx, event.ToMap())
 			if err != nil {
 				return err
 			}

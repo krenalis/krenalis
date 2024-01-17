@@ -21,8 +21,8 @@ import (
 // Event represents an event as returned by the ParseObservedEvent method of the
 // *Events type.
 type Event interface {
-	ConnectorEvent() *connector.Event
-	MapEvent() map[string]any
+	ToConnectorEvent() *connector.Event
+	ToMap() map[string]any
 }
 
 // EventHeader represents the header of an event as collected from a client.
@@ -142,9 +142,9 @@ type eventContext struct {
 	UserAgent    string         `json:"userAgent,omitempty"`
 }
 
-// ConnectorEvent returns event as a connector event to be passed as an
+// ToConnectorEvent returns event as a connector event to be passed as an
 // argument to the SendEvent and PreviewSendEvent methods of an app connector.
-func (event *collectedEvent) ConnectorEvent() *connector.Event {
+func (event *collectedEvent) ToConnectorEvent() *connector.Event {
 	// Keep in sync with the connector.Event type.
 	groupId := event.GroupId
 	if event.GroupId == "" {
@@ -212,8 +212,8 @@ func (event *collectedEvent) ConnectorEvent() *connector.Event {
 	return &e
 }
 
-// MapEvent returns event as a map, enabling its use in transformations.
-func (event *collectedEvent) MapEvent() map[string]any {
+// ToMap returns event as a map, enabling its use in transformations.
+func (event *collectedEvent) ToMap() map[string]any {
 
 	// Keep in sync with the schema in "apis/events/schema.go".
 

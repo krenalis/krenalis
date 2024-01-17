@@ -74,7 +74,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 				case event := <-events:
 					for _, action := range st.Actions() {
 						// Convert the collectedEvent to a map of properties.
-						mapEvent := event.MapEvent()
+						mapEvent := event.ToMap()
 						// Check if the filter applies.
 						ok, err := filterApplies(action.Filter, mapEvent)
 						if err != nil {
@@ -114,7 +114,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 							// See the issue https://github.com/open2b/chichi/issues/194.
 							//
 							endpoint: 0,
-							inEvent:  event.ConnectorEvent(),
+							inEvent:  event.ToConnectorEvent(),
 						}
 						processor.events.out <- ev
 					}
