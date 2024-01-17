@@ -25,6 +25,9 @@ type Transformer struct {
 // identifier. function is the transformer function to use for function
 // transformations and is nil for mappings. If not nil, layouts represent the
 // layouts used to format DateTime, Date, and Time values as strings.
+//
+// For mappings, it returns a types.PathNotExistError error if a path in
+// expressions does not exist in the source schema.
 func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, function Function, layouts *state.Layouts) (*Transformer, error) {
 
 	if !outSchema.Valid() {
