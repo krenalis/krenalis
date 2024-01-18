@@ -215,7 +215,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	// Merge the anonymous IDS.
 	b.Reset()
 	b.WriteString(`UPDATE users_identities SET _anonymous_ids = (
-		SELECT array_agg(anon_ids.ids) as _anonymous_ids
+		SELECT array_agg(DISTINCT anon_ids.ids) as _anonymous_ids
 		FROM (
 			SELECT unnest("_anonymous_ids") as ids
 			FROM users_identities
