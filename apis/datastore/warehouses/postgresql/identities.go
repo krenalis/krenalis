@@ -129,7 +129,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND (_external_id = $2) OR ($3 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
+				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
