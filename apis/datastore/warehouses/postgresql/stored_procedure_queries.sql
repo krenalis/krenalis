@@ -111,4 +111,12 @@ AS $$
             "users_identities"."_identity_id" = ANY ("users".__identity_ids__)
     );
 
+    -- Update the GID of the events.
+    UPDATE "events" SET "gid" = 0;
+    UPDATE "events" SET "gid" = "users_identities"."_gid"
+    FROM "users_identities" WHERE
+        ("events"."user_id" <> '' AND "events"."user_id" = "users_identities"."_external_id")
+            OR
+        ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("users_identities"."_anonymous_ids"));
+
 $$;

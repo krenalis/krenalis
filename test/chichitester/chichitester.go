@@ -260,31 +260,6 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	return &c
 }
 
-// AssociateGIDToEvents associates the given GID to every event in the "events"
-// table of the testing data warehouse. Returns the count of events affected.
-//
-// This method serves as workaround until the identity resolution on events is
-// implemented.
-func (c *Chichi) AssociateGIDToEvents(ctx context.Context, gid int) int64 {
-	db, err := postgres.Open(&postgres.Options{
-		Host:     testsSettings.Warehouse.Host,
-		Port:     testsSettings.Warehouse.Port,
-		Username: testsSettings.Warehouse.Username,
-		Password: testsSettings.Warehouse.Password,
-		Database: testsSettings.Warehouse.Database,
-		Schema:   testsSettings.Warehouse.Schema,
-	})
-	if err != nil {
-		c.t.Fatalf("cannot open warehouse for executing query tests: %s", err)
-	}
-	defer db.Close()
-	res, err := db.Exec(ctx, `UPDATE "events" SET "gid" = $1`, gid)
-	if err != nil {
-		c.t.Fatalf("cannot update GID of events: %s", err)
-	}
-	return res.RowsAffected()
-}
-
 // CountEventsInWarehouse returns the counts of events stored in the "events"
 // table of the testing data warehouse.
 func (c *Chichi) CountEventsInWarehouse(ctx context.Context) int {

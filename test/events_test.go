@@ -32,34 +32,33 @@ func TestEvents(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Load some users in the data warehouse.
-	{
-		dummySrc := c.AddDummy("Dummy (source)", connector.Source)
-		importUsersID := c.AddAction(dummySrc, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Import users from Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":     "email",
-						"firstName": "firstName",
-					},
+	// Load some users in the data warehouse from Dummy.
+	dummySrc := c.AddDummy("Dummy (source)", connector.Source)
+	importUsersID := c.AddAction(dummySrc, map[string]any{
+		"Target": "Users",
+		"Action": map[string]any{
+			"Name": "Import users from Dummy",
+			"InSchema": types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+			}),
+			"OutSchema": types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+			}),
+			"Transformation": map[string]any{
+				"Mapping": map[string]string{
+					"email":     "email",
+					"firstName": "firstName",
 				},
 			},
-		})
-		c.ExecuteAction(dummySrc, importUsersID, true)
-		c.WaitActionsToFinish(dummySrc)
-	}
+		},
+	})
+	c.ExecuteAction(dummySrc, importUsersID, true)
+	c.WaitActionsToFinish(dummySrc)
 
-	// Add a website connection (with an enabled action) and retrieve its key.
+	// Add a website connection with two actions (one for importing events, one
+	// for importing user traits) and retrieve its key.
 	var websiteID int
 	var websiteKey string
 	{
@@ -76,7 +75,38 @@ func TestEvents(t *testing.T) {
 				"Enabled": true,
 			},
 		})
+		c.AddAction(websiteID, map[string]any{
+			"Target": "Users",
+			"Action": map[string]any{
+				"Name":    "Website",
+				"Enabled": true,
+				"InSchema": types.Object([]types.Property{
+					{Name: "traits", Type: types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+					})},
+				}),
+				"OutSchema": types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				"Transformation": map[string]any{
+					"Mapping": map[string]string{
+						"email": "traits.email",
+					},
+				},
+			},
+		})
 	}
+
+	const eventUserEmail = "event-user@example.com"
+
+	// Send an identity event. More than importing an event, this should create
+	// a user identity.
+	c.SendEvent(websiteKey, analytics.Identify{
+		UserId: "f4ca124298",
+		Traits: map[string]interface{}{
+			"email": eventUserEmail,
+		},
+	})
 
 	// Send 3 events.
 	for i := 0; i < 3; i++ {
@@ -98,7 +128,7 @@ func TestEvents(t *testing.T) {
 
 	ctx := context.Background()
 
-	const expectedEventsCount = 3
+	const expectedEventsCount = 4
 
 	// Wait for the events to be stored in the warehouse.
 	bo := backoff.New(20)
@@ -116,24 +146,40 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
-	// Choose a GID to associate to events.
-	userGID := 1
+	// Trigger the identity resolution, so that the events GID are updated.
+	c.ExecuteAction(dummySrc, importUsersID, true)
+	c.WaitActionsToFinish(dummySrc)
 
-	// As a workaround, "manually" assign the GID to the events.
-	count := c.AssociateGIDToEvents(ctx, userGID)
-	if expectedEventsCount != count {
-		t.Fatalf("expecting %d events affected, got %d", expectedEventsCount, count)
+	// Retrieve the user imported from the event.
+	response := c.Users([]string{"Id", "email"}, "", 0, 100)
+	count, _ := response["count"].(json.Number).Int64()
+	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from website, with the identity call
+	if expectedUsersCount != count {
+		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)
 	}
+	var userGID int64
+	for _, user := range response["users"].([]any) {
+		email, _ := user.(map[string]any)["email"].(string)
+		if email == eventUserEmail {
+			userGID, _ = user.(map[string]any)["Id"].(json.Number).Int64()
+			if userGID <= 0 {
+				t.Fatalf("invalid user GID %d", userGID)
+			}
+			break
+		}
+	}
+	if userGID == 0 {
+		t.Fatalf("user with email %q not found", eventUserEmail)
+	}
+	t.Logf("user imported from event has GID %d", userGID)
 
 	// Retrieve the first event for the user.
 	var event map[string]any
-	{
-		events := c.UserEvents(userGID)
-		if len(events) != expectedEventsCount {
-			t.Fatalf("expecting %d events, got %d", expectedEventsCount, len(events))
-		}
-		event = events[0] // most recent event.
+	events := c.UserEvents(int(userGID))
+	if len(events) != expectedEventsCount {
+		t.Fatalf("expecting %d events for user %d, got %d", expectedEventsCount, userGID, len(events))
 	}
+	event = events[0] // most recent event.
 
 	// Validate some fields of the event.
 	{
