@@ -6,7 +6,8 @@ Chichi validates data in the following scenarios:
 
 | Data Validation Scenarios                                                                                                   |
 |-----------------------------------------------------------------------------------------------------------------------------|
-| **Collecting data and events from a source location**, validation occurs against the connection's source schema.            |
+| **Collecting data from a source location**, validation occurs against the connection's source schema.                       |
+| **Receiving events from a source location**, validation occurs against the schema of the events.                            |
 | **Before data transformation**, validation checks are performed against the transformation's input schema.                  |
 | **After data transformation**, the transformed data undergoes validation against the transformation's output schema.        |
 | **During storage in the data warehouse**, data is validated against the destination table's schema.                         |
