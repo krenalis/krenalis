@@ -802,13 +802,14 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								EventType      string
 								Event          *apis.ObservedEvent
 								Transformation apis.Transformation
+								OutSchema      types.Type
 							}
 							err = json.NewDecoder(r.Body).Decode(&req)
 							if err != nil {
 								respond(w, err)
 								return
 							}
-							preview, err := connection.PreviewSendEvent(ctx, req.EventType, req.Event, req.Transformation)
+							preview, err := connection.PreviewSendEvent(ctx, req.EventType, req.Event, req.Transformation, req.OutSchema)
 							if err != nil {
 								respond(w, err)
 								return

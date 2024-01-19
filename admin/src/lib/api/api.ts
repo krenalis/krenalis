@@ -352,11 +352,13 @@ class Connections {
 		connection: number,
 		eventType: string,
 		event: ObservedEvent,
+		outSchema: ObjectType,
 		transformation?: Transformation,
 	): Promise<EventPreviewResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-preview`, http.POST, {
 			eventType: eventType,
 			event: event,
+			outSchema: outSchema,
 			transformation: transformation,
 		});
 	};

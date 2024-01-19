@@ -14,6 +14,7 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector"
+	"chichi/connector/types"
 )
 
 const pipeSize = 100
@@ -27,13 +28,14 @@ const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 type processedEvent struct {
 	*collectedEvent
-	action      *state.Action
-	destination int
-	eventType   string
-	endpoint    int
-	data        map[string]any
-	inEvent     *connector.Event
-	err         error
+	action       *state.Action
+	destination  int
+	eventType    string
+	endpoint     int
+	values       map[string]any
+	valuesSchema types.Type
+	inEvent      *connector.Event
+	err          error
 }
 
 // Processor processes events received from source streams and sent them to
@@ -74,9 +76,9 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 				case event := <-events:
 					for _, action := range st.Actions() {
 						// Convert the collectedEvent to a map of properties.
-						mapEvent := event.ToMap()
+						eventAsMap := event.ToMap()
 						// Check if the filter applies.
-						ok, err := filterApplies(action.Filter, mapEvent)
+						ok, err := filterApplies(action.Filter, eventAsMap)
 						if err != nil {
 							eventLog.TransformationFailed(event.id, action.ID, err)
 							continue
@@ -84,17 +86,14 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 						if !ok {
 							continue
 						}
-						var data map[string]any
-						// If the action's input schema is valid (which means
-						// that there is a mapping or a transformation defined),
-						// apply the mapping or the transformation.
-						if action.InSchema.Valid() {
-							transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID, transformer, nil)
+						var values map[string]any
+						if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
+							transformer, err := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, transformer, nil)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
 							}
-							data, err = transformer.Transform(ctx, mapEvent)
+							values, err = transformer.Transform(ctx, eventAsMap)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
@@ -105,7 +104,8 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 							action:         action,
 							destination:    action.Connection().ID,
 							eventType:      action.EventType,
-							data:           data,
+							values:         values,
+							valuesSchema:   action.OutSchema,
 							// TODO(Gianluca): since the endpoints have been
 							// removed from the action, we do not have
 							// information about the endpoint. We should

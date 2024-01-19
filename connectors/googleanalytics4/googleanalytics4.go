@@ -104,12 +104,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 // PreviewSendEvent returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
-	switch eventType {
-	case "page_view", "share":
-	default:
-		return nil, connector.ErrEventTypeNotExist
-	}
+func (c *connection) PreviewSendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString("POST https://www.google-analytics.com/mp/collect?api_secret=REDACTED&measurement_id=" + _url.QueryEscape(c.settings.MeasurementID) + "\n")
 	b.WriteString("Content-Type: application/json\n\n")
@@ -129,12 +124,7 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 // SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
-	switch eventType {
-	case "page_view", "share":
-	default:
-		return connector.ErrEventTypeNotExist
-	}
+func (c *connection) SendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) error {
 	return c.collect(eventBody(eventType, event, data))
 }
 
@@ -249,9 +239,9 @@ func (c *connection) collect(body any) error {
 	return nil
 }
 
-func eventBody(eventType string, event *connector.Event, data map[string]any) any {
+func eventBody(eventType *connector.EventType, event *connector.Event, data map[string]any) any {
 	var ev map[string]any
-	switch eventType {
+	switch eventType.ID {
 	case "page_view":
 		ev = map[string]any{
 			"page_location": event.Context.Page.URL,

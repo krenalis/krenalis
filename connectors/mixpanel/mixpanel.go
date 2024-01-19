@@ -106,12 +106,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 // PreviewSendEvent returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) PreviewSendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
-	switch eventType {
-	case "track", "page", "screen":
-	default:
-		return nil, connector.ErrEventTypeNotExist
-	}
+func (c *connection) PreviewSendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) ([]byte, error) {
 	var b bytes.Buffer
 	if c.conf.Region == connector.PrivacyRegionEurope {
 		b.WriteString("POST https://api-eu.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
@@ -136,12 +131,7 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 // SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) SendEvent(ctx context.Context, eventType string, event *connector.Event, data map[string]any) error {
-	switch eventType {
-	case "track", "page", "screen":
-	default:
-		return connector.ErrEventTypeNotExist
-	}
+func (c *connection) SendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) error {
 	b, err := json.Marshal(eventBody(event, data))
 	if err != nil {
 		return err

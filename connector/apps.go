@@ -23,10 +23,6 @@ import (
 // request was not authorized.
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
-// ErrEventTypeNotExist is returned by the SendEvent and the PreviewSendEvent
-// methods if the event type does not exist.
-var ErrEventTypeNotExist = errors.New("event type does not exist")
-
 // App represents an app connector.
 type App struct {
 	Name                   string
@@ -104,12 +100,12 @@ type AppEventsConnection interface {
 	// PreviewSendEvent returns a preview of the event that would be sent when
 	// calling SendEvent with the same arguments.
 	// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-	PreviewSendEvent(ctx context.Context, eventType string, event *Event, data map[string]any) ([]byte, error)
+	PreviewSendEvent(ctx context.Context, eventType *EventType, event *Event, data map[string]any) ([]byte, error)
 
 	// SendEvent sends the event, along with the given mapped data.
 	// Can be used by multiple goroutines at the same time.
 	// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-	SendEvent(ctx context.Context, eventType string, event *Event, data map[string]any) error
+	SendEvent(ctx context.Context, eventType *EventType, event *Event, data map[string]any) error
 }
 
 // Cursor represents a cursor used to implement pagination.

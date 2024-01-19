@@ -208,6 +208,11 @@ const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): Tra
 };
 
 const transformAction = (action: Action, outputSchema: ObjectType): TransformedAction => {
+	let actionMapping = action.Transformation.Mapping;
+	if (action.Transformation.Function == null && actionMapping == null) {
+		// Mappings are selected but there is nothing mapped.
+		actionMapping = {};
+	}
 	return {
 		ID: action.ID,
 		Connection: action.Connection,
@@ -222,10 +227,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		OutSchema: action.OutSchema,
 		Filter: action.Filter,
 		Transformation: {
-			Mapping:
-				action.Transformation.Mapping != null
-					? transformActionMapping(action.Transformation.Mapping, outputSchema)
-					: null,
+			Mapping: actionMapping != null ? transformActionMapping(actionMapping, outputSchema) : null,
 			Function: action.Transformation.Function,
 		},
 		Query: action.Query,
@@ -296,7 +298,9 @@ const transformInActionToSet = async (
 				inputSchema.properties!.push(fullProperty);
 			}
 		}
-		mapping = mappingToSave;
+		if (expressions.length > 0) {
+			mapping = mappingToSave;
+		}
 		inSchema = inputSchema;
 		outSchema = outputSchema;
 	}
@@ -418,7 +422,7 @@ const transformInActionToSet = async (
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: {
-			Mapping: mapping!,
+			Mapping: mapping,
 			Function: func,
 		},
 		query: query!,

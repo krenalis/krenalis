@@ -274,33 +274,18 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // more details.
 //
 // It returns an errors.UnprocessableError error with code
-//   - EventTypeNotExist, if the event type does not exist anymore for the
-//     connection.
-//   - FetchSchemaFailed, if an error occurred fetching the event type schema.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	this.apis.mustBeOpen()
+
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
 
-	c := this.action.Connection()
-
 	// Validate the action.
-	var eventTypeSchema types.Type
-	var err error
-	if this.action.EventType != "" {
-		eventTypeSchema, err = this.app().Schema(ctx, state.Events, this.action.EventType)
-		if err != nil {
-			if err == connectors.ErrEventTypeNotExist {
-				return errors.Unprocessable(EventTypeNotExist, "connection %d no longer has the event type %q", c.ID, this.action.EventType)
-			}
-			return errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the event type schema: %w", err)
-		}
-	}
-	err = this.connection.validateActionToSet(action, this.action.Target, eventTypeSchema)
+	err := this.connection.validateActionToSet(action, this.action.Target)
 	if err != nil {
 		return err
 	}

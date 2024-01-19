@@ -34,7 +34,6 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/mappings"
-	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/telemetry"
 
@@ -69,6 +68,7 @@ const (
 	NoGroupsSchema       errors.Code = "NoGroupsSchema"
 	NoStorage            errors.Code = "NoStorage"
 	NoUsersSchema        errors.Code = "NoUsersSchema"
+	NotCompatibleSchema  errors.Code = "NotCompatibleSchema"
 	ReadFileFailed       errors.Code = "ReadFileFailed"
 	SheetNotExist        errors.Code = "SheetNotExist"
 	StorageNotExist      errors.Code = "StorageNotExist"
@@ -361,7 +361,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
 //   - ConnectionNotExist, if the connection does not exist.
-//   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
@@ -374,14 +373,9 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.AddAction", "target", target, "eventType", eventType)
 	defer span.End()
 
-	// Validate the target and the event type.
-	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
-	if err != nil {
-		return 0, err
-	}
-
 	// Validate the action.
-	if err := this.validateActionToSet(action, state.Target(target), eventTypeSchema); err != nil {
+	err := this.validateActionToSet(action, state.Target(target))
+	if err != nil {
 		return 0, err
 	}
 
@@ -1026,16 +1020,17 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 
 // PreviewSendEvent returns a preview of an event as it would be sent to an app.
 // The connection must be a destination app connection, and it is expected to
-// have an event type named eventType. If the event type has a schema, then
-// either the mapping or the function transformation to apply to the event must
-// be present.
+// have an event type named eventType. If there is a transformation, outSchema
+// is the out schema of the transformation, and it must be a valid.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - LanguageNotSupported, if the transformation language is not supported.
+//   - NotCompatibleSchema, if the out schema is not compatible with the event
+//     type's schema.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation Transformation) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation Transformation, outSchema types.Type) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1079,19 +1074,16 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	// Get the event type.
-	outSchema, err := this.app().Schema(ctx, state.Events, eventType)
-	if err != nil {
-		if err == connectors.ErrEventTypeNotExist {
-			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+	var values map[string]any
+
+	if transformation.Mapping != nil || transformation.Function != nil {
+
+		if !outSchema.Valid() {
+			return nil, errors.BadRequest("a transformation has been provided but out schema is not valid")
 		}
-		return nil, err
-	}
-
-	var data map[string]any
-
-	// If the event type has a schema, apply the mapping or the transformation.
-	if outSchema.Valid() {
+		if outSchema.Kind() != types.ObjectKind {
+			return nil, errors.BadRequest("out schema is not an Object")
+		}
 
 		inSchema := events.Schema
 
@@ -1156,7 +1148,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			transformer = newTemporaryTransformer(name, transformation.Function.Source, this.apis.functionTransformer)
 		}
 
-		// Transform the data.
+		// Transform the values.
 		action := 1 // no matter the action, it will be overwritten by the temporary transformation.
 		tr := state.Transformation{
 			Mapping:  transformation.Mapping,
@@ -1166,7 +1158,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		if err != nil {
 			return nil, err
 		}
-		data, err = m.Transform(ctx, ev.ToMap())
+		values, err = m.Transform(ctx, ev.ToMap())
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
@@ -1179,16 +1171,19 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	} else {
 
-		if transformation.Mapping != nil || transformation.Function != nil {
-			return nil, errors.BadRequest("transformation is not allowed because the event type %q does not have a schema", eventType)
+		if outSchema.Valid() {
+			return nil, errors.BadRequest("out schema is a valid schema, but no transformation has been provided")
 		}
 
 	}
 
-	preview, err := this.app().PreviewSendEvent(ctx, eventType, ev.ToConnectorEvent(), data)
+	preview, err := this.app().PreviewSendEvent(ctx, eventType, ev.ToConnectorEvent(), values, outSchema)
 	if err != nil {
-		if err == _connector.ErrEventTypeNotExist {
-			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+		if err == connectors.ErrEventTypeNotExist {
+			return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+		}
+		if err, ok := err.(*connectors.SchemaError); ok {
+			return nil, errors.Unprocessable(NotCompatibleSchema, "out schema is not compatible with the event type's schema: %w", err)
 		}
 		return nil, err
 	}
@@ -1751,7 +1746,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context, count int) e
 }
 
 // validateActionToSet validates the action to set (when adding or setting an
-// action) for the given target and event type.
+// action) for the given target.
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
@@ -1760,7 +1755,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context, count int) e
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
-func (this *Connection) validateActionToSet(action ActionToSet, target state.Target, eventTypeSchema types.Type) error {
+func (this *Connection) validateActionToSet(action ActionToSet, target state.Target) error {
 
 	// First, do formal validations.
 
@@ -1799,7 +1794,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 	// Validate the mapping.
 	var usedOutPaths []types.Path
-	if mapping := action.Transformation.Mapping; mapping != nil && len(mapping) > 0 {
+	if mapping := action.Transformation.Mapping; mapping != nil {
+		if len(mapping) == 0 {
+			return errors.BadRequest("transformation mapping must have mapped properties")
+		}
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the mapping")
 		}
@@ -2137,7 +2135,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	switch connector.Type {
 	case state.AppType:
 		if c.Role == state.Destination && target == state.Events {
-			transformationIsMandatory = eventTypeSchema.Valid()
 			functionIsAllowed = true
 		} else {
 			transformationIsMandatory = targetUsersOrGroups

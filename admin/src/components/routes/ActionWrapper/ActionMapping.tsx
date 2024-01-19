@@ -1028,6 +1028,7 @@ const FullscreenTransformation = ({
 				connection.id,
 				actionType.EventType,
 				event.full,
+				actionToSet.outSchema,
 				actionToSet.transformation,
 			);
 		} catch (err) {

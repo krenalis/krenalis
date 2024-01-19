@@ -72,18 +72,30 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 }
 
 // PreviewSendEvent returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments. If the event type does not exist,
-// it returns the ErrEventTypeNotExist error.
-// It panics if the app does not support the events target.
-func (app *App) PreviewSendEvent(ctx context.Context, eventType string, event *Event, data map[string]any) ([]byte, error) {
+// calling SendEvent along with the provided values. valuesSchema is the schema
+// of the values, and can be the invalid schema if there are no values.
+//
+// If the event type does not exist, it returns the ErrEventTypeNotExist error.
+// If the schema of values is incompatible with the event type's schema, it
+// returns a *SchemaError error.
+//
+// It panics if the app does not support the Events target, or if valuesSchema
+// is valid but not an Object.
+func (app *App) PreviewSendEvent(ctx context.Context, eventType string, event *Event, values map[string]any, valuesSchema types.Type) ([]byte, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	preview, err := app.inner.(_connector.AppEventsConnection).PreviewSendEvent(ctx, eventType, event, data)
+	et, err := app.eventType(ctx, eventType)
 	if err != nil {
-		if err == _connector.ErrEventTypeNotExist {
-			err = ErrEventTypeNotExist
-		}
+		return nil, err
+	}
+	// Check compatibility between the schema of the values and the schema of the event type.
+	if err = verifySchemaCompatibilityForSendEvents(valuesSchema, et.Schema); err != nil {
+		return nil, err
+	}
+	// Get a preview of the event.
+	preview, err := app.inner.(_connector.AppEventsConnection).PreviewSendEvent(ctx, et, event, values)
+	if err != nil {
 		return nil, err
 	}
 	return preview, nil
@@ -146,20 +158,30 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	panic("unexpected target")
 }
 
-// SendEvent sends an event, with the give event type, along with the provided
-// mapped data.
+// SendEvent sends an event with the given event type, along with the provided
+// values. valuesSchema is the schema of the values, and can be the invalid
+// schema if there are no values.
 //
-// It returns the ErrEventTypeNotExist error if the event type does not exist.
-// It panics if the app does not support the events target.
-func (app *App) SendEvent(ctx context.Context, eventType string, event *Event, data map[string]any) error {
+// If the event type does not exist, it returns the ErrEventTypeNotExist error.
+// If the schema of values is incompatible with the event type's schema, it
+// returns a *SchemaError error.
+//
+// It panics if the app does not support the Events target, or if valuesSchema
+// is valid but not an Object.
+func (app *App) SendEvent(ctx context.Context, eventType string, event *Event, data map[string]any, valuesSchema types.Type) error {
 	if app.err != nil {
 		return app.err
 	}
-	err := app.inner.(_connector.AppEventsConnection).SendEvent(ctx, eventType, event, data)
-	if err == _connector.ErrEventTypeNotExist {
-		err = ErrEventTypeNotExist
+	et, err := app.eventType(ctx, eventType)
+	if err != nil {
+		return err
 	}
-	return err
+	// Check compatibility between the schema of the values and the schema of the event type.
+	if err = verifySchemaCompatibilityForSendEvents(valuesSchema, et.Schema); err != nil {
+		return err
+	}
+	// Send the event.
+	return app.inner.(_connector.AppEventsConnection).SendEvent(ctx, et, event, data)
 }
 
 // Users returns an iterator to iterate over the app's users, conforming to the
@@ -213,6 +235,22 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 		users: app.inner.(_connector.AppUsersConnection),
 	}
 	return &w, nil
+}
+
+// eventType returns the app's event type with identifier id. It the event type
+// does not exist, it returns the ErrEventTypeNotExist error.
+// It panics if the app does not support the Events target.
+func (app *App) eventType(ctx context.Context, id string) (*_connector.EventType, error) {
+	eventTypes, err := app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range eventTypes {
+		if t.ID == id {
+			return t, nil
+		}
+	}
+	return nil, ErrEventTypeNotExist
 }
 
 // appWriter implements the Writer interface for apps.
@@ -376,4 +414,183 @@ func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, e
 	}
 	app.users.schemas = schemas
 	return app.users.schemas[role], nil
+}
+
+// verifySchemaCompatibilityForSendEvents verifies whether t1 and t2 are
+// compatible for sending events. If they are compatible, values satisfying t1
+// can be safely passed to the SendEvent and PreviewSendEvent methods, where t2
+// represents the schema of the event type to send. In such cases, it guarantees
+// that the values also satisfy t2.
+//
+// An invalid schema is handled as if it were an object without properties.
+//
+// It returns a *SchemaError error if t1 and t2 are not compatible. It panics if
+// the schema is invalid.
+//
+// It panics if t1 and t2 are valid but non-Object.
+func verifySchemaCompatibilityForSendEvents(t1, t2 types.Type) error {
+	if !t1.Valid() || !t2.Valid() {
+		switch {
+		case t1.Valid():
+			properties := t1.Properties()
+			return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, properties[0].Name)}
+		case t2.Valid():
+			for _, p2 := range t2.Properties() {
+				if p2.Required {
+					return &SchemaError{Msg: fmt.Sprintf(`there is a new required property %q`, p2.Name)}
+				}
+			}
+		}
+		return nil
+	}
+	if t1.Kind() != types.ObjectKind || t2.Kind() != types.ObjectKind {
+		panic("t1 and t2 must be invalid or objects")
+	}
+	// t1 and t2 are valid.
+	var verify func(name string, t1, t2 types.Type) error
+	verify = func(name string, t1, t2 types.Type) error {
+		if t1.EqualTo(t2) {
+			return nil
+		}
+		pt1 := t1.Kind()
+		pt2 := t2.Kind()
+		if pt1 != pt2 {
+			return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
+		}
+		switch pt1 {
+		case types.IntKind:
+			min1, max1 := t1.IntRange()
+			min2, max2 := t2.IntRange()
+			if min1 < min2 {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; minimum value is changed from %d to %d", name, min1, min2)}
+			}
+			if max2 < max1 {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; maximum value is changed from %d to %d", name, max1, max2)}
+			}
+			return nil
+		case types.UintKind:
+			min1, max1 := t1.UintRange()
+			min2, max2 := t2.UintRange()
+			if min1 < min2 {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; minimum value is changed from %d to %d", name, min1, min2)}
+			}
+			if max2 < max1 {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; maximum value is changed from %d to %d", name, max1, max2)}
+			}
+			return nil
+		case types.FloatKind:
+			if t2.BitSize() < t1.BitSize() {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; bit size is changed from 64 to 32", name)}
+			}
+			min1, max1 := t1.FloatRange()
+			min2, max2 := t2.FloatRange()
+			if min1 < min2 {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; minimum value is changed from %g to %g", name, min1, min2)}
+			}
+			if max2 < max1 {
+				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; maximum value is changed from %g to %g", name, max1, max2)}
+			}
+			return nil
+		case types.DecimalKind:
+			s1 := t1.Scale()
+			s2 := t2.Scale()
+			if s1 > s2 || t1.Precision()-s1 > t2.Precision()-s2 {
+				return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed from %s to %s`, name, t1, t2)}
+			}
+			min1, max1 := t1.DecimalRange()
+			min2, max2 := t2.DecimalRange()
+			if min1.LessThan(min2) {
+				return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; minimum value is changed from %s to %s`, name, min1, min2)}
+			}
+			if max2.LessThan(max1) {
+				return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; maximum value is changed from %s to %s`, name, max1, max2)}
+			}
+			return nil
+		case types.TextKind:
+			if values1 := t1.Values(); values1 != nil {
+				values2 := t2.Values()
+				if values2 == nil {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it is no longer limited to specific values`, name)}
+				}
+				for _, v1 := range values1 {
+					found := false
+					for _, v2 := range values2 {
+						if v1 == v2 {
+							found = true
+							break
+						}
+					}
+					if !found {
+						return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; value %q is no longer allowed`, name, v1)}
+					}
+				}
+				return nil
+			}
+			if rx1 := t1.Regexp(); rx1 != nil {
+				rx2 := t2.Regexp()
+				if rx2 == nil {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it no longer validates against a regular expression`, name)}
+				}
+				if rx1.String() != rx2.String() {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it validates against a different regular expression`, name)}
+				}
+				return nil
+			}
+			if max2, ok := t2.ByteLen(); ok {
+				max1, ok := t1.ByteLen()
+				if !ok {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it is now restricted in byte length`, name)}
+				}
+				if max1 > max2 {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; maximum length in bytes has changed from %d to %d`, name, max1, max2)}
+				}
+			}
+			if max2, ok := t2.CharLen(); ok {
+				max1, ok := t1.CharLen()
+				if !ok {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it is now restricted in character length`, name)}
+				}
+				if max1 > max2 {
+					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; maximum length in characters has changed from %d to %d`, name, max1, max2)}
+				}
+			}
+			return nil
+		case types.ArrayKind:
+			return verify(name+"[]", t1.Elem(), t2.Elem())
+		case types.ObjectKind:
+			for _, p1 := range t1.Properties() {
+				path := p1.Name
+				if name != "" {
+					path = name + "." + path
+				}
+				p2, ok := t2.Property(p1.Name)
+				if !ok {
+					return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, path)}
+				}
+				if !p1.Required && p2.Required {
+					return &SchemaError{Msg: fmt.Sprintf(`property %q has become required`, path)}
+				}
+				err := verify(path, p1.Type, p2.Type)
+				if err != nil {
+					return err
+				}
+			}
+			for _, p2 := range t2.Properties() {
+				if p2.Required {
+					if _, ok := t1.Property(p2.Name); !ok {
+						path2 := p2.Name
+						if name != "" {
+							path2 = name + "." + path2
+						}
+						return &SchemaError{Msg: fmt.Sprintf(`there is a new required property %q`, path2)}
+					}
+				}
+			}
+			return nil
+		case types.MapKind:
+			return verify(name, t1.Elem(), t2.Elem())
+		}
+		return nil
+	}
+	return verify("", t1, t2)
 }
