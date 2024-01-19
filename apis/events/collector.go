@@ -114,9 +114,11 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// importUserTraits imports the user traits from the given events batch
-// collected on the source connection.
-func (c *collector) importUserTraits(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
+// importTraitsOfUsers imports the traits of the users from the given events
+// batch collected on the source connection.
+// If an event does not contain traits, then the corresponding user is not
+// imported.
+func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
 	anonIdents := source.Workspace().AnonymousIdentifiers.Mapping
 	for _, action := range source.Actions() {
 		if !action.Enabled {
@@ -339,17 +341,16 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	// Store the events into the data warehouse.
 	c.storeEvents(source.Workspace().ID, events.Batch)
 
-	// In case there are user traits in some events, import the user from the
-	// events batch.
-	importUserTraits := false
+	// Import the traits of the users, if traits are provided.
+	importTraitsOfUsers := false
 	for _, event := range events.Batch {
 		if len(event.Traits) > 0 || len(event.Context.Traits) > 0 {
-			importUserTraits = true
+			importTraitsOfUsers = true
 			break
 		}
 	}
-	if importUserTraits {
-		err := c.importUserTraits(ctx, source, events.Batch)
+	if importTraitsOfUsers {
+		err := c.importTraitsOfUsers(ctx, source, events.Batch)
 		if err != nil {
 			return err
 		}
