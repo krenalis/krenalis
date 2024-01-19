@@ -779,7 +779,6 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 		event.Properties = map[string]any{}
 	}
 
-	return
 }
 
 // storeEvents store the events in the data warehouse.
@@ -932,7 +931,6 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 
 	store.AddEvents(rows)
 
-	return
 }
 
 // collectHeader returns selected headers of r.
