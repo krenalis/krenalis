@@ -449,6 +449,7 @@ func sameType(t1, t2 Type) error {
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
 		t1.p == t2.p &&
+		t1.s == t2.s &&
 		t1.vl == nil && t2.vl == nil {
 		return nil
 	}

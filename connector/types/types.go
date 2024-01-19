@@ -1144,7 +1144,7 @@ func (t Type) Elem() Type {
 
 // EqualTo reports whether t is equals to t2.
 func (t Type) EqualTo(t2 Type) bool {
-	almostEqual := t.kind == t2.kind && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.p == t2.p
+	almostEqual := t.kind == t2.kind && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.p == t2.p && t.s == t2.s
 	if !almostEqual {
 		return false
 	}
