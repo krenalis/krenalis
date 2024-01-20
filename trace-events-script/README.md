@@ -5,6 +5,13 @@
 - [Build `dist/chichi.js`](#build-distchichijs)
 - [Add the snippet to an HTML page](#add-the-snippet-to-an-html-page)
 
+### Install dependencies
+
+Run:
+
+```sh
+npm install
+```
 
 ## Format files
 
@@ -26,12 +33,19 @@ npm run prettier-test-website
 
 ```sh
 npm run build
-npm run bundle
 ```
 
-These script commands create the `dist/chichi.js` file.
+As an alternative, you can perform the build in three steps:
 
-> As an experiment run `npm run build-swc` to build using SWC. 
+```sh
+npm run bundle
+npm run transpile
+npm run minify
+```
+
+* `npm run bundle` bundles the `chichi.js` file and creates the `build/chichi.bundle.js` file.
+* `npm run transpile` transpile the `build/chichi.bundle.js` file to ES5 and creates the `build/chichi.es5.js` file.
+* `npm run minify` minifies the `build/chichi.es5.js` file and creates the `dist/chichi.js` file.
 
 ## Add the snippet to an HTML page
 
