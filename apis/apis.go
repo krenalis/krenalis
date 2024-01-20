@@ -322,7 +322,7 @@ func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
 	return &connector, nil
 }
 
-// Connectors returns the collectors.
+// Connectors returns the connectors.
 func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 	apis.mustBeOpen()
 	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
