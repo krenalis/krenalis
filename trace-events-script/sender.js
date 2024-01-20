@@ -94,7 +94,7 @@ const post = (function () {
 				method: 'POST',
 				cache: 'no-cache',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'text/plain',
 				},
 				redirect: 'error',
 				body: body,
@@ -113,7 +113,7 @@ const post = (function () {
 	return function (endpoint, body, keepalive, cb) {
 		const xhr = new XMLHttpRequest();
 		xhr.open('POST', endpoint, true);
-		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.setRequestHeader('Content-Type', 'text/plain');
 		xhr.onerror = () => {
 			cb(new Error('an error occurred processing the request'));
 		};

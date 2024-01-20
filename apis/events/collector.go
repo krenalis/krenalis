@@ -47,9 +47,10 @@ const maxRequestSize = 500 * 1024
 
 // Errors handled by the HTTP server of the collector.
 var (
-	errUnauthorized = errors.New("unauthorized")
-	errBadRequest   = errors.New("bad request")
-	errNotFound     = errors.New("not found")
+	errUnauthorized     = errors.New("unauthorized")
+	errBadRequest       = errors.New("bad request")
+	errMethodNotAllowed = errors.New("method not allowed")
+	errNotFound         = errors.New("not found")
 )
 
 type batchEvents struct {
@@ -103,6 +104,9 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case errBadRequest:
 			http.Error(w, "Bad batchRequest", http.StatusBadRequest)
+		case errMethodNotAllowed:
+			w.Header().Set("Allow", "POST, OPTIONS")
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		case errNotFound:
 			http.Error(w, "Invalid path or identifier", http.StatusNotFound)
 		case errUnauthorized:
@@ -201,6 +205,21 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		_ = r.Body.Close()
 	}()
 
+	origin := r.Header.Get("Origin")
+
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+		w.WriteHeader(204)
+		return nil
+	}
+	if r.Method != "POST" {
+		return errMethodNotAllowed
+	}
+
 	method := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 	switch method {
 	case "batch", "track", "page", "screen", "identify", "group", "alias":
@@ -210,7 +229,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 
 	// Validate the content type.
 	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mt != "application/json" || len(params) > 1 {
+	if err != nil || (mt != "application/json" && mt != "text/plain") || len(params) > 1 {
 		return errBadRequest
 	}
 	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
@@ -285,6 +304,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 			// Send a successful response to the client.
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Content-Length", "21")
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 			_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 			return nil
 		}
@@ -316,6 +336,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		// Send a successful response to the client.
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", "21")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 		return nil
 	}
@@ -336,6 +357,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	// Send a successful response to the client.
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", "21")
+	w.Header().Set("Access-Control-Allow-Origin", origin)
 	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 
 	// Store the events into the data warehouse.
