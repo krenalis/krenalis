@@ -87,7 +87,7 @@ const onUnload = function () {
 // It returns an object with properties 'ok', 'status' and 'statusText'.
 // Returns an Error value in case of error.
 const post = (function () {
-	// Legacy: ie10 and ie11 do not support fetch.
+	// ES5: "fetch" is not available.
 	if (window.fetch && typeof window.fetch === 'function') {
 		return function (endpoint, body, keepalive, cb) {
 			const promise = fetch(endpoint, {

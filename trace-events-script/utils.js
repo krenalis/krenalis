@@ -1,7 +1,7 @@
 // campaign returns an object with the UTM parameters of the campaign, or it returns undefined if there are none.
 function campaign() {
 	let campaign;
-	// Legacy: ie10 and ie11 do not support URLSearchParams.
+	// ES5: "URLSearchParams" is not available.
 	const search = window.location.search.substring(1).replace(/\?/g, '&');
 	const params = search.split('&');
 	for (let i = 0; i < params.length; i++) {
@@ -14,7 +14,7 @@ function campaign() {
 			continue;
 		}
 		try {
-			// Legacy: ie10 and ie11 do not support replaceAll.
+			// ES5: "replaceAll" is not available.
 			const v = decodeURIComponent(kv[1].replace(/\+/g, ' '));
 			campaign = campaign || {};
 			const k = kv[0] === 'campaign' ? 'name' : kv[0];
@@ -25,16 +25,31 @@ function campaign() {
 }
 
 // uuid returns a random UUID.
-function uuid() {
-	if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-		return window.crypto.randomUUID();
+// It is undefined for unsupported browsers.
+const uuid = (function () {
+	let crypto = window.crypto;
+	if (crypto && typeof crypto.randomUUID === 'function') {
+		return () => crypto.randomUUID();
 	}
-	// Legacy: ie10 does not support crypto.getRandomValues.
-	const url = URL.createObjectURL(new Blob());
-	const uuid = url.toString();
-	URL.revokeObjectURL(url);
-	return uuid.split(/[:\/]/g).pop();
-}
+	crypto ||= window.msCrypto;
+	if (crypto && typeof crypto.getRandomValues === 'function') {
+		return function () {
+			// See https://stackoverflow.com/questions/105034/#2117523
+			return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
+				(c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16),
+			);
+		};
+	}
+	const URL = window.URL;
+	if (URL && typeof URL.createObjectURL === 'function') {
+		return function () {
+			const url = URL.createObjectURL(new Blob());
+			const uuid = url.toString();
+			URL.revokeObjectURL(url);
+			return uuid.split(/[:\/]/g).pop();
+		};
+	}
+})();
 
 // typesOf returns a string representing the types of the elements of the array arr.
 // If arr is not an array, it throws an error. If arr is empty, it returns an empty string.

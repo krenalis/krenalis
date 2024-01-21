@@ -1,10 +1,16 @@
 import Analytics from './analytics.js';
+import { uuid } from './utils';
 
 // set DEBUG to true if you are running Chichi's server on localhost.
 const DEBUG = true;
 const undefined = void 0;
 
 function main() {
+	// Do nothing if the browser is not supported.
+	if (!uuid) {
+		return;
+	}
+
 	const analytics = window.chichianalytics;
 
 	const a = new Analytics(analytics.key, analytics.url, analytics.options);

@@ -374,7 +374,7 @@ class Analytics {
 		function executor(resolve, reject) {
 			let event;
 			const data = { type };
-			// Legacy: ie10 and ie11 do not support Array.from.
+			// ES5: "Array.from" is not available.
 			args = Array.prototype.slice.call(args);
 			let callback;
 			if (args.length > 0 && typeof args[args.length - 1] === 'function') {
@@ -385,14 +385,13 @@ class Analytics {
 				event = self.#sendEvent(data, options);
 			} catch (error) {
 				reject(error);
-				return;
 			}
 			if (callback) {
 				callback({ attempts: 1, event: event });
 			}
 			resolve({ attempts: 1, event: event });
 		}
-		if (window.Promise !== undefined) {
+		if (typeof window.Promise === 'function') {
 			return new Promise(executor);
 		}
 		executor(none, none);
