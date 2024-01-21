@@ -385,6 +385,7 @@ class Analytics {
 				event = self.#sendEvent(data, options);
 			} catch (error) {
 				reject(error);
+				return;
 			}
 			if (callback) {
 				callback({ attempts: 1, event: event });
