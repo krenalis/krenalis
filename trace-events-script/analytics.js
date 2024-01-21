@@ -5,6 +5,7 @@ import Sender from './sender.js';
 import { campaign, uuid, typesOf } from './utils.js';
 
 const version = '0.0.0';
+const none = () => {};
 
 class Analytics {
 	#options;
@@ -370,7 +371,7 @@ class Analytics {
 	// the setArgs function.
 	#send(type, setArgs, args) {
 		const self = this;
-		return new Promise(function (resolve, reject) {
+		function executor(resolve, reject) {
 			let event;
 			const data = { type };
 			// Legacy: ie10 and ie11 do not support Array.from.
@@ -389,7 +390,11 @@ class Analytics {
 				callback({ attempts: 1, event: event });
 			}
 			resolve({ attempts: 1, event: event });
-		});
+		}
+		if (window.Promise !== undefined) {
+			return new Promise(executor);
+		}
+		executor(none, none);
 	}
 
 	// sendEvent sends an event with the given options.
