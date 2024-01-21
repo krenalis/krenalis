@@ -31,6 +31,8 @@ npm run prettier-test-website
 
 ## Build `dist/chichi.js`
 
+Run:
+
 ```sh
 npm run build
 ```
@@ -44,7 +46,7 @@ npm run minify
 ```
 
 * `npm run bundle` bundles the `chichi.js` file and creates the `build/chichi.bundle.js` file.
-* `npm run transpile` transpile the `build/chichi.bundle.js` file to ES5 and creates the `build/chichi.es5.js` file.
+* `npm run transpile` transpiles the `build/chichi.bundle.js` file to ES5 and creates the `build/chichi.es5.js` file.
 * `npm run minify` minifies the `build/chichi.es5.js` file and creates the `dist/chichi.js` file.
 
 ## Add the snippet to an HTML page
@@ -59,3 +61,12 @@ Add the content of the `snippet.js` file to the HTML page:
 
 Replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with a write key of the JavaScript source connection and replace `'../dist/chichi.js'` with the
 URL of the `dist/chichi.js` script.
+
+## Minimum Supported Browsers
+
+* Chrome 23
+* Edge 80
+* Safari 7
+* Firefox 21
+* Opera 14
+* IE 11
