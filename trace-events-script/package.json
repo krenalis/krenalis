@@ -6,7 +6,7 @@
     "prettier-test-website": "npx prettier@latest --write \"./website-for-testing/**/*\"",
     "bundle": "esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
     "transpile": "swc build/chichi.bundle.js -o build/chichi.es5.js",
-    "minify": "esbuild build/chichi.es5.js --outfile=dist/chichi.js --minify",
+    "minify": "esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --format=iife",
     "build": "npm run bundle && npm run transpile && npm run minify"
   },
   "devDependencies": {

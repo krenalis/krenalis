@@ -10,7 +10,7 @@
 		var s = document.createElement('script');
 		s.async = !0;
 		s.type = 'text/javascript';
-		s.src = '../dist/chichi.js';
+		s.src = '../dist/chichi.min.js';
 		var c = document.getElementsByTagName('script')[0];
 		c.parentNode.insertBefore(s, c);
 	};
