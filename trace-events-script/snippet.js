@@ -9,7 +9,7 @@
 		a.options = options;
 		var s = document.createElement('script');
 		s.async = !0;
-		s.type = 'module';
+		s.type = 'text/javascript';
 		s.src = '../dist/chichi.js';
 		var c = document.getElementsByTagName('script')[0];
 		c.parentNode.insertBefore(s, c);
