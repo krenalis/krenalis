@@ -70,3 +70,27 @@ URL of the `dist/chichi.js` script.
 * Firefox 21
 * Opera 14
 * IE 11
+
+## ES6 Module Integration
+
+To integrate the JavaScript SDK into a browser application as an ES6 module, follow these steps:
+
+1. Build the `chichi.es6.min.js` module file:
+
+   ```sh
+   npm run build:es6
+   ```
+
+2. Import the module in the browser:
+
+    ```html
+    <script type="module">
+        import Analytics from "../dist/chichi.es6.min.js";
+        const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+        analytics.page();
+    </script>
+    ```
+
+### ES6 Module Compatibility
+
+Check the browser compatibility for ES6 module usage and dynamic import: https://caniuse.com/es6-module-dynamic-import

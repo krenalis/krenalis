@@ -7,7 +7,8 @@
     "bundle": "esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
     "transpile": "swc build/chichi.bundle.js -o build/chichi.es5.js",
     "minify": "esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --format=iife",
-    "build": "npm run bundle && npm run transpile && npm run minify"
+    "build": "npm run bundle && npm run transpile && npm run minify",
+    "build:es6": "esbuild analytics.js --outfile=dist/chichi.es6.min.js --bundle --minify --format=esm"
   },
   "devDependencies": {
     "@swc/cli": "0.1.63",
