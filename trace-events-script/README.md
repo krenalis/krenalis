@@ -94,3 +94,10 @@ To integrate the JavaScript SDK into a browser application as an ES6 module, fol
 ### ES6 Module Compatibility
 
 Check the browser compatibility for ES6 module usage and dynamic import: https://caniuse.com/es6-module-dynamic-import
+
+## Run Tests
+
+To run the tests, follow these steps:
+
+1. Install Deno (https://docs.deno.com/runtime/manual#install-deno) if it is not already installed.
+2. Execute `npm run test`.

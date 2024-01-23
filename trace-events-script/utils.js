@@ -24,14 +24,19 @@ function campaign() {
 	return campaign;
 }
 
-// uuid returns a random UUID.
-// It is undefined for unsupported browsers.
-const uuid = (function () {
+// _uuid_imp returns a function that returns random UUIDs or undefined if the
+// browser is not supported.
+function _uuid_imp() {
 	let crypto = window.crypto;
 	if (crypto && typeof crypto.randomUUID === 'function') {
 		return () => crypto.randomUUID();
 	}
-	crypto ||= window.msCrypto;
+	// The following statement could be simplified to "crypto ||= window.msCrypto",
+	// but it hasn't been done because it wouldn't be testable.
+	// Therefore, do not change it.
+	if (!crypto || typeof crypto.getRandomValues !== 'function') {
+		crypto = window.msCrypto;
+	}
 	if (crypto && typeof crypto.getRandomValues === 'function') {
 		return function () {
 			// See https://stackoverflow.com/questions/105034/#2117523
@@ -49,7 +54,11 @@ const uuid = (function () {
 			return uuid.split(/[:\/]/g).pop();
 		};
 	}
-})();
+}
+
+// uuid returns a random UUID.
+// The uuid function is undefined for unsupported browsers.
+const uuid = _uuid_imp();
 
 // typesOf returns a string representing the types of the elements of the array arr.
 // If arr is not an array, it throws an error. If arr is empty, it returns an empty string.
@@ -58,4 +67,4 @@ function typesOf(arr) {
 	return arr.map((v) => typeof v).join(',');
 }
 
-export { campaign, uuid, typesOf };
+export { campaign, uuid, typesOf, _uuid_imp };
