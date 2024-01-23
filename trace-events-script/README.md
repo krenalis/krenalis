@@ -1,11 +1,21 @@
 # Chichi Analytics
 
+- [Install dependencies](#install-dependencies)
 - [Format files](#format-files)
   - [Formatting files under `website-for-testing`](#formatting-files-under-website-for-testing)
 - [Build `dist/chichi.js`](#build-distchichijs)
 - [Add the snippet to an HTML page](#add-the-snippet-to-an-html-page)
+- [Minimum Supported Browsers](#minimum-supported-browsers)
+- [ES6 Module Integration](#es6-module-integration)
+  - [ES6 Module Compatibility](#es6-module-compatibility)
+- [Execute Tests](#execute-tests)
 
 ### Install dependencies
+
+The following dependencies are required:
+
+* Node.js with npm
+* Deno
 
 Run:
 
@@ -18,7 +28,7 @@ npm install
 Run:
 
 ```sh
-npm run prettier
+npm run fmt
 ```
 
 ### Formatting files under `website-for-testing`
@@ -95,9 +105,10 @@ To integrate the JavaScript SDK into a browser application as an ES6 module, fol
 
 Check the browser compatibility for ES6 module usage and dynamic import: https://caniuse.com/es6-module-dynamic-import
 
-## Run Tests
+## Execute Tests
 
-To run the tests, follow these steps:
+Run:
 
-1. Install Deno (https://docs.deno.com/runtime/manual#install-deno) if it is not already installed.
-2. Execute `npm run test`.
+```sh
+npm run test
+```

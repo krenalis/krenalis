@@ -40,8 +40,9 @@ function _uuid_imp() {
 	if (crypto && typeof crypto.getRandomValues === 'function') {
 		return function () {
 			// See https://stackoverflow.com/questions/105034/#2117523
-			return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
-				(c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16),
+			return '10000000-1000-4000-8000-100000000000'.replace(
+				/[018]/g,
+				(c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16),
 			);
 		};
 	}
@@ -67,4 +68,4 @@ function typesOf(arr) {
 	return arr.map((v) => typeof v).join(',');
 }
 
-export { campaign, uuid, typesOf, _uuid_imp };
+export { _uuid_imp, campaign, typesOf, uuid };

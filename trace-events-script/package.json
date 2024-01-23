@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "test": "deno test *_test.js",
-    "prettier": "npx prettier@latest --print-width 120 --use-tabs --tab-width 4 --single-quote --jsx-single-quote --write \"**/*.js\"",
+    "fmt": "deno fmt --use-tabs --single-quote --line-width=120 *.js",
     "prettier-test-website": "npx prettier@latest --write \"./website-for-testing/**/*\"",
     "bundle": "esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
     "transpile": "swc build/chichi.bundle.js -o build/chichi.es5.js",

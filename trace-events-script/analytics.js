@@ -2,7 +2,7 @@ import Options from './options';
 import Storage from './storage.js';
 import Session from './session.js';
 import Sender from './sender.js';
-import { campaign, uuid, typesOf } from './utils.js';
+import { campaign, typesOf, uuid } from './utils.js';
 
 const version = '0.0.0';
 const none = () => {};
