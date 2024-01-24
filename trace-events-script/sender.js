@@ -5,10 +5,12 @@ class Sender {
 	#timeoutID;
 	#flushing = false;
 	#events = [];
+	#post;
 
 	constructor(writeKey, endpoint) {
 		this.#writeKey = writeKey;
 		this.#endpoint = endpoint;
+		this.#post = postFunc();
 		onUnload(() => {
 			this.flush(true);
 		});
@@ -41,7 +43,7 @@ class Sender {
 		}
 		body += '],"writeKey":' + JSON.stringify(this.#writeKey) + '}';
 		try {
-			post(this.#endpoint, body, keepalive, (res) => {
+			this.#post(this.#endpoint, body, keepalive, (res) => {
 				if (res instanceof Error) {
 					console.warn('cannot send events: ' + res.message);
 					return;
@@ -82,11 +84,11 @@ const onUnload = function () {
 	};
 };
 
-// post issues a POST to the specified endpoint with the given body.
-// If keepalive is true the request outlives the page.
+// postFunc returns a function that issues a POST to the specified endpoint with
+// the given body. If keepalive is true the request outlives the page.
 // It returns an object with properties 'ok', 'status' and 'statusText'.
 // Returns an Error value in case of error.
-const post = (function () {
+function postFunc() {
 	// ES5: "fetch" is not available.
 	if (window.fetch && typeof window.fetch === 'function') {
 		return function (endpoint, body, keepalive, cb) {
@@ -130,6 +132,6 @@ const post = (function () {
 		};
 		xhr.send(body);
 	};
-})();
+}
 
 export default Sender;
