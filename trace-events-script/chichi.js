@@ -1,5 +1,5 @@
 import Analytics from './analytics.js';
-import { uuid } from './utils';
+import { uuid } from './utils.js';
 
 // set DEBUG to true if you are running Chichi's server on localhost.
 const DEBUG = true;

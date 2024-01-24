@@ -1,4 +1,4 @@
-import Options from './options';
+import Options from './options.js';
 import Storage from './storage.js';
 import Session from './session.js';
 import Sender from './sender.js';
