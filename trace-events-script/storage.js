@@ -1,3 +1,5 @@
+const warnMsg = 'Analytics: cannot stringify traits';
+
 class Storage {
 	constructor() {
 		try {
@@ -63,9 +65,26 @@ class Storage {
 	}
 
 	setTraits(traits) {
+		const type = typeof traits;
+		if (type !== 'object') {
+			console.warn(`${warnMsg}: traits is a ${type}`);
+			return;
+		}
+		if (Array.isArray(traits)) {
+			console.warn(`${warnMsg}: traits is an array`);
+			return;
+		}
+		if (traits === null) {
+			traits = {};
+		}
+		let value;
 		try {
-			this.store.setItem('chichi_traits', JSON.stringify(traits));
-		} catch (_) {}
+			value = JSON.stringify(traits);
+		} catch (error) {
+			console.warn(`${warnMsg}: ${error.message}`);
+			return;
+		}
+		this.store.setItem('chichi_traits', value);
 	}
 
 	setUserID(id) {

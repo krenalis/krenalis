@@ -28,13 +28,9 @@ class Analytics {
 		},
 		anonymousId: (id) => this.setAnonymousId(id),
 		traits: (traits) => {
-			if (traits === undefined) {
-				return this.#storage.getTraits();
+			if (traits !== void (0)) {
+				this.#storage.setTraits(traits);
 			}
-			if (typeof traits !== 'object') {
-				traits = {};
-			}
-			this.#storage.setTraits(traits);
 			return this.#storage.getTraits();
 		},
 	};
