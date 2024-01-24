@@ -44,6 +44,7 @@ class Analytics {
 		this.#storage = new Storage();
 		this.#session = new Session(this.#storage, this.#options.sessions.autoTrack, this.#options.sessions.timeout);
 		this.#sender = new Sender(writeKey, endpoint);
+		this.#anonymousId(); // generates a new anonymous ID if one does not already exist
 		const onReady = this.#onReady;
 		if (onReady) {
 			for (let i = 0; i < onReady.length; i++) {
@@ -144,6 +145,17 @@ class Analytics {
 	// User ID, and 'anonymousId' to get the Anonymous ID.
 	user() {
 		return this.#user;
+	}
+
+	// anonymousId returns the anonymous ID. If the anonymous ID is null, it
+	// creates and stores a new generated anonymous ID, then returns it.
+	#anonymousId() {
+		let id = this.#storage.getAnonymousID();
+		if (id == null) {
+			id = uuid();
+			this.#storage.setAnonymousID(id);
+		}
+		return id;
 	}
 
 	// setAliasArguments sets the arguments for alias calls.
@@ -409,13 +421,7 @@ class Analytics {
 		}
 
 		event.messageId = uuid();
-
-		let anonymousID = this.#storage.getAnonymousID();
-		if (anonymousID == null) {
-			anonymousID = uuid();
-			this.#storage.setAnonymousID(anonymousID);
-		}
-		event.anonymousId = anonymousID;
+		event.anonymousId = this.#anonymousId();
 
 		const loc = window.location;
 
