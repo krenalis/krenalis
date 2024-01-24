@@ -1,3 +1,5 @@
+import { isPlainObject } from './utils.js';
+
 class Options {
 	sessions;
 
@@ -21,11 +23,6 @@ class Options {
 			}
 		}
 	}
-}
-
-// isPlainObject reports whether obj is a plain object.
-function isPlainObject(obj) {
-	return typeof obj === 'object' && !Array.isArray(obj) && obj != null;
 }
 
 export default Options;

@@ -24,6 +24,11 @@ function campaign() {
 	return campaign;
 }
 
+// isPlainObject reports whether obj is a plain object.
+function isPlainObject(obj) {
+	return typeof obj === 'object' && !Array.isArray(obj) && obj != null;
+}
+
 // _uuid_imp returns a function that returns random UUIDs or undefined if the
 // browser is not supported.
 function _uuid_imp() {
@@ -68,4 +73,4 @@ function typesOf(arr) {
 	return arr.map((v) => typeof v).join(',');
 }
 
-export { _uuid_imp, campaign, typesOf, uuid };
+export { _uuid_imp, campaign, isPlainObject, typesOf, uuid };

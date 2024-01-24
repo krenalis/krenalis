@@ -2,7 +2,7 @@ import Options from './options.js';
 import Storage from './storage.js';
 import Session from './session.js';
 import Sender from './sender.js';
-import { campaign, typesOf, uuid } from './utils.js';
+import { campaign, isPlainObject, typesOf, uuid } from './utils.js';
 
 const version = '0.0.0';
 const none = () => {};
@@ -527,11 +527,6 @@ class Analytics {
 
 		return event;
 	}
-}
-
-// isPlainObject reports whether obj is a plain object.
-function isPlainObject(obj) {
-	return typeof obj === 'object' && !Array.isArray(obj) && obj != null;
 }
 
 export default Analytics;
