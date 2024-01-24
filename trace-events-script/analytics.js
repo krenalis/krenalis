@@ -19,6 +19,10 @@ class Analytics {
 			if (id === undefined) {
 				return this.#storage.getUserID();
 			}
+			if (id === null) {
+				this.#storage.setUserID(null);
+				return null;
+			}
 			let data = {};
 			this.#setUserId(data, id);
 			if ('userId' in data) {

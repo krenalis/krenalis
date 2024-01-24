@@ -88,7 +88,11 @@ class Storage {
 	}
 
 	setUserID(id) {
-		this.store.setItem('chichi_user_id', id);
+		if (id == null) {
+			this.store.removeItem('chichi_user_id');
+		} else {
+			this.store.setItem('chichi_user_id', id);
+		}
 	}
 }
 
