@@ -12,8 +12,8 @@
     "build:es6": "esbuild analytics.js --outfile=dist/chichi.es6.min.js --bundle --minify --format=esm --target=es6"
   },
   "devDependencies": {
-    "@swc/cli": "0.1.63",
-    "@swc/core": "1.3.104",
+    "@swc/cli": "0.3.0",
+    "@swc/core": "1.3.105",
     "esbuild": "0.19.12",
     "prettier": "3.2.4"
   }
