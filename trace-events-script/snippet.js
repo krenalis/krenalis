@@ -2,6 +2,7 @@
 	var a = (window.chichianalytics = window.chichianalytics || []);
 	if (a.load) {
 		window.console && console.error && console.error('The ChiChi snippet is included twice');
+		return;
 	}
 	a.load = function (key, url, options) {
 		a.key = key;
