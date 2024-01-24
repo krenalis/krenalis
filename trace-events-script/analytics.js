@@ -21,8 +21,8 @@ class Analytics {
 			}
 			let data = {};
 			this.#setUserId(data, id);
-			if ('id' in data) {
-				return data.id;
+			if ('userId' in data) {
+				return data.userId;
 			}
 			return null;
 		},
