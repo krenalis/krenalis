@@ -64,7 +64,7 @@ require (
 	github.com/aws/smithy-go v1.15.0
 	github.com/evanw/esbuild v0.19.12
 	github.com/go-chi/chi/v5 v5.0.11
-	github.com/go-json-experiment/json v0.0.0-20231013223334-54c864be5b8d
+	github.com/go-json-experiment/json v0.0.0-20231102232822-2e55bd4e08b0
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.5.0
