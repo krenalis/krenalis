@@ -17,7 +17,7 @@ class Sender {
 	}
 
 	send(event) {
-		this.#events.push(event);
+		this.#events.push(JSON.stringify(event));
 		if (this.#events.length === 1) {
 			this.#timeoutID = setTimeout(() => {
 				this.flush(false);
@@ -31,17 +31,14 @@ class Sender {
 		}
 		this.#flushing = true;
 
-		let sentAt = new Date();
 		let body = '{"batch":[';
 		for (let i = 0; i < this.#events.length; i++) {
 			if (i > 0) {
 				body += ',';
 			}
-			let event = this.#events[i];
-			event.sentAt = sentAt;
-			body += JSON.stringify(event);
+			body += this.#events[i];
 		}
-		body += '],"writeKey":' + JSON.stringify(this.#writeKey) + '}';
+		body += '],"sentAt":' + JSON.stringify(new Date()) + ',"writeKey":' + JSON.stringify(this.#writeKey) + '}';
 		try {
 			this.#post(this.#endpoint, body, keepalive, (res) => {
 				if (res instanceof Error) {
