@@ -8,6 +8,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -18,7 +19,7 @@ import (
 
 	"chichi/server"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func main() {
@@ -48,7 +49,9 @@ func main() {
 		os.Exit(1)
 	}
 	var settings server.Settings
-	err = yaml.UnmarshalStrict(settingsFileContent, &settings)
+	dec := yaml.NewDecoder(bytes.NewReader(settingsFileContent))
+	dec.KnownFields(true)
+	err = dec.Decode(&settings)
 	if err != nil {
 		slog.Error("cannot parse configuration file", "path", settingsFile, "err", err)
 		os.Exit(1)
