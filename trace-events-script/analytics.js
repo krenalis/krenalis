@@ -101,7 +101,9 @@ class Analytics {
 	// reset resets the user and group identifiers, and traits removing them from the storage.
 	// It also resets the Anonymous ID by generating a new one.
 	reset() {
-		this.#storage.reset();
+		this.#storage.setGroupID(null);
+		this.#storage.setTraits(null);
+		this.#storage.setUserID(null);
 		this.#storage.setAnonymousID(uuid());
 	}
 

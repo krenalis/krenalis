@@ -40,17 +40,15 @@ class Storage {
 		return this.store.getItem('chichi_user_id');
 	}
 
-	reset() {
-		this.store.removeItem('chichi_group_id');
-		this.store.removeItem('chichi_traits');
-		this.store.removeItem('chichi_user_id');
-	}
-
 	setAnonymousID(id) {
 		this.store.setItem('chichi_anonymous_id', id);
 	}
 
 	setGroupID(id) {
+		if (id == null) {
+			this.store.removeItem('chichi_group_id');
+			return;
+		}
 		this.store.setItem('chichi_group_id', id);
 	}
 
