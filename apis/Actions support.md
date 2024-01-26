@@ -1,40 +1,40 @@
-# Action support specification
+## Supported targets by connection / role
 
-This file specifies the support for actions in Chichi.
+> ⚠️ **Support for groups is incomplete and badly documented**. So, even where stated as implemented, may be not yet implemented nor tested.
 
-## Action targets support
-
-**Warning about groups**: support for groups is incomplete and badly documented. So, even where stated as implemented, may be not yet implemented nor tested.
-
-| Connection / Role                           | Users            | Groups             | Events          |
-|---------------------------------------------|------------------|--------------------|-----------------|
-| **App** (source)                            | Import users[^1] | Import groups[^1]  | -               |
-| **App** (destination)                       | Export users[^1] | Export groups[^1]  | Send events[^1] |
-| **Database** (source)                       | Import users     | Import groups      | -               |
-| **Database** (destination)                  | Export users     | Export groups      | -               |
-| **File** (source)                           | Import users     | Import groups      | -               |
-| **File** (destination)                      | Export users     | Export groups      | -               |
-| **Mobile / Server / Website** (source)      | Import users     | Import groups      | Collect events  |
-| **Mobile / Server / Website** (destination) | -                | -                  | -               |
-| **Stream** (source/destination)             | -                | -                  | -               |
-| **Storage** (source/destination)            | -                | -                  | -               |
+| Connection / Role                           | Users            | Groups            | Events          |
+|---------------------------------------------|------------------|-------------------|-----------------|
+| **App** (source)                            | Import users[^1] | Import groups[^1] | -               |
+| **App** (destination)                       | Export users[^1] | Export groups[^1] | Send events[^1] |
+| **Database** (source)                       | Import users     | Import groups     | -               |
+| **Database** (destination)                  | Export users     | Export groups     | -               |
+| **File** (source)                           | Import users     | Import groups     | -               |
+| **File** (destination)                      | Export users     | Export groups     | -               |
+| **Mobile / Server / Website** (source)      | Import users     | Import groups     | Collect events  |
+| **Mobile / Server / Website** (destination) | -                | -                 | -               |
+| **Stream** (source/destination)             | -                | -                 | -               |
+| **Storage** (source/destination)            | -                | -                 | -               |
 
 [^1]: depends on the actual support by the app.
 
-## Action fields support
+## Supported fields by connection / role / target
 
-Mappings (and transformations) support is implicit where there are both an input and output valid schemas.
+> ⚠️ **Support for groups is incomplete and badly documented**. So, even where stated as implemented, may be not yet implemented nor tested.
 
-**Warning about groups**: support for groups is incomplete and badly documented. So, even where stated as implemented, may be not yet implemented nor tested.
+Some notes about the table:
 
-| Connection / Role / Target                               | Filter                                      | Schema (input)                   | Schema (output)                                            | Identity resolution | Misc                                                                                                  |
-|----------------------------------------------------------|---------------------------------------------|----------------------------------|------------------------------------------------------------|---------------------|-------------------------------------------------------------------------------------------------------|
-| **App** (source) on Users / Groups                       | -                                           | Read from the app                | `users_identities` (with no meta-properties)               | Yes                 | -                                                                                                     |
-| **App** (destination) on Users / Groups                  | Filters the users to send to the app        | `users`                          | Read from the app                                          | -                   | Export mode and matching properties                                                                   |
-| **App** (destination) on Events                          | Filters the events to map and then send     | Events (hard-coded into Chichi)  | Event Type (may be invalid to indicate there is no schema) | -                   | -                                                                                                     |
-| **Database** (source) on Users / Groups                  | -                                           | Generated by executing the query | `users_identities` (with no meta-properties)               | Yes                 | Query                                                                                                 |
-| **Database** (destination) on Users / Groups             | Filters the users to export to the database | `users`                          | Read from the indicated table                              | -                   | Table name                                                                                            |
-| **File** (source) on Users / Groups                      | -                                           | Read from file columns / headers | `users_identities` (with no meta-properties)               | Yes                 | File path and sheet, identity column and (optionally) a timestamp column                              |
-| **File** (destination) on Users / Groups                 | Filters the users to write to the file      | `users`                          | Not present, there are no transformations                  | -                   | File path. Does it require a sheet? See the issue [#430](https://github.com/open2b/chichi/issues/430) |
-| **Mobile / Server / Website** (source) on Events         | -                                           | -                                | -                                                          | -                   | -                                                                                                     |
-| **Mobile / Server / Website** (source) on Users / Groups | -                                           | Events (hard-coded into Chichi)  | `users_identities` (with no meta-properties)               | Yes                 | Does not have transformation                                                                          |
+* The columns of the table do not necessarily refer to the fields of the action's fields in JSON/internal Chichi representations, but rather to their broader meaning. The purpose of this table is not to provide specifics on how information is represented, but rather to give an indication of the meaning of the various fields.
+* The **Identity Resolution** procedure is **always executed every time an import action is executed**, so there is no need to specify a column on this.
+* **Transformations are always supported/necessary** when there is a **valid input and output schema**, so there is no need to specify a column on this.
+
+| Connection / Role / Target                               | Filter                                      | Input schema                           | Output schema                                                             | Misc                                                                                                  |
+|----------------------------------------------------------|---------------------------------------------|----------------------------------------|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| **App** (source) on Users / Groups                       | -                                           | Read from the app                      | `users_identities` (with no meta-properties)                              | -                                                                                                     |
+| **App** (destination) on Users / Groups                  | Filters the users to send to the app        | `users`                                | Read from the app                                                         | Export mode and matching properties                                                                   |
+| **App** (destination) on Events                          | Filters the events to map and then send     | Events schema (hard-coded into Chichi) | From the Event Type (may be invalid to indicate there is no schema)       | -                                                                                                     |
+| **Database** (source) on Users / Groups                  | -                                           | Generated by executing the query       | `users_identities` (with no meta-properties)                              | Query                                                                                                 |
+| **Database** (destination) on Users / Groups             | Filters the users to export to the database | `users`                                | Read from the indicated table                                             | Table name                                                                                            |
+| **File** (source) on Users / Groups                      | -                                           | Read from file columns / headers       | `users_identities` (with no meta-properties)                              | File path and sheet, identity column and (optionally) a timestamp column                              |
+| **File** (destination) on Users / Groups                 | Filters the users to write to the file      | `users`                                | - *(not present as there are no transformations when exporting to files)* | File path. Does it require a sheet? See the issue [#430](https://github.com/open2b/chichi/issues/430) |
+| **Mobile / Server / Website** (source) on Events         | -                                           | -                                      | -                                                                         | -                                                                                                     |
+| **Mobile / Server / Website** (source) on Users / Groups | -                                           | Events schema (hard-coded into Chichi) | `users_identities` (with no meta-properties)                              | -                                                                                                     |
