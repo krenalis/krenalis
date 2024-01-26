@@ -98,13 +98,15 @@ class Analytics {
 		this.#onReady.push(callback);
 	}
 
-	// reset resets the user and group identifiers, and traits removing them from the storage.
-	// It also resets the Anonymous ID by generating a new one.
+	// reset resets the user and group identifiers, and traits removing them
+	// from the storage. It also resets the Anonymous ID by generating a new
+	// one, and ends the session if one exists.
 	reset() {
 		this.#storage.setGroupID(null);
 		this.#storage.setTraits(null);
 		this.#storage.setUserID(null);
 		this.#storage.setAnonymousID(uuid());
+		this.#session.end();
 	}
 
 	// screen sends a screen event.
@@ -521,10 +523,10 @@ class Analytics {
 			}
 		}
 
-		const [sessionId, start] = this.#session.getFresh();
+		const [sessionId, sessionStart] = this.#session.getFresh();
 		if (sessionId != null) {
 			event.context.sessionId = sessionId;
-			if (start) {
+			if (sessionStart) {
 				event.context.sessionStart = true;
 			}
 		}

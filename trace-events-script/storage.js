@@ -24,8 +24,9 @@ class Storage {
 		if (id != null) {
 			id = Number(id);
 		}
+		const expiration = Number(this.store.getItem('chichi_session_expiration'));
 		const start = this.store.getItem('chichi_session_start') === 'true';
-		return [id, start];
+		return [id, expiration, start];
 	}
 
 	getTraits() {
@@ -52,13 +53,15 @@ class Storage {
 		this.store.setItem('chichi_group_id', id);
 	}
 
-	setSession(id, start) {
+	setSession(id, expiration, start) {
 		if (id == null) {
 			this.store.removeItem('chichi_session_id');
+			this.store.removeItem('chichi_session_expiration');
 			this.store.removeItem('chichi_session_start');
 			return;
 		}
 		this.store.setItem('chichi_session_id', id);
+		this.store.setItem('chichi_session_expiration', expiration);
 		this.store.setItem('chichi_session_start', start);
 	}
 

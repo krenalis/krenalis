@@ -8,50 +8,51 @@ class Session {
 		this.#storage = storage;
 		this.#timeout = timeout;
 		if (autoTrack) {
-			this.#init();
-		}
-	}
-
-	// init initializes the current session. If no section exists, or the
-	// current session is expired it starts a new session as the start method
-	// does.
-	#init() {
-		let [id] = this.#storage.getSession();
-		const timestamp = new Date().getTime();
-		if (id == null || id + this.#timeout < timestamp) {
-			this.#storage.setSession(timestamp, true);
+			const [id, expiration] = storage.getSession();
+			const now = getTime();
+			if (id == null || expiration < now) {
+				storage.setSession(now, now + timeout, true);
+			}
 		}
 	}
 
 	// end ends the current session.
 	end() {
-		this.#storage.setSession(null, false);
+		this.#storage.setSession(null);
 	}
 
 	// getFresh returns the current session and a boolean value reporting
 	// whether a new session has been started since the last call to getFresh.
-	// Returns null and false is no session exists.
+	// It also extends the expiration of the current session.
 	//
-	// As a special case, when autoTrack is true, it starts a new session if
-	// none exists, or the current session is expired, and then return it.
+	// If no session exists:
+	//   - if autoTrack is true, it starts a new session and then returns it.
+	//   - if autoTrack is false, it returns null.
 	getFresh() {
-		let [id, start] = this.#storage.getSession();
+		let [id, expiration, start] = this.#storage.getSession();
+		const now = getTime();
 		if (this.#autoTrack) {
-			const timestamp = new Date().getTime();
-			if (id == null || id + this.#timeout < timestamp) {
-				id = timestamp;
+			if (id == null || expiration < now) {
+				id = now;
 				start = true;
 			}
 		}
-		if (start) {
-			this.#storage.setSession(id, false);
+		if (id != null) {
+			const expiration = now + this.#timeout;
+			this.#storage.setSession(id, expiration, false);
 		}
 		return [id, start];
 	}
 
 	// get returns the current session, or null if no session exist.
 	get() {
-		let [id] = this.#storage.getSession();
+		let [id, expiration] = this.#storage.getSession();
+		if (id != null && this.#autoTrack) {
+			const now = getTime();
+			if (expiration < now) {
+				id = null;
+			}
+		}
 		return id;
 	}
 
@@ -59,11 +60,18 @@ class Session {
 	// id valuates to false, start uses the time in milliseconds from the epoch
 	// in UTC as identifier.
 	start(id) {
+		const now = getTime();
 		if (id == null) {
-			id = new Date().getTime();
+			id = getTime();
 		}
-		this.#storage.setSession(id, true);
+		const expiration = now + this.#timeout;
+		this.#storage.setSession(id, expiration, true);
 	}
+}
+
+// getTime returns the current UTC time in milliseconds from the epoch.
+function getTime() {
+	return new Date().getTime();
 }
 
 export default Session;
