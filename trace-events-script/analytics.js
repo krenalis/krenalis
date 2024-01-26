@@ -118,11 +118,14 @@ class Analytics {
 		if (id === undefined) {
 			return this.#storage.getAnonymousID();
 		}
-		if (!id) {
-			this.#storage.setAnonymousID(uuid());
-			return null;
+		if (typeof id === 'number') {
+			id = String(id);
 		}
-		this.#storage.setAnonymousID(id);
+		if (typeof id === 'string' && id !== '') {
+			this.#storage.setAnonymousID(id);
+		} else {
+			this.#storage.setAnonymousID(uuid());
+		}
 		return id;
 	}
 
