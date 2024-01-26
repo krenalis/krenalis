@@ -17,6 +17,7 @@ import (
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
@@ -290,13 +291,20 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		return err
 	}
 
+	c := this.action.Connection()
+
+	inSchema := action.InSchema
+	if importsTraitsFromEvents(c.Connector().Type, c.Role, this.action.Target) {
+		inSchema = events.Schema
+	}
+
 	span.Log("action validated successfully")
 
 	n := state.SetAction{
 		ID:        this.action.ID,
 		Name:      action.Name,
 		Enabled:   action.Enabled,
-		InSchema:  action.InSchema,
+		InSchema:  inSchema,
 		OutSchema: action.OutSchema,
 		Transformation: state.Transformation{
 			Mapping: action.Transformation.Mapping,
@@ -344,7 +352,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 
 	// Marshal the input and the output schemas.
-	rawInSchema, err := marshalSchema(action.InSchema)
+	rawInSchema, err := marshalSchema(inSchema)
 	if err != nil {
 		return err
 	}

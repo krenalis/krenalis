@@ -30,6 +30,7 @@ func TestActionsCreation(t *testing.T) {
 		srcCSVConnection     int
 		dstCSVConnection     int
 		postgreSQLConnection int
+		websiteConnection    int
 	)
 	{
 		// CSV connection.
@@ -48,6 +49,7 @@ func TestActionsCreation(t *testing.T) {
 		srcCSVConnection = c.AddSourceCSV(srcFsID)
 		dstFsID := c.AddDestinationFilesystem(storageDir)
 		dstCSVConnection = c.AddDestinationCSV(dstFsID)
+		websiteConnection = c.AddWebsiteSource("Website (source)", "example.com")
 	}
 	{
 		// PostgreSQL connection.
@@ -365,6 +367,49 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			conn: websiteConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name":     "Import user traits from events",
+					"Enabled":  true,
+					"InSchema": nil,
+					"OutSchema": types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"email": "traits.email",
+						},
+					},
+				},
+			},
+		},
+		{
+			conn: websiteConnection,
+			action: map[string]any{
+				"Target": "Users",
+				"Action": map[string]any{
+					"Name":    "Import user traits from events",
+					"Enabled": true,
+					"InSchema": types.Object([]types.Property{
+						{Name: "traits", Type: types.Object([]types.Property{
+							{Name: "email", Type: types.Text()},
+						})},
+					}),
+					"OutSchema": types.Object([]types.Property{
+						{Name: "email", Type: types.Text()},
+					}),
+					"Transformation": map[string]any{
+						"Mapping": map[string]string{
+							"email": "traits.email",
+						},
+					},
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import user traits from events"}}`,
 		},
 	}
 	for _, test := range tests {

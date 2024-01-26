@@ -78,13 +78,9 @@ func TestEvents(t *testing.T) {
 		c.AddAction(websiteID, map[string]any{
 			"Target": "Users",
 			"Action": map[string]any{
-				"Name":    "Website",
-				"Enabled": true,
-				"InSchema": types.Object([]types.Property{
-					{Name: "traits", Type: types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					})},
-				}),
+				"Name":     "Website",
+				"Enabled":  true,
+				"InSchema": nil,
 				"OutSchema": types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),

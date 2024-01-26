@@ -381,6 +381,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	span.Log("action validated successfully")
 
+	inSchema := action.InSchema
+	if importsTraitsFromEvents(this.connection.Connector().Type, this.connection.Role, state.Target(target)) {
+		inSchema = events.Schema
+	}
+
 	n := state.AddAction{
 		Connection:     this.connection.ID,
 		Target:         state.Target(target),
@@ -389,7 +394,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		EventType:      eventType,
 		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
 		SchedulePeriod: 60,
-		InSchema:       action.InSchema,
+		InSchema:       inSchema,
 		OutSchema:      action.OutSchema,
 		Transformation: state.Transformation{
 			Mapping: action.Transformation.Mapping,
@@ -436,7 +441,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Marshal the input and the output schemas.
-	rawInSchema, err := marshalSchema(action.InSchema)
+	rawInSchema, err := marshalSchema(inSchema)
 	if err != nil {
 		return 0, err
 	}
@@ -1757,6 +1762,17 @@ func (this *Connection) updateConnectionsStats(ctx context.Context, count int) e
 //     identifier.
 func (this *Connection) validateActionToSet(action ActionToSet, target state.Target) error {
 
+	inSchema := action.InSchema
+	outSchema := action.OutSchema
+
+	importTraitsFromEvents := importsTraitsFromEvents(this.connection.Connector().Type, this.connection.Role, target)
+	if importTraitsFromEvents {
+		if inSchema.Valid() {
+			return errors.BadRequest("input schema must be invalid for actions that import user traits from events")
+		}
+		inSchema = events.Schema
+	}
+
 	// First, do formal validations.
 
 	// Validate the name.
@@ -1770,19 +1786,19 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		return errors.BadRequest("name is longer than 60 runes")
 	}
 	// Validate the schemas.
-	if action.InSchema.Valid() && action.InSchema.Kind() != types.ObjectKind {
+	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("input schema, if provided, must be an object")
 	}
-	if action.OutSchema.Valid() && action.OutSchema.Kind() != types.ObjectKind {
+	if outSchema.Valid() && outSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("out schema, if provided, must be an object")
 	}
 	// Validate the filter.
 	var usedInPaths []types.Path
 	if action.Filter != nil {
-		if !action.InSchema.Valid() {
+		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := validateFilter(action.Filter, action.InSchema)
+		properties, err := validateFilter(action.Filter, inSchema)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
@@ -1798,13 +1814,13 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if len(mapping) == 0 {
 			return errors.BadRequest("transformation mapping must have mapped properties")
 		}
-		if !action.InSchema.Valid() {
+		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the mapping")
 		}
-		if !action.OutSchema.Valid() {
+		if !outSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		transformer, err := mappings.New(mapping, action.InSchema, action.OutSchema, nil)
+		transformer, err := mappings.New(mapping, inSchema, outSchema, nil)
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
@@ -1819,10 +1835,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 	// Validate the transformation.
 	if function := action.Transformation.Function; function != nil {
-		if !action.InSchema.Valid() {
+		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the transformation")
 		}
-		if !action.OutSchema.Valid() {
+		if !outSchema.Valid() {
 			return errors.BadRequest("output schema is required by the transformation")
 		}
 		if function.Source == "" {
@@ -1897,10 +1913,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if !types.IsValidPropertyName(props.Internal) {
 			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
 		}
-		if !action.InSchema.Valid() {
+		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		internal, ok := action.InSchema.Property(props.Internal)
+		internal, ok := inSchema.Property(props.Internal)
 		if !ok {
 			return errors.BadRequest("internal matching property %q not found within the input schema", props.Internal)
 		}
@@ -1929,8 +1945,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// In case of a source connection, since its actions write on the data
 	// warehouse, the output schema cannot contain meta-properties because such
 	// properties are not writable by user transformations.
-	if c.Role == state.Source && action.OutSchema.Valid() {
-		for _, p := range action.OutSchema.Properties() {
+	if c.Role == state.Source && outSchema.Valid() {
+		for _, p := range outSchema.Properties() {
 			if isMetaProperty(p) {
 				return errors.BadRequest("output schema cannot contain meta-properties")
 			}
@@ -1942,7 +1958,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	if importingUsers := c.Role == state.Source && target == state.Users; importingUsers {
 		var tOutProps []string
 		if action.Transformation.Function != nil {
-			tOutProps = action.OutSchema.PropertiesNames()
+			tOutProps = outSchema.PropertiesNames()
 		}
 		for _, p := range ws.AnonymousIdentifiers.Priority {
 			_, ok := action.Transformation.Mapping[p]
@@ -2000,7 +2016,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check the column for the identity and for the timestamp.
 	if connector.Type == state.FileType && c.Role == state.Source {
-		if !action.InSchema.Valid() {
+		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
 		// Validate the identity column.
@@ -2013,7 +2029,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if utf8.RuneCountInString(action.IdentityColumn) > 1024 {
 			return errors.BadRequest("column name for the identity is longer than 1024 runes")
 		}
-		identityColumn, ok := action.InSchema.Property(action.IdentityColumn)
+		identityColumn, ok := inSchema.Property(action.IdentityColumn)
 		if !ok {
 			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
 		}
@@ -2032,7 +2048,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
 				return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
 			}
-			timestampColumn, ok := action.InSchema.Property(action.TimestampColumn)
+			timestampColumn, ok := inSchema.Property(action.TimestampColumn)
 			if !ok {
 				return errors.BadRequest("timestamp column %q not found within input schema", action.TimestampColumn)
 			}
@@ -2070,11 +2086,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// When importing from databases, check if the "id" and (eventually) the
 	// "timestamp" columns are defined and have a correct type.
 	if connector.Type == state.DatabaseType && c.Role == state.Source {
-		if !action.InSchema.Valid() {
+		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
 		// Validate the identity column "id".
-		id, ok := action.InSchema.Property("id")
+		id, ok := inSchema.Property("id")
 		if !ok {
 			return errors.BadRequest("identity column \"id\" not found within input schema")
 		}
@@ -2085,7 +2101,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			return errors.BadRequest("identity column \"id\" has kind %s instead of Int, Uint, UUID or Text", k)
 		}
 		// Validate the timestamp column "timestamp", if present.
-		if timestamp, ok := action.InSchema.Property("timestamp"); ok {
+		if timestamp, ok := inSchema.Property("timestamp"); ok {
 			if k := timestamp.Type.Kind(); k != types.DateTimeKind {
 				return errors.BadRequest("timestamp column \"timestamp\" has kind %s instead of DateTime", k)
 			}
@@ -2096,7 +2112,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// When exporting users to file, ensure that the output schema is valid, as
 	// it contains the properties that will be exported to the file.
 	if connector.Type == state.FileType && c.Role == state.Destination && target == state.Users {
-		if !action.OutSchema.Valid() {
+		if !outSchema.Valid() {
 			return errors.BadRequest("output schema cannot be empty when exporting users to file")
 		}
 	}
@@ -2166,14 +2182,24 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		// The action has a transformation function, so we do not know which
 		// properties are used; consequently, this check would always pass
 		// because we would consider every property of the schema as used.
+	} else if importTraitsFromEvents {
+		// In this case the input schema is the full schema of the events, both
+		// in case of mappings and transformation, so we cannot return the error
+		// about unused properties in input schema because just a minor part of
+		// them is generally used.
+		if usedOutPaths != nil {
+			if props := unusedProperties(outSchema, usedOutPaths); props != nil {
+				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
+			}
+		}
 	} else {
 		if usedInPaths != nil {
-			if props := unusedProperties(action.InSchema, usedInPaths); props != nil {
+			if props := unusedProperties(inSchema, usedInPaths); props != nil {
 				return errors.BadRequest("input schema contains unused properties: %s", strings.Join(props, ", "))
 			}
 		}
 		if usedOutPaths != nil {
-			if props := unusedProperties(action.OutSchema, usedOutPaths); props != nil {
+			if props := unusedProperties(outSchema, usedOutPaths); props != nil {
 				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
 			}
 		}
@@ -2213,6 +2239,19 @@ type ConnectionToSet struct {
 func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
+}
+
+// importsTraitsFromEvents reports whether a connector with the given type, on a
+// connection with the given role, with an action with the given target, imports
+// users traits from events.
+func importsTraitsFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	if role == state.Source && target == state.Users {
+		switch connectorType {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			return true
+		}
+	}
+	return false
 }
 
 // isMetaProperty reports whether the property p is considered a meta-property

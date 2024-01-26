@@ -415,6 +415,14 @@ const transformInActionToSet = async (
 		}
 	}
 
+	if (
+		connection.isSource &&
+		(connection.isMobile || connection.isServer || connection.isWebsite) &&
+		(actionType.Target === 'Users' || actionType.Target === 'Groups')
+	) {
+		inSchema = null;
+	}
+
 	const actionToSet: ActionToSet = {
 		name: action.Name,
 		enabled: action.Enabled,
