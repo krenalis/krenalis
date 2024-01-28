@@ -420,9 +420,7 @@ class Analytics {
 	// sendEvent sends an event with the given options.
 	#sendEvent(event, options) {
 		if (options && 'timestamp' in options) {
-			if (options.timestamp !== void 0) {
-				event.timestamp = options.timestamp;
-			}
+			event.timestamp = options.timestamp;
 		} else {
 			event.timestamp = new Date();
 		}
