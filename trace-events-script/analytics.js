@@ -453,7 +453,7 @@ class Analytics {
 
 		const page = {
 			path: path,
-			referrer: document.referrer,
+			referrer: document.referrer == null ? '' : document.referrer,
 			search: loc.search,
 			title: document.title,
 			url: pageURL,
