@@ -1,3 +1,5 @@
+import { getTime } from './utils.js';
+
 class Session {
 	#autoTrack;
 	#storage;
@@ -67,11 +69,6 @@ class Session {
 		const expiration = now + this.#timeout;
 		this.#storage.setSession(id, expiration, true);
 	}
-}
-
-// getTime returns the current UTC time in milliseconds from the epoch.
-function getTime() {
-	return new Date().getTime();
 }
 
 export default Session;

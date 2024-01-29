@@ -24,6 +24,11 @@ function campaign() {
 	return campaign;
 }
 
+// getTime returns the current UTC time in milliseconds from the epoch.
+function getTime() {
+	return new Date().getTime();
+}
+
 // isPlainObject reports whether obj is a plain object.
 function isPlainObject(obj) {
 	return typeof obj === 'object' && !Array.isArray(obj) && obj != null;
@@ -73,4 +78,4 @@ function typesOf(arr) {
 	return arr.map((v) => typeof v).join(',');
 }
 
-export { _uuid_imp, campaign, isPlainObject, typesOf, uuid };
+export { _uuid_imp, campaign, getTime, isPlainObject, typesOf, uuid };

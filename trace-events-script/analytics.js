@@ -1,7 +1,7 @@
 import Options from './options.js';
 import Storage from './storage.js';
 import Session from './session.js';
-import Sender from './sender.js';
+import { Sender } from './sender.js';
 import { campaign, isPlainObject, typesOf, uuid } from './utils.js';
 
 const version = '0.0.0';

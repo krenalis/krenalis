@@ -1,62 +1,105 @@
+import { getTime } from './utils.js';
+
+const MaxBodySize = 500 * 1024;
+const MaxUnloadingBodySize = 64 * 1024;
+const MaxEventSize = 32 * 1024;
+
 class Sender {
-	#writeKey = '';
+	timeout = 300;
+	#writeKey;
 	#endpoint = '';
-	#timeout = 300;
-	#timeoutID;
 	#flushing = false;
 	#events = [];
 	#post;
 
 	constructor(writeKey, endpoint) {
-		this.#writeKey = writeKey;
+		this.#writeKey = JSON.stringify(writeKey);
 		this.#endpoint = endpoint;
 		this.#post = postFunc();
 		onUnload(() => {
-			this.flush(true);
+			this.#flush(true);
 		});
 	}
 
 	send(event) {
-		this.#events.push(JSON.stringify(event));
-		if (this.#events.length === 1) {
-			this.#timeoutID = setTimeout(() => {
-				this.flush(false);
-			}, this.#timeout);
+		const t = getTime();
+		const b = new Blob([JSON.stringify(event)]);
+		if (b.size > MaxEventSize) {
+			console.warn('event size (' + b.size + ' bytes) is greater then 32KB');
+			return;
 		}
+		if (this.#events.length === 0) {
+			setTimeout(this.#flush.bind(this), this.timeout);
+		}
+		this.#events.push({ t, b });
 	}
 
-	flush(keepalive) {
-		if (this.#flushing || !window.navigator.onLine) {
+	// flush flushes the queued events. If unloading is true, it sends a single
+	// request within 64KB body size limit.
+	#flush(unloading) {
+		if (unloading) {
+			if (this.#events.length === 0 || this.#flushing || !navigator.onLine) {
+				return;
+			}
+		} else if (!navigator.onLine) {
+			setTimeout(this.#flush.bind(this), this.timeout);
 			return;
 		}
 		this.#flushing = true;
-
-		let body = '{"batch":[';
-		for (let i = 0; i < this.#events.length; i++) {
-			if (i > 0) {
-				body += ',';
+		const leading = '{"batch":[';
+		const trailing = new Blob([
+			'],"sentAt":"',
+			new Date().toJSON(),
+			'","writeKey":',
+			this.#writeKey,
+			'}',
+		]);
+		let size = leading.length + trailing.size;
+		const parts = [leading];
+		const maxBodySize = unloading ? MaxUnloadingBodySize : MaxBodySize;
+		const length = this.#events.length;
+		for (let i = 0; i < length; i++) {
+			const event = this.#events[i];
+			size += event.b.size;
+			if (size >= maxBodySize) {
+				break;
 			}
-			body += this.#events[i];
+			if (i > 0) {
+				size++;
+				parts.push(',');
+			}
+			parts.push(event.b);
 		}
-		body += '],"sentAt":' + JSON.stringify(new Date()) + ',"writeKey":' + JSON.stringify(this.#writeKey) + '}';
+		const sent = parts.length / 2;
+		parts.push(trailing);
+		const body = new Blob(parts);
 		try {
-			this.#post(this.#endpoint, body, keepalive, (res) => {
-				if (res instanceof Error) {
-					console.warn('cannot send events: ' + res.message);
-					return;
-				}
-				if (!res.ok) {
-					console.warn(
-						'sending events, the server responded with status ' + res.status + ' ' + res.statusText,
-					);
-					return;
-				}
-				this.#events.length = 0;
-				clearTimeout(this.#timeoutID);
+			this.#post(this.#endpoint, body, unloading, (response) => {
 				this.#flushing = false;
+				if (response instanceof Error) {
+					if (navigator.onLine) {
+						console.warn(response.message);
+					}
+				} else if (!response.ok) {
+					console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`);
+				} else {
+					this.#events.splice(0, sent);
+				}
+				if (unloading || this.#events.length === 0) {
+					return;
+				}
+				const timeout = getTime() - (this.#events[0].t + this.timeout);
+				if (timeout <= 0) {
+					this.#flush();
+				} else {
+					setTimeout(this.#flush.bind(this), timeout);
+				}
 			});
-		} catch (e) {
-			console.warn('cannot send events: ' + e.message);
+		} catch (error) {
+			if (navigator.onLine) {
+				console.warn(error.message);
+			}
+			setTimeout(this.#flush.bind(this), 100);
 		}
 	}
 }
@@ -70,7 +113,9 @@ const onUnload = function () {
 				return;
 			}
 			unloaded = !unloaded;
-			if (unloaded) cb();
+			if (unloaded) {
+				cb();
+			}
 		});
 		window.addEventListener('pagehide', () => {
 			if (!unloaded) {
@@ -131,4 +176,4 @@ function postFunc() {
 	};
 }
 
-export default Sender;
+export { MaxBodySize, MaxEventSize, MaxUnloadingBodySize, Sender };
