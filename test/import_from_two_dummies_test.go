@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"chichi/apis"
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -27,35 +26,32 @@ func TestImportFromTwoDummies(t *testing.T) {
 	defer c.Stop()
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.AddDummy("Dummy 1", connector.Source)
-	dummy2 := c.AddDummy("Dummy 2", connector.Source)
+	dummy1 := c.AddDummy("Dummy 1", chichitester.Source)
+	dummy2 := c.AddDummy("Dummy 2", chichitester.Source)
 
 	// Add two identical actions on two different connections.
-	actionParams := map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "Import users from Dummy",
-			"InSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
-			}),
-			"Transformation": map[string]any{
-				"Mapping": map[string]string{
-					"email":     "email",
-					"firstName": "firstName",
-					"lastName":  "lastName",
-				},
+	actionParams := chichitester.ActionToSet{
+		Name: "Import users from Dummy",
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text()},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email":     "email",
+				"firstName": "firstName",
+				"lastName":  "lastName",
 			},
 		},
 	}
-	action1 := c.AddAction(dummy1, actionParams)
-	action2 := c.AddAction(dummy2, actionParams)
+	action1 := c.AddAction(dummy1, "Users", actionParams)
+	action2 := c.AddAction(dummy2, "Users", actionParams)
 
 	// Import from both actions - and implicitly trigger the identity resolution
 	// process.

@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"chichi/apis"
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 
@@ -39,29 +38,26 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", connector.Source)
-		importUsersID := c.AddAction(dummySrc, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Import users from Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":     "coalesce(email, 'default.email@example.com')",
-						"firstName": "firstName",
-						"lastName":  "lastName",
-						"gender":    "'male'",
-					},
+		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+			Name: "Import users from Dummy",
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email":     "coalesce(email, 'default.email@example.com')",
+					"firstName": "firstName",
+					"lastName":  "lastName",
+					"gender":    "'male'",
 				},
 			},
 		})
@@ -73,48 +69,41 @@ func TestExportUsersToFile(t *testing.T) {
 	storage := chichitester.NewTempStorage(t)
 
 	// Create the Filesystem connection.
-	fsID := c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "Filesystem",
-			"Role":      "Destination",
-			"Enabled":   true,
-			"Connector": 19, // Filesystem.
-			"Settings": map[string]any{
-				"Root": storage.Root(),
-			},
-		},
+	fsID := c.AddConnection(chichitester.ConnectionToAdd{
+		Name:      "Filesystem",
+		Role:      chichitester.Destination,
+		Enabled:   true,
+		Connector: 19, // Filesystem.
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Root": storage.Root(),
+		}),
 	})
 
 	// Create the CSV connection.
-	csvID := c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "CSV",
-			"Role":      "Destination",
-			"Enabled":   true,
-			"Connector": 5, // CSV.
-			"Storage":   fsID,
-			"Settings": map[string]any{
-				"Comma": ",",
-			},
-		},
+	csvID := c.AddConnection(chichitester.ConnectionToAdd{
+		Name:      "CSV",
+		Role:      chichitester.Destination,
+		Enabled:   true,
+		Connector: 5, // CSV.
+		Storage:   fsID,
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma": ",",
+		}),
 	})
 
 	exportedFilename := "exported-users.tmp.csv"
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 	// Add an action to the CSV for exporting the users.
-	exportUsersActionID := c.AddAction(csvID, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "Export users to the CSV on Filesystem",
-			"Path": exportedFilename,
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
-			}),
-		},
+	exportUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{
+		Name: "Export users to the CSV on Filesystem",
+		Path: exportedFilename,
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text()},
+			{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+		}),
 	})
 
 	compressions := []apis.Compression{

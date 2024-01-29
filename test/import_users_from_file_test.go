@@ -49,28 +49,25 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
 
 	// Add an action to the CSV for importing the users.
-	importUsersActionID := c.AddAction(csvID, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "Import users from CSV on Filesystem",
-			"Path": "users.csv",
-			"InSchema": types.Object([]types.Property{
-				{Name: "identity", Type: types.Text()},
-				{Name: "name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "firstName", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-			}),
-			"Transformation": map[string]any{
-				"Mapping": map[string]string{
-					"firstName": "name",
-					"email":     "email",
-				},
+	importUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{
+		Name: "Import users from CSV on Filesystem",
+		Path: "users.csv",
+		InSchema: types.Object([]types.Property{
+			{Name: "identity", Type: types.Text()},
+			{Name: "name", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "firstName", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"firstName": "name",
+				"email":     "email",
 			},
-			"IdentityColumn": "identity",
 		},
+		IdentityColumn: "identity",
 	})
 
 	// Execute the action that imports users.

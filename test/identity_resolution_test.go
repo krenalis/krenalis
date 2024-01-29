@@ -86,33 +86,27 @@ func TestIdentityResolution(t *testing.T) {
 	}
 
 	// Add the action A.
-	actionA := c.AddAction(jsonID, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name":      "Action A",
-			"Path":      "users.json",
-			"InSchema":  types.Object(inSchemaProps),
-			"OutSchema": types.Object(outSchemaProps),
-			"Transformation": map[string]any{
-				"Mapping": mapping,
-			},
-			"IdentityColumn": "dummyId",
+	actionA := c.AddAction(jsonID, "Users", chichitester.ActionToSet{
+		Name:      "Action A",
+		Path:      "users.json",
+		InSchema:  types.Object(inSchemaProps),
+		OutSchema: types.Object(outSchemaProps),
+		Transformation: chichitester.Transformation{
+			Mapping: mapping,
 		},
+		IdentityColumn: "dummyId",
 	})
 
 	// Add the action B.
-	actionB := c.AddAction(jsonID, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name":      "Action B",
-			"Path":      "users.json",
-			"InSchema":  types.Object(inSchemaProps),
-			"OutSchema": types.Object(outSchemaProps),
-			"Transformation": map[string]any{
-				"Mapping": mapping,
-			},
-			"IdentityColumn": "dummyId",
+	actionB := c.AddAction(jsonID, "Users", chichitester.ActionToSet{
+		Name:      "Action B",
+		Path:      "users.json",
+		InSchema:  types.Object(inSchemaProps),
+		OutSchema: types.Object(outSchemaProps),
+		Transformation: chichitester.Transformation{
+			Mapping: mapping,
 		},
+		IdentityColumn: "dummyId",
 	})
 
 	// Define a function "expectUsers" which checks if the expected users match

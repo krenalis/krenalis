@@ -58,242 +58,212 @@ func TestActionsCreation(t *testing.T) {
 
 	tests := []struct {
 		conn   int
-		action map[string]any
+		action chichitester.ActionToSet
 		err    string
 	}{
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "identity", Type: types.Text()},
-						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email":     "Email",
-							"timestamp": "timestamp",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "identity", Type: types.Text()},
+					{Name: "Email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email":     "Email",
+						"timestamp": "timestamp",
 					},
-					"IdentityColumn":  "identity",
-					"TimestampColumn": "timestamp",
-					"TimestampFormat": "'%Y-%m-%d %H:%M:%S'",
 				},
+				IdentityColumn:  "identity",
+				TimestampColumn: "timestamp",
+				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 			},
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "identity", Type: types.Text()},
-						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"Email":     "Email",
-							"timestamp": "timestamp",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "identity", Type: types.Text()},
+					{Name: "Email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "Email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"Email":     "Email",
+						"timestamp": "timestamp",
 					},
-					"IdentityColumn":  "identity",
-					"TimestampColumn": "timestamp",
-					"TimestampFormat": "'%Y-%m-%d %H:%M:%S'",
 				},
+				IdentityColumn:  "identity",
+				TimestampColumn: "timestamp",
+				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta-properties"}}`,
 		},
 		{
 			conn: dstCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Export users to a CSV on Filesystem",
-					"Path": "users.csv",
-					"OutSchema": types.Object([]types.Property{
-						{Name: "Email", Type: types.Text()}, // allowed because this is a destination connection.
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-				},
+			action: chichitester.ActionToSet{
+				Name: "Export users to a CSV on Filesystem",
+				Path: "users.csv",
+				OutSchema: types.Object([]types.Property{
+					{Name: "Email", Type: types.Text()}, // allowed because this is a destination connection.
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
 			},
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "identity", Type: types.Text()},
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email":     "email",
-							"timestamp": "timestamp",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "identity", Type: types.Text()},
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email":     "email",
+						"timestamp": "timestamp",
 					},
-					"IdentityColumn":  "identity",
-					"TimestampColumn": "timestamp",
 				},
+				IdentityColumn:  "identity",
+				TimestampColumn: "timestamp",
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp format is required"}}`,
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email":     "email",
-							"timestamp": "timestamp",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email":     "email",
+						"timestamp": "timestamp",
 					},
-					"TimestampColumn": "timestamp",
-					"TimestampFormat": "'%Y-%m-%d %H:%M:%S'",
 				},
+				TimestampColumn: "timestamp",
+				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity is mandatory"}}`,
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email":     "email",
-							"timestamp": "timestamp",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email":     "email",
+						"timestamp": "timestamp",
 					},
-					"IdentityColumn": "- - invalid - -",
 				},
+				IdentityColumn: "- - invalid - -",
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity has not a valid property name"}}`,
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "email",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
 					},
-					"IdentityColumn":  "email",
-					"TimestampColumn": "timestamp",
 				},
+				IdentityColumn:  "email",
+				TimestampColumn: "timestamp",
 			},
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":            "Import users from CSV on Filesystem",
-					"Path":            "users.csv",
-					"IdentityColumn":  "email",
-					"TimestampColumn": "timestamp",
-					"TimestampFormat": "2006-01-02 15:04:05",
-				},
+			action: chichitester.ActionToSet{
+				Name:            "Import users from CSV on Filesystem",
+				Path:            "users.csv",
+				IdentityColumn:  "email",
+				TimestampColumn: "timestamp",
+				TimestampFormat: "2006-01-02 15:04:05",
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be valid"}}`,
 		},
 		{
 			conn: srcCSVConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name": "Import users from CSV on Filesystem",
-					"Path": "users.csv",
-					"InSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "email",
-						},
+			action: chichitester.ActionToSet{
+				Name: "Import users from CSV on Filesystem",
+				Path: "users.csv",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
 					},
-					"IdentityColumn":  "email",
-					"TimestampColumn": "timestamp",
-					"TimestampFormat": "'%Y-%m-%d %H:%M:%S'",
 				},
+				IdentityColumn:  "email",
+				TimestampColumn: "timestamp",
+				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"action cannot specify a timestamp format"}}`,
 		},
 		{
 			conn: postgreSQLConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":  "Import users from PostgreSQL",
-					"Query": `SELECT "email" FROM "my_table"`,
-					"InSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "email",
-						},
+			action: chichitester.ActionToSet{
+				Name:  "Import users from PostgreSQL",
+				Query: `SELECT "email" FROM "my_table"`,
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
 					},
 				},
 			},
@@ -301,45 +271,39 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":  "Import users from PostgreSQL",
-					"Query": `SELECT "id", "email" FROM "my_table"`,
-					"InSchema": types.Object([]types.Property{
-						{Name: "id", Type: types.Int(32)},
-						{Name: "email", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "email",
-						},
+			action: chichitester.ActionToSet{
+				Name:  "Import users from PostgreSQL",
+				Query: `SELECT "id", "email" FROM "my_table"`,
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
 					},
 				},
 			},
 		},
 		{
 			conn: postgreSQLConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":  "Import users from PostgreSQL",
-					"Query": `SELECT "id", "email", "timestamp" FROM "my_table"`,
-					"InSchema": types.Object([]types.Property{
-						{Name: "id", Type: types.Int(32)},
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.Text()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "email",
-						},
+			action: chichitester.ActionToSet{
+				Name:  "Import users from PostgreSQL",
+				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
 					},
 				},
 			},
@@ -347,65 +311,56 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":  "Import users from PostgreSQL",
-					"Query": `SELECT "id", "email", "timestamp" FROM "my_table"`,
-					"InSchema": types.Object([]types.Property{
-						{Name: "id", Type: types.Int(32)},
-						{Name: "email", Type: types.Text()},
-						{Name: "timestamp", Type: types.DateTime()},
-					}),
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "email",
-						},
+			action: chichitester.ActionToSet{
+				Name:  "Import users from PostgreSQL",
+				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
 					},
 				},
 			},
 		},
 		{
 			conn: websiteConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":     "Import user traits from events",
-					"Enabled":  true,
-					"InSchema": nil,
-					"OutSchema": types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "traits.email",
-						},
+			action: chichitester.ActionToSet{
+				Name:     "Import user traits from events",
+				Enabled:  true,
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "traits.email",
 					},
 				},
 			},
 		},
 		{
 			conn: websiteConnection,
-			action: map[string]any{
-				"Target": "Users",
-				"Action": map[string]any{
-					"Name":    "Import user traits from events",
-					"Enabled": true,
-					"InSchema": types.Object([]types.Property{
-						{Name: "traits", Type: types.Object([]types.Property{
-							{Name: "email", Type: types.Text()},
-						})},
-					}),
-					"OutSchema": types.Object([]types.Property{
+			action: chichitester.ActionToSet{
+				Name:    "Import user traits from events",
+				Enabled: true,
+				InSchema: types.Object([]types.Property{
+					{Name: "traits", Type: types.Object([]types.Property{
 						{Name: "email", Type: types.Text()},
-					}),
-					"Transformation": map[string]any{
-						"Mapping": map[string]string{
-							"email": "traits.email",
-						},
+					})},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "traits.email",
 					},
 				},
 			},
@@ -414,7 +369,7 @@ func TestActionsCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			_, err := c.AddActionErr(test.conn, test.action)
+			_, err := c.AddActionErr(test.conn, "Users", test.action)
 			switch {
 			case test.err == "" && err == nil:
 				// Ok.

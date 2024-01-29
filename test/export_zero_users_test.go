@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"chichi/apis"
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -35,32 +34,29 @@ func TestExportZeroUsers(t *testing.T) {
 
 	// Test the export of zero users to an app (Dummy).
 	func() {
-		dummyDest := c.AddDummy("Dummy (destination)", connector.Destination)
-		exportUsersActionID := c.AddAction(dummyDest, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Export users to Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":    "email",
-						"lastName": "lastName",
-					},
+		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination)
+		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
+			Name: "Export users to Dummy",
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email":    "email",
+					"lastName": "lastName",
 				},
-				"ExportMode": "CreateOrUpdate",
-				"MatchingProperties": map[string]any{
-					"Internal": "email",
-					"External": types.Property{
-						Name: "email",
-						Type: types.Text(),
-					},
+			},
+			ExportMode: chichitester.ExportModeCreateOrUpdate,
+			MatchingProperties: &chichitester.MatchingProperties{
+				Internal: "email",
+				External: types.Property{
+					Name: "email",
+					Type: types.Text(),
 				},
 			},
 		})
@@ -75,48 +71,41 @@ func TestExportZeroUsers(t *testing.T) {
 		storage := chichitester.NewTempStorage(t)
 
 		// Create the Filesystem connection.
-		fsID := c.AddConnection(map[string]any{
-			"Connection": map[string]any{
-				"Name":      "Filesystem",
-				"Role":      "Destination",
-				"Enabled":   true,
-				"Connector": 19, // Filesystem.
-				"Settings": map[string]any{
-					"Root": storage.Root(),
-				},
-			},
+		fsID := c.AddConnection(chichitester.ConnectionToAdd{
+			Name:      "Filesystem",
+			Role:      chichitester.Destination,
+			Enabled:   true,
+			Connector: 19, // Filesystem.
+			Settings: chichitester.JSONEncodeSettings(map[string]any{
+				"Root": storage.Root(),
+			}),
 		})
 
 		// Create the CSV connection.
-		csvID := c.AddConnection(map[string]any{
-			"Connection": map[string]any{
-				"Name":      "CSV",
-				"Role":      "Destination",
-				"Enabled":   true,
-				"Connector": 5, // CSV.
-				"Storage":   fsID,
-				"Settings": map[string]any{
-					"Comma": ",",
-				},
-			},
+		csvID := c.AddConnection(chichitester.ConnectionToAdd{
+			Name:      "CSV",
+			Role:      chichitester.Destination,
+			Enabled:   true,
+			Connector: 5, // CSV.
+			Storage:   fsID,
+			Settings: chichitester.JSONEncodeSettings(map[string]any{
+				"Comma": ",",
+			}),
 		})
 
 		exportedFilename := "exported-users.tmp.csv"
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 		// Add an action to the CSV for exporting the users.
-		exportUsersActionID := c.AddAction(csvID, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Export users to the CSV on Filesystem",
-				"Path": exportedFilename,
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
-				}),
-			},
+		exportUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{
+			Name: "Export users to the CSV on Filesystem",
+			Path: exportedFilename,
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+			}),
 		})
 
 		// Remove the export file, if exists.

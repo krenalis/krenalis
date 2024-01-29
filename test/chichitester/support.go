@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"chichi/apis"
-	"chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/segmentio/analytics-go/v3"
@@ -33,7 +32,16 @@ func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) m
 	return c.MustCall("GET", url, nil).(map[string]any)
 }
 
-func (c *Chichi) AddAction(connection int, data map[string]any) int {
+func (c *Chichi) AddAction(connection int, target string, action ActionToSet) int {
+	switch target {
+	case "Events", "Users", "Groups":
+	default:
+		panic(fmt.Sprintf("invalid target %q", target))
+	}
+	data := map[string]any{
+		"Target": target,
+		"Action": action,
+	}
 	n := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data)
 	id, err := strconv.Atoi(string(n.(json.Number)))
 	if err != nil {
@@ -43,7 +51,16 @@ func (c *Chichi) AddAction(connection int, data map[string]any) int {
 }
 
 // AddActionErr is like AddAction but returns an error instead of panicking.
-func (c *Chichi) AddActionErr(connection int, data map[string]any) (int, error) {
+func (c *Chichi) AddActionErr(connection int, target string, action ActionToSet) (int, error) {
+	switch target {
+	case "Events", "Users", "Groups":
+	default:
+		panic(fmt.Sprintf("invalid target %q", target))
+	}
+	data := map[string]any{
+		"Target": target,
+		"Action": action,
+	}
 	n, err := c.Call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data)
 	if err != nil {
 		return 0, err
@@ -55,7 +72,10 @@ func (c *Chichi) AddActionErr(connection int, data map[string]any) (int, error) 
 	return id, nil
 }
 
-func (c *Chichi) AddConnection(data map[string]any) int {
+func (c *Chichi) AddConnection(connection ConnectionToAdd) int {
+	data := map[string]any{
+		"Connection": connection,
+	}
 	n := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/add-connection", data)
 	id, err := strconv.Atoi(string(n.(json.Number)))
 	if err != nil {
@@ -65,135 +85,117 @@ func (c *Chichi) AddConnection(data map[string]any) int {
 }
 
 func (c *Chichi) AddDestinationCSV(filesystem int) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "CSV",
-			"Role":      "Destination",
-			"Enabled":   true,
-			"Connector": 5, // CSV.
-			"Storage":   filesystem,
-			"Settings": map[string]any{
-				"Comma":          ",",
-				"HasColumnNames": true,
-			},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "CSV",
+		Role:      Destination,
+		Enabled:   true,
+		Connector: 5, // CSV.
+		Storage:   filesystem,
+		Settings: JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
 	})
 }
 
 func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "Filesystem",
-			"Role":      "Destination",
-			"Enabled":   true,
-			"Connector": 19, // Filesystem.
-			"Settings": map[string]any{
-				"Root": storageDir,
-			},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "Filesystem",
+		Role:      Destination,
+		Enabled:   true,
+		Connector: 19, // Filesystem.
+		Settings: JSONEncodeSettings(map[string]any{
+			"Root": storageDir,
+		}),
 	})
 }
 
 func (c *Chichi) AddDestinationPostgreSQL() int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "PostgreSQL (destination)",
-			"Role":      apis.Destination,
-			"Enabled":   true,
-			"Connector": 10, // PostgreSQL.
-			"Settings": map[string]any{
-				"Host":     testsSettings.Database.Host,
-				"Port":     testsSettings.Database.Port,
-				"Username": testsSettings.Database.Username,
-				"Password": testsSettings.Database.Password,
-				"Database": testsSettings.Database.Database,
-			},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "PostgreSQL (destination)",
+		Role:      Destination,
+		Enabled:   true,
+		Connector: 10, // PostgreSQL.
+		Settings: JSONEncodeSettings(map[string]any{
+			"Host":     testsSettings.Database.Host,
+			"Port":     testsSettings.Database.Port,
+			"Username": testsSettings.Database.Username,
+			"Password": testsSettings.Database.Password,
+			"Database": testsSettings.Database.Database,
+		}),
 	})
 }
 
-func (c *Chichi) AddDummy(name string, role connector.Role) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      name,
-			"Role":      role.String(),
-			"Enabled":   true,
-			"Connector": 3, // Dummy.
-			"Settings":  map[string]any{},
-		},
+func (c *Chichi) AddDummy(name string, role Role) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:      name,
+		Role:      role,
+		Enabled:   true,
+		Connector: 3, // Dummy.
+		Settings:  []byte("{}"),
 	})
 }
 
 func (c *Chichi) AddSourceCSV(filesystem int) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "CSV",
-			"Role":      "Source",
-			"Enabled":   true,
-			"Connector": 5, // CSV.
-			"Storage":   filesystem,
-			"Settings": map[string]any{
-				"Comma":          ",",
-				"HasColumnNames": true,
-			},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "CSV",
+		Role:      Source,
+		Enabled:   true,
+		Connector: 5, // CSV.
+		Storage:   filesystem,
+		Settings: JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
 	})
 }
 
 func (c *Chichi) AddSourceFilesystem(storageDir string) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "Filesystem",
-			"Role":      "Source",
-			"Enabled":   true,
-			"Connector": 19, // Filesystem.
-			"Settings": map[string]any{
-				"Root": storageDir,
-			},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "Filesystem",
+		Role:      Source,
+		Enabled:   true,
+		Connector: 19, // Filesystem.
+		Settings: JSONEncodeSettings(map[string]any{
+			"Root": storageDir,
+		}),
 	})
 }
 
 func (c *Chichi) AddSourceJSON(filesystem int) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "JSON",
-			"Role":      "Source",
-			"Enabled":   true,
-			"Storage":   filesystem,
-			"Connector": 21, // JSON.
-			"Settings":  map[string]any{},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "JSON",
+		Role:      Source,
+		Enabled:   true,
+		Storage:   filesystem,
+		Connector: 21, // JSON.
+		Settings:  []byte("{}"),
 	})
 }
 
 func (c *Chichi) AddSourcePostgreSQL() int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":      "PostgreSQL (destination)",
-			"Role":      apis.Source,
-			"Enabled":   true,
-			"Connector": 10, // PostgreSQL.
-			"Settings": map[string]any{
-				"Host":     testsSettings.Database.Host,
-				"Port":     testsSettings.Database.Port,
-				"Username": testsSettings.Database.Username,
-				"Password": testsSettings.Database.Password,
-				"Database": testsSettings.Database.Database,
-			},
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:      "PostgreSQL (destination)",
+		Role:      Source,
+		Enabled:   true,
+		Connector: 10, // PostgreSQL.
+		Settings: JSONEncodeSettings(map[string]any{
+			"Host":     testsSettings.Database.Host,
+			"Port":     testsSettings.Database.Port,
+			"Username": testsSettings.Database.Username,
+			"Password": testsSettings.Database.Password,
+			"Database": testsSettings.Database.Database,
+		}),
 	})
 }
 
 func (c *Chichi) AddWebsiteSource(name, host string) int {
-	return c.AddConnection(map[string]any{
-		"Connection": map[string]any{
-			"Name":        name,
-			"Role":        connector.Source.String(),
-			"Enabled":     true,
-			"Connector":   12, // Website.
-			"WebsiteHost": host,
-		},
+	return c.AddConnection(ConnectionToAdd{
+		Name:        name,
+		Role:        Source,
+		Enabled:     true,
+		Connector:   12, // Website.
+		WebsiteHost: host,
 	})
 }
 
@@ -326,4 +328,12 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 		}
 		return
 	}
+}
+
+func JSONEncodeSettings(settings map[string]any) []byte {
+	data, err := json.Marshal(settings)
+	if err != nil {
+		panic(fmt.Sprintf("cannot encode connection settings to JSON: %s", err))
+	}
+	return data
 }

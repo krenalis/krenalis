@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"chichi/apis"
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -29,24 +28,21 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", connector.Source)
-		importUsersID := c.AddAction(dummySrc, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Import users from Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":     "email",
-						"firstName": "firstName",
-					},
+		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+			Name: "Import users from Dummy",
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email":     "email",
+					"firstName": "firstName",
 				},
 			},
 		})
@@ -56,31 +52,28 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Export the users to Dummy.
 	{
-		dummyDest := c.AddDummy("Dummy (destination)", connector.Destination)
-		exportUsersActionID := c.AddAction(dummyDest, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Export users to Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":    "email",
-						"lastName": "email", // this is intended.
-					},
+		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination)
+		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
+			Name: "Export users to Dummy",
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email":    "email",
+					"lastName": "email", // this is intended.
 				},
-				"ExportMode": "CreateOrUpdate",
-				"MatchingProperties": map[string]any{
-					"Internal": "email",
-					"External": types.Property{
-						Name: "email",
-						Type: types.Text(),
-					},
+			},
+			ExportMode: chichitester.ExportModeCreateOrUpdate,
+			MatchingProperties: &chichitester.MatchingProperties{
+				Internal: "email",
+				External: types.Property{
+					Name: "email",
+					Type: types.Text(),
 				},
 			},
 		})
@@ -91,27 +84,24 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.AddDummy("Dummy (source 2)", connector.Source)
-		importUsersID := c.AddAction(dummySrc, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Import users from Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":     "email",
-						"firstName": "firstName",
-						"lastName":  "lastName",
-					},
+		dummySrc := c.AddDummy("Dummy (source 2)", chichitester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+			Name: "Import users from Dummy",
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email":     "email",
+					"firstName": "firstName",
+					"lastName":  "lastName",
 				},
 			},
 		})

@@ -11,7 +11,6 @@ import (
 	"context"
 	"testing"
 
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -27,29 +26,26 @@ func TestExportToPostgreSQL(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", connector.Source)
-		importUsersID := c.AddAction(dummySrc, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name": "Import users from Dummy",
-				"InSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-				}),
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
-					{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email":     "coalesce(email, 'default.email@example.com')",
-						"firstName": "firstName",
-						"lastName":  "lastName",
-						"gender":    "'male'",
-					},
+		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+			Name: "Import users from Dummy",
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email":     "coalesce(email, 'default.email@example.com')",
+					"firstName": "firstName",
+					"lastName":  "lastName",
+					"gender":    "'male'",
 				},
 			},
 		})
@@ -84,25 +80,22 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportAction := c.AddAction(pgsql, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name":      "Export users to PostgreSQL",
-			"TableName": "test_export_to_db",
-			"InSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "full_name", Type: types.Text()},
-			}),
-			"Transformation": map[string]any{
-				"Mapping": map[string]string{
-					"email":     "email",
-					"full_name": `firstName " " lastName`,
-				},
+	exportAction := c.AddAction(pgsql, "Users", chichitester.ActionToSet{
+		Name:      "Export users to PostgreSQL",
+		TableName: "test_export_to_db",
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "full_name", Type: types.Text()},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email":     "email",
+				"full_name": `firstName " " lastName`,
 			},
 		},
 	})

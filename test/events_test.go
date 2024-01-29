@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"chichi/backoff"
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 
@@ -33,24 +32,21 @@ func TestEvents(t *testing.T) {
 	defer c.Stop()
 
 	// Load some users in the data warehouse from Dummy.
-	dummySrc := c.AddDummy("Dummy (source)", connector.Source)
-	importUsersID := c.AddAction(dummySrc, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "Import users from Dummy",
-			"InSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-			}),
-			"Transformation": map[string]any{
-				"Mapping": map[string]string{
-					"email":     "email",
-					"firstName": "firstName",
-				},
+	dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
+	importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+		Name: "Import users from Dummy",
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email":     "email",
+				"firstName": "firstName",
 			},
 		},
 	})
@@ -68,26 +64,20 @@ func TestEvents(t *testing.T) {
 			t.Fatalf("expecting one key, got %d keys", len(keys))
 		}
 		websiteKey = keys[0]
-		c.AddAction(websiteID, map[string]any{
-			"Target": "Events",
-			"Action": map[string]any{
-				"Name":    "Website",
-				"Enabled": true,
-			},
+		c.AddAction(websiteID, "Events", chichitester.ActionToSet{
+			Name:    "Website",
+			Enabled: true,
 		})
-		c.AddAction(websiteID, map[string]any{
-			"Target": "Users",
-			"Action": map[string]any{
-				"Name":     "Website",
-				"Enabled":  true,
-				"InSchema": nil,
-				"OutSchema": types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-				}),
-				"Transformation": map[string]any{
-					"Mapping": map[string]string{
-						"email": "traits.email",
-					},
+		c.AddAction(websiteID, "Users", chichitester.ActionToSet{
+			Name:     "Website",
+			Enabled:  true,
+			InSchema: types.Type{},
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+			}),
+			Transformation: chichitester.Transformation{
+				Mapping: map[string]string{
+					"email": "traits.email",
 				},
 			},
 		})

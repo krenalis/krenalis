@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"chichi/apis"
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -28,28 +27,26 @@ func TestImportWithTransformation(t *testing.T) {
 	defer c.Stop()
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", connector.Source)
+	dummyID := c.AddDummy("Dummy (source)", chichitester.Source)
 
 	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
 
 	// Add an action with a transformation function which imports users, then
 	// execute it.
-	importUsersID := c.AddAction(dummyID, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "Import users from Dummy",
-			"InSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
-			}),
-			"Transformation": map[string]any{
-				"Function": map[string]any{
-					"Source": `
+	importUsersID := c.AddAction(dummyID, "Users", chichitester.ActionToSet{
+		Name: "Import users from Dummy",
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+		}),
+		Transformation: chichitester.Transformation{
+			Function: &chichitester.TransformationFunction{
+				Source: `
 def transform(user: dict) -> dict:
 	if user["firstName"] == "Jerad":
 		gender = "male"
@@ -60,8 +57,7 @@ def transform(user: dict) -> dict:
 		"firstName": user["firstName"],
 		"gender": gender,
 	}`,
-					"Language": "Python",
-				},
+				Language: "Python",
 			},
 		},
 	})

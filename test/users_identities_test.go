@@ -38,46 +38,40 @@ func Test_UsersIdentities(t *testing.T) {
 	csv1 := c.AddSourceCSV(fs)
 	csv2 := c.AddSourceCSV(fs)
 
-	action1 := c.AddAction(csv1, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "CSV 1",
-			"Path": "users1.csv",
-			"InSchema": types.Object([]types.Property{
-				{Name: "identity", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-			}),
-			"Transformation": map[string]any{
-				"Mapping": map[string]string{
-					"email": "email",
-				},
+	action1 := c.AddAction(csv1, "Users", chichitester.ActionToSet{
+		Name: "CSV 1",
+		Path: "users1.csv",
+		InSchema: types.Object([]types.Property{
+			{Name: "identity", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "email",
 			},
-			"IdentityColumn": "identity",
 		},
+		IdentityColumn: "identity",
 	})
 
-	action2 := c.AddAction(csv2, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "CSV 2",
-			"Path": "users2.csv",
-			"InSchema": types.Object([]types.Property{
-				{Name: "identity", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-			}),
-			"Transformation": map[string]any{
-				"Mapping": map[string]string{
-					"email": "email",
-				},
+	action2 := c.AddAction(csv2, "Users", chichitester.ActionToSet{
+		Name: "CSV 2",
+		Path: "users2.csv",
+		InSchema: types.Object([]types.Property{
+			{Name: "identity", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "email",
 			},
-			"IdentityColumn": "identity",
 		},
+		IdentityColumn: "identity",
 	})
 
 	c.ExecuteAction(csv1, action1, false)

@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"testing"
 
-	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -26,24 +25,22 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	dummy := c.AddDummy("Dummy (source)", connector.Source)
-	importUsersID := c.AddAction(dummy, map[string]any{
-		"Target": "Users",
-		"Action": map[string]any{
-			"Name": "Import users from Dummy",
-			"InSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-			}),
-			"OutSchema": types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "ios", Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Text()},
-					{Name: "idfa", Type: types.Text()},
-				})},
-			}),
-			"Transformation": map[string]any{
-				"Function": map[string]any{
-					"Source": `
+	dummy := c.AddDummy("Dummy (source)", chichitester.Source)
+	importUsersID := c.AddAction(dummy, "Users", chichitester.ActionToSet{
+		Name: "Import users from Dummy",
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "ios", Type: types.Object([]types.Property{
+				{Name: "id", Type: types.Text()},
+				{Name: "idfa", Type: types.Text()},
+			})},
+		}),
+		Transformation: chichitester.Transformation{
+			Function: &chichitester.TransformationFunction{
+				Source: `
 def transform(user: dict) -> dict:
 	email = user["email"]
 	return {
@@ -53,8 +50,7 @@ def transform(user: dict) -> dict:
 			"idfa": email + "-idfa",
 		}
 	}`,
-					"Language": "Python",
-				},
+				Language: "Python",
 			},
 		},
 	})
