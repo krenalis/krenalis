@@ -242,10 +242,6 @@ func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	}
 }
 
-func (c *Chichi) SetAction(connection, action int, data map[string]any) {
-	c.MustCall("PUT", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions/"+strconv.Itoa(action), data)
-}
-
 func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers apis.AnonymousIdentifiers) {
 	body := map[string]any{
 		"Identifiers":          identifiers,
