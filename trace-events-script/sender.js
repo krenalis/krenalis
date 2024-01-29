@@ -88,7 +88,7 @@ class Sender {
 				if (unloading || this.#events.length === 0) {
 					return;
 				}
-				const timeout = getTime() - (this.#events[0].t + this.timeout);
+				const timeout = (this.#events[0].t + this.timeout) - getTime();
 				if (timeout <= 0) {
 					this.#flush();
 				} else {
