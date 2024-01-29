@@ -91,7 +91,7 @@ CREATE TYPE event_browser_name AS ENUM ('None', 'Chrome', 'Safari', 'Edge', 'Fir
 CREATE TYPE event_type AS ENUM ('alias', 'identify', 'group', 'page', 'screen', 'track');
 
 CREATE TABLE events (
-    "gid" integer NOT NULL,
+    "gid" integer NOT NULL DEFAULT 0,
     "anonymous_id" varchar NOT NULL,
     "category" varchar NOT NULL,
     "context_app_name" varchar NOT NULL,

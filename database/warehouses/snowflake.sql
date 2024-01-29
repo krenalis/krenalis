@@ -34,7 +34,7 @@ CREATE TABLE "groups" (
 -- Keep in sync with the events.eventsMergeTable variable.
 
 CREATE TABLE "events" (
-    "gid" NUMBER NOT NULL,
+    "gid" NUMBER NOT NULL DEFAULT 0,
     "anonymousId" VARCHAR NOT NULL,
     "category" VARCHAR NOT NULL,
     "context_app_name" VARCHAR NOT NULL,

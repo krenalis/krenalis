@@ -43,7 +43,7 @@ SETTINGS index_granularity = 8192;
 
 CREATE TABLE events
 (
-    `gid` Int32,
+    `gid` Int32 DEFAULT 0,
     `anonymousId` String,
     `category` String,
     `context_app_name` String,

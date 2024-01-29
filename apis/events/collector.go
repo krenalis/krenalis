@@ -858,7 +858,6 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 		}
 
 		rows[i] = map[string]any{
-			"gid":         0, // TODO: set the correct GID. See https://github.com/open2b/chichi/issues/483.
 			"anonymousId": e.AnonymousId,
 			"category":    e.Category,
 			"context": map[string]any{
