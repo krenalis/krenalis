@@ -935,7 +935,10 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string,
 		if !ok {
 			return errors.BadRequest("anonymous identifier %s does not have a mapped expression", id)
 		}
-		_, err := mappings.Compile(expr, events.Schema, types.JSON(), false, true, nil)
+		// Validate the anonymous identifiers with the events schema without the
+		// GID, as the mappings declared for the anonymous identifiers refer to
+		// the events incoming to Chichi, which do not have a GID.
+		_, err := mappings.Compile(expr, events.SchemaWithoutGID, types.JSON(), false, true, nil)
 		if err != nil {
 			return errors.BadRequest("expression of anonymous identifier %s is not valid: %w", id, err)
 		}

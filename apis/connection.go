@@ -237,7 +237,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return actionSchemas, nil
 			}
 		case Events:
-			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
+			// Use the schema without GID since events sent to the apps do not
+			// have the GID, as they are sent as they are after enrichment; the
+			// GID is added by the identity resolution directly to the data
+			// warehouse, without affecting the events sent to the apps.
+			return &ActionSchemas{
+				In:  events.SchemaWithoutGID,
+				Out: eventTypeSchema,
+			}, nil
 		}
 
 	case state.DatabaseType:
@@ -324,6 +331,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
+		// The input schema is the events schema without GID because these
+		// actions import user traits from incoming events, which do not have
+		// any user associated.
 		switch target {
 		case Users:
 			usersIdentities, ok := schemas["users_identities"]
@@ -331,7 +341,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			return &ActionSchemas{
-				In:  events.Schema,
+				In:  events.SchemaWithoutGID,
 				Out: removeMetaProperties(usersIdentities),
 			}, nil
 		case Groups:
@@ -340,7 +350,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
 			return &ActionSchemas{
-				In:  events.Schema,
+				In:  events.SchemaWithoutGID,
 				Out: removeMetaProperties(groupsIdentities),
 			}, nil
 		}
@@ -383,7 +393,10 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	inSchema := action.InSchema
 	if importsTraitsFromEvents(this.connection.Connector().Type, this.connection.Role, state.Target(target)) {
-		inSchema = events.Schema
+		// The input schema is the events schema without GID because this
+		// actions imports user traits from incoming events, which, of course,
+		// do not have any user associated.
+		inSchema = events.SchemaWithoutGID
 	}
 
 	n := state.AddAction{
@@ -1090,7 +1103,11 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			return nil, errors.BadRequest("out schema is not an Object")
 		}
 
-		inSchema := events.Schema
+		// Use the schema without GID since events sent to the apps do not have
+		// the GID, as they are sent as they are after enrichment; the GID is
+		// added by the identity resolution directly to the data warehouse,
+		// without affecting the events sent to the apps.
+		inSchema := events.SchemaWithoutGID
 
 		// Validate the mapping and the transformation.
 		switch {
@@ -1770,7 +1787,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if inSchema.Valid() {
 			return errors.BadRequest("input schema must be invalid for actions that import user traits from events")
 		}
-		inSchema = events.Schema
+		// The input schema is the events schema without GID because this
+		// actions imports user traits from incoming events, which, of course,
+		// do not have any user associated.
+		inSchema = events.SchemaWithoutGID
 	}
 
 	// First, do formal validations.

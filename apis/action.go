@@ -295,7 +295,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	inSchema := action.InSchema
 	if importsTraitsFromEvents(c.Connector().Type, c.Role, this.action.Target) {
-		inSchema = events.Schema
+		// Use the schema without GID because incoming events do not have a GID.
+		inSchema = events.SchemaWithoutGID
 	}
 
 	span.Log("action validated successfully")

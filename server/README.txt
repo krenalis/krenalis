@@ -57,7 +57,7 @@ GET     /api/workspaces/{id}/user-schema                                        
 POST    /api/workspaces/{id}/oauth-token                                         Generate an OAuth token not yet associated with a connection.
 POST    /api/workspaces/{id}/add-connection                                      Add a new connection.
 GET     /api/workspaces/{id}/privacy-region                                      Get the workspace privacy region.
-GET     /api/events-schema                                                       Get the events schema.
+GET     /api/events-schema                                                       Get the events schema (which does not include the GID).
 POST    /api/expressions-properties                                              Return the unique properties contained inside a list of expressions.
 GET     /api/transformation-languages                                            Return the supported transformation languages.
 POST    /api/transform-data                                                      Transform data, using a mapping or a transformation, and returns it.

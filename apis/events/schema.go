@@ -11,8 +11,15 @@ import (
 	"chichi/connector/types"
 )
 
-// Schema is the schema of an event.
-var Schema = types.Object([]types.Property{
+// SchemaWithGID is the schema of an event which includes the GID property.
+var SchemaWithGID = types.Object(append(
+	[]types.Property{{Name: "gid", Type: types.Int(32)}},
+	SchemaWithoutGID.Properties()...,
+))
+
+// SchemaWithoutGID is the schema of an event which does not include the GID
+// property.
+var SchemaWithoutGID = types.Object([]types.Property{
 
 	// NOTE: keep this in sync with 'datastore.eventsMergeTable'.
 	// See https://github.com/open2b/chichi/issues/477.

@@ -1081,7 +1081,8 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(events.Schema)
+		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/320.
+		_ = json.NewEncoder(w).Encode(events.SchemaWithoutGID)
 	})
 	router.Post("/api/validate-expression", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {

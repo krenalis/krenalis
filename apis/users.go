@@ -56,16 +56,8 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 
 	// Read the event schema's properties.
-	properties := events.Schema.Properties()
-
-	// Determine the schema of the events, which should include the ID, as such.
-	// property is referenced in the "where".
-	var schema types.Type
-	{
-		props := make([]types.Property, 1, 1+len(properties))
-		props[0] = types.Property{Name: "gid", Type: types.Int(32)}
-		schema = types.Object(append(props, properties...))
-	}
+	schema := events.SchemaWithGID
+	properties := schema.Properties()
 
 	// Retrieve the events records.
 	propsPaths := make([]types.Path, len(properties))
@@ -97,7 +89,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		return nil, err
 	}
 
-	return encoding.MarshalSlice(events.Schema, evs)
+	return encoding.MarshalSlice(schema, evs)
 }
 
 // Identities returns the users identities of the user, and an estimate of their
