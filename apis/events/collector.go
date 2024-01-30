@@ -150,8 +150,6 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 			if len(event.Traits) == 0 && len(event.Context.Traits) == 0 {
 				continue
 			}
-			// TODO(Gianluca): shall we normalize the user properties before
-			// transformation?
 			transformation := state.Transformation{
 				Mapping:  action.Transformation.Mapping,
 				Function: action.Transformation.Function,
