@@ -8,6 +8,7 @@
 package chichitester
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"chichi/apis"
+	"chichi/backoff"
 	"chichi/connector/types"
 
 	"github.com/segmentio/analytics-go/v3"
@@ -327,6 +329,23 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 			continue
 		}
 		return
+	}
+}
+
+func (c *Chichi) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
+	bo := backoff.New(20)
+	bo.SetAttempts(10)
+	bo.SetCap(2 * time.Second)
+	bo.SetNextWaitTime(200 * time.Millisecond)
+	for bo.Next(ctx) {
+		count := c.CountEventsInWarehouse(ctx)
+		if count == expected {
+			break
+		}
+		c.t.Logf("[attempt %d] %d event(s) stored in warehouse until now", bo.Attempt(), count)
+		if bo.WaitTime() == 0 {
+			c.t.Fatalf("too many failed attempts")
+		}
 	}
 }
 

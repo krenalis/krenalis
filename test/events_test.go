@@ -13,9 +13,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
-	"chichi/backoff"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 
@@ -116,21 +114,7 @@ func TestEvents(t *testing.T) {
 
 	const expectedEventsCount = 4
 
-	// Wait for the events to be stored in the warehouse.
-	bo := backoff.New(20)
-	bo.SetAttempts(10)
-	bo.SetCap(2 * time.Second)
-	bo.SetNextWaitTime(200 * time.Millisecond)
-	for bo.Next(ctx) {
-		count := c.CountEventsInWarehouse(ctx)
-		if count == expectedEventsCount {
-			break
-		}
-		t.Logf("[attempt %d] %d event(s) stored in warehouse until now", bo.Attempt(), count)
-		if bo.WaitTime() == 0 {
-			t.Fatalf("too many failed attempts")
-		}
-	}
+	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Trigger the identity resolution, so that the events GID are updated.
 	c.ExecuteAction(dummySrc, importUsersID, true)
