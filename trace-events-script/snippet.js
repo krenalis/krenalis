@@ -17,6 +17,7 @@
 	};
 	var methods = [
 		'alias',
+		'debug',
 		'endSession',
 		'getSessionId',
 		'group',

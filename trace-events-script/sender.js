@@ -1,4 +1,4 @@
-import { getTime } from './utils.js';
+import { debug, getTime } from './utils.js';
 
 const MaxBodySize = 500 * 1024;
 const MaxUnloadingBodySize = 64 * 1024;
@@ -11,6 +11,7 @@ class Sender {
 	#flushing = false;
 	#events = [];
 	#post;
+	#debug;
 
 	constructor(writeKey, endpoint) {
 		this.#writeKey = JSON.stringify(writeKey);
@@ -22,6 +23,7 @@ class Sender {
 	}
 
 	send(event) {
+		this.#debug?.('send', event.type, 'event', event);
 		const t = getTime();
 		const b = new Blob([JSON.stringify(event)]);
 		if (b.size > MaxEventSize) {
@@ -32,6 +34,11 @@ class Sender {
 			setTimeout(this.#flush.bind(this), this.timeout);
 		}
 		this.#events.push({ t, b });
+	}
+
+	// debug toggles debug mode.
+	debug(on) {
+		this.#debug = debug(on);
 	}
 
 	// flush flushes the queued events. If unloading is true, it sends a single
@@ -60,10 +67,10 @@ class Sender {
 		const length = this.#events.length;
 		for (let i = 0; i < length; i++) {
 			const event = this.#events[i];
-			size += event.b.size;
-			if (size >= maxBodySize) {
+			if (size + event.b.size >= maxBodySize) {
 				break;
 			}
+			size += event.b.size;
 			if (i > 0) {
 				size++;
 				parts.push(',');
@@ -73,6 +80,7 @@ class Sender {
 		const sent = parts.length / 2;
 		parts.push(trailing);
 		const body = new Blob(parts);
+		this.#debug?.('flush', sent, 'events of', this.#events.length, 'in queue (', size, 'bytes )');
 		try {
 			this.#post(this.#endpoint, body, unloading, (response) => {
 				this.#flushing = false;
@@ -85,13 +93,16 @@ class Sender {
 				} else {
 					this.#events.splice(0, sent);
 				}
+				this.#debug?.(sent, 'events sent (', this.#events.length, 'remains in queue )');
 				if (unloading || this.#events.length === 0) {
 					return;
 				}
 				const timeout = (this.#events[0].t + this.timeout) - getTime();
 				if (timeout <= 0) {
+					this.#debug?.('continue to flush now ( events in queue were supposed to be sent', -timeout, 'ms ago )');
 					this.#flush();
 				} else {
+					this.#debug?.(`continue to flush after ${timeout}ms`);
 					setTimeout(this.#flush.bind(this), timeout);
 				}
 			});
@@ -99,6 +110,7 @@ class Sender {
 			if (navigator.onLine) {
 				console.warn(error.message);
 			}
+			this.#debug?.('cannot post events, try again after 100ms: ', error);
 			setTimeout(this.#flush.bind(this), 100);
 		}
 	}

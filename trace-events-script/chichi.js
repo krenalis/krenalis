@@ -16,6 +16,7 @@ function main() {
 	const a = new Analytics(analytics.key, analytics.url, analytics.options);
 	const methods = [
 		'alias',
+		'debug',
 		'endSession',
 		'getSessionId',
 		'group',

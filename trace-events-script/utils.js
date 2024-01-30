@@ -34,6 +34,16 @@ function isPlainObject(obj) {
 	return typeof obj === 'object' && !Array.isArray(obj) && obj != null;
 }
 
+// debug returns a logging function for debug messages if 'on' is true;
+// otherwise, it returns undefined.
+function debug(on) {
+	if (on) {
+		return (...msg) => {
+			console.log(`[${getTime()}]`, ...msg);
+		};
+	}
+}
+
 // _uuid_imp returns a function that returns random UUIDs or undefined if the
 // browser is not supported.
 function _uuid_imp() {
@@ -78,4 +88,4 @@ function typesOf(arr) {
 	return arr.map((v) => typeof v).join(',');
 }
 
-export { _uuid_imp, campaign, getTime, isPlainObject, typesOf, uuid };
+export { _uuid_imp, campaign, debug, getTime, isPlainObject, typesOf, uuid };

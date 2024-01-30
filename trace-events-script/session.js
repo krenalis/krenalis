@@ -1,9 +1,10 @@
-import { getTime } from './utils.js';
+import { debug, getTime } from './utils.js';
 
 class Session {
 	#autoTrack;
 	#storage;
 	#timeout;
+	#debug;
 
 	constructor(storage, autoTrack, timeout) {
 		this.#autoTrack = autoTrack;
@@ -13,13 +14,25 @@ class Session {
 			const [id, expiration] = storage.getSession();
 			const now = getTime();
 			if (id == null || expiration < now) {
+				this.#debug?.('start session', now, ' with timeout', timeout, 'ms ( there was no session )');
 				storage.setSession(now, now + timeout, true);
 			}
 		}
 	}
 
+	// debug toggles debug mode.
+	debug(on) {
+		this.#debug = debug(on);
+	}
+
 	// end ends the current session.
 	end() {
+		if (this.#debug) {
+			const [id] = this.#storage.getSession();
+			if (id != null) {
+				this.#debug('end session', id);
+			}
+		}
 		this.#storage.setSession(null);
 	}
 
@@ -35,6 +48,19 @@ class Session {
 		const now = getTime();
 		if (this.#autoTrack) {
 			if (id == null || expiration < now) {
+				if (id == null) {
+					this.#debug?.('start session', now, ' with timeout', this.#timeout, 'ms ( there was no session )');
+				} else {
+					this.#debug?.(
+						'start session',
+						now,
+						' with timeout',
+						this.#timeout,
+						'ms ( previous session is expired',
+						now - expiration,
+						'ms ago)',
+					);
+				}
 				id = now;
 				start = true;
 			}
@@ -67,6 +93,7 @@ class Session {
 			id = getTime();
 		}
 		const expiration = now + this.#timeout;
+		this.#debug?.('start session', id, ' with timeout', this.#timeout, 'ms ( there was no session )');
 		this.#storage.setSession(id, expiration, true);
 	}
 }

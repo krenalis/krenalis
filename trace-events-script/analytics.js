@@ -60,6 +60,12 @@ class Analytics {
 		return this.#send('alias', this.#setAliasArguments, arguments);
 	}
 
+	// debug toggles debug mode.
+	debug(on) {
+		this.#session.debug(on);
+		this.#sender.debug(on);
+	}
+
 	endSession() {
 		this.#session.end();
 	}
