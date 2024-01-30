@@ -17,7 +17,6 @@ import (
 	"strings"
 	"testing"
 
-	"chichi/apis"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -77,7 +76,7 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phoneNumbers", Type: types.Array(types.Text())},
 	}
 
-	c.SetWorkspaceIdentifiers(identifiers, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers(identifiers, chichitester.AnonymousIdentifiers{})
 
 	// Generate and add an action to the JSON for importing the users.
 	mapping := map[string]string{}

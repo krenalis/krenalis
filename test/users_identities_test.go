@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"chichi/apis"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -27,7 +26,7 @@ func Test_UsersIdentities(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
 
 	storageDir, err := filepath.Abs("testdata/users_identities_test")
 	if err != nil {

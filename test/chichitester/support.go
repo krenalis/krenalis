@@ -244,7 +244,7 @@ func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	}
 }
 
-func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers apis.AnonymousIdentifiers) {
+func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers AnonymousIdentifiers) {
 	body := map[string]any{
 		"Identifiers":          identifiers,
 		"AnonymousIdentifiers": anonymousIdentifiers,

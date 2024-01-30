@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"chichi/apis"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -46,7 +45,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Create the CSV connection.
 	csvID := c.AddSourceCSV(fsID)
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
 
 	// Add an action to the CSV for importing the users.
 	importUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{

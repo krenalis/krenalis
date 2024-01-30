@@ -10,7 +10,6 @@ package test
 import (
 	"testing"
 
-	"chichi/apis"
 	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
@@ -24,7 +23,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, apis.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
 
 	// Load some users in the data warehouse.
 	{
