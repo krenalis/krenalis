@@ -75,7 +75,7 @@ require (
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/useragent v1.0.0
 	github.com/oschwald/geoip2-golang v1.9.0
-	github.com/relvacode/iso8601 v1.3.0
+	github.com/relvacode/iso8601 v1.4.0
 	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
