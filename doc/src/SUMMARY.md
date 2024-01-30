@@ -16,6 +16,7 @@
     - [Mapping](./mapping.md)
     - [JavaScript](./javascript.md)
     - [Python](./python.md)
+- [Identity Resolution](./identity-resolution.md)
 - [Data Warehouse](./data-warehouse.md)
     - [ClickHouse](./clickhouse.md)
     - [PostgreSQL](./postgresql.md)
