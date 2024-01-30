@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -214,9 +215,10 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 	count := len(ws.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
 	identifiers := make([]types.Property, count)
 	for i, ident := range append(ws.Identifiers, ws.AnonymousIdentifiers.Priority...) {
-		identifiers[i], ok = usersIdentities.Property(ident)
-		if !ok {
-			return fmt.Errorf("identifier %q not found within 'users_identities' schema", ident)
+		path := strings.Split(ident, ".")
+		identifiers[i], err = usersIdentities.PropertyByPath(path)
+		if err != nil {
+			return err
 		}
 	}
 

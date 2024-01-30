@@ -51,7 +51,6 @@ func TestUserTraitsImport(t *testing.T) {
 	}
 
 	// TODO(Gianluca): this is currently broken. See the issue
-	// https://github.com/open2b/chichi/issues/514 and
 	// https://github.com/open2b/chichi/issues/515.
 	//
 	// c.SetWorkspaceIdentifiers([]string{}, chichitester.AnonymousIdentifiers{
