@@ -60,9 +60,9 @@ Here, in addition to choosing these identifiers, it is necessary to **specify a 
 
 ## Merging of users
 
-In the Workspace Identity Resolution, users are merged by taking the `MAX` value between the values of the properties for the users.
+In the Workspace Identity Resolution, users are merged by taking the `max` value between the values of the properties for the users.
 
-> `MAX` refers to the `MAX` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
+> `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
 
 For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* by the Workspace Identity Resolution and thus must be merged:
 
