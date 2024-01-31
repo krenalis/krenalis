@@ -33,6 +33,9 @@ class Analytics {
 		anonymousId: (id) => this.setAnonymousId(id),
 		traits: (traits) => {
 			if (traits !== void (0)) {
+				if (traits == null) {
+					traits = {};
+				}
 				this.#storage.setTraits(traits);
 			}
 			return this.#storage.getTraits();
@@ -44,7 +47,6 @@ class Analytics {
 		this.#storage = new Storage();
 		this.#session = new Session(this.#storage, this.#options.sessions.autoTrack, this.#options.sessions.timeout);
 		this.#sender = new Sender(writeKey, endpoint);
-		this.#anonymousId(); // generates a new anonymous ID if one does not already exist
 		const onReady = this.#onReady;
 		if (onReady) {
 			for (let i = 0; i < onReady.length; i++) {
@@ -117,7 +119,7 @@ class Analytics {
 		this.#storage.setGroupID(null);
 		this.#storage.setTraits(null);
 		this.#storage.setUserID(null);
-		this.#storage.setAnonymousID(uuid());
+		this.#storage.setAnonymousID(null);
 		this.#session.end();
 	}
 
@@ -130,7 +132,7 @@ class Analytics {
 	// returns the default Anonymous ID.
 	setAnonymousId(id) {
 		if (id === undefined) {
-			return this.#storage.getAnonymousID();
+			return this.#anonymousId();
 		}
 		if (typeof id === 'number') {
 			id = String(id);
@@ -184,7 +186,7 @@ class Analytics {
 		}
 		id = this.#storage.getUserID();
 		if (id == null) {
-			return this.#storage.getAnonymousID();
+			return this.#anonymousId();
 		}
 		return id;
 	}

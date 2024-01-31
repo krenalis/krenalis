@@ -42,6 +42,10 @@ class Storage {
 	}
 
 	setAnonymousID(id) {
+		if (id == null) {
+			this.store.removeItem('chichi_anonymous_id');
+			return;
+		}
 		this.store.setItem('chichi_anonymous_id', id);
 	}
 
@@ -66,6 +70,10 @@ class Storage {
 	}
 
 	setTraits(traits) {
+		if (traits == null) {
+			this.store.removeItem('chichi_traits');
+			return;
+		}
 		const type = typeof traits;
 		if (type !== 'object') {
 			console.warn(`${warnMsg}: traits is a ${type}`);
@@ -74,9 +82,6 @@ class Storage {
 		if (Array.isArray(traits)) {
 			console.warn(`${warnMsg}: traits is an array`);
 			return;
-		}
-		if (traits === null) {
-			traits = {};
 		}
 		let value;
 		try {
