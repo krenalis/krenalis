@@ -25,7 +25,6 @@ const steps = [
 	// Page.
 	{
 		name: `page()`,
-		options: {},
 		call: (analytics) => {
 			analytics.page();
 		},
@@ -33,7 +32,6 @@ const steps = [
 	},
 	{
 		name: `page(name)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page('Chichi Home');
 		},
@@ -51,7 +49,6 @@ const steps = [
 	},
 	{
 		name: `page(properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page({ title: 'alternative title', foo: 'boo' });
 		},
@@ -75,7 +72,6 @@ const steps = [
 	},
 	{
 		name: `page(category, name)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page('Products', 'Shirt');
 		},
@@ -94,7 +90,6 @@ const steps = [
 	},
 	{
 		name: `page(name, properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page('Sign Up', { resellers: true });
 		},
@@ -112,7 +107,6 @@ const steps = [
 	},
 	{
 		name: `page(properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page({ title: 'alternative title', foo: 'boo' }, { count: 150 });
 		},
@@ -137,7 +131,6 @@ const steps = [
 	},
 	{
 		name: `page(category, name, properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page('users', 'Sign Up', { resellers: true });
 		},
@@ -156,7 +149,6 @@ const steps = [
 	},
 	{
 		name: `page(name, properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page('', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -174,7 +166,6 @@ const steps = [
 	},
 	{
 		name: `page(category, name, properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.page('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -194,7 +185,6 @@ const steps = [
 	// Screen.
 	{
 		name: `screen()`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen();
 		},
@@ -202,7 +192,6 @@ const steps = [
 	},
 	{
 		name: `screen(name)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen('Chichi Main');
 		},
@@ -220,7 +209,6 @@ const steps = [
 	},
 	{
 		name: `screen(properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen({ score: 517836 });
 		},
@@ -237,7 +225,6 @@ const steps = [
 	},
 	{
 		name: `screen(category, name)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen('Products', 'Shirt');
 		},
@@ -256,7 +243,6 @@ const steps = [
 	},
 	{
 		name: `screen(name, properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen('Sign Up', { resellers: true });
 		},
@@ -274,7 +260,6 @@ const steps = [
 	},
 	{
 		name: `screen(properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen({ step: 6 }, { count: 150 });
 		},
@@ -299,7 +284,6 @@ const steps = [
 	},
 	{
 		name: `screen(category, name, properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen('users', 'Sign Up', { resellers: true });
 		},
@@ -318,7 +302,6 @@ const steps = [
 	},
 	{
 		name: `screen(name, properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen('', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -336,7 +319,6 @@ const steps = [
 	},
 	{
 		name: `screen(category, name, properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.screen('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -379,7 +361,6 @@ const steps = [
 	},
 	{
 		name: `track(event, properties)`,
-		options: {},
 		call: (analytics) => {
 			analytics.track('Product Viewed', { productId: 819382 });
 		},
@@ -397,7 +378,6 @@ const steps = [
 	},
 	{
 		name: `track(event, properties, context)`,
-		options: {},
 		call: (analytics) => {
 			analytics.track('Product Viewed', { productId: 819382 }, { locale: 'it-IT' });
 		},
