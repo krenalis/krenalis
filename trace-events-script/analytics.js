@@ -205,25 +205,33 @@ class Analytics {
 	#setIdentifyArguments(data, a) {
 		let options;
 		switch (typesOf(a)) {
+			// ()
 			case '':
 				this.#setUserId(data);
+				this.#setTraits(data);
 				break;
+			// (userId);
 			case 'string':
 				this.#setUserId(data, a[0]);
+				this.#setTraits(data);
 				break;
+			// (traits);
 			case 'object':
 				this.#setUserId(data);
 				this.#setTraits(data, a[0]);
 				break;
+			// (userId, traits);
 			case 'string,object':
 				this.#setUserId(data, a[0]);
 				this.#setTraits(data, a[1]);
 				break;
+			// (traits, context);
 			case 'object,object':
 				this.#setUserId(data);
 				this.#setTraits(data, a[0]);
 				options = a[1];
 				break;
+			// (userId, traits, context)
 			case 'string,object,object':
 				this.#setUserId(data, a[0]);
 				this.#setTraits(data, a[1]);
@@ -242,17 +250,32 @@ class Analytics {
 		if (a.length === 0) {
 			throw new Error('Group is missing');
 		}
-		this.#setGroup(data, a.shift());
 		let options;
 		switch (typesOf(a)) {
-			case '':
+			// (groupId)
+			case 'string':
+				this.#setGroup(data, a[0]);
+				data.traits = {};
 				break;
+			// (traits)
 			case 'object':
 				data.traits = a[0];
 				break;
+			// (groupId, traits)
+			case 'string,object':
+				this.#setGroup(data, a[0]);
+				data.traits = a[1];
+				break;
+			// (traits, context)
 			case 'object,object':
 				data.traits = a[0];
 				options = a[1];
+				break;
+			// (groupId, traits, context)
+			case 'string,object,object':
+				this.#setGroup(data, a[0]);
+				data.traits = a[1];
+				options = a[2];
 				break;
 			default:
 				throw new Error('Invalid arguments');
@@ -270,11 +293,14 @@ class Analytics {
 		data.event = a.shift();
 		let options;
 		switch (typesOf(a)) {
+			// (name)
 			case '':
 				break;
+			// (name, properties)
 			case 'object':
 				data.properties = a[0];
 				break;
+			// (name, properties, context)
 			case 'object,object':
 				data.properties = a[0];
 				options = a[1];
@@ -291,36 +317,45 @@ class Analytics {
 	#setPageScreenArguments(data, a) {
 		let options;
 		switch (typesOf(a)) {
+			// ()
 			case '':
 				break;
+			// (name)
 			case 'string':
 				data.name = a[0];
 				break;
+			// (properties)
 			case 'object':
 				data.properties = a[0];
 				break;
+			// (category, name)
 			case 'string,string':
 				data.category = a[0];
 				data.name = a[1];
 				break;
+			// (name, properties)
 			case 'string,object':
 				data.name = a[0];
 				data.properties = a[1];
 				break;
+			// (properties, context)
 			case 'object,object':
 				data.properties = a[0];
 				options = a[1];
 				break;
+			// (category, name, properties)
 			case 'string,string,object':
 				data.category = a[0];
 				data.name = a[1];
 				data.properties = a[2];
 				break;
+			// (name, properties, context)
 			case 'string,object,object':
 				data.name = a[0];
 				data.properties = a[1];
 				options = a[2];
 				break;
+			// (category, name, properties, context)
 			case 'string,string,object,object':
 				data.category = a[0];
 				data.name = a[1];
@@ -386,10 +421,7 @@ class Analytics {
 			}
 			return;
 		}
-		id = this.#storage.getUserID();
-		if (id != null) {
-			data.userId = id;
-		}
+		data.userId = this.#storage.getUserID();
 	}
 
 	// send sends an event of the given type, setting the arguments args with
@@ -464,9 +496,7 @@ class Analytics {
 		};
 
 		switch (event.type) {
-			case 'track':
 			case 'page':
-			case 'screen':
 				const p = isPlainObject(event.properties) ? event.properties : {};
 				for (let k in page) {
 					if (k in p) {
@@ -478,17 +508,20 @@ class Analytics {
 						p[k] = page[k];
 					}
 				}
-				if (event.type === 'page') {
-					if ('category' in event) {
-						p.category = event.category;
-					}
-					if ('name' in event) {
-						p.name = event.name;
-					}
+				if ('category' in event) {
+					p.category = event.category;
+				}
+				if ('name' in event && event.name !== '') {
+					p.name = event.name;
 				}
 				event.properties = p;
 				this.#setUserId(event);
 				break;
+			case 'screen':
+				if (!isPlainObject(event.properties)) {
+					event.properties = {};
+				}
+			case 'track':
 			case 'group':
 				this.#setUserId(event);
 		}
