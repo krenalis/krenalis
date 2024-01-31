@@ -2,7 +2,7 @@
   "name": "chichi-analytics.js",
   "version": "0.0.1",
   "scripts": {
-    "test": "deno test *_test.js",
+    "test": "deno lint *_test.js test_* *_test_* && deno test *_test.js",
     "fmt": "deno fmt --use-tabs --single-quote --line-width=120 *.js",
     "prettier-test-website": "npx prettier@latest --write \"./website-for-testing/**/*\"",
     "bundle": "esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
