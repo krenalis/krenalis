@@ -19,6 +19,7 @@
 - [Identity Resolution](./identity-resolution.md)
     - [Connection Identity Resolution](./identity-resolution/connection-identity-resolution.md)
     - [Workspace Identity Resolution](./identity-resolution/workspace-identity-resolution.md)
+    - [Anonymous Users Strategies](./identity-resolution/anonymous-users-strategies.md)
 - [Data Warehouse](./data-warehouse.md)
     - [ClickHouse](./clickhouse.md)
     - [PostgreSQL](./postgresql.md)

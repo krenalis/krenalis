@@ -17,7 +17,7 @@ for users **imported from events traits**, if the user…
 * … **is anonymous** (i.e. does not have a value for `userId`), it is merged with other users imported from the same connection who have an anonymous ID in common.
 * … **is not anonymous**, it is merged with other users within the same connection that share the same `userId` or do not have an `userId` and have an anonymous ID in common.
 
-The behavior for the users imported from events traits allows the implementation of *strategies* by controlling how `userId` and `anonymousId` are sent by the client (eg. the JavaScript SDK in the browser).
+The behavior for the users imported from events traits allows the implementation of [strategies](anonymous-users-strategies.md) by controlling how `userId` and `anonymousId` are sent by the client (eg. the JavaScript SDK in the browser).
 
 ## Merging of users
 
