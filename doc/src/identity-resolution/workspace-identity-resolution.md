@@ -17,7 +17,7 @@ Hence, it follows that if there are no identifiers defined in the workspace, the
 
 ## Identifiers
 
-An identifier consists in **a property path** which refers to a property of the `users_identities` schema (which have a *compatible type*, see the issue [#321](https://github.com/open2b/chichi/issues/321)).
+An identifier consists in **a property path** which refers to a property of the `users_identities` schema which have [an allowed type](./allowed-types-for-identifiers.md).
 
 It is possible to define zero, one, or more identifiers for the identity resolution. 
 
