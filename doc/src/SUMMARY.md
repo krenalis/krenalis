@@ -17,6 +17,8 @@
     - [JavaScript](./javascript.md)
     - [Python](./python.md)
 - [Identity Resolution](./identity-resolution.md)
+    - [Connection Identity Resolution](./identity-resolution/connection-identity-resolution.md)
+    - [Workspace Identity Resolution](./identity-resolution/workspace-identity-resolution.md)
 - [Data Warehouse](./data-warehouse.md)
     - [ClickHouse](./clickhouse.md)
     - [PostgreSQL](./postgresql.md)
