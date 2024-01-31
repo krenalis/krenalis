@@ -34,4 +34,4 @@ To implement this strategy:
 
 * Call the `getAnonymousId` method and save the returned Anonymous ID on the device.
 * When the user logs in, call the `reset` method.
-* When the user logs out, call the `reset` method, then call the `setAnonymousId` method with the previously saved Anonymous ID as an argument.
+* When the user logs out, call the `reset` method, then call the `setAnonymousId` method with the previously saved Anonymous ID as argument.
