@@ -43,13 +43,20 @@ class Sender {
 
 	// flush flushes the queued events. If unloading is true, it sends a single
 	// request within 64KB body size limit.
+	//
+	// flush should be invoked only when the queue becomes non-empty (unloading
+	// is false) or the page is unloading (unloading is true). In all other
+	// scenarios, once flush is called, it is guaranteed to continue until the
+	// queue becomes empty or the page is unloading.
 	#flush(unloading) {
 		if (unloading) {
 			if (this.#events.length === 0 || this.#flushing || !navigator.onLine) {
 				return;
 			}
 		} else if (!navigator.onLine) {
-			setTimeout(this.#flush.bind(this), this.timeout);
+			window.addEventListener('online', (e) => {
+				this.#flush();
+			});
 			return;
 		}
 		this.#flushing = true;
@@ -85,14 +92,37 @@ class Sender {
 			this.#post(this.#endpoint, body, unloading, (response) => {
 				this.#flushing = false;
 				if (response instanceof Error) {
-					if (navigator.onLine) {
-						console.warn(response.message);
+					if (unloading) {
+						return;
 					}
-				} else if (!response.ok) {
-					console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`);
-				} else {
-					this.#events.splice(0, sent);
+					if (navigator.onLine) {
+						const timeout = 1000;
+						if (this.#debug) {
+							this.#debug('error occurred sending the events (will retry after', timeout, 'ms):\n', response);
+						} else {
+							console.warn(response.message);
+						}
+						setTimeout(this.#flush.bind(this), timeout);
+					} else {
+						this.#flush();
+					}
+					return;
 				}
+				if (!response.ok) {
+					const timeout = 1000;
+					if (this.#debug) {
+						this.#debug(
+							`server responded with status ${response.status} ${response.statusText} (will retry after`,
+							timeout,
+							'ms)',
+						);
+					} else {
+						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`);
+					}
+					setTimeout(this.#flush.bind(this), timeout);
+					return;
+				}
+				this.#events.splice(0, sent);
 				this.#debug?.(sent, 'events sent (', this.#events.length, 'remains in queue )');
 				if (unloading || this.#events.length === 0) {
 					return;
