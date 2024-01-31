@@ -76,3 +76,16 @@ The resulting user of the workspace will be:
 | email | name | totalOrders |
 |-------|------|-------------|
 | a@b   | John | 20          |
+
+## Association between events and users
+
+From the same connection which receives events, can both be imported users (through the users traits) and events, using different actions. The Workspace Identity Resolution, as mentioned before, also associated events to the users of the workspace.
+
+Every event is associated to the **users incoming from the same connection** which:
+
+* have the same `userId` (in case of non-anonymous events)
+* or have an `anonymousId` in common (in case of anonymous events).
+
+At that point, since users from multiple connections have been merged together through the Workspace Identity Resolution, **events from different connections can be associated to the same workspace user**.
+
+<img src="../images/events-users.png" width="70%" alt="event-users">
