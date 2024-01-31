@@ -16,6 +16,7 @@
     },
     "target": "es5",
     "loose": true,
+    "preserveAllComments": true
   },
   "isModule": true
 }
