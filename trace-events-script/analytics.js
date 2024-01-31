@@ -70,6 +70,17 @@ class Analytics {
 		this.#session.end();
 	}
 
+	// getAnonymousId returns the current Anonymous ID. If no Anonymous ID
+	// exists, it generates one and returns it.
+	getAnonymousId() {
+		let id = this.#storage.getAnonymousID();
+		if (id == null) {
+			id = uuid();
+			this.#storage.setAnonymousID(id);
+		}
+		return id;
+	}
+
 	// getSessionId returns the current session ID, or null if there is no
 	// session.
 	getSessionId() {

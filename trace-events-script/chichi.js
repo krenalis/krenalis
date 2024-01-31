@@ -14,6 +14,7 @@ function main() {
 		'alias',
 		'debug',
 		'endSession',
+		'getAnonymousId',
 		'getSessionId',
 		'group',
 		'identify',

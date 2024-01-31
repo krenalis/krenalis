@@ -89,6 +89,19 @@ Deno.test('Analytics', async (t) => {
 		await p2;
 	});
 
+	await t.step('getAnonymousId function', () => {
+		const a = newAnalytics();
+		assert(uuid.validate(a.getAnonymousId()));
+		a.setAnonymousId('f5d354ed');
+		assertEquals(a.getAnonymousId(), 'f5d354ed');
+		a.setAnonymousId(903726473);
+		assertEquals(a.getAnonymousId(), '903726473');
+		a.setAnonymousId('');
+		assert(uuid.validate(a.getAnonymousId()));
+		a.setAnonymousId({});
+		assert(uuid.validate(a.getAnonymousId()));
+	});
+
 	await t.step('setAnonymousId function', () => {
 		const a = newAnalytics();
 		assert(uuid.validate(a.setAnonymousId()));
