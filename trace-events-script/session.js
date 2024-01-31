@@ -14,7 +14,7 @@ class Session {
 			const [id, expiration] = storage.getSession();
 			const now = getTime();
 			if (id == null || expiration < now) {
-				this.#debug?.('start session', now, ' with timeout', timeout, 'ms ( there was no session )');
+				this.#debug?.('start session', now, 'with timeout', timeout, 'ms ( there was no session )');
 				storage.setSession(now, now + timeout, true);
 			}
 		}
@@ -49,12 +49,12 @@ class Session {
 		if (this.#autoTrack) {
 			if (id == null || expiration < now) {
 				if (id == null) {
-					this.#debug?.('start session', now, ' with timeout', this.#timeout, 'ms ( there was no session )');
+					this.#debug?.('start session', now, 'with timeout', this.#timeout, 'ms ( there was no session )');
 				} else {
 					this.#debug?.(
 						'start session',
 						now,
-						' with timeout',
+						'with timeout',
 						this.#timeout,
 						'ms ( previous session is expired',
 						now - expiration,
@@ -93,7 +93,7 @@ class Session {
 			id = getTime();
 		}
 		const expiration = now + this.#timeout;
-		this.#debug?.('start session', id, ' with timeout', this.#timeout, 'ms ( there was no session )');
+		this.#debug?.('start session', id, 'with timeout', this.#timeout, 'ms ( there was no session )');
 		this.#storage.setSession(id, expiration, true);
 	}
 }
