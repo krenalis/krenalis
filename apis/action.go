@@ -17,7 +17,7 @@ import (
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/events"
+	"chichi/apis/events/eventschema"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
@@ -296,7 +296,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	inSchema := action.InSchema
 	if importsTraitsFromEvents(c.Connector().Type, c.Role, this.action.Target) {
 		// Use the schema without GID because incoming events do not have a GID.
-		inSchema = events.SchemaWithoutGID
+		inSchema = eventschema.SchemaWithoutGID
 	}
 
 	span.Log("action validated successfully")

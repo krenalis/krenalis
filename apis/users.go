@@ -18,7 +18,7 @@ import (
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
-	"chichi/apis/events"
+	"chichi/apis/events/eventschema"
 	"chichi/apis/state"
 	"chichi/connector/types"
 )
@@ -56,7 +56,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 
 	// Read the event schema's properties.
-	schema := events.SchemaWithGID
+	schema := eventschema.SchemaWithGID
 	properties := schema.Properties()
 
 	// Retrieve the events records.

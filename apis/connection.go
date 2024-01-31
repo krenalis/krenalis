@@ -30,6 +30,7 @@ import (
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/events/eventschema"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
@@ -242,7 +243,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			// GID is added by the identity resolution directly to the data
 			// warehouse, without affecting the events sent to the apps.
 			return &ActionSchemas{
-				In:  events.SchemaWithoutGID,
+				In:  eventschema.SchemaWithoutGID,
 				Out: eventTypeSchema,
 			}, nil
 		}
@@ -341,7 +342,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			return &ActionSchemas{
-				In:  events.SchemaWithoutGID,
+				In:  eventschema.SchemaWithoutGID,
 				Out: removeMetaProperties(usersIdentities),
 			}, nil
 		case Groups:
@@ -350,7 +351,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
 			return &ActionSchemas{
-				In:  events.SchemaWithoutGID,
+				In:  eventschema.SchemaWithoutGID,
 				Out: removeMetaProperties(groupsIdentities),
 			}, nil
 		}
@@ -396,7 +397,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		// The input schema is the events schema without GID because this
 		// actions imports user traits from incoming events, which, of course,
 		// do not have any user associated.
-		inSchema = events.SchemaWithoutGID
+		inSchema = eventschema.SchemaWithoutGID
 	}
 
 	n := state.AddAction{
@@ -1107,7 +1108,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		// the GID, as they are sent as they are after enrichment; the GID is
 		// added by the identity resolution directly to the data warehouse,
 		// without affecting the events sent to the apps.
-		inSchema := events.SchemaWithoutGID
+		inSchema := eventschema.SchemaWithoutGID
 
 		// Validate the mapping and the transformation.
 		switch {
@@ -1790,7 +1791,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		// The input schema is the events schema without GID because this
 		// actions imports user traits from incoming events, which, of course,
 		// do not have any user associated.
-		inSchema = events.SchemaWithoutGID
+		inSchema = eventschema.SchemaWithoutGID
 	}
 
 	// First, do formal validations.

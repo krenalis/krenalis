@@ -5,11 +5,12 @@
 // Copyright (c) 2024 Open2b
 //
 
-package events
+package eventschema
 
 import (
-	"chichi/connector/types"
 	"testing"
+
+	"chichi/connector/types"
 )
 
 func Test_SchemaWithoutGID(t *testing.T) {

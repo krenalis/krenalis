@@ -32,6 +32,7 @@ import (
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/events/eventschema"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers/mappings"
@@ -938,7 +939,7 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string,
 		// Validate the anonymous identifiers with the events schema without the
 		// GID, as the mappings declared for the anonymous identifiers refer to
 		// the events incoming to Chichi, which do not have a GID.
-		_, err := mappings.Compile(expr, events.SchemaWithoutGID, types.JSON(), false, true, nil)
+		_, err := mappings.Compile(expr, eventschema.SchemaWithoutGID, types.JSON(), false, true, nil)
 		if err != nil {
 			return errors.BadRequest("expression of anonymous identifier %s is not valid: %w", id, err)
 		}

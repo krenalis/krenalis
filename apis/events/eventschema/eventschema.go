@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 //
 //
-// Copyright (c) 2023 Open2b
+// Copyright (c) 2024 Open2b
 //
 
-package events
+package eventschema
 
-import (
-	"chichi/connector/types"
-)
+import "chichi/connector/types"
 
 // SchemaWithGID is the schema of an event which includes the GID property.
 var SchemaWithGID = types.Object(append(
@@ -20,10 +18,6 @@ var SchemaWithGID = types.Object(append(
 // SchemaWithoutGID is the schema of an event which does not include the GID
 // property.
 var SchemaWithoutGID = types.Object([]types.Property{
-
-	// NOTE: keep this in sync with 'datastore.eventsMergeTable'.
-	// See https://github.com/open2b/chichi/issues/477.
-
 	{Name: "anonymousId", Type: types.Text()},
 	{Name: "category", Type: types.Text()},
 	{
