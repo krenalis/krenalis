@@ -54,7 +54,7 @@ class Sender {
 				return;
 			}
 		} else if (!navigator.onLine) {
-			window.addEventListener('online', (e) => {
+			globalThis.addEventListener('online', () => {
 				this.#flush();
 			});
 			return;
@@ -150,7 +150,7 @@ class Sender {
 const onUnload = function () {
 	let unloaded = false;
 	return function (cb) {
-		window.addEventListener('visibilitychange', () => {
+		globalThis.addEventListener('visibilitychange', () => {
 			if (unloaded === (document.visibilityState === 'hidden')) {
 				return;
 			}
@@ -159,7 +159,7 @@ const onUnload = function () {
 				cb();
 			}
 		});
-		window.addEventListener('pagehide', () => {
+		globalThis.addEventListener('pagehide', () => {
 			if (!unloaded) {
 				unloaded = true;
 				cb();
@@ -174,7 +174,7 @@ const onUnload = function () {
 // Returns an Error value in case of error.
 function postFunc() {
 	// ES5: "fetch" is not available.
-	if (window.fetch && typeof window.fetch === 'function') {
+	if (globalThis.fetch && typeof globalThis.fetch === 'function') {
 		return function (endpoint, body, keepalive, cb) {
 			const promise = fetch(endpoint, {
 				method: 'POST',
@@ -196,7 +196,7 @@ function postFunc() {
 			}, cb);
 		};
 	}
-	return function (endpoint, body, keepalive, cb) {
+	return function (endpoint, body, _, cb) {
 		const xhr = new XMLHttpRequest();
 		xhr.open('POST', endpoint, true);
 		xhr.setRequestHeader('Content-Type', 'text/plain');

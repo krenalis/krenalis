@@ -2,7 +2,7 @@
 function campaign() {
 	let campaign;
 	// ES5: "URLSearchParams" is not available.
-	const search = window.location.search.substring(1).replace(/\?/g, '&');
+	const search = globalThis.location.search.substring(1).replace(/\?/g, '&');
 	const params = search.split('&');
 	for (let i = 0; i < params.length; i++) {
 		const u = params[i].split('utm_');
@@ -19,7 +19,9 @@ function campaign() {
 			campaign = campaign || {};
 			const k = kv[0] === 'campaign' ? 'name' : kv[0];
 			campaign[k] = v;
-		} catch (_) {}
+		} catch (_) {
+			// nothing.
+		}
 	}
 	return campaign;
 }
@@ -47,15 +49,15 @@ function debug(on) {
 // _uuid_imp returns a function that returns random UUIDs or undefined if the
 // browser is not supported.
 function _uuid_imp() {
-	let crypto = window.crypto;
+	let crypto = globalThis.crypto;
 	if (crypto && typeof crypto.randomUUID === 'function') {
 		return () => crypto.randomUUID();
 	}
-	// The following statement could be simplified to "crypto ||= window.msCrypto",
+	// The following statement could be simplified to "crypto ||= globalThis.msCrypto",
 	// but it hasn't been done because it wouldn't be testable.
 	// Therefore, do not change it.
 	if (!crypto || typeof crypto.getRandomValues !== 'function') {
-		crypto = window.msCrypto;
+		crypto = globalThis.msCrypto;
 	}
 	if (crypto && typeof crypto.getRandomValues === 'function') {
 		return function () {
@@ -66,7 +68,7 @@ function _uuid_imp() {
 			);
 		};
 	}
-	const URL = window.URL;
+	const URL = globalThis.URL;
 	if (URL && typeof URL.createObjectURL === 'function') {
 		return function () {
 			const url = URL.createObjectURL(new Blob());

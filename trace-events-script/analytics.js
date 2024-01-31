@@ -23,7 +23,7 @@ class Analytics {
 				this.#storage.setUserID(null);
 				return null;
 			}
-			let data = {};
+			const data = {};
 			this.#setUserId(data, id);
 			if ('userId' in data) {
 				return data.userId;
@@ -397,7 +397,7 @@ class Analytics {
 	#setTraits(data, traits) {
 		data.traits = this.#storage.getTraits();
 		if (traits !== undefined) {
-			for (let k in traits) {
+			for (const k in traits) {
 				const v = traits[k];
 				if (v === undefined) {
 					delete data.traits[k];
@@ -414,7 +414,7 @@ class Analytics {
 	#setUserId(data, id) {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
 			data.userId = String(id);
-			let userId = this.#storage.getUserID();
+			const userId = this.#storage.getUserID();
 			if (userId !== data.userId) {
 				this.#storage.setUserID(data.userId);
 				this.#storage.setTraits({});
@@ -427,8 +427,7 @@ class Analytics {
 	// send sends an event of the given type, setting the arguments args with
 	// the setArgs function.
 	#send(type, setArgs, args) {
-		const self = this;
-		function executor(resolve, reject) {
+		const executor = (resolve, reject) => {
 			let event;
 			const data = { type };
 			// ES5: "Array.from" is not available.
@@ -438,8 +437,8 @@ class Analytics {
 				callback = args.pop();
 			}
 			try {
-				const options = setArgs.call(self, data, args);
-				event = self.#sendEvent(data, options);
+				const options = setArgs.call(this, data, args);
+				event = this.#sendEvent(data, options);
 			} catch (error) {
 				reject(error);
 				return;
@@ -448,8 +447,8 @@ class Analytics {
 				callback({ attempts: 1, event: event });
 			}
 			resolve({ attempts: 1, event: event });
-		}
-		if (typeof window.Promise === 'function') {
+		};
+		if (typeof globalThis.Promise === 'function') {
 			return new Promise(executor);
 		}
 		executor(none, none);
@@ -466,7 +465,7 @@ class Analytics {
 		event.messageId = uuid();
 		event.anonymousId = this.#anonymousId();
 
-		const loc = window.location;
+		const loc = globalThis.location;
 
 		const canonical = document.querySelector('link[rel="canonical"]');
 		let pageURL = canonical ? canonical.getAttribute('href') : null;
@@ -496,9 +495,9 @@ class Analytics {
 		};
 
 		switch (event.type) {
-			case 'page':
+			case 'page': {
 				const p = isPlainObject(event.properties) ? event.properties : {};
-				for (let k in page) {
+				for (const k in page) {
 					if (k in p) {
 						const v = p[k];
 						if (typeof v === 'string' && v !== '') {
@@ -517,16 +516,19 @@ class Analytics {
 				event.properties = p;
 				this.#setUserId(event);
 				break;
+			}
 			case 'screen':
 				if (!isPlainObject(event.properties)) {
 					event.properties = {};
 				}
+				this.#setUserId(event);
+				break;
 			case 'track':
 			case 'group':
 				this.#setUserId(event);
 		}
 
-		const n = window.navigator;
+		const n = globalThis.navigator;
 		event.context = {
 			library: {
 				name: 'chichi.js',
@@ -535,9 +537,9 @@ class Analytics {
 			locale: n.language || n.userLanguage,
 			page: page,
 			screen: {
-				width: window.screen.width,
-				height: window.screen.height,
-				density: window.devicePixelRatio,
+				width: globalThis.screen.width,
+				height: globalThis.screen.height,
+				density: globalThis.devicePixelRatio,
 			},
 			userAgent: n.userAgent,
 		};
@@ -549,12 +551,12 @@ class Analytics {
 
 		event.integrations = {};
 		if (options && typeof options.integrations == 'object') {
-			for (let n in options.integrations) {
+			for (const n in options.integrations) {
 				event.integrations[n] = options.integrations[n];
 			}
 		}
 
-		for (let option in options) {
+		for (const option in options) {
 			if (option !== 'integrations' && options[option] !== void 0) {
 				event.context[option] = options[option];
 			}

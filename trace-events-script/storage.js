@@ -8,7 +8,7 @@ class Storage {
 		} catch (_) {
 			throw new Error('local storage is not available');
 		}
-		this.store = window.localStorage;
+		this.store = globalThis.localStorage;
 	}
 
 	getAnonymousID() {

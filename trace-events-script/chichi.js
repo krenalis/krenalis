@@ -1,17 +1,13 @@
 import Analytics from './analytics.js';
 import { uuid } from './utils.js';
 
-// set DEBUG to true if you are running Chichi's server on localhost.
-const DEBUG = true;
-const undefined = void 0;
-
 function main() {
 	// Do nothing if the browser is not supported.
 	if (!uuid) {
 		return;
 	}
 
-	const analytics = window.chichianalytics;
+	const analytics = globalThis.chichianalytics;
 
 	const a = new Analytics(analytics.key, analytics.url, analytics.options);
 	const methods = [
@@ -36,14 +32,14 @@ function main() {
 	}
 
 	for (let i = 0; i < analytics.length; i++) {
-		let event = analytics[i];
+		const event = analytics[i];
 		analytics[event[0]](...event[1]);
 	}
 
 	// empty the array.
 	analytics.length = 0;
 
-	window.chichianalytics = a;
+	globalThis.chichianalytics = a;
 }
 
 main();
