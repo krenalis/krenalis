@@ -32,7 +32,7 @@ class Analytics {
 		},
 		anonymousId: (id) => this.setAnonymousId(id),
 		traits: (traits) => {
-			if (traits !== void (0)) {
+			if (traits !== undefined) {
 				if (traits == null) {
 					traits = {};
 				}
