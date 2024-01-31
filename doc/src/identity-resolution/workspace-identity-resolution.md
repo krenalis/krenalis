@@ -28,7 +28,7 @@ There are two types of identifiers: **non-anonymous** and **anonymous**. The dif
 
 ### Non-anonymous Identifiers
 
-Non-anonymous identifiers are chosen from the properties of the `users_identities` schema.
+Non-anonymous identifiers can be chosen from the properties of the `users_identities` schema.
 
 It is necessary to choose a **priority order**, which will be taken into account by the identity resolution procedure.
 
