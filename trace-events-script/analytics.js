@@ -177,203 +177,6 @@ class Analytics {
 		return id;
 	}
 
-	// setAliasArguments sets the arguments for alias calls.
-	// It writes the 'userId' and 'previousId' arguments into data and
-	// returns the options.
-	#setAliasArguments(data, a) {
-		if (a.length === 0) {
-			throw new Error('User is missing');
-		}
-		data.userId = this.#getAlias(a.shift());
-		let options;
-		switch (typesOf(a)) {
-			case '':
-				break;
-			case 'string':
-				data.previousId = this.#getAlias(a[0]);
-				break;
-			case 'object':
-				options = a[0];
-				break;
-			case 'string,object':
-				data.previousId = this.#getAlias(a[0]);
-				options = a[1];
-				break;
-			default:
-				throw new Error('Invalid arguments');
-		}
-		return options;
-	}
-
-	// setIdentifyArguments sets the arguments for identify calls.
-	// It writes the 'userId' and 'traits' arguments into data and
-	// returns the options.
-	#setIdentifyArguments(data, a) {
-		let options;
-		switch (typesOf(a)) {
-			// ()
-			case '':
-				this.#setUserId(data);
-				this.#setTraits(data);
-				break;
-			// (userId);
-			case 'string':
-				this.#setUserId(data, a[0]);
-				this.#setTraits(data);
-				break;
-			// (traits);
-			case 'object':
-				this.#setUserId(data);
-				this.#setTraits(data, a[0]);
-				break;
-			// (userId, traits);
-			case 'string,object':
-				this.#setUserId(data, a[0]);
-				this.#setTraits(data, a[1]);
-				break;
-			// (traits, context);
-			case 'object,object':
-				this.#setUserId(data);
-				this.#setTraits(data, a[0]);
-				options = a[1];
-				break;
-			// (userId, traits, context)
-			case 'string,object,object':
-				this.#setUserId(data, a[0]);
-				this.#setTraits(data, a[1]);
-				options = a[2];
-				break;
-			default:
-				throw new Error('Invalid arguments');
-		}
-		return options;
-	}
-
-	// setGroupArguments sets the arguments for group calls.
-	// It writes the 'groupId' and 'traits' arguments into data and
-	// returns the options.
-	#setGroupArguments(data, a) {
-		if (a.length === 0) {
-			throw new Error('Group is missing');
-		}
-		let options;
-		switch (typesOf(a)) {
-			// (groupId)
-			case 'string':
-				this.#setGroup(data, a[0]);
-				data.traits = {};
-				break;
-			// (traits)
-			case 'object':
-				data.traits = a[0];
-				break;
-			// (groupId, traits)
-			case 'string,object':
-				this.#setGroup(data, a[0]);
-				data.traits = a[1];
-				break;
-			// (traits, context)
-			case 'object,object':
-				data.traits = a[0];
-				options = a[1];
-				break;
-			// (groupId, traits, context)
-			case 'string,object,object':
-				this.#setGroup(data, a[0]);
-				data.traits = a[1];
-				options = a[2];
-				break;
-			default:
-				throw new Error('Invalid arguments');
-		}
-		return options;
-	}
-
-	// setTrackArguments sets the arguments for track calls.
-	// It writes the 'event' and 'properties' arguments into data and
-	// returns the options.
-	#setTrackArguments(data, a) {
-		if (a.length === 0 || typeof a[0] != 'string') {
-			throw new Error('Event name is missing');
-		}
-		data.event = a.shift();
-		let options;
-		switch (typesOf(a)) {
-			// (name)
-			case '':
-				break;
-			// (name, properties)
-			case 'object':
-				data.properties = a[0];
-				break;
-			// (name, properties, context)
-			case 'object,object':
-				data.properties = a[0];
-				options = a[1];
-				break;
-			default:
-				throw new Error('Invalid arguments');
-		}
-		return options;
-	}
-
-	// setPageScreenArguments sets the arguments for page and screen calls.
-	// It writes the 'category', 'name', and 'properties' arguments into data
-	// and returns the options.
-	#setPageScreenArguments(data, a) {
-		let options;
-		switch (typesOf(a)) {
-			// ()
-			case '':
-				break;
-			// (name)
-			case 'string':
-				data.name = a[0];
-				break;
-			// (properties)
-			case 'object':
-				data.properties = a[0];
-				break;
-			// (category, name)
-			case 'string,string':
-				data.category = a[0];
-				data.name = a[1];
-				break;
-			// (name, properties)
-			case 'string,object':
-				data.name = a[0];
-				data.properties = a[1];
-				break;
-			// (properties, context)
-			case 'object,object':
-				data.properties = a[0];
-				options = a[1];
-				break;
-			// (category, name, properties)
-			case 'string,string,object':
-				data.category = a[0];
-				data.name = a[1];
-				data.properties = a[2];
-				break;
-			// (name, properties, context)
-			case 'string,object,object':
-				data.name = a[0];
-				data.properties = a[1];
-				options = a[2];
-				break;
-			// (category, name, properties, context)
-			case 'string,string,object,object':
-				data.category = a[0];
-				data.name = a[1];
-				data.properties = a[2];
-				options = a[3];
-				break;
-			default:
-				throw new Error('Invalid arguments');
-		}
-		return options;
-	}
-
 	// getAlias returns the userId or previousId arguments of the alias calls.
 	#getAlias(id) {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
@@ -384,50 +187,6 @@ class Analytics {
 			return this.#storage.getAnonymousID();
 		}
 		return id;
-	}
-
-	// setGroup sets the groupId with id.
-	#setGroup(data, id) {
-		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
-			data.groupId = String(id);
-			this.#storage.setGroupID(data.groupId);
-			return;
-		}
-		id = this.#storage.getGroupID();
-		if (id != null) {
-			data.groupId = id;
-		}
-	}
-
-	// setTraits sets the traits merging the user traits with traits.
-	#setTraits(data, traits) {
-		data.traits = this.#storage.getTraits();
-		if (traits !== undefined) {
-			for (const k in traits) {
-				const v = traits[k];
-				if (v === undefined) {
-					delete data.traits[k];
-				} else {
-					data.traits[k] = v;
-				}
-			}
-		}
-		this.#storage.setTraits(data.traits);
-		data.traits = this.#storage.getTraits();
-	}
-
-	// setUserId sets the userId with id.
-	#setUserId(data, id) {
-		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
-			data.userId = String(id);
-			const userId = this.#storage.getUserID();
-			if (userId !== data.userId) {
-				this.#storage.setUserID(data.userId);
-				this.#storage.setTraits({});
-			}
-			return;
-		}
-		data.userId = this.#storage.getUserID();
 	}
 
 	// send sends an event of the given type, setting the arguments args with
@@ -578,6 +337,247 @@ class Analytics {
 		this.#sender.send(event);
 
 		return event;
+	}
+
+	// setAliasArguments sets the arguments for alias calls.
+	// It writes the 'userId' and 'previousId' arguments into data and
+	// returns the options.
+	#setAliasArguments(data, a) {
+		if (a.length === 0) {
+			throw new Error('User is missing');
+		}
+		data.userId = this.#getAlias(a.shift());
+		let options;
+		switch (typesOf(a)) {
+			case '':
+				break;
+			case 'string':
+				data.previousId = this.#getAlias(a[0]);
+				break;
+			case 'object':
+				options = a[0];
+				break;
+			case 'string,object':
+				data.previousId = this.#getAlias(a[0]);
+				options = a[1];
+				break;
+			default:
+				throw new Error('Invalid arguments');
+		}
+		return options;
+	}
+
+	// setIdentifyArguments sets the arguments for identify calls.
+	// It writes the 'userId' and 'traits' arguments into data and
+	// returns the options.
+	#setIdentifyArguments(data, a) {
+		let options;
+		switch (typesOf(a)) {
+			// ()
+			case '':
+				this.#setUserId(data);
+				this.#setTraits(data);
+				break;
+			// (userId);
+			case 'string':
+				this.#setUserId(data, a[0]);
+				this.#setTraits(data);
+				break;
+			// (traits);
+			case 'object':
+				this.#setUserId(data);
+				this.#setTraits(data, a[0]);
+				break;
+			// (userId, traits);
+			case 'string,object':
+				this.#setUserId(data, a[0]);
+				this.#setTraits(data, a[1]);
+				break;
+			// (traits, context);
+			case 'object,object':
+				this.#setUserId(data);
+				this.#setTraits(data, a[0]);
+				options = a[1];
+				break;
+			// (userId, traits, context)
+			case 'string,object,object':
+				this.#setUserId(data, a[0]);
+				this.#setTraits(data, a[1]);
+				options = a[2];
+				break;
+			default:
+				throw new Error('Invalid arguments');
+		}
+		return options;
+	}
+
+	// setGroup sets the groupId with id.
+	#setGroup(data, id) {
+		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
+			data.groupId = String(id);
+			this.#storage.setGroupID(data.groupId);
+			return;
+		}
+		id = this.#storage.getGroupID();
+		if (id != null) {
+			data.groupId = id;
+		}
+	}
+
+	// setGroupArguments sets the arguments for group calls.
+	// It writes the 'groupId' and 'traits' arguments into data and
+	// returns the options.
+	#setGroupArguments(data, a) {
+		if (a.length === 0) {
+			throw new Error('Group is missing');
+		}
+		let options;
+		switch (typesOf(a)) {
+			// (groupId)
+			case 'string':
+				this.#setGroup(data, a[0]);
+				data.traits = {};
+				break;
+			// (traits)
+			case 'object':
+				data.traits = a[0];
+				break;
+			// (groupId, traits)
+			case 'string,object':
+				this.#setGroup(data, a[0]);
+				data.traits = a[1];
+				break;
+			// (traits, context)
+			case 'object,object':
+				data.traits = a[0];
+				options = a[1];
+				break;
+			// (groupId, traits, context)
+			case 'string,object,object':
+				this.#setGroup(data, a[0]);
+				data.traits = a[1];
+				options = a[2];
+				break;
+			default:
+				throw new Error('Invalid arguments');
+		}
+		return options;
+	}
+
+	// setPageScreenArguments sets the arguments for page and screen calls.
+	// It writes the 'category', 'name', and 'properties' arguments into data
+	// and returns the options.
+	#setPageScreenArguments(data, a) {
+		let options;
+		switch (typesOf(a)) {
+			// ()
+			case '':
+				break;
+			// (name)
+			case 'string':
+				data.name = a[0];
+				break;
+			// (properties)
+			case 'object':
+				data.properties = a[0];
+				break;
+			// (category, name)
+			case 'string,string':
+				data.category = a[0];
+				data.name = a[1];
+				break;
+			// (name, properties)
+			case 'string,object':
+				data.name = a[0];
+				data.properties = a[1];
+				break;
+			// (properties, context)
+			case 'object,object':
+				data.properties = a[0];
+				options = a[1];
+				break;
+			// (category, name, properties)
+			case 'string,string,object':
+				data.category = a[0];
+				data.name = a[1];
+				data.properties = a[2];
+				break;
+			// (name, properties, context)
+			case 'string,object,object':
+				data.name = a[0];
+				data.properties = a[1];
+				options = a[2];
+				break;
+			// (category, name, properties, context)
+			case 'string,string,object,object':
+				data.category = a[0];
+				data.name = a[1];
+				data.properties = a[2];
+				options = a[3];
+				break;
+			default:
+				throw new Error('Invalid arguments');
+		}
+		return options;
+	}
+
+	// setTrackArguments sets the arguments for track calls.
+	// It writes the 'event' and 'properties' arguments into data and
+	// returns the options.
+	#setTrackArguments(data, a) {
+		if (a.length === 0 || typeof a[0] != 'string') {
+			throw new Error('Event name is missing');
+		}
+		data.event = a.shift();
+		let options;
+		switch (typesOf(a)) {
+			// (name)
+			case '':
+				break;
+			// (name, properties)
+			case 'object':
+				data.properties = a[0];
+				break;
+			// (name, properties, context)
+			case 'object,object':
+				data.properties = a[0];
+				options = a[1];
+				break;
+			default:
+				throw new Error('Invalid arguments');
+		}
+		return options;
+	}
+
+	// setTraits sets the traits merging the user traits with traits.
+	#setTraits(data, traits) {
+		data.traits = this.#storage.getTraits();
+		if (traits !== undefined) {
+			for (const k in traits) {
+				const v = traits[k];
+				if (v === undefined) {
+					delete data.traits[k];
+				} else {
+					data.traits[k] = v;
+				}
+			}
+		}
+		this.#storage.setTraits(data.traits);
+		data.traits = this.#storage.getTraits();
+	}
+
+	// setUserId sets the userId with id.
+	#setUserId(data, id) {
+		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
+			data.userId = String(id);
+			const userId = this.#storage.getUserID();
+			if (userId !== data.userId) {
+				this.#storage.setUserID(data.userId);
+				this.#storage.setTraits({});
+			}
+			return;
+		}
+		data.userId = this.#storage.getUserID();
 	}
 }
 
