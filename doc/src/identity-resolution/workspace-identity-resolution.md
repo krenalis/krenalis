@@ -9,9 +9,9 @@ This procedure is started arbitrarily by Chichi and cannot be started explicitly
 
 ## Same user criterion
 
+> NOTE: this paragraph should be reviewed and eventually clarified.
 
-Given two users, they are the *same user* if they have at least one equal value for an **identifier**, and if at least one of the users have no value for identifiers with higher priority (*this should be reviewed*).
-
+Given two users, they are the *same user* if they have at least one equal value for an **identifier**, and if at least one of the users have no value for identifiers with higher priority.
 
 Hence, it follows that if there are no identifiers defined in the workspace, the Workspace Identity Resolution considers every user imported from a connection always different from any other user.
 
