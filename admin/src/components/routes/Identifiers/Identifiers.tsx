@@ -145,7 +145,7 @@ const Identifiers = () => {
 		setIsLoadingWorkspaces(true);
 		setTimeout(() => {
 			setIsSaving(false);
-			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Identifiers saved succesfully' });
+			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Identifiers saved successfully' });
 		}, 500);
 	};
 
