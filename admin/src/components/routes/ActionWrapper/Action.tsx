@@ -11,7 +11,6 @@ import ActionTable from './ActionTable';
 import { useAction } from '../../../hooks/useActionData';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { FullscreenContext } from '../../../context/FullscreenContext';
-import appContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 
@@ -19,7 +18,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [mode, setMode] = useState<'mappings' | 'transformation' | ''>('');
 	const [isSaveButtonLoading, setIsSaveButtonLoading] = useState<boolean>(false);
 
-	const { workspaces, selectedWorkspace } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
 	const { closeFullscreen } = useContext(FullscreenContext)!;
 
@@ -29,7 +27,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		closeFullscreen();
 	};
 
-	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 	const {
 		isEditing,
 		isImport,
@@ -48,7 +45,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		isMappingHidden,
 		isMappingDisabled,
 		mappingDisabledReason,
-	} = useAction(connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
+	} = useAction(connection, providedActionType, providedAction, setIsSaveButtonLoading);
 
 	if (isLoading) {
 		return (

@@ -179,12 +179,11 @@ func (state *State) Load() error {
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_settings,\n"+
-			"identifiers, anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region\n"+
-			"FROM workspaces",
+			"identifiers, privacy_region FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
 				var warehouseType *WarehouseType
-				var warehouseSettings, mapping []byte
+				var warehouseSettings []byte
 				for rows.Next() {
 					ws := &Workspace{
 						mu:          new(sync.Mutex),
@@ -192,7 +191,7 @@ func (state *State) Load() error {
 						resources:   map[int]*Resource{},
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseSettings,
-						&ws.Identifiers, &ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion); err != nil {
+						&ws.Identifiers, &ws.PrivacyRegion); err != nil {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
@@ -201,10 +200,6 @@ func (state *State) Load() error {
 							Type:     *warehouseType,
 							Settings: warehouseSettings,
 						}
-					}
-					err = json.Unmarshal(mapping, &ws.AnonymousIdentifiers.Mapping)
-					if err != nil {
-						return err
 					}
 					ws.organization.workspaces[ws.ID] = ws
 					state.workspaces[ws.ID] = ws

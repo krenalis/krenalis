@@ -212,9 +212,8 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 	if !ok {
 		return errors.New("missing 'users_identities' schema")
 	}
-	count := len(ws.Identifiers) + len(ws.AnonymousIdentifiers.Priority)
-	identifiers := make([]types.Property, count)
-	for i, ident := range append(ws.Identifiers, ws.AnonymousIdentifiers.Priority...) {
+	identifiers := make([]types.Property, len(ws.Identifiers))
+	for i, ident := range ws.Identifiers {
 		path := strings.Split(ident, ".")
 		identifiers[i], err = usersIdentities.PropertyByPath(path)
 		if err != nil {

@@ -172,15 +172,14 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				router.Route("/identifiers", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						req := struct {
-							Identifiers          []string
-							AnonymousIdentifiers apis.AnonymousIdentifiers
+							Identifiers []string
 						}{}
 						err := json.NewDecoder(r.Body).Decode(&req)
 						if err != nil {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						err = workspace.SetIdentifiers(ctx, req.Identifiers, req.AnonymousIdentifiers)
+						err = workspace.SetIdentifiers(ctx, req.Identifiers)
 						respond(w, err)
 					})
 				})

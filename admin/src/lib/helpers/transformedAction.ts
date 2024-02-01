@@ -11,7 +11,6 @@ import {
 	TransformationFunction,
 } from '../../types/external/action';
 import { Filter } from '../../types/external/api';
-import { AnonymousIdentifiers } from '../../types/external/identifiers';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
 import API from '../api/api';
 import TransformedConnection from './transformedConnection';
@@ -246,7 +245,6 @@ const transformInActionToSet = async (
 	action: TransformedAction,
 	actionType: TransformedActionType,
 	api: API,
-	anonymousIdentifiers: AnonymousIdentifiers,
 	connection: TransformedConnection,
 ): Promise<ActionToSet> => {
 	let mapping: Mapping;
@@ -310,12 +308,6 @@ const transformInActionToSet = async (
 	if (action.Transformation.Function != null) {
 		inSchema = actionType.InputSchema;
 		outSchema = { name: 'Object', properties: [] };
-		for (const property of actionType.OutputSchema.properties!) {
-			const isIdentifier = isIdentifierProperty(property.name, anonymousIdentifiers.Priority);
-			if (!isIdentifier) {
-				outSchema.properties!.push(property);
-			}
-		}
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
@@ -536,29 +528,6 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	return fields;
 };
 
-const isIdentifierProperty = (name: string, identifiers: string[] | null): boolean => {
-	if (identifiers == null) {
-		return false;
-	}
-	if (identifiers.includes(name)) {
-		return true;
-	}
-	let isIdentifierParent = false;
-	for (const identifier of identifiers) {
-		if (identifier.includes('.')) {
-			const parent = identifier.split('.')[0];
-			if (name === parent) {
-				isIdentifierParent = true;
-				break;
-			}
-		}
-	}
-	if (isIdentifierParent) {
-		return true;
-	}
-	return false;
-};
-
 const doesTimestampNeedFormat = (timestampColumn: string, schema: ObjectType): boolean => {
 	let needFormat = true;
 	if (timestampColumn == null || timestampColumn === '') {
@@ -587,7 +556,6 @@ export {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
-	isIdentifierProperty,
 	doesTimestampNeedFormat,
 };
 

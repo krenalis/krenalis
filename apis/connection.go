@@ -373,8 +373,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // anymore, and returns an errors.UnprocessableError error with code
 //   - ConnectionNotExist, if the connection does not exist.
 //   - LanguageNotSupported, if the transformation language is not supported.
-//   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
-//     identifier.
 //   - TargetAlreadyExist, if an action already exists for a target for the
 //     connection.
 func (this *Connection) AddAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
@@ -1774,10 +1772,8 @@ func (this *Connection) updateConnectionsStats(ctx context.Context, count int) e
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 //
-// It returns an errors.UnprocessableError error with code
-//   - LanguageNotSupported, if the transformation language is not supported.
-//   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
-//     identifier.
+// It returns an errors.UnprocessableError error with code LanguageNotSupported,
+// if the transformation language is not supported.
 func (this *Connection) validateActionToSet(action ActionToSet, target state.Target) error {
 
 	inSchema := action.InSchema
@@ -1961,7 +1957,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	c := this.connection
 	connector := c.Connector()
-	ws := this.connection.Workspace()
 
 	// In case of a source connection, since its actions write on the data
 	// warehouse, the output schema cannot contain meta-properties because such
@@ -1970,21 +1965,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		for _, p := range outSchema.Properties() {
 			if isMetaProperty(p) {
 				return errors.BadRequest("output schema cannot contain meta-properties")
-			}
-		}
-	}
-
-	// When importing users, ensure that there are no mappings over the
-	// anonymous identifiers of the workspace.
-	if importingUsers := c.Role == state.Source && target == state.Users; importingUsers {
-		var tOutProps []string
-		if action.Transformation.Function != nil {
-			tOutProps = outSchema.PropertiesNames()
-		}
-		for _, p := range ws.AnonymousIdentifiers.Priority {
-			_, ok := action.Transformation.Mapping[p]
-			if ok || slices.Contains(tOutProps, p) {
-				return errors.Unprocessable(MappingOverAnonymousIdentifier, "cannot map over the property %s because it is an anonymous identifier", p)
 			}
 		}
 	}

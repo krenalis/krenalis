@@ -26,7 +26,7 @@ func Test_UsersIdentities(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	storageDir, err := filepath.Abs("testdata/users_identities_test")
 	if err != nil {

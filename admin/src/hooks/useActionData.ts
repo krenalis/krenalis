@@ -14,7 +14,6 @@ import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../types/external/action';
 import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
 import { ObjectType } from '../types/external/types';
-import Workspace from '../types/external/workspace';
 import { sleep } from '../lib/utils/sleep';
 import { FullscreenContext } from '../context/FullscreenContext';
 
@@ -23,7 +22,6 @@ const useAction = (
 	providedActionType: ActionType,
 	providedAction: Action,
 	setIsSaveButtonLoading: React.Dispatch<React.SetStateAction<boolean>>,
-	workspace: Workspace,
 ) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
@@ -169,13 +167,7 @@ const useAction = (
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(
-				action,
-				actionType,
-				api,
-				workspace.AnonymousIdentifiers,
-				connection,
-			);
+			actionToSet = await transformInActionToSet(action, actionType, api, connection);
 		} catch (err) {
 			return err;
 		}

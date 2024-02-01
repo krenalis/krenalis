@@ -1,4 +1,4 @@
-import { Identifiers, AnonymousIdentifiers } from '../../types/external/identifiers';
+import { Identifiers } from '../../types/external/identifiers';
 import { TransformedMapping } from './transformedAction';
 
 const SUPPORTED_IDENTIFIERS_TYPES = ['Int', 'Uint', 'Decimal', 'UUID', 'Inet', 'Text', 'Array'];
@@ -25,27 +25,6 @@ const isTypeSupportedAsIdentifier = (type: string): boolean => {
 	return false;
 };
 
-const validateIdentifiersMapping = (identifiersMapping: TransformedIdentifiers) => {
-	for (let i = 0; i < identifiersMapping.length; i++) {
-		const [mapped, identifier] = identifiersMapping[i];
-		if (mapped.value === '') {
-			return 'You cannot map an identifier with an empty value';
-		}
-		if (identifier.value === '') {
-			return 'You cannot use an empty value as identifier';
-		}
-		if (mapped.error) {
-			return 'You must fix the errors in the identifier mapping';
-		}
-		const otherAssociations = [...identifiersMapping.slice(0, i), ...identifiersMapping.slice(i + 1)];
-		for (const [, otherIdentifier] of otherAssociations) {
-			if (identifier.value === otherIdentifier.value) {
-				return 'You cannot use the same identifier twice';
-			}
-		}
-	}
-};
-
 const transformIdentifiers = (identifiers: Identifiers, mapping: TransformedMapping): TransformedIdentifiers => {
 	return identifiers.map((identifier) => [{ value: mapping[identifier].value, error: '' }, { value: identifier }]);
 };
@@ -54,32 +33,6 @@ const untransformIdentifiers = (transformed: TransformedIdentifiers): Identifier
 	return transformed.map(([, identifier]) => identifier.value);
 };
 
-const transformAnonymousIdentifiers = (identifiers: AnonymousIdentifiers): TransformedIdentifiers => {
-	const transformed: TransformedIdentifiers = [];
-	for (const identifier of identifiers.Priority) {
-		const mapped = identifiers.Mapping[identifier];
-		transformed.push([{ value: mapped, error: '' }, { value: identifier }]);
-	}
-	return transformed;
-};
-
-const untransformAnonymousIdentifiers = (transformed: TransformedIdentifiers): AnonymousIdentifiers => {
-	const untransformed: AnonymousIdentifiers = { Priority: [], Mapping: {} };
-	for (const [mapped, identifier] of transformed) {
-		untransformed.Priority.push(identifier.value);
-		untransformed.Mapping[identifier.value] = mapped.value;
-	}
-	return untransformed;
-};
-
-export {
-	DEFAULT_IDENTIFIERS_MAPPING,
-	isTypeSupportedAsIdentifier,
-	validateIdentifiersMapping,
-	transformIdentifiers,
-	untransformIdentifiers,
-	transformAnonymousIdentifiers,
-	untransformAnonymousIdentifiers,
-};
+export { DEFAULT_IDENTIFIERS_MAPPING, isTypeSupportedAsIdentifier, transformIdentifiers, untransformIdentifiers };
 
 export type { TransformedIdentifiers, IdentifierAssociation };

@@ -24,10 +24,7 @@ import (
 	"chichi/telemetry"
 )
 
-const (
-	MappingOverAnonymousIdentifier errors.Code = "MappingOverAnonymousIdentifier"
-	DatabaseFailed                 errors.Code = "DatabaseFailed"
-)
+const DatabaseFailed errors.Code = "DatabaseFailed"
 
 // Action represents an action associated to a destination connection to send
 // events.
@@ -274,10 +271,8 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 //
-// It returns an errors.UnprocessableError error with code
-//   - LanguageNotSupported, if the transformation language is not supported.
-//   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
-//     identifier.
+// It returns an errors.UnprocessableError error with code LanguageNotSupported,
+// if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	this.apis.mustBeOpen()

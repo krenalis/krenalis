@@ -34,7 +34,7 @@ func TestExportUsersToFile(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Load some users in the data warehouse.
 	{

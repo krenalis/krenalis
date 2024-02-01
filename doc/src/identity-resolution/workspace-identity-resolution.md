@@ -19,18 +19,11 @@ Hence, it follows that if there are no identifiers defined in the workspace, the
 
 An identifier consists in **a property path** which refers to a property of the `users_identities` schema which have [an allowed type](./allowed-types-for-identifiers.md).
 
-It is possible to define zero, one, or more identifiers for the identity resolution. 
-
-There are two types of identifiers: **non-anonymous** and **anonymous**. The difference is not related to the identity resolution – which treats both in the same way – but to how corresponding values for the users are imported.
-
 > The properties shown in the UI are currently wrong. See the issue [#320](https://github.com/open2b/chichi/issues/320). 
 
+It is possible to define zero, one, or more identifiers for the identity resolution. 
 
-### Non-anonymous Identifiers
-
-Non-anonymous identifiers can be chosen from the properties of the `users_identities` schema.
-
-It is necessary to choose a **priority order**, which will be taken into account by the identity resolution procedure.
+In case more than one identifier is defined, it is necessary to choose a **priority order**, which will be taken into account by the identity resolution procedure.
 
 So, for example:
 
@@ -41,22 +34,7 @@ So, for example:
 [ 4 ]  address.street1
 ```
 
-### Anonymous Identifiers
-
-The anonymous identifiers, like non-anonymous ones, are identifiers that refer to the properties of the `users_identities` schema properties and **have lower priority** than the former.
-
-Here, in addition to choosing these identifiers, it is necessary to **specify a mapping between incoming event properties and the chosen anonymous identifiers**. This mapping will be executed when importing traits of an incoming event. 
-
-```
-┌────────────────────────┐
-│ context.device.id      │ ->  [ 1 ]  ios.id
-└────────────────────────┘
-┌────────────────────────┐
-│ context.ip             │ ->  [ 2 ]  ip
-└────────────────────────┘
-```
-
-**So, why using anonymous identifiers?** They are useful to avoid repeating the same [mapping](../mapping.md) on anonymous properties (device IDs, etc...) in every action that import user traits from events. Consequently, as can be deduced, the behavior of anonymous identifiers can be replaced with non-anonymous identifiers and mappings within actions.
+Here, `customerId` is the identifier with the higher priority while `address.street1` has the lower priority.
 
 ## Merging of users
 

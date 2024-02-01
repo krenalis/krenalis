@@ -32,10 +32,8 @@ import (
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/events/eventschema"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/transformers/mappings"
 	"chichi/connector/types"
 
 	"github.com/jxskiss/base62"
@@ -908,9 +906,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	return b, nil
 }
 
-// SetIdentifiers sets the identifiers and the anonymous identifiers of the
-// workspace.
-func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string, anonIdentifiers AnonymousIdentifiers) error {
+// SetIdentifiers sets the identifiers of the workspace.
+func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string) error {
 
 	this.apis.mustBeOpen()
 
@@ -924,59 +921,18 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string,
 		}
 	}
 
-	// Validate the anonymous identifiers.
-	for i, id := range anonIdentifiers.Priority {
-		if !types.IsValidPropertyPath(id) {
-			return errors.BadRequest("anonymous identifier %q is not a valid property path", id)
-		}
-		if slices.Contains(anonIdentifiers.Priority[i+1:], id) {
-			return errors.BadRequest("anonymous identifier %s is repeated", id)
-		}
-		expr, ok := anonIdentifiers.Mapping[id]
-		if !ok {
-			return errors.BadRequest("anonymous identifier %s does not have a mapped expression", id)
-		}
-		// Validate the anonymous identifiers with the events schema without the
-		// GID, as the mappings declared for the anonymous identifiers refer to
-		// the events incoming to Chichi, which do not have a GID.
-		_, err := mappings.Compile(expr, eventschema.SchemaWithoutGID, types.JSON(), false, true, nil)
-		if err != nil {
-			return errors.BadRequest("expression of anonymous identifier %s is not valid: %w", id, err)
-		}
-	}
-	if len(anonIdentifiers.Priority) != len(anonIdentifiers.Mapping) {
-		for _, id := range anonIdentifiers.Priority {
-			delete(anonIdentifiers.Mapping, id)
-		}
-		keys := maps.Keys(anonIdentifiers.Mapping)
-		slices.Sort(keys)
-		return errors.BadRequest("anonymous identifier %q does not exist in mapping", keys[0])
-	}
-
 	// Update the database and send the notification.
 	if identifiers == nil {
 		identifiers = []string{}
 	}
-	if anonIdentifiers.Mapping == nil {
-		anonIdentifiers.Mapping = map[string]string{}
-	}
-	if anonIdentifiers.Priority == nil {
-		anonIdentifiers.Priority = []string{}
-	}
 	ws := this.workspace
 	n := state.SetWorkspaceIdentifiers{
-		Workspace:            ws.ID,
-		Identifiers:          identifiers,
-		AnonymousIdentifiers: state.AnonymousIdentifiers(anonIdentifiers),
+		Workspace:   ws.ID,
+		Identifiers: identifiers,
 	}
-	mapping, err := json.Marshal(anonIdentifiers.Mapping)
-	if err != nil {
-		return err
-	}
-	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces\n"+
-			"SET identifiers = $1, anonymous_identifiers_priority = $2, anonymous_identifiers_mapping = $3\n"+
-			"WHERE id = $4", n.Identifiers, n.AnonymousIdentifiers.Priority, mapping, n.Workspace)
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET identifiers = $1 WHERE id = $2",
+			n.Identifiers, n.Workspace)
 		if err != nil {
 			return err
 		}

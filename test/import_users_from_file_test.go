@@ -45,7 +45,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Create the CSV connection.
 	csvID := c.AddSourceCSV(fsID)
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Add an action to the CSV for importing the users.
 	importUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{

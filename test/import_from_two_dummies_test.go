@@ -86,7 +86,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Change the workspace identifiers and import again from the first Dummy,
 	// just to trigger the identity resolution.
-	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"})
 	c.ExecuteAction(dummy1, action1, true)
 	c.WaitActionsToFinish(dummy1)
 

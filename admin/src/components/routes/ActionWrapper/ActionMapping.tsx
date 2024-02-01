@@ -7,7 +7,6 @@ import {
 	TransformedMapping,
 	doesTimestampNeedFormat,
 	flattenSchema,
-	isIdentifierProperty,
 	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
 import { rawTransformationFunctions } from './Action.constants';
@@ -539,11 +538,6 @@ const TransformationBox = ({
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.Transformation.Mapping) {
-			// hide anonymous identifiers and their parent properties.
-			const isIdentifier = isIdentifierProperty(k, workspace.AnonymousIdentifiers.Priority);
-			if (isIdentifier) {
-				continue;
-			}
 			mappings.push(
 				<div
 					key={k}
@@ -739,7 +733,7 @@ const FullscreenTransformation = ({
 	const [outputError, setOutputError] = useState<string>('');
 	const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
-	const { handleError, api, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { handleError, api } = useContext(AppContext);
 	const { action, actionType, connection } = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
@@ -946,16 +940,9 @@ const FullscreenTransformation = ({
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
 
-		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(
-				action,
-				actionType,
-				api,
-				workspace.AnonymousIdentifiers,
-				connection,
-			);
+			actionToSet = await transformInActionToSet(action, actionType, api, connection);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
@@ -1004,16 +991,9 @@ const FullscreenTransformation = ({
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
 
-		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(
-				action,
-				actionType,
-				api,
-				workspace.AnonymousIdentifiers,
-				connection,
-			);
+			actionToSet = await transformInActionToSet(action, actionType, api, connection);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);

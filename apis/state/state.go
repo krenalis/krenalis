@@ -278,16 +278,15 @@ type Warehouse struct {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu                   *sync.Mutex
-	Warehouse            *Warehouse
-	connections          map[int]*Connection
-	ID                   int
-	organization         *Organization
-	Name                 string
-	resources            map[int]*Resource
-	Identifiers          []string
-	AnonymousIdentifiers AnonymousIdentifiers
-	PrivacyRegion        PrivacyRegion
+	mu            *sync.Mutex
+	Warehouse     *Warehouse
+	connections   map[int]*Connection
+	ID            int
+	organization  *Organization
+	Name          string
+	resources     map[int]*Resource
+	Identifiers   []string
+	PrivacyRegion PrivacyRegion
 }
 
 // Organization returns the organization of the workspace.
@@ -342,12 +341,6 @@ func (workspace *Workspace) ResourceByCode(code string) (*Resource, bool) {
 	}
 	workspace.mu.Unlock()
 	return r, r != nil
-}
-
-// AnonymousIdentifiers represents the anonymous identifiers of a workspace.
-type AnonymousIdentifiers struct {
-	Priority []string
-	Mapping  map[string]string
 }
 
 // PrivacyRegion represents a privacy region.

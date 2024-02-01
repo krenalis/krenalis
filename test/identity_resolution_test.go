@@ -76,7 +76,7 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phoneNumbers", Type: types.Array(types.Text())},
 	}
 
-	c.SetWorkspaceIdentifiers(identifiers, chichitester.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers(identifiers)
 
 	// Generate and add an action to the JSON for importing the users.
 	mapping := map[string]string{}

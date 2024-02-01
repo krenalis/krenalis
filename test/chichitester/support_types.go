@@ -33,11 +33,6 @@ type ActionToSet struct {
 	MatchingProperties *MatchingProperties
 }
 
-type AnonymousIdentifiers struct {
-	Priority []string
-	Mapping  map[string]string
-}
-
 type Compression string
 
 const (

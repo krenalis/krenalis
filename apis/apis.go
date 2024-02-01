@@ -701,15 +701,14 @@ func isValidInvitationToken(token string) bool {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	apis                 *APIs
-	organization         *Organization
-	store                *datastore.Store
-	workspace            *state.Workspace
-	ID                   int
-	Name                 string
-	Identifiers          []string
-	AnonymousIdentifiers AnonymousIdentifiers
-	PrivacyRegion        PrivacyRegion
+	apis          *APIs
+	organization  *Organization
+	store         *datastore.Store
+	workspace     *state.Workspace
+	ID            int
+	Name          string
+	Identifiers   []string
+	PrivacyRegion PrivacyRegion
 }
 
 type OrganizationSort int
@@ -724,12 +723,6 @@ func (s OrganizationSort) String() string {
 		return "name"
 	}
 	panic("invalid organization sort")
-}
-
-// AnonymousIdentifiers represents the anonymous identifiers of a workspace.
-type AnonymousIdentifiers struct {
-	Priority []string
-	Mapping  map[string]string
 }
 
 // PrivacyRegion represents a privacy region.

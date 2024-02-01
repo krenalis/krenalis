@@ -38,7 +38,6 @@ import (
 	"github.com/oschwald/geoip2-golang"
 	"github.com/relvacode/iso8601"
 	"github.com/segmentio/ksuid"
-	"golang.org/x/exp/maps"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -123,7 +122,6 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // If an event does not contain traits, then the corresponding user is not
 // imported.
 func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
-	anonIdents := source.Workspace().AnonymousIdentifiers.Mapping
 	for _, action := range source.Actions() {
 		if !action.Enabled {
 			continue
@@ -153,11 +151,6 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 			transformation := state.Transformation{
 				Mapping:  action.Transformation.Mapping,
 				Function: action.Transformation.Function,
-			}
-			if len(anonIdents) > 0 {
-				transformation.Mapping = map[string]string{}
-				maps.Copy(transformation.Mapping, action.Transformation.Mapping)
-				maps.Copy(transformation.Mapping, anonIdents)
 			}
 			transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformer, nil)
 			if err != nil {

@@ -50,16 +50,6 @@ func TestUserTraitsImport(t *testing.T) {
 		})
 	}
 
-	// TODO(Gianluca): this is currently broken. See the issue
-	// https://github.com/open2b/chichi/issues/515.
-	//
-	// c.SetWorkspaceIdentifiers([]string{}, chichitester.AnonymousIdentifiers{
-	//  Priority: []string{"ios.id"},
-	//  Mapping: map[string]string{
-	//      "ios.id": "context.device.id",
-	//  },
-	// })
-
 	const eventUserEmail = "event-user@example.com"
 	c.SendEvent(websiteKey, analytics.Identify{
 		UserId: "f4ca124298",

@@ -1019,16 +1019,14 @@ func (state *State) setWorkspace(n notification) {
 	}
 }
 
-// SetWorkspaceIdentifiers is the event sent when the identifiers and the
-// anonymous identifiers of a workspace are changed.
+// SetWorkspaceIdentifiers is the event sent when the identifiers of a workspace
+// are changed.
 type SetWorkspaceIdentifiers struct {
-	Workspace            int
-	Identifiers          []string
-	AnonymousIdentifiers AnonymousIdentifiers
+	Workspace   int
+	Identifiers []string
 }
 
-// setWorkspaceIdentifiers sets the identifiers and the anonymous identifier of
-// a workspace.
+// setWorkspaceIdentifiers sets the identifiers of a workspace.
 func (state *State) setWorkspaceIdentifiers(n notification) {
 	e := SetWorkspaceIdentifiers{}
 	if !decodeNotification(n, &e) {
@@ -1036,7 +1034,6 @@ func (state *State) setWorkspaceIdentifiers(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Identifiers = e.Identifiers
-		w.AnonymousIdentifiers = e.AnonymousIdentifiers
 	})
 }
 

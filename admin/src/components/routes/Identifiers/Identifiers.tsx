@@ -1,18 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './Identifiers.css';
-import IdentifiersMapping from '../../shared/IdentifiersMapping/IdentifiersMapping';
 import Section from '../../shared/Section/Section';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
-import {
-	validateIdentifiersMapping,
-	transformAnonymousIdentifiers,
-	untransformAnonymousIdentifiers,
-	TransformedIdentifiers,
-} from '../../../lib/helpers/transformedIdentifiers';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -24,9 +17,7 @@ import { Identifiers } from '../../../types/external/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 
 const Identifiers = () => {
-	const [anonymousIdentifiers, setAnonymousIdentifiers] = useState<TransformedIdentifiers>();
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
-	const [eventSchema, setEventSchema] = useState<ObjectType>();
 	const [userSchema, setUserSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -40,16 +31,6 @@ const Identifiers = () => {
 		const fetchData = async () => {
 			const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 			setIdentifiers(workspace.Identifiers);
-			const anonymousIdentifiers = transformAnonymousIdentifiers(workspace.AnonymousIdentifiers);
-			setAnonymousIdentifiers(anonymousIdentifiers);
-			let eventSchema: ObjectType;
-			try {
-				eventSchema = await api.eventsSchema();
-			} catch (err) {
-				handleError(err);
-				return;
-			}
-			setEventSchema(eventSchema);
 			let userSchema: ObjectType;
 			try {
 				userSchema = await api.workspaces.userSchema();
@@ -124,17 +105,8 @@ const Identifiers = () => {
 
 	const onSave = async () => {
 		setIsSaving(true);
-		const errorMessage = validateIdentifiersMapping(anonymousIdentifiers!);
-		if (errorMessage) {
-			setTimeout(() => {
-				setIsSaving(false);
-				handleError(errorMessage);
-			}, 500);
-			return;
-		}
-		const untransformedAnonymousIdentifiers = untransformAnonymousIdentifiers(anonymousIdentifiers!);
 		try {
-			await api.workspaces.setIdentifiers(identifiers, untransformedAnonymousIdentifiers);
+			await api.workspaces.setIdentifiers(identifiers);
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
@@ -174,8 +146,8 @@ const Identifiers = () => {
 				<div className='identifiers__no-schema'>
 					<div className='identifiers__no-schema-title'>Connect a data warehouse</div>
 					<div className='identifiers__no-schema-description'>
-						The anonymous identifiers are chosen from among the data warehouse columns. For this reason,
-						before you can set the anonymous identifiers you must connect a data warehouse.
+						The identifiers are chosen from among the data warehouse columns. For this reason, before you
+						can set the identifiers you must connect a data warehouse.
 					</div>
 					<SlButton
 						variant='primary'
@@ -249,17 +221,6 @@ const Identifiers = () => {
 							ref={identifiersListRef}
 							items={identifiersComboboxItems}
 							onSelect={onSelectIdentifier}
-						/>
-					</Section>
-					<Section
-						title='Anonymous Identifiers'
-						description='Define the identifiers used to resolve the identity of anonymous users'
-					>
-						<IdentifiersMapping
-							mapping={anonymousIdentifiers!}
-							setMapping={setAnonymousIdentifiers}
-							inputSchema={eventSchema!}
-							outputSchema={userSchema!}
 						/>
 						<SlButton
 							className='identifiers__save-button'

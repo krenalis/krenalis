@@ -28,7 +28,7 @@ func TestImportWithTransformation(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummyID := c.AddDummy("Dummy (source)", chichitester.Source)
 
-	c.SetWorkspaceIdentifiers([]string{"email"}, chichitester.AnonymousIdentifiers{})
+	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Add an action with a transformation function which imports users, then
 	// execute it.

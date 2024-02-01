@@ -246,10 +246,9 @@ func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	}
 }
 
-func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string, anonymousIdentifiers AnonymousIdentifiers) {
+func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 	body := map[string]any{
-		"Identifiers":          identifiers,
-		"AnonymousIdentifiers": anonymousIdentifiers,
+		"Identifiers": identifiers,
 	}
 	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body)
 }

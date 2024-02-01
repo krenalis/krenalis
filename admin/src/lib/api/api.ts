@@ -8,7 +8,7 @@ import {
 	ConnectionStats,
 	ConnectionToSet,
 } from '../../types/external/connection';
-import { AnonymousIdentifiers, Identifiers } from '../../types/external/identifiers';
+import { Identifiers } from '../../types/external/identifiers';
 import {
 	ActionTarget,
 	SchedulePeriod,
@@ -477,10 +477,9 @@ class Workspaces {
 		});
 	};
 
-	setIdentifiers = async (identifiers: Identifiers, anonymousIdentifiers: AnonymousIdentifiers): Promise<void> => {
+	setIdentifiers = async (identifiers: Identifiers): Promise<void> => {
 		return await call(`${this.apiURL}/identifiers`, http.POST, {
 			identifiers: identifiers,
-			anonymousIdentifiers: anonymousIdentifiers,
 		});
 	};
 
