@@ -90,19 +90,19 @@ Deno.test('Analytics', async (t) => {
 	});
 
 	await t.step('no key is created in the localStorage', () => {
-		newAnalytics({sessions:{autoTrack: false}});
+		newAnalytics({ sessions: { autoTrack: false } });
 		assertEquals(localStorage.length, 0);
 	});
 
 	await t.step('reset function', () => {
 		const fetch = new fake.Fetch(writeKey, endpoint);
-		const a = newAnalytics({sessions:{autoTrack: false}});
+		const a = newAnalytics({ sessions: { autoTrack: false } });
 		a.startSession(137206);
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7');
 		const time = new FakeTime();
 		fetch.install();
 		try {
-			a.identify('17258645', {foo: 5});
+			a.identify('17258645', { foo: 5 });
 			a.group('2649247');
 			time.tick(1000);
 			fetch.events(2);
