@@ -94,7 +94,7 @@ Deno.test('Analytics', async (t) => {
 		assertEquals(localStorage.length, 0);
 	});
 
-	await t.step('reset function', () => {
+	await t.step('reset function', async () => {
 		const fetch = new fake.Fetch(writeKey, endpoint);
 		const a = newAnalytics({ sessions: { autoTrack: false } });
 		a.startSession(137206);
@@ -105,7 +105,7 @@ Deno.test('Analytics', async (t) => {
 			a.identify('17258645', { foo: 5 });
 			a.group('2649247');
 			time.tick(1000);
-			fetch.events(2);
+			await fetch.events(2);
 		} finally {
 			fetch.restore();
 			time.restore();
