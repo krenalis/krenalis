@@ -73,6 +73,28 @@ Deno.test('Sender send', async (t) => {
 		}
 	});
 
+	await t.step('sendBeacon', async () => {
+		const time = new FakeTime();
+		const sendBeacon = new fake.SendBeacon(writeKey, endpoint);
+		sendBeacon.install();
+		try {
+			const sender = new Sender(writeKey, endpoint);
+			sender.debug(DEBUG);
+			for (let i = 0; i < events.length; i++) {
+				sender.send(events[i]);
+			}
+			globalThis.dispatchEvent(new Event('pagehide'));
+			const sentEvents = await sendBeacon.events(events.length);
+			assertEquals(sentEvents.length, events.length);
+			for (let i = 0; i < events.length; i++) {
+				assertEquals(sentEvents[i], events[i]);
+			}
+		} finally {
+			sendBeacon.restore();
+			time.restore();
+		}
+	});
+
 	await t.step('XMLHttpRequest', async () => {
 		const time = new FakeTime();
 		fake.XMLHttpRequest.install(writeKey, endpoint);

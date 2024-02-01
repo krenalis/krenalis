@@ -89,6 +89,91 @@ class Fetch {
 	}
 }
 
+// SendBeacon implements a fake sendBeacon.
+class SendBeacon {
+	#installTime;
+	#writeKey;
+	#endpoint;
+	#events = [];
+	#wait = null;
+	#sendBeacon;
+
+	constructor(writeKey, endpoint) {
+		this.#writeKey = writeKey;
+		this.#endpoint = endpoint;
+		this.#sendBeacon = (url, data) => {
+			assertEquals(url, endpoint);
+			assert(data instanceof Blob);
+			assertEquals(data.type, 'text/plain');
+			parseRequest(this.#writeKey, this.#installTime, {
+				method: 'POST',
+				headers: { 'Content-Type': data.type },
+				body: data,
+				redirect: 'error',
+			}).then((events) => {
+				this.#events.push(...events);
+				const min = this.#wait?.min;
+				if (min != null && this.#events.length >= min) {
+					const events = this.#events;
+					const resolve = this.#wait.resolve;
+					this.#events = [];
+					this.#wait = null;
+					resolve(events);
+				}
+			});
+			return true;
+		};
+	}
+
+	events(min) {
+		if (this.#installTime == null) {
+			return new Promise((_, reject) => {
+				reject(new Error('Fake sendBeacon is not installed'));
+			});
+		}
+		if (this.#wait != null) {
+			return new Promise((_, reject) => {
+				reject(new Error('events already called'));
+			});
+		}
+		return new Promise((resolve) => {
+			if (this.#events.length < min) {
+				this.#wait = {
+					min: min,
+					resolve: resolve,
+				};
+			} else {
+				const events = this.#events;
+				this.#events = [];
+				this.#wait = null;
+				resolve(events);
+			}
+		});
+	}
+
+	install() {
+		if (this.#installTime != null) {
+			throw new Error('Fake sendBeacon is already installed');
+		}
+		this.#installTime = getTime();
+		this.#events = [];
+		this.#wait = null;
+		globalThis.navigator.sendBeacon = this.#sendBeacon;
+	}
+
+	restore() {
+		if (this.#installTime == null) {
+			throw new Error('Fake sendBeacon is not installed');
+		}
+		this.#installTime = null;
+		if (this.#events.length > 0) {
+			throw new AssertionError(
+				`Fake sendBeacon has been restored; however, there are ${this.#events.length} unread events`,
+			);
+		}
+	}
+}
+
 // Navigator is a fake Navigator.
 class Navigator {
 	language = 'en-US';
@@ -282,4 +367,4 @@ async function parseRequest(writeKey, minTime, options) {
 	return events;
 }
 
-export { Fetch, Navigator, RandomUUID, XMLHttpRequest };
+export { Fetch, Navigator, RandomUUID, SendBeacon, XMLHttpRequest };

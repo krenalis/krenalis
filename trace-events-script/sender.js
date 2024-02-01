@@ -16,8 +16,8 @@ class Sender {
 	constructor(writeKey, endpoint) {
 		this.#writeKey = JSON.stringify(writeKey);
 		this.#endpoint = endpoint;
-		this.#post = postFunc();
-		onUnload(() => {
+		this.#post = this.#postFunc();
+		this.#onUnload(() => {
 			this.#flush(true);
 		});
 	}
@@ -86,7 +86,8 @@ class Sender {
 		}
 		const sent = parts.length / 2;
 		parts.push(trailing);
-		const body = new Blob(parts);
+		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
+		const body = new Blob(parts, { type: 'text/plain' });
 		this.#debug?.('flush', sent, 'events of', this.#events.length, 'in queue (', size, 'bytes )');
 		try {
 			this.#post(this.#endpoint, body, unloading, (response) => {
@@ -98,7 +99,7 @@ class Sender {
 					if (navigator.onLine) {
 						const timeout = 1000;
 						if (this.#debug) {
-							this.#debug('error occurred sending the events (will retry after', timeout, 'ms):\n', response);
+							this.#debug('cannot post events, try again after', timeout, 'ms:', response);
 						} else {
 							console.warn(response.message);
 						}
@@ -112,9 +113,9 @@ class Sender {
 					const timeout = 1000;
 					if (this.#debug) {
 						this.#debug(
-							`server responded with status ${response.status} ${response.statusText} (will retry after`,
+							`server responded with status ${response.status} ${response.statusText}, will retry after`,
 							timeout,
-							'ms)',
+							'ms',
 						);
 					} else {
 						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`);
@@ -140,20 +141,19 @@ class Sender {
 			if (navigator.onLine) {
 				console.warn(error.message);
 			}
-			this.#debug?.('cannot post events, try again after 100ms: ', error);
+			this.#debug?.('cannot post events, try again after 100ms:', error);
 			setTimeout(this.#flush.bind(this), 100);
 		}
 	}
-}
 
-// onUnload calls cb when the page unloads.
-const onUnload = function () {
-	let unloaded = false;
-	return function (cb) {
+	// onUnload calls cb when the page unloads.
+	#onUnload(cb) {
+		let unloaded = false;
 		globalThis.addEventListener('visibilitychange', () => {
 			if (unloaded === (document.visibilityState === 'hidden')) {
 				return;
 			}
+			this.#debug?.(`received the 'visibilitychange' event`);
 			unloaded = !unloaded;
 			if (unloaded) {
 				cb();
@@ -161,61 +161,74 @@ const onUnload = function () {
 		});
 		globalThis.addEventListener('pagehide', () => {
 			if (!unloaded) {
+				this.#debug?.(`received the 'pagehide' event`);
 				unloaded = true;
 				cb();
 			}
 		});
-	};
-};
+	}
 
-// postFunc returns a function that issues a POST to the specified endpoint with
-// the given body. If keepalive is true the request outlives the page.
-// It returns an object with properties 'ok', 'status' and 'statusText'.
-// Returns an Error value in case of error.
-function postFunc() {
-	// ES5: "fetch" is not available.
-	if (globalThis.fetch && typeof globalThis.fetch === 'function') {
-		return function (endpoint, body, keepalive, cb) {
-			const promise = fetch(endpoint, {
-				method: 'POST',
-				cache: 'no-cache',
-				headers: {
-					'Content-Type': 'text/plain',
-				},
-				redirect: 'error',
-				body: body,
-				keepalive: keepalive,
-			});
-			promise.then((res) => {
+	// postFunc returns a function that issues a POST to the specified endpoint
+	// with the given body. If keepalive is true the request outlives the page.
+	// It returns an object with properties 'ok', 'status' and 'statusText'.
+	// Returns an Error value in case of error.
+	#postFunc() {
+		// ES5: "fetch" is not available.
+		if (globalThis.fetch && typeof globalThis.fetch === 'function') {
+			return (endpoint, body, keepalive, cb) => {
+				// Firefox does not support the keepalive option with fetch, so use beacon if it is available.
+				if (keepalive && typeof navigator.sendBeacon === 'function') {
+					this.#debug?.('sending', body.size, 'bytes using sendBeacon');
+					if (!navigator.sendBeacon(endpoint, body)) {
+						cb(new Error('User agent is unable to queue the data for transfer'));
+						return;
+					}
+					cb({ ok: true, status: 204, statusText: 'No Content' });
+					return;
+				}
+				this.#debug?.('sending', body.size, 'bytes using fetch');
+				const promise = fetch(endpoint, {
+					method: 'POST',
+					cache: 'no-cache',
+					headers: {
+						'Content-Type': 'text/plain',
+					},
+					redirect: 'error',
+					body: body,
+					keepalive: keepalive,
+				});
+				promise.then((res) => {
+					const response = {
+						ok: res.ok,
+						status: res.status,
+						statusText: res.statusText,
+					};
+					cb(response);
+				}, cb);
+			};
+		}
+		return (endpoint, body, _, cb) => {
+			this.#debug?.('sending', body.size, 'bytes using XMLHttpRequest');
+			const xhr = new XMLHttpRequest();
+			xhr.open('POST', endpoint, true);
+			xhr.setRequestHeader('Content-Type', 'text/plain');
+			xhr.onerror = () => {
+				cb(new Error('an error occurred processing the request'));
+			};
+			xhr.onreadystatechange = () => {
+				if (xhr.readyState !== 4) {
+					return;
+				}
 				const response = {
-					ok: res.ok,
-					status: res.status,
-					statusText: res.statusText,
+					ok: 200 <= xhr.status && xhr.status <= 299,
+					status: xhr.status,
+					statusText: xhr.statusText,
 				};
 				cb(response);
-			}, cb);
+			};
+			xhr.send(body);
 		};
 	}
-	return function (endpoint, body, _, cb) {
-		const xhr = new XMLHttpRequest();
-		xhr.open('POST', endpoint, true);
-		xhr.setRequestHeader('Content-Type', 'text/plain');
-		xhr.onerror = () => {
-			cb(new Error('an error occurred processing the request'));
-		};
-		xhr.onreadystatechange = () => {
-			if (xhr.readyState !== 4) {
-				return;
-			}
-			const response = {
-				ok: 200 <= xhr.status && xhr.status <= 299,
-				status: xhr.status,
-				statusText: xhr.statusText,
-			};
-			cb(response);
-		};
-		xhr.send(body);
-	};
 }
 
 export { MaxBodySize, MaxEventSize, MaxUnloadingBodySize, Sender };
