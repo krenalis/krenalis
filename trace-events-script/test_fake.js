@@ -40,7 +40,7 @@ class Fetch {
 	events(min) {
 		if (this.#installTime == null) {
 			return new Promise((_, reject) => {
-				reject(new Error('FakeFetch is not installed'));
+				reject(new Error('Fake fetch is not installed'));
 			});
 		}
 		if (this.#wait != null) {
@@ -83,7 +83,7 @@ class Fetch {
 		this.#originalFetch = null;
 		if (this.#events.length > 0) {
 			throw new AssertionError(
-				`Fake fetch has been reinstated; however, there are ${this.#events.length} unread events`,
+				`Fake fetch has been restored; however, there are ${this.#events.length} unread events`,
 			);
 		}
 	}
@@ -214,7 +214,7 @@ class XMLHttpRequest {
 		delete (globalThis.XMLHttpRequest);
 		if (this.#events.length > 0) {
 			throw new AssertionError(
-				`Fake fetch has been reinstated; however, there are ${this.#events.length} unread events`,
+				`Fake fetch has been restored; however, there are ${this.#events.length} unread events`,
 			);
 		}
 	}
