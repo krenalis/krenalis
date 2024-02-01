@@ -1,4 +1,4 @@
-import { assert, assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts';
+import { assert, assertEquals, AssertionError, assertNotEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
 import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts';
 import { DOMParser, HTMLDocument } from 'https://deno.land/x/deno_dom/deno-dom-wasm.ts';
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts';
@@ -150,6 +150,9 @@ Deno.test('Analytics', async (t) => {
 
 		assertEquals(a.user().id('8g1emx962iR'), '8g1emx962iR');
 		assertEquals(a.user().id(), '8g1emx962iR');
+		const anonymousId = a.getAnonymousId();
+		assertEquals(a.user().id('e4X9L6mcA18'), 'e4X9L6mcA18');
+		assertNotEquals(a.getAnonymousId(), anonymousId);
 		assertEquals(a.user().id(null), null);
 		assertEquals(a.user().id(), null);
 

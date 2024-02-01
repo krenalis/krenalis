@@ -576,6 +576,9 @@ class Analytics {
 			if (userId !== data.userId) {
 				this.#storage.setUserID(data.userId);
 				this.#storage.setTraits({});
+				if (userId != null) {
+					this.#storage.setAnonymousID(uuid());
+				}
 			}
 			return;
 		}
