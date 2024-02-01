@@ -54,6 +54,7 @@ POST    /api/workspaces/{id}/disconnect-warehouse                               
 POST    /api/workspaces/{id}/ping-warehouse                                      Ping a data warehouse.
 POST    /api/workspaces/{id}/init-warehouse                                      Initialize the data warehouse.
 GET     /api/workspaces/{id}/user-schema                                         Get the user schema of the workspace.
+GET     /api/workspaces/{id}/identifiers-schema                                  Get a schema whose properties can be used as identifiers for the workspace.                     
 POST    /api/workspaces/{id}/oauth-token                                         Generate an OAuth token not yet associated with a connection.
 POST    /api/workspaces/{id}/add-connection                                      Add a new connection.
 GET     /api/workspaces/{id}/privacy-region                                      Get the workspace privacy region.

@@ -461,6 +461,10 @@ class Workspaces {
 		return await call(`${this.apiURL}/user-schema`, http.GET);
 	};
 
+	identifiersSchema = async (): Promise<ObjectType> => {
+		return await call(`${this.apiURL}/identifiers-schema`, http.GET);
+	};
+
 	addConnection = async (connection: ConnectionToAdd, oAuthToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/add-connection`, http.POST, {
 			connection: connection,

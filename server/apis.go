@@ -263,6 +263,20 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						_ = json.NewEncoder(w).Encode(schema)
 					})
 				})
+				router.Route("/identifiers-schema", func(router chi.Router) {
+					router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+						schema, err := workspace.Schema(ctx, "users_identities")
+						if err != nil {
+							respond(w, err)
+							return
+						}
+						// TODO(Gianluca): remove from the schema the properties
+						// which cannot be identifiers. See the issue
+						// https://github.com/open2b/chichi/issues/321.
+						w.Header().Add("Content-Type", "application/json")
+						_ = json.NewEncoder(w).Encode(schema)
+					})
+				})
 				router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
 					var req struct {
 						Connector  int
@@ -1080,7 +1094,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/320.
 		_ = json.NewEncoder(w).Encode(eventschema.SchemaWithoutGID)
 	})
 	router.Post("/api/validate-expression", func(w http.ResponseWriter, r *http.Request) {

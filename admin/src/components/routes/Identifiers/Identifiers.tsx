@@ -18,7 +18,7 @@ import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 
 const Identifiers = () => {
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
-	const [userSchema, setUserSchema] = useState<ObjectType>();
+	const [identifiersSchema, setIdentifiersSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -31,14 +31,14 @@ const Identifiers = () => {
 		const fetchData = async () => {
 			const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 			setIdentifiers(workspace.Identifiers);
-			let userSchema: ObjectType;
+			let identifiersSchema: ObjectType;
 			try {
-				userSchema = await api.workspaces.userSchema();
+				identifiersSchema = await api.workspaces.identifiersSchema();
 			} catch (err) {
 				handleError(err);
 				return;
 			}
-			setUserSchema(userSchema);
+			setIdentifiersSchema(identifiersSchema);
 			setIsLoading(false);
 		};
 		fetchData();
@@ -121,7 +121,7 @@ const Identifiers = () => {
 		}, 500);
 	};
 
-	const items = getSchemaComboboxItems(userSchema);
+	const items = getSchemaComboboxItems(identifiersSchema);
 	const identifiersComboboxItems = [];
 	for (const it of items) {
 		const isAlreadyUsed = identifiers.includes(it.term);
@@ -142,7 +142,7 @@ const Identifiers = () => {
 						} as React.CSSProperties
 					}
 				></SlSpinner>
-			) : userSchema == null ? (
+			) : identifiersSchema == null ? (
 				<div className='identifiers__no-schema'>
 					<div className='identifiers__no-schema-title'>Connect a data warehouse</div>
 					<div className='identifiers__no-schema-description'>
