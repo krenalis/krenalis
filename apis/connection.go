@@ -366,8 +366,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // added action. target is the target of the action and must be supported by the
 // connector of the connection.
 //
-// Refer to the specifications in the file "connector/Actions support.md" for
-// more details.
+// Refer to the specifications in the file "Actions support.md" for more
+// details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code

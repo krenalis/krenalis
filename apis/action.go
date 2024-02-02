@@ -599,7 +599,7 @@ type ActionToSet struct {
 
 	// Transformation is the mapping or function transformation, if it has one.
 	//
-	// Every action that supports transformations must have an associated
+	// Every action that supports transformations may have an associated
 	// mapping or function, which are mutually exclusive.
 	//
 	// If it has a mapping, the names of the properties in which the values are
