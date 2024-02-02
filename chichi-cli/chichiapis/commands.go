@@ -134,6 +134,13 @@ func WorkspaceInitWarehouse(workspace int) {
 	}
 }
 
+func WorkspaceRunIdentityResolution(workspace int) {
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/run-identity-resolution", nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func WorkspacePingWarehouse(workspace int, typ string, settings []byte) {
 	req := struct {
 		Type     string

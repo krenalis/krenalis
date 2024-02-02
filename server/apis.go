@@ -277,6 +277,12 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						_ = json.NewEncoder(w).Encode(schema)
 					})
 				})
+				router.Route("/run-identity-resolution", func(router chi.Router) {
+					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+						err := workspace.RunIdentityResolution(ctx)
+						respond(w, err)
+					})
+				})
 				router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
 					var req struct {
 						Connector  int

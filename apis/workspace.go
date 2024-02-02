@@ -657,6 +657,27 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	return err
 }
 
+// RunIdentityResolution runs the Workspace Identity Resolution on the
+// workspace.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - NotConnected, if the workspace is not connected to a data warehouse
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
+	this.apis.mustBeOpen()
+	if this.store == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
+	}
+	slog.Info("running Workspace Identity Resolution", "workspace", this.workspace.ID)
+	err := this.store.ResolveSyncUsers(ctx)
+	if err != nil {
+		return err
+	}
+	slog.Info("execution of Workspace Identity Resolution is completed", "workspace", this.workspace.ID)
+	return nil
+}
+
 // ObservedEvent represents an observed event.
 type ObservedEvent struct {
 

@@ -3,7 +3,12 @@
 
 The Workspace Identity Resolution determines if more users, belonging to **any connection** of the workspace (even the same connection), are a single user of the workspace, and eventually merges them. It also associates the workspace users to the events stored in the data warehouse.
 
-This procedure is started arbitrarily by Chichi and cannot be started explicitly by the user.
+## When is executed
+
+The Workspace Identity Resolution is executed:
+
+* arbitrarily by Chichi, for example when importing from a connection
+* explicitly by the user
 
 >  We have a discussion on that, [#354](https://github.com/open2b/chichi/issues/354).
 
