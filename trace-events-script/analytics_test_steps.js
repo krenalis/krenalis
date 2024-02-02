@@ -427,6 +427,24 @@ const steps = [
 		},
 	},
 	{
+		name: `identify(null)`,
+		call: (analytics) => {
+			analytics.user().id('920577314');
+			analytics.user().traits({ first_name: 'Susan' });
+			analytics.identify(null);
+		},
+		event: {
+			type: 'identify',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			traits: { first_name: 'Susan' },
+			userId: '920577314',
+		},
+	},
+	{
 		name: `identify(traits)`,
 		call: (analytics) => {
 			analytics.identify({ first_name: 'Susan', last_name: 'Davis' });
@@ -446,6 +464,24 @@ const steps = [
 		name: `identify(userId, traits)`,
 		call: (analytics) => {
 			analytics.identify('920577314', { first_name: 'Susan', last_name: 'Davis' });
+		},
+		event: {
+			type: 'identify',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			traits: { first_name: 'Susan', last_name: 'Davis' },
+			userId: '920577314',
+		},
+	},
+	{
+		name: `identify(null, traits)`,
+		call: (analytics) => {
+			analytics.user().id('920577314');
+			analytics.user().traits({ first_name: 'Susan' });
+			analytics.identify(null, { last_name: 'Davis' });
 		},
 		event: {
 			type: 'identify',

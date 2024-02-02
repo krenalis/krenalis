@@ -83,13 +83,4 @@ function _uuid_imp() {
 // The uuid function is undefined for unsupported browsers.
 const uuid = _uuid_imp();
 
-// typesOf returns a string representing the types of the elements of the array
-// arr, 'object' for Object values and 'string' for all the other types. If arr
-// is not an array, it throws an error. If arr is empty, it returns an empty
-// string. For example, if arr is ['a', null, 5, {}], it returns
-// 'string,object,string,object'.
-function typesOf(arr) {
-	return arr.map((v) => typeof v === 'object' ? 'object' : 'string').join(',');
-}
-
-export { _uuid_imp, campaign, debug, getTime, isPlainObject, typesOf, uuid };
+export { _uuid_imp, campaign, debug, getTime, isPlainObject, uuid };
