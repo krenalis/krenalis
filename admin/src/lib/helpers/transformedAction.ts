@@ -298,8 +298,6 @@ const transformInActionToSet = async (
 		}
 		if (expressions.length > 0) {
 			mapping = mappingToSave;
-		} else {
-			throw 'Please ensure that at least one mapping is defined';
 		}
 		inSchema = inputSchema;
 		outSchema = outputSchema;
