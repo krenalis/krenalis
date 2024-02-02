@@ -20,7 +20,7 @@ class Analytics {
 				return this.#storage.getUserID();
 			}
 			if (id === null) {
-				this.#storage.setUserID(null);
+				this.#storage.setUserID();
 				return null;
 			}
 			const data = {};
@@ -116,10 +116,10 @@ class Analytics {
 	// from the storage. It also resets the Anonymous ID by generating a new
 	// one, and ends the session if one exists.
 	reset() {
-		this.#storage.setGroupID(null);
-		this.#storage.setTraits(null);
-		this.#storage.setUserID(null);
-		this.#storage.setAnonymousID(null);
+		this.#storage.setGroupID();
+		this.#storage.setTraits();
+		this.#storage.setUserID();
+		this.#storage.setAnonymousID();
 		this.#session.end();
 	}
 

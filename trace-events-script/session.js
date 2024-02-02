@@ -33,7 +33,7 @@ class Session {
 				this.#debug('end session', id);
 			}
 		}
-		this.#storage.setSession(null);
+		this.#storage.setSession();
 	}
 
 	// getFresh returns the current session and a boolean value reporting

@@ -40,10 +40,10 @@ Deno.test('Storage', () => {
 
 	storage.setGroupID('72047285');
 	expectGroupID('72047285');
-	storage.setGroupID(null);
+	storage.setGroupID();
 	expectGroupID(null);
 
-	storage.setSession(null, 0, false);
+	storage.setSession();
 	expectSession(null, 0, false);
 
 	storage.setSession(1706175160340, 1706176628710, false);
@@ -59,14 +59,14 @@ Deno.test('Storage', () => {
 	storage.setTraits({});
 	expectTraits({});
 	storage.setTraits({ name: 'John' });
-	storage.setTraits(null);
+	storage.setTraits();
 	expectTraits({});
 
 	storage.setUserID('86103517');
 	expectUserID('86103517');
-	storage.setUserID(null);
+	storage.setUserID();
 	expectUserID(null);
 
-	storage.setSession(null);
+	storage.setSession();
 	expectSession(null, 0, false);
 });
