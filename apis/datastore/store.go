@@ -147,37 +147,6 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 	return store.warehouse.Init(ctx)
 }
 
-// SetDestinationUser sets the destination user relative to the action, with
-// the given external user ID and external property.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
-	store.mustBeOpen()
-	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
-}
-
-// Schemas returns the schemas of users, groups, and events for the relative
-// tables. If a table doesn't exist, it won't be included in returned schemas.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) {
-	store.mustBeOpen()
-	tables, err := store.warehouse.Tables(ctx)
-	if err != nil {
-		return nil, err
-	}
-	schemas := make(map[string]types.Type)
-	for _, table := range tables {
-		switch table.Name {
-		case "users", "users_identities", "groups", "groups_identities", "events":
-			schemas[table.Name] = table.Schema
-		}
-	}
-	return schemas, nil
-}
-
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
 func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 
@@ -228,6 +197,37 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 	}
 
 	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersSchema)
+}
+
+// SetDestinationUser sets the destination user relative to the action, with
+// the given external user ID and external property.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
+	store.mustBeOpen()
+	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
+}
+
+// Schemas returns the schemas of users, groups, and events for the relative
+// tables. If a table doesn't exist, it won't be included in returned schemas.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) {
+	store.mustBeOpen()
+	tables, err := store.warehouse.Tables(ctx)
+	if err != nil {
+		return nil, err
+	}
+	schemas := make(map[string]types.Type)
+	for _, table := range tables {
+		switch table.Name {
+		case "users", "users_identities", "groups", "groups_identities", "events":
+			schemas[table.Name] = table.Schema
+		}
+	}
+	return schemas, nil
 }
 
 type Records = warehouses.Records

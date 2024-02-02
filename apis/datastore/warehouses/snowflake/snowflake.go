@@ -378,17 +378,6 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 	return nil
 }
 
-// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-// connections holds the identifiers of the connections of the workspace and
-// must always contain at least one connection.
-// identifiers are the properties of the 'users_identities' schema which are
-// identifiers, ordered by priority.
-// usersSchema is the schema of the 'users' table, which will be populated
-// during the users synchronization.
-func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
-	panic("not implemented")
-}
-
 // Records returns an iterator over the results of the query and an estimated
 // count of the records that would be returned if First and Limit were not
 // provided in the query.
@@ -400,6 +389,17 @@ func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, 
 // As a simplification, it is currently assumed that the table schema does not
 // change in the data warehouse during the execution of this method.
 func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, int, error) {
+	panic("not implemented")
+}
+
+// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
+// connections holds the identifiers of the connections of the workspace and
+// must always contain at least one connection.
+// identifiers are the properties of the 'users_identities' schema which are
+// identifiers, ordered by priority.
+// usersSchema is the schema of the 'users' table, which will be populated
+// during the users synchronization.
+func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 	panic("not implemented")
 }
 
