@@ -6,11 +6,11 @@
     "fmt": "deno fmt --use-tabs --single-quote --line-width=120 *.js",
     "prettier-test-website": "npx prettier@latest --write \"./website-for-testing/**/*\"",
     "lint": "deno lint chichi.js analytics.js options.js sender.js session.js storage.js utils.js",
-    "bundle": "npm run lint && esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
-    "transpile": "swc build/chichi.bundle.js -o build/chichi.es5.js",
-    "minify": "esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --format=iife --target=es5",
+    "bundle": "npm run lint && ./node_modules/.bin/esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
+    "transpile": "./node_modules/.bin/swc build/chichi.bundle.js -o build/chichi.es5.js",
+    "minify": "./node_modules/.bin/esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --format=iife --target=es5",
     "build": "npm run bundle && npm run transpile && npm run minify",
-    "build:es6": "npm run lint && esbuild analytics.js --outfile=dist/chichi.es6.min.js --define:'globalThis=window' --bundle --minify --format=esm --target=es6"
+    "build:es6": "npm run lint && ./node_modules/.bin/esbuild analytics.js --outfile=dist/chichi.es6.min.js --define:'globalThis=window' --bundle --minify --format=esm --target=es6"
   },
   "devDependencies": {
     "@swc/cli": "0.3.0",
