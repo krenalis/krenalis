@@ -207,6 +207,7 @@ Deno.test('Analytics', async (t) => {
 			}
 		} finally {
 			fetch.restore();
+			time.restore();
 		}
 	});
 
@@ -249,6 +250,33 @@ Deno.test('Analytics', async (t) => {
 			assertEquals(events.length, 1);
 		} finally {
 			fetch.restore();
+			time.restore();
+		}
+	});
+
+	await t.step('changing User ID, resets traits and Anonymous ID', async () => {
+		const time = new FakeTime();
+
+		const fetch = new fake.Fetch(writeKey, endpoint);
+		fetch.install();
+
+		const a = newAnalytics({ sessions: { autoTrack: false } });
+
+		try {
+			a.user().id('274084295');
+			a.user().traits({ first_name: 'Susan' });
+			const anonymousId = a.getAnonymousId();
+			void a.identify('920577314');
+			time.tick(1000);
+			const events = await fetch.events(1);
+			assertEquals(a.user().traits(), {});
+			const newAnonymousId = a.getAnonymousId();
+			assertNotEquals(newAnonymousId, anonymousId);
+			assertEquals(events[0].traits, {});
+			assertEquals(events[0].anonymousId, newAnonymousId);
+		} finally {
+			fetch.restore();
+			time.restore();
 		}
 	});
 

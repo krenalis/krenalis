@@ -572,11 +572,11 @@ class Analytics {
 	#setUserId(data, id) {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
 			data.userId = String(id);
-			const userId = this.#storage.getUserID();
-			if (userId !== data.userId) {
+			const previousId = this.#storage.getUserID();
+			if (data.userId !== previousId) {
 				this.#storage.setUserID(data.userId);
-				this.#storage.setTraits({});
-				if (userId != null) {
+				if (previousId != null) {
+					this.#storage.setTraits();
 					this.#storage.setAnonymousID(uuid());
 				}
 			}

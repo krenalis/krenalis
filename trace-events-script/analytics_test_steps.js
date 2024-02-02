@@ -427,6 +427,23 @@ const steps = [
 		},
 	},
 	{
+		name: `identify(userId) // with anonymous traits`,
+		call: (analytics) => {
+			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' });
+			analytics.identify('920577314');
+		},
+		event: {
+			type: 'identify',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			traits: { first_name: 'Susan', last_name: 'Davis' },
+			userId: '920577314',
+		},
+	},
+	{
 		name: `identify(null)`,
 		call: (analytics) => {
 			analytics.user().id('920577314');
