@@ -3,14 +3,13 @@ import { flattenSchema } from '../../lib/helpers/transformedAction';
 import { ObjectType } from '../../types/external/types';
 import { ComboboxItem } from '../../types/internal/app';
 
-const getSchemaComboboxItems = (schema: ObjectType, nonSelectableProperties?: string[]): ComboboxItem[] => {
+const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
 	const items: ComboboxItem[] = [];
 	for (const propertyName in flatSchema) {
-		if (nonSelectableProperties && nonSelectableProperties.includes(propertyName)) continue;
 		let typ = flatSchema[propertyName].type;
 		if (typ === 'Int' || typ === 'Uint' || typ === 'Float') {
 			typ += `(${flatSchema[propertyName].size})`;
