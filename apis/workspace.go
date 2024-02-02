@@ -670,7 +670,7 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
 	slog.Info("running Workspace Identity Resolution", "workspace", this.workspace.ID)
-	err := this.store.ResolveSyncUsers(ctx)
+	err := this.store.RunWorkspaceIdentityResolution(ctx)
 	if err != nil {
 		return err
 	}

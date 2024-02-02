@@ -176,8 +176,8 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 		if err != nil {
 			return err
 		}
-		// Resolve and sync the users.
-		err = store.ResolveSyncUsers(ctx)
+		// Run the Workspace Identity Resolution.
+		err = store.RunWorkspaceIdentityResolution(ctx)
 		if err != nil {
 			return fmt.Errorf("cannot resolve and sync users: %s", err)
 		}

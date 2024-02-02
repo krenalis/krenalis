@@ -199,8 +199,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	users = nil
 
-	// Resolve and sync the users.
-	err = this.connection.store.ResolveSyncUsers(ctx)
+	// Run the Workspace Identity Resolution.
+	err = this.connection.store.RunWorkspaceIdentityResolution(ctx)
 	if err != nil {
 		return actionExecutionError{err}
 	}

@@ -178,8 +178,8 @@ func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) 
 	return schemas, nil
 }
 
-// ResolveSyncUsers resolves and sync the users.
-func (store *Store) ResolveSyncUsers(ctx context.Context) error {
+// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
+func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 
 	store.mustBeOpen()
 
@@ -227,7 +227,7 @@ func (store *Store) ResolveSyncUsers(ctx context.Context) error {
 		return errors.New("missing 'users' schema")
 	}
 
-	return store.warehouse.ResolveSyncUsers(ctx, connections, identifiers, usersSchema)
+	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersSchema)
 }
 
 type Records = warehouses.Records
