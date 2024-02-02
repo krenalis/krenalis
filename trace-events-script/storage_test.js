@@ -21,8 +21,8 @@ Deno.test('Storage', () => {
 		assertEquals(actualStart, start);
 	}
 
-	function expectTraits(traits) {
-		assertEquals(storage.getTraits(), traits);
+	function expectTraits(kind, traits) {
+		assertEquals(storage.getTraits(kind), traits);
 	}
 
 	function expectUserID(id) {
@@ -32,7 +32,8 @@ Deno.test('Storage', () => {
 	expectAnonymousID(null);
 	expectGroupID(null);
 	expectSession(null, 0, false);
-	expectTraits({});
+	expectTraits('user', {});
+	expectTraits('group', {});
 	expectUserID(null);
 
 	storage.setAnonymousID('703a1h3b830');
@@ -52,15 +53,25 @@ Deno.test('Storage', () => {
 	storage.setSession(1706178514540, 1706178239698, true);
 	expectSession(1706178514540, 1706178239698, true);
 
-	storage.setTraits({ name: 'John' });
-	expectTraits({ name: 'John' });
-	storage.setTraits({ name: 0n });
-	expectTraits({ name: 'John' });
-	storage.setTraits({});
-	expectTraits({});
-	storage.setTraits({ name: 'John' });
-	storage.setTraits();
-	expectTraits({});
+	storage.setTraits('user', { name: 'John' });
+	expectTraits('user', { name: 'John' });
+	storage.setTraits('user', { name: 0n });
+	expectTraits('user', { name: 'John' });
+	storage.setTraits('user', {});
+	expectTraits('user', {});
+	storage.setTraits('user', { name: 'John' });
+	storage.setTraits('user');
+	expectTraits('user', {});
+
+	storage.setTraits('group', { name: 'Acme' });
+	expectTraits('group', { name: 'Acme' });
+	storage.setTraits('group', { name: 0n });
+	expectTraits('group', { name: 'Acme' });
+	storage.setTraits('group', {});
+	expectTraits('group', {});
+	storage.setTraits('group', { name: 'Acme' });
+	storage.setTraits('group');
+	expectTraits('group', {});
 
 	storage.setUserID('86103517');
 	expectUserID('86103517');

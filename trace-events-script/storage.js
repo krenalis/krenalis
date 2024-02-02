@@ -29,8 +29,8 @@ class Storage {
 		return [id, expiration, start];
 	}
 
-	getTraits() {
-		const traits = this.store.getItem('chichi_traits');
+	getTraits(kind) {
+		const traits = this.store.getItem(`chichi_${kind}_traits`);
 		if (traits == null) {
 			return {};
 		}
@@ -69,9 +69,12 @@ class Storage {
 		this.store.setItem('chichi_session_start', start);
 	}
 
-	setTraits(traits) {
+	setTraits(kind, traits) {
+		if (typeof kind !== 'string') {
+			throw new Error('kind is ' + (typeof kind));
+		}
 		if (traits == null) {
-			this.store.removeItem('chichi_traits');
+			this.store.removeItem(`chichi_${kind}_traits`);
 			return;
 		}
 		const type = typeof traits;
@@ -80,7 +83,7 @@ class Storage {
 			return;
 		}
 		if (Array.isArray(traits)) {
-			console.warn(`${warnMsg}: traits is an array`);
+			console.warn(`${warnMsg}: ${kind} traits is an array`);
 			return;
 		}
 		let value;
@@ -90,7 +93,7 @@ class Storage {
 			console.warn(`${warnMsg}: ${error.message}`);
 			return;
 		}
-		this.store.setItem('chichi_traits', value);
+		this.store.setItem(`chichi_${kind}_traits`, value);
 	}
 
 	setUserID(id) {

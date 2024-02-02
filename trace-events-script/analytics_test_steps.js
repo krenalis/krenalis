@@ -550,14 +550,6 @@ const steps = [
 		},
 		error: new Error('Invalid arguments'),
 	},
-	// Group.
-	{
-		name: `group()`,
-		call: (analytics) => {
-			return analytics.group();
-		},
-		error: new Error('Group is missing'),
-	},
 	{
 		name: `group(groupId)`,
 		call: (analytics) => {
@@ -573,6 +565,25 @@ const steps = [
 			traits: {},
 			userId: null,
 			groupId: '3617408',
+		},
+	},
+	{
+		name: `group(null)`,
+		call: (analytics) => {
+			analytics.group().id('acme');
+			analytics.group().traits({ name: 'Acme' });
+			analytics.group(null);
+		},
+		event: {
+			type: 'group',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			traits: { name: 'Acme' },
+			groupId: 'acme',
+			userId,
 		},
 	},
 	{
@@ -605,6 +616,25 @@ const steps = [
 			integrations,
 			traits: { name: 'Acme Inc.' },
 			groupId: '3617408',
+			userId,
+		},
+	},
+	{
+		name: `group(null, traits)`,
+		call: (analytics) => {
+			analytics.group().id('acme');
+			analytics.group().traits({ name: 'Acme' });
+			analytics.group(null, { employees: 85 });
+		},
+		event: {
+			type: 'group',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			traits: { name: 'Acme', employees: 85 },
+			groupId: 'acme',
 			userId,
 		},
 	},

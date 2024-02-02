@@ -25,10 +25,7 @@ class Analytics {
 			}
 			const data = {};
 			this.#setUserId(data, id);
-			if ('userId' in data) {
-				return data.userId;
-			}
-			return null;
+			return 'userId' in data ? data.userId : null;
 		},
 		anonymousId: (id) => this.setAnonymousId(id),
 		traits: (traits) => {
@@ -36,9 +33,32 @@ class Analytics {
 				if (traits == null) {
 					traits = {};
 				}
-				this.#storage.setTraits(traits);
+				this.#storage.setTraits('user', traits);
 			}
-			return this.#storage.getTraits();
+			return this.#storage.getTraits('user');
+		},
+	};
+	#group = {
+		id: (id) => {
+			if (id === undefined) {
+				return this.#storage.getGroupID();
+			}
+			if (id === null) {
+				this.#storage.setGroupID();
+				return null;
+			}
+			const data = {};
+			this.#setGroup(data, id);
+			return 'groupId' in data ? data.groupId : null;
+		},
+		traits: (traits) => {
+			if (traits !== undefined) {
+				if (traits == null) {
+					traits = {};
+				}
+				this.#storage.setTraits('group', traits);
+			}
+			return this.#storage.getTraits('group');
 		},
 	};
 
@@ -84,8 +104,13 @@ class Analytics {
 		return this.#session.get();
 	}
 
-	// group sends a group event.
+	// group sends a group event, if there is no arguments, it returns the
+	// current group as a value with methods 'id', to get the Group ID, and
+	// 'traits' to get the traits.
 	group() {
+		if (arguments.length === 0) {
+			return this.#group;
+		}
 		return this.#send('group', this.#setGroupArguments, arguments);
 	}
 
@@ -116,9 +141,10 @@ class Analytics {
 	// from the storage. It also resets the Anonymous ID by generating a new
 	// one, and ends the session if one exists.
 	reset() {
-		this.#storage.setGroupID();
-		this.#storage.setTraits();
 		this.#storage.setUserID();
+		this.#storage.setGroupID();
+		this.#storage.setTraits('user');
+		this.#storage.setTraits('group');
 		this.#storage.setAnonymousID();
 		this.#session.end();
 	}
@@ -162,8 +188,9 @@ class Analytics {
 		return this.#send('track', this.#setTrackArguments, arguments);
 	}
 
-	// user returns the default user as a value with methods 'id', to get the
-	// User ID, and 'anonymousId' to get the Anonymous ID.
+	// user returns the current user as a value with methods 'id', to get the
+	// User ID, 'traits' to get the traits, and 'anonymousId' to get the
+	// Anonymous ID.
 	user() {
 		return this.#user;
 	}
@@ -378,33 +405,33 @@ class Analytics {
 			// ()
 			case '':
 				this.#setUserId(data);
-				this.#setTraits(data);
+				this.#setUserTraits(data);
 				break;
 			// (userId);
 			case 'string':
 				this.#setUserId(data, a[0]);
-				this.#setTraits(data);
+				this.#setUserTraits(data);
 				break;
 			// (traits);
 			case 'object':
 				this.#setUserId(data);
-				this.#setTraits(data, a[0]);
+				this.#setUserTraits(data, a[0]);
 				break;
 			// (userId, traits);
 			case 'string,object':
 				this.#setUserId(data, a[0]);
-				this.#setTraits(data, a[1]);
+				this.#setUserTraits(data, a[1]);
 				break;
 			// (traits, context);
 			case 'object,object':
 				this.#setUserId(data);
-				this.#setTraits(data, a[0]);
+				this.#setUserTraits(data, a[0]);
 				options = a[1];
 				break;
 			// (userId, traits, context)
 			case 'string,object,object':
 				this.#setUserId(data, a[0]);
-				this.#setTraits(data, a[1]);
+				this.#setUserTraits(data, a[1]);
 				options = a[2];
 				break;
 			default:
@@ -426,6 +453,12 @@ class Analytics {
 		}
 	}
 
+	// setGroupTraits sets the group traits, merging the current traits with
+	// traits.
+	#setGroupTraits(data, traits) {
+		this.#setTraits('group', data, traits);
+	}
+
 	// setGroupArguments sets the arguments for group calls.
 	// It writes the 'groupId' and 'traits' arguments into data and
 	// returns the options.
@@ -438,26 +471,26 @@ class Analytics {
 			// (groupId)
 			case 'string':
 				this.#setGroup(data, a[0]);
-				data.traits = {};
+				this.#setGroupTraits(data);
 				break;
 			// (traits)
 			case 'object':
-				data.traits = a[0];
+				this.#setGroupTraits(data, a[0]);
 				break;
 			// (groupId, traits)
 			case 'string,object':
 				this.#setGroup(data, a[0]);
-				data.traits = a[1];
+				this.#setGroupTraits(data, a[1]);
 				break;
 			// (traits, context)
 			case 'object,object':
-				data.traits = a[0];
+				this.#setGroupTraits(data, a[0]);
 				options = a[1];
 				break;
 			// (groupId, traits, context)
 			case 'string,object,object':
 				this.#setGroup(data, a[0]);
-				data.traits = a[1];
+				this.#setGroupTraits(data, a[1]);
 				options = a[2];
 				break;
 			default:
@@ -551,9 +584,10 @@ class Analytics {
 		return options;
 	}
 
-	// setTraits sets the traits merging the user traits with traits.
-	#setTraits(data, traits) {
-		data.traits = this.#storage.getTraits();
+	// setTraits sets the user or group traits, merging the current traits with
+	// traits. kind must be 'user' or 'group'.
+	#setTraits(kind, data, traits) {
+		data.traits = this.#storage.getTraits(kind);
 		if (traits !== undefined) {
 			for (const k in traits) {
 				const v = traits[k];
@@ -564,8 +598,8 @@ class Analytics {
 				}
 			}
 		}
-		this.#storage.setTraits(data.traits);
-		data.traits = this.#storage.getTraits();
+		this.#storage.setTraits(kind, data.traits);
+		data.traits = this.#storage.getTraits(kind);
 	}
 
 	// setUserId sets the userId with id.
@@ -576,13 +610,19 @@ class Analytics {
 			if (data.userId !== previousId) {
 				this.#storage.setUserID(data.userId);
 				if (previousId != null) {
-					this.#storage.setTraits();
+					this.#storage.setTraits('user');
 					this.#storage.setAnonymousID(uuid());
 				}
 			}
 			return;
 		}
 		data.userId = this.#storage.getUserID();
+	}
+
+	// setUserTraits sets the user traits, merging the current traits with
+	// traits.
+	#setUserTraits(data, traits) {
+		this.#setTraits('user', data, traits);
 	}
 }
 

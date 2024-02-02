@@ -102,10 +102,10 @@ Deno.test('Analytics', async (t) => {
 		const time = new FakeTime();
 		fetch.install();
 		try {
-			a.identify('17258645', { foo: 5 });
-			a.group('2649247');
+			a.identify('17258645', { name: 'John' });
+			a.group('2649247', { name: 'Acme' });
 			time.tick(1000);
-			await fetch.events(2);
+			await fetch.events(1);
 		} finally {
 			fetch.restore();
 			time.restore();
@@ -183,6 +183,41 @@ Deno.test('Analytics', async (t) => {
 			const change = changes[i];
 			assertEquals(a.user().traits(change.set), change.expect);
 			assertEquals(a.user().traits(), change.expect);
+		}
+	});
+
+	await t.step('group function (without arguments)', () => {
+		const a = newAnalytics();
+
+		assertEquals(a.group().id(), null);
+		assertEquals(a.group().traits(), {});
+
+		assertEquals(a.group().id('acme'), 'acme');
+		assertEquals(a.group().id(), 'acme');
+		assertEquals(a.group().id(null), null);
+		assertEquals(a.group().id(), null);
+
+		const rec = {};
+		rec.boo = rec;
+
+		// Apply the following changes to traits consecutively and test the results of each step.
+		const changes = [
+			{ set: { foo: true }, expect: { foo: true } },
+			{ set: undefined, expect: { foo: true } },
+			{ set: null, expect: {} },
+			{ set: { foo: false }, expect: { foo: false } },
+			{ set: 'foo', expect: { foo: false } },
+			{ set: { foo: {} }, expect: { foo: {} } },
+			{ set: { foo: 5n, boo: true }, expect: { foo: {} } },
+			{ set: { foo: undefined, boo: 5 }, expect: { boo: 5 } },
+			{ set: { foo: rec }, expect: { boo: 5 } },
+			{ set: { foo: () => {}, boo: true }, expect: { boo: true } },
+		];
+
+		for (let i = 0; i < changes.length; i++) {
+			const change = changes[i];
+			assertEquals(a.group().traits(change.set), change.expect);
+			assertEquals(a.group().traits(), change.expect);
 		}
 	});
 
