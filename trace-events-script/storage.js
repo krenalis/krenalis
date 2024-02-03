@@ -20,13 +20,11 @@ class Storage {
 	}
 
 	session() {
-		let id = this.store.getItem('chichi_session_id');
-		if (id != null) {
-			id = Number(id);
+		const session = this.store.getItem('chichi_session');
+		if (session == null) {
+			return [null, 0, false];
 		}
-		const expiration = Number(this.store.getItem('chichi_session_expiration'));
-		const start = this.store.getItem('chichi_session_start') === 'true';
-		return [id, expiration, start];
+		return JSON.parse(session);
 	}
 
 	traits(kind) {
@@ -59,14 +57,10 @@ class Storage {
 
 	setSession(id, expiration, start) {
 		if (id == null) {
-			this.store.removeItem('chichi_session_id');
-			this.store.removeItem('chichi_session_expiration');
-			this.store.removeItem('chichi_session_start');
+			this.store.removeItem('chichi_session');
 			return;
 		}
-		this.store.setItem('chichi_session_id', id);
-		this.store.setItem('chichi_session_expiration', expiration);
-		this.store.setItem('chichi_session_start', start);
+		this.store.setItem('chichi_session', JSON.stringify([id, expiration, start]));
 	}
 
 	setTraits(kind, traits) {
