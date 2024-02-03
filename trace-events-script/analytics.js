@@ -370,13 +370,13 @@ class Analytics {
 				this.#setUserId(data, a[0]);
 				this.#setTraits(this.#user, data, a[1]);
 				break;
-			// (traits, context);
+			// (traits, options);
 			case 'object,object':
 				this.#setUserId(data);
 				this.#setTraits(this.#user, data, a[0]);
 				options = a[1];
 				break;
-			// (userId, traits, context)
+			// (userId, traits, options)
 			case 'string,object,object':
 				this.#setUserId(data, a[0]);
 				this.#setTraits(this.#user, data, a[1]);
@@ -413,12 +413,12 @@ class Analytics {
 				this.#setGroup(data, a[0]);
 				this.#setTraits(this.#group, data, a[1]);
 				break;
-			// (traits, context)
+			// (traits, options)
 			case 'object,object':
 				this.#setTraits(this.#group, data, a[0]);
 				options = a[1];
 				break;
-			// (groupId, traits, context)
+			// (groupId, traits, options)
 			case 'string,object,object':
 				this.#setGroup(data, a[0]);
 				this.#setTraits(this.#group, data, a[1]);
@@ -457,7 +457,7 @@ class Analytics {
 				data.name = a[0];
 				data.properties = a[1];
 				break;
-			// (properties, context)
+			// (properties, options)
 			case 'object,object':
 				data.properties = a[0];
 				options = a[1];
@@ -468,13 +468,13 @@ class Analytics {
 				data.name = a[1];
 				data.properties = a[2];
 				break;
-			// (name, properties, context)
+			// (name, properties, options)
 			case 'string,object,object':
 				data.name = a[0];
 				data.properties = a[1];
 				options = a[2];
 				break;
-			// (category, name, properties, context)
+			// (category, name, properties, options)
 			case 'string,string,object,object':
 				data.category = a[0];
 				data.name = a[1];
@@ -504,7 +504,7 @@ class Analytics {
 			case 'object':
 				data.properties = a[0];
 				break;
-			// (name, properties, context)
+			// (name, properties, options)
 			case 'object,object':
 				data.properties = a[0];
 				options = a[1];
