@@ -3,10 +3,10 @@ import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts';
 import * as fake from './test_fake.js';
 import { Sender } from './sender.js';
 
+const DEBUG = false;
+
 const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO';
 const endpoint = 'https://example.com/api/v1/batch';
-
-const DEBUG = false;
 
 Deno.test('Sender send', async (t) => {
 	// Prepare the execution environment.
@@ -26,7 +26,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('fetch', async () => {
 		let time;
-		const fetch = new fake.Fetch(writeKey, endpoint);
+		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
 
 		try {
 			time = new FakeTime();
@@ -75,7 +75,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('sendBeacon', async () => {
 		const time = new FakeTime();
-		const sendBeacon = new fake.SendBeacon(writeKey, endpoint);
+		const sendBeacon = new fake.SendBeacon(writeKey, endpoint, DEBUG);
 		sendBeacon.install();
 		try {
 			const sender = new Sender(writeKey, endpoint);
@@ -97,7 +97,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('XMLHttpRequest', async () => {
 		const time = new FakeTime();
-		fake.XMLHttpRequest.install(writeKey, endpoint);
+		fake.XMLHttpRequest.install(writeKey, endpoint, DEBUG);
 		assertEquals(globalThis.XMLHttpRequest, XMLHttpRequest);
 		const fetch = globalThis.fetch;
 		globalThis.fetch = undefined;

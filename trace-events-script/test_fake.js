@@ -1,7 +1,7 @@
 import { assert, assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts';
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts';
 import { MaxBodySize } from './sender.js';
-import { getTime } from './utils.js';
+import * as utils from './utils.js';
 
 // Fetch implements a fake fetch.
 class Fetch {
@@ -12,8 +12,9 @@ class Fetch {
 	#wait = null;
 	#fetch;
 	#originalFetch;
+	#debug;
 
-	constructor(writeKey, endpoint) {
+	constructor(writeKey, endpoint, debug) {
 		this.#writeKey = writeKey;
 		this.#endpoint = endpoint;
 		this.#fetch = async (resource, options) => {
@@ -26,6 +27,7 @@ class Fetch {
 				const resolve = this.#wait.resolve;
 				this.#events = [];
 				this.#wait = null;
+				this.#debug?.(`promise resolution is resolved: Fetch.events(${min})`);
 				resolve(events);
 			}
 			const res = new Response('', {
@@ -35,6 +37,7 @@ class Fetch {
 			});
 			return res;
 		};
+		this.#debug = utils.debug(debug);
 	}
 
 	events(min) {
@@ -54,6 +57,7 @@ class Fetch {
 					min: min,
 					resolve: resolve,
 				};
+				this.#debug?.(`promise resolution is pending:  Fetch.events(${min})`);
 			} else {
 				const events = this.#events;
 				this.#events = [];
@@ -67,7 +71,7 @@ class Fetch {
 		if (this.#originalFetch != null) {
 			throw new Error('Fake fetch is already installed');
 		}
-		this.#installTime = getTime();
+		this.#installTime = utils.getTime();
 		this.#events = [];
 		this.#wait = null;
 		this.#originalFetch = globalThis.fetch;
@@ -97,8 +101,9 @@ class SendBeacon {
 	#events = [];
 	#wait = null;
 	#sendBeacon;
+	#debug;
 
-	constructor(writeKey, endpoint) {
+	constructor(writeKey, endpoint, debug) {
 		this.#writeKey = writeKey;
 		this.#endpoint = endpoint;
 		this.#sendBeacon = (url, data) => {
@@ -118,11 +123,13 @@ class SendBeacon {
 					const resolve = this.#wait.resolve;
 					this.#events = [];
 					this.#wait = null;
+					this.#debug?.(`promise resolution is resolved: SendBeacon.events(${min})`);
 					resolve(events);
 				}
 			});
 			return true;
 		};
+		this.#debug = utils.debug(debug);
 	}
 
 	events(min) {
@@ -142,6 +149,7 @@ class SendBeacon {
 					min: min,
 					resolve: resolve,
 				};
+				this.#debug?.(`promise resolution is pending:  SendBeacon.events(${min})`);
 			} else {
 				const events = this.#events;
 				this.#events = [];
@@ -155,7 +163,7 @@ class SendBeacon {
 		if (this.#installTime != null) {
 			throw new Error('Fake sendBeacon is already installed');
 		}
-		this.#installTime = getTime();
+		this.#installTime = utils.getTime();
 		this.#events = [];
 		this.#wait = null;
 		globalThis.navigator.sendBeacon = this.#sendBeacon;
@@ -206,6 +214,7 @@ class XMLHttpRequest {
 	static #endpoint;
 	static #events;
 	static #wait;
+	static #debug;
 	#method;
 	#url;
 	#headers = new Headers();
@@ -243,6 +252,7 @@ class XMLHttpRequest {
 				const resolve = XMLHttpRequest.#wait.resolve;
 				XMLHttpRequest.#events = [];
 				XMLHttpRequest.#wait = null;
+				XMLHttpRequest.#debug?.(`promise resolution is resolved: XMLHttpRequest.events(${min})`);
 				resolve(events);
 			}
 		}).catch((error) => {
@@ -270,6 +280,7 @@ class XMLHttpRequest {
 					min: min,
 					resolve: resolve,
 				};
+				XMLHttpRequest.#debug?.(`promise resolution is pending:  XMLHttpRequest.events(${min})`);
 			} else {
 				const events = XMLHttpRequest.#events;
 				XMLHttpRequest.#events = [];
@@ -279,15 +290,16 @@ class XMLHttpRequest {
 		});
 	}
 
-	static install(writeKey, endpoint) {
+	static install(writeKey, endpoint, debug) {
 		if (XMLHttpRequest.#installTime != null) {
 			throw new Error('Fake XMLHttpRequest is already installed');
 		}
-		XMLHttpRequest.#installTime = getTime();
+		XMLHttpRequest.#installTime = utils.getTime();
 		XMLHttpRequest.#events = [];
 		XMLHttpRequest.#wait = null;
 		XMLHttpRequest.#writeKey = writeKey;
 		XMLHttpRequest.#endpoint = endpoint;
+		XMLHttpRequest.#debug = utils.debug(debug);
 		globalThis.XMLHttpRequest = XMLHttpRequest;
 	}
 
@@ -330,7 +342,7 @@ class RandomUUID {
 
 // parseRequest parses a request to the fake fetch and XMLHttpRequest.send functions
 async function parseRequest(writeKey, minTime, options) {
-	const now = getTime();
+	const now = utils.getTime();
 
 	assertEquals(options.method, 'POST');
 	let headers = options.headers;
