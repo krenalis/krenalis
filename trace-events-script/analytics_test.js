@@ -141,86 +141,6 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.setAnonymousId()));
 	});
 
-	await t.step('user function', () => {
-		const a = newAnalytics();
-
-		assertEquals(a.user().id(), null);
-		assert(uuid.validate(a.user().anonymousId()));
-		assertEquals(a.user().traits(), {});
-
-		assertEquals(a.user().id('8g1emx962iR'), '8g1emx962iR');
-		assertEquals(a.user().id(), '8g1emx962iR');
-		const anonymousId = a.getAnonymousId();
-		assertEquals(a.user().id('e4X9L6mcA18'), 'e4X9L6mcA18');
-		assertNotEquals(a.getAnonymousId(), anonymousId);
-		assertEquals(a.user().id(null), null);
-		assertEquals(a.user().id(), null);
-
-		assertEquals(a.user().anonymousId('mC592p0Gn3z1Ld'), 'mC592p0Gn3z1Ld');
-		assertEquals(a.user().anonymousId(), 'mC592p0Gn3z1Ld');
-
-		assertEquals(a.user().anonymousId(null), null);
-		assert(uuid.validate(a.user().anonymousId()));
-
-		const rec = {};
-		rec.boo = rec;
-
-		// Apply the following changes to traits consecutively and test the results of each step.
-		const changes = [
-			{ set: { foo: true }, expect: { foo: true } },
-			{ set: undefined, expect: { foo: true } },
-			{ set: null, expect: {} },
-			{ set: { foo: false }, expect: { foo: false } },
-			{ set: 'foo', expect: { foo: false } },
-			{ set: { foo: {} }, expect: { foo: {} } },
-			{ set: { foo: 5n, boo: true }, expect: { foo: {} } },
-			{ set: { foo: undefined, boo: 5 }, expect: { boo: 5 } },
-			{ set: { foo: rec }, expect: { boo: 5 } },
-			{ set: { foo: () => {}, boo: true }, expect: { boo: true } },
-		];
-
-		for (let i = 0; i < changes.length; i++) {
-			const change = changes[i];
-			assertEquals(a.user().traits(change.set), change.expect);
-			assertEquals(a.user().traits(), change.expect);
-		}
-	});
-
-	await t.step('group function (without arguments)', () => {
-		const a = newAnalytics();
-
-		assertEquals(a.group().id(), null);
-		assertEquals(a.group().traits(), {});
-
-		assertEquals(a.group().id('acme'), 'acme');
-		assertEquals(a.group().id(), 'acme');
-		assertEquals(a.group().id(null), null);
-		assertEquals(a.group().id(), null);
-
-		const rec = {};
-		rec.boo = rec;
-
-		// Apply the following changes to traits consecutively and test the results of each step.
-		const changes = [
-			{ set: { foo: true }, expect: { foo: true } },
-			{ set: undefined, expect: { foo: true } },
-			{ set: null, expect: {} },
-			{ set: { foo: false }, expect: { foo: false } },
-			{ set: 'foo', expect: { foo: false } },
-			{ set: { foo: {} }, expect: { foo: {} } },
-			{ set: { foo: 5n, boo: true }, expect: { foo: {} } },
-			{ set: { foo: undefined, boo: 5 }, expect: { boo: 5 } },
-			{ set: { foo: rec }, expect: { boo: 5 } },
-			{ set: { foo: () => {}, boo: true }, expect: { boo: true } },
-		];
-
-		for (let i = 0; i < changes.length; i++) {
-			const change = changes[i];
-			assertEquals(a.group().traits(change.set), change.expect);
-			assertEquals(a.group().traits(), change.expect);
-		}
-	});
-
 	await t.step('sessions with auto tracking', () => {
 		const time = new FakeTime();
 		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
@@ -330,6 +250,7 @@ Deno.test('Analytics', async (t) => {
 			navigator.install();
 			try {
 				const analytics = new Analytics(writeKey, endpoint, step.options);
+				analytics.debug(DEBUG);
 				analytics.setAnonymousId('1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7');
 				if (step.options?.sessions?.autoTrack !== false) {
 					// Start a session and sent an event to mark it as not just started.

@@ -1,8 +1,10 @@
+import { campaign, isPlainObject, uuid } from './utils.js';
 import Options from './options.js';
 import Storage from './storage.js';
 import Session from './session.js';
 import { Sender } from './sender.js';
-import { campaign, isPlainObject, uuid } from './utils.js';
+import User from './user.js';
+import Group from './group.js';
 
 const version = '0.0.0';
 const none = () => {};
@@ -14,59 +16,16 @@ class Analytics {
 	#sender;
 	#isReady = false;
 	#onReady;
-	#user = {
-		id: (id) => {
-			if (id === undefined) {
-				return this.#storage.getUserID();
-			}
-			if (id === null) {
-				this.#storage.setUserID();
-				return null;
-			}
-			const data = {};
-			this.#setUserId(data, id);
-			return 'userId' in data ? data.userId : null;
-		},
-		anonymousId: (id) => this.setAnonymousId(id),
-		traits: (traits) => {
-			if (traits !== undefined) {
-				if (traits == null) {
-					traits = {};
-				}
-				this.#storage.setTraits('user', traits);
-			}
-			return this.#storage.getTraits('user');
-		},
-	};
-	#group = {
-		id: (id) => {
-			if (id === undefined) {
-				return this.#storage.getGroupID();
-			}
-			if (id === null) {
-				this.#storage.setGroupID();
-				return null;
-			}
-			const data = {};
-			this.#setGroup(data, id);
-			return 'groupId' in data ? data.groupId : null;
-		},
-		traits: (traits) => {
-			if (traits !== undefined) {
-				if (traits == null) {
-					traits = {};
-				}
-				this.#storage.setTraits('group', traits);
-			}
-			return this.#storage.getTraits('group');
-		},
-	};
+	#user;
+	#group;
 
 	constructor(writeKey, endpoint, options) {
 		this.#options = new Options(options);
 		this.#storage = new Storage();
 		this.#session = new Session(this.#storage, this.#options.sessions.autoTrack, this.#options.sessions.timeout);
 		this.#sender = new Sender(writeKey, endpoint);
+		this.#user = new User(this.#storage);
+		this.#group = new Group(this.#storage);
 		const onReady = this.#onReady;
 		if (onReady) {
 			for (let i = 0; i < onReady.length; i++) {
@@ -157,18 +116,7 @@ class Analytics {
 	// setAnonymousId sets the default Anonymous ID or, if id is undefined,
 	// returns the default Anonymous ID.
 	setAnonymousId(id) {
-		if (id === undefined) {
-			return this.#anonymousId();
-		}
-		if (typeof id === 'number') {
-			id = String(id);
-		}
-		if (typeof id === 'string' && id !== '') {
-			this.#storage.setAnonymousID(id);
-		} else {
-			this.#storage.setAnonymousID(uuid());
-		}
-		return id;
+		return this.#user.anonymousId(id);
 	}
 
 	// startSession starts a new session.
@@ -405,33 +353,33 @@ class Analytics {
 			// ()
 			case '':
 				this.#setUserId(data);
-				this.#setUserTraits(data);
+				this.#setTraits(this.#user, data);
 				break;
 			// (userId);
 			case 'string':
 				this.#setUserId(data, a[0]);
-				this.#setUserTraits(data);
+				this.#setTraits(this.#user, data);
 				break;
 			// (traits);
 			case 'object':
 				this.#setUserId(data);
-				this.#setUserTraits(data, a[0]);
+				this.#setTraits(this.#user, data, a[0]);
 				break;
 			// (userId, traits);
 			case 'string,object':
 				this.#setUserId(data, a[0]);
-				this.#setUserTraits(data, a[1]);
+				this.#setTraits(this.#user, data, a[1]);
 				break;
 			// (traits, context);
 			case 'object,object':
 				this.#setUserId(data);
-				this.#setUserTraits(data, a[0]);
+				this.#setTraits(this.#user, data, a[0]);
 				options = a[1];
 				break;
 			// (userId, traits, context)
 			case 'string,object,object':
 				this.#setUserId(data, a[0]);
-				this.#setUserTraits(data, a[1]);
+				this.#setTraits(this.#user, data, a[1]);
 				options = a[2];
 				break;
 			default:
@@ -442,18 +390,7 @@ class Analytics {
 
 	// setGroup sets the groupId with id.
 	#setGroup(data, id) {
-		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
-			data.groupId = String(id);
-			this.#storage.setGroupID(data.groupId);
-			return;
-		}
-		data.groupId = this.#storage.getGroupID();
-	}
-
-	// setGroupTraits sets the group traits, merging the current traits with
-	// traits.
-	#setGroupTraits(data, traits) {
-		this.#setTraits('group', data, traits);
+		data.groupId = this.#group.id(id !== null ? id : undefined);
 	}
 
 	// setGroupArguments sets the arguments for group calls.
@@ -465,26 +402,26 @@ class Analytics {
 			// (groupId)
 			case 'string':
 				this.#setGroup(data, a[0]);
-				this.#setGroupTraits(data);
+				this.#setTraits(this.#group, data);
 				break;
 			// (traits)
 			case 'object':
-				this.#setGroupTraits(data, a[0]);
+				this.#setTraits(this.#group, data, a[0]);
 				break;
 			// (groupId, traits)
 			case 'string,object':
 				this.#setGroup(data, a[0]);
-				this.#setGroupTraits(data, a[1]);
+				this.#setTraits(this.#group, data, a[1]);
 				break;
 			// (traits, context)
 			case 'object,object':
-				this.#setGroupTraits(data, a[0]);
+				this.#setTraits(this.#group, data, a[0]);
 				options = a[1];
 				break;
 			// (groupId, traits, context)
 			case 'string,object,object':
 				this.#setGroup(data, a[0]);
-				this.#setGroupTraits(data, a[1]);
+				this.#setTraits(this.#group, data, a[1]);
 				options = a[2];
 				break;
 			default:
@@ -579,9 +516,9 @@ class Analytics {
 	}
 
 	// setTraits sets the user or group traits, merging the current traits with
-	// traits. kind must be 'user' or 'group'.
-	#setTraits(kind, data, traits) {
-		data.traits = this.#storage.getTraits(kind);
+	// traits. k must be #user or #group.
+	#setTraits(k, data, traits) {
+		data.traits = k.traits();
 		if (traits !== undefined) {
 			for (const k in traits) {
 				const v = traits[k];
@@ -592,31 +529,13 @@ class Analytics {
 				}
 			}
 		}
-		this.#storage.setTraits(kind, data.traits);
-		data.traits = this.#storage.getTraits(kind);
+		k.traits(data.traits);
+		data.traits = k.traits();
 	}
 
 	// setUserId sets the userId with id.
 	#setUserId(data, id) {
-		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
-			data.userId = String(id);
-			const previousId = this.#storage.getUserID();
-			if (data.userId !== previousId) {
-				this.#storage.setUserID(data.userId);
-				if (previousId != null) {
-					this.#storage.setTraits('user');
-					this.#storage.setAnonymousID(uuid());
-				}
-			}
-			return;
-		}
-		data.userId = this.#storage.getUserID();
-	}
-
-	// setUserTraits sets the user traits, merging the current traits with
-	// traits.
-	#setUserTraits(data, traits) {
-		this.#setTraits('user', data, traits);
+		data.userId = this.#user.id(id !== null ? id : undefined);
 	}
 }
 
