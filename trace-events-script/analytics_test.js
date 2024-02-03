@@ -343,6 +343,7 @@ Deno.test('Analytics', async (t) => {
 				try {
 					await step.call(analytics);
 				} catch (error) {
+					time.tick(1000);
 					if (step.error) {
 						assertEquals(Object.getPrototypeOf(error), Object.getPrototypeOf(step.error));
 						assertEquals(error.message, step.error.message);
@@ -350,7 +351,10 @@ Deno.test('Analytics', async (t) => {
 					}
 					throw new AssertionError(`unexpected error from step '${step.name}': ${error}`);
 				}
-				time.tick(300);
+				time.tick(1000);
+				if (step.error) {
+					throw new AssertionError(`expected error '${step.error}' from step '${step.name}', got no errors`);
+				}
 				const events = await fetch.events(1);
 				assertEquals(events.length, 1);
 				assertEquals(events[0], step.event);
