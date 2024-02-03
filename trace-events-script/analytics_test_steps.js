@@ -568,6 +568,23 @@ const steps = [
 		},
 	},
 	{
+		name: `group(undefined)`,
+		call: (analytics) => {
+			analytics.group(undefined);
+		},
+		event: {
+			type: 'group',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			traits,
+			groupId: null,
+			userId,
+		},
+	},
+	{
 		name: `group(null)`,
 		call: (analytics) => {
 			analytics.group().id('acme');

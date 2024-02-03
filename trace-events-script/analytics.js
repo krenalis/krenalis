@@ -447,10 +447,7 @@ class Analytics {
 			this.#storage.setGroupID(data.groupId);
 			return;
 		}
-		id = this.#storage.getGroupID();
-		if (id != null) {
-			data.groupId = id;
-		}
+		data.groupId = this.#storage.getGroupID();
 	}
 
 	// setGroupTraits sets the group traits, merging the current traits with
@@ -463,9 +460,6 @@ class Analytics {
 	// It writes the 'groupId' and 'traits' arguments into data and
 	// returns the options.
 	#setGroupArguments(data, a) {
-		if (a.length === 0) {
-			throw new Error('Group is missing');
-		}
 		let options;
 		switch (typesOf(a)) {
 			// (groupId)
