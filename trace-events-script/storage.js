@@ -11,15 +11,15 @@ class Storage {
 		this.store = globalThis.localStorage;
 	}
 
-	getAnonymousID() {
+	anonymousId() {
 		return this.store.getItem('chichi_anonymous_id');
 	}
 
-	getGroupID() {
+	groupId() {
 		return this.store.getItem('chichi_group_id');
 	}
 
-	getSession() {
+	session() {
 		let id = this.store.getItem('chichi_session_id');
 		if (id != null) {
 			id = Number(id);
@@ -29,7 +29,7 @@ class Storage {
 		return [id, expiration, start];
 	}
 
-	getTraits(kind) {
+	traits(kind) {
 		const traits = this.store.getItem(`chichi_${kind}_traits`);
 		if (traits == null) {
 			return {};
@@ -37,11 +37,11 @@ class Storage {
 		return JSON.parse(traits);
 	}
 
-	getUserID() {
+	userId() {
 		return this.store.getItem('chichi_user_id');
 	}
 
-	setAnonymousID(id) {
+	setAnonymousId(id) {
 		if (id == null) {
 			this.store.removeItem('chichi_anonymous_id');
 			return;
@@ -49,7 +49,7 @@ class Storage {
 		this.store.setItem('chichi_anonymous_id', id);
 	}
 
-	setGroupID(id) {
+	setGroupId(id) {
 		if (id == null) {
 			this.store.removeItem('chichi_group_id');
 			return;
@@ -96,7 +96,7 @@ class Storage {
 		this.store.setItem(`chichi_${kind}_traits`, value);
 	}
 
-	setUserID(id) {
+	setUserId(id) {
 		if (id == null) {
 			this.store.removeItem('chichi_user_id');
 		} else {

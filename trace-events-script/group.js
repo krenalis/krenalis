@@ -7,15 +7,15 @@ class Group {
 
 	id(id) {
 		if (id === null) {
-			this.#storage.setGroupID();
+			this.#storage.setGroupId();
 			return null;
 		}
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
 			id = String(id);
-			this.#storage.setGroupID(id);
+			this.#storage.setGroupId(id);
 			return id;
 		}
-		return this.#storage.getGroupID();
+		return this.#storage.groupId();
 	}
 
 	traits(traits) {
@@ -25,7 +25,7 @@ class Group {
 			}
 			this.#storage.setTraits('group', traits);
 		}
-		return this.#storage.getTraits('group');
+		return this.#storage.traits('group');
 	}
 }
 

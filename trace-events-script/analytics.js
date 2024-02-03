@@ -100,11 +100,11 @@ class Analytics {
 	// from the storage. It also resets the Anonymous ID by generating a new
 	// one, and ends the session if one exists.
 	reset() {
-		this.#storage.setUserID();
-		this.#storage.setGroupID();
+		this.#storage.setUserId();
+		this.#storage.setGroupId();
 		this.#storage.setTraits('user');
 		this.#storage.setTraits('group');
-		this.#storage.setAnonymousID();
+		this.#storage.setAnonymousId();
 		this.#session.end();
 	}
 
@@ -146,10 +146,10 @@ class Analytics {
 	// anonymousId returns the anonymous ID. If the anonymous ID is null, it
 	// creates and stores a new generated anonymous ID, then returns it.
 	#anonymousId() {
-		let id = this.#storage.getAnonymousID();
+		let id = this.#storage.anonymousId();
 		if (id == null) {
 			id = uuid();
-			this.#storage.setAnonymousID(id);
+			this.#storage.setAnonymousId(id);
 		}
 		return id;
 	}
@@ -159,7 +159,7 @@ class Analytics {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
 			return String(id);
 		}
-		id = this.#storage.getUserID();
+		id = this.#storage.userId();
 		if (id == null) {
 			return this.#anonymousId();
 		}

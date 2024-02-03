@@ -6,43 +6,43 @@ Deno.test('Storage', () => {
 
 	const storage = new Storage();
 
-	function expectAnonymousID(id) {
-		assertEquals(storage.getAnonymousID(), id);
+	function expectAnonymousId(id) {
+		assertEquals(storage.anonymousId(), id);
 	}
 
-	function expectGroupID(id) {
-		assertEquals(storage.getGroupID(), id);
+	function expectGroupId(id) {
+		assertEquals(storage.groupId(), id);
 	}
 
 	function expectSession(id, expiration, start) {
-		const [actualID, actualExpiration, actualStart] = storage.getSession();
-		assertEquals(actualID, id);
+		const [actualId, actualExpiration, actualStart] = storage.session();
+		assertEquals(actualId, id);
 		assertEquals(actualExpiration, expiration);
 		assertEquals(actualStart, start);
 	}
 
 	function expectTraits(kind, traits) {
-		assertEquals(storage.getTraits(kind), traits);
+		assertEquals(storage.traits(kind), traits);
 	}
 
-	function expectUserID(id) {
-		assertEquals(storage.getUserID(), id);
+	function expectUserId(id) {
+		assertEquals(storage.userId(), id);
 	}
 
-	expectAnonymousID(null);
-	expectGroupID(null);
+	expectAnonymousId(null);
+	expectGroupId(null);
 	expectSession(null, 0, false);
 	expectTraits('user', {});
 	expectTraits('group', {});
-	expectUserID(null);
+	expectUserId(null);
 
-	storage.setAnonymousID('703a1h3b830');
-	expectAnonymousID('703a1h3b830');
+	storage.setAnonymousId('703a1h3b830');
+	expectAnonymousId('703a1h3b830');
 
-	storage.setGroupID('72047285');
-	expectGroupID('72047285');
-	storage.setGroupID();
-	expectGroupID(null);
+	storage.setGroupId('72047285');
+	expectGroupId('72047285');
+	storage.setGroupId();
+	expectGroupId(null);
 
 	storage.setSession();
 	expectSession(null, 0, false);
@@ -73,10 +73,10 @@ Deno.test('Storage', () => {
 	storage.setTraits('group');
 	expectTraits('group', {});
 
-	storage.setUserID('86103517');
-	expectUserID('86103517');
-	storage.setUserID();
-	expectUserID(null);
+	storage.setUserId('86103517');
+	expectUserId('86103517');
+	storage.setUserId();
+	expectUserId(null);
 
 	storage.setSession();
 	expectSession(null, 0, false);

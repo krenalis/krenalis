@@ -11,7 +11,7 @@ class Session {
 		this.#storage = storage;
 		this.#timeout = timeout;
 		if (autoTrack) {
-			const [id, expiration] = storage.getSession();
+			const [id, expiration] = storage.session();
 			const now = getTime();
 			if (id == null || expiration < now) {
 				this.#debug?.('start session', now, 'with timeout', timeout, 'ms ( there was no session )');
@@ -28,7 +28,7 @@ class Session {
 	// end ends the current session.
 	end() {
 		if (this.#debug) {
-			const [id] = this.#storage.getSession();
+			const [id] = this.#storage.session();
 			if (id != null) {
 				this.#debug('end session', id);
 			}
@@ -44,7 +44,7 @@ class Session {
 	//   - if autoTrack is true, it starts a new session and then returns it.
 	//   - if autoTrack is false, it returns null.
 	getFresh() {
-		let [id, expiration, start] = this.#storage.getSession();
+		let [id, expiration, start] = this.#storage.session();
 		const now = getTime();
 		if (this.#autoTrack) {
 			if (id == null || expiration < now) {
@@ -74,7 +74,7 @@ class Session {
 
 	// get returns the current session, or null if no session exist.
 	get() {
-		let [id, expiration] = this.#storage.getSession();
+		let [id, expiration] = this.#storage.session();
 		if (id != null && this.#autoTrack) {
 			const now = getTime();
 			if (expiration < now) {

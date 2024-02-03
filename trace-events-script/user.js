@@ -9,27 +9,27 @@ class User {
 
 	id(id) {
 		if (id === null) {
-			this.#storage.setUserID();
+			this.#storage.setUserId();
 			return null;
 		}
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
 			id = String(id);
-			const previousId = this.#storage.getUserID();
+			const previousId = this.#storage.userId();
 			if (id !== previousId) {
-				this.#storage.setUserID(id);
+				this.#storage.setUserId(id);
 				if (previousId != null) {
 					this.#storage.setTraits('user');
-					this.#storage.setAnonymousID(uuid());
+					this.#storage.setAnonymousId(uuid());
 				}
 			}
 			return id;
 		}
-		return this.#storage.getUserID();
+		return this.#storage.userId();
 	}
 
 	anonymousId(id) {
 		if (id === undefined) {
-			id = this.#storage.getAnonymousID();
+			id = this.#storage.anonymousId();
 			if (id === null) {
 				id = uuid();
 			}
@@ -37,9 +37,9 @@ class User {
 			id = String(id);
 		}
 		if (typeof id === 'string' && id !== '') {
-			this.#storage.setAnonymousID(id);
+			this.#storage.setAnonymousId(id);
 		} else {
-			this.#storage.setAnonymousID(uuid());
+			this.#storage.setAnonymousId(uuid());
 		}
 		return id;
 	}
@@ -51,7 +51,7 @@ class User {
 			}
 			this.#storage.setTraits('user', traits);
 		}
-		return this.#storage.getTraits('user');
+		return this.#storage.traits('user');
 	}
 }
 
