@@ -17,6 +17,7 @@
 	};
 	var methods = [
 		'alias',
+		'anonymize',
 		'debug',
 		'endSession',
 		'getAnonymousId',

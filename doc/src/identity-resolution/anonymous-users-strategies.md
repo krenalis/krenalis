@@ -10,26 +10,26 @@ There will be one user in each of the three time periods, anonymous for A and C,
 
 The AB-C strategy unifies the anonymous user from A with the non-anonymous user from B. This strategy allows all data collected during the initial anonymous navigation to be unified with the data of the non-anonymous user as soon as they log in. From logout onward, however, the collected anonymous data is maintained in a separate anonymous user.
 
-To implement this strategy, when the user logs out, the `reset` method is called.
-
 ### ABC Strategy
 
 The ABC strategy unifies the anonymous users from A and C with the non-anonymous user from B. This strategy allows all data collected during anonymous navigation before login and after logout to be unified with the data of the non-anonymous user.
-
-To implement this strategy, the `reset` method is never called.
 
 ### A-B-C Strategy
 
 The A-B-C strategy never unifies the users. Consequently, there will be two anonymous users and one non-anonymous user.
 
-To implement this strategy, when the user logs in and logs out, the `reset` method is called.
-
 ### AC-B Strategy
 
 The AC-B strategy unifies the anonymous user data before login and after logout, keeping it separate from the non-anonymous user who has logged in.
 
-To implement this strategy:
+## Implement a Strategy
 
-* Call the `getAnonymousId` method and save the returned Anonymous ID on the device.
-* When the user logs in, call the `reset` method.
-* When the user logs out, call the `reset` method, then call the `setAnonymousId` method with the previously saved Anonymous ID as argument.
+To implement a specific strategy, you need to set the strategy option when loading a Chichi SDK. For example, with the JavaScript SDK in the browser:
+
+```javascript
+chichianalytics.load(writeKey, endpoint, { strategy: 'AB-C' });
+```
+
+Then, use the [`identify`](../events/identify.md) call when the user logs in and the [`anonymize`](../events/anonymize.md) call when the user logs out. You can customize different strategies for various devices or situations based on your requirements. Refer to the SDK documentation for more details on how to implement these strategies in your application.
+
+The default strategy, if the strategy option is not specified, is the "AB-C" strategy.

@@ -213,7 +213,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 
 	method := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 	switch method {
-	case "batch", "track", "page", "screen", "identify", "group", "alias":
+	case "alias", "batch", "anonymize", "group", "identify", "page", "screen", "track":
 	default:
 		return errNotFound
 	}
@@ -378,8 +378,8 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 // validateEvent validates the given method and event and returns an error if
-// they are not valid. method can be "alias", "identify", "group", "page",
-// "screen", "track", or "batch".
+// they are not valid. method can be "alias", "anonymize", "identify", "group",
+// "page", "screen", "track", or "batch".
 func validateEvent(method string, event *collectedEvent) error {
 
 	// Type.

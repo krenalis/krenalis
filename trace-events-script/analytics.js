@@ -41,12 +41,28 @@ class Analytics {
 		return this.#send('alias', this.#setAliasArguments, arguments);
 	}
 
+	// anonymize sends an anonymize event, anonymizes the user's identity by
+	// removing the User ID, and updates or removes the Anonymous ID and traits
+	// according to the strategy.
+	anonymize() {
+		const event = this.#send('anonymize', this.#setAnonymizeArguments, arguments);
+		if (this.#options.strategy === 'AC-B') {
+			this.#storage.setUserId();
+			this.#storage.restore();
+		} else {
+			this.#reset(this.#options.strategy.indexOf('-C') > 0);
+		}
+		return event;
+	}
+
 	// debug toggles debug mode.
 	debug(on) {
 		this.#session.debug(on);
 		this.#sender.debug(on);
 	}
 
+	// endSession ends the session.
+	// If there is no session, it does nothing.
 	endSession() {
 		this.#session.end();
 	}
@@ -100,12 +116,7 @@ class Analytics {
 	// from the storage. It also resets the Anonymous ID by generating a new
 	// one, and ends the session if one exists.
 	reset() {
-		this.#storage.setUserId();
-		this.#storage.setGroupId();
-		this.#storage.setTraits('user');
-		this.#storage.setTraits('group');
-		this.#storage.setAnonymousId();
-		this.#session.end();
+		this.#reset(true);
 	}
 
 	// screen sends a screen event.
@@ -155,6 +166,20 @@ class Analytics {
 		return id;
 	}
 
+	// reset is like the public reset method, but it differs in that it does not
+	// reset the Anonymous ID and does not end the session if 'all' is false.
+	#reset(all) {
+		this.#storage.setUserId();
+		this.#storage.setGroupId();
+		this.#storage.setTraits('user');
+		this.#storage.setTraits('group');
+		this.#storage.removeSuspended();
+		if (all) {
+			this.#storage.setAnonymousId();
+			this.#session.end();
+		}
+	}
+
 	// send sends an event of the given type, setting the arguments args with
 	// the setArgs function.
 	#send(type, setArgs, args) {
@@ -193,9 +218,6 @@ class Analytics {
 			event.timestamp = new Date();
 		}
 
-		event.messageId = uuid();
-		event.anonymousId = this.#user.anonymousId();
-
 		const loc = globalThis.location;
 
 		const canonical = document.querySelector('link[rel="canonical"]');
@@ -232,7 +254,7 @@ class Analytics {
 					if (k in p) {
 						const v = p[k];
 						if (typeof v === 'string' && v !== '') {
-							page[k] = p[k];
+							page[k] = v;
 						}
 					} else {
 						p[k] = page[k];
@@ -256,7 +278,29 @@ class Analytics {
 				/* fallthrough */
 			case 'group':
 				this.#setUserId(event);
+				break;
+			case 'identify':
+				if (this.#options.strategy.indexOf('-B') > 0) {
+					if (this.#options.strategy === 'AC-B') {
+						this.#storage.suspend();
+					} else {
+						this.#storage.removeSuspended();
+					}
+					this.#storage.setAnonymousId();
+					this.#storage.setTraits('user', event.traits);
+					this.#storage.setGroupId();
+					this.#storage.setTraits('group');
+					this.#session.end();
+				} else {
+					this.#mergeTraits(this.#user, event, event.traits);
+				}
+				break;
+			case 'anonymize':
+				event.userId = null;
 		}
+
+		event.messageId = uuid();
+		event.anonymousId = this.#user.anonymousId();
 
 		const n = globalThis.navigator;
 		event.context = {
@@ -332,6 +376,13 @@ class Analytics {
 		return options;
 	}
 
+	// setAnonymizeArguments sets the arguments for anonymize calls.
+	#setAnonymizeArguments(_data, a) {
+		if (a.length > 0) {
+			throw new Error('Invalid arguments');
+		}
+	}
+
 	// setIdentifyArguments sets the arguments for identify calls.
 	// It writes the 'userId' and 'traits' arguments into data and
 	// returns the options.
@@ -341,33 +392,31 @@ class Analytics {
 			// ()
 			case '':
 				this.#setUserId(data);
-				this.#setTraits(this.#user, data);
 				break;
-			// (userId);
+			// (userId)
 			case 'string':
 				this.#setUserId(data, a[0]);
-				this.#setTraits(this.#user, data);
 				break;
-			// (traits);
+			// (traits)
 			case 'object':
 				this.#setUserId(data);
-				this.#setTraits(this.#user, data, a[0]);
+				data.traits = a[0];
 				break;
-			// (userId, traits);
+			// (userId, traits)
 			case 'string,object':
 				this.#setUserId(data, a[0]);
-				this.#setTraits(this.#user, data, a[1]);
+				data.traits = a[1];
 				break;
-			// (traits, options);
+			// (traits, options)
 			case 'object,object':
 				this.#setUserId(data);
-				this.#setTraits(this.#user, data, a[0]);
+				data.traits = a[0];
 				options = a[1];
 				break;
 			// (userId, traits, options)
 			case 'string,object,object':
 				this.#setUserId(data, a[0]);
-				this.#setTraits(this.#user, data, a[1]);
+				data.traits = a[1];
 				options = a[2];
 				break;
 			default:
@@ -390,26 +439,26 @@ class Analytics {
 			// (groupId)
 			case 'string':
 				this.#setGroup(data, a[0]);
-				this.#setTraits(this.#group, data);
+				this.#mergeTraits(this.#group, data);
 				break;
 			// (traits)
 			case 'object':
-				this.#setTraits(this.#group, data, a[0]);
+				this.#mergeTraits(this.#group, data, a[0]);
 				break;
 			// (groupId, traits)
 			case 'string,object':
 				this.#setGroup(data, a[0]);
-				this.#setTraits(this.#group, data, a[1]);
+				this.#mergeTraits(this.#group, data, a[1]);
 				break;
 			// (traits, options)
 			case 'object,object':
-				this.#setTraits(this.#group, data, a[0]);
+				this.#mergeTraits(this.#group, data, a[0]);
 				options = a[1];
 				break;
 			// (groupId, traits, options)
 			case 'string,object,object':
 				this.#setGroup(data, a[0]);
-				this.#setTraits(this.#group, data, a[1]);
+				this.#mergeTraits(this.#group, data, a[1]);
 				options = a[2];
 				break;
 			default:
@@ -503,9 +552,9 @@ class Analytics {
 		return options;
 	}
 
-	// setTraits sets the user or group traits, merging the current traits with
-	// traits. k must be #user or #group.
-	#setTraits(k, data, traits) {
+	// mergeTraits merges the current user or group traits with traits, store
+	// them, and assign them to data.traits. k must be #user or #group.
+	#mergeTraits(k, data, traits) {
 		data.traits = k.traits();
 		if (traits !== undefined) {
 			for (const k in traits) {

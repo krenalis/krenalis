@@ -144,6 +144,6 @@ var SchemaWithoutGID = types.Object([]types.Property{
 	{Name: "source", Type: types.Int(32)},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+	{Name: "type", Type: types.Text().WithValues("alias", "anonymize", "identify", "group", "page", "screen", "track")},
 	{Name: "userId", Type: types.Text()},
 })

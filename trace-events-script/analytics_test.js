@@ -96,7 +96,7 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('reset function', async () => {
 		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
-		const a = newAnalytics({ sessions: { autoTrack: false } });
+		const a = newAnalytics({ strategy: 'AC-B', sessions: { autoTrack: false } });
 		a.startSession(137206);
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7');
 		const time = new FakeTime();
@@ -208,6 +208,117 @@ Deno.test('Analytics', async (t) => {
 			time.restore();
 		}
 	});
+
+	// Test identify and anonymize with each strategy, both with and without sessions.
+	for (const strategy of ['ABC', 'AB-C', 'A-B-C', 'AC-B']) {
+		for (const autoTrack of [true, false]) {
+			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
+				const time = new FakeTime();
+
+				const fetch = new fake.Fetch(writeKey, endpoint);
+				fetch.install();
+
+				const a = newAnalytics({ strategy, sessions: { autoTrack } });
+
+				try {
+					let sessionId = a.getSessionId();
+					time.tick(1000);
+					let anonymousId = a.getAnonymousId();
+					const userTraits = { score: 729 };
+					a.user().traits(userTraits);
+					const groupId = 'acme';
+					a.group().id(groupId);
+					const groupTraits = { name: 'Acme' };
+					a.group().traits(groupTraits);
+
+					const original = { sessionId, anonymousId, userTraits, groupId, groupTraits };
+
+					// identity.
+					void a.identify('5F20MB18', { name: 'Susan' });
+					time.tick(1000);
+					let events = await fetch.events(1);
+					let event = events[0];
+
+					assertEquals(event.userId, '5F20MB18');
+					if (!autoTrack) {
+						assert(!('sessionId' in event.context));
+						assert(!('sessionStart' in event.context));
+						assertEquals(a.getSessionId(), null);
+					}
+					if (strategy.includes('-B')) {
+						if (autoTrack) {
+							assertNotEquals(event.context.sessionId, sessionId);
+						}
+						assertNotEquals(event.anonymousId, anonymousId);
+						assertEquals(event.traits, { name: 'Susan' });
+						assertEquals(a.group().id(), null);
+						assertEquals(a.group().traits(), {});
+					} else {
+						if (autoTrack) {
+							assertEquals(event.context.sessionId, sessionId);
+						}
+						assertEquals(event.anonymousId, anonymousId);
+						assertEquals(event.traits, { name: 'Susan', score: 729 });
+						assertEquals(a.group().id(), groupId);
+						assertEquals(a.group().traits(), groupTraits);
+					}
+					assertEquals(a.getAnonymousId(), event.anonymousId);
+					assertEquals(a.user().id(), event.userId);
+					assertEquals(a.user().traits(), event.traits);
+
+					sessionId = a.getSessionId();
+					anonymousId = a.getAnonymousId();
+
+					// anonymize.
+					void a.anonymize();
+					time.tick(1000);
+					events = await fetch.events(1);
+					event = events[0];
+
+					assertEquals(event.userId, null);
+					assertEquals(event.traits, undefined);
+					if (autoTrack) {
+						assertEquals(event.context.sessionId, sessionId);
+					} else {
+						assert(!('sessionId' in event.context));
+						assert(!('sessionStart' in event.context));
+						assertEquals(a.getSessionId(), null);
+					}
+					assertEquals(event.anonymousId, anonymousId);
+					if (strategy === 'AC-B') {
+						if (autoTrack) {
+							assertEquals(a.getSessionId(), original.sessionId);
+						}
+						assertEquals(a.getAnonymousId(), original.anonymousId);
+						assertEquals(a.user().traits(), original.userTraits);
+						assertEquals(a.group().id(), original.groupId);
+						assertEquals(a.group().traits(), original.groupTraits);
+					} else if (strategy.includes('-C')) {
+						if (autoTrack) {
+							assertNotEquals(a.getSessionId(), original.sessionId);
+							assertNotEquals(a.getSessionId(), sessionId);
+						}
+						assertNotEquals(a.getAnonymousId(), original.anonymousId);
+						assertNotEquals(a.getAnonymousId(), anonymousId);
+						assertEquals(a.user().traits(), {});
+						assertEquals(a.group().id(), null);
+						assertEquals(a.group().traits(), {});
+					} else {
+						if (autoTrack) {
+							assertEquals(a.getSessionId(), sessionId);
+						}
+						assertEquals(a.getAnonymousId(), anonymousId);
+						assertEquals(a.user().traits(), {});
+						assertEquals(a.group().id(), null);
+						assertEquals(a.group().traits(), {});
+					}
+				} finally {
+					fetch.restore();
+					time.restore();
+				}
+			});
+		}
+	}
 
 	await t.step('changing User ID, resets traits and Anonymous ID', async () => {
 		const time = new FakeTime();

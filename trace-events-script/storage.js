@@ -19,6 +19,27 @@ class Storage {
 		return this.store.getItem('chichi_group_id');
 	}
 
+	removeSuspended() {
+		this.store.removeItem('chichi_suspended');
+	}
+
+	restore() {
+		let session, anonymousId, userTraits, groupId, groupTraits;
+		const suspended = this.store.getItem('chichi_suspended');
+		if (suspended != null) {
+			[session, anonymousId, userTraits, groupId, groupTraits] = JSON.parse(suspended);
+		}
+		if (session == null) {
+			session = [null, 0, false];
+		}
+		this.setSession(...session);
+		this.setAnonymousId(anonymousId);
+		this.setTraits('user', userTraits);
+		this.setGroupId(groupId);
+		this.setTraits('group', groupTraits);
+		this.store.removeItem('chichi_suspended');
+	}
+
 	session() {
 		const session = this.store.getItem('chichi_session');
 		if (session == null) {
@@ -33,10 +54,6 @@ class Storage {
 			return {};
 		}
 		return JSON.parse(traits);
-	}
-
-	userId() {
-		return this.store.getItem('chichi_user_id');
 	}
 
 	setAnonymousId(id) {
@@ -96,6 +113,20 @@ class Storage {
 		} else {
 			this.store.setItem('chichi_user_id', id);
 		}
+	}
+
+	suspend() {
+		const session = this.session();
+		const anonymousId = this.anonymousId();
+		const userTraits = this.traits('user');
+		const groupId = this.groupId();
+		const groupTraits = this.traits('group');
+		const suspended = [session, anonymousId, userTraits, groupId, groupTraits];
+		this.store.setItem('chichi_suspended', JSON.stringify(suspended));
+	}
+
+	userId() {
+		return this.store.getItem('chichi_user_id');
 	}
 }
 

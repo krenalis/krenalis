@@ -88,7 +88,7 @@ CREATE TABLE groups (
 
 CREATE TYPE event_os_name AS ENUM ('None', 'Android', 'Windows', 'iOS', 'macOS', 'Linux', 'Chrome OS', 'Other');
 CREATE TYPE event_browser_name AS ENUM ('None', 'Chrome', 'Safari', 'Edge', 'Firefox', 'Samsung Internet', 'Opera', 'Other');
-CREATE TYPE event_type AS ENUM ('alias', 'identify', 'group', 'page', 'screen', 'track');
+CREATE TYPE event_type AS ENUM ('alias', 'anonymize', 'identify', 'group', 'page', 'screen', 'track');
 
 CREATE TABLE events (
     "gid" integer NOT NULL DEFAULT 0,

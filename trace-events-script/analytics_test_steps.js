@@ -106,7 +106,7 @@ const steps = [
 		},
 	},
 	{
-		name: `page(properties, context)`,
+		name: `page(properties, options)`,
 		call: (analytics) => {
 			analytics.page({ title: 'alternative title', foo: 'boo' }, { count: 150 });
 		},
@@ -148,7 +148,7 @@ const steps = [
 		},
 	},
 	{
-		name: `page(name, properties, context)`,
+		name: `page(name, properties, options)`,
 		call: (analytics) => {
 			analytics.page('', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -165,7 +165,7 @@ const steps = [
 		},
 	},
 	{
-		name: `page(category, name, properties, context)`,
+		name: `page(category, name, properties, options)`,
 		call: (analytics) => {
 			analytics.page('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -259,7 +259,7 @@ const steps = [
 		},
 	},
 	{
-		name: `screen(properties, context)`,
+		name: `screen(properties, options)`,
 		call: (analytics) => {
 			analytics.screen({ step: 6 }, { count: 150 });
 		},
@@ -301,7 +301,7 @@ const steps = [
 		},
 	},
 	{
-		name: `screen(name, properties, context)`,
+		name: `screen(name, properties, options)`,
 		call: (analytics) => {
 			analytics.screen('', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -318,7 +318,7 @@ const steps = [
 		},
 	},
 	{
-		name: `screen(category, name, properties, context)`,
+		name: `screen(category, name, properties, options)`,
 		call: (analytics) => {
 			analytics.screen('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' });
 		},
@@ -378,7 +378,7 @@ const steps = [
 		},
 	},
 	{
-		name: `track(event, properties, context)`,
+		name: `track(event, properties, options)`,
 		call: (analytics) => {
 			analytics.track('Product Viewed', { productId: 819382 }, { locale: 'it-IT' });
 		},
@@ -513,7 +513,7 @@ const steps = [
 		},
 	},
 	{
-		name: `identify(traits, context)`,
+		name: `identify(traits, options)`,
 		call: (analytics) => {
 			analytics.identify({ first_name: 'Susan', last_name: 'Davis' }, { locale: 'it-IT', key: 'value' });
 		},
@@ -529,7 +529,7 @@ const steps = [
 		},
 	},
 	{
-		name: `identify(userId, traits, context)`,
+		name: `identify(userId, traits, options)`,
 		call: (analytics) => {
 			analytics.identify(603614922, { age: 36 }, { locale: 'it-IT', key: 'value' });
 		},
@@ -551,6 +551,25 @@ const steps = [
 		},
 		error: new Error('Invalid arguments'),
 	},
+	// Anonymize.
+	{
+		name: `anonymize()`,
+		call: (analytics) => {
+			analytics.user().id('603614922');
+			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' });
+			analytics.anonymize();
+		},
+		event: {
+			type: 'anonymize',
+			timestamp,
+			messageId,
+			anonymousId,
+			context,
+			integrations,
+			userId,
+		},
+	},
+	// Group.
 	{
 		name: `group(groupId)`,
 		call: (analytics) => {
@@ -657,7 +676,7 @@ const steps = [
 		},
 	},
 	{
-		name: `group(traits, context)`,
+		name: `group(traits, options)`,
 		call: (analytics) => {
 			analytics.group({ name: 'Acme Inc.' }, { k: true });
 		},
@@ -673,7 +692,7 @@ const steps = [
 		},
 	},
 	{
-		name: `group(groupId, traits, context)`,
+		name: `group(groupId, traits, options)`,
 		call: (analytics) => {
 			analytics.group('3617408', { name: 'Acme Inc.' }, { k: true });
 		},

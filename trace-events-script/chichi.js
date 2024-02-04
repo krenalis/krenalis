@@ -12,6 +12,7 @@ function main() {
 	const a = new Analytics(analytics.key, analytics.url, analytics.options);
 	const methods = [
 		'alias',
+		'anonymize',
 		'debug',
 		'endSession',
 		'getAnonymousId',

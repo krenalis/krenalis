@@ -29,6 +29,14 @@ Deno.test('Storage', () => {
 		assertEquals(storage.userId(), id);
 	}
 
+	function expectEmptySuspended() {
+		expectSession(null, 0, false);
+		expectAnonymousId(null);
+		expectTraits('user', {});
+		expectGroupId(null);
+		expectTraits('group', {});
+	}
+
 	expectAnonymousId(null);
 	expectGroupId(null);
 	expectSession(null, 0, false);
@@ -80,4 +88,67 @@ Deno.test('Storage', () => {
 
 	storage.setSession();
 	expectSession(null, 0, false);
+
+	// Test suspend and restore.
+
+	localStorage.clear();
+
+	storage.suspend();
+	expectEmptySuspended();
+	storage.restore();
+	expectEmptySuspended();
+
+	localStorage.clear();
+
+	storage.restore();
+	expectEmptySuspended();
+
+	localStorage.clear();
+
+	storage.setSession(1706175160340, 1706176628710, false);
+	storage.setAnonymousId('703a1h3b830');
+	storage.setTraits('user', { name: 'John' });
+	storage.setGroupId('acme');
+	storage.setTraits('group', { name: 'Acme' });
+	storage.suspend();
+
+	expectSession(1706175160340, 1706176628710, false);
+	expectAnonymousId('703a1h3b830');
+	expectTraits('user', { name: 'John' });
+	expectGroupId('acme');
+	expectTraits('group', { name: 'Acme' });
+
+	storage.setSession(1706178514540, 1706178239698, true);
+	storage.setAnonymousId('t67w1mvz4t2i');
+	storage.setTraits('user', { name: 'Susan' });
+	storage.setGroupId('inc');
+	storage.setTraits('group', { name: 'Inc' });
+
+	storage.restore();
+	expectSession(1706175160340, 1706176628710, false);
+	expectAnonymousId('703a1h3b830');
+	expectTraits('user', { name: 'John' });
+	expectGroupId('acme');
+	expectTraits('group', { name: 'Acme' });
+
+	// Test removeSuspended.
+
+	localStorage.clear();
+
+	storage.setSession(1706175160340, 1706176628710, false);
+	storage.setAnonymousId('703a1h3b830');
+	storage.setTraits('user', { name: 'John' });
+	storage.setGroupId('acme');
+	storage.setTraits('group', { name: 'Acme' });
+	storage.suspend();
+
+	storage.setSession(1706178514540, 1706178239698, true);
+	storage.setAnonymousId('t67w1mvz4t2i');
+	storage.setTraits('user', { name: 'Susan' });
+	storage.setGroupId('inc');
+	storage.setTraits('group', { name: 'Inc' });
+
+	storage.removeSuspended();
+	storage.restore();
+	expectEmptySuspended();
 });

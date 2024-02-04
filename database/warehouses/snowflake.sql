@@ -96,7 +96,7 @@ CREATE TABLE "events" (
     "source" integer NOT NULL,
     "timestamp" DATETIME(3) NOT NULL,
     "traits" OBJECT NOT NULL,
-    "type" VARCHAR NOT NULL, -- "alias", "identify", "group", "page", "screen", "track"
+    "type" VARCHAR NOT NULL, -- "alias", "anonymize", "identify", "group", "page", "screen", "track"
     "userId" VARCHAR NOT NULL,
     PRIMARY KEY ("messageId")
 )
