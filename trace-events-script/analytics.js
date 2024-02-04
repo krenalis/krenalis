@@ -54,7 +54,7 @@ class Analytics {
 	// getAnonymousId returns the current Anonymous ID. If no Anonymous ID
 	// exists, it generates one and returns it.
 	getAnonymousId() {
-		return this.#anonymousId();
+		return this.#user.anonymousId();
 	}
 
 	// getSessionId returns the current session ID, or null if there is no
@@ -143,17 +143,6 @@ class Analytics {
 		return this.#user;
 	}
 
-	// anonymousId returns the anonymous ID. If the anonymous ID is null, it
-	// creates and stores a new generated anonymous ID, then returns it.
-	#anonymousId() {
-		let id = this.#storage.anonymousId();
-		if (id == null) {
-			id = uuid();
-			this.#storage.setAnonymousId(id);
-		}
-		return id;
-	}
-
 	// getAlias returns the userId or previousId arguments of the alias calls.
 	#getAlias(id) {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
@@ -161,7 +150,7 @@ class Analytics {
 		}
 		id = this.#storage.userId();
 		if (id == null) {
-			return this.#anonymousId();
+			return this.#user.anonymousId();
 		}
 		return id;
 	}
@@ -205,7 +194,7 @@ class Analytics {
 		}
 
 		event.messageId = uuid();
-		event.anonymousId = this.#anonymousId();
+		event.anonymousId = this.#user.anonymousId();
 
 		const loc = globalThis.location;
 
