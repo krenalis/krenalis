@@ -354,6 +354,7 @@ const steps = [
 			timestamp,
 			messageId,
 			anonymousId,
+			properties: {},
 			context,
 			integrations,
 			userId,

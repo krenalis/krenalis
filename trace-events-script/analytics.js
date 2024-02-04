@@ -249,12 +249,11 @@ class Analytics {
 				break;
 			}
 			case 'screen':
+			case 'track':
 				if (!isPlainObject(event.properties)) {
 					event.properties = {};
 				}
-				this.#setUserId(event);
-				break;
-			case 'track':
+				/* fallthrough */
 			case 'group':
 				this.#setUserId(event);
 		}
