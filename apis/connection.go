@@ -194,7 +194,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, err
 				}
 				actionSchemas := &ActionSchemas{
-					In:  users, // don't remove meta-properties here, they may be useful in transformations.
+					In:  users, // don't remove meta properties here, they may be useful in transformations.
 					Out: schema,
 				}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -228,7 +228,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, err
 				}
 				actionSchemas := &ActionSchemas{
-					In:  groups, // don't remove meta-properties here, they may be useful in transformations.
+					In:  groups, // don't remove meta properties here, they may be useful in transformations.
 					Out: schema,
 				}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -265,7 +265,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
 				return &ActionSchemas{
-					In: users, // don't remove meta-properties here, they may be useful in transformations.
+					In: users, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
 			}
 		case Groups:
@@ -283,7 +283,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
 				return &ActionSchemas{
-					In: groups, // don't remove meta-properties here, they may be useful in transformations.
+					In: groups, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
 			}
 		}
@@ -305,7 +305,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 				}
 				return &ActionSchemas{
-					In: users, // don't remove meta-properties here, they may be useful in transformations.
+					In: users, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
 			}
 		case Groups:
@@ -323,7 +323,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 				}
 				return &ActionSchemas{
-					In: groups, // don't remove meta-properties here, they may be useful in transformations.
+					In: groups, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
 			}
 		}
@@ -1959,12 +1959,12 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	connector := c.Connector()
 
 	// In case of a source connection, since its actions write on the data
-	// warehouse, the output schema cannot contain meta-properties because such
+	// warehouse, the output schema cannot contain meta properties because such
 	// properties are not writable by user transformations.
 	if c.Role == state.Source && outSchema.Valid() {
 		for _, p := range outSchema.Properties() {
 			if isMetaProperty(p.Name) {
-				return errors.BadRequest("output schema cannot contain meta-properties")
+				return errors.BadRequest("output schema cannot contain meta properties")
 			}
 		}
 	}
@@ -2364,7 +2364,7 @@ func onlyForMatching(schema types.Type) types.Type {
 	return types.Object(props)
 }
 
-// removeMetaProperties removes the properties considered meta-properties by the
+// removeMetaProperties removes the properties considered meta properties by the
 // data warehouses from the schema, and returns it as a new schema.
 func removeMetaProperties(schema types.Type) types.Type {
 	props := schema.Properties()

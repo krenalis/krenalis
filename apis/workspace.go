@@ -979,7 +979,7 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string)
 		}
 		name := strings.Split(id, ".")[0]
 		if isMetaProperty(name) {
-			return errors.BadRequest("meta-properties cannot be used as identifiers")
+			return errors.BadRequest("meta properties cannot be used as identifiers")
 		}
 		if slices.Contains(identifiers[i+1:], id) {
 			return errors.BadRequest("identifier %s is repeated", id)

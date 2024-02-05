@@ -110,7 +110,7 @@ func TestActionsCreation(t *testing.T) {
 				TimestampColumn: "timestamp",
 				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta-properties"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta properties"}}`,
 		},
 		{
 			conn: dstCSVConnection,
