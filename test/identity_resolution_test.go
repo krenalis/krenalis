@@ -64,7 +64,7 @@ func TestIdentityResolution(t *testing.T) {
 	jsonID := c.AddSourceJSON(fsID)
 
 	allProps := []string{"dummyId", "email", "phoneNumbers"}
-	identifiers := []string{"dummyId", "email", "phoneNumbers"}
+	identifiers := []string{"dummyId", "email"}
 	inSchemaProps := []types.Property{
 		{Name: "dummyId", Type: types.JSON()},
 		{Name: "email", Type: types.JSON()},

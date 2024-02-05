@@ -6,22 +6,22 @@ Here is a list of allowed types for the [identifiers](workspace-identity-resolut
 > Note that meta properties cannot be used as identifiers. This should be
 > documented in a consistent way.
 
-| Type           | Allowed                                                                |
-|----------------|------------------------------------------------------------------------|
-| `Boolean`      | No                                                                     |
-| `Int(n)`       | **Yes**                                                                |
-| `UInt(n)`      | **Yes**                                                                |
-| `Float`        | No                                                                     |
-| `Float(n)`     | No                                                                     |
-| `Decimal(p,s)` | **Yes**, but only if scale `s` is 0                                    |
-| `DateTime`     | No                                                                     |
-| `Date`         | No                                                                     |
-| `Time`         | No                                                                     |
-| `Year`         | No                                                                     |
-| `UUID`         | **Yes**                                                                |
-| `JSON`         | No                                                                     |
-| `Inet`         | **Yes**                                                                |
-| `Text`         | **Yes**                                                                |
-| `Array(T)`     | **Yes**, but only if the item type `T` is allowed and it's not `Array` |
-| `Object`       | No                                                                     |
-| `Map(T)`       | No                                                                     |
+| Type           | Allowed                             |
+|----------------|-------------------------------------|
+| `Boolean`      | No                                  |
+| `Int(n)`       | **Yes**                             |
+| `UInt(n)`      | **Yes**                             |
+| `Float`        | No                                  |
+| `Float(n)`     | No                                  |
+| `Decimal(p,s)` | **Yes**, but only if scale `s` is 0 |
+| `DateTime`     | No                                  |
+| `Date`         | No                                  |
+| `Time`         | No                                  |
+| `Year`         | No                                  |
+| `UUID`         | **Yes**                             |
+| `JSON`         | No                                  |
+| `Inet`         | **Yes**                             |
+| `Text`         | **Yes**                             |
+| `Array(T)`     | No                                  |
+| `Object`       | No                                  |
+| `Map(T)`       | No                                  |

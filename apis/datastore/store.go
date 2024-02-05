@@ -380,9 +380,6 @@ func CanBeIdentifier(t types.Type) bool {
 		return true
 	case types.DecimalKind:
 		return t.Scale() == 0
-	case types.ArrayKind:
-		elem := t.Elem()
-		return elem.Kind() != types.ArrayKind && CanBeIdentifier(elem)
 	default:
 		return false
 	}
