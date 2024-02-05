@@ -26,7 +26,7 @@ func Test_isMetaProperty(t *testing.T) {
 		{types.Property{Name: "HeyTest", Type: types.Int(32)}, true},
 	}
 	for _, test := range tests {
-		got := isMetaProperty(test.p)
+		got := isMetaProperty(test.p.Name)
 		if test.expected != got {
 			t.Errorf("%#v: expected %t, got %t", test.p, test.expected, got)
 		}

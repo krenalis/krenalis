@@ -184,10 +184,14 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 	identifiers := make([]types.Property, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
 		path := strings.Split(ident, ".")
-		identifiers[i], err = usersIdentities.PropertyByPath(path)
+		identifier, err := usersIdentities.PropertyByPath(path)
 		if err != nil {
 			return err
 		}
+		if !CanBeIdentifier(identifier.Type) {
+			return fmt.Errorf("identifier %q has a not allowed type %v", identifier.Name, identifier.Type)
+		}
+		identifiers[i] = identifier
 	}
 
 	// Take the 'users' schema.
@@ -361,5 +365,25 @@ func (store *Store) close() error {
 func (store *Store) mustBeOpen() {
 	if store.closed.Load() {
 		panic("apis/datastore/store is closed")
+	}
+}
+
+// CanBeIdentifier reports whether a property with type t can be used as
+// identifier in the Workspace Identity Resolution.
+func CanBeIdentifier(t types.Type) bool {
+	switch t.Kind() {
+	case types.IntKind,
+		types.UintKind,
+		types.UUIDKind,
+		types.InetKind,
+		types.TextKind:
+		return true
+	case types.DecimalKind:
+		return t.Scale() == 0
+	case types.ArrayKind:
+		elem := t.Elem()
+		return elem.Kind() != types.ArrayKind && CanBeIdentifier(elem)
+	default:
+		return false
 	}
 }

@@ -638,6 +638,46 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 	return err
 }
 
+// IdentifiersSchema returns the identifiers schema, based on the properties of
+// the 'users_identities' table schema.
+// If none of the properties of this table is allowed as an identifier, this
+// method returns the invalid schema.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - NotConnected, if the workspace is not connected to a data warehouse
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error) {
+	this.apis.mustBeOpen()
+	if this.store == nil {
+		return types.Type{}, errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
+	}
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return types.Type{}, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		return types.Type{}, err
+	}
+	usersIdentities, ok := schemas["users_identities"]
+	if !ok {
+		return types.Type{}, nil
+	}
+	var properties []types.Property
+	for _, p := range usersIdentities.Properties() {
+		if isMetaProperty(p.Name) {
+			continue
+		}
+		if datastore.CanBeIdentifier(p.Type) {
+			properties = append(properties, p)
+		}
+	}
+	if len(properties) == 0 {
+		return types.Type{}, nil
+	}
+	return types.Object(properties), nil
+}
+
 // InitWarehouse initializes the data warehouse of the workspace by creating the
 // supporting tables.
 //
@@ -936,6 +976,10 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string)
 	for i, id := range identifiers {
 		if !types.IsValidPropertyPath(id) {
 			return errors.BadRequest("identifier %q is not a valid property path", id)
+		}
+		name := strings.Split(id, ".")[0]
+		if isMetaProperty(name) {
+			return errors.BadRequest("meta-properties cannot be used as identifiers")
 		}
 		if slices.Contains(identifiers[i+1:], id) {
 			return errors.BadRequest("identifier %s is repeated", id)

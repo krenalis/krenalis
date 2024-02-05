@@ -2,8 +2,9 @@
 
 Here is a list of allowed types for the [identifiers](workspace-identity-resolution.md#identifiers) used in the [Workspace Identity Resolution](workspace-identity-resolution.md). 
 
-> See the issue [#321](https://github.com/open2b/chichi/issues/321)
 
+> Note that meta properties cannot be used as identifiers. This should be
+> documented in a consistent way.
 
 | Type           | Allowed                                                                |
 |----------------|------------------------------------------------------------------------|

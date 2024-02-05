@@ -265,14 +265,11 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				})
 				router.Route("/identifiers-schema", func(router chi.Router) {
 					router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-						schema, err := workspace.Schema(ctx, "users_identities")
+						schema, err := workspace.IdentifiersSchema(ctx)
 						if err != nil {
 							respond(w, err)
 							return
 						}
-						// TODO(Gianluca): remove from the schema the properties
-						// which cannot be identifiers. See the issue
-						// https://github.com/open2b/chichi/issues/321.
 						w.Header().Add("Content-Type", "application/json")
 						_ = json.NewEncoder(w).Encode(schema)
 					})

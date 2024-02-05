@@ -1963,7 +1963,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// properties are not writable by user transformations.
 	if c.Role == state.Source && outSchema.Valid() {
 		for _, p := range outSchema.Properties() {
-			if isMetaProperty(p) {
+			if isMetaProperty(p.Name) {
 				return errors.BadRequest("output schema cannot contain meta-properties")
 			}
 		}
@@ -2255,10 +2255,10 @@ func importsTraitsFromEvents(connectorType state.ConnectorType, role state.Role,
 	return false
 }
 
-// isMetaProperty reports whether the property p is considered a meta-property
-// by a data warehouse.
-func isMetaProperty(p types.Property) bool {
-	for _, r := range p.Name {
+// isMetaProperty reports whether the given property name refers to a property
+// considered a meta-property by a data warehouse.
+func isMetaProperty(name string) bool {
+	for _, r := range name {
 		return unicode.IsUpper(r)
 	}
 	return false
@@ -2370,7 +2370,7 @@ func removeMetaProperties(schema types.Type) types.Type {
 	props := schema.Properties()
 	noMetaProps := make([]types.Property, 0, len(props))
 	for _, p := range props {
-		if isMetaProperty(p) {
+		if isMetaProperty(p.Name) {
 			continue
 		}
 		noMetaProps = append(noMetaProps, p)

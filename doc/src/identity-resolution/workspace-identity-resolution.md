@@ -24,8 +24,6 @@ Hence, it follows that if there are no identifiers defined in the workspace, the
 
 An identifier consists in **a property path** which refers to a property of the `users_identities` schema which have [an allowed type](./allowed-types-for-identifiers.md).
 
-> The properties shown in the UI are currently wrong. See the issue [#321](https://github.com/open2b/chichi/issues/321). 
-
 It is possible to define zero, one, or more identifiers for the identity resolution. 
 
 In case more than one identifier is defined, it is necessary to choose a **priority order**, which will be taken into account by the identity resolution procedure.

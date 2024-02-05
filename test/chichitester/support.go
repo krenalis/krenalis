@@ -221,6 +221,19 @@ func (c *Chichi) Executions(connection int) []any {
 	return c.MustCall("GET", method, nil).([]any)
 }
 
+func (c *Chichi) IdentifiersSchema() types.Type {
+	mapSchema := c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers-schema", nil)
+	jsonSchema, err := json.Marshal(mapSchema)
+	if err != nil {
+		c.t.Fatalf("cannot marshal schema: %s", err)
+	}
+	schema, err := types.Parse(string(jsonSchema))
+	if err != nil {
+		c.t.Fatalf("cannot parse schema: %s", err)
+	}
+	return schema
+}
+
 func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	endpoint := "https://" + testsSettings.ChichiHost + "/" + "api"
 	tr := &http.Transport{
