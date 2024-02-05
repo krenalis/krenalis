@@ -1,3 +1,4 @@
+type UserTab = 'traits' | 'events' | 'identities';
 interface UserProperty {
 	name: string;
 	isUsed: boolean;
@@ -9,4 +10,4 @@ interface UserPagination {
 	last: number;
 }
 
-export type { UserProperty, UserPagination };
+export type { UserProperty, UserPagination, UserTab };

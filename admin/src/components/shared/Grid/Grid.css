@@ -40,6 +40,23 @@
 	padding: 15px 0;
 }
 
+.grid .gridRow.selected .gridCell {
+	background-color: var(--sl-color-primary-50) !important;
+}
+
+.grid .gridRow .gridCell .cellContent .object {
+	font-family: monospace;
+	background-color: var(--sl-color-neutral-100);
+	font-size: 13px;
+	border-radius: 5px;
+	padding: 0 3px;
+	transition: background-color 0.3s;
+}
+
+.grid .gridRow.selected .gridCell .object {
+	background-color: var(--sl-color-primary-100);
+}
+
 .grid .cellContent {
 	padding: 0 20px;
 	width: fit-content;

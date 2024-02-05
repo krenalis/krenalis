@@ -503,10 +503,11 @@ func (state *State) executeAction(n notification) {
 
 // AddWorkspace is the event sent when a workspace is added.
 type AddWorkspace struct {
-	ID            int
-	Organization  int
-	Name          string
-	PrivacyRegion PrivacyRegion
+	ID                  int
+	Organization        int
+	Name                string
+	PrivacyRegion       PrivacyRegion
+	DisplayedProperties DisplayedProperties
 }
 
 // addWorkspace adds a workspace.
@@ -517,12 +518,13 @@ func (state *State) addWorkspace(n notification) {
 	}
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
-		mu:            &sync.Mutex{},
-		connections:   map[int]*Connection{},
-		ID:            e.ID,
-		organization:  organization,
-		Name:          e.Name,
-		PrivacyRegion: e.PrivacyRegion,
+		mu:                  &sync.Mutex{},
+		connections:         map[int]*Connection{},
+		ID:                  e.ID,
+		organization:        organization,
+		Name:                e.Name,
+		PrivacyRegion:       e.PrivacyRegion,
+		DisplayedProperties: e.DisplayedProperties,
 	}
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
@@ -996,12 +998,13 @@ func (state *State) setWarehouse(n notification) {
 	}
 }
 
-// SetWorkspace is the event sent when the name and the privacy region of a
-// workspace are changed.
+// SetWorkspace is the event sent when the name, the privacy region and the
+// displayed properties of a workspace are changed.
 type SetWorkspace struct {
-	Workspace     int
-	Name          string
-	PrivacyRegion PrivacyRegion
+	Workspace           int
+	Name                string
+	PrivacyRegion       PrivacyRegion
+	DisplayedProperties DisplayedProperties
 }
 
 // setWorkspace sets the name and the privacy region of a workspace.
@@ -1013,6 +1016,7 @@ func (state *State) setWorkspace(n notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Name = e.Name
 		w.PrivacyRegion = e.PrivacyRegion
+		w.DisplayedProperties = e.DisplayedProperties
 	})
 	for _, listener := range state.listeners.SetWorkspace {
 		listener(e)

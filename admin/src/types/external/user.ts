@@ -1,5 +1,3 @@
-import { ReactNode } from 'react';
-
 interface UserEventContextApp {
 	name: string;
 	version: string;
@@ -113,10 +111,15 @@ interface UserEvent {
 	traits?: any;
 	type?: string;
 	userId?: string;
-	logo?: ReactNode; // inserted by UI. TODO: define transformation logic in separate file.
 }
 
 type UserTraits = Record<string, any>;
+
+interface UserIdentity {
+	Connection: number;
+	ExternalId: string;
+	Timestamp: string;
+}
 
 interface User {
 	id: number;
@@ -124,4 +127,4 @@ interface User {
 	traits: UserTraits;
 }
 
-export type { User, UserEvent, UserTraits };
+export type { User, UserEvent, UserTraits, UserIdentity };

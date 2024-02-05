@@ -1,17 +1,15 @@
 import { createContext } from 'react';
 import { UserPagination, UserProperty } from '../types/internal/user';
-import { GridColumn, GridRow } from '../types/componentTypes/Grid.types';
 
 interface UsersContext {
-	usersRows: GridRow[];
+	users: Record<string, any>[];
 	usersCount: number;
 	limit: number;
-	properties: UserProperty[];
+	usersProperties: UserProperty[];
 	pagination: UserPagination;
-	columnDefs: GridColumn[];
 	isLoading: boolean;
 	userIDList: number[];
-	fetchUsers: (page: number) => void;
+	fetchUsers: (page: number) => Promise<number[]>;
 }
 
 const usersContext = createContext<UsersContext>({} as UsersContext);

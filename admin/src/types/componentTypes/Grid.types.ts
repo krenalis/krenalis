@@ -13,6 +13,7 @@ interface StandardGridRow {
 	key?: string;
 	onClick?: () => void;
 	animation?: string;
+	selected?: boolean;
 }
 
 type NestedGridRows = GridRow[];

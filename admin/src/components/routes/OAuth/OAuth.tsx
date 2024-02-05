@@ -27,7 +27,7 @@ const OAuth = () => {
 
 	useEffect(() => {
 		const fetchOAuthToken = async () => {
-			const connectorID = localStorage.getItem('addConnectionID');
+			const connectorID = localStorage.getItem('chichi_ui_add_connection_id');
 			const connector = connectors.find((c) => c.id === Number(connectorID));
 			if (connector == null) {
 				console.error(`connector with id ${Number(connectorID)} does not exist`);
@@ -56,10 +56,9 @@ const OAuth = () => {
 				setErrorMessage(`${connector.name} didn't respond with a valid authentication code.`);
 				return;
 			}
-
-			const connectionRole = localStorage.getItem('addConnectionRole');
-			localStorage.removeItem('addConnectionID');
-			localStorage.removeItem('addConnectionRole');
+			const connectionRole = localStorage.getItem('chichi_ui_add_connection_role');
+			localStorage.removeItem('chichi_ui_add_connection_id');
+			localStorage.removeItem('chichi_ui_add_connection_role');
 			let oauthToken: string;
 			try {
 				oauthToken = await api.workspaces.oauthToken(Number(connectorID), oauthCode);

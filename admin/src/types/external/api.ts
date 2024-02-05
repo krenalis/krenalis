@@ -1,6 +1,6 @@
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorAction, ConnectorAlert } from './ui';
-import { UserEvent, UserTraits } from './user';
+import { UserEvent, UserIdentity, UserTraits } from './user';
 
 interface authCodeURLResponse {
 	url: string;
@@ -105,6 +105,11 @@ interface userTraitsResponse {
 	traits: UserTraits;
 }
 
+interface UserIdentitiesResponse {
+	identities: UserIdentity[];
+	count: number;
+}
+
 interface EventPreviewResponse {
 	preview: string;
 }
@@ -172,6 +177,7 @@ export type {
 	AppUsersResponse,
 	UserEventsResponse,
 	userTraitsResponse,
+	UserIdentitiesResponse,
 	EventPreviewResponse,
 	ObservedEvent,
 	Member,

@@ -34,7 +34,7 @@ const useApp = (
 	const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
 	const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState<boolean>(false);
 	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(
-		Number(localStorage.getItem('chichi_workspace_id')),
+		Number(localStorage.getItem('chichi_ui_workspace_id')),
 	);
 
 	let api = new API(window.location.origin, selectedWorkspace);
@@ -280,9 +280,9 @@ const useApp = (
 
 	useEffect(() => {
 		if (selectedWorkspace === 0) {
-			localStorage.removeItem('chichi_workspace_id');
+			localStorage.removeItem('chichi_ui_workspace_id');
 		} else {
-			localStorage.setItem('chichi_workspace_id', String(selectedWorkspace));
+			localStorage.setItem('chichi_ui_workspace_id', String(selectedWorkspace));
 		}
 	}, [selectedWorkspace]);
 

@@ -278,15 +278,16 @@ type Warehouse struct {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu            *sync.Mutex
-	Warehouse     *Warehouse
-	connections   map[int]*Connection
-	ID            int
-	organization  *Organization
-	Name          string
-	resources     map[int]*Resource
-	Identifiers   []string
-	PrivacyRegion PrivacyRegion
+	mu                  *sync.Mutex
+	Warehouse           *Warehouse
+	connections         map[int]*Connection
+	ID                  int
+	organization        *Organization
+	Name                string
+	resources           map[int]*Resource
+	Identifiers         []string
+	PrivacyRegion       PrivacyRegion
+	DisplayedProperties DisplayedProperties
 }
 
 // Organization returns the organization of the workspace.
@@ -350,6 +351,14 @@ const (
 	PrivacyRegionNotSpecified PrivacyRegion = ""
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
+
+// DisplayedProperties represents the displayed properties.
+type DisplayedProperties struct {
+	Image       string
+	FirstName   string
+	LastName    string
+	Information string
+}
 
 // Layouts represents the layouts used to format DateTime, Date, and Time
 // values.

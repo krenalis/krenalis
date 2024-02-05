@@ -154,15 +154,16 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				})
 				router.Put("/", func(w http.ResponseWriter, r *http.Request) {
 					var req struct {
-						Name          string
-						PrivacyRegion apis.PrivacyRegion
+						Name                string
+						PrivacyRegion       apis.PrivacyRegion
+						DisplayedProperties apis.DisplayedProperties
 					}
 					err := json.NewDecoder(r.Body).Decode(&req)
 					if err != nil {
 						respond(w, errors.BadRequest("invalid JSON"))
 						return
 					}
-					err = workspace.Set(ctx, req.Name, req.PrivacyRegion)
+					err = workspace.Set(ctx, req.Name, req.PrivacyRegion, req.DisplayedProperties)
 					respond(w, err)
 				})
 				router.Delete("/", func(w http.ResponseWriter, r *http.Request) {

@@ -179,10 +179,15 @@ func (state *State) Load() error {
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_settings,\n"+
-			"identifiers, privacy_region FROM workspaces",
+			"identifiers, privacy_region, displayed_image, displayed_first_name, displayed_last_name, displayed_information\n"+
+			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
 				var warehouseType *WarehouseType
+				var displayedImage string
+				var displayedFirstName string
+				var displayedLastName string
+				var displayedInformation string
 				var warehouseSettings []byte
 				for rows.Next() {
 					ws := &Workspace{
@@ -191,7 +196,8 @@ func (state *State) Load() error {
 						resources:   map[int]*Resource{},
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseSettings,
-						&ws.Identifiers, &ws.PrivacyRegion); err != nil {
+						&ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
+						&displayedFirstName, &displayedLastName, &displayedInformation); err != nil {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
@@ -200,6 +206,12 @@ func (state *State) Load() error {
 							Type:     *warehouseType,
 							Settings: warehouseSettings,
 						}
+					}
+					ws.DisplayedProperties = DisplayedProperties{
+						Image:       displayedImage,
+						FirstName:   displayedFirstName,
+						LastName:    displayedLastName,
+						Information: displayedInformation,
 					}
 					ws.organization.workspaces[ws.ID] = ws
 					state.workspaces[ws.ID] = ws

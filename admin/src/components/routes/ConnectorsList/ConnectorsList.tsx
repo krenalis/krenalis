@@ -34,8 +34,8 @@ const ConnectorsList = () => {
 	}, [goToConnectorSettings]);
 
 	const authorizeWithOAuth = async (connectorID: number) => {
-		localStorage.setItem('addConnectionID', String(connectorID));
-		localStorage.setItem('addConnectionRole', connectionRole);
+		localStorage.setItem('chichi_ui_add_connection_id', String(connectorID));
+		localStorage.setItem('chichi_ui_add_connection_role', connectionRole);
 		let res: authCodeURLResponse;
 		try {
 			res = await api.connectors.authCodeURL(connectorID);

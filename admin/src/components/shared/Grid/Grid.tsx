@@ -78,7 +78,9 @@ const Grid = ({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRow
 			continue;
 		}
 		const r = row as StandardGridRow;
-		rowComponents.push(<GridRow key={i} row={r} columns={columns} className={`gridRow ${className}`} />);
+		rowComponents.push(
+			<GridRow key={i} row={r} columns={columns} className={`gridRow${className ? ' ' + className : ''}`} />,
+		);
 	}
 
 	return (

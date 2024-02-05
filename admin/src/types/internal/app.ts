@@ -23,7 +23,6 @@ interface EventListenerEvent {
 	id: number;
 	err: string;
 	type: string;
-	path: string;
 	time: string;
 	source: string;
 	full: ObservedEvent;

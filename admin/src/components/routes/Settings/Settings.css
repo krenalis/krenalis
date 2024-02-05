@@ -1,5 +1,5 @@
 .settings__content {
-	height: calc(100% - 70px);
+	min-height: calc(100% - 70px);
 	background-color: var(--bg-gray);
 }
 

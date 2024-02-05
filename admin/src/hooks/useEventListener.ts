@@ -62,7 +62,6 @@ const useEventListener = (
 						id: id,
 						err: e.Err,
 						type: dec.type,
-						path: dec.properties.url,
 						time: e.Header.receivedAt,
 						source: JSON.stringify(dec, null, 4),
 						full: e,

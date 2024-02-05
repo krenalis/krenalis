@@ -64,6 +64,10 @@ CREATE TABLE workspaces (
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
     identifiers text[] NOT NULL DEFAULT '{}',
     privacy_region privacy_region NOT NULL DEFAULT '',
+    displayed_image varchar(100) NOT NULL DEFAULT '',
+    displayed_first_name varchar(100) NOT NULL DEFAULT '',
+    displayed_last_name varchar(100) NOT NULL DEFAULT '',
+    displayed_information varchar(100) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 

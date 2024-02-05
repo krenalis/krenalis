@@ -19,7 +19,7 @@ import {
 import { adminBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
 import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
-import Workspace, { AddWorkspaceResponse, PrivacyRegion } from '../../types/external/workspace';
+import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from '../../types/external/workspace';
 import {
 	UIResponse,
 	UIValues,
@@ -44,6 +44,7 @@ import {
 	MemberToSet,
 	Member,
 	MemberInvitationResponse,
+	UserIdentitiesResponse,
 } from '../../types/external/api';
 
 class API {
@@ -411,6 +412,13 @@ class Users {
 	traits = async (user: number): Promise<userTraitsResponse> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/traits`, http.GET);
 	};
+
+	identities = async (user: number, first: number, limit: number): Promise<UserIdentitiesResponse> => {
+		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/identities`, http.POST, {
+			first: first,
+			limit: limit,
+		});
+	};
 }
 
 class Workspaces {
@@ -446,10 +454,15 @@ class Workspaces {
 		return await call(`${this.apiURL}`, http.GET);
 	};
 
-	update = async (name: string, privacyRegion: PrivacyRegion): Promise<void> => {
+	update = async (
+		name: string,
+		privacyRegion: PrivacyRegion,
+		displayedProperties: DisplayedProperties,
+	): Promise<void> => {
 		return await call(`${this.apiURL}`, http.PUT, {
 			name,
 			privacyRegion,
+			displayedProperties,
 		});
 	};
 
@@ -514,6 +527,10 @@ class Workspaces {
 
 	disconnectWarehouse = async (): Promise<void> => {
 		return await call(`${this.apiURL}/disconnect-warehouse`, http.POST);
+	};
+
+	runIdentityResolution = async (): Promise<void> => {
+		return await call(`${this.apiURL}/run-identity-resolution`, http.POST);
 	};
 }
 

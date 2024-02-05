@@ -10,9 +10,7 @@ import ConnectionsList from './components/routes/ConnectionsList/ConnectionsList
 import ConnectionWrapper from './components/routes/ConnectionWrapper/ConnectionWrapper';
 import { ConnectionProvider } from './context/providers/ConnectionProvider';
 import RootError from './components/routes/RootError/RootError';
-import UsersWrapper from './components/routes/UsersWrapper/UsersWrapper';
-import UsersList from './components/routes/UsersList/UsersList';
-import User from './components/routes/User/User';
+import { Users } from './components/routes/Users/Users';
 import Schema from './components/routes/Schema/Schema';
 import OAuth from './components/routes/OAuth/OAuth';
 import NotFound from './components/routes/NotFound/NotFound';
@@ -74,13 +72,7 @@ const router = createBrowserRouter([
 					},
 					{ path: 'connections', element: <ConnectionsMap /> },
 					{ path: 'oauth/authorize', element: <OAuth /> },
-					{
-						element: <UsersWrapper />,
-						children: [
-							{ path: 'users/:id', element: <User /> },
-							{ path: 'users', element: <UsersList /> },
-						],
-					},
+					{ path: 'users', element: <Users /> },
 					{
 						path: 'schema',
 						element: <Schema />,

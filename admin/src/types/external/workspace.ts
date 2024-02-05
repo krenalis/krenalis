@@ -2,11 +2,19 @@ import { Identifiers } from './identifiers';
 
 type PrivacyRegion = 'Europe' | '';
 
+interface DisplayedProperties {
+	Image: string;
+	FirstName: string;
+	LastName: string;
+	Information: string;
+}
+
 interface Workspace {
 	ID: number;
 	Name: string;
 	Identifiers: Identifiers;
 	PrivacyRegion: PrivacyRegion;
+	DisplayedProperties: DisplayedProperties;
 }
 
 interface AddWorkspaceResponse {
@@ -14,4 +22,4 @@ interface AddWorkspaceResponse {
 }
 
 export default Workspace;
-export type { PrivacyRegion, AddWorkspaceResponse };
+export type { PrivacyRegion, AddWorkspaceResponse, DisplayedProperties };

@@ -1007,9 +1007,12 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string)
 	return err
 }
 
-// Set sets the name and the privacy region of the workspace. name must be
-// between 1 and 100 runes long.
-func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegion) error {
+// Set sets the name, the privacy region and the displayed properties of the
+// workspace. name must be between 1 and 100 runes long. displayedProperties
+// must contain valid displayed property names. A valid displayed property name
+// is an empty string, or alternatively a valid property name between 1 and 100
+// runes long.
+func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegion, displayedProperties DisplayedProperties) error {
 	this.apis.mustBeOpen()
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return errors.BadRequest("name %q is not valid", name)
@@ -1020,15 +1023,31 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	default:
 		return errors.BadRequest("invalid privacy region %q", string(region))
 	}
+	if !isValidDisplayedPropertyName(displayedProperties.Image) {
+		return errors.BadRequest("invalid displayed image %q", displayedProperties.Image)
+	}
+	if !isValidDisplayedPropertyName(displayedProperties.FirstName) {
+		return errors.BadRequest("invalid displayed first name %q", displayedProperties.FirstName)
+	}
+	if !isValidDisplayedPropertyName(displayedProperties.LastName) {
+		return errors.BadRequest("invalid displayed last name %q", displayedProperties.LastName)
+	}
+	if !isValidDisplayedPropertyName(displayedProperties.Information) {
+		return errors.BadRequest("invalid displayed information %q", displayedProperties.Information)
+	}
 	ws := this.workspace
 	n := state.SetWorkspace{
-		Workspace:     ws.ID,
-		Name:          name,
-		PrivacyRegion: state.PrivacyRegion(region),
+		Workspace:           ws.ID,
+		Name:                name,
+		PrivacyRegion:       state.PrivacyRegion(region),
+		DisplayedProperties: state.DisplayedProperties(displayedProperties),
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2 WHERE id = $3",
-			n.Name, n.PrivacyRegion, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2, displayed_image = $3, "+
+			"displayed_first_name = $4, displayed_last_name = $5, displayed_information = $6 "+
+			"WHERE id = $7",
+			n.Name, n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
+			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -1429,4 +1448,14 @@ func validateSchema(table string, schema types.Type) error {
 		}
 	}
 	return nil
+}
+
+// isValidDisplayedPropertyName reports whether property is a valid displayed
+// property name. A valid displayed property name is an empty string, or
+// alternatively a valid property name between 1 and 100 runes long.
+func isValidDisplayedPropertyName(property string) bool {
+	if property != "" && (utf8.RuneCountInString(property) > 100 || !types.IsValidPropertyName(property)) {
+		return false
+	}
+	return true
 }

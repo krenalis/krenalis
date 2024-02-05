@@ -1,0 +1,132 @@
+import { useState, useContext, useEffect } from 'react';
+import AppContext from '../../../context/AppContext';
+import { UserEventsResponse, UserIdentitiesResponse, userTraitsResponse } from '../../../types/external/api';
+import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
+import { UserTab } from '../../../types/internal/user';
+import { UserEvent, UserIdentity } from '../../../types/external/user';
+
+const useUserDrawer = (id: number, selectedTab: UserTab) => {
+	const [traits, setTraits] = useState<Map<string, any>>();
+	const [events, setEvents] = useState<UserEvent[]>();
+	const [identities, setIdentities] = useState<UserIdentity[]>();
+	const [isLoading, setIsLoading] = useState<boolean>(false);
+
+	const { api, handleError, redirect } = useContext(AppContext);
+
+	useEffect(() => {
+		const fetchUserTraits = async () => {
+			setIsLoading(true);
+			// Fetch the user's traits.
+			let traitsResponse: userTraitsResponse;
+			try {
+				traitsResponse = await api.workspaces.users.traits(id);
+			} catch (err) {
+				setTimeout(() => setIsLoading(false), 200);
+				if (err instanceof NotFoundError) {
+					handleError('This user does not exist');
+					redirect('users');
+					return;
+				}
+				if (err instanceof UnprocessableError) {
+					if (err.code === 'NoWarehouse') {
+						handleError('The workspace is not connected to any data warehouse');
+						return;
+					}
+					if (err.code === 'DataWarehouseFailed') {
+						handleError('An error occurred with the data warehouse');
+						return;
+					}
+				}
+				handleError(err);
+				return;
+			}
+			const m = new Map();
+			for (const key in traitsResponse.traits) {
+				if (traitsResponse.traits.hasOwnProperty(key)) {
+					m.set(key, traitsResponse.traits[key]);
+				}
+			}
+			setTraits(m);
+			setTimeout(() => setIsLoading(false), 200);
+			return;
+		};
+		if (id === 0) {
+			return;
+		}
+		fetchUserTraits();
+	}, [id]);
+
+	useEffect(() => {
+		const fetchUserTab = async () => {
+			if (selectedTab === 'events') {
+				setIsLoading(true);
+				// Fetch the user's events.
+				let eventsResponse: UserEventsResponse;
+				try {
+					eventsResponse = await api.workspaces.users.events(id);
+				} catch (err) {
+					setTimeout(() => setIsLoading(false), 200);
+					if (err instanceof NotFoundError) {
+						handleError('This user does not exist');
+						redirect('users');
+						return;
+					}
+					if (err instanceof UnprocessableError) {
+						if (err.code === 'NoWarehouse') {
+							handleError('The workspace is not connected to any data warehouse');
+							return;
+						}
+						if (err.code === 'DataWarehouseFailed') {
+							handleError('An error occurred with the data warehouse');
+							return;
+						}
+					}
+					handleError(err);
+					return;
+				}
+				setEvents(eventsResponse.events);
+				setTimeout(() => setIsLoading(false), 200);
+				return;
+			}
+
+			if (selectedTab === 'identities') {
+				setIsLoading(true);
+				// Fetch the user's identities.
+				let identitiesResponse: UserIdentitiesResponse;
+				try {
+					identitiesResponse = await api.workspaces.users.identities(id, 0, 1000);
+				} catch (err) {
+					setTimeout(() => setIsLoading(false), 200);
+					if (err instanceof NotFoundError) {
+						handleError('This user does not exist');
+						redirect('users');
+						return;
+					}
+					if (err instanceof UnprocessableError) {
+						if (err.code === 'NoWarehouse') {
+							handleError('The workspace is not connected to any data warehouse');
+							return;
+						}
+						if (err.code === 'DataWarehouseFailed') {
+							handleError('An error occurred with the data warehouse');
+							return;
+						}
+					}
+					handleError(err);
+					return;
+				}
+				setIdentities(identitiesResponse.identities);
+				setTimeout(() => setIsLoading(false), 200);
+				return;
+			}
+		};
+		if (id === 0) {
+			return;
+		}
+		fetchUserTab();
+	}, [id, selectedTab]);
+
+	return { isLoading, traits, events, identities };
+};
+
+export { useUserDrawer };

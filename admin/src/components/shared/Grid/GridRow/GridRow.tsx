@@ -23,7 +23,7 @@ const GridRow = ({ row, columns, className }: GridRowProps) => {
 	return (
 		<div
 			key={row.key}
-			className={`${className}${row.onClick ? ' clickable' : ''}`}
+			className={`${className}${row.onClick ? ' clickable' : ''}${row.selected ? ' selected' : ''}`}
 			onClick={row.onClick}
 			data-animation={row.animation}
 		>

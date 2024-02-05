@@ -701,14 +701,15 @@ func isValidInvitationToken(token string) bool {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	apis          *APIs
-	organization  *Organization
-	store         *datastore.Store
-	workspace     *state.Workspace
-	ID            int
-	Name          string
-	Identifiers   []string
-	PrivacyRegion PrivacyRegion
+	apis                *APIs
+	organization        *Organization
+	store               *datastore.Store
+	workspace           *state.Workspace
+	ID                  int
+	Name                string
+	Identifiers         []string
+	PrivacyRegion       PrivacyRegion
+	DisplayedProperties DisplayedProperties
 }
 
 type OrganizationSort int
@@ -732,3 +733,11 @@ const (
 	PrivacyRegionNotSpecified PrivacyRegion = ""
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
+
+// DisplayedProperties represents the displayed properties.
+type DisplayedProperties struct {
+	Image       string
+	FirstName   string
+	LastName    string
+	Information string
+}
