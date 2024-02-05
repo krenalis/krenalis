@@ -268,8 +268,8 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 
 // Set sets the action.
 //
-// Refer to the specifications in the file "connector/Actions support.md" for
-// more details.
+// Refer to the specifications in the file "apis/Actions support.md" for more
+// details.
 //
 // It returns an errors.UnprocessableError error with code LanguageNotSupported,
 // if the transformation language is not supported.
@@ -560,8 +560,8 @@ func (this *Action) file() *connectors.File {
 // action (using the method Connection.AddAction) or updating an existing one
 // (using the method Action.Set).
 //
-// Refer to the specifications in the file "connector/Actions support.md" for
-// more details.
+// Refer to the specifications in the file "apis/Actions support.md" for more
+// details.
 type ActionToSet struct {
 
 	// Name must be a non-empty valid UTF-8 encoded string and cannot be longer
