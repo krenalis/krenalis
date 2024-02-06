@@ -108,6 +108,13 @@ func Test_UsersIdentities(t *testing.T) {
 			externalID := identity["ExternalId"].(string)
 			timestamp := identity["Timestamp"].(string)
 
+			if _, ok := identity["AnonymousIds"]; !ok {
+				t.Fatalf("identity should have an 'AnonymousIds' key")
+			}
+			if anonIds := identity["AnonymousIds"]; anonIds != nil {
+				t.Fatalf("identity should have a nil 'AnonymousIds', got %v", anonIds)
+			}
+
 			t.Logf(
 				"the APIs returned an identity for user with GID %d that has"+
 					" connection = %d, external ID = %q and timestamp = %q",

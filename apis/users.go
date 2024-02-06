@@ -125,9 +125,10 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		{Name: "ExternalId", Type: types.Text()},
 		{Name: "Timestamp", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
+		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"Timestamp"}},
+		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"}, {"Timestamp"}},
 		Where:      expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
 		OrderBy:    types.Property{Name: "IdentityId", Type: types.Int(32)},
 		Schema:     schema,
@@ -138,9 +139,10 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		return nil, 0, err
 	}
 	type identity struct {
-		Connection int
-		ExternalId string
-		Timestamp  time.Time
+		Connection   int
+		ExternalId   string
+		AnonymousIds []string // nil for identities not imported from events.
+		Timestamp    time.Time
 	}
 	var identities []identity
 	err = records.For(func(record warehouses.Record) error {
@@ -149,11 +151,19 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		}
 		connectionID := record.Properties["Connection"].(int)
 		externalID := record.Properties["ExternalId"].(string)
+		var anonymousIDs []string
+		if anonIDs, ok := record.Properties["AnonymousIds"].([]any); ok {
+			anonymousIDs = make([]string, len(anonIDs))
+			for i := range anonIDs {
+				anonymousIDs[i] = anonIDs[i].(string)
+			}
+		}
 		timestamp := record.Properties["Timestamp"].(time.Time)
 		identities = append(identities, identity{
-			Connection: connectionID,
-			ExternalId: externalID,
-			Timestamp:  timestamp,
+			Connection:   connectionID,
+			ExternalId:   externalID,
+			Timestamp:    timestamp,
+			AnonymousIds: anonymousIDs,
 		})
 		return nil
 	})
