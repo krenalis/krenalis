@@ -30,6 +30,7 @@ type Connector struct {
 	HasSheets              bool
 	HasSettings            bool
 	Icon                   string
+	ExternalIDLabel        string
 	FileExtension          string
 	SampleQuery            string
 	WebhooksPer            WebhooksPer

@@ -103,9 +103,12 @@ func Test_UsersIdentities(t *testing.T) {
 		}
 
 		for _, identity := range identities {
+
 			connectionInt64, _ := identity["Connection"].(json.Number).Int64()
 			connection := int(connectionInt64)
-			externalID := identity["ExternalId"].(string)
+
+			externalID := identity["ExternalId"].(map[string]any)
+
 			timestamp := identity["Timestamp"].(string)
 
 			if _, ok := identity["AnonymousIds"]; !ok {
@@ -130,7 +133,13 @@ func Test_UsersIdentities(t *testing.T) {
 				t.Fatalf("unexpected connection %d", connection)
 			}
 
-			if !strings.HasPrefix(externalID, externalIDPrefix) {
+			// Check the External ID label.
+			const expectedExternalIDLabel = "ID"
+			if expectedExternalIDLabel != externalID["Label"].(string) {
+				t.Fatalf("expected External ID label %q, got %q", expectedExternalIDLabel, externalID["Label"].(string))
+			}
+
+			if !strings.HasPrefix(externalID["Value"].(string), externalIDPrefix) {
 				t.Fatalf("unexpected external ID %q, it should have prefix %q", externalID, externalIDPrefix)
 			}
 

@@ -30,6 +30,7 @@ type App struct {
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	TermForUsers           string
 	TermForGroups          string
+	ExternalIDLabel        string
 	Icon                   string      // icon in SVG format
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0

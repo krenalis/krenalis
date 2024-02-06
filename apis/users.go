@@ -10,6 +10,7 @@ package apis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -138,33 +139,82 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	if err != nil {
 		return nil, 0, err
 	}
+
+	type labelValue struct {
+		Label string
+		Value string
+	}
 	type identity struct {
 		Connection   int
-		ExternalId   string
-		AnonymousIds []string // nil for identities not imported from events.
+		ExternalId   labelValue // zero struct for identities imported from anonymous events.
+		AnonymousIds []string   // nil for identities not imported from events.
 		Timestamp    time.Time
 	}
+
+	// Create the identities from the records returned by the warehouse.
 	var identities []identity
 	err = records.For(func(record warehouses.Record) error {
 		if record.Err != nil {
 			return err
 		}
-		connectionID := record.Properties["Connection"].(int)
-		externalID := record.Properties["ExternalId"].(string)
-		var anonymousIDs []string
-		if anonIDs, ok := record.Properties["AnonymousIds"].([]any); ok {
-			anonymousIDs = make([]string, len(anonIDs))
-			for i := range anonIDs {
-				anonymousIDs[i] = anonIDs[i].(string)
+
+		// Retrieve the connection.
+		connID := record.Properties["Connection"].(int)
+		conn, ok := this.apis.state.Connection(connID)
+		if !ok {
+			// The connection for this user identity no longer exists, so skip
+			// this identity.
+			return nil
+		}
+
+		// Determine the value for the external ID, which may be the empty
+		// string for identities incoming from anonymous events.
+		extIDValue := record.Properties["ExternalId"].(string)
+
+		// Determine the label for the External ID, except for the case of
+		// "anonymous identities", which are identities imported from anonymous
+		// events. In that case, both the External ID value and label must be
+		// empty.
+		var extIDLabel string
+		if extIDValue != "" {
+			c := conn.Connector()
+			switch c.Type {
+			case state.AppType:
+				extIDLabel = c.ExternalIDLabel
+				if extIDLabel == "" {
+					extIDLabel = "ID"
+				}
+			case state.DatabaseType, state.FileType:
+				extIDLabel = "ID"
+			case state.MobileType, state.ServerType, state.WebsiteType:
+				extIDLabel = "User ID"
+			default:
+				return fmt.Errorf("unexpected connector type %v", c.Type)
 			}
 		}
+
+		// Determine the anonymous IDs.
+		var anonIDs []string
+		if ids, ok := record.Properties["AnonymousIds"].([]any); ok {
+			anonIDs = make([]string, len(ids))
+			for i := range ids {
+				anonIDs[i] = ids[i].(string)
+			}
+		}
+
+		// Determine the timestamp.
 		timestamp := record.Properties["Timestamp"].(time.Time)
+
 		identities = append(identities, identity{
-			Connection:   connectionID,
-			ExternalId:   externalID,
+			Connection: connID,
+			ExternalId: labelValue{
+				Label: extIDLabel,
+				Value: extIDValue,
+			},
+			AnonymousIds: anonIDs,
 			Timestamp:    timestamp,
-			AnonymousIds: anonymousIDs,
 		})
+
 		return nil
 	})
 	if err != nil {

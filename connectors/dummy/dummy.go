@@ -53,6 +53,7 @@ func init() {
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
+		ExternalIDLabel:        "Dummy Unique ID",
 		Icon:                   icon,
 	}, new)
 }

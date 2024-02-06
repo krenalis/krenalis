@@ -60,6 +60,7 @@ func (state *State) Load() error {
 					c.DestinationDescription = app.DestinationDescription
 					c.TermForUsers = app.TermForUsers
 					c.TermForGroups = app.TermForGroups
+					c.ExternalIDLabel = app.ExternalIDLabel
 					ct = app.ConnectionReflectType()
 					if ct.Implements(appEventsConnectionType) {
 						c.Targets |= EventsFlag

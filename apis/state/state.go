@@ -376,6 +376,7 @@ type Connector struct {
 	DestinationDescription string
 	TermForUsers           string
 	TermForGroups          string
+	ExternalIDLabel        string
 	Type                   ConnectorType
 	Targets                ConnectorTargets
 	HasSheets              bool

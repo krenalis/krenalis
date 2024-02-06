@@ -46,6 +46,7 @@ func init() {
 		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
 		TermForUsers:           "contacts",
 		TermForGroups:          "companies",
+		ExternalIDLabel:        "HubSpot ID",
 		Icon:                   icon,
 		WebhooksPer:            connector.WebhooksPerConnector,
 		OAuth: connector.OAuth{

@@ -115,9 +115,14 @@ interface UserEvent {
 
 type UserTraits = Record<string, any>;
 
+interface UserIdentityLabelValue {
+	Label: string;
+	Value: string;
+}
+
 interface UserIdentity {
 	Connection: number;
-	ExternalId: string;
+	ExternalId: UserIdentityLabelValue;
 	Timestamp: string;
 }
 

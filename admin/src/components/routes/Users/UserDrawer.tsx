@@ -260,7 +260,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 												{connection.name}
 											</div>
 											<div className='user-drawer__identity-external-id'>
-												(user: {identity.ExternalId})
+												({identity.ExternalId.Label}: {identity.ExternalId.Value})
 											</div>
 										</div>
 										<div className='user-drawer__identity-date'>
