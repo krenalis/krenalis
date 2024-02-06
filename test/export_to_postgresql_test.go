@@ -35,10 +35,10 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "lastName", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+				{Name: "email", Type: types.Text(), Nullable: true},
+				{Name: "firstName", Type: types.Text(), Nullable: true},
+				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
@@ -84,9 +84,9 @@ func TestExportToPostgreSQL(t *testing.T) {
 		Name:      "Export users to PostgreSQL",
 		TableName: "test_export_to_db",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "firstName", Type: types.Text()},
-			{Name: "lastName", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "lastName", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},

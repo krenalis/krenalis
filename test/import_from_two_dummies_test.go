@@ -37,9 +37,9 @@ func TestImportFromTwoDummies(t *testing.T) {
 			{Name: "lastName", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "firstName", Type: types.Text()},
-			{Name: "lastName", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "lastName", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{

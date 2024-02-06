@@ -57,8 +57,8 @@ func TestImportUsersFromFile(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "firstName", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{

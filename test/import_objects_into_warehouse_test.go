@@ -32,11 +32,11 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
 			{Name: "ios", Type: types.Object([]types.Property{
-				{Name: "id", Type: types.Text()},
-				{Name: "idfa", Type: types.Text()},
-			})},
+				{Name: "id", Type: types.Text(), Nullable: true},
+				{Name: "idfa", Type: types.Text(), Nullable: true},
+			})}, // TODO(Gianluca): see https://github.com/open2b/chichi/issues/527 for nullability of 'ios'.
 		}),
 		Transformation: chichitester.Transformation{
 			Function: &chichitester.TransformationFunction{

@@ -544,6 +544,12 @@ func CheckConformity(name string, t1, t2 types.Type) error {
 			if !ok {
 				return &SchemaError{Msg: fmt.Sprintf(`"%s" property no longer exists`, path)}
 			}
+			if p1.Nullable != p2.Nullable {
+				if p1.Nullable && !p2.Nullable {
+					return &SchemaError{Msg: fmt.Sprintf("property %q has changed from nullable to non-nullable", p1.Name)}
+				}
+				return &SchemaError{Msg: fmt.Sprintf("property %q has changed from non-nullable to nullable", p1.Name)}
+			}
 			err := CheckConformity(path, p1.Type, p2.Type)
 			if err != nil {
 				return err
