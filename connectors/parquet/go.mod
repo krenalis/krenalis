@@ -1,6 +1,6 @@
 module parquet
 
-go 1.21
+go 1.22
 
 require github.com/fraugster/parquet-go v0.12.0
 

@@ -1,6 +1,6 @@
 module chichi
 
-go 1.21
+go 1.22
 
 replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.12.0-fix
 

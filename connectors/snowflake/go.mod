@@ -1,6 +1,6 @@
 module snowflake
 
-go 1.21
+go 1.22
 
 require github.com/snowflakedb/gosnowflake v1.7.2
 
