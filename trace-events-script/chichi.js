@@ -35,7 +35,7 @@ function main() {
 
 	for (let i = 0; i < analytics.length; i++) {
 		const event = analytics[i];
-		analytics[event[0]](...event[1]);
+		analytics[event[0]](...event.splice(1));
 	}
 
 	// empty the array.

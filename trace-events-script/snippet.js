@@ -36,7 +36,7 @@
 	for (var i = 0; i < methods.length; i++) {
 		(function (name) {
 			a[name] = function () {
-				a.push([name].concat(arguments));
+				a.push([name].concat(Array.prototype.slice.call(arguments)));
 				return a;
 			};
 		})(methods[i]);
