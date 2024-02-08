@@ -5,7 +5,7 @@
     "test": "deno lint *_test.js test_* *_test_* && deno test *_test.js",
     "fmt": "deno fmt --use-tabs --single-quote --line-width=120 *.js",
     "prettier-test-website": "npx prettier@latest --write \"./website-for-testing/**/*\"",
-    "lint": "deno lint chichi.js analytics.js options.js sender.js session.js storage.js utils.js",
+    "lint": "deno lint analytics.js chichi.js group.js options.js sender.js session.js storage.js user.js utils.js",
     "bundle": "npm run lint && npm run test --fail-fast && ./node_modules/.bin/esbuild chichi.js --outfile=build/chichi.bundle.js --bundle",
     "transpile": "./node_modules/.bin/swc build/chichi.bundle.js -o build/chichi.es5.js",
     "minify": "./node_modules/.bin/esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --format=iife --target=es5",
