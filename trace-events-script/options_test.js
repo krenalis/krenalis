@@ -4,62 +4,57 @@ import Options from './options.js';
 Deno.test('Options', () => {
 	localStorage.clear();
 
-	const thirtyMinutes = 30 * 60000;
+	const base = { debug: false, strategy: 'AB-C', autoTrack: true, timeout: 30 * 60000 };
 
 	const tests = [
-		{ options: undefined, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: null, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: {}, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: [], strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: '', strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { sessions: {} }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { sessions: { autoTrack: true } }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { sessions: { autoTrack: false } }, strategy: 'AB-C', autoTrack: false, timeout: thirtyMinutes },
-		{ options: { sessions: { autoTrack: null } }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { sessions: { timeout: 10 * 1000 } }, strategy: 'AB-C', autoTrack: true, timeout: 10 * 1000 },
-		{ options: { sessions: { timeout: '5000' } }, strategy: 'AB-C', autoTrack: true, timeout: 5 * 1000 },
-		{ options: { sessions: { timeout: Infinity } }, strategy: 'AB-C', autoTrack: true, timeout: Infinity },
-		{ options: { sessions: { timeout: {} } }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { sessions: { timeout: 0 } }, strategy: 'AB-C', autoTrack: false, timeout: thirtyMinutes },
-		{ options: { sessions: { timeout: -5000 } }, strategy: 'AB-C', autoTrack: false, timeout: thirtyMinutes },
-		{
-			options: { sessions: { autoTrack: true, timeout: 20 * 1000 } },
-			strategy: 'AB-C',
-			autoTrack: true,
-			timeout: 20 * 1000,
-		},
-		{
-			options: { sessions: { autoTrack: true, timeout: 0 } },
-			strategy: 'AB-C',
-			autoTrack: false,
-			timeout: thirtyMinutes,
-		},
-		{ options: { strategy: undefined }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { strategy: null }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { strategy: 'ABC' }, strategy: 'ABC', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { strategy: 'AB-C' }, strategy: 'AB-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { strategy: 'A-B-C' }, strategy: 'A-B-C', autoTrack: true, timeout: thirtyMinutes },
-		{ options: { strategy: 'AC-B' }, strategy: 'AC-B', autoTrack: true, timeout: thirtyMinutes },
+		{ options: undefined, ...base },
+		{ options: null, ...base },
+		{ options: {}, ...base },
+		{ options: [], ...base },
+		{ options: '', ...base },
+		{ options: { sessions: {} }, ...base },
+		{ options: { sessions: { autoTrack: true } }, ...base },
+		{ options: { sessions: { autoTrack: false } }, ...base, autoTrack: false },
+		{ options: { sessions: { autoTrack: null } }, ...base },
+		{ options: { sessions: { timeout: 10 * 1000 } }, ...base, timeout: 10 * 1000 },
+		{ options: { sessions: { timeout: '5000' } }, ...base, timeout: 5 * 1000 },
+		{ options: { sessions: { timeout: Infinity } }, ...base, timeout: Infinity },
+		{ options: { sessions: { timeout: {} } }, ...base },
+		{ options: { sessions: { timeout: 0 } }, ...base, autoTrack: false },
+		{ options: { sessions: { timeout: -5000 } }, ...base, autoTrack: false },
+		{ options: { sessions: { autoTrack: true, timeout: 20 * 1000 } }, ...base, timeout: 20 * 1000 },
+		{ options: { sessions: { autoTrack: true, timeout: 0 } }, ...base, autoTrack: false },
+		{ options: { strategy: undefined }, ...base },
+		{ options: { strategy: null }, ...base },
+		{ options: { strategy: 'ABC' }, ...base, strategy: 'ABC' },
+		{ options: { strategy: 'AB-C' }, ...base },
+		{ options: { strategy: 'A-B-C' }, ...base, strategy: 'A-B-C' },
+		{ options: { strategy: 'AC-B' }, ...base, strategy: 'AC-B' },
 		{
 			options: { strategy: 'A-B-C', sessions: { autoTrack: true, timeout: 20 * 1000 } },
+			...base,
 			strategy: 'A-B-C',
-			autoTrack: true,
 			timeout: 20 * 1000,
 		},
+		{ options: { debug: false }, ...base },
+		{ options: { debug: true }, ...base, debug: true },
+		{ options: { debug: 0 }, ...base },
+		{ options: { debug: 1 }, ...base, debug: true },
 	];
 
 	for (let i = 0; i < tests.length; i++) {
 		const test = tests[i];
 		const options = new Options(test.options);
+		assertEquals(options.debug, test.debug);
 		assertEquals(options.sessions.autoTrack, test.autoTrack);
 		assertEquals(options.sessions.timeout, test.timeout);
 		assertEquals(options.strategy, test.strategy);
 	}
 
 	// Test invalid strategies.
-	const invalides = ['', 5, {}, 'CBA', 'A--BC', ' ABC'];
-	for (let i = 0; i < invalides.length; i++) {
-		const strategy = invalides[i];
+	const invalids = ['', 5, {}, 'CBA', 'A--BC', ' ABC'];
+	for (let i = 0; i < invalids.length; i++) {
+		const strategy = invalids[i];
 		try {
 			new Options({ strategy });
 		} catch {

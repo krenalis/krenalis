@@ -6,10 +6,11 @@ class Session {
 	#timeout;
 	#debug;
 
-	constructor(storage, autoTrack, timeout) {
+	constructor(storage, autoTrack, timeout, debug) {
 		this.#autoTrack = autoTrack;
 		this.#storage = storage;
 		this.#timeout = timeout;
+		this.debug(debug);
 		if (autoTrack) {
 			const [id, expiration] = storage.session();
 			const now = getTime();

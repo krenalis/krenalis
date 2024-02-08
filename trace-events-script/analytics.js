@@ -22,8 +22,13 @@ class Analytics {
 	constructor(writeKey, endpoint, options) {
 		this.#options = new Options(options);
 		this.#storage = new Storage();
-		this.#session = new Session(this.#storage, this.#options.sessions.autoTrack, this.#options.sessions.timeout);
-		this.#sender = new Sender(writeKey, endpoint);
+		this.#session = new Session(
+			this.#storage,
+			this.#options.sessions.autoTrack,
+			this.#options.sessions.timeout,
+			this.#options.debug,
+		);
+		this.#sender = new Sender(writeKey, endpoint, this.#options.debug);
 		this.#user = new User(this.#storage);
 		this.#group = new Group(this.#storage);
 		const onReady = this.#onReady;

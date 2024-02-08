@@ -13,9 +13,10 @@ class Sender {
 	#post;
 	#debug;
 
-	constructor(writeKey, endpoint) {
+	constructor(writeKey, endpoint, debug) {
 		this.#writeKey = JSON.stringify(writeKey);
 		this.#endpoint = endpoint;
+		this.debug(debug);
 		this.#post = this.#postFunc();
 		this.#onUnload(() => {
 			this.#flush(true);
