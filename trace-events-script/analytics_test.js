@@ -102,10 +102,10 @@ Deno.test('Analytics', async (t) => {
 		const time = new FakeTime();
 		fetch.install();
 		try {
-			a.identify('17258645', { name: 'John' });
-			a.group('2649247', { name: 'Acme' });
+			void a.identify('17258645', { name: 'John' });
+			void a.group('2649247', { name: 'Acme' });
 			time.tick(1000);
-			await fetch.events(1);
+			await fetch.events(2);
 		} finally {
 			fetch.restore();
 			time.restore();

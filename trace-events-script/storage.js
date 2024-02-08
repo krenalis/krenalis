@@ -2,7 +2,7 @@ const warnMsg = 'Analytics: cannot stringify traits';
 
 class Storage {
 	#store;
-	
+
 	constructor() {
 		try {
 			localStorage.setItem('test', '');
