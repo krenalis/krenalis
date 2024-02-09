@@ -381,19 +381,6 @@ func (sv recordsScanValue) Scan(src any) error {
 	}
 
 	switch p.Name {
-	case sv.businessIDColumn.Name:
-		col := sv.businessIDColumn
-		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
-		if err != nil {
-			slog.Warn("Business ID value cannot be normalized", "err", err)
-		} else {
-			businessID, err := businessIDToString(normalizedValue)
-			if err != nil {
-				slog.Warn("invalid Business ID value", "err", err)
-			} else {
-				sv.record.BusinessID = businessID
-			}
-		}
 	case "id":
 		if src == nil {
 			return errors.New("identity value is NULL")
@@ -407,6 +394,19 @@ func (sv recordsScanValue) Scan(src any) error {
 	case "timestamp":
 		if src == nil {
 			return errors.New("timestamp value is NULL")
+		}
+	case sv.businessIDColumn.Name:
+		col := sv.businessIDColumn
+		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
+		if err != nil {
+			slog.Warn("Business ID value cannot be normalized", "err", err)
+		} else {
+			businessID, err := businessIDToString(normalizedValue)
+			if err != nil {
+				slog.Warn("invalid Business ID value", "err", err)
+			} else {
+				sv.record.BusinessID = businessID
+			}
 		}
 	}
 	value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
