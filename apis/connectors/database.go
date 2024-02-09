@@ -356,6 +356,9 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 			r.err = err
 			return nil
 		}
+		if record.Timestamp.IsZero() {
+			record.Timestamp = time.Now().UTC()
+		}
 		if err := yield(record); err != nil {
 			return err
 		}
@@ -415,7 +418,11 @@ func (sv recordsScanValue) Scan(src any) error {
 	}
 	sv.record.Properties[p.Name] = value
 	if p.Name == "timestamp" {
-		sv.record.Timestamp = value.(time.Time)
+		timestamp := value.(time.Time)
+		if err := validateTimestamp(timestamp); err != nil {
+			return err
+		}
+		sv.record.Timestamp = timestamp
 	}
 	return nil
 }

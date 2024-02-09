@@ -501,6 +501,22 @@ func supportedTypeForBusinessID(t types.Type) bool {
 	}
 }
 
+// validateTimestamp validates the timestamp t, returning an error if it is not
+// valid.
+func validateTimestamp(t time.Time) error {
+	if t.IsZero() {
+		return errors.New("timestamp cannot be the zero time instant (January 1, year 1, 00:00:00 UTC)")
+	}
+	if y := t.Year(); y < 1 || y > 9999 {
+		return fmt.Errorf("timestamp year %d out of range [1,9999]", y)
+	}
+	now := time.Now().UTC()
+	if t.After(now) {
+		return errors.New("timestamp cannot be in the future")
+	}
+	return nil
+}
+
 // webhookURL returns the URL of the webhook for the provided connection and
 // resource.
 // If the connector does not support webhooks, it returns an empty string.

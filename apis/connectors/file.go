@@ -117,12 +117,15 @@ func (file *File) Read(ctx context.Context, name, sheet, businessIDColumn string
 		return nil, nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	r, _, err := s.Reader(ctx, name)
+	r, storageTimestamp, err := s.Reader(ctx, name)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer r.Close()
-	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, businessIDColumn, limit)
+	if err = validateTimestamp(storageTimestamp); err != nil {
+		return nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
+	}
+	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, businessIDColumn, storageTimestamp, limit)
 	err = file.inner.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		if err == _connector.ErrSheetNotExist {
@@ -180,11 +183,14 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.connection.Compression)
-	rc, _, err := s.Reader(ctx, name)
+	rc, storageTimestamp, err := s.Reader(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, businessIDColumn, math.MaxInt)
+	if err = validateTimestamp(storageTimestamp); err != nil {
+		return nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
+	}
+	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, businessIDColumn, storageTimestamp, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -467,7 +473,9 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If the yield function is not nil, it calls the yield function for
 // each record, otherwise it stores the records in the records field.
-func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, businessIDColumn string, limit int) *recordWriter {
+// storageTimestamp is the timestamp provided by the storage connector, and it
+// is used in the case when the file columns do not specify a timestamp.
+func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, businessIDColumn string, storageTimestamp time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -486,6 +494,8 @@ func newRecordWriter(connector int, schema types.Type, identityColumn string, ti
 		typ, _ := schema.Property(timestamp.Name)
 		rw.timestampColumn.typ = typ.Type
 		rw.timestampColumn.format = timestamp.Format
+	} else {
+		rw.storageTimestamp = storageTimestamp
 	}
 	return &rw
 }
@@ -516,7 +526,8 @@ type recordWriter struct {
 		index  int
 		format string
 	}
-	records []map[string]any
+	storageTimestamp time.Time
+	records          []map[string]any
 }
 
 // Columns sets the columns of the records as properties.
@@ -634,11 +645,15 @@ func (rw *recordWriter) Record(record []any) error {
 			}
 		}
 		// Parse the timestamp column.
-		if rd.Err == nil && rw.timestampColumn.name != "" {
-			ts := record[rw.timestampColumn.index]
-			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
-			if err != nil {
-				rd.Err = err
+		if rd.Err == nil {
+			if rw.timestampColumn.name != "" {
+				ts := record[rw.timestampColumn.index]
+				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+				if err != nil {
+					rd.Err = err
+				}
+			} else {
+				rd.Timestamp = rw.storageTimestamp
 			}
 		}
 		// Parse the Business ID column.
@@ -703,11 +718,15 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			}
 		}
 		// Parse the timestamp column.
-		if rd.Err == nil && rw.timestampColumn.name != "" {
-			ts := record[rw.timestampColumn.name]
-			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
-			if err != nil {
-				rd.Err = err
+		if rd.Err == nil {
+			if rw.timestampColumn.name != "" {
+				ts := record[rw.timestampColumn.name]
+				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+				if err != nil {
+					rd.Err = err
+				}
+			} else {
+				rd.Timestamp = rw.storageTimestamp
 			}
 		}
 		if err := rw.yield(rd); err != nil {
@@ -781,11 +800,15 @@ func (rw *recordWriter) RecordString(record []string) error {
 			}
 		}
 		// Parse the timestamp column.
-		if rd.Err == nil && rw.timestampColumn.name != "" {
-			ts := record[rw.timestampColumn.index]
-			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
-			if err != nil {
-				rd.Err = err
+		if rd.Err == nil {
+			if rw.timestampColumn.name != "" {
+				ts := record[rw.timestampColumn.index]
+				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+				if err != nil {
+					rd.Err = err
+				}
+			} else {
+				rd.Timestamp = rw.storageTimestamp
 			}
 		}
 		// Parse the Business ID column.
@@ -881,7 +904,8 @@ func parseIdentityColumn(name string, typ types.Type, value any) (string, error)
 	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
 }
 
-// parseTimestampColumn parses a timestamp column value.
+// parseTimestampColumn parses a timestamp column value. If the timestamp cannot
+// be parsed or it is not valid, returns an error.
 //
 // To see a list of accepted format values, see the documentation of
 // 'parseTimestamp'.
@@ -894,11 +918,19 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any)
 	case nil:
 		return time.Time{}, errors.New("timestamp value is null")
 	case time.Time:
+		err = validateTimestamp(timestamp)
+		if err != nil {
+			return time.Time{}, err
+		}
 		return timestamp, nil
 	case string:
 		ts, err := parseTimestamp(format, value.(string))
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+		}
+		err = validateTimestamp(ts)
+		if err != nil {
+			return time.Time{}, err
 		}
 		return ts, nil
 	case json.RawMessage:
@@ -910,6 +942,10 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any)
 		ts, err := parseTimestamp(format, value.(string))
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+		}
+		err = validateTimestamp(ts)
+		if err != nil {
+			return time.Time{}, err
 		}
 		return ts, nil
 	}

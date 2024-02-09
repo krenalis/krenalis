@@ -404,7 +404,11 @@ func (r *appRecords) For(yield func(Record) error) error {
 					}
 				}
 			}
-			user.Timestamp = user.Timestamp.UTC()
+			timestamp := user.Timestamp.UTC()
+			if err = validateTimestamp(timestamp); err != nil {
+				return err
+			}
+			user.Timestamp = timestamp
 			user.BusinessID = businessID
 			if err := yield(user); err != nil {
 				return err
