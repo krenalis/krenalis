@@ -9,14 +9,20 @@ package connectors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
+	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
+
+	"github.com/shopspring/decimal"
 )
 
 // Database represents the database of a database connection.
@@ -89,7 +95,7 @@ func (database *Database) Query(ctx context.Context, query string) (*Rows, error
 //
 // If the provided schema, which must be valid, does not conform to the query's
 // results schema, it returns a *SchemaError error.
-func (database *Database) Records(ctx context.Context, query string, schema types.Type) (Records, error) {
+func (database *Database) Records(ctx context.Context, query string, schema types.Type, businessIDColumnName string) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
@@ -135,8 +141,18 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 	if err != nil {
 		return nil, err
 	}
+
+	// Determine the Business ID, if necessary.
+	var businessIDColumn types.Property
+	if businessIDColumnName != "" {
+		businessIDColumn, err = businessIDFromSchema(querySchema, businessIDColumnName)
+		if err != nil {
+			slog.Warn("cannot determine the Business ID column", "err", err)
+		}
+	}
+
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, schema.Properties())
+	records = newDatabaseRecords(rows, columns, schema.Properties(), businessIDColumn)
 	return records, nil
 }
 
@@ -285,20 +301,22 @@ func (sv queryScanValue) Scan(src any) error {
 
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
-	columns    []types.Property
-	rows       _connector.Rows
-	propertyOf map[string]types.Property
-	dst        []any
-	err        error
-	closed     bool
+	columns          []types.Property
+	rows             _connector.Rows
+	propertyOf       map[string]types.Property
+	dst              []any
+	businessIDColumn types.Property
+	err              error
+	closed           bool
 }
 
-func newDatabaseRecords(rows _connector.Rows, columns, properties []types.Property) *databaseRecords {
+func newDatabaseRecords(rows _connector.Rows, columns, properties []types.Property, businessIDColumn types.Property) *databaseRecords {
 	records := databaseRecords{
-		columns:    columns,
-		rows:       rows,
-		dst:        make([]any, len(columns)),
-		propertyOf: make(map[string]types.Property, len(properties)),
+		columns:          columns,
+		rows:             rows,
+		dst:              make([]any, len(columns)),
+		propertyOf:       make(map[string]types.Property, len(properties)),
+		businessIDColumn: businessIDColumn,
 	}
 	for _, p := range properties {
 		records.propertyOf[p.Name] = p
@@ -334,8 +352,9 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 		}
 		for i, c := range r.columns {
 			r.dst[i] = recordsScanValue{
-				property: r.propertyOf[c.Name],
-				record:   &record,
+				property:         r.propertyOf[c.Name],
+				record:           &record,
+				businessIDColumn: r.businessIDColumn,
 			}
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
@@ -355,8 +374,37 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 // recordsScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
 type recordsScanValue struct {
-	property types.Property
-	record   *Record
+	property         types.Property
+	record           *Record
+	businessIDColumn types.Property
+}
+
+func businessIDToString(src any) (string, error) {
+
+	var s string
+
+	switch src := src.(type) {
+	case int: // Int(n).
+		s = strconv.Itoa(src)
+	case uint: // Uint(n).
+		s = strconv.Itoa(int(src))
+	case string: // Text, JSON String.
+		s = src
+	case decimal.Decimal: // Decimal.
+		s = src.String()
+	case json.Number: // JSON Number
+		s = src.String()
+	case float64:
+		s = fmt.Sprint(src)
+	default:
+		return "", fmt.Errorf("unexpected Business ID value with type %T", src)
+	}
+
+	if utf8.RuneCountInString(s) > 40 {
+		return "", fmt.Errorf("the Business ID value is longer than 40 runes")
+	}
+
+	return s, nil
 }
 
 func (sv recordsScanValue) Scan(src any) error {
@@ -364,7 +412,21 @@ func (sv recordsScanValue) Scan(src any) error {
 	if !p.Type.Valid() {
 		return nil
 	}
+
 	switch p.Name {
+	case sv.businessIDColumn.Name:
+		col := sv.businessIDColumn
+		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
+		if err != nil {
+			slog.Warn("Business ID value cannot be normalized", "err", err)
+		} else {
+			businessID, err := businessIDToString(normalizedValue)
+			if err != nil {
+				slog.Warn("invalid Business ID value", "err", err)
+			} else {
+				sv.record.BusinessID = businessID
+			}
+		}
 	case "id":
 		if src == nil {
 			return errors.New("identity value is NULL")

@@ -18,7 +18,9 @@
 .connectionSettings .generalSettings .enablingField,
 .connectionSettings .generalSettings .storageField,
 .connectionSettings .generalSettings .compressionField,
-.connectionSettings .generalSettings .websiteHostField {
+.connectionSettings .generalSettings .websiteHostField,
+.connectionSettings .generalSettings .businessIDNameField,
+.connectionSettings .generalSettings .businessIDLabelField {
 	margin-bottom: 30px;
 }
 

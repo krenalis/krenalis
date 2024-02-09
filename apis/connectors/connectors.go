@@ -410,6 +410,19 @@ type webhookReceiver interface {
 	ReceiveWebhook(*http.Request) ([]WebhookPayload, error)
 }
 
+// businessIDFromSchema returns the Business ID from the given schema, if found
+// and its type is compatible, otherwise returns the zero Property and an error.
+func businessIDFromSchema(schema types.Type, businessIDName string) (types.Property, error) {
+	p, ok := schema.Property(businessIDName)
+	if !ok {
+		return types.Property{}, fmt.Errorf("the Business ID property %q cannot be found in app schema", businessIDName)
+	}
+	if !supportedTypeForBusinessID(p.Type) {
+		return types.Property{}, fmt.Errorf("the Business ID property %q has an unsupported type %s", businessIDName, p.Type)
+	}
+	return p, nil
+}
+
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
 // settings for the connection.
 func setSettingsFunc(st *state.State, c *state.Connection) _connector.SetSettingsFunc {
@@ -439,6 +452,23 @@ func setSettings(ctx context.Context, st *state.State, connection int, settings 
 		return tx.Notify(ctx, n)
 	})
 	return err
+}
+
+// supportedTypeForBusinessID reports whether the type t is supported as a
+// Business ID type.
+func supportedTypeForBusinessID(t types.Type) bool {
+	switch t.Kind() {
+	case types.IntKind,
+		types.UintKind,
+		types.FloatKind,
+		types.JSONKind,
+		types.TextKind:
+		return true
+	case types.DecimalKind:
+		return t.Scale() == 0
+	default:
+		return false
+	}
 }
 
 // webhookURL returns the URL of the webhook for the provided connection and

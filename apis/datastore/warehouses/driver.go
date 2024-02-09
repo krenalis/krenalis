@@ -197,8 +197,12 @@ type IdentitiesWriter interface {
 type Identity struct {
 	ID          string // external ID.
 	Properties  map[string]any
-	AnonymousID string    // empty string if not present.
-	Timestamp   time.Time // in UTC.
+	AnonymousID string // empty string if not present.
+	BusinessID  struct {
+		Value string // cannot be longer than 40 runes.
+		Label string // cannot be longer than 16 runes.
+	}
+	Timestamp time.Time // in UTC.
 }
 
 // Records is the iterator interface used to iterate over the records read from

@@ -129,7 +129,8 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 		if action.Target != state.Users {
 			continue
 		}
-		ws := action.Connection().Workspace()
+		connection := action.Connection()
+		ws := connection.Workspace()
 		store := c.datastore.Store(ws.ID)
 
 		// Instantiate an IdentitiesWriter for writing the users identities.
@@ -140,7 +141,7 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 			}
 			slog.Warn("users traits imported successfully", "action", action.ID, "ids", ids)
 		}
-		iw := store.IdentitiesWriter(ctx, action.OutSchema, action.Connection().ID, true, ack)
+		iw := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
 		defer iw.Close(ctx)
 
 		// Import the user traits for this event, if provided.
@@ -157,9 +158,33 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 				return err
 			}
 			// Transform the event.
-			properties, err := transformer.Transform(ctx, event.ToMap())
+			mapEvent := event.ToMap()
+			properties, err := transformer.Transform(ctx, mapEvent)
 			if err != nil {
 				return err
+			}
+			// Determine the Business ID.
+			var businessID string
+			if connection.BusinessID.Name != "" {
+				v, ok := mapEvent["traits"].(map[string]any)[connection.BusinessID.Name]
+				if ok {
+					switch v := v.(type) {
+					case string:
+						businessID = v
+					case json.Number:
+						if f, err := v.Float64(); err == nil && math.Floor(f) == f {
+							businessID = v.String()
+						}
+					case float64:
+						if math.Floor(v) == v {
+							businessID = fmt.Sprint(v)
+						}
+					}
+				}
+			}
+			if utf8.RuneCountInString(businessID) > 40 {
+				slog.Error("the Business ID value is longer than 40 runes")
+				businessID = ""
 			}
 			// Write the user identity on the data warehouse.
 			ok := iw.Write(ctx, warehouses.Identity{
@@ -167,6 +192,13 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 				Properties:  properties,
 				AnonymousID: event.AnonymousId,
 				Timestamp:   event.timestamp,
+				BusinessID: struct {
+					Value string
+					Label string
+				}{
+					Value: businessID,
+					Label: connection.BusinessID.Label,
+				},
 			})
 			if !ok {
 				return iw.Close(ctx)

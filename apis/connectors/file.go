@@ -95,6 +95,9 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // case-insensitive.
 //
+// businessIDColumn, when not empty, is the column from which the Business ID
+// should be read.
+//
 // limit restricts the number of records to
 // return and should not exceed 100. If limit is negative, there is no upper
 // limit on the number of records returned.
@@ -102,7 +105,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // If the file does not have a storage, it returns the ErrNoStorage error. If
 // the file has no columns, it returns the ErrNoColumns error. If the file does
 // not have the provided sheet, it returns the ErrSheetNotExist error.
-func (file *File) Read(ctx context.Context, name, sheet string, limit int) (columns []types.Property, rows []map[string]any, err error) {
+func (file *File) Read(ctx context.Context, name, sheet, businessIDColumn string, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if file.err != nil {
 		return nil, nil, file.err
 	}
@@ -119,7 +122,7 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 		return nil, nil, err
 	}
 	defer r.Close()
-	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, limit)
+	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, businessIDColumn, limit)
 	err = file.inner.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		if err == _connector.ErrSheetNotExist {
@@ -154,6 +157,9 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // this name, and if the kind of the file's column is different from the type of
 // this property, the iterator returns an error.
 //
+// businessIDColumn, when not empty, is the name of the column to use as
+// Business ID for an identity.
+//
 // If the file does not have a storage, it returns the ErrNoStorage error. If
 // the provided schema, that must be valid, does not conform with the file's
 // schema, it returns a *SchemaError error.
@@ -162,7 +168,7 @@ func (file *File) Read(ctx context.Context, name, sheet string, limit int) (colu
 // iterator returns immediately, and a subsequent call to the Err method will
 // return the ErrSheetNotExist error. The same occurs if the file has no
 // columns; in this case, the error is ErrNoColumns.
-func (file *File) Records(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn) (Records, error) {
+func (file *File) Records(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn, businessIDColumn string) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
@@ -178,7 +184,7 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	if err != nil {
 		return nil, err
 	}
-	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, math.MaxInt)
+	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, businessIDColumn, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -461,7 +467,7 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If the yield function is not nil, it calls the yield function for
 // each record, otherwise it stores the records in the records field.
-func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, businessIDColumn string, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -469,6 +475,7 @@ func newRecordWriter(connector int, schema types.Type, identityColumn string, ti
 		textColumnsOnly: true,
 		records:         []map[string]any{},
 	}
+	rw.businessID.name = businessIDColumn
 	if identityColumn != "" {
 		rw.identityColumn.name = identityColumn
 		typ, _ := schema.Property(identityColumn)
@@ -493,7 +500,12 @@ type recordWriter struct {
 	columnIndexOf   map[int]int      // map a property index in the schema to the corresponding file's column
 	columns         int              // number of file's columns
 	textColumnsOnly bool
-	identityColumn  struct {
+	businessID      struct {
+		name   string
+		column types.Property
+		index  int
+	}
+	identityColumn struct {
 		name  string
 		typ   types.Type
 		index int
@@ -552,6 +564,15 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		}
 		rw.timestampColumn.typ = c.Type
 		rw.timestampColumn.index = columnIndex[c.Name]
+	}
+	// Validate the Business ID column.
+	if rw.businessID.name != "" {
+		col, err := businessIDFromSchema(fileSchema, rw.businessID.name)
+		if err != nil {
+			slog.Warn("cannot determine the Business ID column", "err", err)
+		}
+		rw.businessID.column = col
+		rw.businessID.index = columnIndex[col.Name]
 	}
 	// Check that the schema, if valid, is compatible with the file's schema.
 	if rw.schema.Valid() {
@@ -620,6 +641,22 @@ func (rw *recordWriter) Record(record []any) error {
 				rd.Err = err
 			}
 		}
+		// Parse the Business ID column.
+		if rd.Err == nil && rw.businessID.name != "" {
+			v := record[rw.businessID.index]
+			c := rw.businessID.column
+			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
+			if err != nil {
+				slog.Warn("the Business ID value cannot be normalized", "err", err)
+			} else {
+				s, err := businessIDToString(vv)
+				if err != nil {
+					slog.Warn("invalid Business ID value", "err", err)
+				} else {
+					rd.BusinessID = s
+				}
+			}
+		}
 		if err := rw.yield(rd); err != nil {
 			return yieldError{err: err}
 		}
@@ -675,6 +712,22 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		}
 		if err := rw.yield(rd); err != nil {
 			return yieldError{err: err}
+		}
+		// Parse the Business ID column.
+		if rd.Err == nil && rw.businessID.name != "" {
+			v := record[rw.businessID.name]
+			c := rw.businessID.column
+			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
+			if err != nil {
+				slog.Warn("Business ID value cannot be normalized", "err", err)
+			} else {
+				s, err := businessIDToString(vv)
+				if err != nil {
+					slog.Warn("invalid Business ID value", "err", err)
+				} else {
+					rd.BusinessID = s
+				}
+			}
 		}
 	}
 	rw.limit--
@@ -733,6 +786,22 @@ func (rw *recordWriter) RecordString(record []string) error {
 			rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
 			if err != nil {
 				rd.Err = err
+			}
+		}
+		// Parse the Business ID column.
+		if rd.Err == nil && rw.businessID.name != "" {
+			v := record[rw.businessID.index]
+			c := rw.businessID.column
+			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
+			if err != nil {
+				slog.Warn("Business ID value cannot be normalized", "err", err)
+			} else {
+				s, err := businessIDToString(vv)
+				if err != nil {
+					slog.Warn("invalid Business ID value", "err", err)
+				} else {
+					rd.BusinessID = s
+				}
 			}
 		}
 		if err := rw.yield(rd); err != nil {

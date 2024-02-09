@@ -4,6 +4,7 @@
 
 - [Installation](./installation.md)
 - [Connections](connections.md)
+    - [Business ID](business-id.md)
 - [Events](./events.md)
     - [page call](events/page.md)
     - [screen call](events/screen.md)

@@ -34,8 +34,36 @@ func Test_UsersIdentities(t *testing.T) {
 	}
 	fs := c.AddSourceFilesystem(storageDir)
 
-	csv1 := c.AddSourceCSV(fs)
-	csv2 := c.AddSourceCSV(fs)
+	csv1 := c.AddConnection(chichitester.ConnectionToAdd{
+		Name:      "CSV",
+		Role:      chichitester.Source,
+		Enabled:   true,
+		Connector: 5, // CSV.
+		Storage:   fs,
+		BusinessID: chichitester.BusinessID{
+			Name:  "email",
+			Label: "CSV User Email",
+		},
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
+	})
+	csv2 := c.AddConnection(chichitester.ConnectionToAdd{
+		Name:      "CSV",
+		Role:      chichitester.Source,
+		Enabled:   true,
+		Connector: 5, // CSV.
+		Storage:   fs,
+		BusinessID: chichitester.BusinessID{
+			Name:  "email",
+			Label: "CSV User Email",
+		},
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
+	})
 
 	action1 := c.AddAction(csv1, "Users", chichitester.ActionToSet{
 		Name: "CSV 1",
@@ -131,6 +159,16 @@ func Test_UsersIdentities(t *testing.T) {
 			}
 			if !strings.HasPrefix(extID.Value, externalIDPrefix) {
 				t.Fatalf("unexpected external ID %q, it should have prefix %q", extID, externalIDPrefix)
+			}
+
+			// Check the Business ID.
+			businessID := identity.BusinessId
+			const expectedBusinessIDLabel = "CSV User Email"
+			if expectedBusinessIDLabel != businessID.Label {
+				t.Fatalf("expecting Business ID label %q, got %q", expectedBusinessIDLabel, businessID.Label)
+			}
+			if !strings.Contains(businessID.Value, "@") {
+				t.Fatalf("expecting Business ID value with a '@', got %q", businessID.Value)
 			}
 
 			totalIdentities++

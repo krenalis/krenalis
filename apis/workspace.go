@@ -105,6 +105,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		Storage:     connection.Storage,
 		Compression: state.Compression(connection.Compression),
 		WebsiteHost: connection.WebsiteHost,
+		BusinessID:  state.BusinessID(connection.BusinessID),
 	}
 	if n.Name == "" {
 		n.Name = c.Name
@@ -144,6 +145,12 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 				return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
 			}
 		}
+	}
+
+	// Validate the Business ID.
+	err := validateBusinessID(c.Type, n.Role, n.BusinessID)
+	if err != nil {
+		return 0, err
 	}
 
 	// Validate OAuth.
@@ -215,7 +222,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	}
 
 	// Generate the identifier.
-	var err error
 	n.ID, err = generateRandomID()
 	if err != nil {
 		return 0, err
@@ -258,9 +264,12 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector, storage, compression, resource, website_host, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12)", n.ID, n.Workspace, n.Name, c.Type,
-			n.Role, n.Enabled, n.Connector, n.Storage, n.Compression, n.Resource.ID, n.WebsiteHost, string(n.Settings))
+			"(id, workspace, name, type, role, enabled, connector, storage,"+
+			" compression, resource, website_host, business_id_name, business_id_label, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12, $13, $14)",
+			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector,
+			n.Storage, n.Compression, n.Resource.ID, n.WebsiteHost, n.BusinessID.Name,
+			n.BusinessID.Label, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				switch postgres.ErrConstraintName(err) {
@@ -452,6 +461,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Connector:    conn.ID,
 		Compression:  Compression(c.Compression),
 		WebsiteHost:  c.WebsiteHost,
+		BusinessID:   BusinessID(c.BusinessID),
 		HasSettings:  conn.HasSettings,
 		ActionsCount: len(c.Actions()),
 		Health:       Health(c.Health),
@@ -495,6 +505,7 @@ func (this *Workspace) Connections() []*Connection {
 			Connector:    conn.ID,
 			Compression:  Compression(c.Compression),
 			WebsiteHost:  c.WebsiteHost,
+			BusinessID:   BusinessID(c.BusinessID),
 			HasSettings:  conn.HasSettings,
 			ActionsCount: len(c.Actions()),
 			Health:       Health(c.Health),
@@ -1341,6 +1352,9 @@ type ConnectionToAdd struct {
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
 	WebsiteHost string
+
+	// Business ID is the Business ID for source connections that import users.
+	BusinessID BusinessID
 
 	// Settings represents the settings. It must be nil if the connection does
 	// not have settings.

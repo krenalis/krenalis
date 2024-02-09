@@ -24,7 +24,10 @@ import (
 func (this *Action) importUsers(ctx context.Context) error {
 
 	action := this.action
-	connector := action.Connection().Connector()
+	connection := action.Connection()
+	connector := connection.Connector()
+
+	businessID := connection.BusinessID
 
 	stats := this.apis.statistics.Action(action.ID)
 
@@ -43,7 +46,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			cursor.ID = action.UserCursor.ID
 			cursor.Timestamp = action.UserCursor.Timestamp
 		}
-		records, err = this.app().Users(ctx, action.InSchema, cursor)
+		records, err = this.app().Users(ctx, action.InSchema, businessID.Name, cursor)
 	case state.DatabaseType:
 		var query string
 		query, err = replacePlaceholders(action.Query, func(name string) (string, bool) {
@@ -57,13 +60,14 @@ func (this *Action) importUsers(ctx context.Context) error {
 		}
 		database := this.database()
 		defer database.Close()
-		records, err = database.Records(ctx, query, action.InSchema)
+		records, err = database.Records(ctx, query, action.InSchema, businessID.Name)
 	case state.FileType:
 		timestampColumn := connectors.TimestampColumn{
 			Name:   action.TimestampColumn,
 			Format: action.TimestampFormat,
 		}
-		records, err = this.file().Records(ctx, action.Path, action.Sheet, action.InSchema, action.IdentityColumn, timestampColumn)
+		records, err = this.file().Records(ctx, action.Path, action.Sheet, action.InSchema,
+			action.IdentityColumn, timestampColumn, businessID.Name)
 	}
 	if err != nil {
 		if err, ok := err.(*connectors.SchemaError); ok {
@@ -127,6 +131,13 @@ func (this *Action) importUsers(ctx context.Context) error {
 				ID:         user.ID,
 				Properties: user.Properties,
 				Timestamp:  user.Timestamp,
+				BusinessID: struct {
+					Value string
+					Label string
+				}{
+					Value: user.BusinessID,
+					Label: businessID.Label,
+				},
 			})
 			if !ok {
 				err := iw.Close(ctx)

@@ -105,7 +105,9 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 	// after buffering the user identities to be written all together, directly
 	// calls the underlying data warehouse to write. This needs to be optimized
 	// for bulk writing rather than writing individual users.
-	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID, identity.AnonymousID, iw.connection, iw.fromEvent, identity.Timestamp)
+	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID,
+		identity.AnonymousID, identity.BusinessID.Value, identity.BusinessID.Label,
+		iw.connection, iw.fromEvent, identity.Timestamp)
 	iw.ack(err, []string{identity.ID})
 	if err != nil {
 		iw.err = err
@@ -115,7 +117,7 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 }
 
 func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string]any,
-	schema types.Type, id string, anonID string, connection int, fromEvent bool, timestamp time.Time) error {
+	schema types.Type, id, anonID, businessIDValue, businessIDLabel string, connection int, fromEvent bool, timestamp time.Time) error {
 
 	// Query the matching user identities, which can be 0 (the identity is a new
 	// identity), 1 (the identity already exists and must be updated) or more
@@ -166,6 +168,8 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	newIdentity["_connection"] = connection
 	newIdentity["_external_id"] = id
 	newIdentity["_timestamp"] = timestamp.Format(time.DateTime)
+	newIdentity["_business_id_value"] = businessIDValue
+	newIdentity["_business_id_label"] = businessIDLabel
 	if anonID != "" {
 		newIdentity["_anonymous_ids"] = []string{anonID}
 	}

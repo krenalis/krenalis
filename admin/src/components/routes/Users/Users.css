@@ -310,10 +310,14 @@
 	padding-top: 4px;
 }
 
-.users-list .user-drawer .user-drawer__identity-external-id {
-	font-size: 13px;
-	font-weight: 600;
-	padding-top: 4px;
+.users-list .user-drawer .user-drawer__identity-external-id,
+.user-drawer__identity-business-id {
+	background-color: var(--sl-color-neutral-50);
+	padding: 5px;
+	margin: 4px;
+	border-radius: 3px;
+	font-size: 15px;
+	font-weight: 500;
 }
 
 .users-list .user-drawer .user-drawer__identity-date {

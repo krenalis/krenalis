@@ -8,6 +8,11 @@ interface ConnectionStatus {
 	variant: string;
 }
 
+interface BusinessID {
+	Name: string;
+	Label: string;
+}
+
 class TransformedConnection {
 	id: number;
 	name: string;
@@ -21,6 +26,7 @@ class TransformedConnection {
 	storage: number;
 	compression: Compression;
 	websiteHost: string;
+	businessID: BusinessID;
 	status: ConnectionStatus;
 	description: string;
 	linkedFiles?: TransformedConnection[];
@@ -40,6 +46,7 @@ class TransformedConnection {
 		storage: number,
 		compression: Compression,
 		websiteHost: string,
+		businessID: BusinessID,
 		status: ConnectionStatus,
 		description: string,
 		linkedFiles?: TransformedConnection[],
@@ -58,6 +65,7 @@ class TransformedConnection {
 		this.storage = storage == null ? 0 : storage;
 		this.compression = compression;
 		this.websiteHost = websiteHost;
+		this.businessID = businessID;
 		this.status = status;
 		this.description = description;
 		this.linkedFiles = linkedFiles;

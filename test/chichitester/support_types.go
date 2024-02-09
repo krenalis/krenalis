@@ -34,6 +34,11 @@ type ActionToSet struct {
 	MatchingProperties *MatchingProperties
 }
 
+type BusinessID struct {
+	Name  string
+	Label string
+}
+
 type Compression string
 
 const (
@@ -51,6 +56,7 @@ type ConnectionToAdd struct {
 	Storage     int
 	Compression Compression
 	WebsiteHost string
+	BusinessID  BusinessID
 	Settings    json.RawMessage
 }
 
@@ -85,6 +91,7 @@ type FilterCondition struct {
 type UserIdentity struct { // copy-pasted from the body of the apis.User.Identities method.
 	Connection   int
 	ExternalId   LabelValue // zero struct for identities imported from anonymous events.
+	BusinessId   LabelValue // zero struct for identities with no Business ID.
 	AnonymousIds []string   // nil for identities not imported from events.
 	Timestamp    time.Time
 }

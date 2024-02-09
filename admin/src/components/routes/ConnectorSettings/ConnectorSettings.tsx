@@ -13,7 +13,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { Compression, ConnectionRole, ConnectionToAdd } from '../../../types/external/connection';
+import { BusinessID, Compression, ConnectionRole, ConnectionToAdd } from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
@@ -28,6 +28,7 @@ const ConnectorSettings = () => {
 	const [storages, setStorages] = useState<TransformedConnection[]>([]);
 	const [compression, setCompression] = useState<Compression>('');
 	const [websiteHost, setWebsiteHost] = useState<string>('');
+	const [businessID, setBusinessID] = useState<BusinessID>({ Name: '', Label: '' });
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [actions, setActions] = useState<ConnectorAction[]>([]);
 	const [values, setValues] = useState<UIValues>({});
@@ -166,6 +167,7 @@ const ConnectorSettings = () => {
 					storage: storage,
 					compression: compression,
 					websiteHost: websiteHost,
+					businessID: businessID,
 					settings: values,
 				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
@@ -260,6 +262,7 @@ const ConnectorSettings = () => {
 				storage: storage,
 				compression: compression,
 				websiteHost: websiteHost,
+				businessID: businessID,
 				settings: values,
 			};
 			id = await api.workspaces.addConnection(connection, OAuthToken);
@@ -323,6 +326,9 @@ const ConnectorSettings = () => {
 		return null;
 	}
 
+	const showBusinessID = connectionRole === 'Source' && c.type !== 'Storage' && c.type !== 'Stream';
+	const businessIDKind = ['File', 'Database'].includes(c.type) ? 'column' : 'property';
+
 	return (
 		<div className='connectorSettings'>
 			<div className='routeContent'>
@@ -340,6 +346,44 @@ const ConnectorSettings = () => {
 									setName(target!.value);
 								}}
 							/>
+							{showBusinessID && (
+								<>
+									<SlInput
+										className='businessIDName'
+										name='businessIDName'
+										helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+										placeholder='Something like "email", "customer_id", etc...'
+										value={businessID.Name}
+										label='Business ID Name'
+										type='text'
+										maxlength={1024}
+										onSlChange={(e) => {
+											const target = e.currentTarget as ShoelaceEventTarget;
+											setBusinessID({
+												Name: target!.value,
+												Label: businessID.Label,
+											});
+										}}
+									/>
+									<SlInput
+										className='businessIDLabel'
+										name='businessIDLabel'
+										value={businessID.Label}
+										placeholder='Something like "Email", "Customer ID", etc...'
+										helpText='A human-readable label for the Business ID. Mandatory when a Business ID name is specified.'
+										label='Business ID Label'
+										type='text'
+										maxlength={16}
+										onSlChange={(e) => {
+											const target = e.currentTarget as ShoelaceEventTarget;
+											setBusinessID({
+												Name: businessID.Name,
+												Label: target!.value,
+											});
+										}}
+									/>
+								</>
+							)}
 						</div>
 						{c!.type === 'File' && (
 							<div className='inputWrapper'>

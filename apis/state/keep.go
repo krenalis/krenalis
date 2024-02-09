@@ -360,8 +360,9 @@ type AddConnection struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
-	WebsiteHost string // website host in form host:port
-	Key         string // server key to add
+	WebsiteHost string     // website host in form host:port
+	BusinessID  BusinessID // Business ID.
+	Key         string     // server key to add
 	Settings    []byte
 }
 
@@ -421,6 +422,7 @@ func (state *State) addConnection(n notification) {
 		Compression:  e.Compression,
 		resource:     r,
 		WebsiteHost:  e.WebsiteHost,
+		BusinessID:   e.BusinessID,
 		Settings:     e.Settings,
 		actions:      map[int]*Action{},
 	}
@@ -915,6 +917,7 @@ type SetConnection struct {
 	Storage     int
 	Compression Compression
 	WebsiteHost string
+	BusinessID  BusinessID
 }
 
 // setConnection sets a connection.
@@ -929,6 +932,7 @@ func (state *State) setConnection(n notification) {
 		c.storage = state.connections[e.Storage]
 		c.Compression = e.Compression
 		c.WebsiteHost = e.WebsiteHost
+		c.BusinessID = e.BusinessID
 	})
 	for _, listener := range state.listeners.SetConnection {
 		listener(e)

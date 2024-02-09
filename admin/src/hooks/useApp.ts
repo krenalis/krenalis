@@ -145,6 +145,7 @@ const useApp = (
 					c.Storage,
 					c.Compression,
 					c.WebsiteHost,
+					c.BusinessID,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
@@ -211,6 +212,7 @@ const useApp = (
 					c.Storage,
 					c.Compression,
 					c.WebsiteHost,
+					c.BusinessID,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);

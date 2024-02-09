@@ -127,14 +127,19 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		{Name: "Timestamp", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
 		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
+		{Name: "BusinessId", Type: types.Object([]types.Property{
+			{Name: "value", Type: types.Text()},
+			{Name: "label", Type: types.Text()},
+		})},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"}, {"Timestamp"}},
-		Where:      expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
-		OrderBy:    types.Property{Name: "IdentityId", Type: types.Int(32)},
-		Schema:     schema,
-		First:      first,
-		Limit:      limit,
+		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
+			{"Timestamp"}, {"BusinessId"}},
+		Where:   expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
+		OrderBy: types.Property{Name: "IdentityId", Type: types.Int(32)},
+		Schema:  schema,
+		First:   first,
+		Limit:   limit,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -147,6 +152,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	type identity struct {
 		Connection   int
 		ExternalId   labelValue // zero struct for identities imported from anonymous events.
+		BusinessId   labelValue // zero struct for identities with no Business ID.
 		AnonymousIds []string   // nil for identities not imported from events.
 		Timestamp    time.Time
 	}
@@ -205,11 +211,18 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		// Determine the timestamp.
 		timestamp := record.Properties["Timestamp"].(time.Time)
 
+		// Determine the Business ID.
+		businessID := record.Properties["BusinessId"].(map[string]any)
+
 		identities = append(identities, identity{
 			Connection: connID,
 			ExternalId: labelValue{
 				Label: extIDLabel,
 				Value: extIDValue,
+			},
+			BusinessId: labelValue{
+				Label: businessID["label"].(string),
+				Value: businessID["value"].(string),
 			},
 			AnonymousIds: anonIDs,
 			Timestamp:    timestamp,

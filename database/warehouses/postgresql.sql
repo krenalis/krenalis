@@ -13,6 +13,9 @@ CREATE TABLE users_identities (
     "_anonymous_ids" text[],
     "_timestamp"     timestamp NOT NULL DEFAULT now(),
     "_gid"           int NOT NULL DEFAULT 0,
+
+    "_business_id_value"  varchar(40) NOT NULL DEFAULT '',
+    "_business_id_label"  varchar(16) NOT NULL DEFAULT '',
     
     "__cluster__"       serial,
 

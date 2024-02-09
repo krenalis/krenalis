@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"slices"
 	"strings"
 
 	"chichi/apis/connectors/httpclient"
@@ -187,9 +189,12 @@ func (app *App) SendEvent(ctx context.Context, eventType string, event *Event, d
 // Users returns an iterator to iterate over the app's users, conforming to the
 // provided schema, starting from a cursor.
 //
+// businessIDName, when not empty, is the property name from which the Business
+// ID should be read.
+//
 // If the provided schema, that must be valid, does not conform with the app's
 // source users schema, it returns a *SchemaError error.
-func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Cursor) (Records, error) {
+func (app *App) Users(ctx context.Context, schema types.Type, businessIDName string, cursor state.Cursor) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -205,13 +210,22 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Curso
 	if err != nil {
 		return nil, err
 	}
+	// Determine and validate the property for the Business ID.
+	var businessIDProperty types.Property
+	if businessIDName != "" {
+		businessIDProperty, err = businessIDFromSchema(usersSchema, businessIDName)
+		if err != nil {
+			slog.Warn("cannot determine the Business ID property", "err", err)
+		}
+	}
 	records := &appRecords{
-		ctx:     ctx,
-		schema:  schema,
-		layouts: app.layouts,
-		cursor:  cursor,
-		appName: app.name,
-		inner:   app.inner,
+		ctx:                ctx,
+		schema:             schema,
+		layouts:            app.layouts,
+		cursor:             cursor,
+		appName:            app.name,
+		inner:              app.inner,
+		businessIDProperty: businessIDProperty,
 	}
 	return records, nil
 }
@@ -281,14 +295,15 @@ func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
 
 // appRecords implements the Records interface for apps.
 type appRecords struct {
-	ctx     context.Context
-	schema  types.Type
-	layouts *state.Layouts
-	cursor  state.Cursor
-	appName string
-	inner   _connector.AppConnection
-	err     error
-	closed  bool
+	ctx                context.Context
+	schema             types.Type
+	layouts            *state.Layouts
+	cursor             state.Cursor
+	appName            string
+	inner              _connector.AppConnection
+	err                error
+	closed             bool
+	businessIDProperty types.Property
 }
 
 func (r *appRecords) Close() error {
@@ -320,6 +335,10 @@ func (r *appRecords) For(yield func(Record) error) error {
 		propertyByName[p.Name] = &p
 	}
 
+	if r.businessIDProperty.Name != "" && !slices.Contains(names, r.businessIDProperty.Name) {
+		names = append(names, r.businessIDProperty.Name)
+	}
+
 	for {
 
 		// Retrieve the users.
@@ -342,6 +361,27 @@ func (r *appRecords) For(yield func(Record) error) error {
 
 		// Normalize the returned users.
 		for _, user := range users {
+
+			// Read the Business ID.
+			var businessID string
+			if r.businessIDProperty.Name != "" {
+				for p, v := range user.Properties {
+					if p == r.businessIDProperty.Name {
+						normalizedValue, err := normalizeAppProperty(r.businessIDProperty.Name, r.businessIDProperty.Type, v, r.businessIDProperty.Nullable, r.layouts)
+						if err != nil {
+							slog.Warn("Business ID value cannot be normalized", "err", err)
+							break
+						}
+						businessID, err = businessIDToString(normalizedValue)
+						if err != nil {
+							slog.Warn("invalid Business ID value", "err", err)
+							break
+						}
+						break
+					}
+				}
+			}
+
 			for _, p := range properties {
 				value, ok := user.Properties[p.Name]
 				if !ok {
@@ -365,6 +405,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 				}
 			}
 			user.Timestamp = user.Timestamp.UTC()
+			user.BusinessID = businessID
 			if err := yield(user); err != nil {
 				return err
 			}

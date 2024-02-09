@@ -79,6 +79,17 @@ const (
 	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
 )
 
+// BusinessID represents a Business ID of a connection.
+type BusinessID struct {
+
+	// Name is the property name or column name (depending on the connection
+	// type). Cannot be longer than 1024 runes.
+	Name string
+
+	// Business ID label. Cannot be longer than 16 runes.
+	Label string
+}
+
 // Connection represents a connection.
 type Connection struct {
 	apis         *APIs
@@ -93,6 +104,7 @@ type Connection struct {
 	Storage      int // zero if the connection is not a file or does not have a storage.
 	Compression  Compression
 	WebsiteHost  string
+	BusinessID   BusinessID
 	HasSettings  bool
 	ActionsCount int
 	Health       Health
@@ -573,7 +585,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, cur)
+	records, err := this.app().Users(ctx, schema, this.connection.BusinessID.Name, cur)
 	if err != nil {
 		return nil, "", err
 	}
@@ -932,7 +944,7 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.file().Read(ctx, path, sheet, limit)
+	columns, records, err := this.file().Read(ctx, path, sheet, c.BusinessID.Name, limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrNoStorage:
@@ -1245,6 +1257,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		Storage:     connection.Storage,
 		Compression: state.Compression(connection.Compression),
 		WebsiteHost: connection.WebsiteHost,
+		BusinessID:  state.BusinessID(connection.BusinessID),
 	}
 
 	c := this.connection.Connector()
@@ -1285,9 +1298,18 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		}
 	}
 
-	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2, storage = NULLIF($3, 0), compression = $4, website_host = $5 WHERE id = $6",
-			n.Name, n.Enabled, n.Storage, n.Compression, n.WebsiteHost, n.Connection)
+	// Validate the BusinessID.
+	err := validateBusinessID(c.Type, this.connection.Role, n.BusinessID)
+	if err != nil {
+		return errors.BadRequest(err.Error())
+	}
+
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
+			" storage = NULLIF($3, 0), compression = $4, website_host = $5,"+
+			" business_id_name = $6, business_id_label = $7 WHERE id = $8",
+			n.Name, n.Enabled, n.Storage, n.Compression, n.WebsiteHost, n.BusinessID.Name,
+			n.BusinessID.Label, n.Connection)
 		if err != nil {
 			return err
 		}
@@ -2233,6 +2255,9 @@ type ConnectionToSet struct {
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
 	WebsiteHost string
+
+	// Business ID is the Business ID for source connections that import users.
+	BusinessID BusinessID
 }
 
 // canBeUsedAsAsMatchingProp reports whether a type with kind k can be used as a
@@ -2262,6 +2287,56 @@ func isMetaProperty(name string) bool {
 		return unicode.IsUpper(r)
 	}
 	return false
+}
+
+// validateBusinessID validates a Business ID. In case it is invalid returns an
+// errors.BadRequest, otherwise returns nil.
+func validateBusinessID(cType state.ConnectorType, role state.Role, businessID state.BusinessID) error {
+
+	// An empty Business ID is always valid.
+	if businessID == (state.BusinessID{}) {
+		return nil
+	}
+
+	// BusinessID can be defined only for source connections.
+	if role == state.Destination {
+		return errors.BadRequest("unexpected Business ID for destination connection")
+	}
+
+	// Both the Business ID name and label must be provided, or neither of them.
+	if businessID.Name == "" && businessID.Label != "" {
+		return errors.BadRequest("Business ID name cannot be empty when a Business ID label is specified")
+	}
+	if businessID.Name != "" && businessID.Label == "" {
+		return errors.BadRequest("Business ID label cannot be empty when a Business ID name is specified")
+	}
+
+	// Validate the Business ID name.
+	if n := utf8.RuneCountInString(businessID.Name); n > 1024 {
+		return errors.BadRequest("Business ID name is longer than 1024 runes")
+	}
+	switch cType {
+	case state.AppType, state.MobileType, state.ServerType, state.WebsiteType:
+		if !types.IsValidPropertyName(businessID.Name) {
+			return errors.BadRequest("Business ID name %q is not a valid property name", businessID.Name)
+		}
+	case state.DatabaseType, state.FileType:
+		if !utf8.ValidString(businessID.Name) {
+			return errors.BadRequest("Business ID name is not UTF-8 encoded")
+		}
+	default:
+		return errors.BadRequest("unexpected Business ID for %s connection", cType)
+	}
+
+	// Validate the Business ID label.
+	if !utf8.ValidString(businessID.Label) {
+		return errors.BadRequest("Business ID label is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(businessID.Label); n > 16 {
+		return errors.BadRequest("Business ID label is longer than 16 runes")
+	}
+
+	return nil
 }
 
 // validateTimestampFormat validates the given timestamp format for importing

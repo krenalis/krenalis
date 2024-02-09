@@ -16,6 +16,7 @@ interface Connection {
 	Storage: number;
 	Compression: Compression;
 	WebsiteHost: string;
+	BusinessID: BusinessID;
 	HasSettings: boolean;
 	Enabled: boolean;
 	ActionsCount: number;
@@ -26,6 +27,11 @@ interface Connection {
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
 
+interface BusinessID {
+	Name: string;
+	Label: string;
+}
+
 interface ConnectionToAdd {
 	name: string;
 	role: string;
@@ -34,6 +40,7 @@ interface ConnectionToAdd {
 	storage: number;
 	compression: Compression;
 	websiteHost: string;
+	businessID: BusinessID;
 	settings: UIValues;
 }
 
@@ -43,6 +50,7 @@ interface ConnectionToSet {
 	storage: number;
 	compression: Compression;
 	websiteHost: string;
+	businessID: BusinessID;
 }
 
 interface ConnectionStats {
@@ -50,6 +58,7 @@ interface ConnectionStats {
 }
 
 export type {
+	BusinessID,
 	Connection,
 	ConnectionRole,
 	Compression,
