@@ -96,7 +96,7 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return f, fi.ModTime(), nil
+	return f, fi.ModTime().UTC(), nil
 }
 
 // ServeUI serves the connector's user interface.

@@ -124,7 +124,7 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 		return nil, time.Time{}, fmt.Errorf("server responded with status: %s", res.Status)
 	}
 	ts, _ := time.Parse(time.RFC1123, res.Header.Get("Last-Modified"))
-	return res.Body, ts, nil
+	return res.Body, ts.UTC(), nil
 }
 
 // ServeUI serves the connector's user interface.
