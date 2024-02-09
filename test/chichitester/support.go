@@ -290,7 +290,7 @@ func (c *Chichi) UserEvents(user int) []map[string]any {
 	return events
 }
 
-func (c *Chichi) UserIdentities(user int, first, limit int) ([]map[string]any, int) {
+func (c *Chichi) UserIdentities(user int, first, limit int) ([]UserIdentity, int) {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/users/" + strconv.Itoa(user) + "/identities"
 	req := map[string]any{
 		"First": first,
@@ -301,9 +301,14 @@ func (c *Chichi) UserIdentities(user int, first, limit int) ([]map[string]any, i
 	if err != nil {
 		c.t.Fatalf("invalid 'count' for user identities: %s", err)
 	}
-	identities := make([]map[string]any, len(response["identities"].([]any)))
-	for i, identity := range response["identities"].([]any) {
-		identities[i] = identity.(map[string]any)
+	jsonIdentities, err := json.Marshal(response["identities"].([]any))
+	if err != nil {
+		c.t.Fatalf("cannot marshal identities: %s", err)
+	}
+	var identities []UserIdentity
+	err = json.Unmarshal(jsonIdentities, &identities)
+	if err != nil {
+		c.t.Fatalf("cannot unmarshal identities: %s", err)
 	}
 	return identities, int(count)
 }

@@ -104,43 +104,33 @@ func Test_UsersIdentities(t *testing.T) {
 
 		for _, identity := range identities {
 
-			connectionInt64, _ := identity["Connection"].(json.Number).Int64()
-			connection := int(connectionInt64)
-
-			externalID := identity["ExternalId"].(map[string]any)
-
-			timestamp := identity["Timestamp"].(string)
-
-			if _, ok := identity["AnonymousIds"]; !ok {
-				t.Fatalf("identity should have an 'AnonymousIds' key")
-			}
-			if anonIds := identity["AnonymousIds"]; anonIds != nil {
+			if anonIds := identity.AnonymousIds; anonIds != nil {
 				t.Fatalf("identity should have a nil 'AnonymousIds', got %v", anonIds)
 			}
 
 			t.Logf(
 				"the APIs returned an identity for user with GID %d that has"+
-					" connection = %d, external ID = %q and timestamp = %q",
-				id, connection, externalID, timestamp)
+					" connection = %d, external ID = %v and timestamp = %q",
+				id, identity.Connection, identity.ExternalId, identity.Timestamp)
 
 			var externalIDPrefix string
-			switch connection {
+			switch identity.Connection {
 			case csv1:
 				externalIDPrefix = "users1_"
 			case csv2:
 				externalIDPrefix = "users2_"
 			default:
-				t.Fatalf("unexpected connection %d", connection)
+				t.Fatalf("unexpected connection %d", identity.Connection)
 			}
 
 			// Check the External ID label.
+			extID := identity.ExternalId
 			const expectedExternalIDLabel = "ID"
-			if expectedExternalIDLabel != externalID["Label"].(string) {
-				t.Fatalf("expected External ID label %q, got %q", expectedExternalIDLabel, externalID["Label"].(string))
+			if expectedExternalIDLabel != extID.Label {
+				t.Fatalf("expected External ID label %q, got %q", expectedExternalIDLabel, extID.Label)
 			}
-
-			if !strings.HasPrefix(externalID["Value"].(string), externalIDPrefix) {
-				t.Fatalf("unexpected external ID %q, it should have prefix %q", externalID, externalIDPrefix)
+			if !strings.HasPrefix(extID.Value, externalIDPrefix) {
+				t.Fatalf("unexpected external ID %q, it should have prefix %q", extID, externalIDPrefix)
 			}
 
 			totalIdentities++

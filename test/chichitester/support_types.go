@@ -9,6 +9,7 @@ package chichitester
 
 import (
 	"encoding/json"
+	"time"
 
 	"chichi/connector/types"
 )
@@ -79,6 +80,18 @@ type FilterCondition struct {
 	Property string
 	Operator string
 	Value    string
+}
+
+type UserIdentity struct { // copy-pasted from the body of the apis.User.Identities method.
+	Connection   int
+	ExternalId   LabelValue // zero struct for identities imported from anonymous events.
+	AnonymousIds []string   // nil for identities not imported from events.
+	Timestamp    time.Time
+}
+
+type LabelValue struct { // copy-pasted from the body of the apis.User.Identities method.
+	Label string
+	Value string
 }
 
 type Language string
