@@ -207,6 +207,32 @@ class Navigator {
 	}
 }
 
+// Storage implements a fake storage that raises an exception at each method
+// call.
+class Storage {
+	length = 0;
+
+	key() {
+		throw new Error('No storage available');
+	}
+
+	getItem() {
+		throw new Error('No storage available');
+	}
+
+	setItem() {
+		throw new Error('Quota exceeded');
+	}
+
+	removeItem() {
+		throw new Error('No storage available');
+	}
+
+	clear() {
+		throw new Error('No storage available');
+	}
+}
+
 // XMLHttpRequest is a fake XMLHttpRequest.
 class XMLHttpRequest {
 	static #installTime;
@@ -379,4 +405,4 @@ async function parseRequest(writeKey, minTime, options) {
 	return events;
 }
 
-export { Fetch, Navigator, RandomUUID, SendBeacon, XMLHttpRequest };
+export { Fetch, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest };

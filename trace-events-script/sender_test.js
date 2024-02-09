@@ -47,6 +47,8 @@ Deno.test('Sender send', async (t) => {
 			time.restore();
 		}
 
+		localStorage.clear();
+
 		try {
 			time = new FakeTime();
 			fetch.install();
@@ -73,6 +75,8 @@ Deno.test('Sender send', async (t) => {
 		}
 	});
 
+	localStorage.clear();
+
 	await t.step('sendBeacon', async () => {
 		const time = new FakeTime();
 		const sendBeacon = new fake.SendBeacon(writeKey, endpoint, DEBUG);
@@ -94,6 +98,8 @@ Deno.test('Sender send', async (t) => {
 			time.restore();
 		}
 	});
+
+	localStorage.clear();
 
 	await t.step('XMLHttpRequest', async () => {
 		const time = new FakeTime();

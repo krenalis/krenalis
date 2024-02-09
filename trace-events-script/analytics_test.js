@@ -111,6 +111,7 @@ Deno.test('Analytics', async (t) => {
 			time.restore();
 		}
 		a.reset();
+		localStorage.removeItem('chichi_queue');
 		assertEquals(localStorage.length, 0);
 	});
 

@@ -1,4 +1,5 @@
 import { debug, getTime } from './utils.js';
+import Queue from './queue.js';
 
 const MaxBodySize = 500 * 1024;
 const MaxUnloadingBodySize = 64 * 1024;
@@ -8,37 +9,55 @@ class Sender {
 	timeout = 300;
 	#writeKey;
 	#endpoint = '';
+	#queue;
 	#flushing = false;
-	#events = [];
 	#post;
 	#debug;
 
 	constructor(writeKey, endpoint, debug) {
+		this.#queue = new Queue(globalThis.localStorage, 'chichi_queue', MaxEventSize, debug);
 		this.#writeKey = JSON.stringify(writeKey);
 		this.#endpoint = endpoint;
 		this.debug(debug);
 		this.#post = this.#postFunc();
 		this.#onUnload(() => {
 			this.#flush(true);
+			this.#queue.close();
 		});
+		if (!this.#queue.isEmpty()) {
+			setTimeout(() => {
+				this.#flush();
+			}, 20);
+		}
 	}
 
 	send(event) {
-		this.#debug?.('send', event.type, 'event', event);
-		const t = getTime();
-		const b = new Blob([JSON.stringify(event)]);
-		if (b.size > MaxEventSize) {
-			console.warn('event size (' + b.size + ' bytes) is greater then 32KB');
-			return;
+		this.#debug?.(`received '${event.type}' event`, event);
+		const wasEmpty = this.#queue.isEmpty();
+		try {
+			const bytes = this.#queue.append(event);
+			if (bytes > MaxEventSize) {
+				console.warn('event size (' + bytes + 'bytes) is greater then 32KB');
+				return;
+			}
+		} catch (error) {
+			if (error instanceof TypeError) {
+				console.warn('cannot stringify the event to JSON:', error);
+				return;
+			}
+			throw error;
 		}
-		if (this.#events.length === 0) {
-			setTimeout(this.#flush.bind(this), this.timeout);
+		if (wasEmpty) {
+			this.#debug?.('events will be flushed after', this.timeout, 'ms');
+			setTimeout(() => {
+				this.#flush();
+			}, this.timeout);
 		}
-		this.#events.push({ t, b });
 	}
 
 	// debug toggles debug mode.
 	debug(on) {
+		this.#queue.debug(on);
 		this.#debug = debug(on);
 	}
 
@@ -51,14 +70,24 @@ class Sender {
 	// queue becomes empty or the page is unloading.
 	#flush(unloading) {
 		if (unloading) {
-			if (this.#events.length === 0 || this.#flushing || !navigator.onLine) {
+			if (this.#queue.isEmpty() || this.#flushing || !navigator.onLine) {
 				return;
 			}
-		} else if (!navigator.onLine) {
-			globalThis.addEventListener('online', () => {
-				this.#flush();
-			});
-			return;
+		} else {
+			if (!navigator.onLine) {
+				globalThis.addEventListener('online', () => {
+					this.#flush();
+				});
+				return;
+			}
+			const timeout = (this.#queue.age() + this.timeout) - getTime();
+			if (timeout > 0) {
+				this.#debug?.('events will be flushed after', timeout, 'ms');
+				setTimeout(() => {
+					this.#flush();
+				}, timeout);
+				return;
+			}
 		}
 		this.#flushing = true;
 		const leading = '{"batch":[';
@@ -69,27 +98,21 @@ class Sender {
 			this.#writeKey,
 			'}',
 		]);
-		let size = leading.length + trailing.size;
-		const parts = [leading];
-		const maxBodySize = unloading ? MaxUnloadingBodySize : MaxBodySize;
-		const length = this.#events.length;
-		for (let i = 0; i < length; i++) {
-			const event = this.#events[i];
-			if (size + event.b.size >= maxBodySize) {
-				break;
-			}
-			size += event.b.size;
+		const maxSize = (unloading ? MaxUnloadingBodySize : MaxBodySize) - leading.length - trailing.size;
+		const events = this.#queue.read(maxSize, 1);
+		const parts = [];
+		parts.push(leading);
+		for (let i = 0; i < events.length; i++) {
 			if (i > 0) {
-				size++;
 				parts.push(',');
 			}
-			parts.push(event.b);
+			parts.push(events[i]);
 		}
-		const sent = parts.length / 2;
 		parts.push(trailing);
 		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
 		const body = new Blob(parts, { type: 'text/plain' });
-		this.#debug?.('flush', sent, 'events of', this.#events.length, 'in queue (', size, 'bytes )');
+		const sent = events.length;
+		this.#debug?.('flushing', sent, 'events of', this.#queue.length(), '(', body.size, 'bytes )');
 		try {
 			this.#post(this.#endpoint, body, unloading, (response) => {
 				this.#flushing = false;
@@ -104,7 +127,9 @@ class Sender {
 						} else {
 							console.warn(response.message);
 						}
-						setTimeout(this.#flush.bind(this), timeout);
+						setTimeout(() => {
+							this.#flush();
+						}, timeout);
 					} else {
 						this.#flush();
 					}
@@ -121,29 +146,27 @@ class Sender {
 					} else {
 						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`);
 					}
-					setTimeout(this.#flush.bind(this), timeout);
+					setTimeout(() => {
+						this.#flush();
+					}, timeout);
 					return;
 				}
-				this.#events.splice(0, sent);
-				this.#debug?.(sent, 'events sent (', this.#events.length, 'remains in queue )');
-				if (unloading || this.#events.length === 0) {
+				this.#debug?.(sent, 'events sent');
+				this.#queue.remove(sent);
+				const length = this.#queue.length();
+				if (unloading || length === 0) {
 					return;
 				}
-				const timeout = (this.#events[0].t + this.timeout) - getTime();
-				if (timeout <= 0) {
-					this.#debug?.('continue to flush now ( events in queue were supposed to be sent', -timeout, 'ms ago )');
-					this.#flush();
-				} else {
-					this.#debug?.(`continue to flush after ${timeout}ms`);
-					setTimeout(this.#flush.bind(this), timeout);
-				}
+				this.#flush();
 			});
 		} catch (error) {
 			if (navigator.onLine) {
 				console.warn(error.message);
 			}
 			this.#debug?.('cannot post events, try again after 100ms:', error);
-			setTimeout(this.#flush.bind(this), 100);
+			setTimeout(() => {
+				this.#flush();
+			}, 100);
 		}
 	}
 
