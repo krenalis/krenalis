@@ -9,20 +9,15 @@ package connectors
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
-	"strconv"
 	"time"
-	"unicode/utf8"
 
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // Database represents the database of a database connection.
@@ -377,34 +372,6 @@ type recordsScanValue struct {
 	property         types.Property
 	record           *Record
 	businessIDColumn types.Property
-}
-
-func businessIDToString(src any) (string, error) {
-
-	var s string
-
-	switch src := src.(type) {
-	case int: // Int(n).
-		s = strconv.Itoa(src)
-	case uint: // Uint(n).
-		s = strconv.Itoa(int(src))
-	case string: // Text, JSON String.
-		s = src
-	case decimal.Decimal: // Decimal.
-		s = src.String()
-	case json.Number: // JSON Number
-		s = src.String()
-	case float64:
-		s = fmt.Sprint(src)
-	default:
-		return "", fmt.Errorf("unexpected Business ID value with type %T", src)
-	}
-
-	if utf8.RuneCountInString(s) > 40 {
-		return "", fmt.Errorf("the Business ID value is longer than 40 runes")
-	}
-
-	return s, nil
 }
 
 func (sv recordsScanValue) Scan(src any) error {

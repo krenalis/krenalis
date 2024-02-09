@@ -11,6 +11,7 @@ package connectors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,6 +27,8 @@ import (
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
+
+	"github.com/shopspring/decimal"
 )
 
 // SchemaError represents an error with a schema.
@@ -421,6 +424,33 @@ func businessIDFromSchema(schema types.Type, businessIDName string) (types.Prope
 		return types.Property{}, fmt.Errorf("the Business ID property %q has an unsupported type %s", businessIDName, p.Type)
 	}
 	return p, nil
+}
+
+// businessIDToString returns a string representation of the Business ID value.
+// If value cannot be represented as a valid Business ID value, an error is
+// returned.
+func businessIDToString(value any) (string, error) {
+	var s string
+	switch src := value.(type) {
+	case int: // Int(n).
+		s = strconv.Itoa(src)
+	case uint: // Uint(n).
+		s = strconv.Itoa(int(src))
+	case string: // Text, JSON String.
+		s = src
+	case decimal.Decimal: // Decimal.
+		s = src.String()
+	case json.Number: // JSON Number
+		s = src.String()
+	case float64:
+		s = fmt.Sprint(src)
+	default:
+		return "", fmt.Errorf("unexpected Business ID value with type %T", src)
+	}
+	if utf8.RuneCountInString(s) > 40 {
+		return "", fmt.Errorf("the Business ID value is longer than 40 runes")
+	}
+	return s, nil
 }
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
