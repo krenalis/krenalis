@@ -1,7 +1,7 @@
 !(function () {
-	var a = (globalThis.chichianalytics = globalThis.chichianalytics || []);
+	var a = (window.chichianalytics = window.chichianalytics || []);
 	if (a.load) {
-		globalThis.console && console.error && console.error('The ChiChi snippet is included twice');
+		window.console && console.error && console.error('The ChiChi snippet is included twice');
 		return;
 	}
 	a.load = function (key, url, options) {
