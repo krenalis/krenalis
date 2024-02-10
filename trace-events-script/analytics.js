@@ -1,10 +1,10 @@
 import { campaign, isPlainObject, uuid } from './utils.js';
-import Options from './options.js';
-import Storage from './storage.js';
-import Session from './session.js';
-import { Sender } from './sender.js';
-import User from './user.js';
 import Group from './group.js';
+import Options from './options.js';
+import Sender from './sender.js';
+import Session from './session.js';
+import Storage from './storage.js';
+import User from './user.js';
 
 const version = '0.0.0';
 const none = () => {};

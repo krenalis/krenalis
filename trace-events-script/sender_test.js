@@ -1,7 +1,7 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
 import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts';
 import * as fake from './test_fake.js';
-import { Sender } from './sender.js';
+import Sender from './sender.js';
 
 const DEBUG = false;
 

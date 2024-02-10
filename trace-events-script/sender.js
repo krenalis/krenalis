@@ -66,7 +66,7 @@ class Sender {
 	// request within 64KB body size limit.
 	//
 	// flush should be invoked only when the queue becomes non-empty (hidden is
-	//  false) or the page becomes hidden (hidden is true). In all other
+	// false) or the page becomes hidden (hidden is true). In all other
 	// scenarios, once flush is called, it is guaranteed to continue until the
 	// queue becomes empty or the page becomes hidden.
 	#flush(hidden) {
@@ -235,4 +235,5 @@ class Sender {
 	}
 }
 
+export default Sender;
 export { MaxBodySize, MaxEventSize, MaxHiddenBodySize, Sender };
