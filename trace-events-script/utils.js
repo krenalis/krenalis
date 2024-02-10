@@ -46,6 +46,26 @@ function debug(on) {
 	}
 }
 
+// onVisibilityChange calls cb when the browser shows or hides the current page.
+// It passed as argument a boolean indicating if the page is visible.
+function onVisibilityChange(cb) {
+	function isVisible() {
+		const state = document.visibilityState || document.webkitvisibilitychange;
+		return state !== 'hidden';
+	}
+	let visible = isVisible();
+	const change = () => {
+		if (visible !== isVisible()) {
+			visible = !visible;
+			cb(visible);
+		}
+	};
+	// IE 11 and Safari before 14.5 only do not support 'visibilitychange'.
+	globalThis.addEventListener('visibilitychange', change);
+	globalThis.addEventListener('pagehide', change);
+	globalThis.addEventListener('pageshow', change);
+}
+
 // _uuid_imp returns a function that returns random UUIDs or undefined if the
 // browser is not supported.
 function _uuid_imp() {
@@ -83,4 +103,4 @@ function _uuid_imp() {
 // The uuid function is undefined for unsupported browsers.
 const uuid = _uuid_imp();
 
-export { _uuid_imp, campaign, debug, getTime, isPlainObject, uuid };
+export { _uuid_imp, campaign, debug, getTime, isPlainObject, onVisibilityChange, uuid };

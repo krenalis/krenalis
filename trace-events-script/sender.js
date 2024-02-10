@@ -1,8 +1,8 @@
-import { debug, getTime } from './utils.js';
+import { debug, getTime, onVisibilityChange } from './utils.js';
 import Queue from './queue.js';
 
 const MaxBodySize = 500 * 1024;
-const MaxUnloadingBodySize = 64 * 1024;
+const MaxHiddenBodySize = 64 * 1024;
 const MaxEventSize = 32 * 1024;
 
 class Sender {
@@ -20,9 +20,10 @@ class Sender {
 		this.#endpoint = endpoint;
 		this.debug(debug);
 		this.#post = this.#postFunc();
-		this.#onUnload(() => {
-			this.#flush(true);
-			this.#queue.close();
+		onVisibilityChange((visible) => {
+			if (!visible) {
+				this.#flush(true);
+			}
 		});
 		if (!this.#queue.isEmpty()) {
 			setTimeout(() => {
@@ -61,15 +62,15 @@ class Sender {
 		this.#debug = debug(on);
 	}
 
-	// flush flushes the queued events. If unloading is true, it sends a single
+	// flush flushes the queued events. If hidden is true, it sends a single
 	// request within 64KB body size limit.
 	//
-	// flush should be invoked only when the queue becomes non-empty (unloading
-	// is false) or the page is unloading (unloading is true). In all other
+	// flush should be invoked only when the queue becomes non-empty (hidden is
+	//  false) or the page becomes hidden (hidden is true). In all other
 	// scenarios, once flush is called, it is guaranteed to continue until the
-	// queue becomes empty or the page is unloading.
-	#flush(unloading) {
-		if (unloading) {
+	// queue becomes empty or the page becomes hidden.
+	#flush(hidden) {
+		if (hidden) {
 			if (this.#queue.isEmpty() || this.#flushing || !navigator.onLine) {
 				return;
 			}
@@ -98,7 +99,7 @@ class Sender {
 			this.#writeKey,
 			'}',
 		]);
-		const maxSize = (unloading ? MaxUnloadingBodySize : MaxBodySize) - leading.length - trailing.size;
+		const maxSize = (hidden ? MaxHiddenBodySize : MaxBodySize) - leading.length - trailing.size;
 		const events = this.#queue.read(maxSize, 1);
 		const parts = [];
 		parts.push(leading);
@@ -114,10 +115,11 @@ class Sender {
 		const sent = events.length;
 		this.#debug?.('flushing', sent, 'events of', this.#queue.length(), '(', body.size, 'bytes )');
 		try {
-			this.#post(this.#endpoint, body, unloading, (response) => {
+			this.#post(this.#endpoint, body, hidden, (response) => {
 				this.#flushing = false;
 				if (response instanceof Error) {
-					if (unloading) {
+					if (hidden) {
+						this.#debug?.('cannot post events:', response);
 						return;
 					}
 					if (navigator.onLine) {
@@ -154,7 +156,7 @@ class Sender {
 				this.#debug?.(sent, 'events sent');
 				this.#queue.remove(sent);
 				const length = this.#queue.length();
-				if (unloading || length === 0) {
+				if (hidden || length === 0) {
 					return;
 				}
 				this.#flush();
@@ -168,28 +170,6 @@ class Sender {
 				this.#flush();
 			}, 100);
 		}
-	}
-
-	// onUnload calls cb when the page unloads.
-	#onUnload(cb) {
-		let unloaded = false;
-		globalThis.addEventListener('visibilitychange', () => {
-			if (unloaded === (document.visibilityState === 'hidden')) {
-				return;
-			}
-			this.#debug?.(`received the 'visibilitychange' event`);
-			unloaded = !unloaded;
-			if (unloaded) {
-				cb();
-			}
-		});
-		globalThis.addEventListener('pagehide', () => {
-			if (!unloaded) {
-				this.#debug?.(`received the 'pagehide' event`);
-				unloaded = true;
-				cb();
-			}
-		});
 	}
 
 	// postFunc returns a function that issues a POST to the specified endpoint
@@ -255,4 +235,4 @@ class Sender {
 	}
 }
 
-export { MaxBodySize, MaxEventSize, MaxUnloadingBodySize, Sender };
+export { MaxBodySize, MaxEventSize, MaxHiddenBodySize, Sender };

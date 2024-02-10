@@ -12,9 +12,9 @@ Deno.test('Sender send', async (t) => {
 	// Prepare the execution environment.
 	{
 		localStorage.clear();
-
 		globalThis.navigator.onLine = true;
 		assert(globalThis.navigator.onLine);
+		globalThis.document = { visibilityState: 'visible' };
 	}
 
 	const events = [
@@ -26,10 +26,11 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('fetch', async () => {
 		let time;
-		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
+		let fetch;
 
 		try {
 			time = new FakeTime();
+			fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 			fetch.install();
 			const sender = new Sender(writeKey, endpoint);
 			sender.debug(DEBUG);
@@ -51,6 +52,7 @@ Deno.test('Sender send', async (t) => {
 
 		try {
 			time = new FakeTime();
+			fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 			fetch.install();
 			const sender = new Sender(writeKey, endpoint);
 			sender.debug(DEBUG);
@@ -73,6 +75,27 @@ Deno.test('Sender send', async (t) => {
 			fetch.restore();
 			time.restore();
 		}
+
+		localStorage.clear();
+
+		// After hiding the page, the queue is immediately flushed.
+		try {
+			time = new FakeTime();
+			fetch = new fake.Fetch(writeKey, endpoint, true, DEBUG);
+			fetch.install();
+			const sender = new Sender(writeKey, endpoint);
+			sender.debug(DEBUG);
+			sender.send({ messageId: crypto.randomUUID() });
+			globalThis.document.visibilityState = 'hidden';
+			globalThis.dispatchEvent(new Event('visibilitychange'));
+			const events = await fetch.events(1);
+			assertEquals(events.length, 1);
+		} finally {
+			globalThis.document.visibilityState = 'visible';
+			globalThis.dispatchEvent(new Event('visibilitychange'));
+			fetch.restore();
+			time.restore();
+		}
 	});
 
 	localStorage.clear();
@@ -87,6 +110,7 @@ Deno.test('Sender send', async (t) => {
 			for (let i = 0; i < events.length; i++) {
 				sender.send(events[i]);
 			}
+			globalThis.document.visibilityState = 'hidden';
 			globalThis.dispatchEvent(new Event('pagehide'));
 			const sentEvents = await sendBeacon.events(events.length);
 			assertEquals(sentEvents.length, events.length);
@@ -94,6 +118,8 @@ Deno.test('Sender send', async (t) => {
 				assertEquals(sentEvents[i], events[i]);
 			}
 		} finally {
+			globalThis.document.visibilityState = 'visible';
+			globalThis.dispatchEvent(new Event('pageshow'));
 			sendBeacon.restore();
 			time.restore();
 		}

@@ -9,6 +9,7 @@ const endpoint = 'https://example.com/api/v1/batch';
 
 Deno.test('User', () => {
 	localStorage.clear();
+	globalThis.document = { visibilityState: 'visible' };
 
 	const a = new Analytics(writeKey, endpoint);
 	a.debug(DEBUG);

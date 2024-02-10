@@ -7,7 +7,8 @@ import Queue from './queue.js';
 const DEBUG = false;
 
 Deno.test('Queue', () => {
-	localStorage.clear();
+	globalThis.localStorage.clear();
+	globalThis.document = { visibilityState: 'visible' };
 	const time = new FakeTime();
 
 	function assertRead(items, maxBytes, separatorBytes) {
@@ -91,10 +92,10 @@ Deno.test('Queue', () => {
 	time.tick(100);
 
 	// A corrupted persisted queue does not break Queue.
-	localStorage.setItem('queue', '....');
+	globalThis.localStorage.setItem('queue', '....');
 	q = new Queue(maxItemBytes, DEBUG);
 	assertEmpty();
-	localStorage.setItem('queue', '{}\n[}\n{}\n123\n123\n123\n2\n');
+	globalThis.localStorage.setItem('queue', '{}\n[}\n{}\n123\n123\n123\n2\n');
 	q = new Queue(maxItemBytes, DEBUG);
 	assertEmpty();
 	q.close();
@@ -134,5 +135,17 @@ Deno.test('Queue', () => {
 	time.tick(200);
 	assertEquals(q2.read(), ['{"q":2}']);
 	q1.close();
+	q2.close();
+
+	// After hiding the page, the queue is immediately persisted in the localStorage.
+	globalThis.localStorage.clear();
+	q = new Queue(globalThis.localStorage, 'queue', maxItemBytes, DEBUG);
+	q.append({ foo: [1, 3] });
+	assertEquals(globalThis.localStorage.getItem('queue'), null);
+	globalThis.document.visibilityState = 'hidden';
+	globalThis.dispatchEvent(new Event('visibilitychange'));
+	assert(globalThis.localStorage.getItem('queue').length > 0);
+	globalThis.document.visibilityState = 'visible';
+	globalThis.dispatchEvent(new Event('visibilitychange'));
 	q2.close();
 });

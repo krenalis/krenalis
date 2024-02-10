@@ -1,4 +1,4 @@
-import { debug, getTime } from './utils.js';
+import { debug, getTime, onVisibilityChange } from './utils.js';
 
 // Queue is an in memory queue made persistent on a Storage.
 class Queue {
@@ -21,6 +21,14 @@ class Queue {
 		this.#maxItemSize = maxItemSize;
 		this.debug(debug);
 		this.#restore();
+		onVisibilityChange((visible) => {
+			if (!visible) {
+				if (this.#syncTimeoutID != null) {
+					clearTimeout(this.#syncTimeoutID);
+				}
+				this.#makePersistent();
+			}
+		});
 	}
 
 	// age returns the time, in milliseconds, when the item in the head of the
@@ -137,6 +145,9 @@ class Queue {
 	// the duration, in milliseconds, to wait before attempting again in case of
 	// an error. If delay is null, no retry will be made.
 	#makePersistent(delay) {
+		if (this.#inSync) {
+			return;
+		}
 		let text = '';
 		if (this.#items.length > 0) {
 			text = this.#items.join('\n') + '\n' + this.#times.join(' ') + '\n' + this.#sizes.join(' ');

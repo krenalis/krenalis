@@ -1,6 +1,6 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts';
-import { _uuid_imp, campaign } from './utils.js';
+import { _uuid_imp, campaign, onVisibilityChange } from './utils.js';
 
 Deno.test('utils', async (t) => {
 	await t.step('campaign function', () => {
@@ -15,6 +15,27 @@ Deno.test('utils', async (t) => {
 
 		globalThis.location = { search: '?utm_medium=social+network&utm_source=social&utm_campaign=paid' };
 		assertEquals(campaign(), { 'medium': 'social network', 'source': 'social', 'name': 'paid' });
+	});
+
+	await t.step('onVisibilityChange function', () => {
+		globalThis.document = { visibilityState: 'visible' };
+		let isPageVisible = true;
+		onVisibilityChange((visible) => {
+			assertEquals(visible, !isPageVisible);
+			isPageVisible = visible;
+		});
+		globalThis.document.visibilityState = 'hidden';
+		globalThis.dispatchEvent(new Event('visibilitychange'));
+		assertEquals(isPageVisible, false);
+		globalThis.document.visibilityState = 'visible';
+		globalThis.dispatchEvent(new Event('visibilitychange'));
+		assertEquals(isPageVisible, true);
+		globalThis.document.visibilityState = 'hidden';
+		globalThis.dispatchEvent(new Event('pagehide'));
+		assertEquals(isPageVisible, false);
+		globalThis.document.visibilityState = 'visible';
+		globalThis.dispatchEvent(new Event('pageshow'));
+		assertEquals(isPageVisible, true);
 	});
 
 	await t.step('uuid function', () => {
