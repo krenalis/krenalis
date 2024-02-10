@@ -26,7 +26,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('fetch', async () => {
 		let time;
-		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 
 		try {
 			time = new FakeTime();

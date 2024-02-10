@@ -95,7 +95,7 @@ Deno.test('Analytics', async (t) => {
 	});
 
 	await t.step('reset function', async () => {
-		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 		const a = newAnalytics({ strategy: 'AC-B', sessions: { autoTrack: false } });
 		a.startSession(137206);
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7');
@@ -144,7 +144,7 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('sessions with auto tracking', () => {
 		const time = new FakeTime();
-		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 		fetch.install();
 		try {
 			for (const option of [null, { sessions: { autoTrack: true } }]) {
@@ -170,7 +170,7 @@ Deno.test('Analytics', async (t) => {
 	await t.step('sessions without auto tracking', async () => {
 		const time = new FakeTime();
 
-		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 		fetch.install();
 
 		const a = newAnalytics({ sessions: { autoTrack: false } });
@@ -216,7 +216,7 @@ Deno.test('Analytics', async (t) => {
 			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
 				const time = new FakeTime();
 
-				const fetch = new fake.Fetch(writeKey, endpoint);
+				const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 				fetch.install();
 
 				const a = newAnalytics({ strategy, sessions: { autoTrack } });
@@ -324,7 +324,7 @@ Deno.test('Analytics', async (t) => {
 	await t.step('changing User ID, resets traits and Anonymous ID', async () => {
 		const time = new FakeTime();
 
-		const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 		fetch.install();
 
 		const a = newAnalytics({ sessions: { autoTrack: false } });
@@ -348,7 +348,7 @@ Deno.test('Analytics', async (t) => {
 	});
 
 	// Execute the steps in the 'analytics_test_steps.js' module.
-	const fetch = new fake.Fetch(writeKey, endpoint, DEBUG);
+	const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG);
 	const randomUUID = new fake.RandomUUID('9587b6d1-ae92-4d3c-a8d9-87c3e9ce7ae3');
 	const navigator = new fake.Navigator();
 	const now = new Date('2024-01-01T00:00:00Z');

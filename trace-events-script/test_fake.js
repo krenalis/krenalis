@@ -8,18 +8,31 @@ class Fetch {
 	#installTime;
 	#writeKey;
 	#endpoint;
+	#keepalive;
 	#events = [];
 	#wait = null;
+	#error;
 	#fetch;
 	#originalFetch;
 	#debug;
 
-	constructor(writeKey, endpoint, debug) {
+	constructor(writeKey, endpoint, keepalive, debug) {
 		this.#writeKey = writeKey;
 		this.#endpoint = endpoint;
+		this.#keepalive = keepalive;
 		this.#fetch = async (resource, options) => {
-			assertEquals(resource, endpoint);
-			const events = await parseRequest(this.#writeKey, this.#installTime, options);
+			let events;
+			try {
+				assertEquals(resource, endpoint);
+				events = await parseRequest(this.#writeKey, this.#installTime, this.#keepalive, options);
+			} catch (error) {
+				if (this.#wait != null) {
+					this.#wait.reject(error);
+				} else {
+					this.#error = error;
+				}
+				throw error;
+			}
 			this.#events.push(...events);
 			const min = this.#wait?.min;
 			if (min != null && this.#events.length >= min) {
@@ -51,11 +64,16 @@ class Fetch {
 				reject(new Error('events already called'));
 			});
 		}
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
+			if (this.#error != null) {
+				reject(this.#error);
+				return;
+			}
 			if (this.#events.length < min) {
 				this.#wait = {
 					min: min,
 					resolve: resolve,
+					reject: reject,
 				};
 				this.#debug?.(`promise resolution is pending:  Fetch.events(${min})`);
 			} else {
@@ -100,6 +118,7 @@ class SendBeacon {
 	#endpoint;
 	#events = [];
 	#wait = null;
+	#error;
 	#sendBeacon;
 	#debug;
 
@@ -107,26 +126,35 @@ class SendBeacon {
 		this.#writeKey = writeKey;
 		this.#endpoint = endpoint;
 		this.#sendBeacon = (url, data) => {
-			assertEquals(url, endpoint);
-			assert(data instanceof Blob);
-			assertEquals(data.type, 'text/plain');
-			parseRequest(this.#writeKey, this.#installTime, {
-				method: 'POST',
-				headers: { 'Content-Type': data.type },
-				body: data,
-				redirect: 'error',
-			}).then((events) => {
-				this.#events.push(...events);
-				const min = this.#wait?.min;
-				if (min != null && this.#events.length >= min) {
-					const events = this.#events;
-					const resolve = this.#wait.resolve;
-					this.#events = [];
-					this.#wait = null;
-					this.#debug?.(`promise resolution is resolved: SendBeacon.events(${min})`);
-					resolve(events);
+			try {
+				assertEquals(url, endpoint);
+				assert(data instanceof Blob);
+				assertEquals(data.type, 'text/plain');
+				parseRequest(this.#writeKey, this.#installTime, false, {
+					method: 'POST',
+					headers: { 'Content-Type': data.type },
+					body: data,
+					redirect: 'error',
+				}).then((events) => {
+					this.#events.push(...events);
+					const min = this.#wait?.min;
+					if (min != null && this.#events.length >= min) {
+						const events = this.#events;
+						const resolve = this.#wait.resolve;
+						this.#events = [];
+						this.#wait = null;
+						this.#debug?.(`promise resolution is resolved: SendBeacon.events(${min})`);
+						resolve(events);
+					}
+				});
+			} catch (error) {
+				if (this.#wait != null) {
+					this.#wait.reject(error);
+				} else {
+					this.#error = error;
 				}
-			});
+				throw error;
+			}
 			return true;
 		};
 		this.#debug = utils.debug(debug);
@@ -143,7 +171,11 @@ class SendBeacon {
 				reject(new Error('events already called'));
 			});
 		}
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
+			if (this.#error != null) {
+				reject(this.#error);
+				return;
+			}
 			if (this.#events.length < min) {
 				this.#wait = {
 					min: min,
@@ -240,6 +272,7 @@ class XMLHttpRequest {
 	static #endpoint;
 	static #events;
 	static #wait;
+	static #error;
 	static #debug;
 	#method;
 	#url;
@@ -265,25 +298,34 @@ class XMLHttpRequest {
 		this.readyState = 4;
 		this.status = 200;
 		this.statusText = 'OK';
-		parseRequest(XMLHttpRequest.#writeKey, XMLHttpRequest.#installTime, {
-			method: this.#method,
-			headers: this.#headers,
-			body: body,
-			redirect: 'error',
-		}).then((events) => {
-			XMLHttpRequest.#events.push(...events);
-			const min = XMLHttpRequest.#wait?.min;
-			if (min != null && XMLHttpRequest.#events.length >= min) {
-				const events = XMLHttpRequest.#events;
-				const resolve = XMLHttpRequest.#wait.resolve;
-				XMLHttpRequest.#events = [];
-				XMLHttpRequest.#wait = null;
-				XMLHttpRequest.#debug?.(`promise resolution is resolved: XMLHttpRequest.events(${min})`);
-				resolve(events);
+		try {
+			parseRequest(XMLHttpRequest.#writeKey, XMLHttpRequest.#installTime, false, {
+				method: this.#method,
+				headers: this.#headers,
+				body: body,
+				redirect: 'error',
+			}).then((events) => {
+				XMLHttpRequest.#events.push(...events);
+				const min = XMLHttpRequest.#wait?.min;
+				if (min != null && XMLHttpRequest.#events.length >= min) {
+					const events = XMLHttpRequest.#events;
+					const resolve = XMLHttpRequest.#wait.resolve;
+					XMLHttpRequest.#events = [];
+					XMLHttpRequest.#wait = null;
+					XMLHttpRequest.#debug?.(`promise resolution is resolved: XMLHttpRequest.events(${min})`);
+					resolve(events);
+				}
+			}).catch((error) => {
+				console.error(error);
+			});
+		} catch (error) {
+			if (XMLHttpRequest.#wait.reject != null) {
+				XMLHttpRequest.#wait.reject(error);
+			} else {
+				XMLHttpRequest.#error = error;
 			}
-		}).catch((error) => {
-			console.error(error);
-		});
+			throw error;
+		}
 		if (typeof this.onreadystatechange === 'function') {
 			this.onreadystatechange();
 		}
@@ -300,7 +342,11 @@ class XMLHttpRequest {
 				reject(new Error('events already called'));
 			});
 		}
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
+			if (XMLHttpRequest.#error != null) {
+				reject(this.#error);
+				return;
+			}
 			if (XMLHttpRequest.#events.length < min) {
 				XMLHttpRequest.#wait = {
 					min: min,
@@ -367,7 +413,7 @@ class RandomUUID {
 }
 
 // parseRequest parses a request to the fake fetch and XMLHttpRequest.send functions
-async function parseRequest(writeKey, minTime, options) {
+async function parseRequest(writeKey, minTime, keepalive, options) {
 	const now = utils.getTime();
 
 	assertEquals(options.method, 'POST');
@@ -378,7 +424,7 @@ async function parseRequest(writeKey, minTime, options) {
 	assertEquals(Array.from(headers.keys()).length, 1);
 	assertEquals(headers.get('content-type'), 'text/plain');
 	assertEquals(options.redirect, 'error');
-	assertEquals(Boolean(options.keepalive), false);
+	assertEquals(Boolean(options.keepalive), keepalive);
 	assert(options.body instanceof Blob);
 	if (options.body.size > MaxBodySize) {
 		throw new AssertionError(`batch body size (${options.body.size}) is greater than ${MaxBodySize}`);
