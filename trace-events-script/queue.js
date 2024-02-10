@@ -12,8 +12,8 @@ class Queue {
 	#syncTimeoutID = null;
 	#debug;
 
-	// The constructor initializes a new Queue using the provided Storage (such
-	// as sessionStorage or localStorage), using the provided key, and with each
+	// constructor initializes a new Queue using the provided Storage (such as
+	// sessionStorage or localStorage), using the provided key, and with each
 	// item limited to a maximum size in bytes specified by maxItemSize.
 	constructor(storage, key, maxItemSize, debug) {
 		this.#storage = storage;
@@ -32,7 +32,7 @@ class Queue {
 	}
 
 	// age returns the time, in milliseconds, when the item in the head of the
-	//  queue was added. Returns null if the queue is empty.
+	// queue was added. Returns null if the queue is empty.
 	age() {
 		return this.isEmpty() ? null : this.#times[0];
 	}
@@ -46,25 +46,26 @@ class Queue {
 		const time = getTime();
 		item = JSON.stringify(item);
 		const size = new Blob([item]).size;
-		if (size <= this.#maxItemSize) {
-			this.#items.push(item);
-			this.#times.push(time);
-			this.#sizes.push(size);
-			this.#inSync = false;
-			if (this.#syncTimeoutID == null) {
-				this.#syncTimeoutID = setTimeout(() => {
-					this.#syncTimeoutID = null;
-					this.#makePersistent(200);
-				}, 20);
-			}
-			this.#debug?.(
-				'appended',
-				size,
-				`bytes value to the '${this.#key}' queue (`,
-				this.#items.length,
-				'events in queue )',
-			);
+		if (size > this.#maxItemSize) {
+			return size;
 		}
+		this.#items.push(item);
+		this.#times.push(time);
+		this.#sizes.push(size);
+		this.#inSync = false;
+		if (this.#syncTimeoutID == null) {
+			this.#syncTimeoutID = setTimeout(() => {
+				this.#syncTimeoutID = null;
+				this.#makePersistent(200);
+			}, 20);
+		}
+		this.#debug?.(
+			'appended',
+			size,
+			`bytes value to the '${this.#key}' queue (`,
+			this.#items.length,
+			'events in queue )',
+		);
 		return size;
 	}
 
@@ -161,21 +162,21 @@ class Queue {
 		} catch (error) {
 			if (delay == null) {
 				this.#debug?.('cannot make', bytes, `bytes of the '${this.#key}' queue persistent:`, error.message);
-			} else {
-				delay = Math.min(2 * delay, 5000);
-				this.#debug?.(
-					'cannot make',
-					bytes,
-					`bytes of the '${this.#key}' queue persistent (will retry after`,
-					delay,
-					'ms):',
-					error.message,
-				);
-				this.#syncTimeoutID = setTimeout(() => {
-					this.#syncTimeoutID = null;
-					this.#makePersistent(delay);
-				}, delay);
+				return;
 			}
+			delay = Math.min(2 * delay, 5000);
+			this.#debug?.(
+				'cannot make',
+				bytes,
+				`bytes of the '${this.#key}' queue persistent (will retry after`,
+				delay,
+				'ms):',
+				error.message,
+			);
+			this.#syncTimeoutID = setTimeout(() => {
+				this.#syncTimeoutID = null;
+				this.#makePersistent(delay);
+			}, delay);
 			return;
 		}
 		this.#inSync = true;
@@ -188,12 +189,12 @@ class Queue {
 		);
 	}
 
-	// restore restores the items from localStorage. If any errors occur while
-	// accessing localStorage or if the serialized items are corrupted, it does
-	// nothing. It assumes that the restored items contain valid JSON but
-	// doesn't check it. It is only called by the constructor.
+	// restore restores the queue from localStorage. If any errors occur while
+	// accessing localStorage it does nothing. It is only called by the
+	// constructor.
 	//
-	// While restore ensures that no internal Queue data is corrupted, it does
+	// If the queue persisted in localStorage has been corrupted, restore
+	// only ensures that no internal Queue data becomes corrupted, but it does
 	// not guarantee the validity of the JSON items, nor does it ensure that
 	// their sizes correspond to the original item sizes or that their
 	// timestamps match the original ones.
