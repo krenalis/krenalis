@@ -14,7 +14,10 @@ Deno.test('Sender send', async (t) => {
 		localStorage.clear();
 		globalThis.navigator.onLine = true;
 		assert(globalThis.navigator.onLine);
-		globalThis.document = { visibilityState: 'visible' };
+		globalThis.document = {
+			visibilityState: 'visible',
+			addEventListener: globalThis.addEventListener.bind(globalThis),
+		};
 	}
 
 	const events = [

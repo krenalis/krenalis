@@ -18,7 +18,10 @@ Deno.test('utils', async (t) => {
 	});
 
 	await t.step('onVisibilityChange function', () => {
-		globalThis.document = { visibilityState: 'visible' };
+		globalThis.document = {
+			visibilityState: 'visible',
+			addEventListener: globalThis.addEventListener.bind(globalThis),
+		};
 		let isPageVisible = true;
 		onVisibilityChange((visible) => {
 			assertEquals(visible, !isPageVisible);

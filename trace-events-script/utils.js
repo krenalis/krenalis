@@ -60,8 +60,10 @@ function onVisibilityChange(cb) {
 			cb(visible);
 		}
 	};
-	// IE 11 and Safari before 14.5 only do not support 'visibilitychange'.
-	globalThis.addEventListener('visibilitychange', change);
+	// IE 11 do not support 'visibilitychange'.
+	// In Safari before 14 'visibilitychange' does not work on globalThis but works on document.
+	// In Safari before 14.5 'visibilitychange' does not fire on page hide, but 'pagehide' does.
+	globalThis.document.addEventListener('visibilitychange', change);
 	globalThis.addEventListener('pagehide', change);
 	globalThis.addEventListener('pageshow', change);
 }

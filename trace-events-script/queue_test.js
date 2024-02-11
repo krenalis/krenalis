@@ -8,7 +8,10 @@ const DEBUG = false;
 
 Deno.test('Queue', () => {
 	globalThis.localStorage.clear();
-	globalThis.document = { visibilityState: 'visible' };
+	globalThis.document = {
+		visibilityState: 'visible',
+		addEventListener: globalThis.addEventListener.bind(globalThis),
+	};
 	const time = new FakeTime();
 
 	function assertRead(items, maxBytes, separatorBytes) {
