@@ -4,11 +4,11 @@ const warnMsg = 'Analytics: cannot stringify traits';
 class Storage {
 	#store;
 
-	constructor(sameSiteCookie, secureCookie) {
+	constructor(sameDomainCookiesOnly, sameSiteCookie, secureCookie) {
 		const stores = [];
 		if (globalThis.document?.cookie != null) {
 			try {
-				stores.push(new cookieStore(sameSiteCookie, secureCookie));
+				stores.push(new cookieStore(sameDomainCookiesOnly, sameSiteCookie, secureCookie));
 			} catch (error) {
 				if (error !== noStorageSupported) {
 					throw error;
@@ -149,18 +149,24 @@ class Storage {
 
 // cookieStore stores key/value pairs in cookies.
 class cookieStore {
-	#domain;
+	#domain; // domain is null if sameDomainOnly is true
+	#sameDomainOnly;
 	#sameSite;
 	#secure;
 
-	// constructor returns a new cookieStore. sameSite is the value for the
-	// SameSite attribute of cookies, and can be 'lex', 'strict', or 'none'. If
-	// secure is true, cookies will have the 'secure' attribute. If cookies are
-	// not supported, it raises an exception with the error storeNotSupported.
-	constructor(sameSite, secure) {
-		this.#setDomain();
+	// constructor returns a new cookieStore. If sameDomainOnly is true, cookies
+	// are restricted to the exact domain where they were created. sameSite is
+	// the value for the SameSite attribute of cookies, and can be 'lex',
+	// 'strict', or 'none'. If secure is true, cookies will have the 'secure'
+	// attribute.
+	//
+	// If cookies are not supported, it raises an exception with the error
+	// storeNotSupported.
+	constructor(sameDomainOnly, sameSite, secure) {
+		this.#sameDomainOnly = sameDomainOnly;
 		this.#sameSite = sameSite;
 		this.#secure = secure;
+		this.#setDomain();
 	}
 
 	get(key) {
@@ -190,12 +196,14 @@ class cookieStore {
 			return null;
 		}
 		const expires = new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toUTCString();
-		globalThis.document.cookie = `${key}=${value}; expires=${expires}; path=/; samesite=${this.#sameSite};` +
-			`${this.#secure ? ' secure;' : ''} domain=${this.#domain}`;
+		globalThis.document.cookie = `${key}=${value}; expires=${expires}; path=/; samesite=${this.#sameSite}` +
+			`${this.#secure ? '; secure' : ''}${this.#domain ? `; domain=${this.#domain}` : ''}`;
 	}
 
 	delete(key) {
-		document.cookie = key + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + this.#domain;
+		document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/${
+			this.#domain ? `; domain=${this.#domain}` : ''
+		}`;
 	}
 
 	// setDomain sets the domain to use for cookies. It is the smallest
@@ -203,7 +211,10 @@ class cookieStore {
 	// for which cookie setting is supported. If cookie setting is not
 	// supported, it raises an exception with the error storeNotSupported.
 	#setDomain() {
-		function hostnames() {
+		const hostnames = () => {
+			if (this.#sameDomainOnly) {
+				return [null];
+			}
 			let hostname = globalThis.location.hostname;
 			if (hostname[-1] === '.') {
 				hostname = hostname.slice(0, -1);
@@ -221,7 +232,7 @@ class cookieStore {
 				names.push(components.slice(-i).join('.'));
 			}
 			return names;
-		}
+		};
 		const domains = hostnames();
 		const key = '__test__';
 		const value = String(Math.floor(Math.random() * 100000000));

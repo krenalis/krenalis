@@ -37,9 +37,7 @@ class CookieDocument {
 
 	set cookie(s) {
 		const cookie = CookieDocument.#parse(s);
-		if (cookie.domain == null) {
-			cookie.domain = this.#location.hostname;
-		} else if (!cookie.domain.endsWith(this.#domain)) {
+		if (cookie.domain != null && !cookie.domain.endsWith(this.#domain)) {
 			return;
 		}
 		if (cookie.path == null) {

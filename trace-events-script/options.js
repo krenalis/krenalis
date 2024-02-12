@@ -2,6 +2,7 @@ import { isPlainObject } from './utils.js';
 
 class Options {
 	debug = false;
+	sameDomainCookiesOnly = false;
 	sameSiteCookie = 'lax';
 	secureCookie = false;
 	sessions = {
@@ -16,6 +17,9 @@ class Options {
 		}
 		if (options.debug != null) {
 			this.debug = !!options.debug;
+		}
+		if (options.sameDomainCookiesOnly != null) {
+			this.sameDomainCookiesOnly = !!options.sameDomainCookiesOnly;
 		}
 		if (options.sameSiteCookie != null) {
 			if (!isSameSite(options.sameSiteCookie)) {

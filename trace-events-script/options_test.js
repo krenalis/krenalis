@@ -7,6 +7,7 @@ Deno.test('Options', () => {
 	const base = {
 		autoTrack: true,
 		debug: false,
+		sameDomainCookiesOnly: false,
 		sameSiteCookie: 'lax',
 		secureCookie: false,
 		strategy: 'AB-C',
@@ -19,6 +20,8 @@ Deno.test('Options', () => {
 		{ options: {}, ...base },
 		{ options: [], ...base },
 		{ options: '', ...base },
+		{ options: { sameDomainCookiesOnly: true }, ...base, sameDomainCookiesOnly: true },
+		{ options: { sameDomainCookiesOnly: false }, ...base },
 		{ options: { secureCookie: true }, ...base, secureCookie: true },
 		{ options: { secureCookie: false }, ...base },
 		{ options: { sameSiteCookie: 'lax' }, ...base },
@@ -61,6 +64,9 @@ Deno.test('Options', () => {
 		const test = tests[i];
 		const options = new Options(test.options);
 		assertEquals(options.debug, test.debug);
+		assertEquals(options.sameDomainCookiesOnly, test.sameDomainCookiesOnly);
+		assertEquals(options.sameSiteCookie, test.sameSiteCookie);
+		assertEquals(options.secureCookie, test.secureCookie);
 		assertEquals(options.sessions.autoTrack, test.autoTrack);
 		assertEquals(options.sessions.timeout, test.timeout);
 		assertEquals(options.strategy, test.strategy);
