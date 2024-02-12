@@ -70,3 +70,7 @@ Every event is associated to the **users incoming from the same connection** whi
 At that point, since users from multiple connections have been merged together through the Workspace Identity Resolution, **events from different connections can be associated to the same workspace user**.
 
 <img src="../images/events-users.png" width="70%" alt="event-users">
+
+## Deletion of orphan users
+
+When executing the Workspace Identity Resolution, the users within `users_identities` and `users` which no longer belong to any connection (i.e. connections that have been deleted) are deleted.

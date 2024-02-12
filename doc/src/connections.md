@@ -25,7 +25,6 @@ A destination connection enables you to send customer data, consolidated in your
 
 You can create a destination in the "connections" page of a workspace clicking on the **Add new destination ⊕** button.
 
+### Deleting a connection
 
-
-
-
+When deleting a source connection, the users imported from it are kept within the table `users_identities`, as well as in the table `users`, until the next [Workspace Identity Resolution](./identity-resolution/workspace-identity-resolution.md) is executed.

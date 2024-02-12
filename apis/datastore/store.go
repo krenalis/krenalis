@@ -158,14 +158,11 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		return nil
 	}
 
-	// Retrieve the workspace connections and simply return if there are none.
+	// Retrieve the IDs of the workspace connections.
 	wsConnections := store.ds.state.Connections()
-	if len(wsConnections) == 0 {
-		return nil
-	}
-	var connections []int
-	for _, c := range wsConnections {
-		connections = append(connections, c.ID)
+	connections := make([]int, len(wsConnections))
+	for i, c := range wsConnections {
+		connections[i] = c.ID
 	}
 
 	// TODO(Gianluca): should the users / users_identities schema be handled by

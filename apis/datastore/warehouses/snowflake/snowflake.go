@@ -393,10 +393,13 @@ func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.Record
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-// connections holds the identifiers of the connections of the workspace and
-// must always contain at least one connection.
+//
+// connections holds the identifiers of the connections of the workspace and may
+// be empty to indicate that no connections are present in the workspace.
+//
 // identifiers are the properties of the 'users_identities' schema which are
 // identifiers, ordered by priority.
+//
 // usersSchema is the schema of the 'users' table, which will be populated
 // during the users synchronization.
 func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {

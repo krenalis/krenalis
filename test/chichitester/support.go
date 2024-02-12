@@ -228,6 +228,11 @@ func (c *Chichi) ConnectionKeys(conn int) []string {
 	return keys
 }
 
+func (c *Chichi) DeleteConnection(connection int) {
+	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection)
+	c.MustCall("DELETE", method, nil)
+}
+
 func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
 	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/actions/" + strconv.Itoa(action) + "/execute"
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport})
