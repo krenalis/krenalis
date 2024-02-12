@@ -157,7 +157,8 @@ Deno.test('Storage', () => {
 Deno.test('cookieStore', () => {
 	globalThis.location = new URL('https://c.b.a.example.com/account/');
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
-	let store = new cookieStore(false, 'lax', false);
+	let store = new cookieStore('lax', false, null, false);
+
 	assertEquals(store.get(''), null);
 	store.set('', '');
 	assertEquals(store.get(''), '');
@@ -165,9 +166,9 @@ Deno.test('cookieStore', () => {
 	store.set('boo', 'foo');
 
 	let cookie = globalThis.document.getCookie('boo', 'a.example.com');
-	assertEquals(cookie.domain, 'a.example.com');
 	assertEquals(cookie.sameSite, 'lax');
 	assert(!cookie.secure);
+	assertEquals(cookie.domain, 'a.example.com');
 
 	assertEquals(store.get('boo'), 'foo');
 	store.set('boo', '%ab');
@@ -188,33 +189,41 @@ Deno.test('cookieStore', () => {
 	assertEquals(store.get('b'), null);
 	assertEquals(store.get('ab'), '3');
 
-	store = new cookieStore(true, 'lax', true);
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
+	store = new cookieStore('lax', true, null, true);
 	store.set('boo', 'foo');
 	cookie = globalThis.document.getCookie('boo', undefined);
-	assertEquals(cookie.domain, undefined);
 	assertEquals(cookie.sameSite, 'lax');
 	assert(cookie.secure);
+	assertEquals(cookie.domain, undefined);
 
-	store = new cookieStore(false, 'strict', true);
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
+	store = new cookieStore('lax', true, 'b.a.example.com', false);
+	store.set('boo', 'foo');
+	cookie = globalThis.document.getCookie('boo', 'b.a.example.com');
+	assertEquals(cookie.sameSite, 'lax');
+	assert(cookie.secure);
+	assertEquals(cookie.domain, 'b.a.example.com');
+
+	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
+	store = new cookieStore('strict', true, null, false);
 	store.set('boo', 'foo');
 	cookie = globalThis.document.getCookie('boo', 'a.example.com');
-	assertEquals(cookie.domain, 'a.example.com');
 	assertEquals(cookie.sameSite, 'strict');
 	assert(cookie.secure);
+	assertEquals(cookie.domain, 'a.example.com');
 
 	globalThis.location = new URL('https://172.16.254.1/');
 	globalThis.document = new fake.CookieDocument(globalThis.location, '172.16.254.1');
-	store = new cookieStore(false, 'none', true);
+	store = new cookieStore('none', true, null, false);
 	assertEquals(store.get('boo'), null);
 	store.set('boo', 'foo');
 	assertEquals(store.get('boo'), 'foo');
 
 	cookie = globalThis.document.getCookie('boo', '172.16.254.1');
-	assertEquals(cookie.domain, '172.16.254.1');
 	assertEquals(cookie.sameSite, 'none');
 	assert(cookie.secure);
+	assertEquals(cookie.domain, '172.16.254.1');
 
 	store.delete('boo');
 	assertEquals(store.get('boo'), null);

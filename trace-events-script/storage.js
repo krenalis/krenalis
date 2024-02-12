@@ -4,11 +4,11 @@ const warnMsg = 'Analytics: cannot stringify traits';
 class Storage {
 	#store;
 
-	constructor(sameDomainCookiesOnly, sameSiteCookie, secureCookie) {
+	constructor(sameSiteCookie, secureCookie, setCookieDomain, sameDomainCookiesOnly) {
 		const stores = [];
 		if (globalThis.document?.cookie != null) {
 			try {
-				stores.push(new cookieStore(sameDomainCookiesOnly, sameSiteCookie, secureCookie));
+				stores.push(new cookieStore(sameSiteCookie, secureCookie, setCookieDomain, sameDomainCookiesOnly));
 			} catch (error) {
 				if (error !== noStorageSupported) {
 					throw error;
@@ -149,23 +149,24 @@ class Storage {
 
 // cookieStore stores key/value pairs in cookies.
 class cookieStore {
-	#domain; // domain is null if sameDomainOnly is true
+	#domain; // domain is undefined if sameDomainOnly is true
 	#sameDomainOnly;
 	#sameSite;
 	#secure;
 
-	// constructor returns a new cookieStore. If sameDomainOnly is true, cookies
-	// are restricted to the exact domain where they were created. sameSite is
-	// the value for the SameSite attribute of cookies, and can be 'lex',
-	// 'strict', or 'none'. If secure is true, cookies will have the 'secure'
-	// attribute.
+	// constructor returns a new cookieStore. sameSite is the value for the
+	// SameSite attribute of cookies, and can be 'lex', 'strict', or 'none'. If
+	// secure is true, cookies will have the 'secure' attribute. domain, if not
+	// null, is the domain to use for cookies, otherwise if sameDomainOnly is
+	// true, cookies are restricted to the exact domain where they were created.
 	//
 	// If cookies are not supported, it raises an exception with the error
 	// storeNotSupported.
-	constructor(sameDomainOnly, sameSite, secure) {
-		this.#sameDomainOnly = sameDomainOnly;
+	constructor(sameSite, secure, domain, sameDomainOnly) {
 		this.#sameSite = sameSite;
 		this.#secure = secure;
+		this.#domain = domain;
+		this.#sameDomainOnly = sameDomainOnly;
 		this.#setDomain();
 	}
 
@@ -212,6 +213,9 @@ class cookieStore {
 	// supported, it raises an exception with the error storeNotSupported.
 	#setDomain() {
 		const hostnames = () => {
+			if (this.#domain != null) {
+				return [this.#domain];
+			}
 			if (this.#sameDomainOnly) {
 				return [null];
 			}

@@ -10,6 +10,7 @@ Deno.test('Options', () => {
 		sameDomainCookiesOnly: false,
 		sameSiteCookie: 'lax',
 		secureCookie: false,
+		setCookieDomain: null,
 		strategy: 'AB-C',
 		timeout: 30 * 60000,
 	};
@@ -42,6 +43,8 @@ Deno.test('Options', () => {
 		{ options: { sessions: { timeout: -5000 } }, ...base, autoTrack: false },
 		{ options: { sessions: { autoTrack: true, timeout: 20 * 1000 } }, ...base, timeout: 20 * 1000 },
 		{ options: { sessions: { autoTrack: true, timeout: 0 } }, ...base, autoTrack: false },
+		{ options: { setCookieDomain: null }, ...base },
+		{ options: { setCookieDomain: 'example.com' }, ...base, setCookieDomain: 'example.com' },
 		{ options: { strategy: undefined }, ...base },
 		{ options: { strategy: null }, ...base },
 		{ options: { strategy: 'ABC' }, ...base, strategy: 'ABC' },
@@ -69,11 +72,37 @@ Deno.test('Options', () => {
 		assertEquals(options.secureCookie, test.secureCookie);
 		assertEquals(options.sessions.autoTrack, test.autoTrack);
 		assertEquals(options.sessions.timeout, test.timeout);
+		assertEquals(options.setCookieDomain, test.setCookieDomain);
 		assertEquals(options.strategy, test.strategy);
 	}
 
+	// Test invalid setCookieDomain values.
+	let invalids = ['', {}, '127.0.0.1', 'example.com.', '%20', '='];
+	for (let i = 0; i < invalids.length; i++) {
+		const setCookieDomain = invalids[i];
+		try {
+			new Options({ setCookieDomain });
+		} catch {
+			continue;
+		}
+		throw new AssertionError(`'${setCookieDomain}' is not a domain name for the setCookieDomain option`);
+	}
+
+	// Test that setCookieDomain and sameDomainCookiesOnly are not both set.
+	let ok = false;
+	try {
+		new Options({ setCookieDomain: 'example.com', sameDomainCookiesOnly: true });
+	} catch {
+		ok = true;
+	}
+	if (!ok) {
+		throw new AssertionError(
+			`setCookieDomain and sameDomainCookiesOnly options are both set, but no error has been returned`,
+		);
+	}
+
 	// Test invalid SameSite values.
-	let invalids = ['', 8, [], true, 'no', ' Lax', 'other'];
+	invalids = ['', 8, [], true, 'no', ' Lax', 'other'];
 	for (let i = 0; i < invalids.length; i++) {
 		const sameSiteCookie = invalids[i];
 		try {

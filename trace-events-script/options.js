@@ -9,6 +9,7 @@ class Options {
 		autoTrack: true,
 		timeout: 30 * 60000, // 30 minutes.
 	};
+	setCookieDomain = null;
 	strategy = 'AB-C';
 
 	constructor(options) {
@@ -23,16 +24,22 @@ class Options {
 		}
 		if (options.sameSiteCookie != null) {
 			if (!isSameSite(options.sameSiteCookie)) {
-				throw new Error(`sameSiteCookie option '${options.sameSiteCookie}' is not valid`);
+				throw new Error(`sameSiteCookie option is not valid`);
 			}
 			this.sameSiteCookie = options.sameSiteCookie.toLowerCase();
 		}
 		if (options.secureCookie != null) {
 			this.secureCookie = !!options.secureCookie;
 		}
+		if (options.setCookieDomain != null) {
+			if (!isDomainName(options.setCookieDomain)) {
+				throw new Error(`setCookieDomain option is not a valid domain`);
+			}
+			this.setCookieDomain = options.setCookieDomain;
+		}
 		if (options.strategy != null) {
 			if (!isStrategy(options.strategy)) {
-				throw new Error(`strategy option '${options.strategy}' is not valid`);
+				throw new Error(`strategy option is not valid`);
 			}
 			this.strategy = options.strategy;
 		}
@@ -50,7 +57,15 @@ class Options {
 				}
 			}
 		}
+		if (this.setCookieDomain != null && this.sameDomainCookiesOnly) {
+			throw new Error(`setCookieDomain option must be null if the sameDomainCookiesOnly option is true`);
+		}
 	}
+}
+
+// isDomainName reports whether s is a domain name.
+function isDomainName(s) {
+	return typeof s === 'string' && /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s) && s === encodeURIComponent(s);
 }
 
 // isSameSite reports whether s is a SameSite value.

@@ -22,9 +22,10 @@ class Analytics {
 	constructor(writeKey, endpoint, options) {
 		this.#options = new Options(options);
 		this.#storage = new Storage(
-			this.#options.sameDomainCookiesOnly,
 			this.#options.sameSiteCookie,
 			this.#options.secureCookie,
+			this.#options.setCookieDomain,
+			this.#options.sameDomainCookiesOnly,
 		);
 		this.#session = new Session(
 			this.#storage,
