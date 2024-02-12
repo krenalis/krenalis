@@ -5,17 +5,27 @@ class Storage {
 	#store;
 
 	constructor() {
+		const stores = [];
 		if (globalThis.document?.cookie != null) {
 			try {
-				this.#store = new cookieStore();
-				return;
+				stores.push(new cookieStore());
 			} catch (error) {
 				if (error !== noStorageSupported) {
 					throw error;
 				}
 			}
 		}
-		this.#store = new localStorageStore();
+		try {
+			stores.push(new localStorageStore());
+		} catch (error) {
+			if (error !== noStorageSupported) {
+				throw error;
+			}
+		}
+		if (stores.length === 0) {
+			throw noStorageSupported;
+		}
+		this.#store = new multipleStore(stores);
 	}
 
 	anonymousId() {
@@ -224,8 +234,8 @@ class cookieStore {
 
 // localStorageStore stores key/value pairs in the localStorage.
 class localStorageStore {
-	// constructor returns a new localStorageStore. If cookie are not supported,
-	// it raises an exception with error storeNotSupported.
+	// constructor returns a new localStorageStore. If localStorage is not
+	// supported, it raises an exception with error storeNotSupported.
 	constructor() {
 		try {
 			globalThis.localStorage.setItem('__test__', '');
@@ -245,5 +255,37 @@ class localStorageStore {
 	}
 }
 
+// multipleStore stores key/value pairs across multiple stores. The get method
+// retrieves the key from the first store, the set method updates the key in all
+// stores, and the delete method removes the key from all stores.
+class multipleStore {
+	#stores;
+	// constructor returns a new multipleStore that stores key/value pairs in
+	// the provided stores.
+	constructor(stores) {
+		this.#stores = stores;
+	}
+	get(key) {
+		let value = null;
+		for (let i = 0; i < this.#stores.length; i++) {
+			value = this.#stores[i].get(key);
+			if (value != null) {
+				break;
+			}
+		}
+		return value;
+	}
+	set(key, value) {
+		for (let i = 0; i < this.#stores.length; i++) {
+			this.#stores[i].set(key, value);
+		}
+	}
+	delete(key) {
+		for (let i = 0; i < this.#stores.length; i++) {
+			this.#stores[i].delete(key);
+		}
+	}
+}
+
 export default Storage;
-export { cookieStore, localStorageStore };
+export { cookieStore, localStorageStore, multipleStore };

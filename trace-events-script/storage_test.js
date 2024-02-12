@@ -1,7 +1,6 @@
 import { assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
 import * as fake from './test_fake.js';
-import Storage from './storage.js';
-import { cookieStore } from './storage.js';
+import Storage, { cookieStore, localStorageStore, multipleStore } from './storage.js';
 
 Deno.test('Storage', () => {
 	localStorage.clear();
@@ -156,8 +155,6 @@ Deno.test('Storage', () => {
 });
 
 Deno.test('cookieStore', () => {
-	localStorage.clear();
-
 	globalThis.location = new URL('https://c.b.a.example.com/account/');
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
 	let store = new cookieStore();
@@ -193,4 +190,28 @@ Deno.test('cookieStore', () => {
 	assertEquals(store.get('boo'), 'foo');
 	store.delete('boo');
 	assertEquals(store.get('boo'), null);
+});
+
+Deno.test('multipleStore', () => {
+	localStorage.clear();
+
+	globalThis.location = new URL('https://c.b.a.example.com/account/');
+	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
+	const cs = new cookieStore();
+	const lss = new localStorageStore();
+	const store = new multipleStore([cs, lss]);
+
+	assertEquals(store.get('key'), null);
+	assertEquals(cs.get('key'), null);
+	assertEquals(lss.get('key'), null);
+
+	store.set('key', 'value');
+	assertEquals(store.get('key'), 'value');
+	assertEquals(cs.get('key'), 'value');
+	assertEquals(lss.get('key'), 'value');
+
+	store.delete('key');
+	assertEquals(store.get('key'), null);
+	assertEquals(cs.get('key'), null);
+	assertEquals(lss.get('key'), null);
 });
