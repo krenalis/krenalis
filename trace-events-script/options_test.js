@@ -4,7 +4,13 @@ import Options from './options.js';
 Deno.test('Options', () => {
 	localStorage.clear();
 
-	const base = { debug: false, strategy: 'AB-C', autoTrack: true, timeout: 30 * 60000 };
+	const base = {
+		autoTrack: true,
+		debug: false,
+		secureCookie: false,
+		strategy: 'AB-C',
+		timeout: 30 * 60000,
+	};
 
 	const tests = [
 		{ options: undefined, ...base },
@@ -12,6 +18,8 @@ Deno.test('Options', () => {
 		{ options: {}, ...base },
 		{ options: [], ...base },
 		{ options: '', ...base },
+		{ options: { secureCookie: true }, ...base, secureCookie: true },
+		{ options: { secureCookie: false }, ...base },
 		{ options: { sessions: {} }, ...base },
 		{ options: { sessions: { autoTrack: true } }, ...base },
 		{ options: { sessions: { autoTrack: false } }, ...base, autoTrack: false },

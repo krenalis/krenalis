@@ -2,6 +2,7 @@ import { isPlainObject } from './utils.js';
 
 class Options {
 	debug = false;
+	secureCookie = false;
 	sessions = {
 		autoTrack: true,
 		timeout: 30 * 60000, // 30 minutes.
@@ -14,6 +15,9 @@ class Options {
 		}
 		if (options.debug != null) {
 			this.debug = !!options.debug;
+		}
+		if (options.secureCookie != null) {
+			this.secureCookie = !!options.secureCookie;
 		}
 		if (options.strategy != null) {
 			if (!isStrategy(options.strategy)) {

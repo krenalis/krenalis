@@ -1,4 +1,4 @@
-import { assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
+import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
 import * as fake from './test_fake.js';
 import Storage, { cookieStore, localStorageStore, multipleStore } from './storage.js';
 
@@ -157,12 +157,13 @@ Deno.test('Storage', () => {
 Deno.test('cookieStore', () => {
 	globalThis.location = new URL('https://c.b.a.example.com/account/');
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
-	let store = new cookieStore();
+	let store = new cookieStore(false);
 	assertEquals(store.get(''), null);
 	store.set('', '');
 	assertEquals(store.get(''), '');
 	assertEquals(store.get('boo'), null);
 	store.set('boo', 'foo');
+	assert(!globalThis.document.getCookie('boo', 'a.example.com').secure);
 	assertEquals(store.get('boo'), 'foo');
 	store.set('boo', '%ab');
 	assertEquals(store.get('boo'), '%ab');
@@ -182,9 +183,14 @@ Deno.test('cookieStore', () => {
 	assertEquals(store.get('b'), null);
 	assertEquals(store.get('ab'), '3');
 
+	store = new cookieStore(true);
+	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
+	store.set('boo', 'foo');
+	assert(globalThis.document.getCookie('boo', 'a.example.com').secure);
+
 	globalThis.location = new URL('https://172.16.254.1/');
 	globalThis.document = new fake.CookieDocument(globalThis.location, '172.16.254.1');
-	store = new cookieStore();
+	store = new cookieStore(true);
 	assertEquals(store.get('boo'), null);
 	store.set('boo', 'foo');
 	assertEquals(store.get('boo'), 'foo');

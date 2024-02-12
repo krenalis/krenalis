@@ -3,26 +3,30 @@ import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts';
 import { MaxBodySize } from './sender.js';
 import * as utils from './utils.js';
 
+// Cookie represents a cookie stored by CookieDocument.
+class Cookie {
+	name;
+	value;
+	path;
+	expires;
+	secure;
+	domain;
+}
+
 // CookieDocument implements a fake document with a 'document.cookie' property
 // that accept cookie from a domain and its subdomains.
 class CookieDocument {
-	static cookie = class {
-		name;
-		value;
-		path;
-		expires;
-		domain;
-	};
-
-	#url;
+	#location;
 	#domain;
 	#cookies = [];
 
-	constructor(url, domain) {
-		if (!(url instanceof URL)) {
-			throw new Error('url is not an instance of URL');
+	// constructor returns a new CookieDocument with the provided location and
+	// the domain to use for cookies.
+	constructor(location, domain) {
+		if (!(location instanceof URL)) {
+			throw new Error('location is not an instance of URL');
 		}
-		this.#url = url;
+		this.#location = location;
 		this.#domain = domain;
 	}
 
@@ -33,12 +37,12 @@ class CookieDocument {
 	set cookie(s) {
 		const cookie = CookieDocument.#parse(s);
 		if (cookie.domain == null) {
-			cookie.domain = this.#url.hostname;
+			cookie.domain = this.#location.hostname;
 		} else if (!cookie.domain.endsWith(this.#domain)) {
 			return;
 		}
 		if (cookie.path == null) {
-			cookie.path = this.#url.path;
+			cookie.path = this.#location.path;
 		}
 		for (let i = 0; i < this.#cookies.length; i++) {
 			const c = this.#cookies[i];
@@ -56,8 +60,19 @@ class CookieDocument {
 		this.#cookies.push(cookie);
 	}
 
+	// getCookie returns the cookie with the provides key and domain as a Cookie
+	// value. If such cookie does non exist, it returns undefined.
+	getCookie(name, domain) {
+		for (let i = 0; i < this.#cookies.length; i++) {
+			const c = this.#cookies[i];
+			if (c.name === name && c.domain === domain) {
+				return Object.assign(Object.create(Object.getPrototypeOf(c)), c);
+			}
+		}
+	}
+
 	static #parse(s) {
-		const cookie = new CookieDocument.cookie();
+		const cookie = new Cookie();
 		const parts = s.split(/\s*;\s*/);
 		for (let i = 0; i < parts.length; i++) {
 			const pair = parts[i].split(/\s*=\s*/);
@@ -80,7 +95,9 @@ class CookieDocument {
 					cookie.expires = new Date(pair[1]);
 					break;
 				case 'samesite':
+					break;
 				case 'secure':
+					cookie.secure = true;
 					break;
 				default:
 					throw new Error(`Unknown cookie attribute '${pair[0]}'`);
@@ -538,4 +555,4 @@ async function parseRequest(writeKey, minTime, keepalive, options) {
 	return events;
 }
 
-export { CookieDocument, Fetch, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest };
+export { Cookie, CookieDocument, Fetch, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest };

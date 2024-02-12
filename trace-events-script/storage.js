@@ -4,11 +4,11 @@ const warnMsg = 'Analytics: cannot stringify traits';
 class Storage {
 	#store;
 
-	constructor() {
+	constructor(secureCookie) {
 		const stores = [];
 		if (globalThis.document?.cookie != null) {
 			try {
-				stores.push(new cookieStore());
+				stores.push(new cookieStore(secureCookie));
 			} catch (error) {
 				if (error !== noStorageSupported) {
 					throw error;
@@ -150,11 +150,14 @@ class Storage {
 // cookieStore stores key/value pairs in cookies.
 class cookieStore {
 	#domain;
+	#secureCookie;
 
-	// constructor returns a new cookieStore. If cookie are not supported, it
-	// raises an exception with error storeNotSupported.
-	constructor() {
+	// constructor returns a new cookieStore. If secureCookie is true, cookies
+	// will have the 'secure' attribute. If cookies are not supported, it raises
+	// an exception with the error storeNotSupported.
+	constructor(secureCookie) {
 		this.#setDomain();
+		this.#secureCookie = secureCookie;
 	}
 
 	get(key) {
@@ -184,9 +187,8 @@ class cookieStore {
 			return null;
 		}
 		const expires = new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toUTCString();
-		globalThis.document.cookie = key + '=' + value + '; expires=' + expires +
-			'; path=/; samesite=Lax; secure; domain=' +
-			this.#domain;
+		globalThis.document.cookie = `${key}=${value}; expires=${expires}; path=/; samesite=Lax;` +
+			`${this.#secureCookie ? ' secure;' : ''} domain=${this.#domain}`;
 	}
 
 	delete(key) {
