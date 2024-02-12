@@ -164,8 +164,8 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		return nil
 	}
 	var connections []int
-	for _, action := range wsConnections {
-		connections = append(connections, action.ID)
+	for _, c := range wsConnections {
+		connections = append(connections, c.ID)
 	}
 
 	// TODO(Gianluca): should the users / users_identities schema be handled by
