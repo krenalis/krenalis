@@ -3,6 +3,93 @@ import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts';
 import { MaxBodySize } from './sender.js';
 import * as utils from './utils.js';
 
+// CookieDocument implements a fake document with a 'document.cookie' property
+// that accept cookie from a domain and its subdomains.
+class CookieDocument {
+	static cookie = class {
+		name;
+		value;
+		path;
+		expires;
+		domain;
+	};
+
+	#url;
+	#domain;
+	#cookies = [];
+
+	constructor(url, domain) {
+		if (!(url instanceof URL)) {
+			throw new Error('url is not an instance of URL');
+		}
+		this.#url = url;
+		this.#domain = domain;
+	}
+
+	get cookie() {
+		return this.#cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+	}
+
+	set cookie(s) {
+		const cookie = CookieDocument.#parse(s);
+		if (cookie.domain == null) {
+			cookie.domain = this.#url.hostname;
+		} else if (!cookie.domain.endsWith(this.#domain)) {
+			return;
+		}
+		if (cookie.path == null) {
+			cookie.path = this.#url.path;
+		}
+		for (let i = 0; i < this.#cookies.length; i++) {
+			const c = this.#cookies[i];
+			if (c.name === cookie.name && c.domain === cookie.domain) {
+				if (cookie.expires != null && cookie.expires < new Date()) {
+					this.#cookies.splice(i, 1);
+				} else {
+					c.value = cookie.value;
+					c.path = cookie.path;
+					c.expires = cookie.expires;
+				}
+				return;
+			}
+		}
+		this.#cookies.push(cookie);
+	}
+
+	static #parse(s) {
+		const cookie = new CookieDocument.cookie();
+		const parts = s.split(/\s*;\s*/);
+		for (let i = 0; i < parts.length; i++) {
+			const pair = parts[i].split(/\s*=\s*/);
+			if (i === 0) {
+				cookie.name = pair[0];
+				cookie.value = pair[1];
+				continue;
+			}
+			switch (pair[0]) {
+				case 'path':
+					cookie.path = pair[1];
+					break;
+				case 'domain':
+					cookie.domain = pair[1];
+					if (cookie.domain.length > 0 && cookie.domain[0] === '.') {
+						cookie.domain = cookie.domain.slice(1);
+					}
+					break;
+				case 'expires':
+					cookie.expires = new Date(pair[1]);
+					break;
+				case 'samesite':
+				case 'secure':
+					break;
+				default:
+					throw new Error(`Unknown cookie attribute '${pair[0]}'`);
+			}
+		}
+		return cookie;
+	}
+}
+
 // Fetch implements a fake fetch.
 class Fetch {
 	#installTime;
@@ -451,4 +538,4 @@ async function parseRequest(writeKey, minTime, keepalive, options) {
 	return events;
 }
 
-export { Fetch, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest };
+export { CookieDocument, Fetch, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest };

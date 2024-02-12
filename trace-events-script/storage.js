@@ -1,33 +1,38 @@
+const noStorageSupported = new Error('no storage supported');
 const warnMsg = 'Analytics: cannot stringify traits';
 
 class Storage {
 	#store;
 
 	constructor() {
-		try {
-			localStorage.setItem('test', '');
-			localStorage.removeItem('test');
-		} catch (_) {
-			throw new Error('local storage is not available');
+		if (globalThis.document?.cookie != null) {
+			try {
+				this.#store = new cookieStore();
+				return;
+			} catch (error) {
+				if (error !== noStorageSupported) {
+					throw error;
+				}
+			}
 		}
-		this.#store = globalThis.localStorage;
+		this.#store = new localStorageStore();
 	}
 
 	anonymousId() {
-		return this.#store.getItem('chichi_anonymous_id');
+		return this.#store.get('chichi_anonymous_id');
 	}
 
 	groupId() {
-		return this.#store.getItem('chichi_group_id');
+		return this.#store.get('chichi_group_id');
 	}
 
 	removeSuspended() {
-		this.#store.removeItem('chichi_suspended');
+		this.#store.delete('chichi_suspended');
 	}
 
 	restore() {
 		let session, anonymousId, userTraits, groupId, groupTraits;
-		const suspended = this.#store.getItem('chichi_suspended');
+		const suspended = this.#store.get('chichi_suspended');
 		if (suspended != null) {
 			[session, anonymousId, userTraits, groupId, groupTraits] = JSON.parse(suspended);
 		}
@@ -39,11 +44,11 @@ class Storage {
 		this.setTraits('user', userTraits);
 		this.setGroupId(groupId);
 		this.setTraits('group', groupTraits);
-		this.#store.removeItem('chichi_suspended');
+		this.#store.delete('chichi_suspended');
 	}
 
 	session() {
-		const session = this.#store.getItem('chichi_session');
+		const session = this.#store.get('chichi_session');
 		if (session == null) {
 			return [null, 0, false];
 		}
@@ -51,7 +56,7 @@ class Storage {
 	}
 
 	traits(kind) {
-		const traits = this.#store.getItem(`chichi_${kind}_traits`);
+		const traits = this.#store.get(`chichi_${kind}_traits`);
 		if (traits == null) {
 			return {};
 		}
@@ -60,26 +65,26 @@ class Storage {
 
 	setAnonymousId(id) {
 		if (id == null) {
-			this.#store.removeItem('chichi_anonymous_id');
+			this.#store.delete('chichi_anonymous_id');
 			return;
 		}
-		this.#store.setItem('chichi_anonymous_id', id);
+		this.#store.set('chichi_anonymous_id', id);
 	}
 
 	setGroupId(id) {
 		if (id == null) {
-			this.#store.removeItem('chichi_group_id');
+			this.#store.delete('chichi_group_id');
 			return;
 		}
-		this.#store.setItem('chichi_group_id', id);
+		this.#store.set('chichi_group_id', id);
 	}
 
 	setSession(id, expiration, start) {
 		if (id == null) {
-			this.#store.removeItem('chichi_session');
+			this.#store.delete('chichi_session');
 			return;
 		}
-		this.#store.setItem('chichi_session', JSON.stringify([id, expiration, start]));
+		this.#store.set('chichi_session', JSON.stringify([id, expiration, start]));
 	}
 
 	setTraits(kind, traits) {
@@ -87,7 +92,7 @@ class Storage {
 			throw new Error('kind is ' + (typeof kind));
 		}
 		if (traits == null) {
-			this.#store.removeItem(`chichi_${kind}_traits`);
+			this.#store.delete(`chichi_${kind}_traits`);
 			return;
 		}
 		const type = typeof traits;
@@ -106,14 +111,14 @@ class Storage {
 			console.warn(`${warnMsg}: ${error.message}`);
 			return;
 		}
-		this.#store.setItem(`chichi_${kind}_traits`, value);
+		this.#store.set(`chichi_${kind}_traits`, value);
 	}
 
 	setUserId(id) {
 		if (id == null) {
-			this.#store.removeItem('chichi_user_id');
+			this.#store.delete('chichi_user_id');
 		} else {
-			this.#store.setItem('chichi_user_id', id);
+			this.#store.set('chichi_user_id', id);
 		}
 	}
 
@@ -124,12 +129,121 @@ class Storage {
 		const groupId = this.groupId();
 		const groupTraits = this.traits('group');
 		const suspended = [session, anonymousId, userTraits, groupId, groupTraits];
-		this.#store.setItem('chichi_suspended', JSON.stringify(suspended));
+		this.#store.set('chichi_suspended', JSON.stringify(suspended));
 	}
 
 	userId() {
-		return this.#store.getItem('chichi_user_id');
+		return this.#store.get('chichi_user_id');
+	}
+}
+
+// cookieStore stores key/value pairs in cookies.
+class cookieStore {
+	#domain;
+
+	// constructor returns a new cookieStore. If cookie are not supported, it
+	// raises an exception with error storeNotSupported.
+	constructor() {
+		this.#setDomain();
+	}
+
+	get(key) {
+		const s = globalThis.document.cookie;
+		const cookies = s.length > 0 ? s.split('; ') : [];
+		for (let i = 0; i < cookies.length; i++) {
+			const cookie = cookies[i];
+			const p = cookie.indexOf('=');
+			if (p === key.length && cookie.substring(0, p) === key) {
+				let value = null;
+				try {
+					value = globalThis.decodeURIComponent(cookie.substring(p + 1));
+				} catch (_) {
+					// value contains an invalid escape sequence.
+				}
+				return value;
+			}
+		}
+		return null;
+	}
+
+	set(key, value) {
+		try {
+			value = globalThis.encodeURIComponent(value);
+		} catch (_) {
+			// value contains a lone surrogate.
+			return null;
+		}
+		const expires = new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toUTCString();
+		globalThis.document.cookie = key + '=' + value + '; expires=' + expires +
+			'; path=/; samesite=Lax; secure; domain=' +
+			this.#domain;
+	}
+
+	delete(key) {
+		document.cookie = key + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + this.#domain;
+	}
+
+	// setDomain sets the domain to use for cookies. It is the smallest
+	// subdomain of the page's domain, or possibly the page's domain itself,
+	// for which cookie setting is supported. If cookie setting is not
+	// supported, it raises an exception with the error storeNotSupported.
+	#setDomain() {
+		function hostnames() {
+			let hostname = globalThis.location.hostname;
+			if (hostname[-1] === '.') {
+				hostname = hostname.slice(0, -1);
+			}
+			const components = hostname.split('.');
+			if (components.length < 3) {
+				return [hostname]; // top-level, second-level domain, or IPv6
+			}
+			const c = components[0][0];
+			if ('0' <= c && c <= '9') {
+				return [hostname]; // IPv4
+			}
+			const names = [];
+			for (let i = 2; i < components.length + 1; i++) {
+				names.push(components.slice(-i).join('.'));
+			}
+			return names;
+		}
+		const domains = hostnames();
+		const key = '__test__';
+		const value = String(Math.floor(Math.random() * 100000000));
+		for (let i = 0; i < domains.length; i++) {
+			this.#domain = domains[i];
+			this.set(key, value);
+			if (this.get(key) === value) {
+				this.delete(key);
+				return;
+			}
+		}
+		throw noStorageSupported;
+	}
+}
+
+// localStorageStore stores key/value pairs in the localStorage.
+class localStorageStore {
+	// constructor returns a new localStorageStore. If cookie are not supported,
+	// it raises an exception with error storeNotSupported.
+	constructor() {
+		try {
+			globalThis.localStorage.setItem('__test__', '');
+			globalThis.localStorage.removeItem('__test__');
+		} catch (_) {
+			throw noStorageSupported;
+		}
+	}
+	get(key) {
+		return globalThis.localStorage.getItem(key);
+	}
+	set(key, value) {
+		return globalThis.localStorage.setItem(key, value);
+	}
+	delete(key) {
+		return globalThis.localStorage.removeItem(key);
 	}
 }
 
 export default Storage;
+export { cookieStore, localStorageStore };

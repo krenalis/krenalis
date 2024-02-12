@@ -1,5 +1,7 @@
 import { assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
+import * as fake from './test_fake.js';
 import Storage from './storage.js';
+import { cookieStore } from './storage.js';
 
 Deno.test('Storage', () => {
 	localStorage.clear();
@@ -151,4 +153,44 @@ Deno.test('Storage', () => {
 	storage.removeSuspended();
 	storage.restore();
 	expectEmptySuspended();
+});
+
+Deno.test('cookieStore', () => {
+	localStorage.clear();
+
+	globalThis.location = new URL('https://c.b.a.example.com/account/');
+	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
+	let store = new cookieStore();
+	assertEquals(store.get(''), null);
+	store.set('', '');
+	assertEquals(store.get(''), '');
+	assertEquals(store.get('boo'), null);
+	store.set('boo', 'foo');
+	assertEquals(store.get('boo'), 'foo');
+	store.set('boo', '%ab');
+	assertEquals(store.get('boo'), '%ab');
+	store.set('boo', ' ;');
+	assertEquals(store.get('boo'), ' ;');
+	store.set('boo', '=');
+	assertEquals(store.get('boo'), '=');
+	store.set('a', '1');
+	store.set('b', '2');
+	store.set('ab', '3');
+	assertEquals(store.get('a'), '1');
+	assertEquals(store.get('b'), '2');
+	assertEquals(store.get('ab'), '3');
+	store.delete('c');
+	store.delete('b');
+	assertEquals(store.get('a'), '1');
+	assertEquals(store.get('b'), null);
+	assertEquals(store.get('ab'), '3');
+
+	globalThis.location = new URL('https://172.16.254.1/');
+	globalThis.document = new fake.CookieDocument(globalThis.location, '172.16.254.1');
+	store = new cookieStore();
+	assertEquals(store.get('boo'), null);
+	store.set('boo', 'foo');
+	assertEquals(store.get('boo'), 'foo');
+	store.delete('boo');
+	assertEquals(store.get('boo'), null);
 });
