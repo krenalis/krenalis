@@ -139,6 +139,17 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 	})
 }
 
+func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID BusinessID) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:       name,
+		Role:       role,
+		Enabled:    true,
+		Connector:  3, // Dummy.
+		BusinessID: businessID,
+		Settings:   []byte("{}"),
+	})
+}
+
 func (c *Chichi) AddSourceCSV(filesystem int) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:      "CSV",
@@ -146,6 +157,21 @@ func (c *Chichi) AddSourceCSV(filesystem int) int {
 		Enabled:   true,
 		Connector: 5, // CSV.
 		Storage:   filesystem,
+		Settings: JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
+	})
+}
+
+func (c *Chichi) AddSourceCSVWithBusinessID(filesystem int, businessID BusinessID) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:       "CSV",
+		Role:       Source,
+		Enabled:    true,
+		Connector:  5, // CSV.
+		Storage:    filesystem,
+		BusinessID: businessID,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
@@ -199,6 +225,17 @@ func (c *Chichi) AddWebsiteSource(name, host string) int {
 		Enabled:     true,
 		Connector:   12, // Website.
 		WebsiteHost: host,
+	})
+}
+
+func (c *Chichi) AddWebsiteSourceWithBusinessID(name, host string, businessID BusinessID) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:        name,
+		Role:        Source,
+		Enabled:     true,
+		Connector:   12, // Website.
+		WebsiteHost: host,
+		BusinessID:  businessID,
 	})
 }
 
