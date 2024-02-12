@@ -120,26 +120,26 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		t.Fatalf("expected 13 users, got %d", count)
 	}
 
-	// Import users and events from a website connection.
-	var website int
+	// Import users and events from a JavaScript connection.
+	var javaScript int
 	t.Log("importing users and events...")
 	{
-		// Add a website connection with two actions (one for importing events, one
-		// for importing user traits) and retrieve its key.
-		var websiteKey string
+		// Add a JavaScript connection with two actions (one for importing
+		// events, one for importing user traits) and retrieve its key.
+		var javaScriptKey string
 		{
-			website = c.AddWebsiteSourceWithBusinessID("Website (source)", "example.com", chichitester.BusinessID{Name: "email", Label: "Website email"})
-			keys := c.ConnectionKeys(website)
+			javaScript = c.AddJavaScriptSourceWithBusinessID("JavaScript (source)", "example.com", chichitester.BusinessID{Name: "email", Label: "JavaScript email"})
+			keys := c.ConnectionKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expecting one key, got %d keys", len(keys))
 			}
-			websiteKey = keys[0]
-			c.AddAction(website, "Events", chichitester.ActionToSet{
-				Name:    "Website",
+			javaScriptKey = keys[0]
+			c.AddAction(javaScript, "Events", chichitester.ActionToSet{
+				Name:    "JavaScript",
 				Enabled: true,
 			})
-			c.AddAction(website, "Users", chichitester.ActionToSet{
-				Name:     "Website",
+			c.AddAction(javaScript, "Users", chichitester.ActionToSet{
+				Name:     "JavaScript",
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
@@ -155,7 +155,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 		// Send an identity event. More than importing an event, this should create
 		// a user identity.
-		c.SendEvent(websiteKey, analytics.Identify{
+		c.SendEvent(javaScriptKey, analytics.Identify{
 			UserId:      "f4ca124298",
 			AnonymousId: "5ce0fd49-199a-47e7-b0c8-498f5144f0ee",
 			Traits: map[string]interface{}{
@@ -243,13 +243,13 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity := identities[2]
 		eventIdentity.Timestamp = time.Time{}
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
-			Connection:   website,
+			Connection:   javaScript,
 			ExternalId:   chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
-			BusinessId:   chichitester.LabelValue{Label: "Website email", Value: "kbuessen0@example.com"},
+			BusinessId:   chichitester.LabelValue{Label: "JavaScript email", Value: "kbuessen0@example.com"},
 			AnonymousIds: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			Timestamp:    time.Time{},
 		})
 	}
-	t.Log("identity imported from website is ok")
+	t.Log("identity imported from JavaScript is ok")
 
 }

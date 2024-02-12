@@ -30,7 +30,7 @@ func TestActionsCreation(t *testing.T) {
 		srcCSVConnection     int
 		dstCSVConnection     int
 		postgreSQLConnection int
-		websiteConnection    int
+		javaScriptConnection int
 	)
 	{
 		// CSV connection.
@@ -49,7 +49,7 @@ func TestActionsCreation(t *testing.T) {
 		srcCSVConnection = c.AddSourceCSV(srcFsID)
 		dstFsID := c.AddDestinationFilesystem(storageDir)
 		dstCSVConnection = c.AddDestinationCSV(dstFsID)
-		websiteConnection = c.AddWebsiteSource("Website (source)", "example.com")
+		javaScriptConnection = c.AddJavaScriptSource("JavaScript (source)", "example.com")
 	}
 	{
 		// PostgreSQL connection.
@@ -330,7 +330,7 @@ func TestActionsCreation(t *testing.T) {
 			},
 		},
 		{
-			conn: websiteConnection,
+			conn: javaScriptConnection,
 			action: chichitester.ActionToSet{
 				Name:     "Import user traits from events",
 				Enabled:  true,
@@ -346,7 +346,7 @@ func TestActionsCreation(t *testing.T) {
 			},
 		},
 		{
-			conn: websiteConnection,
+			conn: javaScriptConnection,
 			action: chichitester.ActionToSet{
 				Name:    "Import user traits from events",
 				Enabled: true,

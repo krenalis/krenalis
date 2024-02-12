@@ -218,27 +218,6 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 	})
 }
 
-func (c *Chichi) AddWebsiteSource(name, host string) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:        name,
-		Role:        Source,
-		Enabled:     true,
-		Connector:   12, // Website.
-		WebsiteHost: host,
-	})
-}
-
-func (c *Chichi) AddWebsiteSourceWithBusinessID(name, host string, businessID BusinessID) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:        name,
-		Role:        Source,
-		Enabled:     true,
-		Connector:   12, // Website.
-		WebsiteHost: host,
-		BusinessID:  businessID,
-	})
-}
-
 func (c *Chichi) ConnectionKeys(conn int) []string {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/keys"
 	rawKeys := c.MustCall("GET", url, nil).([]any)
@@ -270,6 +249,27 @@ func (c *Chichi) IdentifiersSchema() types.Type {
 		c.t.Fatalf("cannot parse schema: %s", err)
 	}
 	return schema
+}
+
+func (c *Chichi) AddJavaScriptSource(name, host string) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:        name,
+		Role:        Source,
+		Enabled:     true,
+		Connector:   12, // JavaScript.
+		WebsiteHost: host,
+	})
+}
+
+func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID BusinessID) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:        name,
+		Role:        Source,
+		Enabled:     true,
+		Connector:   12, // JavaScript.
+		WebsiteHost: host,
+		BusinessID:  businessID,
+	})
 }
 
 func (c *Chichi) RunWorkspaceIdentityResolution() {

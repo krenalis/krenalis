@@ -27,16 +27,16 @@ func TestUserTraitsImport(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	var websiteKey string
+	var javaScriptKey string
 	{
-		websiteID := c.AddWebsiteSource("Website (source)", "example.com")
-		keys := c.ConnectionKeys(websiteID)
+		javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com")
+		keys := c.ConnectionKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expecting one key, got %d keys", len(keys))
 		}
-		websiteKey = keys[0]
-		c.AddAction(websiteID, "Users", chichitester.ActionToSet{
-			Name:     "Website",
+		javaScriptKey = keys[0]
+		c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+			Name:     "JavaScript",
 			Enabled:  true,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
@@ -51,7 +51,7 @@ func TestUserTraitsImport(t *testing.T) {
 	}
 
 	const eventUserEmail = "event-user@example.com"
-	c.SendEvent(websiteKey, analytics.Identify{
+	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
 		Traits: map[string]interface{}{
 			"email": eventUserEmail,

@@ -51,23 +51,23 @@ func TestEvents(t *testing.T) {
 	c.ExecuteAction(dummySrc, importUsersID, true)
 	c.WaitActionsToFinish(dummySrc)
 
-	// Add a website connection with two actions (one for importing events, one
-	// for importing user traits) and retrieve its key.
-	var websiteID int
-	var websiteKey string
+	// Add a JavaScript connection with two actions (one for importing events,
+	// one for importing user traits) and retrieve its key.
+	var javaScriptID int
+	var javaScriptKey string
 	{
-		websiteID = c.AddWebsiteSource("Website (source)", "example.com")
-		keys := c.ConnectionKeys(websiteID)
+		javaScriptID = c.AddJavaScriptSource("JavaScript (source)", "example.com")
+		keys := c.ConnectionKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expecting one key, got %d keys", len(keys))
 		}
-		websiteKey = keys[0]
-		c.AddAction(websiteID, "Events", chichitester.ActionToSet{
-			Name:    "Website",
+		javaScriptKey = keys[0]
+		c.AddAction(javaScriptID, "Events", chichitester.ActionToSet{
+			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.AddAction(websiteID, "Users", chichitester.ActionToSet{
-			Name:     "Website",
+		c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+			Name:     "JavaScript",
 			Enabled:  true,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
@@ -85,7 +85,7 @@ func TestEvents(t *testing.T) {
 
 	// Send an identity event. More than importing an event, this should create
 	// a user identity.
-	c.SendEvent(websiteKey, analytics.Identify{
+	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
 		Traits: map[string]interface{}{
 			"email": eventUserEmail,
@@ -94,7 +94,7 @@ func TestEvents(t *testing.T) {
 
 	// Send 3 events.
 	for i := 0; i < 3; i++ {
-		c.SendEvent(websiteKey, analytics.Track{
+		c.SendEvent(javaScriptKey, analytics.Track{
 			UserId:      "f4ca124298",
 			AnonymousId: "baeeb556-96f3-4631-a22d-928431af8bf6",
 			Event:       "Signed Up",
@@ -122,7 +122,7 @@ func TestEvents(t *testing.T) {
 
 	// Retrieve the user imported from the event.
 	users, _, count := c.Users([]string{"Id", "email"}, "", 0, 100)
-	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from website, with the identity call
+	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)
 	}
@@ -177,8 +177,8 @@ func TestEvents(t *testing.T) {
 		if !reflect.DeepEqual(event["properties"], expectedProperties) {
 			t.Fatalf("expected properties %#v, got %#v", expectedProperties, event["properties"])
 		}
-		if source, err := strconv.Atoi(string(event["source"].(json.Number))); err != nil || source != websiteID {
-			t.Fatalf("expected source %d, got %#v", websiteID, event["source"])
+		if source, err := strconv.Atoi(string(event["source"].(json.Number))); err != nil || source != javaScriptID {
+			t.Fatalf("expected source %d, got %#v", javaScriptID, event["source"])
 		}
 		if !reflect.DeepEqual(event["traits"], expectedTraits) {
 			t.Fatalf("expected traits %#v, got %#v", expectedTraits, event["traits"])
