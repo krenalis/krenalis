@@ -8,6 +8,7 @@
 package chichitester
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -317,14 +318,46 @@ func (c *Chichi) UserIdentities(user int, first, limit int) ([]UserIdentity, int
 	return identities, int(count)
 }
 
-func (c *Chichi) Users(properties []string, order string, first, limit int) map[string]any {
+func (c *Chichi) Users(properties []string, order string, first, limit int) (users []map[string]any, schema types.Type, count int) {
 	req := map[string]any{
 		"Properties": properties,
 		"Order":      order,
 		"First":      first,
 		"Limit":      limit,
 	}
-	return c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/users", req).(map[string]any)
+
+	response := c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/users", req).(map[string]any)
+
+	// Users.
+	jsonUsers, err := json.Marshal(response["users"].([]any))
+	if err != nil {
+		c.t.Fatalf("cannot marshal identities: %s", err)
+	}
+	usersDecoder := json.NewDecoder(bytes.NewReader(jsonUsers))
+	usersDecoder.UseNumber()
+	err = usersDecoder.Decode(&users)
+	if err != nil {
+		c.t.Fatalf("cannot unmarshal users: %s", err)
+	}
+
+	// Schema.
+	jsonSchema, err := json.Marshal(response["schema"])
+	if err != nil {
+		c.t.Fatalf("cannot marshal schema: %s", err)
+	}
+	schema, err = types.Parse(string(jsonSchema))
+	if err != nil {
+		c.t.Fatalf("cannot parse schema: %s", err)
+	}
+
+	// Count.
+	count64, err := response["count"].(json.Number).Int64()
+	if err != nil {
+		c.t.Fatalf("invalid 'count' for user identities: %s", err)
+	}
+	count = int(count64)
+
+	return users, schema, count
 }
 
 func (c *Chichi) WaitActionsToFinish(conn int) {

@@ -62,17 +62,16 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Since the users have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 users, even if they have the same properties.
-	response := c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)
-	count, _ := response["count"].(json.Number).Int64()
-	expectedCount := int64(20)
+	users, _, count := c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)
+	expectedCount := 20
 	if expectedCount != count {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
 	}
 
 	// Every user now should have just one identity associated.
 	totalUsers := 0
-	for _, user := range response["users"].([]any) {
-		id, _ := user.(map[string]any)["Id"].(json.Number).Int64()
+	for _, user := range users {
+		id, _ := user["Id"].(json.Number).Int64()
 		_, count := c.UserIdentities(int(id), 0, 100)
 		const expectedCount = 1
 		if expectedCount != count {
@@ -80,7 +79,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 		totalUsers++
 	}
-	if expectedCount != int64(totalUsers) { // ensure that the number of users matches with the returned 'count' value.
+	if expectedCount != totalUsers { // ensure that the number of users matches with the returned 'count' value.
 		t.Fatalf("expecting %d users returned, got %d", expectedCount, totalUsers)
 	}
 
@@ -90,8 +89,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	c.RunWorkspaceIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
-	response = c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)
-	count, _ = response["count"].(json.Number).Int64()
+	users, _, count = c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)
 	expectedCount = 10
 	if expectedCount != count {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
@@ -99,8 +97,8 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Every user now should have two identities associated.
 	totalUsers = 0
-	for _, user := range response["users"].([]any) {
-		id, _ := user.(map[string]any)["Id"].(json.Number).Int64()
+	for _, user := range users {
+		id, _ := user["Id"].(json.Number).Int64()
 		_, count := c.UserIdentities(int(id), 0, 100)
 		const expectedCount = 2
 		if expectedCount != count {
@@ -108,7 +106,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 		totalUsers++
 	}
-	if expectedCount != int64(totalUsers) { // ensure that the number of users matches with the returned 'count' value.
+	if expectedCount != totalUsers { // ensure that the number of users matches with the returned 'count' value.
 		t.Fatalf("expecting %d users returned, got %d", expectedCount, totalUsers)
 	}
 

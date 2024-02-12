@@ -121,17 +121,16 @@ func TestEvents(t *testing.T) {
 	c.WaitActionsToFinish(dummySrc)
 
 	// Retrieve the user imported from the event.
-	response := c.Users([]string{"Id", "email"}, "", 0, 100)
-	count, _ := response["count"].(json.Number).Int64()
+	users, _, count := c.Users([]string{"Id", "email"}, "", 0, 100)
 	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from website, with the identity call
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)
 	}
 	var userGID int64
-	for _, user := range response["users"].([]any) {
-		email, _ := user.(map[string]any)["email"].(string)
+	for _, user := range users {
+		email, _ := user["email"].(string)
 		if email == eventUserEmail {
-			userGID, _ = user.(map[string]any)["Id"].(json.Number).Int64()
+			userGID, _ = user["Id"].(json.Number).Int64()
 			if userGID <= 0 {
 				t.Fatalf("invalid user GID %d", userGID)
 			}

@@ -112,8 +112,8 @@ func TestIdentityResolution(t *testing.T) {
 	// with the users on the data warehouse.
 	expectUsers := func(expected []map[string]any) {
 
-		// Retrieve the users from the APIs and convert their format.
-		users := c.Users(allProps, "", 0, 1000)["users"].([]any)
+		// Retrieve the users from the APIs.
+		users, _, _ := c.Users(allProps, "", 0, 1000)
 
 		// Check if the users are equal to the expected or not.
 		if len(expected) != len(users) {

@@ -8,7 +8,6 @@
 package test
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,12 +79,11 @@ func TestImportUsersFromFile(t *testing.T) {
 		expectedCount    = 2
 		expectedUsersLen = 2
 	)
-	ret := c.Users([]string{"email"}, "", 0, 100)
-	usersLen := len(ret["users"].([]any))
+	users, _, count := c.Users([]string{"email"}, "", 0, 100)
+	usersLen := len(users)
 	if usersLen != expectedUsersLen {
 		t.Fatalf("expecting %d users, got %d", expectedUsersLen, usersLen)
 	}
-	count, _ := ret["count"].(json.Number).Int64()
 	if count != expectedCount {
 		t.Fatalf("expecting \"count\" to be %d, got %d", expectedCount, count)
 	}

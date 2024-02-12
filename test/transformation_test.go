@@ -8,7 +8,6 @@
 package test
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -65,22 +64,20 @@ def transform(user: dict) -> dict:
 
 	// Retrieve the users.
 	const expectedTotalCount = 10
-	ret := c.Users([]string{"email", "firstName", "gender"}, "", 0, expectedTotalCount)
+	users, _, count := c.Users([]string{"email", "firstName", "gender"}, "", 0, expectedTotalCount)
 
 	// Validate the users count.
-	count, _ := ret["count"].(json.Number).Int64()
 	if count != expectedTotalCount {
 		t.Fatalf("expected \"count\" to be %d, got %d", expectedTotalCount, count)
 	}
 
 	// Validate the count of the returned users.
-	usersLen := len(ret["users"].([]any))
+	usersLen := len(users)
 	if expectedTotalCount != usersLen {
 		t.Fatalf("expecting %d users, got %d", expectedTotalCount, usersLen)
 	}
 
 	// Validate the users.
-	users := ret["users"].([]any)
 	expectedUsers := []map[string]any{
 		{"email": "kbuessen0@example.com", "firstName": "Kinsley", "gender": "female"},
 		{"email": "jdebrett9@example.com", "firstName": "Jerad", "gender": "male"},

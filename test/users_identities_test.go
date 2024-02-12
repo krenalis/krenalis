@@ -107,22 +107,19 @@ func Test_UsersIdentities(t *testing.T) {
 	c.WaitActionsToFinish(csv1)
 	c.WaitActionsToFinish(csv2)
 
-	usersResponse := c.Users([]string{"Id"}, "", 0, 100)
+	users, _, count := c.Users([]string{"Id"}, "", 0, 100)
 
-	count, _ := usersResponse["count"].(json.Number).Int64()
 	const expectedCount = 4
 	if expectedCount != count {
 		t.Fatalf("expecting %d users, got %d", expectedCount, count)
 	}
 	t.Logf("the APIs successfully returned %d users", count)
 
-	users := usersResponse["users"].([]any)
-
 	var totalIdentities int
 
 	for _, user := range users {
 
-		id, _ := user.(map[string]any)["Id"].(json.Number).Int64()
+		id, _ := user["Id"].(json.Number).Int64()
 
 		identities, count := c.UserIdentities(int(id), 0, 1000)
 

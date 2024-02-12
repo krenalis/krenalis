@@ -8,7 +8,6 @@
 package test
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -59,17 +58,15 @@ def transform(user: dict) -> dict:
 
 	// Check if the users have been imported - and then returned - correctly.
 
-	ret := c.Users([]string{"email", "ios"}, "", 0, 1)
+	users, _, count := c.Users([]string{"email", "ios"}, "", 0, 1)
 
 	// Validate the users count.
-	count, _ := ret["count"].(json.Number).Int64()
 	const expectedTotalCount = 10
 	if count != expectedTotalCount {
 		t.Fatalf("expected \"count\" to be %d, got %d", expectedTotalCount, count)
 	}
 
 	// Validate the users.
-	users := ret["users"].([]any)
 	expectedUsers := []map[string]any{
 		{"email": "kbuessen0@example.com",
 			"ios": map[string]any{

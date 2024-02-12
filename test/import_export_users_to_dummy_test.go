@@ -106,14 +106,13 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		})
 		c.ExecuteAction(dummySrc, importUsersID, true)
 		c.WaitActionsToFinish(dummySrc)
-		users := c.Users([]string{"email", "firstName", "lastName"}, "", 0, 100)["users"].([]any)
+		users, _, _ := c.Users([]string{"email", "firstName", "lastName"}, "", 0, 100)
 		if len(users) == 0 {
 			t.Fatal("no users re-imported from Dummy")
 		}
 		for _, user := range users {
-			u := user.(map[string]any)
-			if u["email"] != u["lastName"] {
-				t.Fatalf("expecting 'email' to be equal to 'lastName', got '%v' != '%v'", u["email"], u["lastName"])
+			if user["email"] != user["lastName"] {
+				t.Fatalf("expecting 'email' to be equal to 'lastName', got '%v' != '%v'", user["email"], user["lastName"])
 			}
 		}
 	}

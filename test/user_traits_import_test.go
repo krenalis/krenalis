@@ -68,17 +68,16 @@ func TestUserTraitsImport(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 
 	// Retrieve the user imported from the event.
-	response := c.Users([]string{"Id", "email"}, "", 0, 100)
-	count, _ := response["count"].(json.Number).Int64()
+	users, _, count := c.Users([]string{"Id", "email"}, "", 0, 100)
 	const expectedUsersCount = 1
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d user(s), got %d", expectedUsersCount, count)
 	}
 	var userGID int64
-	for _, user := range response["users"].([]any) {
-		email, _ := user.(map[string]any)["email"].(string)
+	for _, user := range users {
+		email, _ := user["email"].(string)
 		if email == eventUserEmail {
-			userGID, _ = user.(map[string]any)["Id"].(json.Number).Int64()
+			userGID, _ = user["Id"].(json.Number).Int64()
 			if userGID <= 0 {
 				t.Fatalf("invalid user GID %d", userGID)
 			}
