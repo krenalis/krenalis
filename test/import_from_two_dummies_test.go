@@ -84,11 +84,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 		t.Fatalf("expecting %d users returned, got %d", expectedCount, totalUsers)
 	}
 
-	// Change the workspace identifiers and import again from the first Dummy,
-	// just to trigger the identity resolution.
+	// Change the workspace identifiers and run the Workspace Identity
+	// Resolution.
 	c.SetWorkspaceIdentifiers([]string{"email"})
-	c.ExecuteAction(dummy1, action1, true)
-	c.WaitActionsToFinish(dummy1)
+	c.RunWorkspaceIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
 	response = c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)

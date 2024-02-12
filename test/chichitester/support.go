@@ -234,6 +234,10 @@ func (c *Chichi) IdentifiersSchema() types.Type {
 	return schema
 }
 
+func (c *Chichi) RunWorkspaceIdentityResolution() {
+	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/run-identity-resolution", nil)
+}
+
 func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	endpoint := "https://" + testsSettings.ChichiHost + "/" + "api"
 	tr := &http.Transport{
