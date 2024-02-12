@@ -7,6 +7,7 @@ Deno.test('Options', () => {
 	const base = {
 		autoTrack: true,
 		debug: false,
+		sameSiteCookie: 'lax',
 		secureCookie: false,
 		strategy: 'AB-C',
 		timeout: 30 * 60000,
@@ -20,6 +21,12 @@ Deno.test('Options', () => {
 		{ options: '', ...base },
 		{ options: { secureCookie: true }, ...base, secureCookie: true },
 		{ options: { secureCookie: false }, ...base },
+		{ options: { sameSiteCookie: 'lax' }, ...base },
+		{ options: { sameSiteCookie: 'strict' }, ...base, sameSiteCookie: 'strict' },
+		{ options: { sameSiteCookie: 'none' }, ...base, sameSiteCookie: 'none' },
+		{ options: { sameSiteCookie: 'Lax' }, ...base },
+		{ options: { sameSiteCookie: 'Strict' }, ...base, sameSiteCookie: 'strict' },
+		{ options: { sameSiteCookie: 'None' }, ...base, sameSiteCookie: 'none' },
 		{ options: { sessions: {} }, ...base },
 		{ options: { sessions: { autoTrack: true } }, ...base },
 		{ options: { sessions: { autoTrack: false } }, ...base, autoTrack: false },
@@ -59,8 +66,20 @@ Deno.test('Options', () => {
 		assertEquals(options.strategy, test.strategy);
 	}
 
+	// Test invalid SameSite values.
+	let invalids = ['', 8, [], true, 'no', ' Lax', 'other'];
+	for (let i = 0; i < invalids.length; i++) {
+		const sameSiteCookie = invalids[i];
+		try {
+			new Options({ sameSiteCookie });
+		} catch {
+			continue;
+		}
+		throw new AssertionError(`'${sameSiteCookie}' is not a SameSite value, but no error has been returned`);
+	}
+
 	// Test invalid strategies.
-	const invalids = ['', 5, {}, 'CBA', 'A--BC', ' ABC'];
+	invalids = ['', 5, {}, 'CBA', 'A--BC', ' ABC'];
 	for (let i = 0; i < invalids.length; i++) {
 		const strategy = invalids[i];
 		try {

@@ -9,6 +9,7 @@ class Cookie {
 	value;
 	path;
 	expires;
+	sameSite;
 	secure;
 	domain;
 }
@@ -95,6 +96,7 @@ class CookieDocument {
 					cookie.expires = new Date(pair[1]);
 					break;
 				case 'samesite':
+					cookie.sameSite = pair[1];
 					break;
 				case 'secure':
 					cookie.secure = true;
