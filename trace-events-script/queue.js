@@ -1,40 +1,40 @@
-import { debug, getTime, onVisibilityChange } from './utils.js';
+import { debug, getTime, onVisibilityChange } from './utils.js'
 
 // Queue is an in memory queue made persistent on a Storage.
 class Queue {
-	#storage;
-	#key;
-	#maxItemSize;
-	#items = [];
-	#times = [];
-	#sizes = [];
-	#inSync = true;
-	#syncTimeoutID = null;
-	#debug;
+	#storage
+	#key
+	#maxItemSize
+	#items = []
+	#times = []
+	#sizes = []
+	#inSync = true
+	#syncTimeoutID = null
+	#debug
 
 	// constructor initializes a new Queue using the provided Storage (such as
 	// sessionStorage or localStorage), using the provided key, and with each
 	// item limited to a maximum size in bytes specified by maxItemSize.
 	constructor(storage, key, maxItemSize, debug) {
-		this.#storage = storage;
-		this.#key = key;
-		this.#maxItemSize = maxItemSize;
-		this.debug(debug);
-		this.#restore();
+		this.#storage = storage
+		this.#key = key
+		this.#maxItemSize = maxItemSize
+		this.debug(debug)
+		this.#restore()
 		onVisibilityChange((visible) => {
 			if (!visible) {
 				if (this.#syncTimeoutID != null) {
-					clearTimeout(this.#syncTimeoutID);
+					clearTimeout(this.#syncTimeoutID)
 				}
-				this.#makePersistent();
+				this.#makePersistent()
 			}
-		});
+		})
 	}
 
 	// age returns the time, in milliseconds, when the item in the head of the
 	// queue was added. Returns null if the queue is empty.
 	age() {
-		return this.isEmpty() ? null : this.#times[0];
+		return this.isEmpty() ? null : this.#times[0]
 	}
 
 	// append appends item to the queue and returns the size in bytes of the
@@ -43,21 +43,21 @@ class Queue {
 	// in bytes is greater than maxItemSize, it does nothing, apart returning
 	// that size.
 	append(item) {
-		const time = getTime();
-		item = JSON.stringify(item);
-		const size = new Blob([item]).size;
+		const time = getTime()
+		item = JSON.stringify(item)
+		const size = new Blob([item]).size
 		if (size > this.#maxItemSize) {
-			return size;
+			return size
 		}
-		this.#items.push(item);
-		this.#times.push(time);
-		this.#sizes.push(size);
-		this.#inSync = false;
+		this.#items.push(item)
+		this.#times.push(time)
+		this.#sizes.push(size)
+		this.#inSync = false
 		if (this.#syncTimeoutID == null) {
 			this.#syncTimeoutID = setTimeout(() => {
-				this.#syncTimeoutID = null;
-				this.#makePersistent(200);
-			}, 20);
+				this.#syncTimeoutID = null
+				this.#makePersistent(200)
+			}, 20)
 		}
 		this.#debug?.(
 			'appended',
@@ -65,8 +65,8 @@ class Queue {
 			`bytes value to the '${this.#key}' queue (`,
 			this.#items.length,
 			'events in queue )',
-		);
-		return size;
+		)
+		return size
 	}
 
 	// close closes the queue. It tries to preserve the queue in the
@@ -74,25 +74,25 @@ class Queue {
 	// should be made after a call the close method.
 	close() {
 		if (this.#syncTimeoutID != null) {
-			clearTimeout(this.#syncTimeoutID);
-			this.#syncTimeoutID = null;
+			clearTimeout(this.#syncTimeoutID)
+			this.#syncTimeoutID = null
 		}
-		this.#makePersistent();
+		this.#makePersistent()
 	}
 
 	// debug toggles debug mode.
 	debug(on) {
-		this.#debug = debug(on);
+		this.#debug = debug(on)
 	}
 
 	// isEmpty reports whether the queue is empty.
 	isEmpty() {
-		return this.#items.length === 0;
+		return this.#items.length === 0
 	}
 
 	// length returns the total number of items currently in the queue.
 	length() {
-		return this.#items.length;
+		return this.#items.length
 	}
 
 	// read returns the items at the head of the queue, for a maximum of
@@ -101,43 +101,43 @@ class Queue {
 	// limit in bytes. If separatorSize is null, there is no separator.
 	read(maxBytes, separatorSize) {
 		if (maxBytes == null && !separatorSize) {
-			return [].concat(this.#items);
+			return [].concat(this.#items)
 		}
-		let n = 0;
-		let bytes = 0;
-		const length = this.#sizes.length;
+		let n = 0
+		let bytes = 0
+		const length = this.#sizes.length
 		for (let i = 0; i < length; i++) {
 			if (i > 0) {
-				bytes += separatorSize;
+				bytes += separatorSize
 			}
-			bytes += this.#sizes[i];
+			bytes += this.#sizes[i]
 			if (bytes > maxBytes) {
-				break;
+				break
 			}
-			n++;
+			n++
 		}
-		return this.#items.slice(0, n);
+		return this.#items.slice(0, n)
 	}
 
 	// remove removes n items from the queue. If there are fewer than n items,
 	// or n is null, it removes all of them.
 	remove(n) {
 		if (n == null || n > this.#times.length) {
-			n = this.#times.length;
+			n = this.#times.length
 			if (n === 0) {
-				this.#debug?.(`no events to remove from '${this.#key}' queue`);
-				return;
+				this.#debug?.(`no events to remove from '${this.#key}' queue`)
+				return
 			}
 		}
-		this.#items.splice(0, n);
-		this.#times.splice(0, n);
-		this.#sizes.splice(0, n);
-		this.#inSync = false;
-		this.#debug?.('removed', n, `items from the '${this.#key}' queue (`, this.#items.length, 'item still in queue )');
+		this.#items.splice(0, n)
+		this.#times.splice(0, n)
+		this.#sizes.splice(0, n)
+		this.#inSync = false
+		this.#debug?.('removed', n, `items from the '${this.#key}' queue (`, this.#items.length, 'item still in queue )')
 		if (this.#syncTimeoutID != null) {
-			clearTimeout(this.#syncTimeoutID);
+			clearTimeout(this.#syncTimeoutID)
 		}
-		this.#makePersistent(200);
+		this.#makePersistent(200)
 	}
 
 	// makePersistent makes the queue persistent in the localStorage. It is
@@ -147,24 +147,24 @@ class Queue {
 	// an error. If delay is null, no retry will be made.
 	#makePersistent(delay) {
 		if (this.#inSync) {
-			return;
+			return
 		}
-		let text = '';
+		let text = ''
 		if (this.#items.length > 0) {
-			text = this.#items.join('\n') + '\n' + this.#times.join(' ') + '\n' + this.#sizes.join(' ');
+			text = this.#items.join('\n') + '\n' + this.#times.join(' ') + '\n' + this.#sizes.join(' ')
 		}
-		let bytes;
+		let bytes
 		if (this.#debug) {
-			bytes = new Blob([text]).size;
+			bytes = new Blob([text]).size
 		}
 		try {
-			this.#storage.setItem(this.#key, text);
+			this.#storage.setItem(this.#key, text)
 		} catch (error) {
 			if (delay == null) {
-				this.#debug?.('cannot make', bytes, `bytes of the '${this.#key}' queue persistent:`, error.message);
-				return;
+				this.#debug?.('cannot make', bytes, `bytes of the '${this.#key}' queue persistent:`, error.message)
+				return
 			}
-			delay = Math.min(2 * delay, 5000);
+			delay = Math.min(2 * delay, 5000)
 			this.#debug?.(
 				'cannot make',
 				bytes,
@@ -172,21 +172,21 @@ class Queue {
 				delay,
 				'ms):',
 				error.message,
-			);
+			)
 			this.#syncTimeoutID = setTimeout(() => {
-				this.#syncTimeoutID = null;
-				this.#makePersistent(delay);
-			}, delay);
-			return;
+				this.#syncTimeoutID = null
+				this.#makePersistent(delay)
+			}, delay)
+			return
 		}
-		this.#inSync = true;
+		this.#inSync = true
 		this.#debug?.(
 			`made '${this.#key}' queue persistent (`,
 			this.#times.length,
 			'items, with a size of',
 			bytes,
 			'bytes )',
-		);
+		)
 	}
 
 	// restore restores the queue from localStorage. If any errors occur while
@@ -199,43 +199,43 @@ class Queue {
 	// their sizes correspond to the original item sizes or that their
 	// timestamps match the original ones.
 	#restore() {
-		let text;
+		let text
 		try {
-			text = this.#storage.getItem(this.#key);
+			text = this.#storage.getItem(this.#key)
 		} catch (error) {
-			this.#debug?.(`cannot restore the '${this.#key}' queue:`, error.message);
-			return;
+			this.#debug?.(`cannot restore the '${this.#key}' queue:`, error.message)
+			return
 		}
 		if (text == null || text === '') {
-			this.#debug?.(`no '${this.#key}' queue to restore`);
-			return;
+			this.#debug?.(`no '${this.#key}' queue to restore`)
+			return
 		}
 		try {
-			const items = text.split('\n');
-			const sizes = items.pop().split(' ');
-			const times = items.pop().split(' ');
+			const items = text.split('\n')
+			const sizes = items.pop().split(' ')
+			const times = items.pop().split(' ')
 			if (sizes.length !== items.length || times.length !== items.length) {
 				this.#debug?.(
 					`cannot restore the '${this.#key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
-				);
-				return;
+				)
+				return
 			}
-			let bytes = 0;
+			let bytes = 0
 			for (let i = 0; i < items.length; i++) {
-				sizes[i] = Number(sizes[i]);
-				times[i] = Number(times[i]);
-				bytes += sizes[i];
+				sizes[i] = Number(sizes[i])
+				times[i] = Number(times[i])
+				bytes += sizes[i]
 			}
-			this.#items = items;
-			this.#times = times;
-			this.#sizes = sizes;
-			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${this.#key}' queue`);
+			this.#items = items
+			this.#times = times
+			this.#sizes = sizes
+			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${this.#key}' queue`)
 		} catch {
 			this.#debug?.(
 				`cannot restore the '${this.#key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
-			);
+			)
 		}
 	}
 }
 
-export default Queue;
+export default Queue

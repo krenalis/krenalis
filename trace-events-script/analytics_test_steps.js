@@ -1,39 +1,39 @@
 // Steps executed by the 'analytics_test.js' tests.
 
-const timestamp = '2024-01-01T00:00:01.000Z';
-const messageId = '9587b6d1-ae92-4d3c-a8d9-87c3e9ce7ae3';
-const anonymousId = '1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7';
-const path = '/path';
-const referrer = '';
-const search = '?query=123';
-const title = 'Hello from Chichi';
-const url = 'https://example.com:8080/path?query=123';
-const properties = { path, referrer, search, title, url };
-const page = { path, referrer, search, title, url };
-const library = { name: 'chichi.js', version: '0.0.0' };
-const screen = { width: 2560, height: 1440, density: 1.25 };
+const timestamp = '2024-01-01T00:00:01.000Z'
+const messageId = '9587b6d1-ae92-4d3c-a8d9-87c3e9ce7ae3'
+const anonymousId = '1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7'
+const path = '/path'
+const referrer = ''
+const search = '?query=123'
+const title = 'Hello from Chichi'
+const url = 'https://example.com:8080/path?query=123'
+const properties = { path, referrer, search, title, url }
+const page = { path, referrer, search, title, url }
+const library = { name: 'chichi.js', version: '0.0.0' }
+const screen = { width: 2560, height: 1440, density: 1.25 }
 const userAgent =
-	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36';
-const locale = 'en-US';
-const sessionId = 1704070861000;
-const context = { library, locale, page, screen, sessionId, userAgent };
-const integrations = {};
-const traits = {};
-const userId = null;
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+const locale = 'en-US'
+const sessionId = 1704070861000
+const context = { library, locale, page, screen, sessionId, userAgent }
+const integrations = {}
+const traits = {}
+const userId = null
 
 const steps = [
 	// Page.
 	{
 		name: `page()`,
 		call: (analytics) => {
-			analytics.page();
+			analytics.page()
 		},
 		event: { type: 'page', timestamp, messageId, anonymousId, properties, context, integrations, userId },
 	},
 	{
 		name: `page(name)`,
 		call: (analytics) => {
-			analytics.page('Chichi Home');
+			analytics.page('Chichi Home')
 		},
 		event: {
 			type: 'page',
@@ -50,7 +50,7 @@ const steps = [
 	{
 		name: `page(properties)`,
 		call: (analytics) => {
-			analytics.page({ title: 'alternative title', foo: 'boo' });
+			analytics.page({ title: 'alternative title', foo: 'boo' })
 		},
 		event: {
 			type: 'page',
@@ -73,7 +73,7 @@ const steps = [
 	{
 		name: `page(category, name)`,
 		call: (analytics) => {
-			analytics.page('Products', 'Shirt');
+			analytics.page('Products', 'Shirt')
 		},
 		event: {
 			type: 'page',
@@ -91,7 +91,7 @@ const steps = [
 	{
 		name: `page(name, properties)`,
 		call: (analytics) => {
-			analytics.page('Sign Up', { resellers: true });
+			analytics.page('Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'page',
@@ -108,7 +108,7 @@ const steps = [
 	{
 		name: `page(properties, options)`,
 		call: (analytics) => {
-			analytics.page({ title: 'alternative title', foo: 'boo' }, { count: 150 });
+			analytics.page({ title: 'alternative title', foo: 'boo' }, { count: 150 })
 		},
 		event: {
 			type: 'page',
@@ -132,7 +132,7 @@ const steps = [
 	{
 		name: `page(category, name, properties)`,
 		call: (analytics) => {
-			analytics.page('users', 'Sign Up', { resellers: true });
+			analytics.page('users', 'Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'page',
@@ -150,7 +150,7 @@ const steps = [
 	{
 		name: `page(name, properties, options)`,
 		call: (analytics) => {
-			analytics.page('', { data: { a: 'b' } }, { locale: 'it-IT' });
+			analytics.page('', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'page',
@@ -167,7 +167,7 @@ const steps = [
 	{
 		name: `page(category, name, properties, options)`,
 		call: (analytics) => {
-			analytics.page('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' });
+			analytics.page('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'page',
@@ -186,14 +186,14 @@ const steps = [
 	{
 		name: `screen()`,
 		call: (analytics) => {
-			analytics.screen();
+			analytics.screen()
 		},
 		event: { type: 'screen', timestamp, messageId, anonymousId, properties: {}, context, integrations, userId },
 	},
 	{
 		name: `screen(name)`,
 		call: (analytics) => {
-			analytics.screen('Chichi Main');
+			analytics.screen('Chichi Main')
 		},
 		event: {
 			type: 'screen',
@@ -210,7 +210,7 @@ const steps = [
 	{
 		name: `screen(properties)`,
 		call: (analytics) => {
-			analytics.screen({ score: 517836 });
+			analytics.screen({ score: 517836 })
 		},
 		event: {
 			type: 'screen',
@@ -226,7 +226,7 @@ const steps = [
 	{
 		name: `screen(category, name)`,
 		call: (analytics) => {
-			analytics.screen('Products', 'Shirt');
+			analytics.screen('Products', 'Shirt')
 		},
 		event: {
 			type: 'screen',
@@ -244,7 +244,7 @@ const steps = [
 	{
 		name: `screen(name, properties)`,
 		call: (analytics) => {
-			analytics.screen('Sign Up', { resellers: true });
+			analytics.screen('Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'screen',
@@ -261,7 +261,7 @@ const steps = [
 	{
 		name: `screen(properties, options)`,
 		call: (analytics) => {
-			analytics.screen({ step: 6 }, { count: 150 });
+			analytics.screen({ step: 6 }, { count: 150 })
 		},
 		event: {
 			type: 'screen',
@@ -285,7 +285,7 @@ const steps = [
 	{
 		name: `screen(category, name, properties)`,
 		call: (analytics) => {
-			analytics.screen('users', 'Sign Up', { resellers: true });
+			analytics.screen('users', 'Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'screen',
@@ -303,7 +303,7 @@ const steps = [
 	{
 		name: `screen(name, properties, options)`,
 		call: (analytics) => {
-			analytics.screen('', { data: { a: 'b' } }, { locale: 'it-IT' });
+			analytics.screen('', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'screen',
@@ -320,7 +320,7 @@ const steps = [
 	{
 		name: `screen(category, name, properties, options)`,
 		call: (analytics) => {
-			analytics.screen('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' });
+			analytics.screen('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'screen',
@@ -339,14 +339,14 @@ const steps = [
 	{
 		name: `track()`,
 		call: (analytics) => {
-			return analytics.track();
+			return analytics.track()
 		},
 		error: new Error('Event name is missing'),
 	},
 	{
 		name: `track(event)`,
 		call: (analytics) => {
-			analytics.track('Click');
+			analytics.track('Click')
 		},
 		event: {
 			type: 'track',
@@ -363,7 +363,7 @@ const steps = [
 	{
 		name: `track(event, properties)`,
 		call: (analytics) => {
-			analytics.track('Product Viewed', { productId: 819382 });
+			analytics.track('Product Viewed', { productId: 819382 })
 		},
 		event: {
 			type: 'track',
@@ -380,7 +380,7 @@ const steps = [
 	{
 		name: `track(event, properties, options)`,
 		call: (analytics) => {
-			analytics.track('Product Viewed', { productId: 819382 }, { locale: 'it-IT' });
+			analytics.track('Product Viewed', { productId: 819382 }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'track',
@@ -398,7 +398,7 @@ const steps = [
 	{
 		name: `identify()`,
 		call: (analytics) => {
-			analytics.identify();
+			analytics.identify()
 		},
 		event: {
 			type: 'identify',
@@ -414,7 +414,7 @@ const steps = [
 	{
 		name: `identify(userId)`,
 		call: (analytics) => {
-			analytics.identify('920577314');
+			analytics.identify('920577314')
 		},
 		event: {
 			type: 'identify',
@@ -430,8 +430,8 @@ const steps = [
 	{
 		name: `identify(userId) // with anonymous traits`,
 		call: (analytics) => {
-			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' });
-			analytics.identify('920577314');
+			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' })
+			analytics.identify('920577314')
 		},
 		event: {
 			type: 'identify',
@@ -447,9 +447,9 @@ const steps = [
 	{
 		name: `identify(null)`,
 		call: (analytics) => {
-			analytics.user().id('920577314');
-			analytics.user().traits({ first_name: 'Susan' });
-			analytics.identify(null);
+			analytics.user().id('920577314')
+			analytics.user().traits({ first_name: 'Susan' })
+			analytics.identify(null)
 		},
 		event: {
 			type: 'identify',
@@ -465,7 +465,7 @@ const steps = [
 	{
 		name: `identify(traits)`,
 		call: (analytics) => {
-			analytics.identify({ first_name: 'Susan', last_name: 'Davis' });
+			analytics.identify({ first_name: 'Susan', last_name: 'Davis' })
 		},
 		event: {
 			type: 'identify',
@@ -481,7 +481,7 @@ const steps = [
 	{
 		name: `identify(userId, traits)`,
 		call: (analytics) => {
-			analytics.identify('920577314', { first_name: 'Susan', last_name: 'Davis' });
+			analytics.identify('920577314', { first_name: 'Susan', last_name: 'Davis' })
 		},
 		event: {
 			type: 'identify',
@@ -497,9 +497,9 @@ const steps = [
 	{
 		name: `identify(null, traits)`,
 		call: (analytics) => {
-			analytics.user().id('920577314');
-			analytics.user().traits({ first_name: 'Susan' });
-			analytics.identify(null, { last_name: 'Davis' });
+			analytics.user().id('920577314')
+			analytics.user().traits({ first_name: 'Susan' })
+			analytics.identify(null, { last_name: 'Davis' })
 		},
 		event: {
 			type: 'identify',
@@ -515,7 +515,7 @@ const steps = [
 	{
 		name: `identify(traits, options)`,
 		call: (analytics) => {
-			analytics.identify({ first_name: 'Susan', last_name: 'Davis' }, { locale: 'it-IT', key: 'value' });
+			analytics.identify({ first_name: 'Susan', last_name: 'Davis' }, { locale: 'it-IT', key: 'value' })
 		},
 		event: {
 			type: 'identify',
@@ -531,7 +531,7 @@ const steps = [
 	{
 		name: `identify(userId, traits, options)`,
 		call: (analytics) => {
-			analytics.identify(603614922, { age: 36 }, { locale: 'it-IT', key: 'value' });
+			analytics.identify(603614922, { age: 36 }, { locale: 'it-IT', key: 'value' })
 		},
 		event: {
 			type: 'identify',
@@ -547,7 +547,7 @@ const steps = [
 	{
 		name: `identify(userId, userId)`,
 		call: (analytics) => {
-			return analytics.identify(603614922, 603614922);
+			return analytics.identify(603614922, 603614922)
 		},
 		error: new Error('Invalid arguments'),
 	},
@@ -555,9 +555,9 @@ const steps = [
 	{
 		name: `anonymize()`,
 		call: (analytics) => {
-			analytics.user().id('603614922');
-			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' });
-			analytics.anonymize();
+			analytics.user().id('603614922')
+			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' })
+			analytics.anonymize()
 		},
 		event: {
 			type: 'anonymize',
@@ -573,7 +573,7 @@ const steps = [
 	{
 		name: `group(groupId)`,
 		call: (analytics) => {
-			analytics.group('3617408');
+			analytics.group('3617408')
 		},
 		event: {
 			type: 'group',
@@ -590,7 +590,7 @@ const steps = [
 	{
 		name: `group(undefined)`,
 		call: (analytics) => {
-			analytics.group(undefined);
+			analytics.group(undefined)
 		},
 		event: {
 			type: 'group',
@@ -607,9 +607,9 @@ const steps = [
 	{
 		name: `group(null)`,
 		call: (analytics) => {
-			analytics.group().id('acme');
-			analytics.group().traits({ name: 'Acme' });
-			analytics.group(null);
+			analytics.group().id('acme')
+			analytics.group().traits({ name: 'Acme' })
+			analytics.group(null)
 		},
 		event: {
 			type: 'group',
@@ -626,7 +626,7 @@ const steps = [
 	{
 		name: `group(traits)`,
 		call: (analytics) => {
-			analytics.group({ name: 'Acme Inc.' });
+			analytics.group({ name: 'Acme Inc.' })
 		},
 		event: {
 			type: 'group',
@@ -642,7 +642,7 @@ const steps = [
 	{
 		name: `group(groupId, traits)`,
 		call: (analytics) => {
-			analytics.group(3617408, { name: 'Acme Inc.' });
+			analytics.group(3617408, { name: 'Acme Inc.' })
 		},
 		event: {
 			type: 'group',
@@ -659,9 +659,9 @@ const steps = [
 	{
 		name: `group(null, traits)`,
 		call: (analytics) => {
-			analytics.group().id('acme');
-			analytics.group().traits({ name: 'Acme' });
-			analytics.group(null, { employees: 85 });
+			analytics.group().id('acme')
+			analytics.group().traits({ name: 'Acme' })
+			analytics.group(null, { employees: 85 })
 		},
 		event: {
 			type: 'group',
@@ -678,7 +678,7 @@ const steps = [
 	{
 		name: `group(traits, options)`,
 		call: (analytics) => {
-			analytics.group({ name: 'Acme Inc.' }, { k: true });
+			analytics.group({ name: 'Acme Inc.' }, { k: true })
 		},
 		event: {
 			type: 'group',
@@ -694,7 +694,7 @@ const steps = [
 	{
 		name: `group(groupId, traits, options)`,
 		call: (analytics) => {
-			analytics.group('3617408', { name: 'Acme Inc.' }, { k: true });
+			analytics.group('3617408', { name: 'Acme Inc.' }, { k: true })
 		},
 		event: {
 			type: 'group',
@@ -713,7 +713,7 @@ const steps = [
 		name: `no session`,
 		options: { sessions: { autoTrack: false } },
 		call: (analytics) => {
-			analytics.page();
+			analytics.page()
 		},
 		event: {
 			type: 'page',
@@ -730,8 +730,8 @@ const steps = [
 		name: `session started`,
 		options: { sessions: { autoTrack: false } },
 		call: (analytics) => {
-			analytics.startSession(1508273);
-			analytics.page();
+			analytics.startSession(1508273)
+			analytics.page()
 		},
 		event: {
 			type: 'page',
@@ -744,6 +744,6 @@ const steps = [
 			userId,
 		},
 	},
-];
+]
 
-export { steps };
+export { steps }

@@ -1,8 +1,8 @@
-import { assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts';
-import Options from './options.js';
+import { assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts'
+import Options from './options.js'
 
 Deno.test('Options', () => {
-	localStorage.clear();
+	localStorage.clear()
 
 	const base = {
 		autoTrack: true,
@@ -13,7 +13,7 @@ Deno.test('Options', () => {
 		setCookieDomain: null,
 		strategy: 'AB-C',
 		timeout: 30 * 60000,
-	};
+	}
 
 	const tests = [
 		{ options: undefined, ...base },
@@ -61,67 +61,67 @@ Deno.test('Options', () => {
 		{ options: { debug: true }, ...base, debug: true },
 		{ options: { debug: 0 }, ...base },
 		{ options: { debug: 1 }, ...base, debug: true },
-	];
+	]
 
 	for (let i = 0; i < tests.length; i++) {
-		const test = tests[i];
-		const options = new Options(test.options);
-		assertEquals(options.debug, test.debug);
-		assertEquals(options.sameDomainCookiesOnly, test.sameDomainCookiesOnly);
-		assertEquals(options.sameSiteCookie, test.sameSiteCookie);
-		assertEquals(options.secureCookie, test.secureCookie);
-		assertEquals(options.sessions.autoTrack, test.autoTrack);
-		assertEquals(options.sessions.timeout, test.timeout);
-		assertEquals(options.setCookieDomain, test.setCookieDomain);
-		assertEquals(options.strategy, test.strategy);
+		const test = tests[i]
+		const options = new Options(test.options)
+		assertEquals(options.debug, test.debug)
+		assertEquals(options.sameDomainCookiesOnly, test.sameDomainCookiesOnly)
+		assertEquals(options.sameSiteCookie, test.sameSiteCookie)
+		assertEquals(options.secureCookie, test.secureCookie)
+		assertEquals(options.sessions.autoTrack, test.autoTrack)
+		assertEquals(options.sessions.timeout, test.timeout)
+		assertEquals(options.setCookieDomain, test.setCookieDomain)
+		assertEquals(options.strategy, test.strategy)
 	}
 
 	// Test invalid setCookieDomain values.
-	let invalids = ['', {}, '127.0.0.1', 'example.com.', '%20', '='];
+	let invalids = ['', {}, '127.0.0.1', 'example.com.', '%20', '=']
 	for (let i = 0; i < invalids.length; i++) {
-		const setCookieDomain = invalids[i];
+		const setCookieDomain = invalids[i]
 		try {
-			new Options({ setCookieDomain });
+			new Options({ setCookieDomain })
 		} catch {
-			continue;
+			continue
 		}
-		throw new AssertionError(`'${setCookieDomain}' is not a domain name for the setCookieDomain option`);
+		throw new AssertionError(`'${setCookieDomain}' is not a domain name for the setCookieDomain option`)
 	}
 
 	// Test that setCookieDomain and sameDomainCookiesOnly are not both set.
-	let ok = false;
+	let ok = false
 	try {
-		new Options({ setCookieDomain: 'example.com', sameDomainCookiesOnly: true });
+		new Options({ setCookieDomain: 'example.com', sameDomainCookiesOnly: true })
 	} catch {
-		ok = true;
+		ok = true
 	}
 	if (!ok) {
 		throw new AssertionError(
 			`setCookieDomain and sameDomainCookiesOnly options are both set, but no error has been returned`,
-		);
+		)
 	}
 
 	// Test invalid SameSite values.
-	invalids = ['', 8, [], true, 'no', ' Lax', 'other'];
+	invalids = ['', 8, [], true, 'no', ' Lax', 'other']
 	for (let i = 0; i < invalids.length; i++) {
-		const sameSiteCookie = invalids[i];
+		const sameSiteCookie = invalids[i]
 		try {
-			new Options({ sameSiteCookie });
+			new Options({ sameSiteCookie })
 		} catch {
-			continue;
+			continue
 		}
-		throw new AssertionError(`'${sameSiteCookie}' is not a SameSite value, but no error has been returned`);
+		throw new AssertionError(`'${sameSiteCookie}' is not a SameSite value, but no error has been returned`)
 	}
 
 	// Test invalid strategies.
-	invalids = ['', 5, {}, 'CBA', 'A--BC', ' ABC'];
+	invalids = ['', 5, {}, 'CBA', 'A--BC', ' ABC']
 	for (let i = 0; i < invalids.length; i++) {
-		const strategy = invalids[i];
+		const strategy = invalids[i]
 		try {
-			new Options({ strategy });
+			new Options({ strategy })
 		} catch {
-			continue;
+			continue
 		}
-		throw new AssertionError(`'${strategy}' is not a strategy, but no error has been returned`);
+		throw new AssertionError(`'${strategy}' is not a strategy, but no error has been returned`)
 	}
-});
+})

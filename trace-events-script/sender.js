@@ -1,65 +1,65 @@
-import { debug, getTime, onVisibilityChange } from './utils.js';
-import Queue from './queue.js';
+import { debug, getTime, onVisibilityChange } from './utils.js'
+import Queue from './queue.js'
 
-const MaxBodySize = 500 * 1024;
-const MaxHiddenBodySize = 64 * 1024;
-const MaxEventSize = 32 * 1024;
+const MaxBodySize = 500 * 1024
+const MaxHiddenBodySize = 64 * 1024
+const MaxEventSize = 32 * 1024
 
 class Sender {
-	timeout = 300;
-	#writeKey;
-	#endpoint = '';
-	#queue;
-	#flushing = false;
-	#post;
-	#debug;
+	timeout = 300
+	#writeKey
+	#endpoint = ''
+	#queue
+	#flushing = false
+	#post
+	#debug
 
 	constructor(writeKey, endpoint, debug) {
-		this.#queue = new Queue(globalThis.localStorage, 'chichi_queue', MaxEventSize, debug);
-		this.#writeKey = JSON.stringify(writeKey);
-		this.#endpoint = endpoint;
-		this.debug(debug);
-		this.#post = this.#postFunc();
+		this.#queue = new Queue(globalThis.localStorage, 'chichi_queue', MaxEventSize, debug)
+		this.#writeKey = JSON.stringify(writeKey)
+		this.#endpoint = endpoint
+		this.debug(debug)
+		this.#post = this.#postFunc()
 		onVisibilityChange((visible) => {
 			if (!visible) {
-				this.#flush(true);
+				this.#flush(true)
 			}
-		});
+		})
 		if (!this.#queue.isEmpty()) {
 			setTimeout(() => {
-				this.#flush();
-			}, 20);
+				this.#flush()
+			}, 20)
 		}
 	}
 
 	send(event) {
-		this.#debug?.(`received '${event.type}' event`, event);
-		const wasEmpty = this.#queue.isEmpty();
+		this.#debug?.(`received '${event.type}' event`, event)
+		const wasEmpty = this.#queue.isEmpty()
 		try {
-			const bytes = this.#queue.append(event);
+			const bytes = this.#queue.append(event)
 			if (bytes > MaxEventSize) {
-				console.warn('event size (' + bytes + 'bytes) is greater then 32KB');
-				return;
+				console.warn('event size (' + bytes + 'bytes) is greater then 32KB')
+				return
 			}
 		} catch (error) {
 			if (error instanceof TypeError) {
-				console.warn('cannot stringify the event to JSON:', error);
-				return;
+				console.warn('cannot stringify the event to JSON:', error)
+				return
 			}
-			throw error;
+			throw error
 		}
 		if (wasEmpty) {
-			this.#debug?.('events will be flushed after', this.timeout, 'ms');
+			this.#debug?.('events will be flushed after', this.timeout, 'ms')
 			setTimeout(() => {
-				this.#flush();
-			}, this.timeout);
+				this.#flush()
+			}, this.timeout)
 		}
 	}
 
 	// debug toggles debug mode.
 	debug(on) {
-		this.#queue.debug(on);
-		this.#debug = debug(on);
+		this.#queue.debug(on)
+		this.#debug = debug(on)
 	}
 
 	// flush flushes the queued events. If hidden is true, it sends a single
@@ -72,103 +72,103 @@ class Sender {
 	#flush(hidden) {
 		if (hidden) {
 			if (this.#queue.isEmpty() || this.#flushing || !navigator.onLine) {
-				return;
+				return
 			}
 		} else {
 			if (!navigator.onLine) {
 				globalThis.addEventListener('online', () => {
-					this.#flush();
-				});
-				return;
+					this.#flush()
+				})
+				return
 			}
-			const timeout = (this.#queue.age() + this.timeout) - getTime();
+			const timeout = (this.#queue.age() + this.timeout) - getTime()
 			if (timeout > 0) {
-				this.#debug?.('events will be flushed after', timeout, 'ms');
+				this.#debug?.('events will be flushed after', timeout, 'ms')
 				setTimeout(() => {
-					this.#flush();
-				}, timeout);
-				return;
+					this.#flush()
+				}, timeout)
+				return
 			}
 		}
-		this.#flushing = true;
-		const leading = '{"batch":[';
+		this.#flushing = true
+		const leading = '{"batch":['
 		const trailing = new Blob([
 			'],"sentAt":"',
 			new Date().toJSON(),
 			'","writeKey":',
 			this.#writeKey,
 			'}',
-		]);
-		const maxSize = (hidden ? MaxHiddenBodySize : MaxBodySize) - leading.length - trailing.size;
-		const events = this.#queue.read(maxSize, 1);
-		const parts = [];
-		parts.push(leading);
+		])
+		const maxSize = (hidden ? MaxHiddenBodySize : MaxBodySize) - leading.length - trailing.size
+		const events = this.#queue.read(maxSize, 1)
+		const parts = []
+		parts.push(leading)
 		for (let i = 0; i < events.length; i++) {
 			if (i > 0) {
-				parts.push(',');
+				parts.push(',')
 			}
-			parts.push(events[i]);
+			parts.push(events[i])
 		}
-		parts.push(trailing);
+		parts.push(trailing)
 		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
-		const body = new Blob(parts, { type: 'text/plain' });
-		const sent = events.length;
-		this.#debug?.('flushing', sent, 'events of', this.#queue.length(), '(', body.size, 'bytes )');
+		const body = new Blob(parts, { type: 'text/plain' })
+		const sent = events.length
+		this.#debug?.('flushing', sent, 'events of', this.#queue.length(), '(', body.size, 'bytes )')
 		try {
 			this.#post(this.#endpoint, body, hidden, (response) => {
-				this.#flushing = false;
+				this.#flushing = false
 				if (response instanceof Error) {
 					if (hidden) {
-						this.#debug?.('cannot post events:', response);
-						return;
+						this.#debug?.('cannot post events:', response)
+						return
 					}
 					if (navigator.onLine) {
-						const timeout = 1000;
+						const timeout = 1000
 						if (this.#debug) {
-							this.#debug('cannot post events, try again after', timeout, 'ms:', response);
+							this.#debug('cannot post events, try again after', timeout, 'ms:', response)
 						} else {
-							console.warn(response.message);
+							console.warn(response.message)
 						}
 						setTimeout(() => {
-							this.#flush();
-						}, timeout);
+							this.#flush()
+						}, timeout)
 					} else {
-						this.#flush();
+						this.#flush()
 					}
-					return;
+					return
 				}
 				if (!response.ok) {
-					const timeout = 1000;
+					const timeout = 1000
 					if (this.#debug) {
 						this.#debug(
 							`server responded with status ${response.status} ${response.statusText}, will retry after`,
 							timeout,
 							'ms',
-						);
+						)
 					} else {
-						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`);
+						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
 					}
 					setTimeout(() => {
-						this.#flush();
-					}, timeout);
-					return;
+						this.#flush()
+					}, timeout)
+					return
 				}
-				this.#debug?.(sent, 'events sent');
-				this.#queue.remove(sent);
-				const length = this.#queue.length();
+				this.#debug?.(sent, 'events sent')
+				this.#queue.remove(sent)
+				const length = this.#queue.length()
 				if (hidden || length === 0) {
-					return;
+					return
 				}
-				this.#flush();
-			});
+				this.#flush()
+			})
 		} catch (error) {
 			if (navigator.onLine) {
-				console.warn(error.message);
+				console.warn(error.message)
 			}
-			this.#debug?.('cannot post events, try again after 100ms:', error);
+			this.#debug?.('cannot post events, try again after 100ms:', error)
 			setTimeout(() => {
-				this.#flush();
-			}, 100);
+				this.#flush()
+			}, 100)
 		}
 	}
 
@@ -182,15 +182,15 @@ class Sender {
 			return (endpoint, body, keepalive, cb) => {
 				// Firefox does not support the keepalive option with fetch, so use beacon if it is available.
 				if (keepalive && typeof navigator.sendBeacon === 'function') {
-					this.#debug?.('sending', body.size, 'bytes using sendBeacon');
+					this.#debug?.('sending', body.size, 'bytes using sendBeacon')
 					if (!navigator.sendBeacon(endpoint, body)) {
-						cb(new Error('User agent is unable to queue the data for transfer'));
-						return;
+						cb(new Error('User agent is unable to queue the data for transfer'))
+						return
 					}
-					cb({ ok: true, status: 204, statusText: 'No Content' });
-					return;
+					cb({ ok: true, status: 204, statusText: 'No Content' })
+					return
 				}
-				this.#debug?.('sending', body.size, 'bytes using fetch');
+				this.#debug?.('sending', body.size, 'bytes using fetch')
 				const promise = fetch(endpoint, {
 					method: 'POST',
 					cache: 'no-cache',
@@ -200,40 +200,40 @@ class Sender {
 					redirect: 'error',
 					body: body,
 					keepalive: keepalive,
-				});
+				})
 				promise.then((res) => {
 					const response = {
 						ok: res.ok,
 						status: res.status,
 						statusText: res.statusText,
-					};
-					cb(response);
-				}, cb);
-			};
+					}
+					cb(response)
+				}, cb)
+			}
 		}
 		return (endpoint, body, _, cb) => {
-			this.#debug?.('sending', body.size, 'bytes using XMLHttpRequest');
-			const xhr = new XMLHttpRequest();
-			xhr.open('POST', endpoint, true);
-			xhr.setRequestHeader('Content-Type', 'text/plain');
+			this.#debug?.('sending', body.size, 'bytes using XMLHttpRequest')
+			const xhr = new XMLHttpRequest()
+			xhr.open('POST', endpoint, true)
+			xhr.setRequestHeader('Content-Type', 'text/plain')
 			xhr.onerror = () => {
-				cb(new Error('an error occurred processing the request'));
-			};
+				cb(new Error('an error occurred processing the request'))
+			}
 			xhr.onreadystatechange = () => {
 				if (xhr.readyState !== 4) {
-					return;
+					return
 				}
 				const response = {
 					ok: 200 <= xhr.status && xhr.status <= 299,
 					status: xhr.status,
 					statusText: xhr.statusText,
-				};
-				cb(response);
-			};
-			xhr.send(body);
-		};
+				}
+				cb(response)
+			}
+			xhr.send(body)
+		}
 	}
 }
 
-export default Sender;
-export { MaxBodySize, MaxEventSize, MaxHiddenBodySize, Sender };
+export default Sender
+export { MaxBodySize, MaxEventSize, MaxHiddenBodySize, Sender }

@@ -1,15 +1,15 @@
-import Analytics from './analytics.js';
-import { uuid } from './utils.js';
+import Analytics from './analytics.js'
+import { uuid } from './utils.js'
 
 function main() {
 	// Do nothing if the browser is not supported.
 	if (!uuid) {
-		return;
+		return
 	}
 
-	const analytics = globalThis.chichianalytics;
+	const analytics = globalThis.chichianalytics
 
-	const a = new Analytics(analytics.key, analytics.url, analytics.options);
+	const a = new Analytics(analytics.key, analytics.url, analytics.options)
 	const methods = [
 		'alias',
 		'anonymize',
@@ -27,21 +27,21 @@ function main() {
 		'startSession',
 		'track',
 		'user',
-	];
+	]
 	for (let i = 0; i < methods.length; i++) {
-		const method = methods[i];
-		analytics[method] = a[method].bind(a);
+		const method = methods[i]
+		analytics[method] = a[method].bind(a)
 	}
 
 	for (let i = 0; i < analytics.length; i++) {
-		const event = analytics[i];
-		analytics[event[0]](...event.splice(1));
+		const event = analytics[i]
+		analytics[event[0]](...event.splice(1))
 	}
 
 	// empty the array.
-	analytics.length = 0;
+	analytics.length = 0
 
-	globalThis.chichianalytics = a;
+	globalThis.chichianalytics = a
 }
 
-main();
+main()

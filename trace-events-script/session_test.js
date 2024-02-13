@@ -1,94 +1,94 @@
-import { assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts';
-import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts';
-import Storage from './storage.js';
-import Session from './session.js';
+import { assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
+import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts'
+import Storage from './storage.js'
+import Session from './session.js'
 
-const DEBUG = false;
+const DEBUG = false
 
 Deno.test('Session', async (t) => {
-	const fiveMinutes = 5 * 60 * 1000;
-	const tenMinutes = 2 * fiveMinutes;
+	const fiveMinutes = 5 * 60 * 1000
+	const tenMinutes = 2 * fiveMinutes
 
-	let session;
+	let session
 
 	function expectGet(id) {
-		assertEquals(session.get(), id);
+		assertEquals(session.get(), id)
 	}
 
 	function expectGetFresh(id, start) {
-		const [actualID, actualStart] = session.getFresh(); // autoTrack is false.
-		assertEquals(actualStart, start);
-		assertEquals(actualID, id);
+		const [actualID, actualStart] = session.getFresh() // autoTrack is false.
+		assertEquals(actualStart, start)
+		assertEquals(actualID, id)
 	}
 
 	await t.step('session without auto tracking', () => {
-		localStorage.clear();
-		const time = new FakeTime();
+		localStorage.clear()
+		const time = new FakeTime()
 
-		const storage = new Storage();
-		session = new Session(storage, false, tenMinutes);
-		session.debug(DEBUG);
+		const storage = new Storage()
+		session = new Session(storage, false, tenMinutes)
+		session.debug(DEBUG)
 
 		// Check that the session is not started.
-		expectGet(null);
-		expectGetFresh(null, false);
+		expectGet(null)
+		expectGetFresh(null, false)
 
-		session.start();
-		const startedAt = new Date().getTime();
-		expectGet(startedAt);
-		expectGetFresh(startedAt, true);
-		expectGetFresh(startedAt, false);
+		session.start()
+		const startedAt = new Date().getTime()
+		expectGet(startedAt)
+		expectGetFresh(startedAt, true)
+		expectGetFresh(startedAt, false)
 
-		session.end();
-		expectGet(null);
+		session.end()
+		expectGet(null)
 
-		const newSessionID = 52089473;
-		session.start(newSessionID);
-		expectGet(newSessionID);
-		expectGetFresh(newSessionID, true);
+		const newSessionID = 52089473
+		session.start(newSessionID)
+		expectGet(newSessionID)
+		expectGetFresh(newSessionID, true)
 
-		time.tick(tenMinutes * 2);
-		expectGetFresh(newSessionID, false);
+		time.tick(tenMinutes * 2)
+		expectGetFresh(newSessionID, false)
 
-		session.end();
-		expectGet(null);
+		session.end()
+		expectGet(null)
 
-		expectGetFresh(null, false);
+		expectGetFresh(null, false)
 
-		time.restore();
-	});
+		time.restore()
+	})
 
 	await t.step('session with auto tracking', () => {
-		localStorage.clear();
-		const time = new FakeTime();
+		localStorage.clear()
+		const time = new FakeTime()
 
-		const startedAt = new Date().getTime();
+		const startedAt = new Date().getTime()
 
-		const storage = new Storage();
-		session = new Session(storage, true, tenMinutes);
-		session.debug(DEBUG);
+		const storage = new Storage()
+		session = new Session(storage, true, tenMinutes)
+		session.debug(DEBUG)
 
-		assertEquals(session.get(), startedAt);
-		expectGetFresh(startedAt, true); // start is true because will be the first call to getFresh.
-		expectGetFresh(startedAt, false);
+		assertEquals(session.get(), startedAt)
+		expectGetFresh(startedAt, true) // start is true because will be the first call to getFresh.
+		expectGetFresh(startedAt, false)
 
-		time.tick(fiveMinutes); // advance 5 minutes in time
-		expectGet(startedAt);
+		time.tick(fiveMinutes) // advance 5 minutes in time
+		expectGet(startedAt)
 
-		time.tick(fiveMinutes); // advance another 5 minutes in time
-		expectGet(startedAt);
+		time.tick(fiveMinutes) // advance another 5 minutes in time
+		expectGet(startedAt)
 
-		time.tick(1); // advance 1ms in time
-		expectGet(null);
-		expectGetFresh(startedAt + 2 * fiveMinutes + 1, true);
+		time.tick(1) // advance 1ms in time
+		expectGet(null)
+		expectGetFresh(startedAt + 2 * fiveMinutes + 1, true)
 
-		session.end();
-		expectGet(null);
+		session.end()
+		expectGet(null)
 
-		time.tick(fiveMinutes); // advance another 5 minutes in time
-		expectGetFresh(startedAt + 3 * fiveMinutes + 1, true);
-		expectGet(startedAt + 3 * fiveMinutes + 1);
+		time.tick(fiveMinutes) // advance another 5 minutes in time
+		expectGetFresh(startedAt + 3 * fiveMinutes + 1, true)
+		expectGet(startedAt + 3 * fiveMinutes + 1)
 
-		time.restore();
-	});
-});
+		time.restore()
+	})
+})

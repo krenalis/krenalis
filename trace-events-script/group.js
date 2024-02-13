@@ -1,32 +1,32 @@
 class Group {
-	#storage;
+	#storage
 
 	constructor(storage) {
-		this.#storage = storage;
+		this.#storage = storage
 	}
 
 	id(id) {
 		if (id === null) {
-			this.#storage.setGroupId();
-			return null;
+			this.#storage.setGroupId()
+			return null
 		}
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
-			id = String(id);
-			this.#storage.setGroupId(id);
-			return id;
+			id = String(id)
+			this.#storage.setGroupId(id)
+			return id
 		}
-		return this.#storage.groupId();
+		return this.#storage.groupId()
 	}
 
 	traits(traits) {
 		if (traits !== undefined) {
 			if (traits === null) {
-				traits = {};
+				traits = {}
 			}
-			this.#storage.setTraits('group', traits);
+			this.#storage.setTraits('group', traits)
 		}
-		return this.#storage.traits('group');
+		return this.#storage.traits('group')
 	}
 }
 
-export default Group;
+export default Group
