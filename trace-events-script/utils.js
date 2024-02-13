@@ -19,7 +19,7 @@ function campaign() {
 			campaign = campaign || {};
 			const k = kv[0] === 'campaign' ? 'name' : kv[0];
 			campaign[k] = v;
-		} catch (_) {
+		} catch {
 			// nothing.
 		}
 	}

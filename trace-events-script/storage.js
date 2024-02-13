@@ -184,7 +184,7 @@ class cookieStore {
 				let value = null;
 				try {
 					value = globalThis.decodeURIComponent(cookie.substring(p + 1));
-				} catch (_) {
+				} catch {
 					// value contains an invalid escape sequence.
 				}
 				return value;
@@ -196,7 +196,7 @@ class cookieStore {
 	set(key, value) {
 		try {
 			value = globalThis.encodeURIComponent(value);
-		} catch (_) {
+		} catch {
 			// value contains a lone surrogate.
 			return null;
 		}
@@ -263,7 +263,7 @@ class localStorageStore {
 		try {
 			globalThis.localStorage.setItem('__test__', '');
 			globalThis.localStorage.removeItem('__test__');
-		} catch (_) {
+		} catch {
 			throw noStorageSupported;
 		}
 	}

@@ -230,7 +230,7 @@ class Queue {
 			this.#times = times;
 			this.#sizes = sizes;
 			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${this.#key}' queue`);
-		} catch (_) {
+		} catch {
 			this.#debug?.(
 				`cannot restore the '${this.#key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
 			);
