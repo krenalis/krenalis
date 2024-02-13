@@ -1,6 +1,6 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
 import * as fake from './test_fake.js'
-import Storage, { cookieStore, localStorageStore, multipleStore } from './storage.js'
+import Storage, { cookieStore, multipleStore, storageStore } from './storage.js'
 
 Deno.test('Storage', () => {
 	localStorage.clear()
@@ -237,13 +237,29 @@ Deno.test('cookieStore', () => {
 	assertEquals(store.get('boo'), null)
 })
 
+Deno.test('storageStore', () => {
+	let store = new storageStore(globalThis.localStorage)
+	assertEquals(store.get('k'), null)
+	store.set('k', 'v')
+	assertEquals(store.get('k'), 'v')
+	store.delete('k')
+	assertEquals(store.get('k'), null)
+
+	// Exceptions are handled and not propagated.
+	store = new storageStore(new fake.Storage())
+	assertEquals(store.get('k'), null)
+	store.set('k', 'v')
+	assertEquals(store.get('k'), null)
+	store.delete('k')
+})
+
 Deno.test('multipleStore', () => {
 	localStorage.clear()
 
 	globalThis.location = new URL('https://c.b.a.example.com/account/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
 	const cs = new cookieStore()
-	const lss = new localStorageStore()
+	const lss = new storageStore(globalThis.localStorage)
 	const store = new multipleStore([cs, lss])
 
 	assertEquals(store.get('key'), null)

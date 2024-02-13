@@ -345,22 +345,37 @@ class Navigator {
 
 // Storage implements a fake storage that raises an exception at each method
 // call.
+//
+// As a special case, getItem, setItem, and removeItem methods behave as
+// expected if the key is '__test__'.
 class Storage {
+	#testValue = null
 	length = 0
 
 	key() {
 		throw new Error('No storage available')
 	}
 
-	getItem() {
+	getItem(key) {
+		if (key === '__test__') {
+			return this.#testValue
+		}
 		throw new Error('No storage available')
 	}
 
-	setItem() {
+	setItem(key, value) {
+		if (key === '__test__') {
+			this.#testValue = String(value)
+			return
+		}
 		throw new Error('Quota exceeded')
 	}
 
-	removeItem() {
+	removeItem(key) {
+		if (key === '__test__') {
+			this.#testValue = null
+			return
+		}
 		throw new Error('No storage available')
 	}
 

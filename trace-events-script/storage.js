@@ -16,7 +16,7 @@ class Storage {
 			}
 		}
 		try {
-			stores.push(new localStorageStore())
+			stores.push(new storageStore(globalThis.localStorage))
 		} catch (error) {
 			if (error !== noStorageSupported) {
 				throw error
@@ -255,26 +255,42 @@ class cookieStore {
 	}
 }
 
-// localStorageStore stores key/value pairs in the localStorage.
-class localStorageStore {
-	// constructor returns a new localStorageStore. If localStorage is not
-	// supported, it raises an exception with error storeNotSupported.
-	constructor() {
+// storageStore stores key/value pairs in a Storage.
+class storageStore {
+	#storage
+
+	// constructor returns a new storageStore based on the provided Storage,
+	// such as localStorage or sessionStorage. If the provided Storage cannot be
+	// used, it raises an exception with the storeNotSupported error.
+	constructor(storage) {
 		try {
-			globalThis.localStorage.setItem('__test__', '')
-			globalThis.localStorage.removeItem('__test__')
+			storage.setItem('__test__', '')
+			storage.removeItem('__test__')
 		} catch {
 			throw noStorageSupported
 		}
+		this.#storage = storage
 	}
 	get(key) {
-		return globalThis.localStorage.getItem(key)
+		try {
+			return this.#storage.getItem(key)
+		} catch {
+			return null
+		}
 	}
 	set(key, value) {
-		return globalThis.localStorage.setItem(key, value)
+		try {
+			this.#storage.setItem(key, value)
+		} catch {
+			// Nothing to do.
+		}
 	}
 	delete(key) {
-		return globalThis.localStorage.removeItem(key)
+		try {
+			this.#storage.removeItem(key)
+		} catch {
+			// Nothing to do.
+		}
 	}
 }
 
@@ -311,4 +327,4 @@ class multipleStore {
 }
 
 export default Storage
-export { cookieStore, localStorageStore, multipleStore }
+export { cookieStore, multipleStore, storageStore }
