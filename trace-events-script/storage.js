@@ -219,11 +219,10 @@ class cookieStore {
 			if (this.#sameDomainOnly) {
 				return [null];
 			}
-			let hostname = globalThis.location.hostname;
-			if (hostname[-1] === '.') {
-				hostname = hostname.slice(0, -1);
-			}
+			const hostname = globalThis.location.hostname;
 			const components = hostname.split('.');
+			// Note that if the domain ends with a dot, it should be left as is because some browsers,
+			// such as Chrome and Firefox, treat domains with and without dots as distinct.
 			if (components.length < 3) {
 				return [hostname]; // top-level, second-level domain, or IPv6
 			}

@@ -156,6 +156,7 @@ Deno.test('Storage', () => {
 
 Deno.test('cookieStore', () => {
 	globalThis.location = new URL('https://c.b.a.example.com/account/');
+
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com');
 	let store = new cookieStore('lax', false, null, false);
 
@@ -224,6 +225,13 @@ Deno.test('cookieStore', () => {
 	assertEquals(cookie.sameSite, 'none');
 	assert(cookie.secure);
 	assertEquals(cookie.domain, '172.16.254.1');
+
+	globalThis.location = new URL('https://c.b.a.example.com./account/');
+	globalThis.document = new fake.CookieDocument(globalThis.location, 'example.com.');
+	store = new cookieStore('strict', false, null, false);
+	store.set('boo', 'foo');
+	cookie = globalThis.document.getCookie('boo', 'example.com.');
+	assertEquals(cookie.domain, 'example.com.');
 
 	store.delete('boo');
 	assertEquals(store.get('boo'), null);
