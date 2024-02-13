@@ -12,5 +12,6 @@
     "loose": true,
     "preserveAllComments": true
   },
-  "isModule": true
+  "isModule": true,
+  "sourceMaps": true
 }
