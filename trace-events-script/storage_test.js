@@ -1,6 +1,9 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
+import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts'
 import * as fake from './test_fake.js'
 import Storage, { cookieStore, multipleStore, storageStore } from './storage.js'
+
+const oneYear = 365 * 24 * 60 * 60 * 1000
 
 Deno.test('Storage', () => {
 	localStorage.clear()
@@ -155,10 +158,18 @@ Deno.test('Storage', () => {
 })
 
 Deno.test('cookieStore', () => {
+	const time = new FakeTime()
+
+	function expires(maxAge) {
+		const expires = new Date(Date.now() + maxAge)
+		expires.setMilliseconds(0)
+		return expires
+	}
+
 	globalThis.location = new URL('https://c.b.a.example.com/account/')
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	let store = new cookieStore('lax', false, null, false)
+	let store = new cookieStore({ domain: null, maxAge: oneYear / 2, path: '/', sameSite: 'lax', secure: false })
 
 	assertEquals(store.get(''), null)
 	store.set('', '')
@@ -167,9 +178,11 @@ Deno.test('cookieStore', () => {
 	store.set('boo', 'foo')
 
 	let cookie = globalThis.document.getCookie('boo', 'a.example.com')
+	assertEquals(cookie.domain, 'a.example.com')
+	assertEquals(cookie.expires, expires(oneYear / 2))
+	assertEquals(cookie.path, '/')
 	assertEquals(cookie.sameSite, 'lax')
 	assert(!cookie.secure)
-	assertEquals(cookie.domain, 'a.example.com')
 
 	assertEquals(store.get('boo'), 'foo')
 	store.set('boo', '%ab')
@@ -191,50 +204,60 @@ Deno.test('cookieStore', () => {
 	assertEquals(store.get('ab'), '3')
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	store = new cookieStore('lax', true, null, true)
+	store = new cookieStore({ domain: '', maxAge: oneYear, path: '/store/', sameSite: 'lax', secure: true })
 	store.set('boo', 'foo')
 	cookie = globalThis.document.getCookie('boo', undefined)
+	assertEquals(cookie.domain, undefined)
+	assertEquals(cookie.expires, expires(oneYear))
+	assertEquals(cookie.path, '/store/')
 	assertEquals(cookie.sameSite, 'lax')
 	assert(cookie.secure)
-	assertEquals(cookie.domain, undefined)
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	store = new cookieStore('lax', true, 'b.a.example.com', false)
+	store = new cookieStore({ domain: 'b.a.example.com', maxAge: oneYear, path: '/', sameSite: 'lax', secure: true })
 	store.set('boo', 'foo')
 	cookie = globalThis.document.getCookie('boo', 'b.a.example.com')
+	assertEquals(cookie.domain, 'b.a.example.com')
+	assertEquals(cookie.expires, expires(oneYear))
+	assertEquals(cookie.path, '/')
 	assertEquals(cookie.sameSite, 'lax')
 	assert(cookie.secure)
-	assertEquals(cookie.domain, 'b.a.example.com')
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	store = new cookieStore('strict', true, null, false)
+	store = new cookieStore({ domain: null, maxAge: oneYear * 2, path: '/', sameSite: 'strict', secure: true })
 	store.set('boo', 'foo')
 	cookie = globalThis.document.getCookie('boo', 'a.example.com')
+	assertEquals(cookie.domain, 'a.example.com')
+	assertEquals(cookie.expires, expires(oneYear * 2))
+	assertEquals(cookie.path, '/')
 	assertEquals(cookie.sameSite, 'strict')
 	assert(cookie.secure)
-	assertEquals(cookie.domain, 'a.example.com')
 
 	globalThis.location = new URL('https://172.16.254.1/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, '172.16.254.1')
-	store = new cookieStore('none', true, null, false)
+	store = new cookieStore({ domain: null, maxAge: oneYear, path: '/', sameSite: 'none', secure: true })
 	assertEquals(store.get('boo'), null)
 	store.set('boo', 'foo')
 	assertEquals(store.get('boo'), 'foo')
 
 	cookie = globalThis.document.getCookie('boo', '172.16.254.1')
+	assertEquals(cookie.domain, '172.16.254.1')
+	assertEquals(cookie.expires, expires(oneYear))
+	assertEquals(cookie.path, '/')
 	assertEquals(cookie.sameSite, 'none')
 	assert(cookie.secure)
-	assertEquals(cookie.domain, '172.16.254.1')
 
 	globalThis.location = new URL('https://c.b.a.example.com./account/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'example.com.')
-	store = new cookieStore('strict', false, null, false)
+	store = new cookieStore({ domain: null, maxAge: oneYear, path: '/', sameSite: 'strict', secure: false })
 	store.set('boo', 'foo')
 	cookie = globalThis.document.getCookie('boo', 'example.com.')
 	assertEquals(cookie.domain, 'example.com.')
 
 	store.delete('boo')
 	assertEquals(store.get('boo'), null)
+
+	time.restore()
 })
 
 Deno.test('storageStore', () => {
@@ -258,7 +281,7 @@ Deno.test('multipleStore', () => {
 
 	globalThis.location = new URL('https://c.b.a.example.com/account/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	const cs = new cookieStore()
+	const cs = new cookieStore({ domain: null, maxAge: oneYear, path: '/', sameSite: 'lax', secure: false })
 	const lss = new storageStore(globalThis.localStorage)
 	const store = new multipleStore([cs, lss])
 

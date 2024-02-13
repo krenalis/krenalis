@@ -2,14 +2,19 @@ import { isPlainObject } from './utils.js'
 
 class Options {
 	debug = false
-	sameDomainCookiesOnly = false
-	sameSiteCookie = 'lax'
-	secureCookie = false
 	sessions = {
 		autoTrack: true,
 		timeout: 30 * 60000, // 30 minutes.
 	}
-	setCookieDomain = null
+	storage = {
+		cookie: {
+			domain: null,
+			maxAge: 365 * 24 * 60 * 60 * 1000, // one year
+			path: '/',
+			sameSite: 'lax',
+			secure: false,
+		},
+	}
 	strategy = 'AB-C'
 
 	constructor(options) {
@@ -19,23 +24,39 @@ class Options {
 		if (options.debug != null) {
 			this.debug = !!options.debug
 		}
-		if (options.sameDomainCookiesOnly != null) {
-			this.sameDomainCookiesOnly = !!options.sameDomainCookiesOnly
+		if (options.sameDomainCookiesOnly) {
+			this.storage.cookie.domain = ''
 		}
-		if (options.sameSiteCookie != null) {
-			if (!isSameSite(options.sameSiteCookie)) {
-				throw new Error(`sameSiteCookie option is not valid`)
+		if (isSameSite(options.sameSiteCookie)) {
+			this.storage.cookie.sameSite = options.sameSiteCookie.toLowerCase()
+		}
+		if (options.secureCookie) {
+			this.storage.cookie.secure = !!options.secureCookie
+		}
+		if (isDomainName(options.setCookieDomain)) {
+			this.storage.cookie.domain = options.setCookieDomain
+		}
+		if (isPlainObject(options.storage)) {
+			// 'storage.cookie' overwrites 'sameDomainCookiesOnly', 'sameSiteCookie', 'secureCookie', and 'setCookieDomain' options.
+			const cookie = options.storage.cookie
+			if (isPlainObject(cookie)) {
+				if (cookie.domain === '' || isDomainName(cookie.domain)) {
+					this.storage.cookie.domain = cookie.domain
+				}
+				const maxAge = asPositiveFiniteNumber(cookie.maxage)
+				if (maxAge != null) {
+					this.storage.cookie.maxAge = maxAge
+				}
+				if (canBeUsedAsCookiePath(cookie.path)) {
+					this.storage.cookie.path = cookie.path
+				}
+				if (isSameSite(cookie.samesite)) {
+					this.storage.cookie.sameSite = cookie.samesite.toLowerCase()
+				}
+				if ('secure' in cookie) {
+					this.storage.cookie.secure = !!cookie.secure
+				}
 			}
-			this.sameSiteCookie = options.sameSiteCookie.toLowerCase()
-		}
-		if (options.secureCookie != null) {
-			this.secureCookie = !!options.secureCookie
-		}
-		if (options.setCookieDomain != null) {
-			if (!isDomainName(options.setCookieDomain)) {
-				throw new Error(`setCookieDomain option is not a valid domain`)
-			}
-			this.setCookieDomain = options.setCookieDomain
 		}
 		if (options.strategy != null) {
 			if (!isStrategy(options.strategy)) {
@@ -57,10 +78,23 @@ class Options {
 				}
 			}
 		}
-		if (this.setCookieDomain != null && this.sameDomainCookiesOnly) {
-			throw new Error(`setCookieDomain option must be null if the sameDomainCookiesOnly option is true`)
-		}
 	}
+}
+
+// asPositiveFiniteNumber returns n if it is a positive finite Number, otherwise
+// return undefined. If n is a String, it converts it to a Number.
+function asPositiveFiniteNumber(n) {
+	if (typeof n === 'string') {
+		n = Number(n)
+	}
+	if (typeof n === 'number' && isFinite(n) && n > 0) {
+		return n
+	}
+}
+
+// canBeUsedAsCookiePath reports whether s can be used as a cookie path.
+function canBeUsedAsCookiePath(s) {
+	return s === '/' || (typeof s === 'string' && /^[ -~]+$/.test(s) && s.indexOf(';') === -1)
 }
 
 // isDomainName reports whether s is a domain name.
@@ -70,7 +104,7 @@ function isDomainName(s) {
 
 // isSameSite reports whether s is a SameSite value.
 function isSameSite(s) {
-	return typeof s === 'string' && /^lax|strict|none$/i.test(s)
+	return typeof s === 'string' && /^Lax|Strict|None$/.test(s)
 }
 
 // isStrategy reports whether s is a strategy.

@@ -4,11 +4,11 @@ const warnMsg = 'Analytics: cannot stringify traits'
 class Storage {
 	#store
 
-	constructor(sameSiteCookie, secureCookie, setCookieDomain, sameDomainCookiesOnly) {
+	constructor(options) {
 		const stores = []
 		if (globalThis.document?.cookie != null) {
 			try {
-				stores.push(new cookieStore(sameSiteCookie, secureCookie, setCookieDomain, sameDomainCookiesOnly))
+				stores.push(new cookieStore(options.cookie))
 			} catch (error) {
 				if (error !== noStorageSupported) {
 					throw error
@@ -149,28 +149,37 @@ class Storage {
 
 // cookieStore stores key/value pairs in cookies.
 class cookieStore {
+	#domain
+	#maxAge
+	#path
 	#sameSite
 	#secure
-	#domain
-	#sameDomainOnly
 
-	// constructor returns a new cookieStore. sameSite is the value for the
-	// SameSite attribute of cookies, and can be 'lax', 'strict', or 'none'. If
-	// secure is true, cookies will have the 'secure' attribute. domain, if not
-	// null, is the domain to use for cookies, otherwise if sameDomainOnly is
-	// true, cookies are restricted to the exact domain where they were created.
+	// constructor returns a new cookieStore given the following options:
 	//
-	// By default, if domain is null and sameDomainOnly is false, the domain
-	// will be set to the smallest subdomain of the page's domain, or possibly
-	// the page's domain itself, where cookie setting is supported.
+	// * domain, if not null or empty, specifies the domain to use for cookies.
+	//   If it is empty, cookies are restricted to the exact domain where they
+	//   were created. If not empty, the cookies' domain will be set to the
+	//   smallest subdomain of the page's domain, or possibly the page's domain
+	//   itself, where cookie setting is supported.
+	//
+	// * maxAge is the value in milliseconds used for the 'expires' attribute.
+	//
+	// * path is the value used in the 'path' attribute.
+	//
+	// * sameSite determines the value for the 'SameSite' attribute, which can
+	//   be set to 'lax', 'strict', or 'none'.
+	//
+	// * secure, if it is set to true, will add the 'secure' attribute.
 	//
 	// If cookies are not supported, it raises an exception with the error
 	// storeNotSupported.
-	constructor(sameSite, secure, domain, sameDomainOnly) {
-		this.#sameSite = sameSite
-		this.#secure = secure
-		this.#domain = domain
-		this.#sameDomainOnly = sameDomainOnly
+	constructor(options) {
+		this.#domain = options.domain
+		this.#maxAge = options.maxAge
+		this.#path = options.path
+		this.#sameSite = options.sameSite
+		this.#secure = options.secure
 		this.#setDomain()
 	}
 
@@ -200,14 +209,14 @@ class cookieStore {
 			// value contains a lone surrogate.
 			return null
 		}
-		const expires = new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toUTCString()
-		globalThis.document.cookie = `${key}=${value}; expires=${expires}; path=/; samesite=${this.#sameSite}` +
-			`${this.#secure ? '; secure' : ''}${this.#domain ? `; domain=${this.#domain}` : ''}`
+		const expires = new Date(Date.now() + this.#maxAge).toUTCString()
+		globalThis.document.cookie = `${key}=${value}; expires=${expires}; path=${this.#path}; samesite=${this.#sameSite}` +
+			`${this.#secure ? '; secure' : ''}${this.#domain === '' ? '' : `; domain=${this.#domain}`}`
 	}
 
 	delete(key) {
-		document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/${
-			this.#domain ? `; domain=${this.#domain}` : ''
+		document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${this.#path}${
+			this.#domain === '' ? '' : `; domain=${this.#domain}`
 		}`
 	}
 
@@ -219,9 +228,6 @@ class cookieStore {
 		const hostnames = () => {
 			if (this.#domain != null) {
 				return [this.#domain]
-			}
-			if (this.#sameDomainOnly) {
-				return [null]
 			}
 			const hostname = globalThis.location.hostname
 			const components = hostname.split('.')

@@ -21,12 +21,7 @@ class Analytics {
 
 	constructor(writeKey, endpoint, options) {
 		this.#options = new Options(options)
-		this.#storage = new Storage(
-			this.#options.sameSiteCookie,
-			this.#options.secureCookie,
-			this.#options.setCookieDomain,
-			this.#options.sameDomainCookiesOnly,
-		)
+		this.#storage = new Storage(this.#options.storage)
 		this.#session = new Session(
 			this.#storage,
 			this.#options.sessions.autoTrack,
