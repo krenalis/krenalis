@@ -149,16 +149,20 @@ class Storage {
 
 // cookieStore stores key/value pairs in cookies.
 class cookieStore {
-	#domain; // domain is undefined if sameDomainOnly is true
-	#sameDomainOnly;
 	#sameSite;
 	#secure;
+	#domain;
+	#sameDomainOnly;
 
 	// constructor returns a new cookieStore. sameSite is the value for the
-	// SameSite attribute of cookies, and can be 'lex', 'strict', or 'none'. If
+	// SameSite attribute of cookies, and can be 'lax', 'strict', or 'none'. If
 	// secure is true, cookies will have the 'secure' attribute. domain, if not
 	// null, is the domain to use for cookies, otherwise if sameDomainOnly is
 	// true, cookies are restricted to the exact domain where they were created.
+	//
+	// By default, if domain is null and sameDomainOnly is false, the domain
+	// will be set to the smallest subdomain of the page's domain, or possibly
+	// the page's domain itself, where cookie setting is supported.
 	//
 	// If cookies are not supported, it raises an exception with the error
 	// storeNotSupported.
