@@ -1,48 +1,64 @@
-const noStorageSupported = new Error('no storage supported')
+const storageNotSupported = new Error('storage is not supported')
 const warnMsg = 'Analytics: cannot stringify traits'
 
 class Storage {
-	#store
+	#storage
 
 	constructor(options) {
-		const stores = []
-		if (globalThis.document?.cookie != null) {
+		const tryStorage = (store) => {
 			try {
-				stores.push(new cookieStore(options.cookie))
+				const s = store()
+				if (this.#storage == null) {
+					this.#storage = s
+				} else {
+					this.#storage = new multiStorage([this.#storage, s])
+				}
 			} catch (error) {
-				if (error !== noStorageSupported) {
+				if (error !== storageNotSupported) {
 					throw error
 				}
 			}
 		}
-		try {
-			stores.push(new storageStore(globalThis.localStorage))
-		} catch (error) {
-			if (error !== noStorageSupported) {
-				throw error
-			}
+		switch (options.type) {
+			case 'multiStorage':
+			case 'cookieStorage':
+				tryStorage(() => new cookieStorage(options.cookie))
+				if (options.type === 'multiStorage' || !this.#storage) {
+					tryStorage(() => new webStorage(globalThis.localStorage))
+					if (!this.#storage) {
+						tryStorage(() => new webStorage(globalThis.sessionStorage))
+					}
+				}
+				break
+			case 'localStorage':
+				tryStorage(() => new webStorage(globalThis.localStorage))
+				break
+			case 'sessionStorage':
+				tryStorage(() => new webStorage(globalThis.sessionStorage))
+				break
+			case 'none':
+				this.#storage = new noStorage()
 		}
-		if (stores.length === 0) {
-			throw noStorageSupported
+		if (!this.#storage) {
+			this.#storage = new memoryStorage()
 		}
-		this.#store = new multipleStore(stores)
 	}
 
 	anonymousId() {
-		return this.#store.get('chichi_anonymous_id')
+		return this.#storage.get('chichi_anonymous_id')
 	}
 
 	groupId() {
-		return this.#store.get('chichi_group_id')
+		return this.#storage.get('chichi_group_id')
 	}
 
 	removeSuspended() {
-		this.#store.delete('chichi_suspended')
+		this.#storage.delete('chichi_suspended')
 	}
 
 	restore() {
 		let session, anonymousId, userTraits, groupId, groupTraits
-		const suspended = this.#store.get('chichi_suspended')
+		const suspended = this.#storage.get('chichi_suspended')
 		if (suspended != null) {
 			;[session, anonymousId, userTraits, groupId, groupTraits] = JSON.parse(suspended)
 		}
@@ -54,11 +70,11 @@ class Storage {
 		this.setTraits('user', userTraits)
 		this.setGroupId(groupId)
 		this.setTraits('group', groupTraits)
-		this.#store.delete('chichi_suspended')
+		this.#storage.delete('chichi_suspended')
 	}
 
 	session() {
-		const session = this.#store.get('chichi_session')
+		const session = this.#storage.get('chichi_session')
 		if (session == null) {
 			return [null, 0, false]
 		}
@@ -66,7 +82,7 @@ class Storage {
 	}
 
 	traits(kind) {
-		const traits = this.#store.get(`chichi_${kind}_traits`)
+		const traits = this.#storage.get(`chichi_${kind}_traits`)
 		if (traits == null) {
 			return {}
 		}
@@ -75,26 +91,26 @@ class Storage {
 
 	setAnonymousId(id) {
 		if (id == null) {
-			this.#store.delete('chichi_anonymous_id')
+			this.#storage.delete('chichi_anonymous_id')
 			return
 		}
-		this.#store.set('chichi_anonymous_id', id)
+		this.#storage.set('chichi_anonymous_id', id)
 	}
 
 	setGroupId(id) {
 		if (id == null) {
-			this.#store.delete('chichi_group_id')
+			this.#storage.delete('chichi_group_id')
 			return
 		}
-		this.#store.set('chichi_group_id', id)
+		this.#storage.set('chichi_group_id', id)
 	}
 
 	setSession(id, expiration, start) {
 		if (id == null) {
-			this.#store.delete('chichi_session')
+			this.#storage.delete('chichi_session')
 			return
 		}
-		this.#store.set('chichi_session', JSON.stringify([id, expiration, start]))
+		this.#storage.set('chichi_session', JSON.stringify([id, expiration, start]))
 	}
 
 	setTraits(kind, traits) {
@@ -102,7 +118,7 @@ class Storage {
 			throw new Error('kind is ' + (typeof kind))
 		}
 		if (traits == null) {
-			this.#store.delete(`chichi_${kind}_traits`)
+			this.#storage.delete(`chichi_${kind}_traits`)
 			return
 		}
 		const type = typeof traits
@@ -121,14 +137,14 @@ class Storage {
 			console.warn(`${warnMsg}: ${error.message}`)
 			return
 		}
-		this.#store.set(`chichi_${kind}_traits`, value)
+		this.#storage.set(`chichi_${kind}_traits`, value)
 	}
 
 	setUserId(id) {
 		if (id == null) {
-			this.#store.delete('chichi_user_id')
+			this.#storage.delete('chichi_user_id')
 		} else {
-			this.#store.set('chichi_user_id', id)
+			this.#storage.set('chichi_user_id', id)
 		}
 	}
 
@@ -139,23 +155,23 @@ class Storage {
 		const groupId = this.groupId()
 		const groupTraits = this.traits('group')
 		const suspended = [session, anonymousId, userTraits, groupId, groupTraits]
-		this.#store.set('chichi_suspended', JSON.stringify(suspended))
+		this.#storage.set('chichi_suspended', JSON.stringify(suspended))
 	}
 
 	userId() {
-		return this.#store.get('chichi_user_id')
+		return this.#storage.get('chichi_user_id')
 	}
 }
 
-// cookieStore stores key/value pairs in cookies.
-class cookieStore {
+// cookieStorage stores key/value pairs in cookies.
+class cookieStorage {
 	#domain
 	#maxAge
 	#path
 	#sameSite
 	#secure
 
-	// constructor returns a new cookieStore given the following options:
+	// constructor returns a new cookieStorage given the following options:
 	//
 	// * domain, if not null or empty, specifies the domain to use for cookies.
 	//   If it is empty, cookies are restricted to the exact domain where they
@@ -175,12 +191,16 @@ class cookieStore {
 	// If cookies are not supported, it raises an exception with the error
 	// storeNotSupported.
 	constructor(options) {
+		if (globalThis.document?.cookie == null) {
+			// Only in tests.
+			throw storageNotSupported
+		}
 		this.#domain = options.domain
 		this.#maxAge = options.maxAge
 		this.#path = options.path
 		this.#sameSite = options.sameSite
 		this.#secure = options.secure
-		this.#setDomain()
+		this.#check()
 	}
 
 	get(key) {
@@ -220,11 +240,9 @@ class cookieStore {
 		}`
 	}
 
-	// setDomain sets the domain to use for cookies. It is the smallest
-	// subdomain of the page's domain, or possibly the page's domain itself,
-	// for which cookie setting is supported. If cookie setting is not
-	// supported, it raises an exception with the error storeNotSupported.
-	#setDomain() {
+	// check checks whether the cookies are available, and if the domain is
+	// null, it determines the domain of the cookies.
+	#check() {
 		const hostnames = () => {
 			if (this.#domain != null) {
 				return [this.#domain]
@@ -257,23 +275,23 @@ class cookieStore {
 				return
 			}
 		}
-		throw noStorageSupported
+		throw storageNotSupported
 	}
 }
 
-// storageStore stores key/value pairs in a Storage.
-class storageStore {
+// webStorage stores key/value pairs in a Web Storage.
+class webStorage {
 	#storage
 
-	// constructor returns a new storageStore based on the provided Storage,
-	// such as localStorage or sessionStorage. If the provided Storage cannot be
+	// constructor returns a new webStorage based on the provided Web Storage,
+	// such as localStorage or sessionStorage. If the provided storage cannot be
 	// used, it raises an exception with the storeNotSupported error.
 	constructor(storage) {
 		try {
 			storage.setItem('__test__', '')
 			storage.removeItem('__test__')
 		} catch {
-			throw noStorageSupported
+			throw storageNotSupported
 		}
 		this.#storage = storage
 	}
@@ -300,20 +318,35 @@ class storageStore {
 	}
 }
 
-// multipleStore stores key/value pairs across multiple stores. The get method
-// retrieves the key from the first store, the set method updates the key in all
-// stores, and the delete method removes the key from all stores.
-class multipleStore {
-	#stores
-	// constructor returns a new multipleStore that stores key/value pairs in
-	// the provided stores.
-	constructor(stores) {
-		this.#stores = stores
+// memoryStorage stores key/value pairs in memory.
+class memoryStorage {
+	#data = {}
+	get(key) {
+		const value = this.#data[key]
+		return value == null ? null : value
+	}
+	set(key, value) {
+		this.#data[key] = value
+	}
+	delete(key) {
+		delete (this.#data[key])
+	}
+}
+
+// multiStorage stores key/value pairs across multiple storages. The get
+// method retrieves the key from the first storage, the set method updates the
+// key in all storages, and the delete method removes the key from all storages.
+class multiStorage {
+	#storages
+	// constructor returns a new multiStorage that stores key/value pairs in
+	// the provided storages.
+	constructor(storages) {
+		this.#storages = storages
 	}
 	get(key) {
 		let value = null
-		for (let i = 0; i < this.#stores.length; i++) {
-			value = this.#stores[i].get(key)
+		for (let i = 0; i < this.#storages.length; i++) {
+			value = this.#storages[i].get(key)
 			if (value != null) {
 				break
 			}
@@ -321,16 +354,25 @@ class multipleStore {
 		return value
 	}
 	set(key, value) {
-		for (let i = 0; i < this.#stores.length; i++) {
-			this.#stores[i].set(key, value)
+		for (let i = 0; i < this.#storages.length; i++) {
+			this.#storages[i].set(key, value)
 		}
 	}
 	delete(key) {
-		for (let i = 0; i < this.#stores.length; i++) {
-			this.#stores[i].delete(key)
+		for (let i = 0; i < this.#storages.length; i++) {
+			this.#storages[i].delete(key)
 		}
 	}
 }
 
+// noStorage is a storage that does not store key/value pairs.
+class noStorage {
+	get() {
+		return null
+	}
+	set() {}
+	delete() {}
+}
+
 export default Storage
-export { cookieStore, multipleStore, storageStore }
+export { cookieStorage, memoryStorage, multiStorage, noStorage, webStorage }

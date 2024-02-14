@@ -21,6 +21,7 @@ Deno.test('Options', () => {
 				sameSite: 'lax',
 				secure: false,
 			},
+			type: 'multiStorage',
 		},
 		strategy: 'AB-C',
 		timeout: 30 * 60000,
@@ -43,29 +44,66 @@ Deno.test('Options', () => {
 		{
 			options: { storage: { cookie: { domain: '', samesite: 'Strict', secure: true } } },
 			...base,
-			storage: { cookie: { ...base.storage.cookie, domain: '', sameSite: 'strict', secure: true } },
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: '', sameSite: 'strict', secure: true } },
 		},
 		{
 			options: { storage: { cookie: { domain: 'example.com', maxage: 10000000, secure: {} } } },
 			...base,
-			storage: { cookie: { ...base.storage.cookie, domain: 'example.com', maxAge: 10000000, secure: true } },
+			storage: {
+				...base.storage,
+				cookie: { ...base.storage.cookie, domain: 'example.com', maxAge: 10000000, secure: true },
+			},
 		},
 		{
 			options: { storage: { cookie: { path: '/store/' } } },
 			...base,
-			storage: { cookie: { ...base.storage.cookie, path: '/store/' } },
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, path: '/store/' } },
 		},
-		{ options: { sameDomainCookiesOnly: true }, ...base, storage: { cookie: { ...base.storage.cookie, domain: '' } } },
+		{ options: { storage: { type: 'multiStorage' } }, ...base },
+		{
+			options: { storage: { type: 'cookieStorage' } },
+			...base,
+			storage: { ...base.storage, type: 'cookieStorage' },
+		},
+		{
+			options: { storage: { type: 'localStorage' } },
+			...base,
+			storage: { ...base.storage, type: 'localStorage' },
+		},
+		{
+			options: { storage: { type: 'sessionStorage' } },
+			...base,
+			storage: { ...base.storage, type: 'sessionStorage' },
+		},
+		{
+			options: { storage: { type: 'memoryStorage' } },
+			...base,
+			storage: { ...base.storage, type: 'memoryStorage' },
+		},
+		{ options: { storage: { type: 'none' } }, ...base, storage: { ...base.storage, type: 'none' } },
+		{
+			options: { sameDomainCookiesOnly: true },
+			...base,
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: '' } },
+		},
 		{ options: { sameDomainCookiesOnly: false }, ...base },
-		{ options: { secureCookie: true }, ...base, storage: { cookie: { ...base.storage.cookie, secure: true } } },
+		{
+			options: { secureCookie: true },
+			...base,
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, secure: true } },
+		},
 		{ options: { secureCookie: false }, ...base },
 		{ options: { sameSiteCookie: 'Lax' }, ...base },
 		{
 			options: { sameSiteCookie: 'Strict' },
 			...base,
-			storage: { cookie: { ...base.storage.cookie, sameSite: 'strict' } },
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, sameSite: 'strict' } },
 		},
-		{ options: { sameSiteCookie: 'None' }, ...base, storage: { cookie: { ...base.storage.cookie, sameSite: 'none' } } },
+		{
+			options: { sameSiteCookie: 'None' },
+			...base,
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, sameSite: 'none' } },
+		},
 		{ options: { sameSiteCookie: 'lax' }, ...base },
 		{ options: { sameSiteCookie: 'strict' }, ...base },
 		{ options: { sameSiteCookie: 'none' }, ...base },
@@ -85,7 +123,7 @@ Deno.test('Options', () => {
 		{
 			options: { setCookieDomain: 'example.com' },
 			...base,
-			storage: { cookie: { ...base.storage.cookie, domain: 'example.com' } },
+			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: 'example.com' } },
 		},
 		{ options: { strategy: undefined }, ...base },
 		{ options: { strategy: null }, ...base },
@@ -114,17 +152,28 @@ Deno.test('Options', () => {
 		assertEquals(options.storage.cookie.path, test.storage.cookie.path)
 		assertEquals(options.storage.cookie.sameSite, test.storage.cookie.sameSite)
 		assertEquals(options.storage.cookie.secure, test.storage.cookie.secure)
+		assertEquals(options.storage.type, test.storage.type)
 		assertEquals(options.sessions.autoTrack, test.autoTrack)
 		assertEquals(options.sessions.timeout, test.timeout)
 		assertEquals(options.strategy, test.strategy)
 	}
 
 	// Test invalid setCookieDomain values.
-	let invalids = ['', {}, '127.0.0.1', 'example.com.', '%20', '=']
+	let invalids = ['', {}, 'no', 'storage', 'cookiestorage', true]
+	for (let i = 0; i < invalids.length; i++) {
+		const type = invalids[i]
+		const options = new Options({ storage: { type } })
+		if (options.storage.type !== base.storage.type) {
+			throw new AssertionError(`'${type}' is not a type for the storage.type option`)
+		}
+	}
+
+	// Test invalid setCookieDomain values.
+	invalids = ['', {}, '127.0.0.1', 'example.com.', '%20', '=']
 	for (let i = 0; i < invalids.length; i++) {
 		const setCookieDomain = invalids[i]
 		const options = new Options({ setCookieDomain })
-		if (options.storage.cookie.domain != null) {
+		if (options.storage.cookie.domain !== base.storage.cookie.domain) {
 			throw new AssertionError(`'${setCookieDomain}' is not a domain name for the setCookieDomain option`)
 		}
 	}
@@ -135,7 +184,7 @@ Deno.test('Options', () => {
 		const sameSiteCookie = invalids[i]
 		const options = new Options({ sameSiteCookie })
 		const cookie = options.storage.cookie
-		if (cookie.sameSite !== 'lax') {
+		if (cookie.sameSite !== base.storage.cookie.sameSite) {
 			throw new AssertionError(`'${sameSiteCookie}' is not a SameSite value, but no error has been returned`)
 		}
 	}

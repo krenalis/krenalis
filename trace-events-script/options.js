@@ -14,6 +14,7 @@ class Options {
 			sameSite: 'lax',
 			secure: false,
 		},
+		type: 'multiStorage',
 	}
 	strategy = 'AB-C'
 
@@ -56,6 +57,9 @@ class Options {
 				if ('secure' in cookie) {
 					this.storage.cookie.secure = !!cookie.secure
 				}
+			}
+			if (isStorage(options.storage.type)) {
+				this.storage.type = options.storage.type
 			}
 		}
 		if (options.strategy != null) {
@@ -105,6 +109,11 @@ function isDomainName(s) {
 // isSameSite reports whether s is a SameSite value.
 function isSameSite(s) {
 	return typeof s === 'string' && /^Lax|Strict|None$/.test(s)
+}
+
+// isStorage reports whether s is a storage.
+function isStorage(s) {
+	return typeof s === 'string' && /^multiStorage|cookieStorage|localStorage|sessionStorage|memoryStorage|none$/.test(s)
 }
 
 // isStrategy reports whether s is a strategy.
