@@ -93,7 +93,7 @@ type UserIdentity struct { // copy-pasted from the body of the apis.User.Identit
 	ExternalId   LabelValue // zero struct for identities imported from anonymous events.
 	BusinessId   LabelValue // zero struct for identities with no Business ID.
 	AnonymousIds []string   // nil for identities not imported from events.
-	Timestamp    time.Time
+	UpdatedAt    time.Time
 }
 
 type LabelValue struct { // copy-pasted from the body of the apis.User.Identities method.

@@ -124,7 +124,7 @@ interface UserIdentity {
 	Connection: number;
 	ExternalId: UserIdentityLabelValue;
 	BusinessId: UserIdentityLabelValue;
-	Timestamp: string;
+	UpdatedAt: string;
 }
 
 interface User {

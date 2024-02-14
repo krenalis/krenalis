@@ -245,7 +245,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								const connection = connections.find((c) => c.id === identity.Connection);
 								const logo = getConnectorLogo(connection.connector.icon);
 								return (
-									<div className='user-drawer__identity' key={identity.Timestamp}>
+									<div className='user-drawer__identity' key={identity.UpdatedAt}>
 										<div className='user-drawer__identity-head'>
 											<div
 												className='user-drawer__identity-connection-logo'
@@ -267,7 +267,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 											</div>
 										</div>
 										<div className='user-drawer__identity-date'>
-											{new Date(toJSDateString(identity.Timestamp)).toLocaleString('it-IT', {
+											{new Date(toJSDateString(identity.UpdatedAt)).toLocaleString('it-IT', {
 												timeZone: 'Europe/Rome',
 											})}
 										</div>

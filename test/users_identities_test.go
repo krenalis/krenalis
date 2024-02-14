@@ -135,8 +135,8 @@ func Test_UsersIdentities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for user with GID %d that has"+
-					" connection = %d, external ID = %v and timestamp = %q",
-				id, identity.Connection, identity.ExternalId, identity.Timestamp)
+					" connection = %d, external ID = %v and updated_at timestamp = %q",
+				id, identity.Connection, identity.ExternalId, identity.UpdatedAt)
 
 			var externalIDPrefix string
 			switch identity.Connection {

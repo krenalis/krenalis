@@ -124,7 +124,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	schema := types.Object([]types.Property{
 		{Name: "Connection", Type: types.Int(32)},
 		{Name: "ExternalId", Type: types.Text()},
-		{Name: "Timestamp", Type: types.DateTime()},
+		{Name: "UpdatedAt", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
 		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
 		{Name: "BusinessId", Type: types.Object([]types.Property{
@@ -134,7 +134,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
 		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
-			{"Timestamp"}, {"BusinessId"}},
+			{"UpdatedAt"}, {"BusinessId"}},
 		Where:   expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
 		OrderBy: types.Property{Name: "IdentityId", Type: types.Int(32)},
 		Schema:  schema,
@@ -154,7 +154,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		ExternalId   labelValue // zero struct for identities imported from anonymous events.
 		BusinessId   labelValue // zero struct for identities with no Business ID.
 		AnonymousIds []string   // nil for identities not imported from events.
-		Timestamp    time.Time
+		UpdatedAt    time.Time
 	}
 
 	// Create the identities from the records returned by the warehouse.
@@ -208,8 +208,8 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 			}
 		}
 
-		// Determine the timestamp.
-		timestamp := record.Properties["Timestamp"].(time.Time)
+		// Determine the "updated_at" timestamp.
+		updatedAt := record.Properties["UpdatedAt"].(time.Time)
 
 		// Determine the Business ID.
 		businessID := record.Properties["BusinessId"].(map[string]any)
@@ -225,7 +225,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 				Value: businessID["value"].(string),
 			},
 			AnonymousIds: anonIDs,
-			Timestamp:    timestamp,
+			UpdatedAt:    updatedAt,
 		})
 
 		return nil

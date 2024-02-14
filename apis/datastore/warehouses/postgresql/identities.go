@@ -127,16 +127,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND $2 IN _anonymous_ids ORDER BY _timestamp, _identity_id"
+				" AND $2 IN _anonymous_ids ORDER BY _updated_at, _identity_id"
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _timestamp, _identity_id"
+				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _updated_at, _identity_id"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
 		query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-			" AND _external_id = $2 ORDER BY _timestamp, _identity_id"
+			" AND _external_id = $2 ORDER BY _updated_at, _identity_id"
 		args = []any{connection, id}
 	}
 	var matchingIdentities []int
@@ -167,7 +167,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	newIdentity["_connection"] = connection
 	newIdentity["_external_id"] = id
-	newIdentity["_timestamp"] = timestamp.Format(time.DateTime)
+	newIdentity["_updated_at"] = timestamp.Format(time.DateTime)
 	newIdentity["_business_id_value"] = businessIDValue
 	newIdentity["_business_id_label"] = businessIDLabel
 	if anonID != "" {
@@ -238,7 +238,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	b.WriteString("UPDATE users_identities SET ")
 	comma := false
 	for _, p := range properties {
-		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_timestamp" {
+		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_updated_at" {
 			continue
 		}
 		if comma {
@@ -252,7 +252,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" IS NOT NULL AND _identity_id IN (`)
 		b.WriteString(idsStr.String())
-		b.WriteString(") ORDER BY _timestamp DESC, _identity_id DESC LIMIT 1)\n")
+		b.WriteString(") ORDER BY _updated_at DESC, _identity_id DESC LIMIT 1)\n")
 		comma = true
 	}
 	b.WriteString(` WHERE _identity_id = $1`)
