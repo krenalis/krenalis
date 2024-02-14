@@ -11,7 +11,7 @@ CREATE TABLE users_identities (
     "_connection"    int NOT NULL DEFAULT 0,
     "_external_id"   text NOT NULL DEFAULT '',
     "_anonymous_ids" text[],
-    "_updated_at"    timestamp NOT NULL DEFAULT now(),
+    "_updated_at"    timestamp NOT NULL,
     "_gid"           int NOT NULL DEFAULT 0,
 
     "_business_id_value"  varchar(40) NOT NULL DEFAULT '',
