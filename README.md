@@ -19,7 +19,7 @@
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
-- [How test events](#how-test-events)
+- [How to test events (and eventually import user traits)](#how-to-test-events-and-eventually-import-user-traits)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
 - [APIs](#apis)
 
@@ -194,13 +194,38 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 4. Make a note of the URL listed in the standard output (example:  https://xxxxxxx.trycloudflare.com)
 5. Open the URL in a browser
 
-## How test events
+## How to test events (and eventually import user traits)
 
 1. Add a JavaScript source connection with host `localhost:9090`.
-2. Add an action with type "Collect events" (or "Import users") and enable it.
-3. Add the content of the `trace-events-script/snippet.js` file into the `trace-events-script/website-for-testing/index.html`.
+2. Add an action with type "Collect events" (and/or an action "Import users", depending on what you want to test) and enable it.
+3. Add the content of the [trace-events-script/snippet.js](trace-events-script/snippet.js) file into your HTML page under `trace-events-script` (let's suppose `trace-events-script/mywebsite/index.html`); if you don't have one, here you can find a minimal HTML5 page:
+   <details>
+    <summary>Minimal HTML5 page</summary>
+
+    <pre>
+    &lt;!DOCTYPE html&gt;
+    &lt;html lang=&quot;en&quot;&gt;
+
+    &lt;head&gt;
+        &lt;meta charset=&quot;utf-8&quot;&gt;
+        &lt;title&gt;Test website&lt;/title&gt;
+        &lt;script type=&quot;text/javascript&quot;&gt;
+
+            // Replace this comment with the content of snippet.js.
+
+        &lt;/script&gt;
+    &lt;/head&gt;
+
+    &lt;body&gt;
+        &lt;p&gt;Test website&lt;/p&gt;
+    &lt;/body&gt;
+
+    &lt;/html&gt;
+    </pre>
+
+    </details>
 4. In the pasted code, replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with the key in "Settings > API keys" of the connection. 
-5. Visit https://localhost:9090/trace-events-script/website-for-testing/.
+5. Visit the URL pointing to the HTML file, for example https://localhost:9090/trace-events-script/mywebsite/index.html.
 
 ## Interact with Chichi using `chichi-cli`
 

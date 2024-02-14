@@ -1,8 +1,6 @@
 # Chichi Analytics
 
-- [Install dependencies](#install-dependencies)
 - [Format files](#format-files)
-  - [Formatting files under `website-for-testing`](#formatting-files-under-website-for-testing)
 - [Build `dist/chichi.min.js`](#build-distchichiminjs)
 - [Add the snippet to an HTML page](#add-the-snippet-to-an-html-page)
 - [Minimum Supported Browsers](#minimum-supported-browsers)
@@ -29,14 +27,6 @@ Run:
 
 ```sh
 npm run fmt
-```
-
-### Formatting files under `website-for-testing`
-
-Run:
-
-```sh
-npm run prettier-test-website
 ```
 
 ## Build `dist/chichi.min.js`
