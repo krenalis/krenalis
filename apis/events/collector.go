@@ -163,6 +163,13 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 			if err != nil {
 				return err
 			}
+			// Discard anonymous events whose mapping results in no properties.
+			if event.UserId == "" && len(properties) == 0 {
+				slog.Info("incoming event is anonymous and there are no properties returned"+
+					" by mappings, so the user identity won't be imported",
+					"anonymous ID", event.AnonymousId)
+				continue
+			}
 			// Determine the Business ID.
 			var businessID string
 			if connection.BusinessID.Name != "" {
