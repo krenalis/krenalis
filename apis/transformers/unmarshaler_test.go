@@ -356,7 +356,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `[{"value":{"Text_regexp":"faa"}}]`,
-			results:  []Result{{Err: newErrInvalidValue(fmt.Sprintf(`has an invalid value: "faa"; it does not match the property's regular expression`), "Text_regexp", pyTerms)}},
+			results:  []Result{{Err: newErrInvalidValue(`has an invalid value: "faa"; it does not match the property's regular expression`, "Text_regexp", pyTerms)}},
 		},
 		{
 			language: state.Python,

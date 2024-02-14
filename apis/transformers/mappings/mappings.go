@@ -53,9 +53,9 @@ type invalidConversionError struct {
 func (err *invalidConversionError) Error() string {
 	switch err.value {
 	case nil:
-		return fmt.Sprintf("cannot convert null to a non-nullable value")
+		return "cannot convert null to a non-nullable value"
 	case Void:
-		return fmt.Sprintf("expression is required, but the evaluation returned no value")
+		return "expression is required, but the evaluation returned no value"
 	}
 	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.value, err.sourceType, err.destinationType)
 }

@@ -285,7 +285,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			data: `{"Text_regexp":"faa"}`,
-			err:  newErrInvalidValue(fmt.Sprintf(`has an invalid value: "faa"; it does not match the property's regular expression`), "data.Text_regexp"),
+			err:  newErrInvalidValue(`has an invalid value: "faa"; it does not match the property's regular expression`, "data.Text_regexp"),
 		},
 	}
 
