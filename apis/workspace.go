@@ -1445,25 +1445,6 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// validateSchema validates the schema of a data warehouse table.
-func validateSchema(table string, schema types.Type) error {
-	properties := schema.Properties()
-	if table == "users" || table == "groups" {
-		idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
-			return p.Name == "Id"
-		})
-		if idIndex == -1 {
-			return fmt.Errorf("'%s' schema has no 'id' property", table)
-		}
-		if p := properties[idIndex]; p.Type.Kind() != types.IntKind && p.Type.Kind() != types.DecimalKind {
-			return fmt.Errorf("property '%s.id' does not have types Int or Decimal", table)
-		} else if p.Nullable {
-			return fmt.Errorf("property '%s.id' cannot be nullable", table)
-		}
-	}
-	return nil
-}
-
 // isValidDisplayedPropertyName reports whether property is a valid displayed
 // property name. A valid displayed property name is an empty string, or
 // alternatively a valid property name between 1 and 100 runes long.
