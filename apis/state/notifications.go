@@ -60,7 +60,6 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 	}
 	b.Truncate(b.Len() - 1) // remove new line added by Encode.
 	s := b.String()
-	s = escape(s)
 	if len(s) > 8000-maxIDLen-2 {
 		var z strings.Builder
 		bw := base64.NewEncoder(base64.RawStdEncoding, &z)
@@ -86,6 +85,8 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 			}
 			s = s[k:]
 		}
+	} else {
+		s = escape(s)
 	}
 	if _, ok := n.(SeeLeader); !ok {
 		var id int
