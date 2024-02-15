@@ -360,8 +360,9 @@ type AddConnection struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
+	Strategy    *Strategy  // strategy
 	WebsiteHost string     // website host in form host:port
-	BusinessID  BusinessID // Business ID.
+	BusinessID  BusinessID // Business ID
 	Key         string     // server key to add
 	Settings    []byte
 }
@@ -421,6 +422,7 @@ func (state *State) addConnection(n notification) {
 		storage:      state.connections[e.Storage],
 		Compression:  e.Compression,
 		resource:     r,
+		Strategy:     e.Strategy,
 		WebsiteHost:  e.WebsiteHost,
 		BusinessID:   e.BusinessID,
 		Settings:     e.Settings,
@@ -916,6 +918,7 @@ type SetConnection struct {
 	Enabled     bool
 	Storage     int
 	Compression Compression
+	Strategy    *Strategy
 	WebsiteHost string
 	BusinessID  BusinessID
 }
@@ -931,6 +934,7 @@ func (state *State) setConnection(n notification) {
 		c.Enabled = e.Enabled
 		c.storage = state.connections[e.Storage]
 		c.Compression = e.Compression
+		c.Strategy = e.Strategy
 		c.WebsiteHost = e.WebsiteHost
 		c.BusinessID = e.BusinessID
 	})

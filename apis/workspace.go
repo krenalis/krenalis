@@ -90,6 +90,14 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if connection.Storage == 0 && connection.Compression != NoCompression {
 		return 0, errors.BadRequest("compression requires a storage")
 	}
+	if s := connection.Strategy; s != nil {
+		if !isValidStrategy(*s) {
+			return 0, errors.BadRequest("strategy %q is not valid", *s)
+		}
+		if connection.Role == Destination {
+			return 0, errors.BadRequest("connection destinations cannot have a strategy")
+		}
+	}
 
 	c, ok := this.apis.state.Connector(connection.Connector)
 	if !ok {
@@ -104,6 +112,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		Connector:   connection.Connector,
 		Storage:     connection.Storage,
 		Compression: state.Compression(connection.Compression),
+		Strategy:    (*state.Strategy)(connection.Strategy),
 		WebsiteHost: connection.WebsiteHost,
 		BusinessID:  state.BusinessID(connection.BusinessID),
 	}
@@ -129,6 +138,20 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 				return 0, errors.BadRequest("storage %d is not a source", n.Storage)
 			}
 			return 0, errors.BadRequest("storage %d is not a destination", n.Storage)
+		}
+	}
+
+	// Validate the strategy.
+	if connection.Role == Source {
+		switch c.Type {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			if connection.Strategy == nil {
+				return 0, errors.BadRequest("%s connections must have a strategy", c.Type)
+			}
+		default:
+			if connection.Strategy != nil {
+				return 0, errors.BadRequest("%s connections cannot have a strategy", c.Type)
+			}
 		}
 	}
 
@@ -265,10 +288,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, type, role, enabled, connector, storage,"+
-			" compression, resource, website_host, business_id_name, business_id_label, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12, $13, $14)",
+			" compression, resource, strategy, website_host, business_id_name, business_id_label, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12, $13, $14, $15)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector,
-			n.Storage, n.Compression, n.Resource.ID, n.WebsiteHost, n.BusinessID.Name,
+			n.Storage, n.Compression, n.Resource.ID, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
 			n.BusinessID.Label, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -460,6 +483,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Enabled:      c.Enabled,
 		Connector:    conn.ID,
 		Compression:  Compression(c.Compression),
+		Strategy:     (*Strategy)(c.Strategy),
 		WebsiteHost:  c.WebsiteHost,
 		BusinessID:   BusinessID(c.BusinessID),
 		HasSettings:  conn.HasSettings,
@@ -504,6 +528,7 @@ func (this *Workspace) Connections() []*Connection {
 			Enabled:      c.Enabled,
 			Connector:    conn.ID,
 			Compression:  Compression(c.Compression),
+			Strategy:     (*Strategy)(c.Strategy),
 			WebsiteHost:  c.WebsiteHost,
 			BusinessID:   BusinessID(c.BusinessID),
 			HasSettings:  conn.HasSettings,
@@ -1347,6 +1372,11 @@ type ConnectionToAdd struct {
 	// Compression is the compression for file connections. It must be
 	// NoCompression if there is no storage.
 	Compression Compression
+
+	// Strategy is the strategy that determines how to merge anonymous and
+	// non-anonymous users. It must be nil for destination connections and
+	// non-event source connections.
+	Strategy *Strategy
 
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It

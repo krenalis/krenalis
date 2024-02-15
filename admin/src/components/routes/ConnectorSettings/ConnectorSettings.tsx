@@ -13,7 +13,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { BusinessID, Compression, ConnectionRole, ConnectionToAdd } from '../../../types/external/connection';
+import { BusinessID, Compression, ConnectionRole, ConnectionToAdd, Strategy } from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
@@ -27,6 +27,7 @@ const ConnectorSettings = () => {
 	const [storage, setStorage] = useState<number>(0);
 	const [storages, setStorages] = useState<TransformedConnection[]>([]);
 	const [compression, setCompression] = useState<Compression>('');
+	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [businessID, setBusinessID] = useState<BusinessID>({ Name: '', Label: '' });
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
@@ -166,6 +167,7 @@ const ConnectorSettings = () => {
 					connector: connectorID,
 					storage: storage,
 					compression: compression,
+					strategy: strategy,
 					websiteHost: websiteHost,
 					businessID: businessID,
 					settings: values,
@@ -261,6 +263,7 @@ const ConnectorSettings = () => {
 				connector: connectorID,
 				storage: storage,
 				compression: compression,
+				strategy: strategy,
 				websiteHost: websiteHost,
 				businessID: businessID,
 				settings: values,
@@ -325,6 +328,9 @@ const ConnectorSettings = () => {
 	if (connector == null) {
 		return null;
 	}
+
+	const showStrategy =
+		connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website');
 
 	const showBusinessID = connectionRole === 'Source' && c.type !== 'Storage' && c.type !== 'Stream';
 	const businessIDKind = ['File', 'Database'].includes(c.type) ? 'column' : 'property';
@@ -436,6 +442,26 @@ const ConnectorSettings = () => {
 									<SlOption value='Zip'>Zip</SlOption>
 									<SlOption value='Gzip'>Gzip</SlOption>
 									<SlOption value='Snappy'>Snappy</SlOption>
+								</SlSelect>
+							</div>
+						)}
+						{showStrategy && (
+							<div className='inputWrapper'>
+								<SlSelect
+									className='strategy'
+									name='strategy'
+									value={strategy || 'AB-C'}
+									label='Strategy'
+									onSlChange={(e) => {
+										const target = e.currentTarget as ShoelaceEventTarget;
+										const value = target.value as Strategy;
+										setStrategy(value);
+									}}
+								>
+									<SlOption value='AB-C'>AB-C</SlOption>
+									<SlOption value='ABC'>ABC</SlOption>
+									<SlOption value='A-B-C'>A-B-C</SlOption>
+									<SlOption value='AC-B'>AC-B</SlOption>
 								</SlSelect>
 							</div>
 						)}

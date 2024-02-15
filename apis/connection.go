@@ -90,6 +90,18 @@ type BusinessID struct {
 	Label string
 }
 
+// Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
+type Strategy string
+
+// isValidStrategy reports whether s is a valid strategy.
+func isValidStrategy(s Strategy) bool {
+	switch s {
+	case "AB-C", "ABC", "A-B-C", "AC-B":
+		return true
+	}
+	return false
+}
+
 // Connection represents a connection.
 type Connection struct {
 	apis         *APIs
@@ -103,6 +115,7 @@ type Connection struct {
 	Connector    int
 	Storage      int // zero if the connection is not a file or does not have a storage.
 	Compression  Compression
+	Strategy     *Strategy
 	WebsiteHost  string
 	BusinessID   BusinessID
 	HasSettings  bool
@@ -1249,6 +1262,9 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	if connection.Storage == 0 && connection.Compression != NoCompression {
 		return errors.BadRequest("compression requires a storage")
 	}
+	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
+		return errors.BadRequest("strategy %q is not valid", *s)
+	}
 
 	n := state.SetConnection{
 		Connection:  this.connection.ID,
@@ -1256,6 +1272,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		Enabled:     connection.Enabled,
 		Storage:     connection.Storage,
 		Compression: state.Compression(connection.Compression),
+		Strategy:    (*state.Strategy)(connection.Strategy),
 		WebsiteHost: connection.WebsiteHost,
 		BusinessID:  state.BusinessID(connection.BusinessID),
 	}
@@ -1283,6 +1300,22 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		}
 	}
 
+	// Validate the strategy.
+	if this.connection.Role == state.Source {
+		switch c.Type {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			if connection.Strategy == nil {
+				return errors.BadRequest("%s connections must have a strategy", c.Type)
+			}
+		default:
+			if connection.Strategy != nil {
+				return errors.BadRequest("%s connections cannot have a strategy", c.Type)
+			}
+		}
+	} else if connection.Strategy != nil {
+		return errors.BadRequest("connection destinations cannot have a strategy")
+	}
+
 	// Validate the website host.
 	if n.WebsiteHost != "" {
 		if c.Type != state.WebsiteType {
@@ -1306,9 +1339,9 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" storage = NULLIF($3, 0), compression = $4, website_host = $5,"+
-			" business_id_name = $6, business_id_label = $7 WHERE id = $8",
-			n.Name, n.Enabled, n.Storage, n.Compression, n.WebsiteHost, n.BusinessID.Name,
+			" storage = NULLIF($3, 0), compression = $4, strategy = $5, website_host = $6,"+
+			" business_id_name = $7, business_id_label = $8 WHERE id = $9",
+			n.Name, n.Enabled, n.Storage, n.Compression, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
 			n.BusinessID.Label, n.Connection)
 		if err != nil {
 			return err
@@ -2250,6 +2283,11 @@ type ConnectionToSet struct {
 	// Compression is the compression for file connections. It must be
 	// NoCompression if there is no storage.
 	Compression Compression
+
+	// Strategy is the strategy that determines how to merge anonymous and
+	// non-anonymous users. It must be nil for destination connections and
+	// non-event source connections.
+	Strategy *Strategy
 
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It

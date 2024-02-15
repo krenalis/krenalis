@@ -25,6 +25,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		enabled: connection.enabled,
 		storage: connection.storage,
 		compression: connection.compression,
+		strategy: connection.strategy,
 		websiteHost: connection.websiteHost,
 		businessID: connection.businessID,
 	});
@@ -44,6 +45,13 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.compression = value;
+		setConnectionToSet(c);
+	};
+
+	const onStrategyChange = async (e) => {
+		const value = e.target.value;
+		const c = { ...connectionToSet };
+		c.strategy = value;
 		setConnectionToSet(c);
 	};
 
@@ -125,6 +133,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		}
 	}
 
+	const showStrategy =
+		connection.role === 'Source' &&
+		(connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website');
+
 	const showBusinessID =
 		connection.role === 'Source' && connection.type !== 'Storage' && connection.type !== 'Stream';
 	const businessIDKind = ['File', 'Database'].includes(connection.type) ? 'column' : 'property';
@@ -167,6 +179,20 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<SlOption value='Zip'>Zip</SlOption>
 					<SlOption value='Gzip'>Gzip</SlOption>
 					<SlOption value='Snappy'>Snappy</SlOption>
+				</SlSelect>
+			)}
+
+			{showStrategy && (
+				<SlSelect
+					value={connectionToSet.strategy}
+					label='Strategy'
+					className='strategyField'
+					onSlChange={onStrategyChange}
+				>
+					<SlOption value='AB-C'>AB-C</SlOption>
+					<SlOption value='ABC'>ABC</SlOption>
+					<SlOption value='A-B-C'>A-B-C</SlOption>
+					<SlOption value='AC-B'>AC-B</SlOption>
 				</SlSelect>
 			)}
 

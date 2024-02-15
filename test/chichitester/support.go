@@ -25,6 +25,8 @@ import (
 	"github.com/segmentio/analytics-go/v3"
 )
 
+var defaultStrategy Strategy = "AB-C"
+
 // This file contains support methods which reduce verbosity of tests.
 
 func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
@@ -262,6 +264,7 @@ func (c *Chichi) AddJavaScriptSource(name, host string) int {
 		Role:        Source,
 		Enabled:     true,
 		Connector:   12, // JavaScript.
+		Strategy:    &defaultStrategy,
 		WebsiteHost: host,
 	})
 }
@@ -272,6 +275,7 @@ func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID
 		Role:        Source,
 		Enabled:     true,
 		Connector:   12, // JavaScript.
+		Strategy:    &defaultStrategy,
 		WebsiteHost: host,
 		BusinessID:  businessID,
 	})

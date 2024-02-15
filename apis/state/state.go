@@ -583,6 +583,9 @@ func (resource *Resource) Connector() *Connector {
 	return c
 }
 
+// Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
+type Strategy string
+
 // BusinessID represents the Business ID of a connection.
 type BusinessID struct {
 	Name  string // property name or column name, depending on connection type.
@@ -602,6 +605,7 @@ type Connection struct {
 	storage      *Connection
 	Compression  Compression
 	resource     *Resource
+	Strategy     *Strategy
 	WebsiteHost  string
 	Keys         []string
 	Settings     []byte

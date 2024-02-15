@@ -1,5 +1,12 @@
 import * as variants from '../../constants/variants';
-import { Connection, Health, ConnectionRole, ConnectorType, Compression } from '../../types/external/connection';
+import {
+	Connection,
+	Health,
+	ConnectionRole,
+	ConnectorType,
+	Compression,
+	Strategy,
+} from '../../types/external/connection';
 import { Action, ActionTarget, ActionType } from '../../types/external/action';
 import TransformedConnector from './transformedConnector';
 
@@ -25,6 +32,7 @@ class TransformedConnection {
 	health: Health;
 	storage: number;
 	compression: Compression;
+	strategy?: Strategy | null;
 	websiteHost: string;
 	businessID: BusinessID;
 	status: ConnectionStatus;
@@ -45,6 +53,7 @@ class TransformedConnection {
 		health: Health,
 		storage: number,
 		compression: Compression,
+		strategy: Strategy | null,
 		websiteHost: string,
 		businessID: BusinessID,
 		status: ConnectionStatus,
@@ -64,6 +73,7 @@ class TransformedConnection {
 		this.health = health;
 		this.storage = storage == null ? 0 : storage;
 		this.compression = compression;
+		this.strategy = strategy;
 		this.websiteHost = websiteHost;
 		this.businessID = businessID;
 		this.status = status;

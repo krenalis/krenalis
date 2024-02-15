@@ -48,6 +48,8 @@ const (
 	SnappyCompression Compression = "Snappy"
 )
 
+type Strategy string
+
 type ConnectionToAdd struct {
 	Name        string
 	Role        Role
@@ -55,6 +57,7 @@ type ConnectionToAdd struct {
 	Connector   int
 	Storage     int
 	Compression Compression
+	Strategy    *Strategy
 	WebsiteHost string
 	BusinessID  BusinessID
 	Settings    json.RawMessage

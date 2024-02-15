@@ -21,6 +21,10 @@
 	margin: 50px 0;
 }
 
+.connectorSettings sl-select.strategy {
+	max-width: fit-content;
+}
+
 .connectorSettings sl-input.name {
 	max-width: 280px;
 }

@@ -80,6 +80,8 @@ CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDen
 
 CREATE TYPE compression AS ENUM ('', 'Zip', 'Gzip', 'Snappy');
 
+CREATE TYPE strategy AS ENUM ('AB-C', 'ABC', 'A-B-C', 'AC-B');
+
 CREATE TABLE connections (
     id integer NOT NULL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -91,6 +93,7 @@ CREATE TABLE connections (
     storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     compression compression NOT NULL DEFAULT '',
     resource integer NOT NULL DEFAULT 0,
+    strategy strategy DEFAULT NULL,
     website_host varchar(261) NOT NULL DEFAULT '',
     business_id_name varchar(1024) NOT NULL DEFAULT '',
     business_id_label varchar(16) NOT NULL DEFAULT '',

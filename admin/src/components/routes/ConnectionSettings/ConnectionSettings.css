@@ -18,6 +18,7 @@
 .connectionSettings .generalSettings .enablingField,
 .connectionSettings .generalSettings .storageField,
 .connectionSettings .generalSettings .compressionField,
+.connectionSettings .generalSettings .strategyField,
 .connectionSettings .generalSettings .websiteHostField,
 .connectionSettings .generalSettings .businessIDNameField,
 .connectionSettings .generalSettings .businessIDLabelField {
@@ -32,6 +33,10 @@
 .connectionSettings .generalSettings .compressionField {
 	max-width: fit-content;
 	min-width: 280px;
+}
+
+.connectionSettings .generalSettings .strategyField {
+	max-width: fit-content;
 }
 
 .connectionSettings .generalSettings .websiteHostField {
