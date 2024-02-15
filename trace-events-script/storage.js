@@ -269,9 +269,8 @@ class cookieStorage {
 	}
 
 	delete(key) {
-		document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${this.#path}${
-			this.#domain === '' ? '' : `; domain=${this.#domain}`
-		}`
+		document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${this.#path}; samesite=${this.#sameSite}` +
+			`${this.#domain === '' ? '' : `; domain=${this.#domain}`}`
 	}
 
 	// check checks whether the cookies are available, and if the domain is
