@@ -345,8 +345,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			return nil, errors.NotFound("event type not expected")
 		}
 		// The input schema is the events schema without GID because these
-		// actions import user traits from incoming events, which do not have
-		// any user associated.
+		// actions import users identities from incoming events, which do not
+		// have any user associated.
 		switch target {
 		case Users:
 			usersIdentities, ok := schemas["users_identities"]
@@ -403,10 +403,10 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	span.Log("action validated successfully")
 
 	inSchema := action.InSchema
-	if importsTraitsFromEvents(this.connection.Connector().Type, this.connection.Role, state.Target(target)) {
+	if importsUsersIdentitiesFromEvents(this.connection.Connector().Type, this.connection.Role, state.Target(target)) {
 		// The input schema is the events schema without GID because this
-		// actions imports user traits from incoming events, which, of course,
-		// do not have any user associated.
+		// actions imports users identities from incoming events, which,
+		// clearly, still do not have any user associated.
 		inSchema = eventschema.SchemaWithoutGID
 	}
 
@@ -1801,14 +1801,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 
-	importTraitsFromEvents := importsTraitsFromEvents(this.connection.Connector().Type, this.connection.Role, target)
-	if importTraitsFromEvents {
+	importUsersIdentitiesFromEvents := importsUsersIdentitiesFromEvents(this.connection.Connector().Type, this.connection.Role, target)
+	if importUsersIdentitiesFromEvents {
 		if inSchema.Valid() {
-			return errors.BadRequest("input schema must be invalid for actions that import user traits from events")
+			return errors.BadRequest("input schema must be invalid for actions that import users identities from events")
 		}
 		// The input schema is the events schema without GID because this
-		// actions imports user traits from incoming events, which, of course,
-		// do not have any user associated.
+		// actions imports users identities from incoming events, which,
+		// clearly, still do not have any user associated.
 		inSchema = eventschema.SchemaWithoutGID
 	}
 
@@ -2205,7 +2205,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		// The action has a transformation function, so we do not know which
 		// properties are used; consequently, this check would always pass
 		// because we would consider every property of the schema as used.
-	} else if importTraitsFromEvents {
+	} else if importUsersIdentitiesFromEvents {
 		// In this case the input schema is the full schema of the events, both
 		// in case of mappings and transformation, so we cannot return the error
 		// about unused properties in input schema because just a minor part of
@@ -2267,10 +2267,10 @@ func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
-// importsTraitsFromEvents reports whether a connector with the given type, on a
-// connection with the given role, with an action with the given target, imports
-// users traits from events.
-func importsTraitsFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+// importsUsersIdentitiesFromEvents reports whether a connector with the given
+// type, on a connection with the given role, with an action with the given
+// target, imports users identities from events.
+func importsUsersIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	if role == state.Source && target == state.Users {
 		switch connectorType {
 		case state.MobileType, state.ServerType, state.WebsiteType:

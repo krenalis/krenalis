@@ -289,7 +289,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	c := this.action.Connection()
 
 	inSchema := action.InSchema
-	if importsTraitsFromEvents(c.Connector().Type, c.Role, this.action.Target) {
+	if importsUsersIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
 		// Use the schema without GID because incoming events do not have a GID.
 		inSchema = eventschema.SchemaWithoutGID
 	}

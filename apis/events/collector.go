@@ -117,9 +117,9 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// importTraitsOfUsers imports the traits of the users from the given events
-// batch collected on the source connection.
-func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
+// importUsersIdentities imports users identities from the given events batch
+// collected on the source connection.
+func (c *collector) importUsersIdentities(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
 			continue
@@ -134,10 +134,10 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 		// Instantiate an IdentitiesWriter for writing the users identities.
 		ack := func(err error, ids []string) {
 			if err != nil {
-				slog.Warn("cannot import users traits", "action", action.ID, "ids", ids, "err", err)
+				slog.Warn("cannot import users identities", "action", action.ID, "ids", ids, "err", err)
 				return
 			}
-			slog.Warn("users traits imported successfully", "action", action.ID, "ids", ids)
+			slog.Warn("users identities imported successfully", "action", action.ID, "ids", ids)
 		}
 		iw := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
 		defer iw.Close(ctx)
@@ -388,8 +388,8 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	// Store the events into the data warehouse.
 	c.storeEvents(source.Workspace().ID, events.Batch)
 
-	// Import the traits of the users.
-	err = c.importTraitsOfUsers(ctx, source, events.Batch)
+	// Import the users identities.
+	err = c.importUsersIdentities(ctx, source, events.Batch)
 	if err != nil {
 		return err
 	}

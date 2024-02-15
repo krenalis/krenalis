@@ -60,7 +60,7 @@ The resulting user of the workspace will be:
 
 ## Association between events and users
 
-From the same connection which receives events, can both be imported users (through the users traits) and events, using different actions. The Workspace Identity Resolution, as mentioned before, also associated events to the users of the workspace.
+From the same connection which receives events, can both be imported users and events, using different actions. The Workspace Identity Resolution, as mentioned before, also associated events to the users of the workspace.
 
 Every event is associated to the **users incoming from the same connection** which:
 
