@@ -119,8 +119,6 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // importTraitsOfUsers imports the traits of the users from the given events
 // batch collected on the source connection.
-// If an event does not contain traits, then the corresponding user is not
-// imported.
 func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
