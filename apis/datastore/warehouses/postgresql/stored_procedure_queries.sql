@@ -108,8 +108,12 @@ AS $$
         SELECT "_id"
         FROM "users"
         WHERE
-            "users_identities"."_identity_id" = ANY ("users".__identity_ids__)
-    );
+            "users_identities"."_identity_id" = ANY ("users"."__identity_ids__")
+        LIMIT 1
+    )
+    FROM "users"
+    WHERE
+        "users_identities"."_identity_id" = ANY ("users"."__identity_ids__");
 
     -- Update the GID of the events.
     UPDATE "events" SET "gid" = 0;
