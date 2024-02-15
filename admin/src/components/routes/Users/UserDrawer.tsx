@@ -265,6 +265,11 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 											<div className='user-drawer__identity-business-id'>
 												{identity.BusinessId.Label}: <code>{identity.BusinessId.Value}</code>
 											</div>
+											{identity.AnonymousIds !== null && (
+												<div className='user-drawer__identity-anonymous-ids'>
+													Anonymous IDs: <code>{identity.AnonymousIds.join(', ')}</code>
+												</div>
+											)}
 										</div>
 										<div className='user-drawer__identity-date'>
 											{new Date(toJSDateString(identity.UpdatedAt)).toLocaleString('it-IT', {

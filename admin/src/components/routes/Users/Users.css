@@ -311,7 +311,8 @@
 }
 
 .users-list .user-drawer .user-drawer__identity-external-id,
-.user-drawer__identity-business-id {
+.user-drawer__identity-business-id,
+.user-drawer__identity-anonymous-ids {
 	background-color: var(--sl-color-neutral-50);
 	padding: 5px;
 	margin: 4px;
