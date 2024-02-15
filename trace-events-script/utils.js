@@ -26,6 +26,54 @@ function campaign() {
 	return campaign
 }
 
+const textDecoder = typeof globalThis.TextDecoder === 'function' ? new globalThis.TextDecoder() : null
+const textEncoder = typeof globalThis.TextEncoder === 'function' ? new globalThis.TextEncoder() : null
+
+// decodeBase64 returns a string represented by the base64 encoded string s.
+// If s is prefixed by _, the subsequent characters of s are interpreted as
+// UTF-16 encoded characters (each represented by pairs of bytes), instead of
+// UTF-8.
+function decodeBase64(s) {
+	if (s === '') {
+		return ''
+	}
+	const utf16 = s[0] === '_'
+	if (utf16) {
+		s = s.slice(1)
+	}
+	const b = atob(s)
+	const buf = new Uint8Array(b.length)
+	for (let i = 0; i < buf.length; i++) {
+		buf[i] = b.charCodeAt(i)
+	}
+	if (!utf16) {
+		return textDecoder.decode(buf)
+	}
+	return String.fromCharCode.apply(null, new Uint16Array(buf.buffer))
+}
+
+// encodeBase64 returns the base64 encoding of the string src. If TextDecoder
+// and TextEncoder are not supported, it returns the base64 encoding of the
+// UTF-16 encoded content of src, instead of UTF-8, prefixed by _. If src is
+// empty, it returns an empty string.
+function encodeBase64(src) {
+	if (src === '') {
+		return ''
+	}
+	let s
+	// The condition has not simplified to "textDecoder && textEncoder" to allow tests.
+	if (globalThis.TextDecoder && globalThis.TextEncoder) {
+		s = btoa(String.fromCodePoint.apply(null, textEncoder.encode(src)))
+	} else {
+		const b = new Uint16Array(src.length)
+		for (let i = 0; i < b.length; i++) {
+			b[i] = src.charCodeAt(i)
+		}
+		s = '_' + btoa(String.fromCharCode.apply(null, new Uint8Array(b.buffer)))
+	}
+	return s.replace(/=+$/, '')
+}
+
 // getTime returns the current UTC time in milliseconds from the epoch.
 function getTime() {
 	return new Date().getTime()
@@ -105,4 +153,4 @@ function _uuid_imp() {
 // The uuid function is undefined for unsupported browsers.
 const uuid = _uuid_imp()
 
-export { _uuid_imp, campaign, debug, getTime, isPlainObject, onVisibilityChange, uuid }
+export { _uuid_imp, campaign, debug, decodeBase64, encodeBase64, getTime, isPlainObject, onVisibilityChange, uuid }

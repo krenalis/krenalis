@@ -1,3 +1,5 @@
+import { decodeBase64, encodeBase64 } from './utils.js'
+
 const storageNotSupported = new Error('storage is not supported')
 const warnMsg = 'Analytics: cannot stringify traits'
 
@@ -5,13 +7,14 @@ class Storage {
 	#storage
 
 	constructor(options) {
-		const tryStorage = (store) => {
+		let storage
+		const tryStorage = (newStorage) => {
 			try {
-				const s = store()
-				if (this.#storage == null) {
-					this.#storage = s
+				const s = newStorage()
+				if (storage == null) {
+					storage = s
 				} else {
-					this.#storage = new multiStorage([this.#storage, s])
+					storage = new multiStorage([storage, s])
 				}
 			} catch (error) {
 				if (error !== storageNotSupported) {
@@ -23,9 +26,9 @@ class Storage {
 			case 'multiStorage':
 			case 'cookieStorage':
 				tryStorage(() => new cookieStorage(options.cookie))
-				if (options.type === 'multiStorage' || !this.#storage) {
+				if (options.type === 'multiStorage' || !storage) {
 					tryStorage(() => new webStorage(globalThis.localStorage))
-					if (!this.#storage) {
+					if (!storage) {
 						tryStorage(() => new webStorage(globalThis.sessionStorage))
 					}
 				}
@@ -37,11 +40,16 @@ class Storage {
 				tryStorage(() => new webStorage(globalThis.sessionStorage))
 				break
 			case 'none':
-				this.#storage = new noStorage()
+				storage = new noStorage()
 		}
-		if (!this.#storage) {
-			this.#storage = new memoryStorage()
+		if (storage) {
+			if (options.type !== 'none') {
+				storage = new base64Storage(storage)
+			}
+		} else {
+			storage = new memoryStorage()
 		}
+		this.#storage = storage
 	}
 
 	anonymousId() {
@@ -163,6 +171,32 @@ class Storage {
 	}
 }
 
+// base64Storage is a storage that stores the key/value pairs in another storage
+// encoding and decoding the values in base64.
+class base64Storage {
+	#storage
+	constructor(storage) {
+		this.#storage = storage
+	}
+	get(key) {
+		let value = this.#storage.get(key)
+		if (value != null) {
+			try {
+				value = decodeBase64(value)
+			} catch {
+				value = null
+			}
+		}
+		return value
+	}
+	set(key, value) {
+		this.#storage.set(key, encodeBase64(value))
+	}
+	delete(key) {
+		this.#storage.delete(key)
+	}
+}
+
 // cookieStorage stores key/value pairs in cookies.
 class cookieStorage {
 	#domain
@@ -279,45 +313,6 @@ class cookieStorage {
 	}
 }
 
-// webStorage stores key/value pairs in a Web Storage.
-class webStorage {
-	#storage
-
-	// constructor returns a new webStorage based on the provided Web Storage,
-	// such as localStorage or sessionStorage. If the provided storage cannot be
-	// used, it raises an exception with the storeNotSupported error.
-	constructor(storage) {
-		try {
-			storage.setItem('__test__', '')
-			storage.removeItem('__test__')
-		} catch {
-			throw storageNotSupported
-		}
-		this.#storage = storage
-	}
-	get(key) {
-		try {
-			return this.#storage.getItem(key)
-		} catch {
-			return null
-		}
-	}
-	set(key, value) {
-		try {
-			this.#storage.setItem(key, value)
-		} catch {
-			// Nothing to do.
-		}
-	}
-	delete(key) {
-		try {
-			this.#storage.removeItem(key)
-		} catch {
-			// Nothing to do.
-		}
-	}
-}
-
 // memoryStorage stores key/value pairs in memory.
 class memoryStorage {
 	#data = {}
@@ -374,5 +369,44 @@ class noStorage {
 	delete() {}
 }
 
+// webStorage stores key/value pairs in a Web Storage.
+class webStorage {
+	#storage
+
+	// constructor returns a new webStorage based on the provided Web Storage,
+	// such as localStorage or sessionStorage. If the provided storage cannot be
+	// used, it raises an exception with the storeNotSupported error.
+	constructor(storage) {
+		try {
+			storage.setItem('__test__', '')
+			storage.removeItem('__test__')
+		} catch {
+			throw storageNotSupported
+		}
+		this.#storage = storage
+	}
+	get(key) {
+		try {
+			return this.#storage.getItem(key)
+		} catch {
+			return null
+		}
+	}
+	set(key, value) {
+		try {
+			this.#storage.setItem(key, value)
+		} catch {
+			// Nothing to do.
+		}
+	}
+	delete(key) {
+		try {
+			this.#storage.removeItem(key)
+		} catch {
+			// Nothing to do.
+		}
+	}
+}
+
 export default Storage
-export { cookieStorage, memoryStorage, multiStorage, noStorage, webStorage }
+export { base64Storage, cookieStorage, memoryStorage, multiStorage, noStorage, webStorage }

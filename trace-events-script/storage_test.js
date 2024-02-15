@@ -1,7 +1,7 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
 import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts'
 import * as fake from './test_fake.js'
-import Storage, { cookieStorage, memoryStorage, multiStorage, noStorage, webStorage } from './storage.js'
+import Storage, { base64Storage, cookieStorage, memoryStorage, multiStorage, noStorage, webStorage } from './storage.js'
 
 const oneYear = 365 * 24 * 60 * 60 * 1000
 
@@ -258,6 +258,21 @@ Deno.test('cookieStorage', () => {
 	assertEquals(storage.get('boo'), null)
 
 	time.restore()
+})
+
+Deno.test('base64Storage', () => {
+	const memory = new memoryStorage()
+	const storage = new base64Storage(memory)
+	assertEquals(storage.get('k'), null)
+	storage.set('k', "Let's watch a 🎥. 🍔 & 🍟 for dinner!")
+	assertEquals(
+		memory.get('k'),
+		'TGV0J3Mgd2F0Y2ggYSDwn46lLiDwn42UICYg8J+NnyBmb3IgZGlubmVyIQ',
+	)
+	assertEquals(storage.get('k'), "Let's watch a 🎥. 🍔 & 🍟 for dinner!")
+	storage.delete('k')
+	assertEquals(memory.get('k'), null)
+	assertEquals(storage.get('k'), null)
 })
 
 Deno.test('memoryStorage', () => {
