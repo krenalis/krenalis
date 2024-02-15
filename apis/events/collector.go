@@ -144,11 +144,8 @@ func (c *collector) importTraitsOfUsers(ctx context.Context, source *state.Conne
 		iw := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
 		defer iw.Close(ctx)
 
-		// Import the user traits for this event, if provided.
+		// Import the user identities from the events batch.
 		for _, event := range eventsBatch {
-			if len(event.Traits) == 0 && len(event.Context.Traits) == 0 {
-				continue
-			}
 			transformation := state.Transformation{
 				Mapping:  action.Transformation.Mapping,
 				Function: action.Transformation.Function,
@@ -393,21 +390,11 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	// Store the events into the data warehouse.
 	c.storeEvents(source.Workspace().ID, events.Batch)
 
-	// Import the traits of the users, if traits are provided.
-	importTraitsOfUsers := false
-	for _, event := range events.Batch {
-		if len(event.Traits) > 0 || len(event.Context.Traits) > 0 {
-			importTraitsOfUsers = true
-			break
-		}
+	// Import the traits of the users.
+	err = c.importTraitsOfUsers(ctx, source, events.Batch)
+	if err != nil {
+		return err
 	}
-	if importTraitsOfUsers {
-		err := c.importTraitsOfUsers(ctx, source, events.Batch)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Send the events to the next stage.
 	for _, event := range events.Batch {
 		c.events <- event
