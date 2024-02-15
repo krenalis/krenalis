@@ -26,7 +26,7 @@ func TestIdentifiersSchema(t *testing.T) {
 	// properties.
 	schema := c.IdentifiersSchema()
 	properties := schema.Properties()
-	const expectedLen = 6
+	const expectedLen = 5
 	if expectedLen != len(properties) {
 		t.Fatalf("expected %d properties in the identifiers schema, got %d", expectedLen, len(properties))
 	}

@@ -20,7 +20,6 @@ CREATE TABLE users_identities (
     "__cluster__"       serial,
 
     "dummy_id"                          text,
-    "anonymous_id"                      text,
     "android_id"                        text,
     "android_idfa"                      text,
     "android_push_token"                text,
@@ -51,7 +50,6 @@ CREATE TABLE users (
     "__identity_ids__" int[],
 
     "dummy_id"                          text,
-    "anonymous_id"                      text,
     "android_id"                        text,
     "android_idfa"                      text,
     "android_push_token"                text,
