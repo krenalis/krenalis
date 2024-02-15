@@ -127,7 +127,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND $2 = ANY(_anonymous_ids) ORDER BY _updated_at, _identity_id"
+				" AND _external_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _updated_at, _identity_id"
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
