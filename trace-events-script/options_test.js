@@ -159,7 +159,7 @@ Deno.test('Options', () => {
 	}
 
 	// Test invalid setCookieDomain values.
-	let invalids = ['', {}, 'no', 'storage', 'cookiestorage', true]
+	let invalids = ['', {}, 'no', 'storage', 'cookiestorage', 'AsessionStorage', true]
 	for (let i = 0; i < invalids.length; i++) {
 		const type = invalids[i]
 		const options = new Options({ storage: { type } })
@@ -190,7 +190,7 @@ Deno.test('Options', () => {
 	}
 
 	// Test invalid strategies.
-	invalids = ['', 5, {}, 'CBA', 'A--BC', ' ABC']
+	invalids = ['', 5, {}, 'CBA', 'A--BC', 'ABCxy', 'xyAC-B']
 	for (let i = 0; i < invalids.length; i++) {
 		const strategy = invalids[i]
 		try {

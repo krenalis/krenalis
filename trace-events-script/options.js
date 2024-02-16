@@ -1,5 +1,8 @@
 import { isPlainObject } from './utils.js'
 
+const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
+const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
+
 class Options {
 	debug = false
 	sessions = {
@@ -108,17 +111,17 @@ function isDomainName(s) {
 
 // isSameSite reports whether s is a SameSite value.
 function isSameSite(s) {
-	return typeof s === 'string' && /^Lax|Strict|None$/.test(s)
+	return typeof s === 'string' && ['Lax', 'Strict', 'None'].indexOf(s) >= 0
 }
 
 // isStorage reports whether s is a storage.
 function isStorage(s) {
-	return typeof s === 'string' && /^multiStorage|cookieStorage|localStorage|sessionStorage|memoryStorage|none$/.test(s)
+	return typeof s === 'string' && storages.indexOf(s) >= 0
 }
 
 // isStrategy reports whether s is a strategy.
 function isStrategy(s) {
-	return typeof s === 'string' && /^ABC|AB-C|A-B-C|AC-B$/.test(s)
+	return typeof s === 'string' && strategies.indexOf(s) >= 0
 }
 
 export default Options
