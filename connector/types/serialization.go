@@ -429,7 +429,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("regular expression cannot be provided if values are provided")
 			}
 			if expr, ok := tok.(string); ok {
-				re, err = regexp.Compile(expr)
+				re, _ = regexp.Compile(expr)
 			}
 			if re == nil {
 				return Type{}, errors.New("invalid regular expression")
