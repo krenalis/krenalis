@@ -391,8 +391,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // added action. target is the target of the action and must be supported by the
 // connector of the connection.
 //
-// Refer to the specifications in the file "Actions support.md" for more
-// details.
+// Refer to the specifications in the file "apis/Actions.md" for more details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
@@ -1526,8 +1525,7 @@ func (this *Connection) Keys() ([]string, error) {
 
 // actionTypes returns the action types for the connection.
 //
-// Refer to the specifications in the file "apis/Actions support.md" for more
-// details.
+// Refer to the specifications in the file "apis/Actions.md" for more details.
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -1824,8 +1822,7 @@ func (this *Connection) updateConnectionsStats(ctx context.Context, count int) e
 // validateActionToSet validates the action to set (when adding or setting an
 // action) for the given target.
 //
-// Refer to the specifications in the file "apis/Actions support.md" for more
-// details.
+// Refer to the specifications in the file "apis/Actions.md" for more details.
 //
 // It returns an errors.UnprocessableError error with code LanguageNotSupported,
 // if the transformation language is not supported.
@@ -2534,8 +2531,8 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
 	}
 	// Perform a validation based on the connection's type and role.
-	// (Refer to the specifications in the file "apis/Actions support.md" for
-	// more details)
+	// (Refer to the specifications in the file "apis/Actions.md" for more
+	// details)
 	c := this.connection
 	connector := c.Connector()
 	var supported bool
