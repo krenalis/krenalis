@@ -40,3 +40,39 @@ Some notes about the table:
 | Destination **App** on **Events**                          | Filters the events to map and then send     | Events schema without GID (hard-coded into Chichi) | From the Event Type (may be invalid to indicate there is no schema)       | **Not allowed** when event type schema is invalid,<br />**Optional** when the event type schema is valid and does not contain required properties<br />**Mandatory** when the event type schema is valid and contains required properties                                                          | Supported                                               | ? ? ?                                                                                                                                                                       | —                                                                                                     |
 | Destination **Database** on **Users / Groups**             | Filters the users to export to the database | `users`                                            | Read from the indicated table                                             | **Mandatory**. Chichi does not know how to map properties from the `users` table to the table columns                                                                                                                                                                                              | Supported                                               | ? ? ?                                                                                                                                                                       | Table name                                                                                            |
 | Destination **File** on **Users / Groups**                 | Filters the users to write to the file      | `users`                                            | - *(not present as there are no transformations when exporting to files)* | **Not allowed**. The columns in the exported files match the properties of the `users` table                                                                                                                                                                                                       | *(does not apply as transformations are not supported)* | Input schema is unused and must be invalid, out schema must be valid (it was the `users` schema and it is used for the file schema).                                        | File path. Does it require a sheet? See the issue [#430](https://github.com/open2b/chichi/issues/430) |
+
+## Transformations
+
+**Legend**
+
+* 🟢 = transformation is **mandatory**
+* 🟠 = transformation is **optional**
+* 🔴 = transformation is **not allowed**
+
+```mermaid
+graph LR
+
+	conn([Connection]) --> source([Source])
+	conn --> dest([Destination])
+	
+	source --> source_app(["App (Users) 🟢"])
+	source --> source_db(["Database (Users) 🟢"])
+	source --> source_file(["File (Users) 🟢"])
+	source --> source_events_based([Mobile/Server/Website])
+	
+	dest --> dest_app([App])
+	dest --> dest_db(["Database (Users) 🟢"])
+	dest --> dest_file(["File (Users) 🔴"])
+	
+	source_events_based --> source_events_based_users(["Users 🟠"])
+	source_events_based --> source_events_based_events(["Events 🔴"])
+	
+	dest_app --> dest_app_users(["Users 🟢"])
+	dest_app --> dest_app_events([Events])
+	
+	dest_app_events --> valid_schema_no_required_props(["Event type schema is validid w/o invalid props 🟠"])
+	dest_app_events --> valid_schema_with_required_props(["Event type schema w/ props 🟢"])
+	dest_app_events --> invalid_schema(["Event Type schema is invalid 🔴"])
+
+```
+
