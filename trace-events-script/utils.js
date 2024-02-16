@@ -84,6 +84,24 @@ function isPlainObject(obj) {
 	return typeof obj === 'object' && !Array.isArray(obj) && obj != null
 }
 
+// isURL reports whether url is a URL.
+function isURL(url) {
+	if (typeof url !== 'string' || !/^https?:\/\/\S+$/.test(url)) {
+		return false
+	}
+	if (typeof globalThis.URL === 'function') {
+		try {
+			new URL(url)
+		} catch {
+			return false
+		}
+		return true
+	}
+	const a = document.createElement('a')
+	a.href = url
+	return a.href !== '' && a.hostname !== ''
+}
+
 // debug returns a logging function for debug messages if 'on' is true;
 // otherwise, it returns undefined.
 function debug(on) {
@@ -153,4 +171,15 @@ function _uuid_imp() {
 // The uuid function is undefined for unsupported browsers.
 const uuid = _uuid_imp()
 
-export { _uuid_imp, campaign, debug, decodeBase64, encodeBase64, getTime, isPlainObject, onVisibilityChange, uuid }
+export {
+	_uuid_imp,
+	campaign,
+	debug,
+	decodeBase64,
+	encodeBase64,
+	getTime,
+	isPlainObject,
+	isURL,
+	onVisibilityChange,
+	uuid,
+}

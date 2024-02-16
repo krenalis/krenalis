@@ -1,6 +1,7 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts'
-import { _uuid_imp, campaign, decodeBase64, encodeBase64, onVisibilityChange } from './utils.js'
+import { DOMParser } from 'https://deno.land/x/deno_dom/deno-dom-wasm.ts'
+import { _uuid_imp, campaign, decodeBase64, encodeBase64, isURL, onVisibilityChange } from './utils.js'
 
 Deno.test('utils', async (t) => {
 	await t.step('campaign function', () => {
@@ -86,6 +87,28 @@ Deno.test('utils', async (t) => {
 			} finally {
 				globalThis[fns[i]] = fn
 			}
+		}
+	})
+
+	await t.step('isURL function', () => {
+		assert(isURL('http://example.com/'))
+		assert(isURL('https://example.com/'))
+		assert(!isURL('ftp://example.com/'))
+		assert(!isURL('/signup'))
+		assert(!isURL(''))
+		// Mock document.
+		globalThis.document = new DOMParser().parseFromString(`<!DOCTYPE html>`, 'text/html')
+		const URL = globalThis.URL
+		globalThis.URL = undefined
+		try {
+			assert(isURL('http://example.com/'))
+			assert(isURL('https://example.com/'))
+			assert(!isURL('ftp://example.com/'))
+			assert(!isURL('/signup'))
+			assert(!isURL(''))
+		} finally {
+			delete (globalThis.document)
+			globalThis.URL = URL
 		}
 	})
 

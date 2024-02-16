@@ -1,4 +1,4 @@
-import Analytics from './analytics.js'
+import { Analytics, EndpointURLError } from './analytics.js'
 import { uuid } from './utils.js'
 
 function main() {
@@ -9,7 +9,17 @@ function main() {
 
 	const analytics = globalThis.chichianalytics
 
-	const a = new Analytics(analytics.key, analytics.url, analytics.options)
+	let a
+	try {
+		a = new Analytics(analytics.key, analytics.url, analytics.options)
+	} catch (error) {
+		if (error instanceof EndpointURLError) {
+			console.error(error.message)
+			return
+		}
+		throw error
+	}
+
 	const methods = [
 		'alias',
 		'anonymize',

@@ -1,4 +1,4 @@
-import { campaign, isPlainObject, uuid } from './utils.js'
+import { campaign, isPlainObject, isURL, uuid } from './utils.js'
 import Group from './group.js'
 import Options from './options.js'
 import Sender from './sender.js'
@@ -8,6 +8,13 @@ import User from './user.js'
 
 const version = '0.0.0'
 const none = () => {}
+
+class EndpointURLError extends Error {
+	constructor(endpoint) {
+		super(`The endpoint URL '${endpoint}' is not valid.`)
+		this.name = this.constructor.name
+	}
+}
 
 class Analytics {
 	#options
@@ -19,7 +26,14 @@ class Analytics {
 	#user
 	#group
 
+	// constructor returns a new Analytics instance. writeKey is the write key,
+	// endpoint denotes the endpoint URL, and options is an object containing
+	// the options, if any. If endpoint is not a valid URL, it raises an
+	// EndpointURLError error.
 	constructor(writeKey, endpoint, options) {
+		if (!isURL(endpoint)) {
+			throw new EndpointURLError(endpoint)
+		}
 		this.#options = new Options(options)
 		this.#storage = new Storage(this.#options.storage)
 		this.#session = new Session(
@@ -591,3 +605,4 @@ function typesOf(arr) {
 }
 
 export default Analytics
+export { Analytics, EndpointURLError }
