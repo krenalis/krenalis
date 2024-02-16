@@ -70,7 +70,7 @@ Deno.test('Analytics', async (t) => {
 		return analytics
 	}
 
-	await t.step('ready callbacks are invoked', async () => {
+	await t.step('ready when Promise is not supported', async () => {
 		let ready1, ready2
 		const p1 = new Promise((resolve) => {
 			ready1 = resolve
@@ -78,15 +78,32 @@ Deno.test('Analytics', async (t) => {
 		const p2 = new Promise((resolve) => {
 			ready2 = resolve
 		})
-		const a = newAnalytics()
-		a.ready(() => {
-			ready1()
-		})
-		a.ready(() => {
-			ready2()
-		})
+		const originalPromise = globalThis.Promise
+		try {
+			const a = newAnalytics()
+			void a.ready(() => {
+				ready1()
+			})
+			void a.ready(() => {
+				ready2()
+			})
+		} finally {
+			globalThis.Promise = originalPromise
+		}
 		await p1
 		await p2
+	})
+
+	await t.step('ready when Promise is supported', async () => {
+		let ready
+		const p = new Promise((resolve) => {
+			ready = resolve
+		})
+		const a = newAnalytics()
+		await a.ready(() => {
+			ready()
+		})
+		await p
 	})
 
 	await t.step('no key is created in the localStorage', () => {

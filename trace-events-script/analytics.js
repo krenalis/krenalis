@@ -8,6 +8,7 @@ import User from './user.js'
 
 const version = '0.0.0'
 const none = () => {}
+const supportPromise = typeof globalThis.Promise === 'function'
 
 class EndpointURLError extends Error {
 	constructor(endpoint) {
@@ -118,17 +119,28 @@ class Analytics {
 		return this.#send('page', this.#setPageScreenArguments, arguments)
 	}
 
-	// ready calls callback after Analytics finishes initializing.
+	// ready calls callback after Analytics finishes initializing. If promises
+	// are supported, it also returns a promise.
 	ready(callback) {
-		if (typeof callback !== 'function') {
-			return
-		}
 		if (this.#isReady) {
-			setTimeout(callback)
-			return
+			if (callback !== undefined) {
+				setTimeout(callback)
+			}
+		} else {
+			this.#onReady = this.#onReady || []
+			if (callback !== undefined) {
+				this.#onReady.push(callback)
+			}
 		}
-		this.#onReady = this.#onReady || []
-		this.#onReady.push(callback)
+		if (supportPromise) {
+			return new Promise((resolve) => {
+				if (this.#isReady) {
+					setTimeout(resolve)
+				} else {
+					this.#onReady.push(resolve)
+				}
+			})
+		}
 	}
 
 	// reset resets the user and group identifiers, and traits removing them
@@ -223,7 +235,7 @@ class Analytics {
 			}
 			resolve({ attempts: 1, event: event })
 		}
-		if (typeof globalThis.Promise === 'function') {
+		if (supportPromise) {
 			return new Promise(executor)
 		}
 		executor(none, none)
