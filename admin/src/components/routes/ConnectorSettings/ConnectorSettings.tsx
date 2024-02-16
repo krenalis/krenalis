@@ -21,6 +21,12 @@ import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 
+const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
+
+const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
+	return connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website');
+};
+
 const ConnectorSettings = () => {
 	const [connector, setConnector] = useState<TransformedConnector | null>(null);
 	const [name, setName] = useState<string>('');
@@ -89,6 +95,9 @@ const ConnectorSettings = () => {
 				</Flex>,
 			);
 			setName(connector.name);
+			if (hasStrategy(connectionRole, connector)) {
+				setStrategy(strategyOptions[0]);
+			}
 			const storages: TransformedConnection[] = [];
 			if (connector.type === 'File') {
 				for (const c of connections) {
@@ -329,9 +338,7 @@ const ConnectorSettings = () => {
 		return null;
 	}
 
-	const showStrategy =
-		connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website');
-
+	const showStrategy = hasStrategy(connectionRole, c);
 	const showBusinessID = connectionRole === 'Source' && c.type !== 'Storage' && c.type !== 'Stream';
 	const businessIDKind = ['File', 'Database'].includes(c.type) ? 'column' : 'property';
 
@@ -458,10 +465,9 @@ const ConnectorSettings = () => {
 										setStrategy(value);
 									}}
 								>
-									<SlOption value='AB-C'>AB-C</SlOption>
-									<SlOption value='ABC'>ABC</SlOption>
-									<SlOption value='A-B-C'>A-B-C</SlOption>
-									<SlOption value='AC-B'>AC-B</SlOption>
+									{strategyOptions.map((option) => (
+										<SlOption value={option}>{option}</SlOption>
+									))}
 								</SlSelect>
 							</div>
 						)}
