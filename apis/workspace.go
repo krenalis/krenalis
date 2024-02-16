@@ -872,6 +872,9 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 		RefreshToken: auth.RefreshToken,
 		ExpiresIn:    auth.ExpiresIn,
 	})
+	if err != nil {
+		return "", err
+	}
 
 	// TODO(marco): Encrypt the token.
 
