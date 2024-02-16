@@ -70,7 +70,7 @@ graph LR
 	dest_app --> dest_app_users(["Users 🟢"])
 	dest_app --> dest_app_events([Events])
 	
-	dest_app_events --> valid_schema_no_required_props(["Event type schema is validid w/o invalid props 🟠"])
+	dest_app_events --> valid_schema_no_required_props(["Event type schema is valid w/o invalid props 🟠"])
 	dest_app_events --> valid_schema_with_required_props(["Event type schema w/ props 🟢"])
 	dest_app_events --> invalid_schema(["Event Type schema is invalid 🔴"])
 
