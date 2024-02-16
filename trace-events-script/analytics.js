@@ -307,7 +307,7 @@ class Analytics {
 		event.messageId = uuid()
 		event.anonymousId = this.#user.anonymousId()
 
-		const n = globalThis.navigator
+		const n = navigator
 		event.context = {
 			library: {
 				name: 'chichi.js',

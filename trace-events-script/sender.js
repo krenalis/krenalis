@@ -15,7 +15,7 @@ class Sender {
 	#debug
 
 	constructor(writeKey, endpoint, debug) {
-		this.#queue = new Queue(globalThis.localStorage, 'chichi_queue', MaxEventSize, debug)
+		this.#queue = new Queue(localStorage, 'chichi_queue', MaxEventSize, debug)
 		this.#writeKey = JSON.stringify(writeKey)
 		this.#endpoint = endpoint
 		this.debug(debug)
@@ -76,7 +76,7 @@ class Sender {
 			}
 		} else {
 			if (!navigator.onLine) {
-				globalThis.addEventListener('online', () => {
+				addEventListener('online', () => {
 					this.#flush()
 				})
 				return

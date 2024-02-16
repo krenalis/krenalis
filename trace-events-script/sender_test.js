@@ -12,11 +12,11 @@ Deno.test('Sender send', async (t) => {
 	// Prepare the execution environment.
 	{
 		localStorage.clear()
-		globalThis.navigator.onLine = true
-		assert(globalThis.navigator.onLine)
+		navigator.onLine = true
+		assert(navigator.onLine)
 		globalThis.document = {
 			visibilityState: 'visible',
-			addEventListener: globalThis.addEventListener.bind(globalThis),
+			addEventListener: addEventListener.bind(globalThis),
 		}
 	}
 
@@ -89,13 +89,13 @@ Deno.test('Sender send', async (t) => {
 			const sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
 			sender.send({ messageId: crypto.randomUUID() })
-			globalThis.document.visibilityState = 'hidden'
-			globalThis.dispatchEvent(new Event('visibilitychange'))
+			document.visibilityState = 'hidden'
+			dispatchEvent(new Event('visibilitychange'))
 			const events = await fetch.events(1)
 			assertEquals(events.length, 1)
 		} finally {
-			globalThis.document.visibilityState = 'visible'
-			globalThis.dispatchEvent(new Event('visibilitychange'))
+			document.visibilityState = 'visible'
+			dispatchEvent(new Event('visibilitychange'))
 			fetch.restore()
 			time.restore()
 		}
@@ -113,16 +113,16 @@ Deno.test('Sender send', async (t) => {
 			for (let i = 0; i < events.length; i++) {
 				sender.send(events[i])
 			}
-			globalThis.document.visibilityState = 'hidden'
-			globalThis.dispatchEvent(new Event('pagehide'))
+			document.visibilityState = 'hidden'
+			dispatchEvent(new Event('pagehide'))
 			const sentEvents = await sendBeacon.events(events.length)
 			assertEquals(sentEvents.length, events.length)
 			for (let i = 0; i < events.length; i++) {
 				assertEquals(sentEvents[i], events[i])
 			}
 		} finally {
-			globalThis.document.visibilityState = 'visible'
-			globalThis.dispatchEvent(new Event('pageshow'))
+			document.visibilityState = 'visible'
+			dispatchEvent(new Event('pageshow'))
 			sendBeacon.restore()
 			time.restore()
 		}

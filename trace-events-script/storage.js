@@ -27,17 +27,17 @@ class Storage {
 			case 'cookieStorage':
 				tryStorage(() => new cookieStorage(options.cookie))
 				if (options.type === 'multiStorage' || !storage) {
-					tryStorage(() => new webStorage(globalThis.localStorage))
+					tryStorage(() => new webStorage(localStorage))
 					if (!storage) {
-						tryStorage(() => new webStorage(globalThis.sessionStorage))
+						tryStorage(() => new webStorage(sessionStorage))
 					}
 				}
 				break
 			case 'localStorage':
-				tryStorage(() => new webStorage(globalThis.localStorage))
+				tryStorage(() => new webStorage(localStorage))
 				break
 			case 'sessionStorage':
-				tryStorage(() => new webStorage(globalThis.sessionStorage))
+				tryStorage(() => new webStorage(sessionStorage))
 				break
 			case 'none':
 				storage = new noStorage()
@@ -225,7 +225,7 @@ class cookieStorage {
 	// If cookies are not supported, it raises an exception with the error
 	// storeNotSupported.
 	constructor(options) {
-		if (globalThis.document?.cookie == null) {
+		if (document?.cookie == null) {
 			// Only in tests.
 			throw storageNotSupported
 		}
@@ -238,7 +238,7 @@ class cookieStorage {
 	}
 
 	get(key) {
-		const s = globalThis.document.cookie
+		const s = document.cookie
 		const cookies = s.length > 0 ? s.split('; ') : []
 		for (let i = 0; i < cookies.length; i++) {
 			const cookie = cookies[i]
@@ -264,7 +264,7 @@ class cookieStorage {
 			return null
 		}
 		const expires = new Date(Date.now() + this.#maxAge).toUTCString()
-		globalThis.document.cookie = `${key}=${value}; expires=${expires}; path=${this.#path}; samesite=${this.#sameSite}` +
+		document.cookie = `${key}=${value}; expires=${expires}; path=${this.#path}; samesite=${this.#sameSite}` +
 			`${this.#secure ? '; secure' : ''}${this.#domain === '' ? '' : `; domain=${this.#domain}`}`
 	}
 

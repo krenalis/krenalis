@@ -302,7 +302,7 @@ class SendBeacon {
 		this.#installTime = utils.getTime()
 		this.#events = []
 		this.#wait = null
-		globalThis.navigator.sendBeacon = this.#sendBeacon
+		navigator.sendBeacon = this.#sendBeacon
 	}
 
 	restore() {
@@ -329,7 +329,7 @@ class Navigator {
 		if (this.#originalNavigator != null) {
 			throw new Error('Fake Navigator is already installed')
 		}
-		this.#originalNavigator = globalThis.navigator
+		this.#originalNavigator = navigator
 		delete (globalThis.navigator)
 		globalThis.navigator = this
 	}

@@ -7,10 +7,10 @@ import Queue from './queue.js'
 const DEBUG = false
 
 Deno.test('Queue', () => {
-	globalThis.localStorage.clear()
+	localStorage.clear()
 	globalThis.document = {
 		visibilityState: 'visible',
-		addEventListener: globalThis.addEventListener.bind(globalThis),
+		addEventListener: addEventListener.bind(globalThis),
 	}
 	const time = new FakeTime()
 
@@ -33,7 +33,7 @@ Deno.test('Queue', () => {
 	}
 
 	const maxItemBytes = 20
-	let q = new Queue(globalThis.localStorage, 'queue', maxItemBytes, DEBUG)
+	let q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 
 	// The queue is empty.
 	assertEmpty()
@@ -71,7 +71,7 @@ Deno.test('Queue', () => {
 	time.tick(100)
 
 	// The queue has been make persistent.
-	q = new Queue(globalThis.localStorage, 'queue', maxItemBytes, DEBUG)
+	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	assertRead([`{"boo":"😁"}`, `{"a":{"b":23.4}}`, `{"c":null}`])
 	assertEquals(q.age(), age)
 	assertEquals(q.isEmpty(), false)
@@ -95,10 +95,10 @@ Deno.test('Queue', () => {
 	time.tick(100)
 
 	// A corrupted persisted queue does not break Queue.
-	globalThis.localStorage.setItem('queue', '....')
+	localStorage.setItem('queue', '....')
 	q = new Queue(maxItemBytes, DEBUG)
 	assertEmpty()
-	globalThis.localStorage.setItem('queue', '{}\n[}\n{}\n123\n123\n123\n2\n')
+	localStorage.setItem('queue', '{}\n[}\n{}\n123\n123\n123\n2\n')
 	q = new Queue(maxItemBytes, DEBUG)
 	assertEmpty()
 	q.close()
@@ -115,14 +115,14 @@ Deno.test('Queue', () => {
 	q.remove()
 	time.tick(100)
 	q.close()
-	q = new Queue(globalThis.localStorage, 'queue', maxItemBytes, DEBUG)
+	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	assertEmpty()
 	q.close()
 
 	// Two queues with two different keys are completely separated.
 	localStorage.clear()
-	let q1 = new Queue(globalThis.localStorage, 'queue1', maxItemBytes, DEBUG)
-	let q2 = new Queue(globalThis.localStorage, 'queue2', maxItemBytes, DEBUG)
+	let q1 = new Queue(localStorage, 'queue1', maxItemBytes, DEBUG)
+	let q2 = new Queue(localStorage, 'queue2', maxItemBytes, DEBUG)
 	q1.append({ q: 1 })
 	time.tick(200)
 	assertEquals(q2.length(), 0)
@@ -131,24 +131,24 @@ Deno.test('Queue', () => {
 	q1.close()
 	q2.close()
 	time.tick(200)
-	q1 = new Queue(globalThis.localStorage, 'queue1', maxItemBytes, DEBUG)
+	q1 = new Queue(localStorage, 'queue1', maxItemBytes, DEBUG)
 	time.tick(200)
 	assertEquals(q1.read(), ['{"q":1}'])
-	q2 = new Queue(globalThis.localStorage, 'queue2', maxItemBytes, DEBUG)
+	q2 = new Queue(localStorage, 'queue2', maxItemBytes, DEBUG)
 	time.tick(200)
 	assertEquals(q2.read(), ['{"q":2}'])
 	q1.close()
 	q2.close()
 
 	// After hiding the page, the queue is immediately persisted in the localStorage.
-	globalThis.localStorage.clear()
-	q = new Queue(globalThis.localStorage, 'queue', maxItemBytes, DEBUG)
+	localStorage.clear()
+	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	q.append({ foo: [1, 3] })
-	assertEquals(globalThis.localStorage.getItem('queue'), null)
-	globalThis.document.visibilityState = 'hidden'
-	globalThis.dispatchEvent(new Event('visibilitychange'))
-	assert(globalThis.localStorage.getItem('queue').length > 0)
-	globalThis.document.visibilityState = 'visible'
-	globalThis.dispatchEvent(new Event('visibilitychange'))
+	assertEquals(localStorage.getItem('queue'), null)
+	document.visibilityState = 'hidden'
+	dispatchEvent(new Event('visibilitychange'))
+	assert(localStorage.getItem('queue').length > 0)
+	document.visibilityState = 'visible'
+	dispatchEvent(new Event('visibilitychange'))
 	q2.close()
 })

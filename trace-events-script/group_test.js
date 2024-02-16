@@ -10,7 +10,7 @@ Deno.test('Group', () => {
 	localStorage.clear()
 	globalThis.document = {
 		visibilityState: 'visible',
-		addEventListener: globalThis.addEventListener.bind(globalThis),
+		addEventListener: addEventListener.bind(globalThis),
 	}
 
 	const a = new Analytics(writeKey, endpoint)
