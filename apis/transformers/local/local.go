@@ -182,10 +182,24 @@ if __name__ == "__main__":
 `
 	}
 	filename := fn.absFilename(name, version, ext)
-	err = os.WriteFile(filename, []byte(source), 0644)
-	if err != nil && errors.Is(err, os.ErrExist) {
-		err = transformers.ErrFunctionExist
+	var success bool
+	defer func() {
+		if !success {
+			_ = os.Remove(filename)
+		}
+	}()
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			err = transformers.ErrFunctionExist
+		}
+		return err
 	}
+	_, err = f.WriteString(source)
+	if err != nil {
+		return err
+	}
+	success = true
 	return nil
 }
 
