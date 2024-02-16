@@ -1140,7 +1140,6 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 			}
 			return err
 		})
-		r = r2
 	case state.SnappyCompression:
 		r2 := snappy.NewReader(r)
 		r1 := r
