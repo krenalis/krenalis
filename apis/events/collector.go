@@ -231,6 +231,9 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	}()
 
 	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "*"
+	}
 
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
