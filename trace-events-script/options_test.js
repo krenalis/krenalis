@@ -1,5 +1,5 @@
-import { assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts'
-import Options from './options.js'
+import { assert, assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts'
+import { isStrategy, Options } from './options.js'
 
 const oneYear = 365 * 24 * 60 * 60 * 1000
 
@@ -23,7 +23,6 @@ Deno.test('Options', () => {
 			},
 			type: 'multiStorage',
 		},
-		strategy: 'AB-C',
 		timeout: 30 * 60000,
 	}
 
@@ -125,18 +124,6 @@ Deno.test('Options', () => {
 			...base,
 			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: 'example.com' } },
 		},
-		{ options: { strategy: undefined }, ...base },
-		{ options: { strategy: null }, ...base },
-		{ options: { strategy: 'ABC' }, ...base, strategy: 'ABC' },
-		{ options: { strategy: 'AB-C' }, ...base },
-		{ options: { strategy: 'A-B-C' }, ...base, strategy: 'A-B-C' },
-		{ options: { strategy: 'AC-B' }, ...base, strategy: 'AC-B' },
-		{
-			options: { strategy: 'A-B-C', sessions: { autoTrack: true, timeout: 20 * 1000 } },
-			...base,
-			strategy: 'A-B-C',
-			timeout: 20 * 1000,
-		},
 		{ options: { debug: false }, ...base },
 		{ options: { debug: true }, ...base, debug: true },
 		{ options: { debug: 0 }, ...base },
@@ -145,7 +132,7 @@ Deno.test('Options', () => {
 
 	for (let i = 0; i < tests.length; i++) {
 		const test = tests[i]
-		const options = new Options(test.options)
+		const options = new Options(null, null, test.options)
 		assertEquals(test.debug, test.debug)
 		assertEquals(options.storage.cookie.domain, test.storage.cookie.domain)
 		assertEquals(options.storage.cookie.maxAge, test.storage.cookie.maxAge)
@@ -155,14 +142,13 @@ Deno.test('Options', () => {
 		assertEquals(options.storage.type, test.storage.type)
 		assertEquals(options.sessions.autoTrack, test.autoTrack)
 		assertEquals(options.sessions.timeout, test.timeout)
-		assertEquals(options.strategy, test.strategy)
 	}
 
 	// Test invalid setCookieDomain values.
 	let invalids = ['', {}, 'no', 'storage', 'cookiestorage', 'AsessionStorage', true]
 	for (let i = 0; i < invalids.length; i++) {
 		const type = invalids[i]
-		const options = new Options({ storage: { type } })
+		const options = new Options(null, null, { storage: { type } })
 		if (options.storage.type !== base.storage.type) {
 			throw new AssertionError(`'${type}' is not a type for the storage.type option`)
 		}
@@ -172,7 +158,7 @@ Deno.test('Options', () => {
 	invalids = ['', {}, '127.0.0.1', 'example.com.', '%20', '=']
 	for (let i = 0; i < invalids.length; i++) {
 		const setCookieDomain = invalids[i]
-		const options = new Options({ setCookieDomain })
+		const options = new Options(null, null, { setCookieDomain })
 		if (options.storage.cookie.domain !== base.storage.cookie.domain) {
 			throw new AssertionError(`'${setCookieDomain}' is not a domain name for the setCookieDomain option`)
 		}
@@ -182,22 +168,25 @@ Deno.test('Options', () => {
 	invalids = ['', 8, [], true, 'no', ' Lax', 'other']
 	for (let i = 0; i < invalids.length; i++) {
 		const sameSiteCookie = invalids[i]
-		const options = new Options({ sameSiteCookie })
+		const options = new Options(null, null, { sameSiteCookie })
 		const cookie = options.storage.cookie
 		if (cookie.sameSite !== base.storage.cookie.sameSite) {
 			throw new AssertionError(`'${sameSiteCookie}' is not a SameSite value, but no error has been returned`)
 		}
 	}
+})
 
-	// Test invalid strategies.
-	invalids = ['', 5, {}, 'CBA', 'A--BC', 'ABCxy', 'xyAC-B']
-	for (let i = 0; i < invalids.length; i++) {
-		const strategy = invalids[i]
-		try {
-			new Options({ strategy })
-		} catch {
-			continue
-		}
-		throw new AssertionError(`'${strategy}' is not a strategy, but no error has been returned`)
-	}
+Deno.test('isStrategy', () => {
+	assert(isStrategy('ABC'))
+	assert(isStrategy('AB-C'))
+	assert(isStrategy('A-B-C'))
+	assert(isStrategy('AC-B'))
+	assert(!isStrategy('A-BC'))
+	assert(!isStrategy('ABCxy'))
+	assert(!isStrategy('xyAC-B'))
+	assert(!isStrategy('AB'))
+	assert(!isStrategy('ABC '))
+	assert(!isStrategy(''))
+	assert(!isStrategy(5))
+	assert(!isStrategy(null))
 })

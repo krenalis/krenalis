@@ -10,7 +10,7 @@ import Analytics from './analytics.js'
 const DEBUG = false
 
 const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
-const endpoint = 'https://example.com/api/v1/batch'
+const endpoint = 'https://example.com/api/v1/'
 
 Deno.test('Analytics', async (t) => {
 	// Prepare the execution environment.
@@ -63,57 +63,111 @@ Deno.test('Analytics', async (t) => {
 	const thirtyMinutes = 30 * minute
 	const fiveMinutes = 5 * minute
 
-	function newAnalytics(options) {
+	// newAnalytics returns a new instance of Analytics, waiting for it to
+	// become ready. If a delay is provided, it returns immediately, and the
+	// returned Analytics instance will become ready only after delay
+	// milliseconds.
+	//
+	// If the time is fake when newAnalytics is called, provide a delay and
+	// invoke time.tick(delay) to ensure that the returned Analytics instance
+	// becomes ready. Provide a 0 delay and call time.next() to not advance to
+	// time.
+	async function newAnalytics(options, strategy, delay) {
+		const fetch = globalThis.fetch
+		globalThis.fetch = function () {
+			return new Promise(function (resolve) {
+				const body = JSON.stringify({ strategy: strategy || 'AB-C' })
+				const response = new Response(body, {
+					status: 200,
+					statusText: 'OK',
+					headers: new Headers({ 'content-type': 'text/javascript' }),
+				})
+				if (delay == null) {
+					resolve(response)
+				} else {
+					setTimeout(resolve, delay, response)
+				}
+			})
+		}
 		localStorage.clear()
-		const analytics = new Analytics(writeKey, endpoint, options)
-		analytics.debug(DEBUG)
-		return analytics
+		try {
+			if (DEBUG) {
+				if (options == null) {
+					options = {}
+				}
+				options.debug = true
+			}
+			const analytics = new Analytics(writeKey, endpoint, options)
+			analytics.debug(DEBUG)
+			if (delay == null) {
+				await new Promise((resolve) => {
+					analytics.ready(resolve)
+				})
+			}
+			return analytics
+		} finally {
+			globalThis.fetch = fetch
+		}
 	}
 
-	await t.step('ready when Promise is not supported', async () => {
+	await t.step('ready, when Promise is not supported', async () => {
 		let ready1, ready2
-		const p1 = new Promise((resolve) => {
+		let p1 = new Promise((resolve) => {
 			ready1 = resolve
 		})
-		const p2 = new Promise((resolve) => {
+		let p2 = new Promise((resolve) => {
 			ready2 = resolve
 		})
 		const originalPromise = globalThis.Promise
 		try {
-			const a = newAnalytics()
+			const a = await newAnalytics()
 			void a.ready(() => {
 				ready1()
 			})
 			void a.ready(() => {
 				ready2()
 			})
+			await p1
+			await p2
+			p1 = new Promise((resolve) => {
+				ready1 = resolve
+			})
+			p2 = new Promise((resolve) => {
+				ready2 = resolve
+			})
+			void a.ready(() => {
+				ready1()
+			})
+			void a.ready(() => {
+				ready2()
+			})
+			await p1
+			await p2
 		} finally {
 			globalThis.Promise = originalPromise
 		}
-		await p1
-		await p2
 	})
 
-	await t.step('ready when Promise is supported', async () => {
+	await t.step('ready, when Promise is supported', async () => {
 		let ready
 		const p = new Promise((resolve) => {
 			ready = resolve
 		})
-		const a = newAnalytics()
+		const a = await newAnalytics(null, null, 10)
 		await a.ready(() => {
 			ready()
 		})
 		await p
 	})
 
-	await t.step('no key is created in the localStorage', () => {
-		newAnalytics({ sessions: { autoTrack: false } })
+	await t.step('no key is created in the localStorage', async () => {
+		await newAnalytics({ sessions: { autoTrack: false } })
 		assertEquals(localStorage.length, 0)
 	})
 
 	await t.step('reset function', async () => {
-		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
-		const a = newAnalytics({ strategy: 'AC-B', sessions: { autoTrack: false } })
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
+		const a = await newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
 		a.startSession(137206)
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7')
 		const time = new FakeTime()
@@ -132,8 +186,8 @@ Deno.test('Analytics', async (t) => {
 		assertEquals(localStorage.length, 0)
 	})
 
-	await t.step('getAnonymousId function', () => {
-		const a = newAnalytics()
+	await t.step('getAnonymousId function', async () => {
+		const a = await newAnalytics()
 		assert(uuid.validate(a.getAnonymousId()))
 		a.setAnonymousId('f5d354ed')
 		assertEquals(a.getAnonymousId(), 'f5d354ed')
@@ -145,8 +199,8 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.getAnonymousId()))
 	})
 
-	await t.step('setAnonymousId function', () => {
-		const a = newAnalytics()
+	await t.step('setAnonymousId function', async () => {
+		const a = await newAnalytics()
 		assert(uuid.validate(a.setAnonymousId()))
 		const anonymousId = 'f5d354ed'
 		assertEquals(a.setAnonymousId(anonymousId), anonymousId)
@@ -159,25 +213,24 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.setAnonymousId()))
 	})
 
-	await t.step('sessions with auto tracking', () => {
+	await t.step('sessions with auto tracking', async () => {
 		const time = new FakeTime()
-		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+		let sessionId = getTime()
+		const a = await newAnalytics(null, null, 10)
+		time.tick(10)
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		fetch.install()
 		try {
-			for (const option of [null, { sessions: { autoTrack: true } }]) {
-				const a = newAnalytics(option)
-				let sessionId = getTime()
-				assertEquals(a.getSessionId(), sessionId)
-				time.tick(fiveMinutes)
-				assertEquals(a.getSessionId(), sessionId)
-				time.tick(thirtyMinutes)
-				assertEquals(a.getSessionId(), null)
-				void a.track('click')
-				sessionId = getTime()
-				assertEquals(a.getSessionId(), sessionId)
-				a.reset()
-				assertEquals(a.getSessionId(), null)
-			}
+			assertEquals(a.getSessionId(), sessionId)
+			time.tick(fiveMinutes)
+			assertEquals(a.getSessionId(), sessionId)
+			time.tick(thirtyMinutes)
+			assertEquals(a.getSessionId(), null)
+			void a.track('click')
+			sessionId = getTime()
+			assertEquals(a.getSessionId(), sessionId)
+			a.reset()
+			assertEquals(a.getSessionId(), null)
 		} finally {
 			fetch.restore()
 			time.restore()
@@ -186,12 +239,10 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('sessions without auto tracking', async () => {
 		const time = new FakeTime()
-
-		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+		const a = await newAnalytics({ sessions: { autoTrack: false } }, null, 10)
+		time.tick(10)
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		fetch.install()
-
-		const a = newAnalytics({ sessions: { autoTrack: false } })
-
 		try {
 			assertEquals(a.getSessionId(), null)
 			time.tick(fiveMinutes)
@@ -204,7 +255,6 @@ Deno.test('Analytics', async (t) => {
 			time.tick(300)
 			let events = await fetch.events(1)
 			assertEquals(events.length, 1)
-
 			a.startSession(728472643)
 			assertEquals(a.getSessionId(), 728472643)
 			time.tick(2 * thirtyMinutes)
@@ -231,12 +281,11 @@ Deno.test('Analytics', async (t) => {
 	for (const strategy of ['ABC', 'AB-C', 'A-B-C', 'AC-B']) {
 		for (const autoTrack of [true, false]) {
 			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
+				const a = await newAnalytics({ sessions: { autoTrack } }, strategy)
+
 				const time = new FakeTime()
-
-				const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+				const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 				fetch.install()
-
-				const a = newAnalytics({ strategy, sessions: { autoTrack } })
 
 				try {
 					let sessionId = a.getSessionId()
@@ -339,13 +388,10 @@ Deno.test('Analytics', async (t) => {
 	}
 
 	await t.step('changing User ID, resets traits and Anonymous ID', async () => {
+		const a = await newAnalytics({ sessions: { autoTrack: false } })
 		const time = new FakeTime()
-
-		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		fetch.install()
-
-		const a = newAnalytics({ sessions: { autoTrack: false } })
-
 		try {
 			a.user().id('274084295')
 			a.user().traits({ first_name: 'Susan' })
@@ -365,7 +411,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	// Execute the steps in the 'analytics_test_steps.js' module.
-	const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+	const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 	const randomUUID = new fake.RandomUUID('9587b6d1-ae92-4d3c-a8d9-87c3e9ce7ae3')
 	const navigator = new fake.Navigator()
 	const now = new Date('2024-01-01T00:00:00Z')
@@ -378,8 +424,8 @@ Deno.test('Analytics', async (t) => {
 			randomUUID.install()
 			navigator.install()
 			try {
-				const analytics = new Analytics(writeKey, endpoint, step.options)
-				analytics.debug(DEBUG)
+				const analytics = await newAnalytics(step.options, null, 0)
+				time.next()
 				analytics.setAnonymousId('1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7')
 				if (step.options?.sessions?.autoTrack !== false) {
 					// Start a session and sent an event to mark it as not just started.

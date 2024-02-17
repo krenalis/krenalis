@@ -20,38 +20,40 @@ function main() {
 		throw error
 	}
 
-	const methods = [
-		'alias',
-		'anonymize',
-		'debug',
-		'endSession',
-		'getAnonymousId',
-		'getSessionId',
-		'group',
-		'identify',
-		'page',
-		'ready',
-		'reset',
-		'screen',
-		'setAnonymousId',
-		'startSession',
-		'track',
-		'user',
-	]
-	for (let i = 0; i < methods.length; i++) {
-		const method = methods[i]
-		analytics[method] = a[method].bind(a)
-	}
+	void a.ready(function () {
+		const methods = [
+			'alias',
+			'anonymize',
+			'debug',
+			'endSession',
+			'getAnonymousId',
+			'getSessionId',
+			'group',
+			'identify',
+			'page',
+			'ready',
+			'reset',
+			'screen',
+			'setAnonymousId',
+			'startSession',
+			'track',
+			'user',
+		]
+		for (let i = 0; i < methods.length; i++) {
+			const method = methods[i]
+			analytics[method] = a[method].bind(a)
+		}
 
-	for (let i = 0; i < analytics.length; i++) {
-		const event = analytics[i]
-		analytics[event[0]](...event.splice(1))
-	}
+		for (let i = 0; i < analytics.length; i++) {
+			const event = analytics[i]
+			analytics[event[0]](...event.splice(1))
+		}
 
-	// empty the array.
-	analytics.length = 0
+		// empty the array.
+		analytics.length = 0
 
-	globalThis.chichianalytics = a
+		globalThis.chichianalytics = a
+	})
 }
 
 main()

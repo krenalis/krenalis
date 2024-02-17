@@ -35,7 +35,18 @@ class Analytics {
 		if (!isURL(endpoint)) {
 			throw new EndpointURLError(endpoint)
 		}
-		this.#options = new Options(options)
+		if (endpoint.slice(-1) !== '/') {
+			endpoint += '/'
+		}
+		this.#options = new Options(writeKey, endpoint, options, () => {
+			this.#isReady = true
+			if (this.#onReady) {
+				for (let i = 0; i < this.#onReady.length; i++) {
+					setTimeout(this.#onReady[i])
+				}
+				this.#onReady = undefined
+			}
+		})
 		this.#storage = new Storage(this.#options.storage)
 		this.#session = new Session(
 			this.#storage,
@@ -46,14 +57,6 @@ class Analytics {
 		this.#sender = new Sender(writeKey, endpoint, this.#options.debug)
 		this.#user = new User(this.#storage)
 		this.#group = new Group(this.#storage)
-		const onReady = this.#onReady
-		if (onReady) {
-			for (let i = 0; i < onReady.length; i++) {
-				setTimeout(onReady[i]())
-			}
-			this.#onReady = void 0
-		}
-		this.#isReady = true
 	}
 
 	// alias sends an alias event.

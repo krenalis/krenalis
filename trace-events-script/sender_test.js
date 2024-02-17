@@ -6,7 +6,7 @@ import Sender from './sender.js'
 const DEBUG = false
 
 const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
-const endpoint = 'https://example.com/api/v1/batch'
+const endpoint = 'https://example.com/api/v1/'
 
 Deno.test('Sender send', async (t) => {
 	// Prepare the execution environment.
@@ -33,7 +33,7 @@ Deno.test('Sender send', async (t) => {
 
 		try {
 			time = new FakeTime()
-			fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 			fetch.install()
 			const sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
@@ -55,7 +55,7 @@ Deno.test('Sender send', async (t) => {
 
 		try {
 			time = new FakeTime()
-			fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
+			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 			fetch.install()
 			const sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
@@ -84,7 +84,7 @@ Deno.test('Sender send', async (t) => {
 		// After hiding the page, the queue is immediately flushed.
 		try {
 			time = new FakeTime()
-			fetch = new fake.Fetch(writeKey, endpoint, true, DEBUG)
+			fetch = new fake.Fetch(writeKey, endpoint + 'batch', true, DEBUG)
 			fetch.install()
 			const sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
@@ -105,7 +105,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('sendBeacon', async () => {
 		const time = new FakeTime()
-		const sendBeacon = new fake.SendBeacon(writeKey, endpoint, DEBUG)
+		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'batch', DEBUG)
 		sendBeacon.install()
 		try {
 			const sender = new Sender(writeKey, endpoint)
@@ -132,7 +132,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('XMLHttpRequest', async () => {
 		const time = new FakeTime()
-		fake.XMLHttpRequest.install(writeKey, endpoint, DEBUG)
+		fake.XMLHttpRequest.install(writeKey, endpoint + 'batch', DEBUG)
 		assertEquals(globalThis.XMLHttpRequest, XMLHttpRequest)
 		const fetch = globalThis.fetch
 		globalThis.fetch = undefined

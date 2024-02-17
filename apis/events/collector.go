@@ -94,24 +94,42 @@ func (c *collector) Events() <-chan *collectedEvent {
 	return c.events
 }
 
-// ServeHTTP serves event messages from HTTP.
+// ServeHTTP serves both settings and event messages over HTTP.
 // A message is a JSON stream of JSON objects where the first object is the
 // message header.
 func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := c.serveHTTP(w, r)
+	defer func() {
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+	var serveSettings = strings.HasPrefix(r.URL.Path, "/api/v1/connection/")
+	var err error
+	if serveSettings {
+		err = c.serveSettings(w, r)
+	} else {
+		err = c.serveEvents(w, r)
+	}
 	if err != nil {
 		switch err {
 		case errBadRequest:
 			http.Error(w, "Bad batchRequest", http.StatusBadRequest)
 		case errMethodNotAllowed:
-			w.Header().Set("Allow", "POST, OPTIONS")
+			if serveSettings {
+				w.Header().Set("Allow", "GET, OPTIONS")
+			} else {
+				w.Header().Set("Allow", "POST, OPTIONS")
+			}
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		case errNotFound:
-			http.Error(w, "Invalid path or identifier", http.StatusNotFound)
+			http.Error(w, "Not Found", http.StatusNotFound)
 		case errUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
-			slog.Error("error occurred collecting an event", "err", err)
+			if serveSettings {
+				slog.Error("collector: an error occurred serving the settings", "err", err)
+			} else {
+				slog.Error("collector: an error occurred collecting an event", "err", err)
+			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 	}
@@ -219,16 +237,55 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 	return nil
 }
 
-// serveHTTP is called by the ServeHTTP method to serve an event request.
-func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
+// serveSettings is called by the ServeHTTP method to serve a settings request.
+func (c *collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "*"
+	}
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "GET")
+		w.Header().Set("Access-Control-Max-Age", "900")
+		w.WriteHeader(204)
+		return nil
+	}
+	if r.Method != "GET" {
+		return errMethodNotAllowed
+	}
+	path, ok := strings.CutPrefix(r.URL.Path, "/api/v1/connection/")
+	if !ok {
+		return errNotFound
+	}
+	writeKey, ok := strings.CutSuffix(path, "/settings")
+	if !ok || strings.Contains(writeKey, "/") {
+		return errNotFound
+	}
+	source, ok := c.state.ConnectionByKey(writeKey)
+	if !ok || source.Strategy == nil {
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Header().Set("Cache-Control", "max-age=31536000")
+		w.WriteHeader(http.StatusNotFound)
+		// Do not modify the returned body, as it is used by the JavaScript SDK
+		// to present an appropriate error message in the console.
+		_, _ = io.WriteString(w, `error: invalid write key`)
+		return nil
+	}
+	strategy := string(*source.Strategy)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(map[string]string{"strategy": strategy})
+	return nil
+}
+
+// serveEvents is called by the ServeHTTP method to serve an events request.
+func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ctx := r.Context()
 	date := time.Now().UTC()
-
-	defer func() {
-		_, _ = io.Copy(io.Discard, r.Body)
-		_ = r.Body.Close()
-	}()
 
 	origin := r.Header.Get("Origin")
 	if origin == "" {

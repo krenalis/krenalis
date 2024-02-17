@@ -21,7 +21,11 @@ class Options {
 	}
 	strategy = 'AB-C'
 
-	constructor(options) {
+	constructor(writeKey, endpoint, options, ready) {
+		// Asynchronously load settings from the endpoint.
+		if (writeKey != null) {
+			this.#load(writeKey, endpoint, true, ready)
+		}
 		if (options == null) {
 			return
 		}
@@ -65,12 +69,6 @@ class Options {
 				this.storage.type = options.storage.type
 			}
 		}
-		if (options.strategy != null) {
-			if (!isStrategy(options.strategy)) {
-				throw new Error(`strategy option is not valid`)
-			}
-			this.strategy = options.strategy
-		}
 		if (isPlainObject(options.sessions)) {
 			const s = options.sessions
 			if (s.autoTrack === false) {
@@ -84,6 +82,74 @@ class Options {
 					this.sessions.autoTrack = false
 				}
 			}
+		}
+	}
+
+	// load loads the settings from the provided URL, and then calls the
+	// callback when the settings have been loaded. If an error occurs and
+	// canRetry is true, it retries one more time after a random delay between
+	// 10 and 100 milliseconds.
+	#load(writeKey, endpoint, canRetry, callback) {
+		const retry = (error, status) => {
+			if (canRetry) {
+				const delay = Math.floor(Math.random() * 91) + 10
+				setTimeout(() => this.#load(writeKey, endpoint, false, callback), delay)
+			} else if (error != null) {
+				console.log(`An error occurred while loading the endpoint URL ${endpoint}: ${error.message}`)
+			} else {
+				console.log(`The request to ${endpoint} encountered an unexpected HTTP status code: ${status}.`)
+			}
+		}
+		const receive = (error, status, text) => {
+			if (error != null || (status !== 200 && status !== 404)) {
+				retry(error, status)
+				return
+			}
+			if (status === 404) {
+				const msg = text === 'error: invalid write key'
+					? `The specified write key '${writeKey}' is invalid.`
+					: `The specified endpoint URL '${endpoint}' does not exist.`
+				console.log(msg)
+				return
+			}
+			try {
+				const s = JSON.parse(text)
+				if (typeof s !== 'object' || s == null || !isStrategy(s.strategy)) {
+					throw null
+				}
+				this.strategy = s.strategy
+			} catch {
+				console.log(`The response body from the endpoint URL '${endpoint}' is invalid.`)
+				return
+			}
+			if (callback != null) {
+				callback()
+			}
+		}
+		const url = `${endpoint}connection/${encodeURIComponent(writeKey)}/settings`
+		if (globalThis.fetch && typeof globalThis.fetch === 'function') {
+			fetch(url)
+				.then((response) => {
+					// Read the body if the status is 200 or 400.
+					if (response.status === 200 || response.status === 404) {
+						response.text()
+							.then((text) => receive(null, response.status, text))
+							.catch((error) => receive(error))
+					} else {
+						receive(null, response.status)
+					}
+				})
+				.catch((error) => receive(error))
+		} else {
+			const xhr = new XMLHttpRequest()
+			xhr.open('GET', url, true)
+			xhr.onerror = (error) => receive(error)
+			xhr.onreadystatechange = () => {
+				if (xhr.readyState === 4) {
+					receive(null, xhr.status, xhr.responseText)
+				}
+			}
+			xhr.send()
 		}
 	}
 }
@@ -125,3 +191,4 @@ function isStrategy(s) {
 }
 
 export default Options
+export { isStrategy, Options }

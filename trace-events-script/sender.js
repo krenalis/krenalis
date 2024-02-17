@@ -17,7 +17,7 @@ class Sender {
 	constructor(writeKey, endpoint, debug) {
 		this.#queue = new Queue(localStorage, 'chichi_queue', MaxEventSize, debug)
 		this.#writeKey = JSON.stringify(writeKey)
-		this.#endpoint = endpoint
+		this.#endpoint = endpoint + 'batch'
 		this.debug(debug)
 		this.#post = this.#postFunc()
 		onVisibilityChange((visible) => {

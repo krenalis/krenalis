@@ -1,10 +1,7 @@
 import { assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
-import Analytics from './analytics.js'
-
-const DEBUG = false
-
-const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
-const endpoint = 'https://example.com/api/v1/batch'
+import Options from './options.js'
+import Storage from './storage.js'
+import Group from './group.js'
 
 Deno.test('Group', () => {
 	localStorage.clear()
@@ -13,16 +10,15 @@ Deno.test('Group', () => {
 		addEventListener: addEventListener.bind(globalThis),
 	}
 
-	const a = new Analytics(writeKey, endpoint)
-	a.debug(DEBUG)
+	const group = new Group(new Storage(new Options().storage))
 
-	assertEquals(a.group().id(), null)
-	assertEquals(a.group().traits(), {})
+	assertEquals(group.id(), null)
+	assertEquals(group.traits(), {})
 
-	assertEquals(a.group().id('acme'), 'acme')
-	assertEquals(a.group().id(), 'acme')
-	assertEquals(a.group().id(null), null)
-	assertEquals(a.group().id(), null)
+	assertEquals(group.id('acme'), 'acme')
+	assertEquals(group.id(), 'acme')
+	assertEquals(group.id(null), null)
+	assertEquals(group.id(), null)
 
 	const rec = {}
 	rec.boo = rec
@@ -43,7 +39,7 @@ Deno.test('Group', () => {
 
 	for (let i = 0; i < changes.length; i++) {
 		const change = changes[i]
-		assertEquals(a.group().traits(change.set), change.expect)
-		assertEquals(a.group().traits(), change.expect)
+		assertEquals(group.traits(change.set), change.expect)
+		assertEquals(group.traits(), change.expect)
 	}
 })

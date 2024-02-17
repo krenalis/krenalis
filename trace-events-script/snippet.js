@@ -41,6 +41,6 @@
 			}
 		})(methods[i])
 	}
-	a.load('kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc', 'https://localhost:9090/api/v1/batch')
+	a.load('kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc', 'https://localhost:9090/api/v1/')
 	a.page()
 })()
