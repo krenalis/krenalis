@@ -8,7 +8,6 @@ import User from './user.js'
 
 const version = '0.0.0'
 const none = () => {}
-const supportPromise = typeof globalThis.Promise === 'function'
 
 class EndpointURLError extends Error {
 	constructor(endpoint) {
@@ -18,12 +17,11 @@ class EndpointURLError extends Error {
 }
 
 class Analytics {
+	#ready
 	#options
 	#storage
 	#session
 	#sender
-	#isReady = false
-	#onReady
 	#user
 	#group
 
@@ -38,15 +36,8 @@ class Analytics {
 		if (endpoint.slice(-1) !== '/') {
 			endpoint += '/'
 		}
-		this.#options = new Options(writeKey, endpoint, options, () => {
-			this.#isReady = true
-			if (this.#onReady) {
-				for (let i = 0; i < this.#onReady.length; i++) {
-					setTimeout(this.#onReady[i])
-				}
-				this.#onReady = undefined
-			}
-		})
+		this.#ready = new ready()
+		this.#options = new Options(writeKey, endpoint, options, (error) => this.#ready.emit(error))
 		this.#storage = new Storage(this.#options.storage)
 		this.#session = new Session(
 			this.#storage,
@@ -122,26 +113,15 @@ class Analytics {
 		return this.#send('page', this.#setPageScreenArguments, arguments)
 	}
 
-	// ready calls callback after Analytics finishes initializing. If promises
-	// are supported, it also returns a promise.
+	// ready calls callback, if not null, after Analytics finishes initializing.
+	// If promises are supported, it also returns a promise.
 	ready(callback) {
-		if (this.#isReady) {
-			if (callback !== undefined) {
-				setTimeout(callback)
-			}
-		} else {
-			this.#onReady = this.#onReady || []
-			if (callback !== undefined) {
-				this.#onReady.push(callback)
-			}
+		if (callback != null) {
+			this.#ready.addListener(callback)
 		}
-		if (supportPromise) {
-			return new Promise((resolve) => {
-				if (this.#isReady) {
-					setTimeout(resolve)
-				} else {
-					this.#onReady.push(resolve)
-				}
+		if (typeof globalThis.Promise === 'function') {
+			return new Promise((resolve, reject) => {
+				this.#ready.addListener(resolve, reject)
 			})
 		}
 	}
@@ -238,7 +218,7 @@ class Analytics {
 			}
 			resolve({ attempts: 1, event: event })
 		}
-		if (supportPromise) {
+		if (typeof globalThis.Promise === 'function') {
 			return new Promise(executor)
 		}
 		executor(none, none)
@@ -607,6 +587,35 @@ class Analytics {
 	// setUserId sets the userId with id.
 	#setUserId(data, id) {
 		data.userId = this.#user.id(id !== null ? id : undefined)
+	}
+}
+
+// ready handles the event that is fired when Analytics finishes initializing.
+class ready {
+	#emitted = false
+	#listeners = []
+	#error
+	addListener(resolve, reject) {
+		this.#listeners.push([resolve, reject])
+		if (this.#emitted) {
+			this.#notify()
+		}
+	}
+	emit(error) {
+		this.#emitted = true
+		this.#error = error
+		this.#notify()
+	}
+	#notify() {
+		for (let i = 0; i < this.#listeners.length; i++) {
+			const [resolve, reject] = this.#listeners[i]
+			if (this.#error == null || reject == null) {
+				setTimeout(resolve)
+			} else {
+				setTimeout(reject, 0, this.#error)
+			}
+		}
+		this.#listeners.length = 0
 	}
 }
 

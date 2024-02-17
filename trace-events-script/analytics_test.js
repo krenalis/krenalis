@@ -59,115 +59,98 @@ Deno.test('Analytics', async (t) => {
 		globalThis.devicePixelRatio = 1.25
 	}
 
+	const _Promise = globalThis.Promise
+
 	const minute = 60 * 1000
 	const thirtyMinutes = 30 * minute
 	const fiveMinutes = 5 * minute
 
-	// newAnalytics returns a new instance of Analytics, waiting for it to
-	// become ready. If a delay is provided, it returns immediately, and the
-	// returned Analytics instance will become ready only after delay
-	// milliseconds.
+	// newAnalytics returns a new instance of Analytics. However, the returned
+	// instance is not immediately ready; it becomes ready after a delay of
+	// 'latency' milliseconds.
 	//
-	// If the time is fake when newAnalytics is called, provide a delay and
-	// invoke time.tick(delay) to ensure that the returned Analytics instance
-	// becomes ready. Provide a 0 delay and call time.next() to not advance to
-	// time.
-	async function newAnalytics(options, strategy, delay) {
+	// To wait until it's ready, call the 'ready' method and await the returned
+	// promise. If using fake time, you can advance the time by calling
+	// time.tick(latency), or alternatively, call time.next() to avoid advancing
+	// the fake time.
+	function newAnalytics(options, strategy, latency) {
 		const fetch = globalThis.fetch
 		globalThis.fetch = function () {
-			return new Promise(function (resolve) {
+			return new _Promise(function (resolve) {
 				const body = JSON.stringify({ strategy: strategy || 'AB-C' })
 				const response = new Response(body, {
 					status: 200,
 					statusText: 'OK',
 					headers: new Headers({ 'content-type': 'text/javascript' }),
 				})
-				if (delay == null) {
-					resolve(response)
-				} else {
-					setTimeout(resolve, delay, response)
-				}
+				setTimeout(resolve, latency || 0, response)
 			})
 		}
 		localStorage.clear()
+		if (DEBUG) {
+			if (options == null) {
+				options = {}
+			}
+			options.debug = true
+		}
 		try {
-			if (DEBUG) {
-				if (options == null) {
-					options = {}
-				}
-				options.debug = true
-			}
-			const analytics = new Analytics(writeKey, endpoint, options)
-			analytics.debug(DEBUG)
-			if (delay == null) {
-				await new Promise((resolve) => {
-					analytics.ready(resolve)
-				})
-			}
-			return analytics
+			return new Analytics(writeKey, endpoint, options)
 		} finally {
 			globalThis.fetch = fetch
 		}
 	}
 
 	await t.step('ready, when Promise is not supported', async () => {
-		let ready1, ready2
-		let p1 = new Promise((resolve) => {
-			ready1 = resolve
-		})
-		let p2 = new Promise((resolve) => {
-			ready2 = resolve
-		})
-		const originalPromise = globalThis.Promise
+		globalThis.Promise = null
 		try {
-			const a = await newAnalytics()
-			void a.ready(() => {
-				ready1()
+			const a = newAnalytics()
+			// Before Analytics is ready.
+			let cb
+			let promise = new _Promise((resolve) => {
+				cb = resolve
 			})
-			void a.ready(() => {
-				ready2()
+			void a.ready(cb)
+			let cb2
+			const promise2 = new _Promise((resolve) => {
+				cb2 = resolve
 			})
-			await p1
-			await p2
-			p1 = new Promise((resolve) => {
-				ready1 = resolve
+			void a.ready(cb2)
+			await promise
+			await promise2
+			// After Analytics is ready.
+			promise = new _Promise((resolve) => {
+				cb = resolve
 			})
-			p2 = new Promise((resolve) => {
-				ready2 = resolve
-			})
-			void a.ready(() => {
-				ready1()
-			})
-			void a.ready(() => {
-				ready2()
-			})
-			await p1
-			await p2
+			void a.ready(cb)
+			await promise
 		} finally {
-			globalThis.Promise = originalPromise
+			globalThis.Promise = _Promise
 		}
 	})
 
 	await t.step('ready, when Promise is supported', async () => {
-		let ready
-		const p = new Promise((resolve) => {
-			ready = resolve
+		const a = newAnalytics()
+		// Before Analytics is ready.
+		await a.ready()
+		// After Analytics is ready.
+		await a.ready()
+		// With a callback.
+		let callback
+		const promise = new Promise((resolve) => {
+			callback = resolve
 		})
-		const a = await newAnalytics(null, null, 10)
-		await a.ready(() => {
-			ready()
-		})
-		await p
+		void a.ready(callback)
+		await promise
 	})
 
-	await t.step('no key is created in the localStorage', async () => {
-		await newAnalytics({ sessions: { autoTrack: false } })
+	await t.step('no key is created in the localStorage', () => {
+		newAnalytics({ sessions: { autoTrack: false } })
 		assertEquals(localStorage.length, 0)
 	})
 
 	await t.step('reset function', async () => {
 		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
-		const a = await newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
+		const a = newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
 		a.startSession(137206)
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7')
 		const time = new FakeTime()
@@ -186,8 +169,8 @@ Deno.test('Analytics', async (t) => {
 		assertEquals(localStorage.length, 0)
 	})
 
-	await t.step('getAnonymousId function', async () => {
-		const a = await newAnalytics()
+	await t.step('getAnonymousId function', () => {
+		const a = newAnalytics()
 		assert(uuid.validate(a.getAnonymousId()))
 		a.setAnonymousId('f5d354ed')
 		assertEquals(a.getAnonymousId(), 'f5d354ed')
@@ -199,8 +182,8 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.getAnonymousId()))
 	})
 
-	await t.step('setAnonymousId function', async () => {
-		const a = await newAnalytics()
+	await t.step('setAnonymousId function', () => {
+		const a = newAnalytics()
 		assert(uuid.validate(a.setAnonymousId()))
 		const anonymousId = 'f5d354ed'
 		assertEquals(a.setAnonymousId(anonymousId), anonymousId)
@@ -213,14 +196,13 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.setAnonymousId()))
 	})
 
-	await t.step('sessions with auto tracking', async () => {
+	await t.step('sessions with auto tracking', () => {
 		const time = new FakeTime()
-		let sessionId = getTime()
-		const a = await newAnalytics(null, null, 10)
-		time.tick(10)
 		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		fetch.install()
 		try {
+			const a = newAnalytics()
+			let sessionId = getTime()
 			assertEquals(a.getSessionId(), sessionId)
 			time.tick(fiveMinutes)
 			assertEquals(a.getSessionId(), sessionId)
@@ -281,7 +263,8 @@ Deno.test('Analytics', async (t) => {
 	for (const strategy of ['ABC', 'AB-C', 'A-B-C', 'AC-B']) {
 		for (const autoTrack of [true, false]) {
 			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
-				const a = await newAnalytics({ sessions: { autoTrack } }, strategy)
+				const a = newAnalytics({ sessions: { autoTrack } }, strategy)
+				await a.ready()
 
 				const time = new FakeTime()
 				const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
@@ -388,10 +371,10 @@ Deno.test('Analytics', async (t) => {
 	}
 
 	await t.step('changing User ID, resets traits and Anonymous ID', async () => {
-		const a = await newAnalytics({ sessions: { autoTrack: false } })
 		const time = new FakeTime()
 		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		fetch.install()
+		const a = newAnalytics({ sessions: { autoTrack: false } })
 		try {
 			a.user().id('274084295')
 			a.user().traits({ first_name: 'Susan' })

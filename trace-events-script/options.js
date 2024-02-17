@@ -1,4 +1,4 @@
-import { isPlainObject } from './utils.js'
+import { debug, isPlainObject } from './utils.js'
 
 const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
 const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
@@ -22,66 +22,65 @@ class Options {
 	strategy = 'AB-C'
 
 	constructor(writeKey, endpoint, options, ready) {
+		if (options != null) {
+			if (options.debug != null) {
+				this.debug = !!options.debug
+			}
+			if (options.sameDomainCookiesOnly) {
+				this.storage.cookie.domain = ''
+			}
+			if (isSameSite(options.sameSiteCookie)) {
+				this.storage.cookie.sameSite = options.sameSiteCookie.toLowerCase()
+			}
+			if (options.secureCookie) {
+				this.storage.cookie.secure = !!options.secureCookie
+			}
+			if (isDomainName(options.setCookieDomain)) {
+				this.storage.cookie.domain = options.setCookieDomain
+			}
+			if (isPlainObject(options.storage)) {
+				// 'storage.cookie' overwrites 'sameDomainCookiesOnly', 'sameSiteCookie', 'secureCookie', and 'setCookieDomain' options.
+				const cookie = options.storage.cookie
+				if (isPlainObject(cookie)) {
+					if (cookie.domain === '' || isDomainName(cookie.domain)) {
+						this.storage.cookie.domain = cookie.domain
+					}
+					const maxAge = asPositiveFiniteNumber(cookie.maxage)
+					if (maxAge != null) {
+						this.storage.cookie.maxAge = maxAge
+					}
+					if (canBeUsedAsCookiePath(cookie.path)) {
+						this.storage.cookie.path = cookie.path
+					}
+					if (isSameSite(cookie.samesite)) {
+						this.storage.cookie.sameSite = cookie.samesite.toLowerCase()
+					}
+					if ('secure' in cookie) {
+						this.storage.cookie.secure = !!cookie.secure
+					}
+				}
+				if (isStorage(options.storage.type)) {
+					this.storage.type = options.storage.type
+				}
+			}
+			if (isPlainObject(options.sessions)) {
+				const s = options.sessions
+				if (s.autoTrack === false) {
+					this.sessions.autoTrack = false
+				}
+				const timeout = Number(s.timeout)
+				if (!isNaN(timeout)) {
+					if (s.timeout > 0) {
+						this.sessions.timeout = timeout
+					} else {
+						this.sessions.autoTrack = false
+					}
+				}
+			}
+		}
 		// Asynchronously load settings from the endpoint.
 		if (writeKey != null) {
 			this.#load(writeKey, endpoint, true, ready)
-		}
-		if (options == null) {
-			return
-		}
-		if (options.debug != null) {
-			this.debug = !!options.debug
-		}
-		if (options.sameDomainCookiesOnly) {
-			this.storage.cookie.domain = ''
-		}
-		if (isSameSite(options.sameSiteCookie)) {
-			this.storage.cookie.sameSite = options.sameSiteCookie.toLowerCase()
-		}
-		if (options.secureCookie) {
-			this.storage.cookie.secure = !!options.secureCookie
-		}
-		if (isDomainName(options.setCookieDomain)) {
-			this.storage.cookie.domain = options.setCookieDomain
-		}
-		if (isPlainObject(options.storage)) {
-			// 'storage.cookie' overwrites 'sameDomainCookiesOnly', 'sameSiteCookie', 'secureCookie', and 'setCookieDomain' options.
-			const cookie = options.storage.cookie
-			if (isPlainObject(cookie)) {
-				if (cookie.domain === '' || isDomainName(cookie.domain)) {
-					this.storage.cookie.domain = cookie.domain
-				}
-				const maxAge = asPositiveFiniteNumber(cookie.maxage)
-				if (maxAge != null) {
-					this.storage.cookie.maxAge = maxAge
-				}
-				if (canBeUsedAsCookiePath(cookie.path)) {
-					this.storage.cookie.path = cookie.path
-				}
-				if (isSameSite(cookie.samesite)) {
-					this.storage.cookie.sameSite = cookie.samesite.toLowerCase()
-				}
-				if ('secure' in cookie) {
-					this.storage.cookie.secure = !!cookie.secure
-				}
-			}
-			if (isStorage(options.storage.type)) {
-				this.storage.type = options.storage.type
-			}
-		}
-		if (isPlainObject(options.sessions)) {
-			const s = options.sessions
-			if (s.autoTrack === false) {
-				this.sessions.autoTrack = false
-			}
-			const timeout = Number(s.timeout)
-			if (!isNaN(timeout)) {
-				if (s.timeout > 0) {
-					this.sessions.timeout = timeout
-				} else {
-					this.sessions.autoTrack = false
-				}
-			}
 		}
 	}
 
@@ -100,20 +99,21 @@ class Options {
 				console.log(`The request to ${endpoint} encountered an unexpected HTTP status code: ${status}.`)
 			}
 		}
-		const receive = (error, status, text) => {
+		const receive = (error, status, body) => {
+			debug(this.debug)?.('received endpoint response: error =', error, ', status =', status + ', body =', body)
 			if (error != null || (status !== 200 && status !== 404)) {
 				retry(error, status)
 				return
 			}
 			if (status === 404) {
-				const msg = text === 'error: invalid write key'
+				const msg = body === 'error: invalid write key'
 					? `The specified write key '${writeKey}' is invalid.`
 					: `The specified endpoint URL '${endpoint}' does not exist.`
-				console.log(msg)
+				log(msg)
 				return
 			}
 			try {
-				const s = JSON.parse(text)
+				const s = JSON.parse(body)
 				if (typeof s !== 'object' || s == null || !isStrategy(s.strategy)) {
 					throw null
 				}
@@ -133,7 +133,7 @@ class Options {
 					// Read the body if the status is 200 or 400.
 					if (response.status === 200 || response.status === 404) {
 						response.text()
-							.then((text) => receive(null, response.status, text))
+							.then((body) => receive(null, response.status, body))
 							.catch((error) => receive(error))
 					} else {
 						receive(null, response.status)
