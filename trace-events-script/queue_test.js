@@ -96,10 +96,10 @@ Deno.test('Queue', () => {
 
 	// A corrupted persisted queue does not break Queue.
 	localStorage.setItem('queue', '....')
-	q = new Queue(maxItemBytes, DEBUG)
+	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	assertEmpty()
 	localStorage.setItem('queue', '{}\n[}\n{}\n123\n123\n123\n2\n')
-	q = new Queue(maxItemBytes, DEBUG)
+	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	assertEmpty()
 	q.close()
 
