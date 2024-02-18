@@ -5,6 +5,8 @@ import Session from './session.js'
 
 const DEBUG = false
 
+const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
+
 Deno.test('Session', async (t) => {
 	const fiveMinutes = 5 * 60 * 1000
 	const tenMinutes = 2 * fiveMinutes
@@ -25,7 +27,7 @@ Deno.test('Session', async (t) => {
 		localStorage.clear()
 		const time = new FakeTime()
 
-		const storage = new Storage({ type: 'localStorage' })
+		const storage = new Storage(writeKey, { type: 'localStorage' })
 		session = new Session(storage, false, tenMinutes)
 		session.debug(DEBUG)
 
@@ -64,7 +66,7 @@ Deno.test('Session', async (t) => {
 
 		const startedAt = new Date().getTime()
 
-		const storage = new Storage({ type: 'localStorage' })
+		const storage = new Storage(writeKey, { type: 'localStorage' })
 		session = new Session(storage, true, tenMinutes)
 		session.debug(DEBUG)
 

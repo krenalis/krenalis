@@ -15,7 +15,8 @@ class Sender {
 	#debug
 
 	constructor(writeKey, endpoint, debug) {
-		this.#queue = new Queue(localStorage, 'chichi_queue', MaxEventSize, debug)
+		const queueKey = `chichi.${writeKey.slice(0, 7)}.queue`
+		this.#queue = new Queue(localStorage, queueKey, MaxEventSize, debug)
 		this.#writeKey = JSON.stringify(writeKey)
 		this.#endpoint = endpoint + 'batch'
 		this.debug(debug)

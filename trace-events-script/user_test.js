@@ -4,6 +4,8 @@ import Storage from './storage.js'
 import User from './user.js'
 import Options from './options.js'
 
+const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
+
 Deno.test('User', () => {
 	localStorage.clear()
 	globalThis.document = {
@@ -11,7 +13,7 @@ Deno.test('User', () => {
 		addEventListener: addEventListener.bind(globalThis),
 	}
 
-	const user = new User(new Storage(new Options().storage))
+	const user = new User(new Storage(writeKey, new Options().storage))
 
 	assertEquals(user.id(), null)
 	assert(uuid.validate(user.anonymousId()))

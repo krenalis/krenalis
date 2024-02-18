@@ -165,7 +165,7 @@ Deno.test('Analytics', async (t) => {
 			time.restore()
 		}
 		a.reset()
-		localStorage.removeItem('chichi_queue')
+		localStorage.removeItem('chichi.rq6JJg5.queue')
 		assertEquals(localStorage.length, 0)
 	})
 

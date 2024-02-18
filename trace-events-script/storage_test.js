@@ -3,12 +3,13 @@ import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts'
 import * as fake from './test_fake.js'
 import Storage, { base64Storage, cookieStorage, memoryStorage, multiStorage, noStorage, webStorage } from './storage.js'
 
+const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
 const oneYear = 365 * 24 * 60 * 60 * 1000
 
 Deno.test('Storage', () => {
 	localStorage.clear()
 
-	const storage = new Storage({ type: 'localStorage' })
+	const storage = new Storage(writeKey, { type: 'localStorage' })
 
 	function expectAnonymousId(id) {
 		assertEquals(storage.anonymousId(), id)

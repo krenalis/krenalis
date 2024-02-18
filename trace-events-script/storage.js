@@ -4,9 +4,22 @@ const storageNotSupported = new Error('storage is not supported')
 const warnMsg = 'Analytics: cannot stringify traits'
 
 class Storage {
+	#key
 	#storage
 
-	constructor(options) {
+	constructor(writeKey, options) {
+		const prefix = `chichi.${writeKey.slice(0, 7)}.`
+		this.#key = {
+			anonymousId: prefix + 'anonymousId',
+			userId: prefix + 'userId',
+			groupId: prefix + 'groupId',
+			traits: {
+				user: prefix + 'userTraits',
+				group: prefix + 'groupTraits',
+			},
+			session: prefix + 'session',
+			suspended: prefix + 'suspended',
+		}
 		let storage
 		const tryStorage = (newStorage) => {
 			try {
@@ -53,20 +66,20 @@ class Storage {
 	}
 
 	anonymousId() {
-		return this.#storage.get('chichi_anonymous_id')
+		return this.#storage.get(this.#key.anonymousId)
 	}
 
 	groupId() {
-		return this.#storage.get('chichi_group_id')
+		return this.#storage.get(this.#key.groupId)
 	}
 
 	removeSuspended() {
-		this.#storage.delete('chichi_suspended')
+		this.#storage.delete(this.#key.suspended)
 	}
 
 	restore() {
 		let session, anonymousId, userTraits, groupId, groupTraits
-		const suspended = this.#storage.get('chichi_suspended')
+		const suspended = this.#storage.get(this.#key.suspended)
 		if (suspended != null) {
 			;[session, anonymousId, userTraits, groupId, groupTraits] = JSON.parse(suspended)
 		}
@@ -78,11 +91,11 @@ class Storage {
 		this.setTraits('user', userTraits)
 		this.setGroupId(groupId)
 		this.setTraits('group', groupTraits)
-		this.#storage.delete('chichi_suspended')
+		this.#storage.delete(this.#key.suspended)
 	}
 
 	session() {
-		const session = this.#storage.get('chichi_session')
+		const session = this.#storage.get(this.#key.session)
 		if (session == null) {
 			return [null, 0, false]
 		}
@@ -90,7 +103,7 @@ class Storage {
 	}
 
 	traits(kind) {
-		const traits = this.#storage.get(`chichi_${kind}_traits`)
+		const traits = this.#storage.get(this.#key.traits[kind])
 		if (traits == null) {
 			return {}
 		}
@@ -99,26 +112,26 @@ class Storage {
 
 	setAnonymousId(id) {
 		if (id == null) {
-			this.#storage.delete('chichi_anonymous_id')
+			this.#storage.delete(this.#key.anonymousId)
 			return
 		}
-		this.#storage.set('chichi_anonymous_id', id)
+		this.#storage.set(this.#key.anonymousId, id)
 	}
 
 	setGroupId(id) {
 		if (id == null) {
-			this.#storage.delete('chichi_group_id')
+			this.#storage.delete(this.#key.groupId)
 			return
 		}
-		this.#storage.set('chichi_group_id', id)
+		this.#storage.set(this.#key.groupId, id)
 	}
 
 	setSession(id, expiration, start) {
 		if (id == null) {
-			this.#storage.delete('chichi_session')
+			this.#storage.delete(this.#key.session)
 			return
 		}
-		this.#storage.set('chichi_session', JSON.stringify([id, expiration, start]))
+		this.#storage.set(this.#key.session, JSON.stringify([id, expiration, start]))
 	}
 
 	setTraits(kind, traits) {
@@ -126,7 +139,7 @@ class Storage {
 			throw new Error('kind is ' + (typeof kind))
 		}
 		if (traits == null) {
-			this.#storage.delete(`chichi_${kind}_traits`)
+			this.#storage.delete(this.#key.traits[kind])
 			return
 		}
 		const type = typeof traits
@@ -145,14 +158,14 @@ class Storage {
 			console.warn(`${warnMsg}: ${error.message}`)
 			return
 		}
-		this.#storage.set(`chichi_${kind}_traits`, value)
+		this.#storage.set(this.#key.traits[kind], value)
 	}
 
 	setUserId(id) {
 		if (id == null) {
-			this.#storage.delete('chichi_user_id')
+			this.#storage.delete(this.#key.userId)
 		} else {
-			this.#storage.set('chichi_user_id', id)
+			this.#storage.set(this.#key.userId, id)
 		}
 	}
 
@@ -163,11 +176,11 @@ class Storage {
 		const groupId = this.groupId()
 		const groupTraits = this.traits('group')
 		const suspended = [session, anonymousId, userTraits, groupId, groupTraits]
-		this.#storage.set('chichi_suspended', JSON.stringify(suspended))
+		this.#storage.set(this.#key.suspended, JSON.stringify(suspended))
 	}
 
 	userId() {
-		return this.#storage.get('chichi_user_id')
+		return this.#storage.get(this.#key.userId)
 	}
 }
 

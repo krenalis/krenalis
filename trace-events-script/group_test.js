@@ -3,6 +3,8 @@ import Options from './options.js'
 import Storage from './storage.js'
 import Group from './group.js'
 
+const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
+
 Deno.test('Group', () => {
 	localStorage.clear()
 	globalThis.document = {
@@ -10,7 +12,7 @@ Deno.test('Group', () => {
 		addEventListener: addEventListener.bind(globalThis),
 	}
 
-	const group = new Group(new Storage(new Options().storage))
+	const group = new Group(new Storage(writeKey, new Options().storage))
 
 	assertEquals(group.id(), null)
 	assertEquals(group.traits(), {})
