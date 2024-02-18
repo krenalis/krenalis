@@ -26,6 +26,16 @@ function campaign() {
 	return campaign
 }
 
+// debug returns a logging function for debug messages if 'on' is true;
+// otherwise, it returns undefined.
+function debug(on) {
+	if (on) {
+		return (...msg) => {
+			console.debug('%c chichi ', 'background:#606060;color:#eee', `[${getTime()}]`, ...msg)
+		}
+	}
+}
+
 const textDecoder = typeof globalThis.TextDecoder === 'function' ? new globalThis.TextDecoder() : null
 const textEncoder = typeof globalThis.TextEncoder === 'function' ? new globalThis.TextEncoder() : null
 
@@ -102,14 +112,9 @@ function isURL(url) {
 	return a.href !== '' && a.hostname !== ''
 }
 
-// debug returns a logging function for debug messages if 'on' is true;
-// otherwise, it returns undefined.
-function debug(on) {
-	if (on) {
-		return (...msg) => {
-			console.log(`[${getTime()}]`, ...msg)
-		}
-	}
+// log returns a logging function for log error messages on the console.
+function log(...msg) {
+	console.error('%c chichi ', 'background:#dc362e;color:#dcdcdc', ...msg)
 }
 
 // onVisibilityChange calls cb when the browser shows or hides the current page.
@@ -180,6 +185,7 @@ export {
 	getTime,
 	isPlainObject,
 	isURL,
+	log,
 	onVisibilityChange,
 	uuid,
 }

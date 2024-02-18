@@ -1,4 +1,4 @@
-import { debug, isPlainObject } from './utils.js'
+import { debug, isPlainObject, log } from './utils.js'
 
 const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
 const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
@@ -94,9 +94,9 @@ class Options {
 				const delay = Math.floor(Math.random() * 91) + 10
 				setTimeout(() => this.#load(writeKey, endpoint, false, callback), delay)
 			} else if (error != null) {
-				console.log(`An error occurred while loading the endpoint URL ${endpoint}: ${error.message}`)
+				log(`An error occurred while loading the endpoint URL ${endpoint}: ${error.message}`)
 			} else {
-				console.log(`The request to ${endpoint} encountered an unexpected HTTP status code: ${status}.`)
+				log(`The request to ${endpoint} encountered an unexpected HTTP status code: ${status}.`)
 			}
 		}
 		const receive = (error, status, body) => {
@@ -119,7 +119,7 @@ class Options {
 				}
 				this.strategy = s.strategy
 			} catch {
-				console.log(`The response body from the endpoint URL '${endpoint}' is invalid.`)
+				log(`The response body from the endpoint URL '${endpoint}' is invalid.`)
 				return
 			}
 			if (callback != null) {
