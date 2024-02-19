@@ -1,3 +1,5 @@
+const isIE = !globalThis.ActiveXObject && 'ActiveXObject' in globalThis
+
 // campaign returns an object with the UTM parameters of the campaign, or it returns undefined if there are none.
 function campaign() {
 	let campaign
@@ -30,6 +32,11 @@ function campaign() {
 // otherwise, it returns undefined.
 function debug(on) {
 	if (on) {
+		if (isIE) {
+			return (...msg) => {
+				console.debug(`[${getTime()}] chichi:`, ...msg)
+			}
+		}
 		return (...msg) => {
 			console.debug('%c chichi ', 'background:#606060;color:#eee', `[${getTime()}]`, ...msg)
 		}
@@ -114,6 +121,9 @@ function isURL(url) {
 
 // log returns a logging function for log error messages on the console.
 function log(...msg) {
+	if (isIE) {
+		console.error('chichi:', ...msg)
+	}
 	console.error('%c chichi ', 'background:#dc362e;color:#dcdcdc', ...msg)
 }
 
