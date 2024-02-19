@@ -37,7 +37,7 @@ func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.Recor
 		return nil, 0, errors.New("invalid ID type")
 	}
 	if query.ID.Type.Kind() != types.IntKind {
-		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/419.
+		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/555.
 		return nil, 0, fmt.Errorf("expecting ID with Int kind, got %s", query.ID.Type.Kind())
 	}
 	if len(query.Properties) == 0 {
