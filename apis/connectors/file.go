@@ -581,9 +581,11 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		col, err := businessIDFromSchema(fileSchema, rw.businessID.name)
 		if err != nil {
 			slog.Warn("cannot determine the Business ID column", "err", err)
+			rw.businessID.name = ""
+		} else {
+			rw.businessID.column = col
+			rw.businessID.index = columnIndex[col.Name]
 		}
-		rw.businessID.column = col
-		rw.businessID.index = columnIndex[col.Name]
 	}
 	// Check that the schema, if valid, is compatible with the file's schema.
 	if rw.schema.Valid() {
