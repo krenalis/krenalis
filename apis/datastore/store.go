@@ -165,19 +165,17 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		connections[i] = c.ID
 	}
 
-	// TODO(Gianluca): should the users / users_identities schema be handled by
-	// Chichi, or internally by the data warehouse? See the issue
-	// https://github.com/open2b/chichi/issues/392.
+	// Retrieve the "users_identities" schema.
 	schemas, err := store.Schemas(ctx)
 	if err != nil {
 		return err
 	}
-
-	// Determine the identifiers properties.
 	usersIdentities, ok := schemas["users_identities"]
 	if !ok {
 		return errors.New("missing 'users_identities' schema")
 	}
+
+	// Determine the identifiers properties.
 	identifiers := make([]types.Property, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
 		path := strings.Split(ident, ".")
