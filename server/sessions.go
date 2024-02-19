@@ -50,7 +50,6 @@ func (s *apisServer) removeSession(w http.ResponseWriter, r *http.Request) {
 		}
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
-	return
 }
 
 // getSession returns the session cookie from the request. If the request has no

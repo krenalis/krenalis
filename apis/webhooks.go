@@ -112,7 +112,6 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	return
 }
 
 var webhookPathReg = regexp.MustCompile(`^/webhook/([scr])/([^/]+)/`)

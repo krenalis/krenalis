@@ -64,7 +64,6 @@ func (log *eventsLog) Append(events []*collectedEvent) <-chan error {
 func (log *eventsLog) Close() {
 	log.close.cancelCtx()
 	log.close.Wait()
-	return
 }
 
 // Delivered sets the event, with identifier id, as delivered for the given

@@ -258,7 +258,6 @@ func (observer *Observer) RemoveListener(id string) {
 		observer.listeners = append(observer.listeners[:p], observer.listeners[p+1:]...)
 	}
 	observer.Unlock()
-	return
 }
 
 func (observer *Observer) flushStats(t time.Time) error {

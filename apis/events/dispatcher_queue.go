@@ -71,7 +71,6 @@ func (q *dispatcherQueue) Pop() *processedEvent {
 // Push pushes an event into the dispatcherQueue.
 func (q *dispatcherQueue) Push(event *processedEvent) {
 	q.events = append(q.events, event)
-	return
 }
 
 // compact compacts the dispatcherQueue.
