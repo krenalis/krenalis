@@ -123,6 +123,7 @@ function isURL(url) {
 function log(...msg) {
 	if (isIE) {
 		console.error('chichi:', ...msg)
+		return
 	}
 	console.error('%c chichi ', 'background:#dc362e;color:#dcdcdc', ...msg)
 }
