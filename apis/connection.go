@@ -1879,6 +1879,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 	// Validate the mapping.
 	var usedOutPaths []types.Path
+	var mappingInProperties int
 	if mapping := action.Transformation.Mapping; mapping != nil {
 		if len(mapping) == 0 {
 			return errors.BadRequest("transformation mapping must have mapped properties")
@@ -1893,7 +1894,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
-		usedInPaths = append(usedInPaths, transformer.Properties()...)
+		// Input properties.
+		inProps := transformer.Properties()
+		mappingInProperties = len(inProps)
+		usedInPaths = append(usedInPaths, inProps...)
+		// Output properties.
 		for m := range mapping {
 			path, err := types.ParsePropertyPath(m)
 			if err != nil {
@@ -2009,6 +2014,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	c := this.connection
 	connector := c.Connector()
+	eventBasedConn := connector.Type == state.MobileType ||
+		connector.Type == state.ServerType ||
+		connector.Type == state.WebsiteType
 
 	// In case of a source connection, since its actions write on the data
 	// warehouse, the output schema cannot contain meta properties because such
@@ -2197,36 +2205,43 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 	}
 
-	// Check if the mapping (or the transformation) is mandatory, and if the
-	// transformation is allowed.
-	var transformationIsMandatory bool
-	var functionIsAllowed bool
-	switch connector.Type {
-	case state.AppType:
-		if c.Role == state.Destination && target == state.Events {
-			functionIsAllowed = true
-		} else {
-			transformationIsMandatory = targetUsersOrGroups
-			functionIsAllowed = true
-		}
-	case state.MobileType, state.ServerType, state.WebsiteType:
-		transformationIsMandatory = targetUsersOrGroups
-		functionIsAllowed = false
-	case state.DatabaseType:
-		transformationIsMandatory = targetUsersOrGroups
-		functionIsAllowed = transformationIsMandatory
-	case state.FileType:
-		transformationIsMandatory = c.Role == state.Source && targetUsersOrGroups
-		functionIsAllowed = transformationIsMandatory
+	// Check the connections for which the transformation is prohibited.
+	transformationProhibited := (c.Role == state.Source && eventBasedConn && target == state.Events) ||
+		(c.Role == state.Destination && connector.Type == state.FileType && targetUsersOrGroups)
+	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
+	if transformationProhibited && haveTransformation {
+		return errors.BadRequest("action cannot have a transformation")
 	}
-	if transformationIsMandatory && action.Transformation.Mapping == nil && action.Transformation.Function == nil {
-		if functionIsAllowed {
-			return errors.BadRequest("transformation mapping or function is required")
+
+	// Check the connections for which the transformation function is
+	// prohibited.
+	if haveTransformation {
+		funcForbidden := c.Role == state.Source && eventBasedConn && targetUsersOrGroups
+		if funcForbidden && action.Transformation.Function != nil {
+			return errors.BadRequest("action cannot have a transformation function")
 		}
-		return errors.BadRequest("transformation mapping is required")
 	}
-	if !functionIsAllowed && action.Transformation.Function != nil {
-		return errors.BadRequest("transformation function is not allowed")
+
+	// Check if the transformation is mandatory, with at least one input
+	// property.
+	//
+	// For mappings, at least one property path must appear in the input
+	// expressions.
+	//
+	// For transformation functions, since every property of the input schema is
+	// passed to the function, the input schema must be valid (thus it must
+	// contain at least one property).
+	transformationMandatory := targetUsersOrGroups &&
+		(connector.Type == state.AppType || connector.Type == state.DatabaseType ||
+			(c.Role == state.Source && connector.Type == state.FileType))
+	if transformationMandatory && !haveTransformation {
+		return errors.BadRequest("action must have a transformation")
+	}
+	if action.Transformation.Mapping != nil && mappingInProperties == 0 {
+		return errors.BadRequest("transformation must map at least one property")
+	}
+	if action.Transformation.Function != nil && !inSchema.Valid() {
+		return errors.BadRequest("transformation function must have at least one input property")
 	}
 
 	// Ensure that every property in the input and output schemas have been used
