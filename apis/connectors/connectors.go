@@ -418,7 +418,7 @@ type webhookReceiver interface {
 func businessIDFromSchema(schema types.Type, businessIDName string) (types.Property, error) {
 	p, ok := schema.Property(businessIDName)
 	if !ok {
-		return types.Property{}, fmt.Errorf("the Business ID property %q cannot be found in app schema", businessIDName)
+		return types.Property{}, fmt.Errorf("the Business ID property %q not found in schema", businessIDName)
 	}
 	if !supportedTypeForBusinessID(p.Type) {
 		return types.Property{}, fmt.Errorf("the Business ID property %q has an unsupported type %s", businessIDName, p.Type)
