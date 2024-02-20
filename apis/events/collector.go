@@ -393,11 +393,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			source, _ = c.state.ConnectionByKey(writeKey)
 		}
 		if source == nil {
-			// Send a successful response to the client.
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Content-Length", "21")
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+			writeOK(w, origin)
 			return nil
 		}
 	}
@@ -428,11 +424,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if !c.state.HasEnabledActions(source) {
-		// Send a successful response to the client.
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", "21")
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+		writeOK(w, origin)
 		return nil
 	}
 
@@ -450,10 +442,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Send a successful response to the client.
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", "21")
-	w.Header().Set("Access-Control-Allow-Origin", origin)
-	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+	writeOK(w, origin)
 
 	// Store the events into the data warehouse.
 	c.storeEvents(source.Workspace().ID, events.Batch)
@@ -1065,4 +1054,12 @@ func collectHeader(r *http.Request) http.Header {
 	}
 	h.Add("Host", r.Host)
 	return h
+}
+
+// Send a successful response to the client.
+func writeOK(w http.ResponseWriter, origin string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", "21")
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 }
