@@ -516,19 +516,7 @@ func (err *SchemaError) Error() string {
 
 // CheckConformity checks whether the schema t1 conforms to the new schema t2
 // and returns a *SchemaError error if it does not conform.
-//
-// The conformity check must take into account:
-//
-// - the possibility that there exists a value of one type that is also a valid
-// value for another type, deferring the check to runtime with actual values;
-// otherwise, if this can never occur, the two types can be considered
-// non-conform.
-//
-// - the real user use case of modifying a column of a certain type in the
-// database
-//
-// - the impact of changing the type on the operation of the 'where' clause
-// (does it return errors? does it behave unexpectedly?)
+// It panics if a schema is not valid.
 func CheckConformity(name string, t1, t2 types.Type) error {
 	if t1.EqualTo(t2) {
 		return nil
