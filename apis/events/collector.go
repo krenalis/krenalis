@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -68,6 +69,7 @@ type collector struct {
 	eventLog    *eventsLog
 	events      chan *collectedEvent
 	observer    *Observer
+	messageIds  sync.Map
 	transformer transformers.Function
 	geoLiteDB   *geoip2.Reader
 }
@@ -81,6 +83,7 @@ func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog,
 		eventLog:    eventLog,
 		events:      make(chan *collectedEvent, 1000),
 		observer:    observer,
+		messageIds:  sync.Map{},
 		transformer: transformer,
 	}
 	var err error
@@ -377,6 +380,13 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return errBadRequest
 	}
 
+	// Discard duplicated events.
+	events.Batch = c.removeDuplicatedEvents(events.Batch)
+	if len(events.Batch) == 0 {
+		writeOK(w, origin)
+		return nil
+	}
+
 	// Validate the write key.
 	var source *state.Connection
 	{
@@ -393,6 +403,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			source, _ = c.state.ConnectionByKey(writeKey)
 		}
 		if source == nil {
+			c.setEventsAsReceived(events.Batch)
 			writeOK(w, origin)
 			return nil
 		}
@@ -414,6 +425,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			// Remove the invalid event.
 			events.Batch = slices.Delete(events.Batch, i, i+1)
+			c.setEventAsReceived(event)
 			i--
 			continue
 		}
@@ -424,6 +436,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if !c.state.HasEnabledActions(source) {
+		c.setEventsAsReceived(events.Batch)
 		writeOK(w, origin)
 		return nil
 	}
@@ -440,6 +453,9 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	if err = <-ack; err != nil {
 		return err
 	}
+
+	// Set the events as received.
+	c.setEventsAsReceived(events.Batch)
 
 	// Send a successful response to the client.
 	writeOK(w, origin)
@@ -886,6 +902,30 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 		event.Properties = map[string]any{}
 	}
 
+}
+
+// removeDuplicatedEvents removes duplicated events returning the modified
+// slice.
+func (c *collector) removeDuplicatedEvents(events []*collectedEvent) []*collectedEvent {
+	for i := 0; i < len(events); i++ {
+		if _, ok := c.messageIds.Load(events[i].MessageId); ok {
+			events = slices.Delete(events, i, i+1)
+			i--
+		}
+	}
+	return events
+}
+
+// setEventAsReceived sets the provided event as received.
+func (c *collector) setEventAsReceived(event *collectedEvent) {
+	c.messageIds.Store(event.MessageId, nil)
+}
+
+// setEventsAsReceived sets the provided events as received.
+func (c *collector) setEventsAsReceived(events []*collectedEvent) {
+	for i := 0; i < len(events); i++ {
+		c.messageIds.Store(events[i].MessageId, nil)
+	}
 }
 
 // storeEvents store the events in the data warehouse.
