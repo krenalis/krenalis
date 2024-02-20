@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -286,7 +287,12 @@ func (c *collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ctx := r.Context()
+
 	date := time.Now().UTC()
+	if y := date.Year(); y < 1 || y > 9999 {
+		slog.Error(fmt.Sprintf("detected a critical clock synchronization issue. Clock is %s", date.Format(time.RFC3339Nano)))
+		os.Exit(1)
+	}
 
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -855,16 +861,26 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	event.sentAt, err = iso8601.ParseString(event.SentAt)
 	if err != nil {
 		event.sentAt = event.header.ReceivedAt
+	} else {
+		event.sentAt = event.sentAt.UTC()
+		// The iso8601.ParseString function returns years >= 0.
+		if y := event.sentAt.Year(); y < 1 || y > 9999 {
+			event.sentAt = event.header.ReceivedAt
+		}
 	}
-	event.sentAt = event.sentAt.UTC()
 
 	// Timestamp.
 	event.timestamp, err = iso8601.ParseString(event.Timestamp)
 	if err != nil {
-		event.timestamp = event.sentAt
+		event.timestamp = event.header.ReceivedAt
+	} else {
+		skew := event.header.ReceivedAt.Sub(event.sentAt)
+		event.timestamp = event.timestamp.UTC().Add(skew)
+		// The iso8601.ParseString function returns years >= 0.
+		if y := event.timestamp.Year(); y < 1 || y > 9999 {
+			event.timestamp = event.header.ReceivedAt
+		}
 	}
-	skew := event.header.ReceivedAt.Sub(event.sentAt)
-	event.timestamp = event.timestamp.UTC().Add(skew)
 
 	// Traits.
 	if t := *event.Type; (t == "identify" || t == "group") && event.Traits == nil {
