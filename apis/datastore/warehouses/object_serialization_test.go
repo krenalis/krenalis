@@ -99,6 +99,48 @@ func TestColumnsToProperties(t *testing.T) {
 
 }
 
+func TestColumnsToPropertiesNullable(t *testing.T) {
+
+	// Test that a flat Object is never nullable, not matters what is the
+	// nullability of the columns it was built from.
+
+	tests := []struct {
+		columns []types.Property
+	}{
+		{columns: []types.Property{
+			{Name: "ios_id", Type: types.Text()},
+			{Name: "ios_idfa", Type: types.Text()}}},
+		{columns: []types.Property{
+			{Name: "ios_id", Type: types.Text(), Nullable: true},
+			{Name: "ios_idfa", Type: types.Text()}}},
+		{columns: []types.Property{
+			{Name: "ios_id", Type: types.Text()},
+			{Name: "ios_idfa", Type: types.Text(), Nullable: true}}},
+		{columns: []types.Property{
+			{Name: "ios_id", Type: types.Text(), Nullable: true},
+			{Name: "ios_idfa", Type: types.Text(), Nullable: true}}},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got, err := ColumnsToProperties(test.columns)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if len(got) != 1 {
+				t.Fatalf("expecting just one property")
+			}
+			if got[0].Name != "ios" {
+				t.Fatalf("expecting property with name 'ios'")
+			}
+			if got[0].Nullable {
+				t.Fatalf("unexpected nullable property")
+			}
+		})
+	}
+
+}
+
 func TestPropertiesToColumns(t *testing.T) {
 
 	columns := []types.Property{

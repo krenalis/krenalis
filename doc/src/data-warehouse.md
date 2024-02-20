@@ -52,6 +52,28 @@ firstName
 lastName
 ```
 
+#### Nullability of Objects
+
+In the case that a property with type Object has been obtained through the grouping of columns, such property will never be nullable, regardless of the nullability of the individual columns.
+
+For example:
+
+```
+ios_id (nullable)
+ios_idfa (nullable)
+```
+
+is represented as:
+
+```
+ios {
+    id (nullable)
+    idfa (nullable)
+}
+```
+
+where the `ios` property is non-nullable.
+
 ## Meta properties
 
 Properties representing columns with names starting with an underscore are referred to as meta properties and are not writable during transformations. Such properties start with an uppercase letter. For example the column
