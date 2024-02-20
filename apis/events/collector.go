@@ -55,6 +55,7 @@ var (
 type batchEvents struct {
 	Batch    []*collectedEvent `json:"batch"`
 	Context  *eventContext     `json:"context,omitempty"`
+	SentAt   string            `json:"sentAt,omitempty"`
 	WriteKey string            `json:"writeKey,omitempty"`
 }
 
@@ -400,6 +401,9 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		event := events.Batch[i]
 		if event.Type == nil && method != "batch" {
 			event.Type = &method
+		}
+		if event.SentAt == "" {
+			event.SentAt = events.SentAt
 		}
 		event.header = header
 		mergeContexts(&event.Context, events.Context)
