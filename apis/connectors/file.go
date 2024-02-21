@@ -1309,9 +1309,7 @@ func (r *timeoutReader) Close() error {
 	if r.closed {
 		return nil
 	}
-	select {
-	case r.stop <- struct{}{}:
-	}
+	r.stop <- struct{}{}
 	r.closed = true
 	return nil
 }

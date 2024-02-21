@@ -129,10 +129,8 @@ func (state *State) keepElections() {
 			return nil
 		}
 		if err == context.Canceled {
-			select {
-			case <-state.close.ctx.Done():
-				return err
-			}
+			<-state.close.ctx.Done()
+			return err
 		}
 		debugf("\t%s\n", err)
 		slog.Warn("cannot send leader election notification", "err", err)

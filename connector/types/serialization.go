@@ -650,7 +650,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid value for minimum")
 			}
 			Max := maxUint[t.size]
-			if min < 0 || min > Max {
+			if min > Max {
 				return Type{}, errors.New("invalid value for minimum")
 			}
 			if min > 0 {
@@ -746,7 +746,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid value for maximum")
 			}
 			Max := maxUint[t.size]
-			if max < 0 || max > Max {
+			if max > Max {
 				return Type{}, errors.New("invalid value for maximum")
 			}
 			if max < Max {

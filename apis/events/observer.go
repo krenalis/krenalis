@@ -86,13 +86,10 @@ func newObserver(db *postgres.DB) *Observer {
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
-		for {
-			select {
-			case t := <-ticker.C:
-				err := observer.flushStats(t.UTC())
-				if err != nil {
-					slog.Error("cannot update event stats", "err", err)
-				}
+		for t := range ticker.C {
+			err := observer.flushStats(t.UTC())
+			if err != nil {
+				slog.Error("cannot update event stats", "err", err)
 			}
 		}
 	}()

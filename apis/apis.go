@@ -61,7 +61,6 @@ type APIs struct {
 	functionTransformer transformers.Function
 	mu                  sync.Mutex // for the scheduler field
 	scheduler           *scheduler
-	eventProcessor      *events.Processor
 	smtp                *SMTPConfig
 	close               struct {
 		ctx       context.Context

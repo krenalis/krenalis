@@ -23,10 +23,8 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		select {
-		case <-stop:
-			cancel()
-		}
+		<-stop
+		cancel()
 	}()
 
 	// Start the workers which send events.

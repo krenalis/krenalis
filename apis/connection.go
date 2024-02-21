@@ -43,10 +43,6 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// maxSettingsLen is the maximum length of settings in runes.
-// Keep in sync with the events.maxSettingsLen constant.
-const maxSettingsLen = 10_000
-
 const (
 	maxKeysPerConnection = 20 // maximum number of keys per connection.
 	maxInt32             = math.MaxInt32
@@ -131,7 +127,7 @@ type Connection struct {
 // It returns an errors.NotFound error if the action does not exist.
 func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 	this.apis.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Connection.Action", "id", id)
+	_, span := telemetry.TraceSpan(ctx, "Connection.Action", "id", id)
 	defer span.End()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
@@ -2468,8 +2464,6 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 	}
 	return rawSchema, nil
 }
-
-var defaultLayout = &state.Layouts{}
 
 // onlyForMatching returns a schema which contains only the properties of schema
 // which can be used for the apps export matching.

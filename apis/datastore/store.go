@@ -44,16 +44,13 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	go func() {
 		ticker := time.NewTicker(flushEventsQueueTimeout)
-		for {
-			select {
-			case <-ticker.C:
-				store.mu.Lock()
-				events := store.events
-				store.events = nil
-				store.mu.Unlock()
-				if events != nil {
-					go store.flushEvents(events)
-				}
+		for range ticker.C {
+			store.mu.Lock()
+			events := store.events
+			store.events = nil
+			store.mu.Unlock()
+			if events != nil {
+				go store.flushEvents(events)
 			}
 		}
 	}()

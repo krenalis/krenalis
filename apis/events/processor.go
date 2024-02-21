@@ -42,7 +42,6 @@ type processedEvent struct {
 // their data warehouses.
 type Processor struct {
 	sync.Mutex // for the streams field.
-	ctx        context.Context
 	state      *eventsState
 	events     struct {
 		in  <-chan *collectedEvent
