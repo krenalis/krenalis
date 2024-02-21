@@ -153,7 +153,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		matchingIdentities = append(matchingIdentities, e)
 	}
 	rows.Close()
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return warehouses.Error(err)
 	}
 

@@ -142,7 +142,7 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 		}
 	}
 	rows.Close()
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return "", false, warehouses.Error(err)
 	}
 	return externalID, externalID != "", nil
