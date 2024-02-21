@@ -798,7 +798,7 @@ func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, er
 		return nil, 0, err
 	}
 	evs := make([]ObservedEvent, len(observedEvents))
-	for i := 0; i < len(evs); i++ {
+	for i := range len(evs) {
 		ov := observedEvents[i]
 		var header *ObservedEventHeader
 		if ov.Header != nil {

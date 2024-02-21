@@ -74,7 +74,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		case types.BooleanKind:
 			valid = cond.Value == "true" || cond.Value == "false"
 		case types.IntKind:
-			for i := 0; i < len(cond.Value); i++ {
+			for i := range len(cond.Value) {
 				if i == 0 && cond.Value[i] == '-' {
 					continue
 				}
@@ -92,7 +92,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				}
 			}
 		case types.UintKind:
-			for i := 0; i < len(cond.Value); i++ {
+			for i := range len(cond.Value) {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
 					valid = false
 					break
@@ -138,7 +138,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		case types.TimeKind:
 			_, valid = parseTime(cond.Value)
 		case types.YearKind:
-			for i := 0; i < len(cond.Value); i++ {
+			for i := range len(cond.Value) {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
 					valid = false
 					break
