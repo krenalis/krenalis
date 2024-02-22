@@ -1487,3 +1487,140 @@ func isValidDisplayedPropertyName(property string) bool {
 	}
 	return true
 }
+
+type labelValue struct {
+	Label string
+	Value string
+}
+type identity struct {
+	Connection   int
+	ExternalId   labelValue // zero struct for identities imported from anonymous events.
+	BusinessId   labelValue // zero struct for identities with no Business ID.
+	AnonymousIds []string   // nil for identities not imported from events.
+	UpdatedAt    time.Time
+}
+
+// userIdentities returns the users identities matching the "where" expression,
+// and an estimate of their count without applying first and limit.
+//
+// It returns the user identities in range [first,first+limit] with first >= 0
+// and 0 < limit <= 1000.
+//
+// If there are no identities, a nil slice is returned.
+//
+// It returns an errors.UnprocessableError error with code DataWarehouseFailed,
+// if an error occurred with the data warehouse.
+func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, first, limit int) ([]identity, int, error) {
+
+	// Retrieve the identities from the data warehouse.
+	schema := types.Object([]types.Property{
+		{Name: "Connection", Type: types.Int(32)},
+		{Name: "ExternalId", Type: types.Text()},
+		{Name: "UpdatedAt", Type: types.DateTime()},
+		{Name: "Gid", Type: types.Int(32)},
+		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
+		{Name: "BusinessId", Type: types.Object([]types.Property{
+			{Name: "value", Type: types.Text()},
+			{Name: "label", Type: types.Text()},
+		})},
+	})
+	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
+		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
+			{"UpdatedAt"}, {"BusinessId"}},
+		Where:   where,
+		OrderBy: types.Property{Name: "IdentityId", Type: types.Int(32)},
+		Schema:  schema,
+		First:   first,
+		Limit:   limit,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Create the identities from the records returned by the warehouse.
+	var identities []identity
+	err = records.For(func(record warehouses.Record) error {
+		if record.Err != nil {
+			return err
+		}
+
+		// Retrieve the connection.
+		connID := record.Properties["Connection"].(int)
+		conn, ok := this.apis.state.Connection(connID)
+		if !ok {
+			// The connection for this user identity no longer exists, so skip
+			// this identity.
+			return nil
+		}
+
+		// Determine the value for the external ID, which may be the empty
+		// string for identities incoming from anonymous events.
+		extIDValue := record.Properties["ExternalId"].(string)
+
+		// Determine the label for the External ID, except for the case of
+		// "anonymous identities", which are identities imported from anonymous
+		// events. In that case, both the External ID value and label must be
+		// empty.
+		var extIDLabel string
+		if extIDValue != "" {
+			c := conn.Connector()
+			switch c.Type {
+			case state.AppType:
+				extIDLabel = c.ExternalIDLabel
+				if extIDLabel == "" {
+					extIDLabel = "ID"
+				}
+			case state.DatabaseType, state.FileType:
+				extIDLabel = "ID"
+			case state.MobileType, state.ServerType, state.WebsiteType:
+				extIDLabel = "User ID"
+			default:
+				return fmt.Errorf("unexpected connector type %v", c.Type)
+			}
+		}
+
+		// Determine the anonymous IDs.
+		var anonIDs []string
+		if ids, ok := record.Properties["AnonymousIds"].([]any); ok {
+			anonIDs = make([]string, len(ids))
+			for i := range ids {
+				anonIDs[i] = ids[i].(string)
+			}
+		}
+
+		// Determine the "updated_at" timestamp.
+		updatedAt := record.Properties["UpdatedAt"].(time.Time)
+
+		// Determine the Business ID.
+		businessID := record.Properties["BusinessId"].(map[string]any)
+
+		identities = append(identities, identity{
+			Connection: connID,
+			ExternalId: labelValue{
+				Label: extIDLabel,
+				Value: extIDValue,
+			},
+			BusinessId: labelValue{
+				Label: businessID["label"].(string),
+				Value: businessID["value"].(string),
+			},
+			AnonymousIds: anonIDs,
+			UpdatedAt:    updatedAt,
+		})
+
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = records.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	// Since the count is an estimate, being counted separately from the actual
+	// number of identities returned, ensure to not return a value lower than
+	// the actually returned number of identities.
+	count = max(len(identities), count)
+
+	return identities, count, nil
+}

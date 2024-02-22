@@ -10,9 +10,7 @@ package apis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"time"
 
 	"chichi/apis/datastore"
 	"chichi/apis/datastore/expr"
@@ -105,146 +103,29 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
-
 	this.apis.mustBeOpen()
-
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", limit)
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-
-	ws := this.workspace
-
 	if this.store == nil {
-		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-
-	schema := types.Object([]types.Property{
-		{Name: "Connection", Type: types.Int(32)},
-		{Name: "ExternalId", Type: types.Text()},
-		{Name: "UpdatedAt", Type: types.DateTime()},
-		{Name: "Gid", Type: types.Int(32)},
-		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "BusinessId", Type: types.Object([]types.Property{
-			{Name: "value", Type: types.Text()},
-			{Name: "label", Type: types.Text()},
-		})},
-	})
-	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
-			{"UpdatedAt"}, {"BusinessId"}},
-		Where:   expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id),
-		OrderBy: types.Property{Name: "IdentityId", Type: types.Int(32)},
-		Schema:  schema,
-		First:   first,
-		Limit:   limit,
-	})
+	where := expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id)
+	ws := &Workspace{
+		apis:      this.apis,
+		store:     this.store,
+		workspace: this.workspace,
+	}
+	identities, count, err := ws.userIdentities(ctx, where, first, limit)
 	if err != nil {
-		return nil, 0, err
-	}
-
-	type labelValue struct {
-		Label string
-		Value string
-	}
-	type identity struct {
-		Connection   int
-		ExternalId   labelValue // zero struct for identities imported from anonymous events.
-		BusinessId   labelValue // zero struct for identities with no Business ID.
-		AnonymousIds []string   // nil for identities not imported from events.
-		UpdatedAt    time.Time
-	}
-
-	// Create the identities from the records returned by the warehouse.
-	var identities []identity
-	err = records.For(func(record warehouses.Record) error {
-		if record.Err != nil {
-			return err
-		}
-
-		// Retrieve the connection.
-		connID := record.Properties["Connection"].(int)
-		conn, ok := this.apis.state.Connection(connID)
-		if !ok {
-			// The connection for this user identity no longer exists, so skip
-			// this identity.
-			return nil
-		}
-
-		// Determine the value for the external ID, which may be the empty
-		// string for identities incoming from anonymous events.
-		extIDValue := record.Properties["ExternalId"].(string)
-
-		// Determine the label for the External ID, except for the case of
-		// "anonymous identities", which are identities imported from anonymous
-		// events. In that case, both the External ID value and label must be
-		// empty.
-		var extIDLabel string
-		if extIDValue != "" {
-			c := conn.Connector()
-			switch c.Type {
-			case state.AppType:
-				extIDLabel = c.ExternalIDLabel
-				if extIDLabel == "" {
-					extIDLabel = "ID"
-				}
-			case state.DatabaseType, state.FileType:
-				extIDLabel = "ID"
-			case state.MobileType, state.ServerType, state.WebsiteType:
-				extIDLabel = "User ID"
-			default:
-				return fmt.Errorf("unexpected connector type %v", c.Type)
-			}
-		}
-
-		// Determine the anonymous IDs.
-		var anonIDs []string
-		if ids, ok := record.Properties["AnonymousIds"].([]any); ok {
-			anonIDs = make([]string, len(ids))
-			for i := range ids {
-				anonIDs[i] = ids[i].(string)
-			}
-		}
-
-		// Determine the "updated_at" timestamp.
-		updatedAt := record.Properties["UpdatedAt"].(time.Time)
-
-		// Determine the Business ID.
-		businessID := record.Properties["BusinessId"].(map[string]any)
-
-		identities = append(identities, identity{
-			Connection: connID,
-			ExternalId: labelValue{
-				Label: extIDLabel,
-				Value: extIDValue,
-			},
-			BusinessId: labelValue{
-				Label: businessID["label"].(string),
-				Value: businessID["value"].(string),
-			},
-			AnonymousIds: anonIDs,
-			UpdatedAt:    updatedAt,
-		})
-
-		return nil
-	})
-	if err != nil {
-		return nil, 0, err
-	}
-	if err = records.Err(); err != nil {
 		return nil, 0, err
 	}
 	if identities == nil {
 		return nil, 0, errors.NotFound("user %d does not exist", this.id)
 	}
-
-	// Since the count is an estimate, being counted separately from the actual
-	// number of identities returned, ensure to not return a value lower than
-	// the actually returned number of identities.
-	count = max(len(identities), count)
-
 	data, err := json.Marshal(identities)
 	return data, count, err
 }

@@ -92,15 +92,15 @@ type FilterCondition struct {
 	Value    string
 }
 
-type UserIdentity struct { // copy-pasted from the body of the apis.User.Identities method.
+type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
 	Connection   int
-	ExternalId   LabelValue // zero struct for identities imported from anonymous events.
-	BusinessId   LabelValue // zero struct for identities with no Business ID.
-	AnonymousIds []string   // nil for identities not imported from events.
+	ExternalId   LabelValue
+	BusinessId   LabelValue
+	AnonymousIds []string
 	UpdatedAt    time.Time
 }
 
-type LabelValue struct { // copy-pasted from the body of the apis.User.Identities method.
+type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.
 	Label string
 	Value string
 }

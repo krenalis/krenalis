@@ -59,6 +59,28 @@ func TestImportFromTwoDummies(t *testing.T) {
 	c.WaitActionsToFinish(dummy1)
 	c.WaitActionsToFinish(dummy2)
 
+	// Ensure that the connection have the correct identities associated.
+	{
+		identities, count := c.ConnectionIdentities(dummy1, 0, 100)
+		if count != 10 {
+			t.Fatalf("expected count 10, got %d", count)
+		}
+		for _, identity := range identities {
+			if identity.Connection != dummy1 {
+				t.Fatalf("unexpected connection %d, expecting %d", identity.Connection, dummy1)
+			}
+		}
+		identities, count = c.ConnectionIdentities(dummy2, 0, 100)
+		if count != 10 {
+			t.Fatalf("expected count 10, got %d", count)
+		}
+		for _, identity := range identities {
+			if identity.Connection != dummy2 {
+				t.Fatalf("unexpected connection %d, expecting %d", identity.Connection, dummy2)
+			}
+		}
+	}
+
 	// Since the users have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 users, even if they have the same properties.

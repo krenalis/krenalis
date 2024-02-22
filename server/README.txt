@@ -20,6 +20,7 @@ GET     /api/workspaces/{id}/connections/{id}/complete-path/{path}              
 POST    /api/workspaces/{id}/connections/{id}/event-preview                      Return an event preview.
 POST    /api/workspaces/{id}/connections/{id}/exec-query                         Execute the query of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/executions                         Return the executions of a connection.
+POST    /api/workspaces/{id}/connections/{id}/identities                         List the user identities of a connection.
 GET     /api/workspaces/{id}/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection.
 GET     /api/workspaces/{id}/connections/{id}/sheets                             List the sheets of a multiple sheets file connection.
 GET     /api/workspaces/{id}/connections/{id}/stats                              Get the stats of a connection.

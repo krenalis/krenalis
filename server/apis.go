@@ -752,6 +752,33 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							_ = json.NewEncoder(w).Encode(executions)
 						})
+						router.Post("/identities", func(w http.ResponseWriter, r *http.Request) {
+							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							var req struct {
+								First int
+								Limit int
+							}
+							err := json.NewDecoder(r.Body).Decode(&req)
+							if err != nil {
+								respond(w, errors.BadRequest("invalid JSON"))
+								return
+							}
+							connection, err := workspace.Connection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							identities, count, err := connection.Identities(ctx, req.First, req.Limit)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							w.Header().Set("Content-Type", "application/json")
+							_ = json.NewEncoder(w).Encode(map[string]any{
+								"identities": json.RawMessage(identities),
+								"count":      count,
+							})
+						})
 						router.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)

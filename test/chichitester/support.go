@@ -220,6 +220,29 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 	})
 }
 
+func (c *Chichi) ConnectionIdentities(connection int, first, limit int) ([]UserIdentity, int) {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/identities"
+	req := map[string]any{
+		"First": first,
+		"Limit": limit,
+	}
+	response := c.MustCall("POST", url, req).(map[string]any)
+	count, err := response["count"].(json.Number).Int64()
+	if err != nil {
+		c.t.Fatalf("invalid 'count' for user identities: %s", err)
+	}
+	jsonIdentities, err := json.Marshal(response["identities"].([]any))
+	if err != nil {
+		c.t.Fatalf("cannot marshal identities: %s", err)
+	}
+	var identities []UserIdentity
+	err = json.Unmarshal(jsonIdentities, &identities)
+	if err != nil {
+		c.t.Fatalf("cannot unmarshal identities: %s", err)
+	}
+	return identities, int(count)
+}
+
 func (c *Chichi) ConnectionKeys(conn int) []string {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/keys"
 	rawKeys := c.MustCall("GET", url, nil).([]any)

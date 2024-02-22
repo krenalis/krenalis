@@ -27,6 +27,7 @@ import (
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
+	"chichi/apis/datastore/expr"
 	"chichi/apis/encoding"
 	"chichi/apis/errors"
 	"chichi/apis/events"
@@ -841,6 +842,45 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 		return nil, err
 	}
 	return executions, nil
+}
+
+// Identities returns the users identities of the connection, and an estimate of
+// their count without applying first and limit.
+//
+// It returns the user identities in range [first,first+limit] with first >= 0
+// and 0 < limit <= 1000.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
+	this.apis.mustBeOpen()
+	if first < 0 {
+		return nil, 0, errors.BadRequest("first %d is not valid", limit)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
+	}
+	ws := this.connection.Workspace()
+	if this.store == nil {
+		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+	}
+	apisWs := &Workspace{
+		apis:      this.apis,
+		store:     this.store,
+		workspace: ws,
+	}
+	where := expr.NewBaseExpr("Connection", expr.OperatorEqual, this.connection.ID)
+	identities, count, err := apisWs.userIdentities(ctx, where, first, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	if identities == nil {
+		identities = []identity{}
+	}
+	data, err := json.Marshal(identities)
+	return data, count, err
 }
 
 // GenerateKey generates a new write key for the connection. The connection must
