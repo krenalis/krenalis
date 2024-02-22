@@ -27,10 +27,11 @@ func TestActionsCreation(t *testing.T) {
 
 	// Create some connections that will be used by the actions.
 	var (
-		srcCSVConnection     int
-		dstCSVConnection     int
-		postgreSQLConnection int
-		javaScriptConnection int
+		srcCSVConnection      int
+		dstCSVConnection      int
+		postgreSQLConnection  int
+		javaScriptConnection  int
+		dummyExportConnection int
 	)
 	{
 		// CSV connection.
@@ -54,6 +55,10 @@ func TestActionsCreation(t *testing.T) {
 	{
 		// PostgreSQL connection.
 		postgreSQLConnection = c.AddSourcePostgreSQL()
+	}
+	{
+		// Dummy export connection.
+		dummyExportConnection = c.AddDummy("Dummy (destination)", chichitester.Destination)
 	}
 
 	tests := []struct {
@@ -365,6 +370,50 @@ func TestActionsCreation(t *testing.T) {
 				},
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import users identities from events"}}`,
+		},
+		{
+			conn: dummyExportConnection,
+			action: chichitester.ActionToSet{
+				Name: "Export users to Dummy",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text(), Nullable: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "email",
+					},
+				},
+				ExportMode: chichitester.ExportModeCreateOrUpdate,
+				MatchingProperties: &chichitester.MatchingProperties{
+					Internal: "email",
+					External: types.Property{
+						Name: "email",
+						Type: types.Text(),
+					},
+				},
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"export on duplicated users setting cannot be nil"}}`,
+		},
+		{
+			conn: javaScriptConnection,
+			action: chichitester.ActionToSet{
+				Name:     "Import users identities from events",
+				Enabled:  true,
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: chichitester.Transformation{
+					Mapping: map[string]string{
+						"email": "traits.email",
+					},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"export on duplicated users setting must be nil"}}`,
 		},
 	}
 	for _, test := range tests {

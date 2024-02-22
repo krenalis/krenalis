@@ -115,37 +115,119 @@ func (warehouse *PostgreSQL) Close() error {
 	return nil
 }
 
-// DestinationUser returns the external ID of the destination user of the action
-// that matches with the corresponding property. If it cannot be found, then the
-// empty string and false are returned.
-func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
+// DestinationUsers returns the external IDs of the destination users of the
+// action whose external matching property value matches with the given property
+// value. If it cannot be found, then an empty slice and false are returned.
+func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	db, err := warehouse.connection()
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
-	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE action = $1 AND property = $2`, action, property)
+	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE action = $1 AND property = $2`, action, propertyValue)
 	if err != nil {
-		return "", false, warehouses.Error(err)
+		return nil, warehouses.Error(err)
 	}
 	defer rows.Close()
-	var externalID string
+	externalIDs := []string{}
 	for rows.Next() {
-		if externalID != "" {
-			// TODO(Gianluca): improve the handling of this error. This happens
-			// when a property on the external app has the same value for more
-			// than one user.
-			return "", false, warehouses.Errorf("too many users matching when using property")
-		}
-		err := rows.Scan(&externalID)
+		var extID string
+		err := rows.Scan(&extID)
 		if err != nil {
-			return "", false, warehouses.Error(err)
+			return nil, warehouses.Error(err)
 		}
+		externalIDs = append(externalIDs, extID)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return "", false, warehouses.Error(err)
+		return nil, warehouses.Error(err)
 	}
-	return externalID, externalID != "", nil
+	return externalIDs, nil
+}
+
+// DuplicatedDestinationUsers returns the external IDs of two users on the
+// action which have the same value for the matching property, along with true.
+//
+// If there are no users on the action matching this condition, no external IDs
+// are returned and the returned boolean is false. If an error occurs with the
+// data warehouse, it returns a *DataWarehouseError error.
+func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
+	db, err := warehouse.connection()
+	if err != nil {
+		return "", "", false, err
+	}
+	query := `SELECT user1, user2
+		FROM (
+			SELECT
+				min("user") AS user1,
+				max("user") as user2,
+				count(*) AS cnt
+			FROM destinations_users
+			WHERE action = $1 
+			GROUP BY property) AS subquery
+		WHERE subquery.cnt > 1
+		LIMIT 1`
+	rows, err := db.Query(ctx, query, action)
+	if err != nil {
+		return "", "", false, warehouses.Error(err)
+	}
+	defer rows.Close()
+	var user1, user2 string
+	var found bool
+	for rows.Next() {
+		err := rows.Scan(&user1, &user2)
+		if err != nil {
+			return "", "", false, warehouses.Error(err)
+		}
+		found = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return "", "", false, warehouses.Error(err)
+	}
+	return user1, user2, found, nil
+}
+
+// DuplicatedUsers returns the GIDs of two users which have the same value for
+// the given property, along with true.
+// If there are no users matching this condition, no GIDs are returned and the
+// returned boolean is false.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
+	db, err := warehouse.connection()
+	if err != nil {
+		return 0, 0, false, err
+	}
+	column := warehouses.PropertyNameToColumnName(property)
+	query := `SELECT gid1, gid2
+		FROM (
+			SELECT
+				min("_id") AS gid1,
+				max("_id") as gid2,
+				count(*) AS cnt
+			FROM users
+			GROUP BY "` + column + `") AS subquery
+		WHERE subquery.cnt > 1
+		LIMIT 1`
+	rows, err := db.Query(ctx, query)
+	if err != nil {
+		return 0, 0, false, warehouses.Error(err)
+	}
+	defer rows.Close()
+	var gid1, gid2 int
+	var found bool
+	for rows.Next() {
+		err := rows.Scan(&gid1, &gid2)
+		if err != nil {
+			return 0, 0, false, warehouses.Error(err)
+		}
+		found = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, 0, false, warehouses.Error(err)
+	}
+	return gid1, gid2, found, nil
 }
 
 // Init initializes the data warehouse by creating the supporting tables.

@@ -59,6 +59,7 @@ func TestExportZeroUsers(t *testing.T) {
 					Type: types.Text(),
 				},
 			},
+			ExportOnDuplicatedUsers: &[]bool{false}[0],
 		})
 		c.ExecuteAction(dummyDest, exportUsersActionID, true)
 		c.WaitActionsToFinish(dummyDest)

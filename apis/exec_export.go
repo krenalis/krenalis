@@ -40,7 +40,32 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		// Download the users from this connection to match the identities for the export.
 		err := this.downloadUsersForExportMatch(ctx)
 		if err != nil {
-			return err
+			return actionExecutionError{fmt.Errorf("cannot retrieve users information from app: %s", err)}
+		}
+		// If the export must be blocked in case of duplicated user on the
+		// destination, check if there are duplicated users on the destination.
+		if !*action.ExportOnDuplicatedUsers {
+			u1, u2, ok, err := store.DuplicatedDestinationUsers(ctx, action.ID)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("cannot look for duplicated destination users: %s", err)}
+			}
+			if ok {
+				return actionExecutionError{fmt.Errorf("there are two users on the connection (%q and %q)"+
+					" with the same value for the external matching property %q",
+					u1, u2, action.MatchingProperties.External.Name)}
+			}
+		}
+		// Check if there are duplicated users within Chichi.
+		{
+			u1, u2, ok, err := store.DuplicatedUsers(ctx, action.MatchingProperties.Internal)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("cannot look for duplicated users on data warehouse: %s", err)}
+			}
+			if ok {
+				return actionExecutionError{fmt.Errorf("there are two users (%d and %d)"+
+					" with the same value for the internal matching property %q",
+					u1, u2, action.MatchingProperties.Internal)}
+			}
 		}
 	}
 
@@ -221,23 +246,31 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		stats.Passed(statistics.InputValidatedStep)
 		var id string
 		if connector.Type == state.AppType {
-			// Resolve the external identity.
-			var exists bool
-			id, exists, err = this.resolveExternalIdentity(ctx, user)
+			// Resolve the external identities.
+			ids, err := this.resolveExternalIdentities(ctx, user)
 			if err != nil {
 				return err
 			}
 			// Determine if this user must be exported or not.
 			mode := *this.action.ExportMode
-			if (mode == state.CreateOnly && exists) || (mode == state.UpdateOnly && !exists) {
+			existsOnApp := len(ids) > 0
+			if (mode == state.CreateOnly && existsOnApp) || (mode == state.UpdateOnly && !existsOnApp) {
 				return nil
 			}
+			for _, id := range ids {
+				users = append(users, userToProcess{
+					GID:        user.ID,
+					ID:         id,
+					Properties: user.Properties,
+				})
+			}
+		} else {
+			users = append(users, userToProcess{
+				GID:        user.ID,
+				ID:         id,
+				Properties: user.Properties,
+			})
 		}
-		users = append(users, userToProcess{
-			GID:        user.ID,
-			ID:         id,
-			Properties: user.Properties,
-		})
 		if len(users) == 100 {
 			err := processUsers(users)
 			if err != nil {
@@ -328,25 +361,25 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	return nil
 }
 
-// resolveExternalIdentity resolves the external identity of user and returns
-// its external ID and true, if resolved, or the empty string and false if such
-// user does not exist on the remote app.
-func (this *Action) resolveExternalIdentity(ctx context.Context, user warehouses.Record) (string, bool, error) {
+// resolveExternalIdentities resolves the external identities of user and
+// returns its external IDs, if resolved, or the empty slice if such user does
+// not exist on the remote app.
+func (this *Action) resolveExternalIdentities(ctx context.Context, user warehouses.Record) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
 	if !ok {
-		return "", false, fmt.Errorf("property %q not found", internalPropName)
+		return nil, fmt.Errorf("property %q not found", internalPropName)
 	}
 	p, err := json.Marshal(property)
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
 	c := this.connection
-	externalID, ok, err := c.store.DestinationUser(ctx, this.action.ID, string(p))
+	externalIDs, err := c.store.DestinationUsers(ctx, this.action.ID, string(p))
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
-	return externalID, ok, nil
+	return externalIDs, nil
 }
 
 // newPathPlaceholderReplacer returns a placeholder replacer that replaces the

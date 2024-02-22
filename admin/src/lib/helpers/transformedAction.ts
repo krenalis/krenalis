@@ -60,6 +60,7 @@ type ActionTypeField =
 	| 'Filter'
 	| 'Mapping'
 	| 'MatchingProperties'
+	| 'ExportOnDuplicatedUsers'
 	| 'ExportMode'
 	| 'Query'
 	| 'Path'
@@ -102,6 +103,7 @@ interface TransformedAction {
 	TimestampFormat?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: MatchingProperties | null;
+	ExportOnDuplicatedUsers?: boolean | null;
 }
 
 // TODO: do not set the value and the required values here (this should only
@@ -238,6 +240,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		TimestampFormat: action.TimestampFormat,
 		ExportMode: action.ExportMode,
 		MatchingProperties: action.MatchingProperties,
+		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	};
 };
 
@@ -434,6 +437,7 @@ const transformInActionToSet = async (
 		TimestampColumn: action.TimestampColumn,
 		TimestampFormat: action.TimestampFormat,
 		matchingProperties: action.MatchingProperties,
+		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	};
 
 	return actionToSet;
@@ -477,6 +481,9 @@ const computeDefaultAction = (
 	if (fields.includes('MatchingProperties')) {
 		action.MatchingProperties = { Internal: null, External: null };
 	}
+	if (fields.includes('ExportOnDuplicatedUsers')) {
+		action.ExportOnDuplicatedUsers = false;
+	}
 	return action;
 };
 
@@ -504,6 +511,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		(actionType.Target === 'Users' || actionType.Target === 'Groups')
 	) {
 		fields.push('MatchingProperties');
+		fields.push('ExportOnDuplicatedUsers');
 		fields.push('ExportMode');
 		fields.push('Filter');
 	}

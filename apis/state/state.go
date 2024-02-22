@@ -903,31 +903,32 @@ type Cursor struct {
 }
 
 type Action struct {
-	mu                 *sync.Mutex
-	ID                 int
-	connection         *Connection
-	execution          *ActionExecution
-	Target             Target
-	Name               string
-	Enabled            bool
-	EventType          string
-	ScheduleStart      int16
-	SchedulePeriod     int16
-	InSchema           types.Type
-	OutSchema          types.Type
-	Filter             *Filter
-	Transformation     Transformation
-	Query              string
-	Path               string
-	TableName          string
-	Sheet              string
-	IdentityColumn     string
-	TimestampColumn    string
-	TimestampFormat    string
-	UserCursor         Cursor
-	Health             Health
-	ExportMode         *ExportMode
-	MatchingProperties *MatchingProperties
+	mu                      *sync.Mutex
+	ID                      int
+	connection              *Connection
+	execution               *ActionExecution
+	Target                  Target
+	Name                    string
+	Enabled                 bool
+	EventType               string
+	ScheduleStart           int16
+	SchedulePeriod          int16
+	InSchema                types.Type
+	OutSchema               types.Type
+	Filter                  *Filter
+	Transformation          Transformation
+	Query                   string
+	Path                    string
+	TableName               string
+	Sheet                   string
+	IdentityColumn          string
+	TimestampColumn         string
+	TimestampFormat         string
+	UserCursor              Cursor
+	Health                  Health
+	ExportMode              *ExportMode
+	MatchingProperties      *MatchingProperties
+	ExportOnDuplicatedUsers *bool
 }
 
 // Language represents a transformation language.

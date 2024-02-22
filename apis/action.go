@@ -29,31 +29,32 @@ const DatabaseFailed errors.Code = "DatabaseFailed"
 // Action represents an action associated to a destination connection to send
 // events.
 type Action struct {
-	apis               *APIs
-	action             *state.Action
-	connection         *Connection
-	ID                 int
-	Connection         int
-	Target             Target
-	Name               string
-	Enabled            bool
-	EventType          *string
-	Running            bool
-	ScheduleStart      *int
-	SchedulePeriod     *SchedulePeriod
-	InSchema           types.Type
-	OutSchema          types.Type
-	Filter             *Filter
-	Transformation     Transformation
-	Query              *string
-	Path               *string
-	Table              *string
-	Sheet              *string
-	IdentityColumn     *string
-	TimestampColumn    *string
-	TimestampFormat    *string
-	ExportMode         *ExportMode
-	MatchingProperties *MatchingProperties
+	apis                    *APIs
+	action                  *state.Action
+	connection              *Connection
+	ID                      int
+	Connection              int
+	Target                  Target
+	Name                    string
+	Enabled                 bool
+	EventType               *string
+	Running                 bool
+	ScheduleStart           *int
+	SchedulePeriod          *SchedulePeriod
+	InSchema                types.Type
+	OutSchema               types.Type
+	Filter                  *Filter
+	Transformation          Transformation
+	Query                   *string
+	Path                    *string
+	Table                   *string
+	Sheet                   *string
+	IdentityColumn          *string
+	TimestampColumn         *string
+	TimestampFormat         *string
+	ExportMode              *ExportMode
+	MatchingProperties      *MatchingProperties
+	ExportOnDuplicatedUsers *bool
 }
 
 // Language represents a transformation language. Valid values are "JavaScript"
@@ -161,6 +162,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 			External: props.External,
 		}
 	}
+	this.ExportOnDuplicatedUsers = action.ExportOnDuplicatedUsers
 }
 
 // Target represents a target.
@@ -304,14 +306,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Transformation: state.Transformation{
 			Mapping: action.Transformation.Mapping,
 		},
-		Query:           action.Query,
-		Path:            action.Path,
-		TableName:       action.TableName,
-		Sheet:           action.Sheet,
-		IdentityColumn:  action.IdentityColumn,
-		TimestampColumn: action.TimestampColumn,
-		TimestampFormat: action.TimestampFormat,
-		ExportMode:      (*state.ExportMode)(action.ExportMode),
+		Query:                   action.Query,
+		Path:                    action.Path,
+		TableName:               action.TableName,
+		Sheet:                   action.Sheet,
+		IdentityColumn:          action.IdentityColumn,
+		TimestampColumn:         action.TimestampColumn,
+		TimestampFormat:         action.TimestampFormat,
+		ExportMode:              (*state.ExportMode)(action.ExportMode),
+		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
 	if function := action.Transformation.Function; function != nil {
 		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
@@ -430,11 +433,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_source = $7, transformation_language = $8, transformation_version = $9, "+
 			"query = $10, path = $11, table_name = $12, sheet = $13, identity_column = $14, "+
 			"timestamp_column = $15, timestamp_format = $16, export_mode = $17, "+
-			"matching_properties_internal = $18, matching_properties_external = $19\nWHERE id = $20",
+			"matching_properties_internal = $18, matching_properties_external = $19, "+
+			"export_on_duplicated_users = $20\nWHERE id = $21",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, function.Source,
 			function.Language, function.Version, n.Query, n.Path, n.TableName, n.Sheet,
 			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode, string(matchPropInternal),
-			string(matchPropExternal), n.ID,
+			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
 		if err != nil {
 			return err
@@ -660,6 +664,10 @@ type ActionToSet struct {
 	// MatchingProperties are the internal and external properties used for matching
 	// users during export to apps.
 	MatchingProperties *MatchingProperties
+
+	// ExportOnDuplicatedUsers indicates if the export to app connections should
+	// be executed even in the case of duplicated users on the app.
+	ExportOnDuplicatedUsers *bool
 }
 
 // MatchingProperties contains an internal property (belonging to the Golden

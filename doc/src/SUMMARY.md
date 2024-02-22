@@ -5,6 +5,7 @@
 - [Installation](./installation.md)
 - [Connections](connections.md)
     - [Import](importing.md)
+    - [Export](exporting.md)
     - [Business ID](business-id.md)
 - [Events](./events.md)
     - [page call](events/page.md)

@@ -44,10 +44,26 @@ type Warehouse interface {
 	// waits for the current ones to finish.
 	Close() error
 
-	// DestinationUser returns the external ID of the destination user of the
-	// action that matches with the corresponding property. If it cannot be
-	// found, then the empty string and false are returned.
-	DestinationUser(ctx context.Context, action int, property string) (string, bool, error)
+	// DestinationUsers returns the external IDs of the destination users of the
+	// action whose external matching property value matches with the given property
+	// value. If it cannot be found, then the empty string and false are returned.
+	DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error)
+
+	// DuplicatedDestinationUsers returns the external IDs of two users on the
+	// action which have the same value for the matching property, along with true.
+	//
+	// If there are no users on the action matching this condition, no external IDs
+	// are returned and the returned boolean is false. If an error occurs with the
+	// data warehouse, it returns a *DataWarehouseError error.
+	DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error)
+
+	// DuplicatedUsers returns the GIDs of two users which have the same value for
+	// the given property, along with true.
+	// If there are no users matching this condition, no GIDs are returned and the
+	// returned boolean is false.
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error)
 
 	// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
 	// the given schema, relative to the connection, on the data warehouse.

@@ -320,7 +320,7 @@ func (state *State) Load() error {
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
 			"transformation_language, transformation_version, query, path, table_name, sheet, identity_column,\n"+
 			"timestamp_column, timestamp_format, (user_cursor).id, (user_cursor).timestamp, health, export_mode,\n"+
-			"matching_properties_internal, matching_properties_external\nFROM actions",
+			"matching_properties_internal, matching_properties_external, export_on_duplicated_users\nFROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -334,7 +334,7 @@ func (state *State) Load() error {
 						&filter, &mapping, &function.Source, &function.Language, &function.Version, &action.Query,
 						&action.Path, &action.TableName, &action.Sheet, &action.IdentityColumn, &action.TimestampColumn,
 						&action.TimestampFormat, &action.UserCursor.ID, &action.UserCursor.Timestamp, &action.Health,
-						&action.ExportMode, &matchPropInternal, &matchPropExternal)
+						&action.ExportMode, &matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)
 					if err != nil {
 						return err
 					}

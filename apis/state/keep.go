@@ -278,27 +278,28 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 
 // AddAction is the event sent when an action is added.
 type AddAction struct {
-	ID                 int
-	Connection         int
-	Target             Target
-	EventType          string
-	Name               string
-	Enabled            bool
-	ScheduleStart      int16
-	SchedulePeriod     int16
-	InSchema           types.Type
-	OutSchema          types.Type
-	Filter             *Filter
-	Transformation     Transformation
-	Query              string
-	Path               string
-	TableName          string
-	Sheet              string
-	IdentityColumn     string
-	TimestampColumn    string
-	TimestampFormat    string
-	ExportMode         *ExportMode
-	MatchingProperties *MatchingProperties
+	ID                      int
+	Connection              int
+	Target                  Target
+	EventType               string
+	Name                    string
+	Enabled                 bool
+	ScheduleStart           int16
+	SchedulePeriod          int16
+	InSchema                types.Type
+	OutSchema               types.Type
+	Filter                  *Filter
+	Transformation          Transformation
+	Query                   string
+	Path                    string
+	TableName               string
+	Sheet                   string
+	IdentityColumn          string
+	TimestampColumn         string
+	TimestampFormat         string
+	ExportMode              *ExportMode
+	MatchingProperties      *MatchingProperties
+	ExportOnDuplicatedUsers *bool
 }
 
 // addAction adds a new action.
@@ -309,28 +310,29 @@ func (state *State) addAction(n notification) {
 	}
 	c := state.connections[e.Connection]
 	action := &Action{
-		mu:                 new(sync.Mutex),
-		ID:                 e.ID,
-		connection:         c,
-		Target:             e.Target,
-		Name:               e.Name,
-		Enabled:            e.Enabled,
-		EventType:          e.EventType,
-		ScheduleStart:      e.ScheduleStart,
-		SchedulePeriod:     e.SchedulePeriod,
-		InSchema:           e.InSchema,
-		OutSchema:          e.OutSchema,
-		Filter:             e.Filter,
-		Transformation:     e.Transformation,
-		Query:              e.Query,
-		Path:               e.Path,
-		TableName:          e.TableName,
-		Sheet:              e.Sheet,
-		IdentityColumn:     e.IdentityColumn,
-		TimestampColumn:    e.TimestampColumn,
-		TimestampFormat:    e.TimestampFormat,
-		ExportMode:         e.ExportMode,
-		MatchingProperties: e.MatchingProperties,
+		mu:                      new(sync.Mutex),
+		ID:                      e.ID,
+		connection:              c,
+		Target:                  e.Target,
+		Name:                    e.Name,
+		Enabled:                 e.Enabled,
+		EventType:               e.EventType,
+		ScheduleStart:           e.ScheduleStart,
+		SchedulePeriod:          e.SchedulePeriod,
+		InSchema:                e.InSchema,
+		OutSchema:               e.OutSchema,
+		Filter:                  e.Filter,
+		Transformation:          e.Transformation,
+		Query:                   e.Query,
+		Path:                    e.Path,
+		TableName:               e.TableName,
+		Sheet:                   e.Sheet,
+		IdentityColumn:          e.IdentityColumn,
+		TimestampColumn:         e.TimestampColumn,
+		TimestampFormat:         e.TimestampFormat,
+		ExportMode:              e.ExportMode,
+		MatchingProperties:      e.MatchingProperties,
+		ExportOnDuplicatedUsers: e.ExportOnDuplicatedUsers,
 	}
 	state.mu.Lock()
 	state.actions[e.ID] = action
@@ -809,22 +811,23 @@ func (state *State) seeLeader(n notification) {
 
 // SetAction is the event sent when an action is set.
 type SetAction struct {
-	ID                 int
-	Name               string
-	Enabled            bool
-	InSchema           types.Type
-	OutSchema          types.Type
-	Filter             *Filter
-	Transformation     Transformation
-	Query              string
-	Path               string
-	TableName          string
-	Sheet              string
-	IdentityColumn     string
-	TimestampColumn    string
-	TimestampFormat    string
-	ExportMode         *ExportMode
-	MatchingProperties *MatchingProperties
+	ID                      int
+	Name                    string
+	Enabled                 bool
+	InSchema                types.Type
+	OutSchema               types.Type
+	Filter                  *Filter
+	Transformation          Transformation
+	Query                   string
+	Path                    string
+	TableName               string
+	Sheet                   string
+	IdentityColumn          string
+	TimestampColumn         string
+	TimestampFormat         string
+	ExportMode              *ExportMode
+	MatchingProperties      *MatchingProperties
+	ExportOnDuplicatedUsers *bool
 }
 
 // setAction sets an action.
@@ -849,6 +852,7 @@ func (state *State) setAction(n notification) {
 		a.TimestampFormat = e.TimestampFormat
 		a.ExportMode = e.ExportMode
 		a.MatchingProperties = e.MatchingProperties
+		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers
 	})
 	for _, listener := range state.listeners.SetAction {
 		listener(e)

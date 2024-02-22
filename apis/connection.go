@@ -431,14 +431,15 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Transformation: state.Transformation{
 			Mapping: action.Transformation.Mapping,
 		},
-		Query:           action.Query,
-		Path:            action.Path,
-		TableName:       action.TableName,
-		Sheet:           action.Sheet,
-		IdentityColumn:  action.IdentityColumn,
-		TimestampColumn: action.TimestampColumn,
-		TimestampFormat: action.TimestampFormat,
-		ExportMode:      (*state.ExportMode)(action.ExportMode),
+		Query:                   action.Query,
+		Path:                    action.Path,
+		TableName:               action.TableName,
+		Sheet:                   action.Sheet,
+		IdentityColumn:          action.IdentityColumn,
+		TimestampColumn:         action.TimestampColumn,
+		TimestampFormat:         action.TimestampFormat,
+		ExportMode:              (*state.ExportMode)(action.ExportMode),
+		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
 	if function := action.Transformation.Function; function != nil {
 		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
@@ -548,13 +549,13 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping," +
 			"transformation_source, transformation_language, transformation_version, query, path, table_name," +
 			"sheet, identity_column, timestamp_column, timestamp_format, export_mode, matching_properties_internal," +
-			"matching_properties_external)\n" +
-			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)"
+			"matching_properties_external, export_on_duplicated_users)\n" +
+			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, n.Path, n.TableName,
 			n.Sheet, n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode,
-			string(matchPropInternal), string(matchPropExternal))
+			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
@@ -2192,12 +2193,18 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if action.MatchingProperties == nil {
 			return errors.BadRequest("matching properties cannot be nil")
 		}
+		if action.ExportOnDuplicatedUsers == nil {
+			return errors.BadRequest("export on duplicated users setting cannot be nil")
+		}
 	} else {
 		if action.ExportMode != nil {
 			return errors.BadRequest("export mode must be nil")
 		}
 		if action.MatchingProperties != nil {
 			return errors.BadRequest("matching properties must be nil")
+		}
+		if action.ExportOnDuplicatedUsers != nil {
+			return errors.BadRequest("export on duplicated users setting must be nil")
 		}
 	}
 

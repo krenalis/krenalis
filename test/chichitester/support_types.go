@@ -17,21 +17,22 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type ActionToSet struct {
-	Name               string
-	Enabled            bool
-	Filter             *Filter
-	InSchema           types.Type
-	OutSchema          types.Type
-	Transformation     Transformation
-	Query              string
-	Path               string
-	TableName          string
-	Sheet              string
-	IdentityColumn     string
-	TimestampColumn    string
-	TimestampFormat    string
-	ExportMode         *ExportMode
-	MatchingProperties *MatchingProperties
+	Name                    string
+	Enabled                 bool
+	Filter                  *Filter
+	InSchema                types.Type
+	OutSchema               types.Type
+	Transformation          Transformation
+	Query                   string
+	Path                    string
+	TableName               string
+	Sheet                   string
+	IdentityColumn          string
+	TimestampColumn         string
+	TimestampFormat         string
+	ExportMode              *ExportMode
+	MatchingProperties      *MatchingProperties
+	ExportOnDuplicatedUsers *bool
 }
 
 type BusinessID struct {

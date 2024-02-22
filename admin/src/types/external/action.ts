@@ -52,6 +52,7 @@ interface Action {
 	TimestampFormat: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
+	ExportOnDuplicatedUsers: boolean | null;
 }
 
 interface ActionType {
@@ -78,6 +79,7 @@ interface ActionToSet {
 	TimestampFormat?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
+	exportOnDuplicatedUsers?: boolean | null;
 }
 
 export type {

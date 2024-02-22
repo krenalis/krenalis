@@ -6,6 +6,7 @@ import ActionPath from './ActionPath';
 import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
+import ActionExportOnDuplicatedUsers from './ActionExportOnDuplicatedUsers';
 import ActionMatchingProperties from './ActionMatchingProperties';
 import ActionTable from './ActionTable';
 import { useAction } from '../../../hooks/useActionData';
@@ -99,6 +100,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.Fields.includes('Table') && <ActionTable />}
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
+					{actionType!.Fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
 					{actionType!.Fields.includes('Mapping') && !isMappingHidden && (
 						<ActionMapping ref={mappingSectionRef} />
 					)}

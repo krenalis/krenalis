@@ -104,11 +104,31 @@ func (warehouse *Snowflake) Close() error {
 	return nil
 }
 
-// DestinationUser returns the external ID of the destination user of the action
-// that matches with the corresponding property. If it cannot be found, then the
-// empty string and false are returned.
-func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
-	return "", false, errors.New("not implemented")
+// DestinationUsers returns the external IDs of the destination users of the
+// action whose external matching property value matches with the given property
+// value. If it cannot be found, then an empty slice and false are returned.
+func (warehouse *Snowflake) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
+	panic("not implemented")
+}
+
+// DuplicatedDestinationUsers returns the external IDs of two users on the
+// action which have the same value for the matching property, along with true.
+//
+// If there are no users on the action matching this condition, no external IDs
+// are returned and the returned boolean is false. If an error occurs with the
+// data warehouse, it returns a *DataWarehouseError error.
+func (warehouse *Snowflake) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
+	panic("TODO: not implemented")
+}
+
+// DuplicatedUsers returns the GIDs of two users which have the same value for
+// the given property, along with true.
+// If there are no users matching this condition, no GIDs are returned and the
+// returned boolean is false.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
+	panic("TODO: not implemented")
 }
 
 // IdentitiesWriter returns an IdentitiesWriter for writing user identities with
