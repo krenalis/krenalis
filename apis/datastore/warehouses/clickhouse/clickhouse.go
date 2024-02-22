@@ -28,8 +28,12 @@ import (
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
-//go:embed destinations_users.sql
-var createDestinationUsersTable string
+var (
+	//go:embed destinations_users.sql
+	createDestinationUsersTable string
+	//go:embed events.sql
+	createEventsTable string
+)
 
 var _ warehouses.Warehouse = &ClickHouse{}
 
@@ -135,6 +139,10 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 		return err
 	}
 	err = conn.Exec(ctx, createDestinationUsersTable)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	err = conn.Exec(ctx, createEventsTable)
 	if err != nil {
 		return warehouses.Error(err)
 	}
