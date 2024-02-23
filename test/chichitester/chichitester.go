@@ -334,13 +334,13 @@ func (c *Chichi) login() error {
 }
 
 func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
-	err := recreateDatabase(ctx, dbSetts.Host, dbSetts.Port, dbSetts.Username, dbSetts.Password, dbSetts.Database)
-	if err != nil {
-		return fmt.Errorf("cannot recreate database: %s", err)
-	}
-	err = validDatabaseNameForTests(dbSetts.Database)
+	err := validDatabaseNameForTests(dbSetts.Database)
 	if err != nil {
 		return err
+	}
+	err = recreateDatabase(ctx, dbSetts.Host, dbSetts.Port, dbSetts.Username, dbSetts.Password, dbSetts.Database)
+	if err != nil {
+		return fmt.Errorf("cannot recreate database: %s", err)
 	}
 	db, err := postgres.Open(&postgres.Options{
 		Host:     dbSetts.Host,
@@ -406,13 +406,13 @@ func (c *Chichi) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 }
 
 func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
-	err := recreateDatabase(ctx, warehouse.Host, warehouse.Port, warehouse.Username, warehouse.Password, warehouse.Database)
-	if err != nil {
-		return fmt.Errorf("cannot recreate database: %s", err)
-	}
-	err = validDatabaseNameForTests(warehouse.Database)
+	err := validDatabaseNameForTests(warehouse.Database)
 	if err != nil {
 		return err
+	}
+	err = recreateDatabase(ctx, warehouse.Host, warehouse.Port, warehouse.Username, warehouse.Password, warehouse.Database)
+	if err != nil {
+		return fmt.Errorf("cannot recreate database: %s", err)
 	}
 	db, err := postgres.Open(&postgres.Options{
 		Host:     warehouse.Host,
