@@ -252,6 +252,12 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t.Fatalf("cannot init warehouse: %s", err)
 	}
 
+	// Add columns to the tables in the data warehouse.
+	err = addColumnsToWarehouseTables(ctx, testsSettings.Warehouse)
+	if err != nil {
+		t.Fatalf("cannot add columns to data warehouse: %s", err)
+	}
+
 	// Wait some time for the leader election.
 	time.Sleep(3 * time.Second)
 
@@ -405,14 +411,10 @@ func (c *Chichi) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 	db.Close()
 }
 
-func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
+func addColumnsToWarehouseTables(ctx context.Context, warehouse *DBSettings) error {
 	err := validDatabaseNameForTests(warehouse.Database)
 	if err != nil {
 		return err
-	}
-	err = recreateDatabase(ctx, warehouse.Host, warehouse.Port, warehouse.Username, warehouse.Password, warehouse.Database)
-	if err != nil {
-		return fmt.Errorf("cannot recreate database: %s", err)
 	}
 	db, err := postgres.Open(&postgres.Options{
 		Host:     warehouse.Host,
@@ -429,6 +431,18 @@ func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
 	err = execQueries(ctx, db, "../database/warehouses/postgresql.sql")
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
+	err := validDatabaseNameForTests(warehouse.Database)
+	if err != nil {
+		return err
+	}
+	err = recreateDatabase(ctx, warehouse.Host, warehouse.Port, warehouse.Username, warehouse.Password, warehouse.Database)
+	if err != nil {
+		return fmt.Errorf("cannot recreate database: %s", err)
 	}
 	return nil
 }

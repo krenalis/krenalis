@@ -29,10 +29,14 @@ import (
 )
 
 var (
-	//go:embed destinations_users.sql
+	//go:embed tables/destinations_users.sql
 	createDestinationUsersTable string
-	//go:embed events.sql
+	//go:embed tables/events.sql
 	createEventsTable string
+	//go:embed tables/groups.sql
+	createGroupsTable string
+	//go:embed tables/users.sql
+	createUsersTable string
 )
 
 var _ warehouses.Warehouse = &ClickHouse{}
@@ -138,13 +142,17 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = conn.Exec(ctx, createDestinationUsersTable)
-	if err != nil {
-		return warehouses.Error(err)
+	tables := []string{
+		createDestinationUsersTable,
+		createEventsTable,
+		createGroupsTable,
+		createUsersTable,
 	}
-	err = conn.Exec(ctx, createEventsTable)
-	if err != nil {
-		return warehouses.Error(err)
+	for _, table := range tables {
+		err := conn.Exec(ctx, table)
+		if err != nil {
+			return warehouses.Error(err)
+		}
 	}
 	return nil
 }

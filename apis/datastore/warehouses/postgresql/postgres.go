@@ -29,10 +29,18 @@ import (
 )
 
 var (
-	//go:embed destinations_users.sql
+	//go:embed tables/destinations_users.sql
 	createDestinationUsersTable string
-	//go:embed events.sql
+	//go:embed tables/events.sql
 	createEventsTable string
+	//go:embed tables/groups_identities.sql
+	createGroupsIdentitiesTable string
+	//go:embed tables/groups.sql
+	createGroupsTable string
+	//go:embed tables/users_identities.sql
+	createUsersIdentitiesTable string
+	//go:embed tables/users.sql
+	createUsersTable string
 	//go:embed stored_procedure_queries.sql
 	storeProcedureQueries string
 )
@@ -238,13 +246,19 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = conn.Exec(ctx, createDestinationUsersTable)
-	if err != nil {
-		return warehouses.Error(err)
+	tables := []string{
+		createDestinationUsersTable,
+		createEventsTable,
+		createGroupsIdentitiesTable,
+		createGroupsTable,
+		createUsersIdentitiesTable,
+		createUsersTable,
 	}
-	_, err = conn.Exec(ctx, createEventsTable)
-	if err != nil {
-		return warehouses.Error(err)
+	for _, table := range tables {
+		_, err := conn.Exec(ctx, table)
+		if err != nil {
+			return warehouses.Error(err)
+		}
 	}
 	return nil
 }

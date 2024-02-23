@@ -11,10 +11,11 @@
   - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
   - [2. Configure and add certificates](#2-configure-and-add-certificates)
   - [3. Compile the server](#3-compile-the-server)
-  - [4. Populate the database and the warehouse](#4-populate-the-database-and-the-warehouse)
+  - [4. Populate the database](#4-populate-the-database)
   - [5. Connect the data warehouse](#5-connect-the-data-warehouse)
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
-  - [7. Run and open the browser](#7-run-and-open-the-browser)
+  - [7. Add more columns to the tables in the data warehouse](#7-add-more-columns-to-the-tables-in-the-data-warehouse)
+  - [8. Run and open the browser](#8-run-and-open-the-browser)
 - [Enable telemetry (optional)](#enable-telemetry-optional)
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
@@ -88,19 +89,9 @@ Within the root of this repository execute:
 go build -tags osusergo,netgo -trimpath
 ```
 
-### 4. Populate the database and the warehouse
+### 4. Populate the database
 
-Populate the database with the queries in:
-
-* [database/PostgreSQL.sql](database/PostgreSQL.sql)
-
-and populate the warehouse with the queries in:
-
-* [database/warehouses/postgresql.sql](database/warehouses/postgresql.sql)
-
-or
-
-* [database/warehouses/clickhouse.sql](database/warehouses/clickhouse.sql)
+Populate the Chichi's database with the queries in [database/PostgreSQL.sql](database/PostgreSQL.sql).
 
 ### 5. Connect the data warehouse
 
@@ -151,7 +142,13 @@ Initialize the warehouse with:
 $ chichi-cli init-warehouse
 ```
 
-### 7. Run and open the browser
+### 7. Add more columns to the tables in the data warehouse
+
+Populate the PostgreSQL data warehouse with the queries in [database/warehouses/postgresql.sql](database/warehouses/postgresql.sql).
+
+*Note that this step will be removed in the future, as it will be performed directly by Chichi*.
+
+### 8. Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
