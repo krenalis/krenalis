@@ -5,7 +5,7 @@ At present, you can install Chichi by compiling its source code in Go.
 ## Requirements
 
 * Git
-* Go v1.21
+* Go v1.22
 * Node.js 20 or higher
 * npm
 * PostgreSQL 15 or higher
