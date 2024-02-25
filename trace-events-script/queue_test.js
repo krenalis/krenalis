@@ -98,6 +98,7 @@ Deno.test('Queue', () => {
 	localStorage.setItem('queue', '....')
 	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	assertEmpty()
+	q.close()
 	localStorage.setItem('queue', '{}\n[}\n{}\n123\n123\n123\n2\n')
 	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
 	assertEmpty()
@@ -150,5 +151,5 @@ Deno.test('Queue', () => {
 	assert(localStorage.getItem('queue').length > 0)
 	document.visibilityState = 'visible'
 	dispatchEvent(new Event('visibilitychange'))
-	q2.close()
+	q.close()
 })

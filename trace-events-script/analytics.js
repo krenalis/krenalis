@@ -69,6 +69,11 @@ class Analytics {
 		return event
 	}
 
+	// close closes the Analytics instance.
+	close() {
+		this.#sender.close()
+	}
+
 	// debug toggles debug mode.
 	debug(on) {
 		this.#session.debug(on)

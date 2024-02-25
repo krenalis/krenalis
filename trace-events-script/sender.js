@@ -11,8 +11,10 @@ class Sender {
 	#endpoint = ''
 	#queue
 	#flushing = false
+	#timeoutID = null
 	#post
 	#debug
+	#closed
 
 	constructor(writeKey, endpoint, debug) {
 		const queueKey = `chichi.${writeKey.slice(0, 7)}.queue`
@@ -27,10 +29,29 @@ class Sender {
 			}
 		})
 		if (!this.#queue.isEmpty()) {
-			setTimeout(() => {
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
 				this.#flush()
 			}, 20)
 		}
+	}
+
+	// close closes the sender. It tries to preserve the queue in the
+	// localStorage before returning, but does not try to send queued events.
+	close() {
+		if (this.#timeoutID != null) {
+			clearTimeout(this.#timeoutID)
+			this.#timeoutID = null
+		}
+		this.#queue.close()
+		this.#closed = true
+		this.#debug?.('sender closed')
+	}
+
+	// debug toggles debug mode.
+	debug(on) {
+		this.#queue.debug(on)
+		this.#debug = debug(on)
 	}
 
 	send(event) {
@@ -51,16 +72,11 @@ class Sender {
 		}
 		if (wasEmpty) {
 			this.#debug?.('events will be flushed after', this.timeout, 'ms')
-			setTimeout(() => {
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
 				this.#flush()
 			}, this.timeout)
 		}
-	}
-
-	// debug toggles debug mode.
-	debug(on) {
-		this.#queue.debug(on)
-		this.#debug = debug(on)
 	}
 
 	// flush flushes the queued events. If hidden is true, it sends a single
@@ -85,7 +101,8 @@ class Sender {
 			const timeout = (this.#queue.age() + this.timeout) - getTime()
 			if (timeout > 0) {
 				this.#debug?.('events will be flushed after', timeout, 'ms')
-				setTimeout(() => {
+				this.#timeoutID = setTimeout(() => {
+					this.#timeoutID = null
 					this.#flush()
 				}, timeout)
 				return
@@ -117,6 +134,9 @@ class Sender {
 		this.#debug?.('flushing', sent, 'events of', this.#queue.length(), '(', body.size, 'bytes )')
 		try {
 			this.#post(this.#endpoint, body, hidden, (response) => {
+				if (this.#closed) {
+					return
+				}
 				this.#flushing = false
 				if (response instanceof Error) {
 					if (hidden) {
@@ -130,7 +150,8 @@ class Sender {
 						} else {
 							console.warn(response.message)
 						}
-						setTimeout(() => {
+						this.#timeoutID = setTimeout(() => {
+							this.#timeoutID = null
 							this.#flush()
 						}, timeout)
 					} else {
@@ -149,7 +170,8 @@ class Sender {
 					} else {
 						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
 					}
-					setTimeout(() => {
+					this.#timeoutID = setTimeout(() => {
+						this.#timeoutID = null
 						this.#flush()
 					}, timeout)
 					return
@@ -167,7 +189,8 @@ class Sender {
 				console.warn(error.message)
 			}
 			this.#debug?.('cannot post events, try again after 100ms:', error)
-			setTimeout(() => {
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
 				this.#flush()
 			}, 100)
 		}

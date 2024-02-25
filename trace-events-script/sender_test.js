@@ -30,12 +30,13 @@ Deno.test('Sender send', async (t) => {
 	await t.step('fetch', async () => {
 		let time
 		let fetch
+		let sender
 
 		try {
 			time = new FakeTime()
 			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 			fetch.install()
-			const sender = new Sender(writeKey, endpoint)
+			sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
 			for (let i = 0; i < events.length; i++) {
 				sender.send(events[i])
@@ -47,6 +48,7 @@ Deno.test('Sender send', async (t) => {
 				assertEquals(sentEvents[i], events[i])
 			}
 		} finally {
+			sender.close()
 			fetch.restore()
 			time.restore()
 		}
@@ -57,7 +59,7 @@ Deno.test('Sender send', async (t) => {
 			time = new FakeTime()
 			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 			fetch.install()
-			const sender = new Sender(writeKey, endpoint)
+			sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
 			const maxPerBatch = 9658 // This value can change if the sender's implementation change.
 			// Send maxPerBatch events.
@@ -75,6 +77,7 @@ Deno.test('Sender send', async (t) => {
 			events = await fetch.events(2)
 			assertEquals(events.length, 2)
 		} finally {
+			sender.close()
 			fetch.restore()
 			time.restore()
 		}
@@ -86,7 +89,7 @@ Deno.test('Sender send', async (t) => {
 			time = new FakeTime()
 			fetch = new fake.Fetch(writeKey, endpoint + 'batch', true, DEBUG)
 			fetch.install()
-			const sender = new Sender(writeKey, endpoint)
+			sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
 			sender.send({ messageId: crypto.randomUUID() })
 			document.visibilityState = 'hidden'
@@ -96,6 +99,7 @@ Deno.test('Sender send', async (t) => {
 		} finally {
 			document.visibilityState = 'visible'
 			dispatchEvent(new Event('visibilitychange'))
+			sender.close()
 			fetch.restore()
 			time.restore()
 		}
@@ -107,8 +111,9 @@ Deno.test('Sender send', async (t) => {
 		const time = new FakeTime()
 		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'batch', DEBUG)
 		sendBeacon.install()
+		let sender
 		try {
-			const sender = new Sender(writeKey, endpoint)
+			sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
 			for (let i = 0; i < events.length; i++) {
 				sender.send(events[i])
@@ -123,6 +128,7 @@ Deno.test('Sender send', async (t) => {
 		} finally {
 			document.visibilityState = 'visible'
 			dispatchEvent(new Event('pageshow'))
+			sender.close()
 			sendBeacon.restore()
 			time.restore()
 		}
@@ -137,8 +143,9 @@ Deno.test('Sender send', async (t) => {
 		const fetch = globalThis.fetch
 		globalThis.fetch = undefined
 		assertEquals(globalThis.fetch, undefined)
+		let sender
 		try {
-			const sender = new Sender(writeKey, endpoint)
+			sender = new Sender(writeKey, endpoint)
 			sender.debug(DEBUG)
 			for (let i = 0; i < events.length; i++) {
 				sender.send(events[i])
@@ -150,6 +157,7 @@ Deno.test('Sender send', async (t) => {
 				assertEquals(sentEvents[i], events[i])
 			}
 		} finally {
+			sender.close()
 			globalThis.fetch = fetch
 			fake.XMLHttpRequest.restore()
 			time.restore()

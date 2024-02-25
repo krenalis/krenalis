@@ -102,8 +102,8 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('ready, when Promise is not supported', async () => {
 		globalThis.Promise = null
+		const a = newAnalytics()
 		try {
-			const a = newAnalytics()
 			// Before Analytics is ready.
 			let cb
 			let promise = new _Promise((resolve) => {
@@ -126,6 +126,7 @@ Deno.test('Analytics', async (t) => {
 		} finally {
 			globalThis.Promise = _Promise
 		}
+		a.close()
 	})
 
 	await t.step('ready, when Promise is supported', async () => {
@@ -141,11 +142,13 @@ Deno.test('Analytics', async (t) => {
 		})
 		void a.ready(callback)
 		await promise
+		a.close()
 	})
 
 	await t.step('no key is created in the localStorage', () => {
-		newAnalytics({ sessions: { autoTrack: false } })
+		const a = newAnalytics({ sessions: { autoTrack: false } })
 		assertEquals(localStorage.length, 0)
+		a.close()
 	})
 
 	await t.step('reset function', async () => {
@@ -167,6 +170,7 @@ Deno.test('Analytics', async (t) => {
 		a.reset()
 		localStorage.removeItem('chichi.rq6JJg5.queue')
 		assertEquals(localStorage.length, 0)
+		a.close()
 	})
 
 	await t.step('getAnonymousId function', () => {
@@ -180,6 +184,7 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.getAnonymousId()))
 		a.setAnonymousId({})
 		assert(uuid.validate(a.getAnonymousId()))
+		a.close()
 	})
 
 	await t.step('setAnonymousId function', () => {
@@ -194,14 +199,16 @@ Deno.test('Analytics', async (t) => {
 		assert(uuid.validate(a.setAnonymousId()))
 		assertEquals(a.setAnonymousId({}), {})
 		assert(uuid.validate(a.setAnonymousId()))
+		a.close()
 	})
 
 	await t.step('sessions with auto tracking', () => {
 		const time = new FakeTime()
 		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		fetch.install()
+		let a
 		try {
-			const a = newAnalytics()
+			a = newAnalytics()
 			let sessionId = getTime()
 			assertEquals(a.getSessionId(), sessionId)
 			time.tick(fiveMinutes)
@@ -214,6 +221,9 @@ Deno.test('Analytics', async (t) => {
 			a.reset()
 			assertEquals(a.getSessionId(), null)
 		} finally {
+			if (a != null) {
+				a.close()
+			}
 			fetch.restore()
 			time.restore()
 		}
@@ -257,6 +267,7 @@ Deno.test('Analytics', async (t) => {
 			fetch.restore()
 			time.restore()
 		}
+		a.close()
 	})
 
 	// Test identify and anonymize with each strategy, both with and without sessions.
@@ -366,6 +377,7 @@ Deno.test('Analytics', async (t) => {
 					fetch.restore()
 					time.restore()
 				}
+				a.close()
 			})
 		}
 	}
@@ -391,6 +403,7 @@ Deno.test('Analytics', async (t) => {
 			fetch.restore()
 			time.restore()
 		}
+		a.close()
 	})
 
 	// Execute the steps in the 'analytics_test_steps.js' module.
@@ -406,21 +419,22 @@ Deno.test('Analytics', async (t) => {
 			fetch.install()
 			randomUUID.install()
 			navigator.install()
+			let a
 			try {
-				const analytics = await newAnalytics(step.options, null, 0)
+				a = await newAnalytics(step.options, null, 0)
 				time.next()
-				analytics.setAnonymousId('1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7')
+				a.setAnonymousId('1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7')
 				if (step.options?.sessions?.autoTrack !== false) {
 					// Start a session and sent an event to mark it as not just started.
-					analytics.startSession(1704070861000)
-					void analytics.page('Home')
+					a.startSession(1704070861000)
+					void a.page('Home')
 					time.tick(1000)
 					await fetch.events(1)
 				} else {
 					time.tick(1000)
 				}
 				try {
-					await step.call(analytics)
+					await step.call(a)
 				} catch (error) {
 					time.tick(1000)
 					if (step.error) {
@@ -438,6 +452,7 @@ Deno.test('Analytics', async (t) => {
 				assertEquals(events.length, 1)
 				assertEquals(events[0], step.event)
 			} finally {
+				a.close()
 				time.restore()
 				navigator.restore()
 				randomUUID.restore()

@@ -78,6 +78,7 @@ class Queue {
 			this.#syncTimeoutID = null
 		}
 		this.#makePersistent()
+		this.#debug?.(`'${this.#key}' queue closed`)
 	}
 
 	// debug toggles debug mode.
