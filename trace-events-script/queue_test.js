@@ -140,16 +140,4 @@ Deno.test('Queue', () => {
 	assertEquals(q2.read(), ['{"q":2}'])
 	q1.close()
 	q2.close()
-
-	// After hiding the page, the queue is immediately persisted in the localStorage.
-	localStorage.clear()
-	q = new Queue(localStorage, 'queue', maxItemBytes, DEBUG)
-	q.append({ foo: [1, 3] })
-	assertEquals(localStorage.getItem('queue'), null)
-	document.visibilityState = 'hidden'
-	dispatchEvent(new Event('visibilitychange'))
-	assert(localStorage.getItem('queue').length > 0)
-	document.visibilityState = 'visible'
-	dispatchEvent(new Event('visibilitychange'))
-	q.close()
 })

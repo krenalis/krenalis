@@ -1,4 +1,4 @@
-import { debug, getTime, onVisibilityChange } from './utils.js'
+import { debug, getTime } from './utils.js'
 
 // Queue is an in memory queue made persistent on a Storage.
 class Queue {
@@ -9,7 +9,7 @@ class Queue {
 	#times = []
 	#sizes = []
 	#inSync = true
-	#syncTimeoutID = null
+	#timeoutID = null
 	#debug
 
 	// constructor initializes a new Queue using the provided Storage (such as
@@ -21,14 +21,6 @@ class Queue {
 		this.#maxItemSize = maxItemSize
 		this.debug(debug)
 		this.#restore()
-		onVisibilityChange((visible) => {
-			if (!visible) {
-				if (this.#syncTimeoutID != null) {
-					clearTimeout(this.#syncTimeoutID)
-				}
-				this.#makePersistent()
-			}
-		})
 	}
 
 	// age returns the time, in milliseconds, when the item in the head of the
@@ -53,9 +45,9 @@ class Queue {
 		this.#times.push(time)
 		this.#sizes.push(size)
 		this.#inSync = false
-		if (this.#syncTimeoutID == null) {
-			this.#syncTimeoutID = setTimeout(() => {
-				this.#syncTimeoutID = null
+		if (this.#timeoutID == null) {
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
 				this.#makePersistent(200)
 			}, 20)
 		}
@@ -73,9 +65,9 @@ class Queue {
 	// localStorage before returning. No other calls to the queue's method
 	// should be made after a call the close method.
 	close() {
-		if (this.#syncTimeoutID != null) {
-			clearTimeout(this.#syncTimeoutID)
-			this.#syncTimeoutID = null
+		if (this.#timeoutID != null) {
+			clearTimeout(this.#timeoutID)
+			this.#timeoutID = null
 		}
 		this.#makePersistent()
 		this.#debug?.(`'${this.#key}' queue closed`)
@@ -94,6 +86,16 @@ class Queue {
 	// length returns the total number of items currently in the queue.
 	length() {
 		return this.#items.length
+	}
+
+	// makePersistent makes the queue persistent in the localStorage. It can be
+	// called, for example, when the page becomes not visible, to immediately
+	// make it persistent.
+	makePersistent() {
+		if (this.#timeoutID != null) {
+			clearTimeout(this.#timeoutID)
+		}
+		this.#makePersistent()
 	}
 
 	// read returns the items at the head of the queue, for a maximum of
@@ -135,17 +137,18 @@ class Queue {
 		this.#sizes.splice(0, n)
 		this.#inSync = false
 		this.#debug?.('removed', n, `items from the '${this.#key}' queue (`, this.#items.length, 'item still in queue )')
-		if (this.#syncTimeoutID != null) {
-			clearTimeout(this.#syncTimeoutID)
+		if (this.#timeoutID != null) {
+			clearTimeout(this.#timeoutID)
 		}
 		this.#makePersistent(200)
 	}
 
 	// makePersistent makes the queue persistent in the localStorage. It is
-	// called when changes occur in the queue and the queue is not currently
-	// being synced (when this.#syncing is false). The delay parameter specifies
-	// the duration, in milliseconds, to wait before attempting again in case of
-	// an error. If delay is null, no retry will be made.
+	// called by the public makePersistent method or when changes occur in the
+	// queue and the queue is not currently being synced (when this.#inSync is
+	// false). The delay parameter specifies the duration, in milliseconds, to
+	// wait before attempting again in case of an error. If delay is null, no
+	// retry will be made.
 	#makePersistent(delay) {
 		if (this.#inSync) {
 			return
@@ -174,8 +177,8 @@ class Queue {
 				'ms):',
 				error.message,
 			)
-			this.#syncTimeoutID = setTimeout(() => {
-				this.#syncTimeoutID = null
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
 				this.#makePersistent(delay)
 			}, delay)
 			return

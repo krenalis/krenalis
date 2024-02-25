@@ -25,6 +25,7 @@ class Sender {
 		this.#post = this.#postFunc()
 		onVisibilityChange((visible) => {
 			if (!visible) {
+				this.#queue.makePersistent()
 				this.#flush(true)
 			}
 		})

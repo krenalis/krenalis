@@ -84,7 +84,7 @@ Deno.test('Sender send', async (t) => {
 
 		localStorage.clear()
 
-		// After hiding the page, the queue is immediately flushed.
+		// After hiding the page, the queue is immediately made persistent and flushed.
 		try {
 			time = new FakeTime()
 			fetch = new fake.Fetch(writeKey, endpoint + 'batch', true, DEBUG)
@@ -96,6 +96,8 @@ Deno.test('Sender send', async (t) => {
 			dispatchEvent(new Event('visibilitychange'))
 			const events = await fetch.events(1)
 			assertEquals(events.length, 1)
+			const queueKey = `chichi.${writeKey.slice(0, 7)}.queue`
+			assert(localStorage.getItem(queueKey).length > 0)
 		} finally {
 			document.visibilityState = 'visible'
 			dispatchEvent(new Event('visibilitychange'))
