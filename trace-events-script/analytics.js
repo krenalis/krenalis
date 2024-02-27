@@ -239,23 +239,24 @@ class Analytics {
 
 		const loc = globalThis.location
 
-		const canonical = document.querySelector('link[rel="canonical"]')
-		let pageURL = canonical ? canonical.getAttribute('href') : null
+		let url
 		let path
-		if (pageURL == null || pageURL === '') {
-			pageURL = loc.href
-			const p = pageURL.indexOf('#')
-			if (p !== -1) {
-				pageURL = pageURL.substring(0, p)
+		{
+			const canonical = document.querySelector('link[rel="canonical"]')
+			if (canonical == null) {
+				url = loc.href
+				path = loc.pathname
+			} else {
+				url = canonical.href
+				// IE11 does not support URL.
+				const a = document.createElement('a')
+				a.href = url
+				path = a.pathname !== '' ? a.pathname : '/'
 			}
-			path = loc.pathname
-		} else {
-			let u = pageURL
-			const p = u.indexOf('#')
+			const p = url.indexOf('#')
 			if (p !== -1) {
-				u = u.substring(0, p)
+				url = url.substring(0, p)
 			}
-			path = u.substring(u.indexOf('/'))
 		}
 
 		const page = {
@@ -263,7 +264,7 @@ class Analytics {
 			referrer: document.referrer == null ? '' : document.referrer,
 			search: loc.search,
 			title: document.title,
-			url: pageURL,
+			url: url,
 		}
 
 		switch (event.type) {
