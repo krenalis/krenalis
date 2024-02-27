@@ -1,7 +1,7 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts'
-import { DOMParser } from 'https://deno.land/x/deno_dom/deno-dom-wasm.ts'
 import { _uuid_imp, campaign, decodeBase64, encodeBase64, isURL, onVisibilityChange } from './utils.js'
+import * as fake from './test_fake.js'
 
 Deno.test('utils', async (t) => {
 	await t.step('campaign function', () => {
@@ -97,7 +97,7 @@ Deno.test('utils', async (t) => {
 		assert(!isURL('/signup'))
 		assert(!isURL(''))
 		// Mock document.
-		globalThis.document = new DOMParser().parseFromString(`<!DOCTYPE html>`, 'text/html')
+		globalThis.document = new fake.HTMLDocument()
 		const URL = globalThis.URL
 		globalThis.URL = undefined
 		try {

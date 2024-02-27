@@ -249,9 +249,13 @@ class Analytics {
 			} else {
 				url = canonical.href
 				// IE11 does not support URL.
-				const a = document.createElement('a')
-				a.href = url
-				path = a.pathname !== '' ? a.pathname : '/'
+				if (typeof globalThis.URL === 'function') {
+					path = new URL(url).pathname
+				} else {
+					const a = document.createElement('a')
+					a.href = url
+					path = a.pathname !== '' ? a.pathname : '/'
+				}
 			}
 			const p = url.indexOf('#')
 			if (p !== -1) {

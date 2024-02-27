@@ -1,6 +1,5 @@
 import { assert, assertEquals, AssertionError, assertNotEquals } from 'https://deno.land/std@0.212.0/assert/mod.ts'
 import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts'
-import { DOMParser, HTMLDocument } from 'https://deno.land/x/deno_dom/deno-dom-wasm.ts'
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts'
 import * as fake from './test_fake.js'
 import { steps } from './analytics_test_steps.js'
@@ -19,24 +18,7 @@ Deno.test('Analytics', async (t) => {
 		assert(globalThis.navigator.onLine)
 
 		// Mock document.
-		const doc = new DOMParser().parseFromString(
-			`<!DOCTYPE html>
-						<html lang="en">
-					<head>
-						<title>Hello from Chichi</title>
-					</head>
-					<body>
-						<h1>Hello from Deno</h1>
-						<form>
-							<input name="user">
-							<button>Submit</button>
-						</form>
-					</body>
-				</html>`,
-			'text/html',
-		)
-		globalThis.document = doc
-		assert(document instanceof HTMLDocument)
+		globalThis.document = new fake.HTMLDocument()
 
 		// Mock location.
 		const url = new URL('https://example.com:8080/path?query=123#fragment')

@@ -1,4 +1,5 @@
 import { assert, assertEquals, AssertionError } from 'https://deno.land/std@0.212.0/assert/mod.ts'
+import { DOMParser } from 'https://deno.land/x/deno_dom/deno-dom-wasm.ts'
 import * as uuid from 'https://deno.land/std@0.212.0/uuid/v4.ts'
 import { MaxBodySize } from './sender.js'
 import * as utils from './utils.js'
@@ -318,6 +319,53 @@ class SendBeacon {
 	}
 }
 
+// HTMLDocument is a fake HTMLDocument.
+class HTMLDocument {
+	#dom
+	#visibilityState = 'visible'
+
+	referrer = ''
+	title = 'Hello from Chichi'
+
+	get visibilityState() {
+		return this.#visibilityState
+	}
+
+	set visibilityState(value) {
+		if (value !== 'visible' && value !== 'hidden') {
+			throw new Error(`invalid visibility state '${value}'`)
+		}
+		if (value === this.#visibilityState) {
+			return
+		}
+		this.#visibilityState = value
+		dispatchEvent(new Event('visibilitychange'))
+	}
+
+	constructor() {
+		this.#dom = new DOMParser().parseFromString('<!DOCTYPE html>', 'text/html')
+	}
+
+	addEventListener() {
+		addEventListener.bind(globalThis)(...arguments)
+	}
+
+	createElement() {
+		return this.#dom.createElement(...arguments)
+	}
+
+	querySelector(selectors) {
+		if (selectors !== 'link[rel="canonical"]') {
+			throw new Error(`query selector '${selector}' is not supported by the fake HTMLDocument`)
+		}
+		const element = this.#dom.createElement('link')
+		element.setAttribute('rel', 'canonical')
+		element.setAttribute('href', '/path?query=123')
+		element.href = 'https://example.com:8080/path?query=123'
+		return element
+	}
+}
+
 // Navigator is a fake Navigator.
 class Navigator {
 	language = 'en-US'
@@ -570,4 +618,4 @@ async function parseRequest(writeKey, minTime, keepalive, options) {
 	return events
 }
 
-export { Cookie, CookieDocument, Fetch, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest }
+export { Cookie, CookieDocument, Fetch, HTMLDocument, Navigator, RandomUUID, SendBeacon, Storage, XMLHttpRequest }
