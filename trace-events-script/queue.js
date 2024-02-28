@@ -88,6 +88,82 @@ class Queue {
 		return this.#items.length === 0
 	}
 
+	// load loads and appends the items in the queue from localStorage with the
+	// provided key. If any errors occur while accessing localStorage it does
+	// nothing. It is only called by the constructor.
+	//
+	// If the queue persisted in localStorage has been corrupted, restore
+	// only ensures that no internal Queue data becomes corrupted, but it does
+	// not guarantee the validity of the JSON items, nor does it ensure that
+	// their sizes correspond to the original item sizes or that their
+	// timestamps match the original ones.
+	load(key) {
+		let text
+		try {
+			text = this.#storage.getItem(key)
+		} catch (error) {
+			this.#debug?.(`cannot restore the '${key}' queue:`, error.message)
+			return
+		}
+		if (text == null || text === '') {
+			this.#debug?.(`no '${key}' queue to restore`)
+			return
+		}
+		try {
+			const items = text.split('\n')
+			const sizes = items.pop().split(' ')
+			const times = items.pop().split(' ')
+			if (sizes.length !== items.length || times.length !== items.length) {
+				this.#debug?.(
+					`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
+				)
+				return
+			}
+			let bytes = 0
+			for (let i = 0; i < items.length; i++) {
+				sizes[i] = Number(sizes[i])
+				times[i] = Number(times[i])
+				bytes += sizes[i]
+			}
+			if (this.isEmpty()) {
+				this.#items = items
+				this.#times = times
+				this.#sizes = sizes
+			} else {
+				let i = times.length - 1
+				let j = this.#times.length - 1
+				let k = times.length + this.#times.length - 1
+				while (i >= 0 && j >= 0) {
+					if (times[i] > this.#times[j]) {
+						this.#items[k] = items[i]
+						this.#times[k] = times[i]
+						this.#sizes[k] = sizes[i]
+						i--
+					} else {
+						this.#items[k] = this.#items[j]
+						this.#times[k] = this.#times[j]
+						this.#sizes[k] = this.#sizes[j]
+						j--
+					}
+					k--
+				}
+				while (i >= 0) {
+					this.#items[k] = items[i]
+					this.#times[k] = times[i]
+					this.#sizes[k] = sizes[i]
+					i--
+					k--
+				}
+			}
+			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${key}' queue`)
+			this.#dispatchEvent()
+		} catch {
+			this.#debug?.(
+				`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
+			)
+		}
+	}
+
 	// read returns the items at the head of the queue, for a maximum of
 	// maxBytes bytes. It considers separatorSize bytes in the total bytes as if
 	// the returned items had a separator. If MaxBytes is null, there is no
@@ -219,82 +295,6 @@ class Queue {
 			bytes,
 			'bytes )',
 		)
-	}
-
-	// load loads and appends the items in the queue from localStorage with the
-	// provided key. If any errors occur while accessing localStorage it does
-	// nothing. It is only called by the constructor.
-	//
-	// If the queue persisted in localStorage has been corrupted, restore
-	// only ensures that no internal Queue data becomes corrupted, but it does
-	// not guarantee the validity of the JSON items, nor does it ensure that
-	// their sizes correspond to the original item sizes or that their
-	// timestamps match the original ones.
-	load(key) {
-		let text
-		try {
-			text = this.#storage.getItem(key)
-		} catch (error) {
-			this.#debug?.(`cannot restore the '${key}' queue:`, error.message)
-			return
-		}
-		if (text == null || text === '') {
-			this.#debug?.(`no '${key}' queue to restore`)
-			return
-		}
-		try {
-			const items = text.split('\n')
-			const sizes = items.pop().split(' ')
-			const times = items.pop().split(' ')
-			if (sizes.length !== items.length || times.length !== items.length) {
-				this.#debug?.(
-					`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
-				)
-				return
-			}
-			let bytes = 0
-			for (let i = 0; i < items.length; i++) {
-				sizes[i] = Number(sizes[i])
-				times[i] = Number(times[i])
-				bytes += sizes[i]
-			}
-			if (this.isEmpty()) {
-				this.#items = items
-				this.#times = times
-				this.#sizes = sizes
-			} else {
-				let i = times.length - 1
-				let j = this.#times.length - 1
-				let k = times.length + this.#times.length - 1
-				while (i >= 0 && j >= 0) {
-					if (times[i] > this.#times[j]) {
-						this.#items[k] = items[i]
-						this.#times[k] = times[i]
-						this.#sizes[k] = sizes[i]
-						i--
-					} else {
-						this.#items[k] = this.#items[j]
-						this.#times[k] = this.#times[j]
-						this.#sizes[k] = this.#sizes[j]
-						j--
-					}
-					k--
-				}
-				while (i >= 0) {
-					this.#items[k] = items[i]
-					this.#times[k] = times[i]
-					this.#sizes[k] = sizes[i]
-					i--
-					k--
-				}
-			}
-			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${key}' queue`)
-			this.#dispatchEvent()
-		} catch {
-			this.#debug?.(
-				`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
-			)
-		}
 	}
 }
 
