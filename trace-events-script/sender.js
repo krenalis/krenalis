@@ -1,200 +1,63 @@
-import { debug, getTime, onVisibilityChange } from './utils.js'
-import Queue from './queue.js'
+import { debug, getTime } from './utils.js'
 
 const MaxBodySize = 500 * 1024
 const MaxHiddenBodySize = 64 * 1024
-const MaxEventSize = 32 * 1024
 
+// Sender sends events read from a Queue to a destination.
 class Sender {
 	timeout = 300
 	#writeKey
-	#endpoint = ''
+	#endpoint
 	#queue
-	#flushing = false
+	#sending = false
 	#timeoutID = null
 	#post
+	#queueListener
 	#debug
 	#closed
 
-	constructor(writeKey, endpoint, debug) {
-		const queueKey = `chichi.${writeKey.slice(0, 7)}.queue`
-		this.#queue = new Queue(localStorage, queueKey, MaxEventSize, debug)
+	// constructor returns a new Sender that sends the events in the queue to
+	// the provided endpoint using the provided write key. Events already in the
+	// queue are promptly dispatched, while others will be sent as they are
+	// added to the queue.
+	constructor(writeKey, endpoint, queue) {
+		this.#queue = queue
 		this.#writeKey = JSON.stringify(writeKey)
 		this.#endpoint = endpoint + 'batch'
-		this.debug(debug)
 		this.#post = this.#postFunc()
-		onVisibilityChange((visible) => {
-			if (!visible) {
-				this.#queue.makePersistent()
-				this.#flush(true)
-			}
-		})
-		if (!this.#queue.isEmpty()) {
-			this.#timeoutID = setTimeout(() => {
-				this.#timeoutID = null
-				this.#flush()
-			}, 20)
+		if (!queue.isEmpty()) {
+			this.#send()
 		}
+		this.#queueListener = () => {
+			if (!this.#sending && this.#timeoutID == null) {
+				this.#debug?.('events will be sent after', this.timeout, 'ms')
+				this.#timeoutID = setTimeout(() => {
+					this.#timeoutID = null
+					this.#send()
+				}, this.timeout)
+			}
+		}
+		this.#queue.addEventListener(this.#queueListener)
 	}
 
-	// close closes the sender. It tries to preserve the queue in the
-	// localStorage before returning, but does not try to send queued events.
+	// close closes the sender.
 	close() {
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
-			this.#timeoutID = null
 		}
-		this.#queue.close()
+		this.#queue.removeEventListener(this.#queueListener)
 		this.#closed = true
 		this.#debug?.('sender closed')
 	}
 
 	// debug toggles debug mode.
 	debug(on) {
-		this.#queue.debug(on)
 		this.#debug = debug(on)
 	}
 
-	send(event) {
-		this.#debug?.(`received '${event.type}' event`, event)
-		const wasEmpty = this.#queue.isEmpty()
-		try {
-			const bytes = this.#queue.append(event)
-			if (bytes > MaxEventSize) {
-				console.warn('event size (' + bytes + 'bytes) is greater then 32KB')
-				return
-			}
-		} catch (error) {
-			if (error instanceof TypeError) {
-				console.warn('cannot stringify the event to JSON:', error)
-				return
-			}
-			throw error
-		}
-		if (wasEmpty) {
-			this.#debug?.('events will be flushed after', this.timeout, 'ms')
-			this.#timeoutID = setTimeout(() => {
-				this.#timeoutID = null
-				this.#flush()
-			}, this.timeout)
-		}
-	}
-
-	// flush flushes the queued events. If hidden is true, it sends a single
-	// request within 64KB body size limit.
-	//
-	// flush should be invoked only when the queue becomes non-empty (hidden is
-	// false) or the page becomes hidden (hidden is true). In all other
-	// scenarios, once flush is called, it is guaranteed to continue until the
-	// queue becomes empty or the page becomes hidden.
-	#flush(hidden) {
-		if (hidden) {
-			if (this.#queue.isEmpty() || this.#flushing || !navigator.onLine) {
-				return
-			}
-		} else {
-			if (!navigator.onLine) {
-				addEventListener('online', () => {
-					this.#flush()
-				})
-				return
-			}
-			const timeout = (this.#queue.age() + this.timeout) - getTime()
-			if (timeout > 0) {
-				this.#debug?.('events will be flushed after', timeout, 'ms')
-				this.#timeoutID = setTimeout(() => {
-					this.#timeoutID = null
-					this.#flush()
-				}, timeout)
-				return
-			}
-		}
-		this.#flushing = true
-		const leading = '{"batch":['
-		const trailing = new Blob([
-			'],"sentAt":"',
-			new Date().toJSON(),
-			'","writeKey":',
-			this.#writeKey,
-			'}',
-		])
-		const maxSize = (hidden ? MaxHiddenBodySize : MaxBodySize) - leading.length - trailing.size
-		const events = this.#queue.read(maxSize, 1)
-		const parts = []
-		parts.push(leading)
-		for (let i = 0; i < events.length; i++) {
-			if (i > 0) {
-				parts.push(',')
-			}
-			parts.push(events[i])
-		}
-		parts.push(trailing)
-		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
-		const body = new Blob(parts, { type: 'text/plain' })
-		const sent = events.length
-		this.#debug?.('flushing', sent, 'events of', this.#queue.length(), '(', body.size, 'bytes )')
-		try {
-			this.#post(this.#endpoint, body, hidden, (response) => {
-				if (this.#closed) {
-					return
-				}
-				this.#flushing = false
-				if (response instanceof Error) {
-					if (hidden) {
-						this.#debug?.('cannot post events:', response)
-						return
-					}
-					if (navigator.onLine) {
-						const timeout = 1000
-						if (this.#debug) {
-							this.#debug('cannot post events, try again after', timeout, 'ms:', response)
-						} else {
-							console.warn(response.message)
-						}
-						this.#timeoutID = setTimeout(() => {
-							this.#timeoutID = null
-							this.#flush()
-						}, timeout)
-					} else {
-						this.#flush()
-					}
-					return
-				}
-				if (!response.ok) {
-					const timeout = 1000
-					if (this.#debug) {
-						this.#debug(
-							`server responded with status ${response.status} ${response.statusText}, will retry after`,
-							timeout,
-							'ms',
-						)
-					} else {
-						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
-					}
-					this.#timeoutID = setTimeout(() => {
-						this.#timeoutID = null
-						this.#flush()
-					}, timeout)
-					return
-				}
-				this.#debug?.(sent, 'events sent')
-				this.#queue.remove(sent)
-				const length = this.#queue.length()
-				if (hidden || length === 0) {
-					return
-				}
-				this.#flush()
-			})
-		} catch (error) {
-			if (navigator.onLine) {
-				console.warn(error.message)
-			}
-			this.#debug?.('cannot post events, try again after 100ms:', error)
-			this.#timeoutID = setTimeout(() => {
-				this.#timeoutID = null
-				this.#flush()
-			}, 100)
-		}
+	// Flush immediately flushes the events waiting to be sent.
+	flush() {
+		this.#send(true)
 	}
 
 	// postFunc returns a function that issues a POST to the specified endpoint
@@ -212,7 +75,7 @@ class Sender {
 						cb(new Error('User agent is unable to queue the data for transfer'))
 						return
 					}
-					cb({ ok: true, status: 204, statusText: 'No Content' })
+					setTimeout(() => cb({ ok: true, status: 204, statusText: 'No Content' }))
 					return
 				}
 				this.#debug?.('sending', body.size, 'bytes using fetch')
@@ -258,7 +121,124 @@ class Sender {
 			xhr.send(body)
 		}
 	}
+
+	// send sends the queued events. If flush is true, it sends a single request
+	// within 64KB body size limit.
+	//
+	// send is invoked only when the queue becomes non-empty (flush is false) or
+	// the flush function is called (flush is true). In all other scenarios,
+	// once send is called, it is guaranteed to continue until the queue becomes
+	// empty.
+	#send(flush) {
+		if (flush) {
+			if (this.#queue.isEmpty() || this.#sending || !navigator.onLine) {
+				return
+			}
+		} else {
+			if (!navigator.onLine) {
+				addEventListener('online', () => {
+					this.#send()
+				})
+				return
+			}
+			const timeout = (this.#queue.age() + this.timeout) - getTime()
+			if (timeout > 0) {
+				this.#debug?.('events will be sent after', timeout, 'ms')
+				this.#timeoutID = setTimeout(() => {
+					this.#timeoutID = null
+					this.#send()
+				}, timeout)
+				return
+			}
+		}
+		this.#sending = true
+		const leading = '{"batch":['
+		const trailing = new Blob([
+			'],"sentAt":"',
+			new Date().toJSON(),
+			'","writeKey":',
+			this.#writeKey,
+			'}',
+		])
+		const maxSize = (flush ? MaxHiddenBodySize : MaxBodySize) - leading.length - trailing.size
+		const events = this.#queue.read(maxSize, 1)
+		const parts = []
+		parts.push(leading)
+		for (let i = 0; i < events.length; i++) {
+			if (i > 0) {
+				parts.push(',')
+			}
+			parts.push(events[i])
+		}
+		parts.push(trailing)
+		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
+		const body = new Blob(parts, { type: 'text/plain' })
+		const sent = events.length
+		this.#debug?.('Sending', sent, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
+		try {
+			this.#post(this.#endpoint, body, flush, (response) => {
+				if (this.#closed) {
+					return
+				}
+				this.#sending = false
+				if (response instanceof Error) {
+					if (flush) {
+						this.#debug?.('cannot post events:', response)
+						return
+					}
+					if (navigator.onLine) {
+						const timeout = 1000
+						if (this.#debug) {
+							this.#debug('cannot post events, try again after', timeout, 'ms:', response)
+						} else {
+							console.warn(response.message)
+						}
+						this.#timeoutID = setTimeout(() => {
+							this.#timeoutID = null
+							this.#send()
+						}, timeout)
+					} else {
+						this.#send()
+					}
+					return
+				}
+				if (!response.ok) {
+					const timeout = 1000
+					if (this.#debug) {
+						this.#debug(
+							`server responded with status ${response.status} ${response.statusText}, will retry after`,
+							timeout,
+							'ms',
+						)
+					} else {
+						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
+					}
+					this.#timeoutID = setTimeout(() => {
+						this.#timeoutID = null
+						this.#send()
+					}, timeout)
+					return
+				}
+				this.#debug?.(sent, 'events sent')
+				this.#queue.remove(sent)
+				const size = this.#queue.size()
+				if (flush || size === 0) {
+					return
+				}
+				this.#send()
+			})
+		} catch (error) {
+			if (navigator.onLine) {
+				console.warn(error.message)
+			}
+			this.#debug?.('cannot post events, try again after 100ms:', error)
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
+				this.#send()
+			}, 100)
+		}
+	}
 }
 
 export default Sender
-export { MaxBodySize, MaxEventSize, MaxHiddenBodySize, Sender }
+export { MaxBodySize, MaxHiddenBodySize, Sender }

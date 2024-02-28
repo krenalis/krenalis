@@ -1,6 +1,8 @@
-import { campaign, isPlainObject, isURL, uuid } from './utils.js'
+import { campaign, debug, isPlainObject, isURL, onVisibilityChange, uuid } from './utils.js'
+import Elections from './elections.js'
 import Group from './group.js'
 import Options from './options.js'
+import Queue, { ItemTooLargeError } from './queue.js'
 import Sender from './sender.js'
 import Session from './session.js'
 import Storage from './storage.js'
@@ -8,6 +10,13 @@ import User from './user.js'
 
 const version = '0.0.0'
 const none = () => {}
+
+// maxEventSize is the maximum size, in bytes, for a single JSON serialized
+// event. Events exceeding this size will not be appended to the queue.
+const maxEventSize = 32 * 1024
+
+// queueKeyReg is the regexp for storage queue keys.
+const queueKeyReg = /^chichi\.[a-zA-Z0-9]{7}\.[a-zA-Z0-9]{8}(?:-[a-zA-Z0-9]{4}){3}-[a-zA-Z0-9]{12}\.queue$/
 
 class EndpointURLError extends Error {
 	constructor(endpoint) {
@@ -17,13 +26,22 @@ class EndpointURLError extends Error {
 }
 
 class Analytics {
+	#id
+	#writeKey
+	#endpoint
 	#ready
 	#options
 	#storage
 	#session
+	#keysPrefix
+	#queue
 	#sender
 	#user
 	#group
+	#elections
+	#isLeader = false
+	#onFollowerQueue = null // is null when it is not the leader
+	#debug
 
 	// constructor returns a new Analytics instance. writeKey is the write key,
 	// endpoint denotes the endpoint URL, and options is an object containing
@@ -36,7 +54,11 @@ class Analytics {
 		if (endpoint.slice(-1) !== '/') {
 			endpoint += '/'
 		}
-		this.#ready = new ready()
+
+		this.#id = uuid()
+		this.#writeKey = writeKey
+		this.#endpoint = endpoint
+		this.#ready = new Ready()
 		this.#options = new Options(writeKey, endpoint, options, (error) => this.#ready.emit(error))
 		this.#storage = new Storage(writeKey, this.#options.storage)
 		this.#session = new Session(
@@ -45,9 +67,27 @@ class Analytics {
 			this.#options.sessions.timeout,
 			this.#options.debug,
 		)
-		this.#sender = new Sender(writeKey, endpoint, this.#options.debug)
+		this.#keysPrefix = `chichi.${writeKey.slice(0, 7)}`
+		this.#queue = new Queue(localStorage, `${this.#keysPrefix}.*.queue`, maxEventSize)
+		this.#queue.debug(this.#options.debug)
 		this.#user = new User(this.#storage)
 		this.#group = new Group(this.#storage)
+
+		// Participate in leader elections.
+		const electionsState = new ElectionsState(this.#keysPrefix)
+		this.#elections = new Elections(this.#id, electionsState, this.#onElection.bind(this))
+
+		onVisibilityChange((visible) => {
+			if (!visible) {
+				this.#queue.save()
+				if (this.#isLeader) {
+					this.#sender.flush()
+					this.#elections.resign()
+				}
+			}
+		})
+
+		this.debug(this.#options.debug)
 	}
 
 	// alias sends an alias event.
@@ -70,14 +110,24 @@ class Analytics {
 	}
 
 	// close closes the Analytics instance.
+	// It tries to preserve the queue in the localStorage before returning.
 	close() {
-		this.#sender.close()
+		this.#elections.close()
+		if (this.#isLeader) {
+			this.#sender.close()
+		}
+		this.#queue.close()
+		this.#debug?.('Analytics closed')
 	}
 
 	// debug toggles debug mode.
 	debug(on) {
+		this.#debug = debug(on)
 		this.#session.debug(on)
-		this.#sender.debug(on)
+		this.#queue.debug(on)
+		if (this.#isLeader) {
+			this.#sender.debug(on)
+		}
 	}
 
 	// endSession ends the session.
@@ -183,6 +233,57 @@ class Analytics {
 			return this.#user.anonymousId()
 		}
 		return id
+	}
+
+	// onElection is called when an election occurs. isLeader reports whether it
+	// is the leader.
+	#onElection(isLeader) {
+		if (isLeader === this.#isLeader) {
+			return
+		}
+		this.#isLeader = isLeader
+		if (!isLeader) {
+			this.#debug?.(`there is another leader`)
+			this.#sender.close()
+			this.#sender = null
+			this.#queue.setKey(`${this.#keysPrefix}.*.queue`)
+			removeEventListener('storage', this.#onFollowerQueue)
+			this.#onFollowerQueue = null
+			return
+		}
+		this.#debug?.(`elected as leader`)
+		const leaderQueueKey = `${this.#keysPrefix}.${this.#id}.queue`
+		this.#queue.setKey(leaderQueueKey)
+		// Listen to new follower queues to merge.
+		const merged = new Set()
+		this.#onFollowerQueue = (event) => {
+			if (this.#isLeader && event.storageArea === localStorage && event.newValue != null) {
+				const key = event.key
+				if (key !== leaderQueueKey && !merged.has(key) && queueKeyReg.test(key)) {
+					this.#queue.load(key)
+					localStorage.removeItem(key)
+				}
+			}
+		}
+		addEventListener('storage', this.#onFollowerQueue)
+		// Merge existing follower queues.
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i)
+			if (key !== leaderQueueKey && queueKeyReg.test(key)) {
+				this.#queue.load(key)
+				merged.add(key)
+			}
+		}
+		if (merged.size > 0) {
+			this.#queue.save()
+			for (const key of merged) {
+				localStorage.removeItem(key)
+			}
+		}
+		this.#sender = new Sender(this.#writeKey, this.#endpoint, this.#queue)
+		if (this.#debug != null) {
+			this.#sender.debug(true)
+		}
 	}
 
 	// reset is like the public reset method, but it differs in that it does not
@@ -367,7 +468,18 @@ class Analytics {
 				event.context.sessionStart = true
 			}
 		}
-		this.#sender.send(event)
+
+		try {
+			this.#queue.append(event)
+		} catch (error) {
+			if (error instanceof TypeError) {
+				console.warn('cannot stringify the event to JSON:', error)
+			} else if (error instanceof ItemTooLargeError) {
+				console.warn('event size (' + error.size + 'bytes) is greater then 32KB')
+			} else {
+				throw error
+			}
+		}
 
 		return event
 	}
@@ -600,8 +712,8 @@ class Analytics {
 	}
 }
 
-// ready handles the event that is fired when Analytics finishes initializing.
-class ready {
+// Ready handles the event that is fired when Analytics finishes initializing.
+class Ready {
 	#emitted = false
 	#listeners = []
 	#error
@@ -626,6 +738,22 @@ class ready {
 			}
 		}
 		this.#listeners.length = 0
+	}
+}
+
+// ElectionsState represents the state of the elections.
+class ElectionsState {
+	#keys
+	constructor(prefix) {
+		this.#keys = [`${prefix}.leader.beat`, `${prefix}.leader.election`]
+	}
+	read(_, location, cb) {
+		const value = localStorage.getItem(this.#keys[location - 1])
+		cb(value)
+	}
+	write(_, location, value, cb) {
+		localStorage.setItem(this.#keys[location - 1], value)
+		cb()
 	}
 }
 

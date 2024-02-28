@@ -2,6 +2,7 @@ import { assert, assertEquals } from 'https://deno.land/std@0.212.0/assert/mod.t
 import { FakeTime } from 'https://deno.land/std@0.212.0/testing/time.ts'
 import * as fake from './test_fake.js'
 import Sender from './sender.js'
+import { Queue } from './queue.js'
 
 const DEBUG = false
 
@@ -31,15 +32,18 @@ Deno.test('Sender send', async (t) => {
 		let time
 		let fetch
 		let sender
+		let queue
 
 		try {
 			time = new FakeTime()
 			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 			fetch.install()
-			sender = new Sender(writeKey, endpoint)
+			queue = new Queue(localStorage, 'queue', 32 * 1024)
+			queue.debug(DEBUG)
+			sender = new Sender(writeKey, endpoint, queue)
 			sender.debug(DEBUG)
 			for (let i = 0; i < events.length; i++) {
-				sender.send(events[i])
+				queue.append(events[i])
 			}
 			time.tick(sender.timeout)
 			const sentEvents = await fetch.events(events.length)
@@ -48,7 +52,10 @@ Deno.test('Sender send', async (t) => {
 				assertEquals(sentEvents[i], events[i])
 			}
 		} finally {
-			sender.close()
+			if (sender != null) {
+				sender.close()
+				queue.close()
+			}
 			fetch.restore()
 			time.restore()
 		}
@@ -59,16 +66,18 @@ Deno.test('Sender send', async (t) => {
 			time = new FakeTime()
 			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 			fetch.install()
-			sender = new Sender(writeKey, endpoint)
+			queue = new Queue(localStorage, 'queue', 32 * 1024)
+			queue.debug(DEBUG)
+			sender = new Sender(writeKey, endpoint, queue)
 			sender.debug(DEBUG)
 			const maxPerBatch = 9658 // This value can change if the sender's implementation change.
 			// Send maxPerBatch events.
 			for (let i = 0; i < maxPerBatch; i++) {
-				sender.send({ messageId: crypto.randomUUID() })
+				queue.append({ messageId: crypto.randomUUID() })
 			}
 			time.tick(100)
-			sender.send({ messageId: crypto.randomUUID() })
-			sender.send({ messageId: crypto.randomUUID() })
+			queue.append({ messageId: crypto.randomUUID() })
+			queue.append({ messageId: crypto.randomUUID() })
 			time.tick(sender.timeout - 100)
 			time.tick(10)
 			let events = await fetch.events(maxPerBatch)
@@ -77,31 +86,12 @@ Deno.test('Sender send', async (t) => {
 			events = await fetch.events(2)
 			assertEquals(events.length, 2)
 		} finally {
-			sender.close()
-			fetch.restore()
-			time.restore()
-		}
-
-		localStorage.clear()
-
-		// After hiding the page, the queue is immediately made persistent and flushed.
-		try {
-			time = new FakeTime()
-			fetch = new fake.Fetch(writeKey, endpoint + 'batch', true, DEBUG)
-			fetch.install()
-			sender = new Sender(writeKey, endpoint)
-			sender.debug(DEBUG)
-			sender.send({ messageId: crypto.randomUUID() })
-			document.visibilityState = 'hidden'
-			dispatchEvent(new Event('visibilitychange'))
-			const events = await fetch.events(1)
-			assertEquals(events.length, 1)
-			const queueKey = `chichi.${writeKey.slice(0, 7)}.queue`
-			assert(localStorage.getItem(queueKey).length > 0)
-		} finally {
-			document.visibilityState = 'visible'
-			dispatchEvent(new Event('visibilitychange'))
-			sender.close()
+			if (sender != null) {
+				sender.close()
+			}
+			if (queue != null) {
+				queue.close()
+			}
 			fetch.restore()
 			time.restore()
 		}
@@ -113,24 +103,29 @@ Deno.test('Sender send', async (t) => {
 		const time = new FakeTime()
 		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'batch', DEBUG)
 		sendBeacon.install()
+		let queue
 		let sender
 		try {
-			sender = new Sender(writeKey, endpoint)
+			queue = new Queue(localStorage, 'queue', 32 * 1024)
+			queue.debug(DEBUG)
+			sender = new Sender(writeKey, endpoint, queue)
 			sender.debug(DEBUG)
 			for (let i = 0; i < events.length; i++) {
-				sender.send(events[i])
+				queue.append(events[i])
 			}
-			document.visibilityState = 'hidden'
-			dispatchEvent(new Event('pagehide'))
+			sender.flush()
 			const sentEvents = await sendBeacon.events(events.length)
 			assertEquals(sentEvents.length, events.length)
 			for (let i = 0; i < events.length; i++) {
 				assertEquals(sentEvents[i], events[i])
 			}
 		} finally {
-			document.visibilityState = 'visible'
-			dispatchEvent(new Event('pageshow'))
-			sender.close()
+			if (sender != null) {
+				sender.close()
+			}
+			if (queue != null) {
+				queue.close()
+			}
 			sendBeacon.restore()
 			time.restore()
 		}
@@ -145,12 +140,15 @@ Deno.test('Sender send', async (t) => {
 		const fetch = globalThis.fetch
 		globalThis.fetch = undefined
 		assertEquals(globalThis.fetch, undefined)
+		let queue
 		let sender
 		try {
-			sender = new Sender(writeKey, endpoint)
+			queue = new Queue(localStorage, 'queue', 32 * 1024)
+			queue.debug(DEBUG)
+			sender = new Sender(writeKey, endpoint, queue)
 			sender.debug(DEBUG)
 			for (let i = 0; i < events.length; i++) {
-				sender.send(events[i])
+				queue.append(events[i])
 			}
 			time.tick(sender.timeout)
 			const sentEvents = await fake.XMLHttpRequest.events(events.length)
@@ -159,7 +157,12 @@ Deno.test('Sender send', async (t) => {
 				assertEquals(sentEvents[i], events[i])
 			}
 		} finally {
-			sender.close()
+			if (sender != null) {
+				sender.close()
+			}
+			if (queue != null) {
+				queue.close()
+			}
 			globalThis.fetch = fetch
 			fake.XMLHttpRequest.restore()
 			time.restore()

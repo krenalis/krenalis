@@ -180,7 +180,7 @@ class Fetch {
 					resolve: resolve,
 					reject: reject,
 				}
-				this.#debug?.(`promise resolution is pending:  Fetch.events(${min})`)
+				this.#debug?.(`promise resolution is pending: Fetch.events(${min})`)
 			} else {
 				const events = this.#events
 				this.#events = []
@@ -286,7 +286,7 @@ class SendBeacon {
 					min: min,
 					resolve: resolve,
 				}
-				this.#debug?.(`promise resolution is pending:  SendBeacon.events(${min})`)
+				this.#debug?.(`promise resolution is pending: SendBeacon.events(${min})`)
 			} else {
 				const events = this.#events
 				this.#events = []
@@ -316,6 +316,7 @@ class SendBeacon {
 				`Fake sendBeacon has been restored; however, there are ${this.#events.length} unread events`,
 			)
 		}
+		delete navigator.sendBeacon
 	}
 }
 
@@ -519,7 +520,7 @@ class XMLHttpRequest {
 					min: min,
 					resolve: resolve,
 				}
-				XMLHttpRequest.#debug?.(`promise resolution is pending:  XMLHttpRequest.events(${min})`)
+				XMLHttpRequest.#debug?.(`promise resolution is pending: XMLHttpRequest.events(${min})`)
 			} else {
 				const events = XMLHttpRequest.#events
 				XMLHttpRequest.#events = []

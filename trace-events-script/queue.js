@@ -1,6 +1,6 @@
-import { debug, getTime } from './utils.js'
+import { debug, getTime, uuid } from './utils.js'
 
-// Queue is an in memory queue made persistent on a Storage.
+// Queue is an in-memory data structure that can be persisted to storage.
 class Queue {
 	#storage
 	#key
@@ -9,18 +9,25 @@ class Queue {
 	#times = []
 	#sizes = []
 	#inSync = true
-	#timeoutID = null
+	#timeoutID
+	#eventListeners = new Set()
 	#debug
 
 	// constructor initializes a new Queue using the provided Storage (such as
 	// sessionStorage or localStorage), using the provided key, and with each
-	// item limited to a maximum size in bytes specified by maxItemSize.
-	constructor(storage, key, maxItemSize, debug) {
+	// item limited to a maximum size in bytes specified by maxItemSize. If the
+	// key contains a "*", the last "*" is replaced with a newly generated UUID
+	// each time the queue is saved.
+	constructor(storage, key, maxItemSize) {
 		this.#storage = storage
 		this.#key = key
 		this.#maxItemSize = maxItemSize
-		this.debug(debug)
-		this.#restore()
+	}
+
+	// addEventListener adds a listener that will be called when one or more
+	// items are added to the queue.
+	addEventListener(listener) {
+		this.#eventListeners.add(listener)
 	}
 
 	// age returns the time, in milliseconds, when the item in the head of the
@@ -29,17 +36,16 @@ class Queue {
 		return this.isEmpty() ? null : this.#times[0]
 	}
 
-	// append appends item to the queue and returns the size in bytes of the
-	// JSON form of item. It raises an exception with type TypeError if an
-	// error occurs calling JSON.stringify on item. If the JSON size of item
-	// in bytes is greater than maxItemSize, it does nothing, apart returning
-	// that size.
+	// append appends item to the queue. It raises an exception with type
+	// TypeError if an error occurs calling JSON.stringify on item, and raises
+	// an exception with type ItemTooLargeError if the JSON size of item in
+	// bytes is greater than maxItemSize.
 	append(item) {
 		const time = getTime()
 		item = JSON.stringify(item)
 		const size = new Blob([item]).size
 		if (size > this.#maxItemSize) {
-			return size
+			throw new ItemTooLargeError(size)
 		}
 		this.#items.push(item)
 		this.#times.push(time)
@@ -48,7 +54,7 @@ class Queue {
 		if (this.#timeoutID == null) {
 			this.#timeoutID = setTimeout(() => {
 				this.#timeoutID = null
-				this.#makePersistent(200)
+				this.#save(200)
 			}, 20)
 		}
 		this.#debug?.(
@@ -58,19 +64,18 @@ class Queue {
 			this.#items.length,
 			'events in queue )',
 		)
-		return size
+		this.#dispatchEvent()
 	}
 
-	// close closes the queue. It tries to preserve the queue in the
-	// localStorage before returning. No other calls to the queue's method
-	// should be made after a call the close method.
+	// close closes the queue. It tries to save the queue in the localStorage
+	// before returning. No other calls to the queue's method should be made
+	// after a call the close method.
 	close() {
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
-			this.#timeoutID = null
 		}
-		this.#makePersistent()
-		this.#debug?.(`'${this.#key}' queue closed`)
+		this.#save()
+		this.#debug?.(`queue closed: '${this.#key}'`)
 	}
 
 	// debug toggles debug mode.
@@ -81,21 +86,6 @@ class Queue {
 	// isEmpty reports whether the queue is empty.
 	isEmpty() {
 		return this.#items.length === 0
-	}
-
-	// length returns the total number of items currently in the queue.
-	length() {
-		return this.#items.length
-	}
-
-	// makePersistent makes the queue persistent in the localStorage. It can be
-	// called, for example, when the page becomes not visible, to immediately
-	// make it persistent.
-	makePersistent() {
-		if (this.#timeoutID != null) {
-			clearTimeout(this.#timeoutID)
-		}
-		this.#makePersistent()
 	}
 
 	// read returns the items at the head of the queue, for a maximum of
@@ -140,16 +130,49 @@ class Queue {
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
 		}
-		this.#makePersistent(200)
+		this.#save(200)
 	}
 
-	// makePersistent makes the queue persistent in the localStorage. It is
-	// called by the public makePersistent method or when changes occur in the
-	// queue and the queue is not currently being synced (when this.#inSync is
-	// false). The delay parameter specifies the duration, in milliseconds, to
-	// wait before attempting again in case of an error. If delay is null, no
-	// retry will be made.
-	#makePersistent(delay) {
+	// removeEventListener removes a listener added with the addEventListener
+	// method.
+	removeEventListener(listener) {
+		this.#eventListeners.delete(listener)
+	}
+
+	// save saves the queue in the localStorage. It can be called, for example,
+	// when the page becomes hidden, to save it immediately.
+	save() {
+		if (this.#timeoutID != null) {
+			clearTimeout(this.#timeoutID)
+		}
+		this.#save()
+	}
+
+	// setKey sets the queue's key. key can be a string or a function to be
+	// invoked when necessary to get the key.
+	setKey(key) {
+		this.#key = key
+	}
+
+	// size returns the total number of items currently in the queue.
+	size() {
+		return this.#items.length
+	}
+
+	// dispatchEvent dispatches events to the listeners added with the
+	// addEventListener method.
+	#dispatchEvent() {
+		for (const listener of this.#eventListeners) {
+			setTimeout(listener)
+		}
+	}
+
+	// save saves the queue in the localStorage. It is called by the public save
+	// method or when changes occur in the queue and the queue is not currently
+	// being synced (when this.#syncing is false). The delay parameter specifies
+	// the duration, in milliseconds, to wait before attempting again in case of
+	// an error. If delay is null, no retry will be made.
+	#save(delay) {
 		if (this.#inSync) {
 			return
 		}
@@ -161,31 +184,36 @@ class Queue {
 		if (this.#debug) {
 			bytes = new Blob([text]).size
 		}
+		let key = this.#key
+		const p = key.lastIndexOf('*')
+		if (p >= 0) {
+			key = key.slice(0, p) + uuid() + key.slice(p + 1)
+		}
 		try {
-			this.#storage.setItem(this.#key, text)
+			this.#storage.setItem(key, text)
 		} catch (error) {
 			if (delay == null) {
-				this.#debug?.('cannot make', bytes, `bytes of the '${this.#key}' queue persistent:`, error.message)
+				this.#debug?.('cannot make', bytes, `bytes of the '${key}' queue persistent:`, error.message)
 				return
 			}
 			delay = Math.min(2 * delay, 5000)
 			this.#debug?.(
 				'cannot make',
 				bytes,
-				`bytes of the '${this.#key}' queue persistent (will retry after`,
+				`bytes of the '${key}' queue persistent (will retry after`,
 				delay,
 				'ms):',
 				error.message,
 			)
 			this.#timeoutID = setTimeout(() => {
 				this.#timeoutID = null
-				this.#makePersistent(delay)
+				this.#save(delay)
 			}, delay)
 			return
 		}
 		this.#inSync = true
 		this.#debug?.(
-			`made '${this.#key}' queue persistent (`,
+			`made '${key}' queue persistent (`,
 			this.#times.length,
 			'items, with a size of',
 			bytes,
@@ -193,25 +221,25 @@ class Queue {
 		)
 	}
 
-	// restore restores the queue from localStorage. If any errors occur while
-	// accessing localStorage it does nothing. It is only called by the
-	// constructor.
+	// load loads and appends the items in the queue from localStorage with the
+	// provided key. If any errors occur while accessing localStorage it does
+	// nothing. It is only called by the constructor.
 	//
 	// If the queue persisted in localStorage has been corrupted, restore
 	// only ensures that no internal Queue data becomes corrupted, but it does
 	// not guarantee the validity of the JSON items, nor does it ensure that
 	// their sizes correspond to the original item sizes or that their
 	// timestamps match the original ones.
-	#restore() {
+	load(key) {
 		let text
 		try {
-			text = this.#storage.getItem(this.#key)
+			text = this.#storage.getItem(key)
 		} catch (error) {
-			this.#debug?.(`cannot restore the '${this.#key}' queue:`, error.message)
+			this.#debug?.(`cannot restore the '${key}' queue:`, error.message)
 			return
 		}
 		if (text == null || text === '') {
-			this.#debug?.(`no '${this.#key}' queue to restore`)
+			this.#debug?.(`no '${key}' queue to restore`)
 			return
 		}
 		try {
@@ -220,7 +248,7 @@ class Queue {
 			const times = items.pop().split(' ')
 			if (sizes.length !== items.length || times.length !== items.length) {
 				this.#debug?.(
-					`cannot restore the '${this.#key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
+					`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
 				)
 				return
 			}
@@ -230,16 +258,56 @@ class Queue {
 				times[i] = Number(times[i])
 				bytes += sizes[i]
 			}
-			this.#items = items
-			this.#times = times
-			this.#sizes = sizes
-			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${this.#key}' queue`)
+			if (this.isEmpty()) {
+				this.#items = items
+				this.#times = times
+				this.#sizes = sizes
+			} else {
+				let i = times.length - 1
+				let j = this.#times.length - 1
+				let k = times.length + this.#times.length - 1
+				while (i >= 0 && j >= 0) {
+					if (times[i] > this.#times[j]) {
+						this.#items[k] = items[i]
+						this.#times[k] = times[i]
+						this.#sizes[k] = sizes[i]
+						i--
+					} else {
+						this.#items[k] = this.#items[j]
+						this.#times[k] = this.#times[j]
+						this.#sizes[k] = this.#sizes[j]
+						j--
+					}
+					k--
+				}
+				while (i >= 0) {
+					this.#items[k] = items[i]
+					this.#times[k] = times[i]
+					this.#sizes[k] = sizes[i]
+					i--
+					k--
+				}
+			}
+			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${key}' queue`)
+			this.#dispatchEvent()
 		} catch {
 			this.#debug?.(
-				`cannot restore the '${this.#key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
+				`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
 			)
 		}
 	}
 }
 
+// ItemTooLargeError represents the error that occurs when attempting to add an
+// item to the queue that exceeds the permissible size limit.
+class ItemTooLargeError extends Error {
+	#size
+	constructor(size) {
+		super('The item is too large')
+		this.#size = size
+		this.name = this.constructor.name
+	}
+}
+
 export default Queue
+export { ItemTooLargeError, Queue }

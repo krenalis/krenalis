@@ -150,8 +150,10 @@ Deno.test('Analytics', async (t) => {
 			time.restore()
 		}
 		a.reset()
-		localStorage.removeItem('chichi.rq6JJg5.queue')
-		assertEquals(localStorage.length, 0)
+		// localStorage only contains the keys of the election.
+		assertEquals(localStorage.length, 2)
+		assert(localStorage.getItem(`chichi.rq6JJg5.leader.beat`) != null)
+		assert(localStorage.getItem(`chichi.rq6JJg5.leader.election`) != null)
 		a.close()
 	})
 
@@ -359,6 +361,7 @@ Deno.test('Analytics', async (t) => {
 					fetch.restore()
 					time.restore()
 				}
+
 				a.close()
 			})
 		}
@@ -388,6 +391,54 @@ Deno.test('Analytics', async (t) => {
 		a.close()
 	})
 
+	await t.step('after hiding the page, the queue is immediately persisted in the localStorage', () => {
+		localStorage.clear()
+		const time = new FakeTime()
+		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'batch', DEBUG)
+		sendBeacon.install()
+		const a = newAnalytics()
+		try {
+			time.tick(200)
+			void a.track('click')
+			assert(!Object.keys(localStorage).some((key) => key.endsWith('.queue')))
+			document.visibilityState = 'hidden'
+			let isPersisted = false
+			for (let i = 0; i < localStorage.length; i++) {
+				const key = localStorage.key(i)
+				if (key.endsWith('.queue')) {
+					isPersisted = localStorage.getItem(key).length > 0
+					break
+				}
+			}
+			assert(isPersisted)
+			document.visibilityState = 'visible'
+			dispatchEvent(new Event('visibilitychange'))
+		} finally {
+			a.close()
+			sendBeacon.restore()
+			time.restore()
+		}
+	})
+
+	await t.step('after hiding the page, the queue is immediately flushed', async () => {
+		localStorage.clear()
+		const time = new FakeTime()
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', true, DEBUG)
+		fetch.install()
+		const a = newAnalytics()
+		try {
+			time.tick(200)
+			void a.track('click')
+			document.visibilityState = 'hidden'
+			const events = await fetch.events(1)
+			assertEquals(events.length, 1)
+		} finally {
+			a.close()
+			fetch.restore()
+			time.restore()
+		}
+	})
+
 	// Execute the steps in the 'analytics_test_steps.js' module.
 	const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 	const randomUUID = new fake.RandomUUID('9587b6d1-ae92-4d3c-a8d9-87c3e9ce7ae3')
@@ -401,9 +452,8 @@ Deno.test('Analytics', async (t) => {
 			fetch.install()
 			randomUUID.install()
 			navigator.install()
-			let a
+			const a = await newAnalytics(step.options, null, 0)
 			try {
-				a = await newAnalytics(step.options, null, 0)
 				time.next()
 				a.setAnonymousId('1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7')
 				if (step.options?.sessions?.autoTrack !== false) {
@@ -434,12 +484,12 @@ Deno.test('Analytics', async (t) => {
 				assertEquals(events.length, 1)
 				assertEquals(events[0], step.event)
 			} finally {
-				a.close()
 				time.restore()
 				navigator.restore()
 				randomUUID.restore()
 				fetch.restore()
 			}
+			a.close()
 		})
 	}
 })
