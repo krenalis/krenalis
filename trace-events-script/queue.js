@@ -8,7 +8,7 @@ class Queue {
 	#items = []
 	#times = []
 	#sizes = []
-	#inSync = true
+	#toBeSaved = false
 	#timeoutID
 	#eventListeners = new Set()
 	#debug
@@ -50,7 +50,7 @@ class Queue {
 		this.#items.push(item)
 		this.#times.push(time)
 		this.#sizes.push(size)
-		this.#inSync = false
+		this.#toBeSaved = true
 		if (this.#timeoutID == null) {
 			this.#timeoutID = setTimeout(() => {
 				this.#timeoutID = null
@@ -102,11 +102,11 @@ class Queue {
 		try {
 			text = this.#storage.getItem(key)
 		} catch (error) {
-			this.#debug?.(`cannot restore the '${key}' queue:`, error.message)
+			this.#debug?.(`cannot load '${key}' queue:`, error.message)
 			return
 		}
 		if (text == null || text === '') {
-			this.#debug?.(`no '${key}' queue to restore`)
+			this.#debug?.(`no '${key}' queue to load`)
 			return
 		}
 		try {
@@ -114,10 +114,7 @@ class Queue {
 			const sizes = items.pop().split(' ')
 			const times = items.pop().split(' ')
 			if (sizes.length !== items.length || times.length !== items.length) {
-				this.#debug?.(
-					`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
-				)
-				return
+				throw null
 			}
 			let bytes = 0
 			for (let i = 0; i < items.length; i++) {
@@ -155,11 +152,12 @@ class Queue {
 					k--
 				}
 			}
-			this.#debug?.('restored', items.length, 'items (', bytes, `bytes ) from the '${key}' queue`)
+			this.#toBeSaved = this.#key !== key
+			this.#debug?.('loaded', items.length, 'items (', bytes, `bytes ) from the '${key}' queue`)
 			this.#dispatchEvent()
 		} catch {
 			this.#debug?.(
-				`cannot restore the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
+				`cannot load the '${key}' queue, it is malformed:\n--begin-queue-------\n${text}\n--end-queue---------\n`,
 			)
 		}
 	}
@@ -201,7 +199,7 @@ class Queue {
 		this.#items.splice(0, n)
 		this.#times.splice(0, n)
 		this.#sizes.splice(0, n)
-		this.#inSync = false
+		this.#toBeSaved = true
 		this.#debug?.('removed', n, `items from the '${this.#key}' queue (`, this.#items.length, 'item still in queue )')
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
@@ -227,7 +225,10 @@ class Queue {
 	// setKey sets the queue's key. key can be a string or a function to be
 	// invoked when necessary to get the key.
 	setKey(key) {
-		this.#key = key
+		if (this.#key !== key) {
+			this.#key = key
+			this.#toBeSaved = this.#items.length > 0
+		}
 	}
 
 	// size returns the total number of items currently in the queue.
@@ -249,16 +250,18 @@ class Queue {
 	// the duration, in milliseconds, to wait before attempting again in case of
 	// an error. If delay is null, no retry will be made.
 	#save(delay) {
-		if (this.#inSync) {
+		if (!this.#toBeSaved) {
 			return
 		}
 		let text = ''
 		if (this.#items.length > 0) {
 			text = this.#items.join('\n') + '\n' + this.#times.join(' ') + '\n' + this.#sizes.join(' ')
 		}
-		let bytes
+		let bytes = 0
 		if (this.#debug) {
-			bytes = new Blob([text]).size
+			for (let i = 0; i < this.#sizes.length; i++) {
+				bytes += this.#sizes[i]
+			}
 		}
 		let key = this.#key
 		const p = key.lastIndexOf('*')
@@ -269,27 +272,20 @@ class Queue {
 			this.#storage.setItem(key, text)
 		} catch (error) {
 			if (delay == null) {
-				this.#debug?.('cannot make', bytes, `bytes of the '${key}' queue persistent:`, error.message)
+				this.#debug?.(`cannot save '${key}' queue (`, bytes, 'bytes ) :', error.message)
 				return
 			}
 			delay = Math.min(2 * delay, 5000)
-			this.#debug?.(
-				'cannot make',
-				bytes,
-				`bytes of the '${key}' queue persistent (will retry after`,
-				delay,
-				'ms):',
-				error.message,
-			)
+			this.#debug?.(`cannot save '${key}' queue (`, bytes, 'bytes ), will retry after', delay, 'ms:', error.message)
 			this.#timeoutID = setTimeout(() => {
 				this.#timeoutID = null
 				this.#save(delay)
 			}, delay)
 			return
 		}
-		this.#inSync = true
+		this.#toBeSaved = false
 		this.#debug?.(
-			`made '${key}' queue persistent (`,
+			`saved '${key}' queue (`,
 			this.#times.length,
 			'items, with a size of',
 			bytes,

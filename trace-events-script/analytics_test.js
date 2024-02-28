@@ -136,6 +136,7 @@ Deno.test('Analytics', async (t) => {
 	await t.step('reset function', async () => {
 		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
 		const a = newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
+		await a.ready()
 		a.startSession(137206)
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7')
 		const time = new FakeTime()
@@ -150,8 +151,16 @@ Deno.test('Analytics', async (t) => {
 			time.restore()
 		}
 		a.reset()
-		// localStorage only contains the keys of the election.
-		assertEquals(localStorage.length, 2)
+		// localStorage only contains the keys corresponding to the election and the queue items.
+		assertEquals(localStorage.length, 3)
+		let hasQueueKey = false
+		for (let i = 0; i < localStorage.length; i++) {
+			if (localStorage.key(i).endsWith('.queue')) {
+				hasQueueKey = true
+				break
+			}
+		}
+		assert(hasQueueKey)
 		assert(localStorage.getItem(`chichi.rq6JJg5.leader.beat`) != null)
 		assert(localStorage.getItem(`chichi.rq6JJg5.leader.election`) != null)
 		a.close()
