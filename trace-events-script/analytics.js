@@ -123,6 +123,7 @@ class Analytics {
 	// debug toggles debug mode.
 	debug(on) {
 		this.#debug = debug(on)
+		this.#ready.debug(on)
 		this.#session.debug(on)
 		this.#queue.debug(on)
 		if (this.#isLeader) {
@@ -717,15 +718,20 @@ class Ready {
 	#emitted = false
 	#listeners = []
 	#error
+	#debug
 	addListener(resolve, reject) {
 		this.#listeners.push([resolve, reject])
 		if (this.#emitted) {
 			this.#notify()
 		}
 	}
+	debug(on) {
+		this.#debug = debug(on)
+	}
 	emit(error) {
 		this.#emitted = true
 		this.#error = error
+		this.#debug?.(error == null ? 'analytics is ready' : `analytics cannot be ready due to an error: ${error}`)
 		this.#notify()
 	}
 	#notify() {
