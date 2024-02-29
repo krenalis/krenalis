@@ -79,12 +79,12 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		rawEnums[typName] = append(rawEnums[typName], enumLabel)
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	enums := map[string]types.Type{}
 	for name, values := range rawEnums {
 		enums[name] = types.Text().WithValues(values...)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	// Read the 'atttypmod' attribute of column types, where relevant.
@@ -212,6 +212,9 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		}
 		table.fds = rows.FieldDescriptions()
 		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 	}
 
 	return tables, nil
