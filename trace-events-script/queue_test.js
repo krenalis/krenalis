@@ -49,7 +49,7 @@ Deno.test('Queue', async (t) => {
 	q.append({ boo: '😁' })
 	assert(q.size() === 2)
 	assertRead([`{"foo":true}`, `{"boo":"😁"}`])
-	q.remove(1)
+	q.remove([`{"foo":true}`])
 	time.tick(100)
 	assert(q.size() === 1)
 	assertRead([`{"boo":"😁"}`])
@@ -70,6 +70,12 @@ Deno.test('Queue', async (t) => {
 	assertRead([`{"boo":"😁"}`, `{"a":{"b":23.4}}`], 31, 1)
 	assertRead([`{"boo":"😁"}`], 31, 2)
 	assertRead([`{"boo":"😁"}`, `{"a":{"b":23.4}}`], 32, 2)
+	localStorage.setItem('queue', `{"boo":"😁"}\n${age - 1000}\n14`)
+	q.load('queue')
+	q.remove([`{"boo":"😁"}`])
+	assertEquals(q.age(), age)
+	assertEquals(q.isEmpty(), false)
+	assertEquals(q.size(), 3)
 
 	q.close()
 	time.tick(100)
@@ -94,11 +100,8 @@ Deno.test('Queue', async (t) => {
 	assertEquals(q.isEmpty(), false)
 	assertEquals(q.size(), 3)
 
-	// remove with a null or undefined argument removes all items.
-	q.remove()
-	assertRead([])
-	q.append({ foo: [1, 3] })
-	q.remove(null)
+	// Clear the queue.
+	q.clear()
 	assertRead([])
 
 	q.close()
@@ -168,7 +171,7 @@ Deno.test('Queue', async (t) => {
 	assertRead([`{"foo":true}`])
 
 	// An empty queue is correctly saved.
-	q.remove()
+	q.clear()
 	time.tick(100)
 	q.close()
 	q = new Queue(localStorage, 'queue', maxItemBytes)

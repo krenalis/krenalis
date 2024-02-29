@@ -173,8 +173,7 @@ class Sender {
 		parts.push(trailing)
 		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
 		const body = new Blob(parts, { type: 'text/plain' })
-		const sent = events.length
-		this.#debug?.('sending', sent, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
+		this.#debug?.('sending', events.length, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
 		try {
 			this.#post(this.#endpoint, body, flush, (response) => {
 				if (this.#closed) {
@@ -219,8 +218,8 @@ class Sender {
 					}, timeout)
 					return
 				}
-				this.#debug?.(sent, 'events sent')
-				this.#queue.remove(sent)
+				this.#debug?.(events.length, 'events sent')
+				this.#queue.remove(events)
 				const size = this.#queue.size()
 				if (flush || size === 0) {
 					return

@@ -69,6 +69,16 @@ class Queue {
 		this.#dispatchEvent()
 	}
 
+	// clear clears the queue removing all the items.
+	clear() {
+		if (this.#items.length > 0) {
+			this.#items.length = 0
+			this.#times.length = 0
+			this.#sizes.length = 0
+			this.#toBeSaved = true
+		}
+	}
+
 	// close closes the queue. It tries to save the queue in the localStorage
 	// before returning. No other calls to the queue's method should be made
 	// after a call the close method.
@@ -188,21 +198,28 @@ class Queue {
 		return this.#items.slice(0, n)
 	}
 
-	// remove removes n items from the queue. If there are fewer than n items,
-	// or n is null, it removes all of them.
-	remove(n) {
-		if (n == null || n > this.#times.length) {
-			n = this.#times.length
-			if (n === 0) {
-				this.#debug?.(`no events to remove from '${this.#key}' queue`)
-				return
+	// remove removes the provided items from the queue. items should be an
+	// array with the items as returned by the read method. Only existing items
+	// are removed, starting from the head of the queue until no items remain to
+	// be removed. If items is null or empty, it does nothing.
+	remove(items) {
+		if (items === null || items.length === 0) {
+			return
+		}
+		let n = 0
+		for (let i = 0; i < items.length; i++) {
+			const j = this.#items.indexOf(items[i])
+			if (j >= 0) {
+				this.#items.splice(j, 1)
+				this.#times.splice(j, 1)
+				this.#sizes.splice(j, 1)
+				n++
 			}
 		}
-		this.#items.splice(0, n)
-		this.#times.splice(0, n)
-		this.#sizes.splice(0, n)
-		this.#toBeSaved = true
 		this.#debug?.('removed', n, `items from the '${this.#key}' queue (`, this.#items.length, 'item still in queue )')
+		if (n > 0) {
+			this.#toBeSaved = true
+		}
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
 		}
