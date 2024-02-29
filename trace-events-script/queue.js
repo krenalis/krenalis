@@ -15,9 +15,11 @@ class Queue {
 
 	// constructor initializes a new Queue using the provided Storage (such as
 	// sessionStorage or localStorage), using the provided key, and with each
-	// item limited to a maximum size in bytes specified by maxItemSize. If the
-	// key contains a "*", the last "*" is replaced with a newly generated UUID
-	// each time the queue is saved.
+	// item limited to a maximum size in bytes specified by maxItemSize.
+	//
+	// If the key contains an "*", the storage key is obtained by replacing the
+	// last "*" with a newly generated UUID when the queue is saved, and after
+	// it has been saved, the queue is cleared.
 	constructor(storage, key, maxItemSize) {
 		this.#storage = storage
 		this.#key = key
@@ -213,8 +215,10 @@ class Queue {
 		this.#eventListeners.delete(listener)
 	}
 
-	// save saves the queue in the localStorage. It can be called, for example,
-	// when the page becomes hidden, to save it immediately.
+	// save immediately saves the queue in the localStorage. If the queue's key
+	// contains a "*", the storage key is obtained by replacing the last "*"
+	// with a newly generated UUID, and after it has been saved, the queue is
+	// cleared.
 	save() {
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
@@ -263,9 +267,11 @@ class Queue {
 				bytes += this.#sizes[i]
 			}
 		}
+		let clear = false
 		let key = this.#key
 		const p = key.lastIndexOf('*')
 		if (p >= 0) {
+			clear = true
 			key = key.slice(0, p) + uuid() + key.slice(p + 1)
 		}
 		try {
@@ -282,6 +288,11 @@ class Queue {
 				this.#save(delay)
 			}, delay)
 			return
+		}
+		if (clear) {
+			this.#items.length = 0
+			this.#times.length = 0
+			this.#sizes.length = 0
 		}
 		this.#toBeSaved = false
 		this.#debug?.(

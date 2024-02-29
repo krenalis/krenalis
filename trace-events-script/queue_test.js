@@ -6,7 +6,7 @@ import { ItemTooLargeError, Queue } from './queue.js'
 
 const DEBUG = false
 
-Deno.test('Queue', () => {
+Deno.test('Queue', async (t) => {
 	localStorage.clear()
 	globalThis.document = {
 		visibilityState: 'visible',
@@ -74,7 +74,7 @@ Deno.test('Queue', () => {
 	q.close()
 	time.tick(100)
 
-	// The queue has been made persistent.
+	// The queue has been saved.
 	q = new Queue(localStorage, 'queue', maxItemBytes)
 	q.debug(DEBUG)
 	q.load('queue')
@@ -146,7 +146,7 @@ Deno.test('Queue', () => {
 	q.close()
 	time.tick(100)
 
-	// A corrupted persisted queue does not break Queue.
+	// A corrupted saved queue does not break Queue.
 	localStorage.setItem('queue', '....')
 	q = new Queue(localStorage, 'queue', maxItemBytes)
 	q.debug(DEBUG)
@@ -167,7 +167,7 @@ Deno.test('Queue', () => {
 	time.tick(100)
 	assertRead([`{"foo":true}`])
 
-	// An empty queue is correctly made persistent.
+	// An empty queue is correctly saved.
 	q.remove()
 	time.tick(100)
 	q.close()
@@ -202,4 +202,29 @@ Deno.test('Queue', () => {
 	assertEquals(q2.read(), ['{"q":2}'])
 	q1.close()
 	q2.close()
+
+	time.restore()
+
+	await t.step('Save the queue', () => {
+		const time = new FakeTime(1709192826078)
+		// Named queue.
+		localStorage.clear()
+		let q = new Queue(localStorage, 'queue', maxItemBytes)
+		q.append({ foo: 'boo' })
+		q.save()
+		assertEquals(localStorage.getItem('queue'), '{"foo":"boo"}\n1709192826078\n13')
+		assert(!q.isEmpty())
+		q.close()
+
+		// Unnamed queue.
+		localStorage.clear()
+		q = new Queue(localStorage, '*.queue', maxItemBytes)
+		q.append({ foo: 'boo' })
+		q.save()
+		assertEquals(localStorage.length, 1)
+		assertEquals(localStorage.getItem(localStorage.key(0)), '{"foo":"boo"}\n1709192826078\n13')
+		assert(q.isEmpty())
+		q.close()
+		time.restore()
+	})
 })
