@@ -122,6 +122,72 @@ class Sender {
 		}
 	}
 
+	// postRetry sends a POST request to the specified endpoint with the
+	// provided body. If keepalive is set to true, the request persists beyond
+	// the page's lifecycle. In case of an error, it automatically retries the
+	// request. The callback is triggered upon successful completion of the
+	// request, or if the sender has been closed, or if there was an error and
+	// keepalive is true.
+	#postRetry(endpoint, body, keepalive, cb) {
+		try {
+			this.#post(endpoint, body, keepalive, (response) => {
+				if (this.#closed) {
+					cb()
+					return
+				}
+				if (response instanceof Error) {
+					if (keepalive) {
+						this.#debug?.('cannot post events:', response)
+						cb()
+						return
+					}
+					if (navigator.onLine) {
+						const timeout = 1000
+						if (this.#debug) {
+							this.#debug('cannot post events, try again after', timeout, 'ms:', response)
+						} else {
+							console.warn(response.message)
+						}
+						this.#timeoutID = setTimeout(() => {
+							this.#timeoutID = null
+							this.#postRetry(endpoint, body, keepalive, cb)
+						}, timeout)
+					} else {
+						this.#postRetry(endpoint, body, keepalive, cb)
+					}
+					return
+				}
+				if (!response.ok) {
+					const timeout = 1000
+					if (this.#debug) {
+						this.#debug(
+							`server responded with status ${response.status} ${response.statusText}, will retry after`,
+							timeout,
+							'ms',
+						)
+					} else {
+						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
+					}
+					this.#timeoutID = setTimeout(() => {
+						this.#timeoutID = null
+						this.#postRetry(endpoint, body, keepalive, cb)
+					}, timeout)
+					return
+				}
+				cb()
+			})
+		} catch (error) {
+			if (navigator.onLine) {
+				console.warn(error.message)
+			}
+			this.#debug?.('cannot post events, try again after 100ms:', error)
+			this.#timeoutID = setTimeout(() => {
+				this.#timeoutID = null
+				this.#postRetry(endpoint, body, keepalive, cb)
+			}, 100)
+		}
+	}
+
 	// send sends the queued events. If flush is true, it sends a single request
 	// within 64KB body size limit.
 	//
@@ -174,68 +240,18 @@ class Sender {
 		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
 		const body = new Blob(parts, { type: 'text/plain' })
 		this.#debug?.('sending', events.length, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
-		try {
-			this.#post(this.#endpoint, body, flush, (response) => {
-				if (this.#closed) {
-					return
-				}
-				this.#sending = false
-				if (response instanceof Error) {
-					if (flush) {
-						this.#debug?.('cannot post events:', response)
-						return
-					}
-					if (navigator.onLine) {
-						const timeout = 1000
-						if (this.#debug) {
-							this.#debug('cannot post events, try again after', timeout, 'ms:', response)
-						} else {
-							console.warn(response.message)
-						}
-						this.#timeoutID = setTimeout(() => {
-							this.#timeoutID = null
-							this.#send()
-						}, timeout)
-					} else {
-						this.#send()
-					}
-					return
-				}
-				if (!response.ok) {
-					const timeout = 1000
-					if (this.#debug) {
-						this.#debug(
-							`server responded with status ${response.status} ${response.statusText}, will retry after`,
-							timeout,
-							'ms',
-						)
-					} else {
-						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
-					}
-					this.#timeoutID = setTimeout(() => {
-						this.#timeoutID = null
-						this.#send()
-					}, timeout)
-					return
-				}
-				this.#debug?.(events.length, 'events sent')
-				this.#queue.remove(events)
-				const size = this.#queue.size()
-				if (flush || size === 0) {
-					return
-				}
-				this.#send()
-			})
-		} catch (error) {
-			if (navigator.onLine) {
-				console.warn(error.message)
+		this.#postRetry(this.#endpoint, body, flush, () => {
+			if (this.#closed) {
+				return
 			}
-			this.#debug?.('cannot post events, try again after 100ms:', error)
-			this.#timeoutID = setTimeout(() => {
-				this.#timeoutID = null
-				this.#send()
-			}, 100)
-		}
+			this.#sending = false
+			this.#debug?.(events.length, 'events sent')
+			this.#queue.remove(events)
+			if (flush || this.#queue.isEmpty()) {
+				return
+			}
+			this.#send()
+		})
 	}
 }
 
