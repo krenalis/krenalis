@@ -169,3 +169,127 @@ Deno.test('Sender send', async (t) => {
 		}
 	})
 })
+
+Deno.test('Sender postRetry', async () => {
+	const exception = new Error('send exception')
+	const error = new Error('send error')
+	const offline = new Error('browser is offline')
+
+	function newSender() {
+		const queue = new Queue(localStorage, 'queue', 32 * 1024)
+		queue.debug(DEBUG)
+		const sender = new Sender(writeKey, endpoint, queue)
+		sender.debug(DEBUG)
+		queue.append({})
+		return { sender, queue }
+	}
+
+	function installFetch(responses) {
+		let globalResolve
+		let globalReject
+		let i = 0
+		globalThis.fetch = () => {
+			if (i === responses.length) {
+				globalReject('got a request when no more requests were expected')
+				return
+			}
+			const r = responses[i]
+			i++
+			// Test an exception.
+			if (r === exception) {
+				throw exception
+			}
+			// Test browser offline.
+			if (r === offline) {
+				navigator.onLine = false
+				const addEventListener = globalThis.addEventListener
+				globalThis.addEventListener = (...theArgs) => {
+					const type = theArgs[0]
+					if (type === 'online') {
+						globalThis.addEventListener = addEventListener
+						const listener = theArgs[1]
+						setTimeout(() => {
+							navigator.onLine = true
+							listener()
+						}, 10)
+						return
+					}
+					addEventListener.apply(globalThis, theArgs)
+				}
+				throw offline
+			}
+			return new Promise(function (resolve, reject) {
+				// Test a network error.
+				if (r === error) {
+					setTimeout(reject, 0, error)
+					return
+				}
+				// Test an HTTP response.
+				const response = new Response(null, {
+					status: typeof r === 'number' ? r : r.status,
+					statusText: 'Status Message',
+					headers: typeof r === 'object' && 'retryAfter' in r
+						? new Headers({ 'Retry-After': r.retryAfter })
+						: new Headers(),
+				})
+				setTimeout(() => {
+					resolve(response)
+					if (i === responses.length) {
+						setTimeout(globalResolve)
+					}
+				})
+			})
+		}
+		return new Promise((resolve, reject) => {
+			globalResolve = resolve
+			globalReject = reject
+		})
+	}
+
+	const fetch = globalThis.fetch
+
+	const tests = [
+		[exception, 200],
+		[error, 200],
+		[200],
+		[201],
+		[404],
+		[500, 200],
+		[{ status: 429, retryAfter: '1' }, 200],
+		[{ status: 429, retryAfter: '' }, 200],
+		[{ status: 429, retryAfter: null }, 200],
+		[{ status: 501, retryAfter: '1' }, 200],
+		[{ status: 503, retryAfter: new Date(Date.now() + 1000).toUTCString() }, 200],
+		[{ status: 503, retryAfter: null }, 200],
+		[{ status: 503, retryAfter: 'foo' }, 200],
+		[504, 200],
+		[500, 500, 500, 500, 200],
+		[{ status: 503, retryAfter: new Date(Date.now() + 1000).toUTCString() }, 500, 200],
+		[500, 500, 404],
+		[offline, 200],
+		[offline, 500, 200],
+		[500, offline, 500, offline, offline, 200],
+	]
+
+	navigator.onLine = true
+
+	try {
+		for (let i = 0; i < tests.length; i++) {
+			const responses = tests[i]
+			if (DEBUG) {
+				console.debug('> expected fetch responses:', responses)
+			}
+			const { sender, queue } = newSender()
+			try {
+				setTimeout(sender.flush.bind(sender))
+				await installFetch(responses)
+			} finally {
+				sender.close()
+				queue.close()
+			}
+		}
+	} finally {
+		globalThis.fetch = fetch
+		delete navigator.onLine
+	}
+})

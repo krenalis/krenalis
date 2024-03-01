@@ -13,6 +13,7 @@ class Sender {
 	#timeoutID = null
 	#post
 	#queueListener
+	#onlineListener
 	#debug
 	#closed
 
@@ -45,6 +46,9 @@ class Sender {
 		if (this.#timeoutID != null) {
 			clearTimeout(this.#timeoutID)
 		}
+		if (this.#onlineListener != null) {
+			removeEventListener('online', this.#onlineListener)
+		}
 		this.#queue.removeEventListener(this.#queueListener)
 		this.#closed = true
 		this.#debug?.('sender closed')
@@ -75,7 +79,7 @@ class Sender {
 						cb(new Error('User agent is unable to queue the data for transfer'))
 						return
 					}
-					setTimeout(() => cb({ ok: true, status: 204, statusText: 'No Content' }))
+					setTimeout(() => cb({ status: 204, statusText: 'No Content', retryAfter: false }))
 					return
 				}
 				this.#debug?.('sending', body.size, 'bytes using fetch')
@@ -91,9 +95,9 @@ class Sender {
 				})
 				promise.then((res) => {
 					const response = {
-						ok: res.ok,
 						status: res.status,
 						statusText: res.statusText,
+						retryAfter: res.headers.get('Retry-After'),
 					}
 					cb(response)
 				}, cb)
@@ -112,9 +116,9 @@ class Sender {
 					return
 				}
 				const response = {
-					ok: 200 <= xhr.status && xhr.status <= 299,
 					status: xhr.status,
 					statusText: xhr.statusText,
+					retryAfter: xhr.getResponseHeader('Retry-After'),
 				}
 				cb(response)
 			}
@@ -124,67 +128,74 @@ class Sender {
 
 	// postRetry sends a POST request to the specified endpoint with the
 	// provided body. If keepalive is set to true, the request persists beyond
-	// the page's lifecycle. In case of an error, it automatically retries the
-	// request. The callback is triggered upon successful completion of the
-	// request, or if the sender has been closed, or if there was an error and
-	// keepalive is true.
-	#postRetry(endpoint, body, keepalive, cb) {
-		try {
-			this.#post(endpoint, body, keepalive, (response) => {
-				if (this.#closed) {
-					cb()
-					return
-				}
-				if (response instanceof Error) {
-					if (keepalive) {
-						this.#debug?.('cannot post events:', response)
-						cb()
-						return
-					}
-					if (navigator.onLine) {
-						const timeout = 1000
-						if (this.#debug) {
-							this.#debug('cannot post events, try again after', timeout, 'ms:', response)
-						} else {
-							console.warn(response.message)
-						}
-						this.#timeoutID = setTimeout(() => {
-							this.#timeoutID = null
-							this.#postRetry(endpoint, body, keepalive, cb)
-						}, timeout)
-					} else {
-						this.#postRetry(endpoint, body, keepalive, cb)
-					}
-					return
-				}
-				if (!response.ok) {
-					const timeout = 1000
-					if (this.#debug) {
-						this.#debug(
-							`server responded with status ${response.status} ${response.statusText}, will retry after`,
-							timeout,
-							'ms',
-						)
-					} else {
-						console.warn(`sending events, the server responded with status ${response.status} ${response.statusText}`)
-					}
-					this.#timeoutID = setTimeout(() => {
-						this.#timeoutID = null
-						this.#postRetry(endpoint, body, keepalive, cb)
-					}, timeout)
-					return
-				}
-				cb()
-			})
-		} catch (error) {
-			if (navigator.onLine) {
-				console.warn(error.message)
+	// the page's lifecycle. In case of an error, if the request is retriable,
+	// it automatically retries the request.
+	//
+	// The callback is invoked upon successful completion of the request, or if
+	// there was an error and the request is not retriable, or if the sender has
+	// been closed. The first argument passed to the callback indicates whether
+	// the request was successful.
+	#postRetry(endpoint, body, keepalive, retries, cb) {
+		const tryPost = (response) => {
+			const status = response instanceof Error ? null : response.status
+			const isSuccessful = status === 200 || status === 201
+			const isRetriable = status === null || status === 429 || status === 408 || status === 500 ||
+				(status === 501 && response.retryAfter != null) || 502 <= status && status <= 599
+			if (this.#debug != null && !isSuccessful && !this.#closed) {
+				this.#debug(
+					'failed sending',
+					body.size,
+					`bytes: ${
+						status == null ? response.message : `server responded with status ${status} ${response.statusText}`
+					}`,
+				)
 			}
-			this.#debug?.('cannot post events, try again after 100ms:', error)
+			if (isSuccessful || !isRetriable || this.#closed) {
+				cb(isSuccessful)
+				return
+			}
+			if (!navigator.onLine) {
+				this.#debug?.('browser is offline, pause sending events')
+				this.#onlineListener = () => {
+					removeEventListener('online', this.#onlineListener)
+					this.#onlineListener = null
+					this.#debug?.('browser is online again, retry sending events')
+					this.#postRetry(endpoint, body, keepalive, 0, cb)
+				}
+				addEventListener('online', this.#onlineListener)
+				return
+			}
+			let delay
+			const base = 100
+			const cap = 5 * 1000
+			if (status === 429 || status === 501 || status === 503) {
+				// Set the delay to match the value returned by the server in the 'Retry-After' header.
+				let retryAfter = parseInt(response.retryAfter)
+				if (isNaN(retryAfter)) {
+					try {
+						const date = new Date(response.retryAfter)
+						retryAfter = (date - getTime()) / 1000
+					} catch {
+						// the date is not valid.
+					}
+				}
+				if (!isNaN(retryAfter)) {
+					delay = Math.min(Math.floor(retryAfter * 1000 + (status === 503 ? Math.random() * base : 0)), cap)
+				}
+			}
+			if (delay == null) {
+				delay = Math.floor(Math.random() * base + Math.min(base * 2 ** retries, cap))
+			}
+			this.#debug?.('retry sending the events after a delay of', delay, 'ms')
 			this.#timeoutID = setTimeout(() => {
 				this.#timeoutID = null
-				this.#postRetry(endpoint, body, keepalive, cb)
-			}, 100)
+				this.#postRetry(endpoint, body, keepalive, retries + 1, cb)
+			}, delay)
+		}
+		try {
+			this.#post(endpoint, body, keepalive, tryPost)
+		} catch (error) {
+			tryPost(error)
 		}
 	}
 
@@ -197,16 +208,14 @@ class Sender {
 	// empty.
 	#send(flush) {
 		if (flush) {
-			if (this.#queue.isEmpty() || this.#sending || !navigator.onLine) {
+			if (this.#queue.isEmpty() || (this.#sending && this.#timeoutID == null)) {
 				return
+			}
+			if (this.#timeoutID != null) {
+				clearTimeout(this.#timeoutID)
+				this.#timeoutID = null
 			}
 		} else {
-			if (!navigator.onLine) {
-				addEventListener('online', () => {
-					this.#send()
-				})
-				return
-			}
 			const timeout = (this.#queue.age() + this.timeout) - getTime()
 			if (timeout > 0) {
 				this.#debug?.('events will be sent after', timeout, 'ms')
@@ -237,20 +246,19 @@ class Sender {
 			parts.push(events[i])
 		}
 		parts.push(trailing)
-		// Send the body. The 'text/plain' content type is required for Chrome starting from version 59 when using sendBeacon.
+		// Starting from version 59, Chrome requires the 'text/plain' type when using sendBeacon.
 		const body = new Blob(parts, { type: 'text/plain' })
 		this.#debug?.('sending', events.length, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
-		this.#postRetry(this.#endpoint, body, flush, () => {
+		this.#postRetry(this.#endpoint, body, flush, 0, (isSuccessful) => {
+			this.#sending = false
 			if (this.#closed) {
 				return
 			}
-			this.#sending = false
-			this.#debug?.(events.length, 'events sent')
+			this.#debug?.(isSuccessful ? 'sent' : 'discarded', events.length, 'events')
 			this.#queue.remove(events)
-			if (flush || this.#queue.isEmpty()) {
-				return
+			if (!this.#queue.isEmpty()) {
+				this.#send()
 			}
-			this.#send()
 		})
 	}
 }
