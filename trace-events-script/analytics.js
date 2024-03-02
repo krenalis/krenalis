@@ -253,14 +253,13 @@ class Analytics {
 			return
 		}
 		this.#debug?.(`elected as leader`)
-		const leaderQueueKey = `${this.#keysPrefix}.${this.#id}.queue`
-		this.#queue.setKey(leaderQueueKey)
+		this.#queue.setKey(`${this.#keysPrefix}.${this.#id}.queue`)
 		// Listen to new follower queues to merge.
 		const merged = new Set()
 		this.#onFollowerQueue = (event) => {
 			if (this.#isLeader && event.storageArea === localStorage && event.newValue != null) {
 				const key = event.key
-				if (key !== leaderQueueKey && !merged.has(key) && queueKeyReg.test(key)) {
+				if (!merged.has(key) && queueKeyReg.test(key)) {
 					this.#queue.load(key)
 					localStorage.removeItem(key)
 				}
@@ -270,7 +269,7 @@ class Analytics {
 		// Merge existing follower queues.
 		for (let i = 0; i < localStorage.length; i++) {
 			const key = localStorage.key(i)
-			if (key !== leaderQueueKey && queueKeyReg.test(key)) {
+			if (queueKeyReg.test(key)) {
 				this.#queue.load(key)
 				merged.add(key)
 			}
