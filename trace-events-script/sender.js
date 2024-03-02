@@ -19,23 +19,20 @@ class Sender {
 
 	// constructor returns a new Sender that sends the events in the queue to
 	// the provided endpoint using the provided write key. Events already in the
-	// queue are promptly dispatched, while others will be sent as they are
-	// added to the queue.
+	// queue will be dispatched as soon as possible, while others will be sent
+	// as they are added to the queue.
 	constructor(writeKey, endpoint, queue) {
 		this.#queue = queue
 		this.#writeKey = JSON.stringify(writeKey)
 		this.#endpoint = endpoint + 'batch'
 		this.#post = this.#postFunc()
 		if (!queue.isEmpty()) {
-			this.#send()
+			this.#setTimeout(this.#send)
 		}
 		this.#queueListener = () => {
 			if (!this.#sending && this.#timeoutID == null) {
 				this.#debug?.('events will be sent after', this.timeout, 'ms')
-				this.#timeoutID = setTimeout(() => {
-					this.#timeoutID = null
-					this.#send()
-				}, this.timeout)
+				this.#setTimeout(this.#send, this.timeout)
 			}
 		}
 		this.#queue.addEventListener(this.#queueListener)
@@ -187,8 +184,7 @@ class Sender {
 				delay = Math.floor(Math.random() * base + Math.min(base * 2 ** retries, cap))
 			}
 			this.#debug?.('retry sending the events after a delay of', delay, 'ms')
-			this.#timeoutID = setTimeout(() => {
-				this.#timeoutID = null
+			this.#setTimeout(() => {
 				this.#postRetry(endpoint, body, keepalive, retries + 1, cb)
 			}, delay)
 		}
@@ -219,10 +215,7 @@ class Sender {
 			const timeout = (this.#queue.age() + this.timeout) - getTime()
 			if (timeout > 0) {
 				this.#debug?.('events will be sent after', timeout, 'ms')
-				this.#timeoutID = setTimeout(() => {
-					this.#timeoutID = null
-					this.#send()
-				}, timeout)
+				this.#setTimeout(this.#send, timeout)
 				return
 			}
 		}
@@ -260,6 +253,16 @@ class Sender {
 				this.#send()
 			}
 		})
+	}
+
+	// setTimeout calls the global setTimeout method to execute a function once
+	// the timer expires. It also sets the timeoutID property with the returned
+	// value, enabling the timeout to be canceled if needed.
+	#setTimeout(functionRef, delay) {
+		this.#timeoutID = setTimeout(() => {
+			this.#timeoutID = null
+			functionRef.call(this)
+		}, delay)
 	}
 }
 
