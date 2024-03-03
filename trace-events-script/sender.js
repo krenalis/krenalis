@@ -1,7 +1,7 @@
 import { debug, getTime } from './utils.js'
 
 const MaxBodySize = 500 * 1024
-const MaxHiddenBodySize = 64 * 1024
+const MaxKeepAliveBodySize = 64 * 1024
 
 // Sender sends events read from a Queue to a destination.
 class Sender {
@@ -56,15 +56,16 @@ class Sender {
 		this.#debug = debug(on)
 	}
 
-	// Flush immediately flushes the events waiting to be sent.
+	// Flush flushes the events. It should be called when the browser is about
+	// to unload the page.
 	flush() {
 		this.#send(true)
 	}
 
 	// postFunc returns a function that issues a POST to the specified endpoint
 	// with the given body. If keepalive is true the request outlives the page.
-	// It returns an object with properties 'ok', 'status' and 'statusText'.
-	// Returns an Error value in case of error.
+	// It returns an object with properties 'status', 'statusText', and
+	// 'retryAfter'. Returns an Error value in case of error.
 	#postFunc() {
 		// ES5: "fetch" is not available.
 		if (globalThis.fetch && typeof globalThis.fetch === 'function') {
@@ -124,8 +125,7 @@ class Sender {
 	}
 
 	// postRetry sends a POST request to the specified endpoint with the
-	// provided body. If keepalive is set to true, the request persists beyond
-	// the page's lifecycle. In case of an error, if the request is retriable,
+	// provided body. In case of an error, if the request is retriable,
 	// it automatically retries the request.
 	//
 	// The callback is invoked upon successful completion of the request, or if
@@ -195,15 +195,17 @@ class Sender {
 		}
 	}
 
-	// send sends the queued events. If flush is true, it sends a single request
-	// within 64KB body size limit.
+	// Send sends the queued events. When keepalive is true, it sends a single
+	// request within a 64KB body size limit, utilizing either the sendBeacon
+	// function or the fetch function with the keepalive option. If sendBeacon
+	// is used, it retains the sent events in the queue, resending them a second
+	// time, with keepalive set to false.
 	//
-	// send is invoked only when the queue becomes non-empty (flush is false) or
-	// the flush function is called (flush is true). In all other scenarios,
-	// once send is called, it is guaranteed to continue until the queue becomes
-	// empty.
-	#send(flush) {
-		if (flush) {
+	// Send is automatically invoked when the queue is not empty (keepalive is
+	// false) or when the flush function is invoked (keepalive is true). Once
+	// invoked, it continues sending events until the queue is emptied.
+	#send(keepalive) {
+		if (keepalive) {
 			if (this.#queue.isEmpty() || (this.#sending && this.#timeoutID == null)) {
 				return
 			}
@@ -228,7 +230,7 @@ class Sender {
 			this.#writeKey,
 			'}',
 		])
-		const maxSize = (flush ? MaxHiddenBodySize : MaxBodySize) - leading.length - trailing.size
+		const maxSize = (keepalive ? MaxKeepAliveBodySize : MaxBodySize) - leading.length - trailing.size
 		const events = this.#queue.read(maxSize, 1)
 		const parts = []
 		parts.push(leading)
@@ -242,7 +244,7 @@ class Sender {
 		// Starting from version 59, Chrome requires the 'text/plain' type when using sendBeacon.
 		const body = new Blob(parts, { type: 'text/plain' })
 		this.#debug?.('sending', events.length, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
-		this.#postRetry(this.#endpoint, body, flush, 0, (isSuccessful) => {
+		this.#postRetry(this.#endpoint, body, keepalive, 0, (isSuccessful) => {
 			this.#sending = false
 			if (this.#closed) {
 				return
@@ -267,4 +269,4 @@ class Sender {
 }
 
 export default Sender
-export { MaxBodySize, MaxHiddenBodySize, Sender }
+export { MaxBodySize, MaxKeepAliveBodySize, Sender }
