@@ -9,6 +9,7 @@ package events
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -112,6 +113,17 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if serveSettings {
 		err = c.serveSettings(w, r)
 	} else {
+		// Serve events.
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			reader, err := gzip.NewReader(r.Body)
+			if err != nil {
+				slog.Error("collector: an error occurred creating gzip reader", "err", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			defer reader.Close()
+			r.Body = http.MaxBytesReader(w, reader, maxRequestSize)
+		}
 		err = c.serveEvents(w, r)
 	}
 	if err != nil {
