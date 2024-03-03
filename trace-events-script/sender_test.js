@@ -75,14 +75,12 @@ Deno.test('Sender send', async (t) => {
 			for (let i = 0; i < maxPerBatch; i++) {
 				queue.append({ messageId: crypto.randomUUID() })
 			}
-			time.tick(100)
 			queue.append({ messageId: crypto.randomUUID() })
 			queue.append({ messageId: crypto.randomUUID() })
-			time.tick(sender.timeout - 100)
-			time.tick(10)
+			time.tick(sender.timeout)
 			let events = await fetch.events(maxPerBatch)
 			assertEquals(events.length, maxPerBatch)
-			time.tick(150)
+			await time.nextAsync()
 			events = await fetch.events(2)
 			assertEquals(events.length, 2)
 		} finally {
@@ -103,6 +101,8 @@ Deno.test('Sender send', async (t) => {
 		const time = new FakeTime()
 		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'batch', DEBUG)
 		sendBeacon.install()
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
+		fetch.install()
 		let queue
 		let sender
 		try {
@@ -113,12 +113,23 @@ Deno.test('Sender send', async (t) => {
 			for (let i = 0; i < events.length; i++) {
 				queue.append(events[i])
 			}
+			// First send, with sendBeacon.
 			sender.flush()
-			const sentEvents = await sendBeacon.events(events.length)
+			let sentEvents = await sendBeacon.events(events.length)
 			assertEquals(sentEvents.length, events.length)
 			for (let i = 0; i < events.length; i++) {
 				assertEquals(sentEvents[i], events[i])
 			}
+			assert(!queue.isEmpty())
+			// Second send, with flush.
+			time.tick(sender.timeout)
+			await time.nextAsync()
+			sentEvents = await fetch.events(events.length)
+			assertEquals(sentEvents.length, events.length)
+			for (let i = 0; i < events.length; i++) {
+				assertEquals(sentEvents[i], events[i])
+			}
+			assert(queue.isEmpty())
 		} finally {
 			if (sender != null) {
 				sender.close()
@@ -126,6 +137,7 @@ Deno.test('Sender send', async (t) => {
 			if (queue != null) {
 				queue.close()
 			}
+			fetch.restore()
 			sendBeacon.restore()
 			time.restore()
 		}

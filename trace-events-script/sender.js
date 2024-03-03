@@ -77,7 +77,7 @@ class Sender {
 						cb(new Error('User agent is unable to queue the data for transfer'))
 						return
 					}
-					setTimeout(() => cb({ status: 204, statusText: 'No Content', retryAfter: false }))
+					setTimeout(cb)
 					return
 				}
 				this.#debug?.('sending', body.size, 'bytes using fetch')
@@ -128,17 +128,21 @@ class Sender {
 	// provided body. In case of an error, if the request is retriable,
 	// it automatically retries the request.
 	//
-	// The callback is invoked upon successful completion of the request, or if
-	// there was an error and the request is not retriable, or if the sender has
-	// been closed. The first argument passed to the callback indicates whether
-	// the request was successful.
+	// The callback is invoked in the following cases:
+	//    * upon successful completion of the request
+	//    * if the request has been sent with sendBeacon
+	//    * if there was an error and the request is not retriable
+	//    * if the sender has been closed.
+	// The first argument passed to the callback indicates whether the request
+	// was successful. It is null if the request has been sent with sendBeacon.
 	#postRetry(endpoint, body, keepalive, retries, cb) {
 		const tryPost = (response) => {
-			const status = response instanceof Error ? null : response.status
-			const isSuccessful = status === 200 || status === 201
+			const asBeacon = response == null
+			const status = asBeacon || response instanceof Error ? null : response.status
+			const isSuccessful = asBeacon ? null : status === 200 || status === 201
 			const isRetriable = status === null || status === 429 || status === 408 || status === 500 ||
 				(status === 501 && response.retryAfter != null) || 502 <= status && status <= 599
-			if (this.#debug != null && !isSuccessful && !this.#closed) {
+			if (this.#debug != null && !isSuccessful && !asBeacon && !this.#closed) {
 				this.#debug(
 					'failed sending',
 					body.size,
@@ -147,7 +151,7 @@ class Sender {
 					}`,
 				)
 			}
-			if (isSuccessful || !isRetriable || this.#closed) {
+			if (isSuccessful || asBeacon || !isRetriable || this.#closed) {
 				cb(isSuccessful)
 				return
 			}
@@ -245,14 +249,17 @@ class Sender {
 		const body = new Blob(parts, { type: 'text/plain' })
 		this.#debug?.('sending', events.length, 'events of', this.#queue.size(), '(', body.size, 'bytes )')
 		this.#postRetry(this.#endpoint, body, keepalive, 0, (isSuccessful) => {
-			this.#sending = false
 			if (this.#closed) {
 				return
 			}
-			this.#debug?.(isSuccessful ? 'sent' : 'discarded', events.length, 'events')
-			this.#queue.remove(events)
+			this.#sending = false
+			// Sent events are only removed if sendBeacon has not been used.
+			if (isSuccessful != null) {
+				this.#queue.remove(events)
+			}
 			if (!this.#queue.isEmpty()) {
-				this.#send()
+				// Continuing in the next tick is mandatory if sendBeacon has been used.
+				this.#setTimeout(this.#send)
 			}
 		})
 	}

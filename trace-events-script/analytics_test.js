@@ -254,6 +254,7 @@ Deno.test('Analytics', async (t) => {
 			assertEquals(a.getSessionId(), 728819037)
 			a.reset()
 			assertEquals(a.getSessionId(), null)
+			await time.nextAsync()
 			events = await fetch.events(1)
 			assertEquals(events.length, 1)
 		} finally {
@@ -326,6 +327,7 @@ Deno.test('Analytics', async (t) => {
 					// anonymize.
 					void a.anonymize()
 					time.tick(1000)
+					await time.nextAsync()
 					events = await fetch.events(1)
 					event = events[0]
 
