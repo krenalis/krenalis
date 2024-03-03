@@ -22,6 +22,7 @@ class Elections {
 	// close closes elections.
 	close() {
 		clearTimeout(this.#timeoutID)
+		this.#timeoutID = null
 	}
 
 	// resign resigns as leader.
@@ -36,6 +37,12 @@ class Elections {
 	// keep keeps the elections. It is initially invoked by the constructor and
 	// then recursively calls itself.
 	#keep() {
+		// While debugging tests in Deno, there have been instances where #keep
+		// is invoked even after the timeout has been canceled.
+		if (this.#timeoutID == null) {
+			console.warn('elections.#keep called after closure')
+			return
+		}
 		this.#timeoutID = null
 		this.#tryElection((isLeader, expiration) => {
 			const interval = expiration - getTime()
