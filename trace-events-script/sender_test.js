@@ -175,15 +175,6 @@ Deno.test('Sender postRetry', async () => {
 	const error = new Error('send error')
 	const offline = new Error('browser is offline')
 
-	function newSender() {
-		const queue = new Queue(localStorage, 'queue', 32 * 1024)
-		queue.debug(DEBUG)
-		const sender = new Sender(writeKey, endpoint, queue)
-		sender.debug(DEBUG)
-		queue.append({})
-		return { sender, queue }
-	}
-
 	function installFetch(responses) {
 		let globalResolve
 		let globalReject
@@ -269,6 +260,9 @@ Deno.test('Sender postRetry', async () => {
 		[offline, 200],
 		[offline, 500, 200],
 		[500, offline, 500, offline, offline, 200],
+		[301],
+		[400],
+		[401],
 	]
 
 	navigator.onLine = true
@@ -279,10 +273,15 @@ Deno.test('Sender postRetry', async () => {
 			if (DEBUG) {
 				console.debug('> expected fetch responses:', responses)
 			}
-			const { sender, queue } = newSender()
+			const queue = new Queue(localStorage, 'queue', 32 * 1024)
+			queue.debug(DEBUG)
+			const sender = new Sender(writeKey, endpoint, queue)
+			sender.debug(DEBUG)
+			queue.append({})
 			try {
 				setTimeout(sender.flush.bind(sender))
 				await installFetch(responses)
+				assert(queue.isEmpty())
 			} finally {
 				sender.close()
 				queue.close()
