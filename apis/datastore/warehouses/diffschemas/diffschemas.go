@@ -122,14 +122,18 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			dropped[droppedName] = true
 			droppedProp := oldPropsByName[droppedName]
 			if droppedProp.Type.Kind() == types.ObjectKind {
-				// TODO(Gianluca): see https://github.com/open2b/chichi/issues/581.
-				return nil, fmt.Errorf("dropping of Object properties is currently" +
-					" not supported (see the issue https://github.com/open2b/chichi/issues/581)")
+				for _, p := range propertyPaths(droppedProp.Type) {
+					operations = append(operations, warehouses.AlterSchemaOperation{
+						Operation: warehouses.OperationDropProperty,
+						Path:      appendPath(path, appendPath(droppedName, p)),
+					})
+				}
+			} else {
+				operations = append(operations, warehouses.AlterSchemaOperation{
+					Operation: warehouses.OperationDropProperty,
+					Path:      appendPath(path, droppedName),
+				})
 			}
-			operations = append(operations, warehouses.AlterSchemaOperation{
-				Operation: warehouses.OperationDropProperty,
-				Path:      appendPath(path, droppedName),
-			})
 		}
 	}
 
@@ -242,4 +246,18 @@ func intersection(set1, set2 []string) []string {
 func propPathToName(path string) string {
 	parts := strings.Split(path, ".")
 	return parts[len(parts)-1]
+}
+
+func propertyPaths(obj types.Type) []string {
+	paths := []string{}
+	for _, p := range obj.Properties() {
+		if p.Type.Kind() == types.ObjectKind {
+			for _, sub := range propertyPaths(p.Type) {
+				paths = append(paths, appendPath(p.Name, sub))
+			}
+		} else {
+			paths = append(paths, p.Name)
+		}
+	}
+	return paths
 }

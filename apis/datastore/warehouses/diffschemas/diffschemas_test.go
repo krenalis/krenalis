@@ -5,17 +5,17 @@
 // Copyright (c) 2024 Open2b
 //
 
-package diffschemas_test
+package diffschemas
 
 import (
 	"bytes"
 	"encoding/json"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/apis/datastore/warehouses/diffschemas"
 	"chichi/connector/types"
 )
 
@@ -441,7 +441,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Cannot drop Object properties",
+			name: "Comprehensive test 2",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text()},
@@ -461,13 +461,41 @@ func TestDiff(t *testing.T) {
 				"x.a": nil,
 				"z2":  "z",
 			},
-			expectedErr: "dropping of Object properties is currently not supported (see the issue https://github.com/open2b/chichi/issues/581)",
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameProperty, Path: "z", Name: "z2"},
+				{Operation: warehouses.OperationDropProperty, Path: "y.a"},
+				{Operation: warehouses.OperationDropProperty, Path: "x.a"},
+				{Operation: warehouses.OperationAddProperty, Path: "x.a", Type: types.Int(32)},
+			},
+		},
+		{
+			name: "Dropping of Object properties",
+			fromSchema: types.Object([]types.Property{
+				{Name: "v", Type: types.Text()},
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+				{Name: "y", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "v", Type: types.Text()},
+			}),
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationDropProperty, Path: "x.a"},
+				{Operation: warehouses.OperationDropProperty, Path: "x.b"},
+				{Operation: warehouses.OperationDropProperty, Path: "y.c"},
+				{Operation: warehouses.OperationDropProperty, Path: "y.d"},
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotOps, gotErr := diffschemas.Diff(test.fromSchema, test.toSchema, test.rePaths, "")
+			gotOps, gotErr := Diff(test.fromSchema, test.toSchema, test.rePaths, "")
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()
@@ -479,6 +507,65 @@ func TestDiff(t *testing.T) {
 				expectedPath := dumpToJSONFile(test.expectedOps)
 				gotPath := dumpToJSONFile(gotOps)
 				t.Fatalf("operations mismatch. Expected operations have been dumped to %q, got operations to %q", expectedPath, gotPath)
+			}
+		})
+	}
+
+}
+
+func Test_propertyPaths(t *testing.T) {
+
+	tests := []struct {
+		obj      types.Type
+		expected []string
+	}{
+		{
+			obj: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			expected: []string{"a"},
+		},
+		{
+			obj: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+				{Name: "b", Type: types.Text()},
+			}),
+			expected: []string{"a", "b"},
+		},
+		{
+			obj: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+				{Name: "y", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+			}),
+			expected: []string{"x.a", "x.b", "y.c", "y.d"},
+		},
+		{
+			obj: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+				{Name: "x2", Type: types.Int(32)},
+				{Name: "y", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+			}),
+			expected: []string{"x.a", "x.b", "x2", "y.c", "y.d"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got := propertyPaths(test.obj)
+			if !slices.Equal(test.expected, got) {
+				t.Fatalf("expected %v, got %v", test.expected, got)
 			}
 		})
 	}
