@@ -224,7 +224,7 @@ type Type struct {
 	//   - maximum value for Int with 8, 16, 24, and 32 bits
 	//   - maximum value, as uint32(s), for Uint with 8, 16, 24, and 32 bits
 	//   - scale for Decimal
-	//   - length in characters, as uint32(s), for JSON and Text
+	//   - length in characters, as uint32(s), for Text
 	//   - maximum length for Array
 	s int32
 
@@ -878,23 +878,22 @@ func (t Type) WithByteLen(l int) Type {
 	return t
 }
 
-// CharLen returns the maximum length in characters of JSON and Text types and
-// true. If t has no maximum length in characters, it returns 0 and false.
-// Panics if t is not a JSON or Text type.
+// CharLen returns the maximum length in characters of a Text type and true. If
+// t has no maximum length in characters, it returns 0 and false. Panics if t is
+// not a Text type.
 func (t Type) CharLen() (int, bool) {
-	if t.kind != JSONKind && t.kind != TextKind {
-		panic("cannot get character length of non-JSON and non-Text types")
+	if t.kind != TextKind {
+		panic("cannot get character length of non-Text types")
 	}
 	return int(uint32(t.s)), t.s != 0
 }
 
-// WithCharLen returns t with a maximum length of l of a JSON and Text type. l
-// must be in range [1, MaxTextLen].
-// Panics if t is not a JSON or Text type, or if l is not in range, or if t has
-// already a char length, or if t already has values.
+// WithCharLen returns t with a maximum length of l of a Text type. l must be in
+// range [1, MaxTextLen]. Panics if t is not a Text type, or if l is not in
+// range, or if t has already a char length, or if t already has values.
 func (t Type) WithCharLen(l int) Type {
-	if t.kind != JSONKind && t.kind != TextKind {
-		panic("cannot set character length of non-JSON and non-Text types")
+	if t.kind != TextKind {
+		panic("cannot set character length of non-Text types")
 	}
 	if t.s > 0 {
 		panic("repeated length in characters")

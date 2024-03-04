@@ -229,9 +229,6 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Text","charLen":10000}`,
 			Type: Text().WithCharLen(10000),
 		}, {
-			Data: `{"name":"JSON","charLen":10000}`,
-			Type: JSON().WithCharLen(10000),
-		}, {
 			Data: `{"name":"Int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {

@@ -164,11 +164,6 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
-	case JSONKind:
-		if t.s > 0 {
-			b.WriteString(`,"charLen":`)
-			b.WriteString(strconv.Itoa(int(t.s)))
-		}
 	case TextKind:
 		if t.p > 0 {
 			b.WriteString(`,"byteLen":`)
@@ -857,8 +852,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
-		if kind != JSONKind && kind != TextKind {
-			return Type{}, errors.New("unexpected length in characters for non-JSON and non-Text types")
+		if kind != TextKind {
+			return Type{}, errors.New("unexpected length in characters for non-Text types")
 		}
 		t.s = int32(charLen)
 	}
