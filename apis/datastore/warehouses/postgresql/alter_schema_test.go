@@ -56,7 +56,21 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type Float(64) is not supported by the PostgreSQL driver",
+			expectedErr: "unsupported alter schema operation: the type of the property \"f\" is not supported by the PostgreSQL driver",
+		},
+		{
+			name: "Unsupported type at first-level property",
+			ops: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64).AsReal()},
+			},
+			expectedErr: "unsupported alter schema operation: the type of the property \"f\" is not supported by the PostgreSQL driver",
+		},
+		{
+			name: "Unsupported type at second-level property",
+			ops: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "x.f", Type: types.Float(64).AsReal()},
+			},
+			expectedErr: "unsupported alter schema operation: the type of the property \"x.f\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Add a first level not-nullable Text (with enum values) property",

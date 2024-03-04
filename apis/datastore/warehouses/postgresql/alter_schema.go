@@ -74,11 +74,12 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, operations 
 // addColumnClause returns the PostgreSQL clause "ADD COLUMN" for a column with
 // the given type and nullable constraint. enumName is the name of the enum type
 // in case the column type refers to an enum.
-func addColumnClause(column string, colType types.Type, nullable bool, enumName string) (string, error) {
+// propertyPath is used for error messages.
+func addColumnClause(propertyPath string, column string, colType types.Type, nullable bool, enumName string) (string, error) {
 	var typ, defaultExpr string
 	typ, defaultExpr, ok := typeToPostgresType(colType)
 	if !ok {
-		return "", fmt.Errorf("the type %v is not supported by the PostgreSQL driver", colType)
+		return "", fmt.Errorf("the type of the property %q is not supported by the PostgreSQL driver", propertyPath)
 	}
 	var additional string
 	if !nullable {
@@ -106,7 +107,7 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 				properties := op.Type.Properties()
 				columns := warehouses.PropertiesToColumns(properties)
 				for _, col := range columns {
-					add, err := addColumnClause(column+"_"+col.Name, col.Type, col.Nullable, "") // TODO(Gianluca): see https://github.com/open2b/chichi/issues/576.
+					add, err := addColumnClause(op.Path, column+"_"+col.Name, col.Type, col.Nullable, "") // TODO(Gianluca): see https://github.com/open2b/chichi/issues/576.
 					if err != nil {
 						return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
 					}
@@ -130,7 +131,7 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 				query := `CREATE TYPE ` + enumName + ` AS ENUM(` + values.String() + `)`
 				enumQueries = append(enumQueries, query)
 			}
-			add, err := addColumnClause(column, op.Type, op.Nullable, enumName)
+			add, err := addColumnClause(op.Path, column, op.Type, op.Nullable, enumName)
 			if err != nil {
 				return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
 			}
