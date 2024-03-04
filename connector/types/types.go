@@ -224,7 +224,7 @@ type Type struct {
 	//   - maximum value for Int with 8, 16, 24, and 32 bits
 	//   - maximum value, as uint32(s), for Uint with 8, 16, 24, and 32 bits
 	//   - scale for Decimal
-	//   - length in characters, as uint32(s), for Text
+	//   - length in characters, as uint32(s), for JSON and Text
 	//   - maximum length for Array
 	s int32
 
