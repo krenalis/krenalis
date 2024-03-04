@@ -197,7 +197,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 
 1. Add a JavaScript source connection with host `localhost:9090`.
 2. Add an action with type "Collect events" (and/or an action "Import users", depending on what you want to test) and enable it.
-3. Add the content of the [trace-events-script/snippet.js](trace-events-script/snippet.js) file into your HTML page under `trace-events-script` (let's suppose `trace-events-script/mywebsite/index.html`); if you don't have one, here you can find a minimal HTML5 page:
+3. Add the content of the [javascript-sdk/snippet.js](javascript-sdk/snippet.js) file into your HTML page under `javascript-sdk` (let's suppose `javascript-sdk/mywebsite/index.html`); if you don't have one, here you can find a minimal HTML5 page:
    <details>
     <summary>Minimal HTML5 page</summary>
 
@@ -224,7 +224,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 
     </details>
 4. In the pasted code, replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with the key in "Settings > API keys" of the connection. 
-5. Visit the URL pointing to the HTML file, for example https://localhost:9090/trace-events-script/mywebsite/index.html.
+5. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/index.html.
 
 ## Interact with Chichi using `chichi-cli`
 

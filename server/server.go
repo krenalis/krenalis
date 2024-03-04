@@ -169,7 +169,7 @@ func Run(ctx context.Context, settings *Settings) error {
 		case strings.HasPrefix(r.URL.Path, "/webhook/"):
 			apis.ServeWebhook(w, r)
 			return
-		case strings.HasPrefix(r.URL.Path, "/trace-events-script/"):
+		case strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
 			fileServer(".").ServeHTTP(w, r)
 			return
 		default:

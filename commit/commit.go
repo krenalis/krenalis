@@ -133,9 +133,9 @@ func main() {
 	// Typecheck the Typescript code in the admin.
 	cmd("npm", []string{"run", "typecheck"}, repo, "admin", true)
 
-	// Format and test the files in the 'trace-events-script' directory.
-	cmd("npm", []string{"run", "fmt"}, repo, "trace-events-script", true)
-	cmd("npm", []string{"run", "test"}, repo, "trace-events-script", true)
+	// Format and test the files in the 'javascript-sdk' directory.
+	cmd("npm", []string{"run", "fmt"}, repo, "javascript-sdk", true)
+	cmd("npm", []string{"run", "test"}, repo, "javascript-sdk", true)
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
