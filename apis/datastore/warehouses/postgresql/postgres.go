@@ -613,7 +613,7 @@ func (warehouse *PostgreSQL) Settings() []byte {
 func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 	tables, err := warehouse.tables(ctx)
 	if err != nil {
-		return nil, err
+		return nil, warehouses.Error(err)
 	}
 	whTables := make([]*warehouses.Table, len(tables))
 	for i, t := range tables {
@@ -649,7 +649,7 @@ func (warehouse *PostgreSQL) tables(ctx context.Context) ([]*tableSchema, error)
 	tables, err := tablesSchemas(ctx, tx, warehouse.settings.Schema,
 		[]string{"users", "users_identities", "groups", "groups_identities", "events"})
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, err
 	}
 	err = tx.Commit(ctx)
 	if err != nil {
