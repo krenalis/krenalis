@@ -1,0 +1,209 @@
+{
+    "Schema": {
+        "name": "Object",
+        "properties": [
+            {
+                "name": "Id",
+                "type": {
+                    "name": "Int",
+                    "bitSize": 32
+                }
+            },
+            {
+                "name": "email",
+                "type": {
+                    "name": "Text",
+                    "charLen": 300
+                },
+                "nullable": true
+            },
+            {
+                "name": "dummyId",
+                "type": {
+                    "name": "Text"
+                },
+                "nullable": true
+            },
+            {
+                "name": "android",
+                "type": {
+                    "name": "Object",
+                    "properties": [
+                        {
+                            "name": "id",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "idfa",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "pushToken",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "ios",
+                "type": {
+                    "name": "Object",
+                    "properties": [
+                        {
+                            "name": "id",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "idfa",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "pushToken",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "firstName",
+                "type": {
+                    "name": "Text",
+                    "charLen": 300
+                },
+                "nullable": true
+            },
+            {
+                "name": "lastName",
+                "type": {
+                    "name": "Text",
+                    "charLen": 300
+                },
+                "nullable": true
+            },
+            {
+                "name": "gender",
+                "type": {
+                    "name": "Text",
+                    "values": [
+                        "other",
+                        "female",
+                        "male"
+                    ]
+                },
+                "nullable": true
+            },
+            {
+                "name": "foodPreferences",
+                "type": {
+                    "name": "Object",
+                    "properties": [
+                        {
+                            "name": "drink",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "fruit",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "phoneNumbers",
+                "type": {
+                    "name": "Array",
+                    "itemType": {
+                        "name": "Text",
+                        "charLen": 300
+                    }
+                },
+                "nullable": true
+            },
+            {
+                "name": "favoriteMovie",
+                "type": {
+                    "name": "Object",
+                    "properties": [
+                        {
+                            "name": "title",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "length",
+                            "type": {
+                                "name": "Float",
+                                "bitSize": 64
+                            },
+                            "nullable": true
+                        },
+                        {
+                            "name": "soundtrack",
+                            "type": {
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "title",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "nullable": true
+                                    },
+                                    {
+                                        "name": "author",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "nullable": true
+                                    },
+                                    {
+                                        "name": "length",
+                                        "type": {
+                                            "name": "Float",
+                                            "bitSize": 64
+                                        },
+                                        "nullable": true
+                                    },
+                                    {
+                                        "name": "genre",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "nullable": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "RePaths": {}
+}

@@ -26,8 +26,8 @@ func TestChangeUsersSchema(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Read the schema in "users_schema.json".
-	f, err := os.Open("users_schema.json")
+	// Read the schema in "tests_users_schema.json".
+	f, err := os.Open("tests_users_schema.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +42,8 @@ func TestChangeUsersSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The schema of "users_schema.json" has already been applied by the tests
-	// framework, so there should be no queries to execute.
+	// The schema of "tests_users_schema.json" has already been applied by the
+	// tests framework, so there should be no queries to execute.
 	queries := c.ChangeUsersSchemaQueries(file.Schema, file.RePaths)
 	if len(queries) > 0 {
 		t.Fatalf("expected 0 queries, got %d", len(queries))

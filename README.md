@@ -151,7 +151,7 @@ Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit http
 Within the root of the repository, run:
 
 ```
-chichi-cli change-users-schema ./test/users_schema.json
+chichi-cli change-users-schema ./test/example_users_schema.json
 ```
 
 ## Enable telemetry (optional)

@@ -57,11 +57,19 @@ type Chichi struct {
 var chichiAlreadyLaunched bool
 var chichiAlreadyBuilt bool
 
+type TestingOption int
+
+const (
+	// DoNotPopulateUsersSchema prevents the test from populating the "users"
+	// (and "users_identities") schema with testing properties.
+	DoNotPopulateUsersSchema TestingOption = iota + 1
+)
+
 // InitAndLaunch initializes and launches an instance of Chichi in a separate
 // goroutine.
 // After calling InitAndLaunch, the "Stop" method must be called on the returned
 // instance of Chichi to stop the instance and shutdown the server.
-func InitAndLaunch(t *testing.T) *Chichi {
+func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 
 	if !launchChichiExternally {
 		if chichiAlreadyLaunched {
@@ -70,6 +78,17 @@ func InitAndLaunch(t *testing.T) *Chichi {
 			t.Fatal(msg)
 		}
 		chichiAlreadyLaunched = true
+	}
+
+	// Determine the options.
+	populateUsersSchema := true
+	for _, opt := range options {
+		switch opt {
+		case DoNotPopulateUsersSchema:
+			populateUsersSchema = false
+		default:
+			panic("unexpected testing option %d")
+		}
 	}
 
 	err := loadTestConfig()
@@ -255,9 +274,11 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	}
 
 	// Change the users schema.
-	err = c.changeUsersSchema()
-	if err != nil {
-		t.Fatalf("cannot change users schema: %s", err)
+	if populateUsersSchema {
+		err = c.changeUsersSchema()
+		if err != nil {
+			t.Fatalf("cannot change users schema: %s", err)
+		}
 	}
 
 	// Wait some time for the leader election.
@@ -333,7 +354,7 @@ func (c *Chichi) initWarehouse() error {
 }
 
 func (c *Chichi) changeUsersSchema() error {
-	f, err := os.Open("users_schema.json")
+	f, err := os.Open("tests_users_schema.json")
 	if err != nil {
 		return err
 	}
