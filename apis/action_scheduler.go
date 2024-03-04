@@ -221,7 +221,14 @@ func (sc *scheduler) toExecute(action *state.Action) bool {
 
 // toSchedule reports whether action can be scheduled.
 func (sc *scheduler) toSchedule(action *state.Action) bool {
-	return action.Target == state.Users || action.Target == state.Groups
+	if t := action.Target; t != state.Users && t != state.Groups {
+		return false
+	}
+	typ := action.Connection().Connector().Type
+	if typ != state.AppType && typ != state.DatabaseType && typ != state.FileType {
+		return false
+	}
+	return true
 }
 
 // _addAction adds action to the scheduler.

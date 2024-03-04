@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
@@ -237,7 +238,8 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// Execute executes the action.
+// Execute executes the action, which must be an app, database, or file action
+// with a target of Users or Groups.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
@@ -252,18 +254,22 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	if _, ok := this.action.Execution(); ok {
 		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
+	c := this.action.Connection()
 	if this.connection.store == nil {
-		ws := this.action.Connection().Workspace()
+		ws := c.Workspace()
 		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 	if t := this.action.Target; t != state.Users && t != state.Groups {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
-	c := this.action.Connection()
-	if c.Connector().Type == state.FileType {
+	switch typ := c.Connector().Type; typ {
+	case state.AppType, state.DatabaseType:
+	case state.FileType:
 		if _, ok := c.Storage(); !ok {
 			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 		}
+	default:
+		return errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
 	}
 	return this.addExecution(ctx, reimport)
 }
