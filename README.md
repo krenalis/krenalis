@@ -100,13 +100,13 @@ Populate the Chichi's database with the queries in [database/PostgreSQL.sql](dat
 Connect the data warehouse with:
 
 ```
-$ chichi-cli connect-warehouse PostgreSQL ./postgresql.json
+chichi-cli connect-warehouse PostgreSQL ./postgresql.json
 ```
 
 or 
 
 ```
-$ chichi-cli connect-warehouse ClickHouse ./clickhouse.json
+chichi-cli connect-warehouse ClickHouse ./clickhouse.json
 ```
 
 where `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
@@ -139,7 +139,7 @@ and `./clickhouse.json` is a JSON file containing the information to access the 
 Initialize the warehouse with:
 
 ```
-$ chichi-cli init-warehouse
+chichi-cli init-warehouse
 ```
 
 ### 7. Run and open the browser
