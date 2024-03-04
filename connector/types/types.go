@@ -210,7 +210,7 @@ type Type struct {
 	size int8 // size for Int, Uint and Float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
 	unique bool // unique reports whether the items of an Array must be unique.
-	real   bool // real reports whether NaN, +Inf and -Inf are allowed for Float.
+	real   bool // real reports whether NaN, +Inf and -Inf are not allowed for Float.
 
 	// p represents
 	//   - minimum value for Int with 8, 16, 24, and 32 bits
