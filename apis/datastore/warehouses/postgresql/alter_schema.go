@@ -203,9 +203,9 @@ func typeToPostgresType(t types.Type) (string, string, bool) {
 	case types.UintKind:
 		return "", "", false
 	case types.FloatKind:
-		// TODO(Gianluca): see the issue
-		// https://github.com/open2b/chichi/issues/579 about "real" and
-		// "non-real" float.
+		if t.IsReal() {
+			return "", "", false
+		}
 		min, max := t.FloatRange()
 		switch t.BitSize() {
 		case 32:

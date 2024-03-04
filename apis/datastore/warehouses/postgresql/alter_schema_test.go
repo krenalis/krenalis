@@ -42,6 +42,23 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 		},
 		{
+			name: "Add a first level not-nullable Float64 (non-real) property",
+			ops: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64)},
+			},
+			expectedQueries: []string{
+				"ALTER TABLE \"users\"\n\tADD COLUMN \"f\" double precision NOT NULL DEFAULT 0",
+				"ALTER TABLE \"users_identities\"\n\tADD COLUMN \"f\" double precision NOT NULL DEFAULT 0",
+			},
+		},
+		{
+			name: "Float64 real properties are not supported",
+			ops: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64).AsReal()},
+			},
+			expectedErr: "unsupported alter schema operation: the type Float(64) is not supported by the PostgreSQL driver",
+		},
+		{
 			name: "Add a first level not-nullable Text (with enum values) property",
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},

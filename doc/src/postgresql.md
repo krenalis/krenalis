@@ -11,8 +11,8 @@ The table below provides a list of supported property types when using a Postgre
 | `Int(32)` [^1]           | `integer`                     |
 | `Int(64)` [^1]           | `bigint`                      |
 | `Decimal(p,s)` [^1] [^2] | `decimal(p,s)`                |
-| `Float(32)` [^3] [^1]    | `real`                        |
-| `Float(64)` [^1]         | `double precision`            |
+| `Float(32)` [^1][^3]     | `real`                        |
+| `Float(64)` [^1][^3]     | `double precision`            |
 | `Text` [^4]              | `varchar`                     |
 | `DateTime`               | `timestamp without time zone` |
 | `Date`                   | `date`                        |
@@ -25,7 +25,7 @@ The table below provides a list of supported property types when using a Postgre
 
 [^2]: `Decimal(p,s)` is supported if `p` is in range [1, 76] and `s` is in range [0, 37].
 
-[^3]: See the issue [#579](https://github.com/open2b/chichi/issues/579) about "real" and "non-real" float support.
+[^3]: Only non-real `Float` types are supported, as Postgres floating-point types allow `Infinity`, `-Infinity` and `NaN`
 
 [^4]: `Text` types with regexp or bytes length are not supported.
 
