@@ -3,13 +3,6 @@
         "name": "Object",
         "properties": [
             {
-                "name": "Id",
-                "type": {
-                    "name": "Int",
-                    "bitSize": 32
-                }
-            },
-            {
                 "name": "email",
                 "type": {
                     "name": "Text",
