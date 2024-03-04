@@ -491,6 +491,36 @@ func TestDiff(t *testing.T) {
 				{Operation: warehouses.OperationDropProperty, Path: "y.d"},
 			},
 		},
+		{
+			name: "One nullable Object added at first level",
+			fromSchema: types.Object([]types.Property{
+				{Name: "c", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "c", Type: types.Text()},
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				}), Nullable: true},
+			}),
+			expectedErr: "nullable properties with type Object are not supported",
+		},
+		{
+			name: "One nullable Object added at second level",
+			fromSchema: types.Object([]types.Property{
+				{Name: "c", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "c", Type: types.Text()},
+				{Name: "y", Type: types.Object([]types.Property{
+					{Name: "x", Type: types.Object([]types.Property{
+						{Name: "a", Type: types.Text()},
+						{Name: "b", Type: types.Text()},
+					}), Nullable: true},
+				})},
+			}),
+			expectedErr: "nullable properties with type Object are not supported",
+		},
 	}
 
 	for _, test := range tests {

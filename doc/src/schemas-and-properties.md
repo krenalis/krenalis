@@ -6,7 +6,7 @@ The `users` schema can be changed through the `chichi-cli` tool.
 
 When changing the `users` schema, these operations are supported:
 
-* add a new property to the schema, necessarily at the end of the already present properties
+* add a new property to the schema, necessarily at the end of the already present properties. In case of Object properties, these cannot be nullable.
 * dropping a property
 * renaming a property, that is changing a property name without altering its position in the schema
 * changing the label or the description of a property

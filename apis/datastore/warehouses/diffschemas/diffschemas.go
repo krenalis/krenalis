@@ -104,6 +104,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		} else {
 			// Property has been added.
 			p := newPropsByName[addedName]
+			if containsNullableObject(p) {
+				return nil, fmt.Errorf("nullable properties with type Object are not supported")
+			}
 			operations = append(operations, warehouses.AlterSchemaOperation{
 				Operation: warehouses.OperationAddProperty,
 				Path:      appendPath(path, addedName),
@@ -214,6 +217,23 @@ func appendPath(path, name string) string {
 		return name
 	}
 	return path + "." + name
+}
+
+// containsNullableObject reports whether p, or one of its sub-properties, have
+// type Object and are nullable.
+func containsNullableObject(p types.Property) bool {
+	if p.Type.Kind() != types.ObjectKind {
+		return false
+	}
+	if p.Nullable {
+		return true
+	}
+	for _, subP := range p.Type.Properties() {
+		if containsNullableObject(subP) {
+			return true
+		}
+	}
+	return false
 }
 
 // difference returns set1 - set2.
