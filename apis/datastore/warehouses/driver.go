@@ -27,6 +27,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// AlterSchemaOperation represents an operation that alters the "users" (and the
+// "users_identities") schema.
+type AlterSchemaOperation struct {
+	Operation OperationType
+	Path      string     // Property path.
+	Type      types.Type // Only for adding.
+	Nullable  bool       // Only for adding.
+	Name      string     // Only for renaming.
+}
+
 // MergeTable represents a table in which rows will be merged.
 type MergeTable struct {
 	Name        string           // Name of the table
@@ -34,11 +44,72 @@ type MergeTable struct {
 	PrimaryKeys []types.Property // Primary keys
 }
 
+// OperationType represents an operation to perform on the data warehouse to
+// alter the "users" (and "users_identities") schema.
+type OperationType int
+
+const (
+	OperationAddProperty OperationType = iota + 1
+	OperationDropProperty
+	OperationRenameProperty
+)
+
+func (op OperationType) String() string {
+	switch op {
+	case OperationAddProperty:
+		return "AddProperty"
+	case OperationDropProperty:
+		return "DropProperty"
+	case OperationRenameProperty:
+		return "RenameProperty"
+	default:
+		return fmt.Sprintf("<invalid OperationType = %d>", int(op))
+	}
+}
+
+func (op OperationType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + op.String() + `"`), nil
+}
+
+// UnsupportedAlterSchemaErr is an error indicating that a schema alter
+// operation is not supported by a data warehouse.
+type UnsupportedAlterSchemaErr string
+
+func (e UnsupportedAlterSchemaErr) Error() string {
+	return fmt.Sprintf("unsupported alter schema operation: %s", string(e))
+}
+
 // Warehouse is the interface implemented by data warehouses.
 //
 // Methods return a *DataWarehouseError error if an error occurs with the data
 // warehouse.
 type Warehouse interface {
+
+	// AlterSchema alters the "users" (and the "users_identities") schema applying
+	// the given operations.
+	//
+	// operations must contain at least one operation.
+	//
+	// If one of the specified operations is not supported by the data warehouse,
+	// for example if a type is not supported, this method returns a
+	// warehouses.UnsupportedSchemaChangeErr error.
+	//
+	// If an error occurs with the data warehouse, it returns a
+	// *warehouses.DataWarehouseError error.
+	AlterSchema(ctx context.Context, operations []AlterSchemaOperation) error
+
+	// AlterSchemaQueries returns the queries that would be executed altering the
+	// "users" (and the "users_identities") schema with the given operations.
+	//
+	// operations must contain at least one operation.
+	//
+	// If one of the specified operations is not supported by the data warehouse,
+	// for example if a type is not supported, this method returns a
+	// warehouses.UnsupportedSchemaChangeErr error.
+	//
+	// If an error occurs with the data warehouse, it returns a
+	// *warehouses.DataWarehouseError error.
+	AlterSchemaQueries(ctx context.Context, operations []AlterSchemaOperation) ([]string, error)
 
 	// Close closes the warehouse. It will not allow any new queries to run, and it
 	// waits for the current ones to finish.

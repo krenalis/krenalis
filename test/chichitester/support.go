@@ -220,6 +220,29 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 	})
 }
 
+func (c *Chichi) ChangeUsersSchema(schema types.Type, rePaths map[string]any) {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/change-users-schema"
+	req := map[string]any{
+		"Schema":  schema,
+		"RePaths": rePaths,
+	}
+	c.MustCall("POST", url, req)
+}
+
+func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]any) []string {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/change-users-schema-queries"
+	req := map[string]any{
+		"Schema":  schema,
+		"RePaths": rePaths,
+	}
+	response := c.MustCall("POST", url, req)
+	var queries []string
+	for _, query := range response.(map[string]any)["Queries"].([]any) {
+		queries = append(queries, query.(string))
+	}
+	return queries
+}
+
 func (c *Chichi) ConnectionIdentities(connection int, first, limit int) ([]UserIdentity, int) {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/identities"
 	req := map[string]any{

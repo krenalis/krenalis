@@ -83,6 +83,36 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	return &ClickHouse{settings: &s}, nil
 }
 
+// AlterSchema alters the "users" (and the "users_identities") schema applying
+// the given operations.
+//
+// operations must contain at least one operation.
+//
+// If one of the specified operations is not supported by the data warehouse,
+// for example if a type is not supported, this method returns a
+// warehouses.UnsupportedSchemaChangeErr error.
+//
+// If an error occurs with the data warehouse, it returns a
+// *warehouses.DataWarehouseError error.
+func (warehouse *ClickHouse) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
+	panic("TODO: not implemented")
+}
+
+// AlterSchemaQueries returns the queries that would be executed altering the
+// "users" (and the "users_identities") schema with the given operations.
+//
+// operations must contain at least one operation.
+//
+// If one of the specified operations is not supported by the data warehouse,
+// for example if a type is not supported, this method returns a
+// warehouses.UnsupportedSchemaChangeErr error.
+//
+// If an error occurs with the data warehouse, it returns a
+// *warehouses.DataWarehouseError error.
+func (warehouse *ClickHouse) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+	panic("TODO: not implemented")
+}
+
 // Close closes the warehouse. It will not allow any new queries to run, and it
 // waits for the current ones to finish.
 func (warehouse *ClickHouse) Close() error {

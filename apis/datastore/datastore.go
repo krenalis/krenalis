@@ -22,9 +22,10 @@ import (
 )
 
 type (
-	DataWarehouseError = warehouses.DataWarehouseError
-	SchemaError        = warehouses.SchemaError
-	SettingsError      = warehouses.SettingsError
+	DataWarehouseError        = warehouses.DataWarehouseError
+	SchemaError               = warehouses.SchemaError
+	SettingsError             = warehouses.SettingsError
+	UnsupportedAlterSchemaErr = warehouses.UnsupportedAlterSchemaErr
 )
 
 // InvalidSettings is the error returned when the data warehouse settings are

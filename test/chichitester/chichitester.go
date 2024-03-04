@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -29,6 +30,7 @@ import (
 	"time"
 
 	"chichi/apis/postgres"
+	"chichi/connector/types"
 	"chichi/server"
 )
 
@@ -252,10 +254,10 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t.Fatalf("cannot init warehouse: %s", err)
 	}
 
-	// Add columns to the tables in the data warehouse.
-	err = addColumnsToWarehouseTables(ctx, testsSettings.Warehouse)
+	// Change the users schema.
+	err = c.changeUsersSchema()
 	if err != nil {
-		t.Fatalf("cannot add columns to data warehouse: %s", err)
+		t.Fatalf("cannot change users schema: %s", err)
 	}
 
 	// Wait some time for the leader election.
@@ -324,6 +326,27 @@ func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 
 func (c *Chichi) initWarehouse() error {
 	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/init-warehouse", nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Chichi) changeUsersSchema() error {
+	f, err := os.Open("users_schema.json")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var req struct {
+		Schema  types.Type
+		RePaths map[string]any
+	}
+	err = json.NewDecoder(f).Decode(&req)
+	if err != nil {
+		return err
+	}
+	_, err = c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/change-users-schema", req)
 	if err != nil {
 		return err
 	}
@@ -409,30 +432,6 @@ func (c *Chichi) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 		c.t.Fatalf("cannot scan result of QueryRow: %s", err)
 	}
 	db.Close()
-}
-
-func addColumnsToWarehouseTables(ctx context.Context, warehouse *DBSettings) error {
-	err := validDatabaseNameForTests(warehouse.Database)
-	if err != nil {
-		return err
-	}
-	db, err := postgres.Open(&postgres.Options{
-		Host:     warehouse.Host,
-		Port:     warehouse.Port,
-		Username: warehouse.Username,
-		Password: warehouse.Password,
-		Database: warehouse.Database,
-		Schema:   warehouse.Schema,
-	})
-	if err != nil {
-		return fmt.Errorf("cannot establish connection to warehouse: %s", err)
-	}
-	defer db.Close()
-	err = execQueries(ctx, db, "../database/warehouses/postgresql.sql")
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {

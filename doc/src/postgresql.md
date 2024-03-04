@@ -2,40 +2,31 @@
 
 ## Supported types
 
-The table below provides a list of supported types in a PostgreSQL data warehouse along with their corresponding property types:
+The table below provides a list of supported property types when using a PostgreSQL data warehouse, along with the corresponding column types that are generated on the data warehouse.
 
-| Column Type                   | Property Type     |
-|-------------------------------|-------------------|
-| `smallint`                    | `Int(16)`         |
-| `integer`                     | `Int(32)`         |
-| `bigint`                      | `Int(64)`         |
-| `decimal(p,s)` [^1]           | `Decimal(p,s)`    |
-| `numeric(p,s)` [^1]           | `Decimal(p,s)`    |
-| `real`                        | `Float(32)`       |
-| `double precision`            | `Float(64)`       |
-| `smallserial`                 | `Int(16)`         |
-| `serial`                      | `Int(32)`         |
-| `bigserial`                   | `Int(64)`         |
-| `varchar`                     | `Text`            |
-| `char`                        | `Text`            |
-| `bpchar`                      | `Text`            |
-| `timestamp without time zone` | `DateTime`        |
-| `date`                        | `Date`            |
-| `time without time zone`      | `Time`            |
-| _Enumerated types_            | `Text`            |
-| `uuid`                        | `UUID`            |
-| `json`                        | `JSON`            |
-| `jsonb`                       | `JSON`            |
-| `T[]` [^2]                    | `Array(T's type)` |
+| Property Type            | Column Type                   |
+|--------------------------|-------------------------------|
+| `Bool`                   | `boolean`                     |
+| `Int(16)` [^1]           | `smallint`                    |
+| `Int(32)` [^1]           | `integer`                     |
+| `Int(64)` [^1]           | `bigint`                      |
+| `Decimal(p,s)` [^1] [^2] | `decimal(p,s)`                |
+| `Float(32)` [^3] [^1]    | `real`                        |
+| `Float(64)` [^1]         | `double precision`            |
+| `Text` [^4]              | `varchar`                     |
+| `DateTime`               | `timestamp without time zone` |
+| `Date`                   | `date`                        |
+| `Time`                   | `time without time zone`      |
+| `UUID`                   | `uuid`                        |
+| `JSON`                   | `jsonb`                       |
+| `Array(T)` [^5]          | `T[]`                         |
 
-[^1]: `decimal(p,s)` and `numeric(p,s)` are supported if `p` is in range [1, 76] and `s` is in range [0, 37].
+[^1]: Numeric types with limited ranges are not supported. For more details, see the issue [#578](https://github.com/open2b/chichi/issues/578).
 
-[^2]: `T[]` is supported if `T` is supported.
+[^2]: `Decimal(p,s)` is supported if `p` is in range [1, 76] and `s` is in range [0, 37].
 
-## Requirements
+[^3]: See the issue [#579](https://github.com/open2b/chichi/issues/579) about "real" and "non-real" float support.
 
-Columns may not have unique constraints, and non-hidden columns must not have check constraints. In such cases, an upsert operation may fail.
+[^4]: `Text` types with regexp or bytes length are not supported.
 
-## NULL columns
-
-Properties of columns declared as `NULL` are nullable.
+[^5]: `Array(T)` is supported if `T` is supported and if `T` is not array.

@@ -1,5 +1,7 @@
 # Snowflake
 
+> This page **may be obsolete**. See [this issue](https://github.com/open2b/chichi/issues/575).
+
 ## Supported types
 
 The table below provides a list of supported types in a Snowflake data warehouse along with their corresponding property types:

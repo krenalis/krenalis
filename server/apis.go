@@ -170,6 +170,42 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					err := workspace.Delete(ctx)
 					respond(w, err)
 				})
+				router.Route("/change-users-schema", func(router chi.Router) {
+					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+						req := struct {
+							Schema  types.Type
+							RePaths map[string]any
+						}{}
+						err := json.NewDecoder(r.Body).Decode(&req)
+						if err != nil {
+							respond(w, errors.BadRequest("invalid JSON"))
+							return
+						}
+						err = workspace.ChangeUsersSchema(ctx, req.Schema, req.RePaths)
+						respond(w, err)
+					})
+				})
+				router.Route("/change-users-schema-queries", func(router chi.Router) {
+					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+						req := struct {
+							Schema  types.Type
+							RePaths map[string]any
+						}{}
+						err := json.NewDecoder(r.Body).Decode(&req)
+						if err != nil {
+							respond(w, errors.BadRequest("invalid JSON"))
+							return
+						}
+						queries, err := workspace.ChangeUsersSchemaQueries(ctx, req.Schema, req.RePaths)
+						if err != nil {
+							respond(w, err)
+						}
+						w.Header().Set("Content-Type", "application/json")
+						_ = json.NewEncoder(w).Encode(map[string]any{
+							"Queries": queries,
+						})
+					})
+				})
 				router.Route("/identifiers", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						req := struct {

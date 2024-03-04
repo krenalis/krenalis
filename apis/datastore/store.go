@@ -57,6 +57,44 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	return store, nil
 }
 
+// AlterSchema alters the "users" (and the "users_identities") schema applying
+// the given operations.
+//
+// operations must contain at least one operation.
+//
+// If one of the specified operations is not supported by the data warehouse,
+// for example if a type is not supported, this method returns a
+// UnsupportedSchemaChangeErr error.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
+	store.mustBeOpen()
+	if len(operations) == 0 {
+		return errors.New("operations cannot be empty")
+	}
+	return store.warehouse.AlterSchema(ctx, operations)
+}
+
+// AlterSchemaQueries returns the queries that would be executed altering the
+// "users" (and the "users_identities") schema with the given operations.
+//
+// operations must contain at least one operation.
+//
+// If one of the specified operations is not supported by the data warehouse,
+// for example if a type is not supported, this method returns a
+// UnsupportedSchemaChangeErr error.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+	if len(operations) == 0 {
+		return nil, errors.New("operations cannot be empty")
+	}
+	store.mustBeOpen()
+	return store.warehouse.AlterSchemaQueries(ctx, operations)
+}
+
 // AddEvents adds events to the store.
 func (store *Store) AddEvents(events []map[string]any) {
 	store.mustBeOpen()

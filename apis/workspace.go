@@ -27,6 +27,7 @@ import (
 	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/datastore/warehouses/clickhouse"
+	"chichi/apis/datastore/warehouses/diffschemas"
 	"chichi/apis/datastore/warehouses/postgresql"
 	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/encoding"
@@ -48,6 +49,7 @@ var (
 	AlreadyConnected     errors.Code = "AlreadyConnected"
 	CurrentlyConnected   errors.Code = "CurrentlyConnected"
 	DataWarehouseFailed  errors.Code = "DataWarehouseFailed"
+	InvalidSchemaChange  errors.Code = "InvalidSchemaChange"
 	InvalidSettings      errors.Code = "InvalidSettings"
 	InvalidWarehouseType errors.Code = "InvalidWarehouseType"
 	NoWarehouse          errors.Code = "NoWarehouse"
@@ -379,6 +381,119 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 	}
 
 	return id, nil
+}
+
+// ChangeUsersSchema changes the "users" (and the "users_identities") schema to
+// newSchema.
+//
+// rePaths is a mapping containing the renamed property paths, where the key is
+// the new property path and its value is the old property path. In case of new
+// properties created with the same name of already existent properties, the
+// value must be the untyped nil. rePaths cannot contain keys with the same path
+// as their value. Any property path which does not refer to changed properties
+// is ignored.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InvalidSchemaChange, if the schema change is invalid.
+func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type, rePaths map[string]any) error {
+	this.apis.mustBeOpen()
+	if !schema.Valid() {
+		return errors.BadRequest("schema must be valid")
+	}
+	if schema.Kind() != types.ObjectKind {
+		return errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+	}
+	if err := validateRePaths(rePaths); err != nil {
+		return errors.BadRequest("invalid rePaths: %s", err)
+	}
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		return err
+	}
+	current, ok := schemas["users"]
+	if !ok {
+		return fmt.Errorf(`schema "users" not loaded from data warehouse`)
+	}
+	current = removeMetaProperties(current)
+	schema = removeMetaProperties(schema)
+	operations, err := diffschemas.Diff(current, schema, rePaths, "")
+	if err != nil {
+		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
+	}
+	if len(operations) == 0 {
+		return nil
+	}
+	err = this.store.AlterSchema(ctx, operations)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
+			return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
+		}
+		return err
+	}
+	return nil
+}
+
+// ChangeUsersSchemaQueries returns the queries that would be executed changing
+// the "users" (and the "users_identities") schema with the given operations.
+//
+// rePaths is a mapping containing the renamed property paths, where the key is
+// the new property path and its value is the old property path. In case of new
+// properties created with the same name of already existent properties, the
+// value must be the untyped nil. rePaths cannot contain keys with the same path
+// as their value.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InvalidSchemaChange, if the schema change is invalid.
+func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
+	this.apis.mustBeOpen()
+	if !schema.Valid() {
+		return nil, errors.BadRequest("schema must be valid")
+	}
+	if schema.Kind() != types.ObjectKind {
+		return nil, errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+	}
+	if err := validateRePaths(rePaths); err != nil {
+		return nil, errors.BadRequest("invalid rePaths: %s", err)
+	}
+	schemas, err := this.store.Schemas(ctx)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		return nil, err
+	}
+	users, ok := schemas["users"]
+	if !ok {
+		return nil, fmt.Errorf(`schema "users" not loaded from data warehouse`)
+	}
+	users = removeMetaProperties(users)
+	schema = removeMetaProperties(schema)
+	operations, err := diffschemas.Diff(users, schema, rePaths, "")
+	if err != nil {
+		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
+	}
+	if len(operations) == 0 {
+		return []string{}, nil
+	}
+	queries, err := this.store.AlterSchemaQueries(ctx, operations)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
+			return nil, errors.Unprocessable(InvalidSchemaChange, "cannot get the queries for the schema change: %s", err)
+		}
+		return nil, err
+	}
+	return queries, nil
 }
 
 // ChangeWarehouseSettings changes the settings of the data warehouse for the
@@ -1623,4 +1738,35 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 	count = max(len(identities), count)
 
 	return identities, count, nil
+}
+
+func validateRePaths(rePaths map[string]any) error {
+	for new, old := range rePaths {
+		if !types.IsValidPropertyPath(new) {
+			return fmt.Errorf("invalid property path: %q", new)
+		}
+		switch old := old.(type) {
+		case string:
+			if !types.IsValidPropertyPath(old) {
+				return fmt.Errorf("invalid property path: %q", new)
+			}
+			if new == old {
+				return fmt.Errorf("rePath key cannot match with its value")
+			}
+			if strings.Contains(old, ".") {
+				oldParts := strings.Split(old, ".")
+				oldPrefix := oldParts[:len(oldParts)-1]
+				newParts := strings.Split(new, ".")
+				newPrefix := newParts[:len(newParts)-1]
+				if !slices.Equal(oldPrefix, newPrefix) {
+					return fmt.Errorf("rePath contains a renamed property whose path is different")
+				}
+			}
+		case nil:
+			// Ok.
+		default:
+			return fmt.Errorf("unexpected value of type %T", old)
+		}
+	}
+	return nil
 }

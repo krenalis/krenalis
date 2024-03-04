@@ -206,18 +206,42 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 
 	// Read the field descriptions of the tables.
 	for _, table := range tables {
-		rows, err := tx.Query(ctx, "SELECT * FROM "+table.name+" LIMIT 0")
+		var cols []string
+		for _, c := range table.columns {
+			cols = append(cols, c.Name)
+		}
+		fds, err := tableFds(ctx, tx, table.name, cols)
 		if err != nil {
-			return nil, err
+			// Try again. This seems to be a workaround for invalidating the
+			// queries cache of PostgreSQL in some cases where the query for
+			// retrieving the field descriptions fails after altering the
+			// schemas.
+			//
+			// TODO(Gianluca): anyway, we will review this in
+			// https://github.com/open2b/chichi/issues/582.
+			fds, err = tableFds(ctx, tx, table.name, cols)
+			if err != nil {
+				return nil, err
+			}
 		}
-		table.fds = rows.FieldDescriptions()
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
+		table.fds = fds
 	}
 
 	return tables, nil
+}
+
+func tableFds(ctx context.Context, tx pgx.Tx, table string, cols []string) ([]pgconn.FieldDescription, error) {
+	query := "SELECT " + strings.Join(cols, ", ") + " FROM " + table + " LIMIT 0"
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	fds := rows.FieldDescriptions()
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return fds, nil
 }
 
 // columnType returns the types.Type corresponding to the PostgreSQL type

@@ -16,6 +16,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"chichi/connector/types"
 )
 
 type ProcessedEvent struct {
@@ -105,6 +107,36 @@ func RemoveEventListener(workspace int, listener string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func WorkspaceChangeUsersSchema(workspace int, schema types.Type, rePaths map[string]any) {
+	req := map[string]any{
+		"Schema":  schema,
+		"RePaths": rePaths,
+	}
+	var b bytes.Buffer
+	_ = json.NewEncoder(&b).Encode(req)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/change-users-schema", &b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func WorkspaceChangeUsersSchemaQueries(workspace int, schema types.Type, rePaths map[string]any) []string {
+	req := map[string]any{
+		"Schema":  schema,
+		"RePaths": rePaths,
+	}
+	var b bytes.Buffer
+	_ = json.NewEncoder(&b).Encode(req)
+	var resp struct {
+		Queries []string
+	}
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/change-users-schema-queries", &b, &resp)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return resp.Queries
 }
 
 func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte) {

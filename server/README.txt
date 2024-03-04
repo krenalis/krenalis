@@ -39,6 +39,8 @@ PUT     /api/workspaces/{id}/event-listeners/                                   
 DELETE  /api/workspaces/{id}/event-listeners/{id}                                Remove an event listener.
 GET     /api/workspaces/{id}/event-listeners/{id}/events                         Return the processed events.
 POST    /api/workspaces/{id}/users                                               List the Golden Records of the users, their schema and an estimated count.
+POST    /api/workspaces/{id}/change-users-schema                                 Change the users schema.
+POST    /api/workspaces/{id}/change-users-schema-queries                         Get a preview of the SQL that changes the users schema.
 GET     /api/workspaces/{id}/users/{id}/events                                   List the events of a user.
 POST    /api/workspaces/{id}/users/{id}/identities                               List the identities of a user.
 GET     /api/workspaces/{id}/users/{id}/traits                                   List the traits of a user.

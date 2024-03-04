@@ -14,8 +14,8 @@
   - [4. Populate the database](#4-populate-the-database)
   - [5. Connect the data warehouse](#5-connect-the-data-warehouse)
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
-  - [7. Add more columns to the tables in the data warehouse](#7-add-more-columns-to-the-tables-in-the-data-warehouse)
-  - [8. Run and open the browser](#8-run-and-open-the-browser)
+  - [7. Run and open the browser](#7-run-and-open-the-browser)
+  - [8. Add properties to the `users` / `users_identities` schemas](#8-add-properties-to-the-users--users_identities-schemas)
 - [Enable telemetry (optional)](#enable-telemetry-optional)
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
@@ -142,15 +142,17 @@ Initialize the warehouse with:
 $ chichi-cli init-warehouse
 ```
 
-### 7. Add more columns to the tables in the data warehouse
-
-Populate the PostgreSQL data warehouse with the queries in [database/warehouses/postgresql.sql](database/warehouses/postgresql.sql).
-
-*Note that this step will be removed in the future, as it will be performed directly by Chichi*.
-
-### 8. Run and open the browser
+### 7. Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
+
+### 8. Add properties to the `users` / `users_identities` schemas
+
+Within the root of the repository, run:
+
+```
+chichi-cli change-users-schema ./test/users_schema.json
+```
 
 ## Enable telemetry (optional)
 
@@ -209,7 +211,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
         &lt;script type=&quot;text/javascript&quot;&gt;
 
             // Replace this comment with the content of snippet.js.
-
+       
         &lt;/script&gt;
     &lt;/head&gt;
 
