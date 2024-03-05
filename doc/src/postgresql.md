@@ -27,6 +27,6 @@ The table below provides a list of supported property types when using a Postgre
 
 [^3]: Only non-real `Float` types are supported, as Postgres floating-point types allow `Infinity`, `-Infinity` and `NaN`
 
-[^4]: `Text` types with regexp or bytes length are not supported.
+[^4]: `Text` types with regexp, bytes length or values are not supported.
 
 [^5]: `Array(T)` is supported if `T` is supported and if `T` is not array.

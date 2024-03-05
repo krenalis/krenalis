@@ -73,15 +73,11 @@ func Test_alterSchemaQueries(t *testing.T) {
 			expectedErr: "unsupported alter schema operation: the type of the property \"x.f\" is not supported by the PostgreSQL driver",
 		},
 		{
-			name: "Add a first level not-nullable Text (with enum values) property",
+			name: "Enum are not supported",
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},
 			},
-			expectedQueries: []string{
-				`CREATE TYPE __chichi_a_enum AS ENUM('Happy', 'Angry', 'Sad')`,
-				"ALTER TABLE \"users\"\n\tADD COLUMN \"a\" __chichi_a_enum NOT NULL DEFAULT ''",
-				"ALTER TABLE \"users_identities\"\n\tADD COLUMN \"a\" __chichi_a_enum NOT NULL DEFAULT ''",
-			},
+			expectedErr: "unsupported alter schema operation: the type of the property \"a\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Add a second level nullable property",

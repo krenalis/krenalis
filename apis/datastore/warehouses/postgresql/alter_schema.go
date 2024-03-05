@@ -72,10 +72,9 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, operations 
 }
 
 // addColumnClause returns the PostgreSQL clause "ADD COLUMN" for a column with
-// the given type and nullable constraint. enumName is the name of the enum type
-// in case the column type refers to an enum.
+// the given type and nullable constraint.
 // propertyPath is used for error messages.
-func addColumnClause(propertyPath string, column string, colType types.Type, nullable bool, enumName string) (string, error) {
+func addColumnClause(propertyPath string, column string, colType types.Type, nullable bool) (string, error) {
 	var typ, defaultExpr string
 	typ, defaultExpr, ok := typeToPostgresType(colType)
 	if !ok {
@@ -85,9 +84,6 @@ func addColumnClause(propertyPath string, column string, colType types.Type, nul
 	if !nullable {
 		additional = " NOT NULL DEFAULT " + defaultExpr
 	}
-	if enumName != "" {
-		typ = enumName
-	}
 	return `ADD COLUMN "` + column + `" ` + typ + additional, nil
 }
 
@@ -95,7 +91,6 @@ func addColumnClause(propertyPath string, column string, colType types.Type, nul
 // operations must contain at least one operation.
 func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string, error) {
 
-	var enumQueries []string
 	var alterOps []string
 	for _, op := range operations {
 		column := propertyPathToColumn(op.Path)
@@ -107,7 +102,7 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 				properties := op.Type.Properties()
 				columns := warehouses.PropertiesToColumns(properties)
 				for _, col := range columns {
-					add, err := addColumnClause(op.Path, column+"_"+col.Name, col.Type, col.Nullable, "") // TODO(Gianluca): see https://github.com/open2b/chichi/issues/576.
+					add, err := addColumnClause(op.Path, column+"_"+col.Name, col.Type, col.Nullable)
 					if err != nil {
 						return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
 					}
@@ -115,23 +110,7 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 				}
 				continue
 			}
-			// Enum.
-			var enumName string
-			if op.Type.Kind() == types.TextKind && len(op.Type.Values()) > 0 {
-				enumName = "__chichi_" + column + "_enum" // TODO(Gianluca): see https://github.com/open2b/chichi/issues/576.
-				var values strings.Builder
-				for i, v := range op.Type.Values() {
-					if i > 0 {
-						values.WriteString(", ")
-					}
-					values.WriteByte('\'')
-					values.WriteString(v) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/576.
-					values.WriteByte('\'')
-				}
-				query := `CREATE TYPE ` + enumName + ` AS ENUM(` + values.String() + `)`
-				enumQueries = append(enumQueries, query)
-			}
-			add, err := addColumnClause(op.Path, column, op.Type, op.Nullable, enumName)
+			add, err := addColumnClause(op.Path, column, op.Type, op.Nullable)
 			if err != nil {
 				return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
 			}
@@ -167,11 +146,7 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 		usersQuery.WriteString(alter)
 		usersIdsQuery.WriteString(alter)
 	}
-	var queries []string
-	if enumQueries != nil {
-		queries = append(queries, enumQueries...)
-	}
-	queries = append(queries, usersQuery.String(), usersIdsQuery.String())
+	queries := []string{usersQuery.String(), usersIdsQuery.String()}
 
 	return queries, nil
 }
@@ -245,9 +220,7 @@ func typeToPostgresType(t types.Type) (string, string, bool) {
 		return "", "", false
 	case types.TextKind:
 		if len(t.Values()) > 0 {
-			// Text with values are handled before calling this function.
-			// TODO(Gianluca): for more details, see https://github.com/open2b/chichi/issues/576.
-			return "varchar", "''", true
+			return "", "", false
 		}
 		if t.Regexp() != nil {
 			return "", "", false
