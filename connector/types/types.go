@@ -1179,15 +1179,7 @@ func (t Type) EqualTo(t2 Type) bool {
 		return true
 	case []string:
 		vl2, ok := t2.vl.([]string)
-		if !ok || len(vl1) != len(vl2) {
-			return false
-		}
-		for _, v := range vl2 {
-			if !slices.Contains(vl1, v) {
-				return false
-			}
-		}
-		return true
+		return ok && slices.Equal(vl1, vl2)
 	case *regexp.Regexp:
 		vl2, ok := t2.vl.(*regexp.Regexp)
 		return ok && vl1.String() == vl2.String()
