@@ -383,8 +383,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 	return id, nil
 }
 
-// ChangeUsersSchema changes the "users" (and the "users_identities") schema to
-// newSchema.
+// ChangeUsersSchema changes the "users" schema to schema.
 //
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
@@ -445,7 +444,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 }
 
 // ChangeUsersSchemaQueries returns the queries that would be executed changing
-// the "users" (and the "users_identities") schema with the given operations.
+// the "users" schema to schema.
 //
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
