@@ -35,7 +35,11 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, operations []wareh
 	if err != nil {
 		return err
 	}
-	err = warehouse.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 		for _, query := range queries {
 			_, err := tx.Exec(ctx, query)
 			if err != nil {
