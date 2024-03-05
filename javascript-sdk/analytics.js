@@ -433,6 +433,8 @@ class Analytics {
 				name: 'chichi.js',
 				version: version,
 			},
+			// According to caniuse.com, IE11 does not support the 'language' property but does support 'userLanguage'.
+			// However, empirical testing suggests that IE11 supports both.
 			locale: n.language || n.userLanguage,
 			page: page,
 			screen: {
@@ -494,14 +496,18 @@ class Analytics {
 		data.userId = this.#getAlias(a.shift())
 		let options
 		switch (typesOf(a)) {
+			// (userId)
 			case '':
 				break
+			// (userId, previousId)
 			case 'string':
 				data.previousId = this.#getAlias(a[0])
 				break
+			// (userId, options)
 			case 'object':
 				options = a[0]
 				break
+			// (userId, previousId, options)
 			case 'string,object':
 				data.previousId = this.#getAlias(a[0])
 				options = a[1]
