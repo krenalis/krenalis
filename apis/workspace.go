@@ -394,8 +394,9 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 // is ignored.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - InvalidSchemaChange, if the schema change is invalid.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type, rePaths map[string]any) error {
 	this.apis.mustBeOpen()
 	if !schema.Valid() {
@@ -403,6 +404,9 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	}
 	if schema.Kind() != types.ObjectKind {
 		return errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+	}
+	if this.store == nil {
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", this.workspace.ID)
 	}
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
@@ -450,8 +454,9 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 // as their value.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - InvalidSchemaChange, if the schema change is invalid.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.apis.mustBeOpen()
 	if !schema.Valid() {
@@ -462,6 +467,9 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	}
 	if err := validateRePaths(rePaths); err != nil {
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
+	}
+	if this.store == nil {
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", this.workspace.ID)
 	}
 	schemas, err := this.store.Schemas(ctx)
 	if err != nil {
