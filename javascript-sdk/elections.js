@@ -1,4 +1,4 @@
-import { getTime, log } from './utils.js'
+import { getTime } from './utils.js'
 
 // Elections maintain leader elections. Each candidate should have its own
 // instance.
@@ -48,7 +48,7 @@ class Elections {
 			const interval = expiration - getTime()
 			// The next election occurs 1.2 seconds later. The leader retries after 1 second
 			// while followers retry between 1.2 and 1.4 seconds.
-			let delay = isLeader ? interval - 200 : interval + Math.floor(Math.random() * 200) + 1
+			const delay = isLeader ? interval - 200 : interval + Math.floor(Math.random() * 200) + 1
 			this.#timeoutID = setTimeout(this.#keep.bind(this), delay > 0 ? delay : 0)
 			this.#onElection(isLeader)
 		})
