@@ -69,10 +69,10 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
 func (store *Store) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
-	store.mustBeOpen()
 	if len(operations) == 0 {
 		return errors.New("operations cannot be empty")
 	}
+	store.mustBeOpen()
 	return store.warehouse.AlterSchema(ctx, operations)
 }
 
