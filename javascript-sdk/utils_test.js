@@ -6,16 +6,20 @@ import * as fake from './test_fake.js'
 Deno.test('utils', async (t) => {
 	await t.step('campaign function', () => {
 		globalThis.location = { search: '' }
-		assertEquals(campaign(), undefined)
+		assertEquals(campaign().size, 0)
 
 		globalThis.location = { search: '?' }
-		assertEquals(campaign(), undefined)
+		assertEquals(campaign().size, 0)
 
 		globalThis.location = { search: '?a=b&c=d' }
-		assertEquals(campaign(), undefined)
+		assertEquals(campaign().size, 0)
 
 		globalThis.location = { search: '?utm_medium=social+network&utm_source=social&utm_campaign=paid' }
-		assertEquals(campaign(), { 'medium': 'social network', 'source': 'social', 'name': 'paid' })
+		const values = campaign()
+		assertEquals(values.size, 3)
+		assertEquals(values.get('medium'), 'social network')
+		assertEquals(values.get('source'), 'social')
+		assertEquals(values.get('name'), 'paid')
 	})
 
 	await t.step('decodeBase64', () => {

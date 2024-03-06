@@ -1,4 +1,4 @@
-import { campaign, debug, isPlainObject, isURL, onVisibilityChange, uuid } from './utils.js'
+import { campaign, debug, isPlainObject, isURL, onVisibilityChange, parseQueryString, uuid } from './utils.js'
 import Elections from './elections.js'
 import Group from './group.js'
 import Options from './options.js'
@@ -59,7 +59,12 @@ class Analytics {
 		this.#writeKey = writeKey
 		this.#endpoint = endpoint
 		this.#ready = new Ready()
-		this.#options = new Options(writeKey, endpoint, options, (error) => this.#ready.emit(error))
+		this.#options = new Options(writeKey, endpoint, options, (error) => {
+			this.#ready.emit(error)
+			if (error == null && this.#options.useQueryString) {
+				this.#processQuerystring()
+			}
+		})
 		this.#storage = new Storage(writeKey, this.#options.storage)
 		this.#session = new Session(
 			this.#storage,
@@ -286,6 +291,36 @@ class Analytics {
 		}
 	}
 
+	// processQuerystring processes the query string according to the
+	// Querystring API.
+	#processQuerystring() {
+		const qs = parseQueryString(globalThis.location.search, 'ajs_')
+		if (qs.size > 0) {
+			const extract = (prefix) => {
+				const props = {}
+				for (const [k, v] of qs) {
+					// ES5: "startsWith" is not available.
+					if (k.indexOf(prefix) === 0) {
+						props[k.substring(prefix.length)] = v
+					}
+				}
+				return props
+			}
+			const aid = qs.get('aid')
+			if (aid) {
+				this.#user.anonymousId(aid)
+			}
+			const uid = qs.get('uid')
+			if (uid) {
+				void this.#send('identify', this.#setIdentifyArguments, [uid, extract('trait_')])
+			}
+			const event = qs.get('event')
+			if (event) {
+				void this.#send('track', this.#setTrackArguments, [event, extract('prop_')])
+			}
+		}
+	}
+
 	// reset is like the public reset method, but it differs in that it does not
 	// reset the Anonymous ID and does not end the session if 'all' is false.
 	#reset(all) {
@@ -446,8 +481,13 @@ class Analytics {
 		}
 
 		const c = campaign()
-		if (c) {
-			event.context.campaign = c
+		if (c.size > 0) {
+			event.context.campaign = {}
+			for (const [k, v] of c) {
+				if (k !== '') {
+					event.context.campaign[k] = v
+				}
+			}
 		}
 
 		event.integrations = {}

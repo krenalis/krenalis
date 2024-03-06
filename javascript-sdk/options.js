@@ -20,6 +20,7 @@ class Options {
 		type: 'multiStorage',
 	}
 	strategy = 'AB-C'
+	useQueryString = true
 
 	constructor(writeKey, endpoint, options, ready) {
 		if (options != null) {
@@ -76,6 +77,9 @@ class Options {
 						this.sessions.autoTrack = false
 					}
 				}
+			}
+			if (options.useQueryString != null) {
+				this.useQueryString = !!options.useQueryString
 			}
 		}
 		// Asynchronously load settings from the endpoint.

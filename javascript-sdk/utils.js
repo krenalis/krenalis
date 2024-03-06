@@ -1,29 +1,11 @@
 const isIE = !globalThis.ActiveXObject && 'ActiveXObject' in globalThis
 
-// campaign returns an object with the UTM parameters of the campaign, or it returns undefined if there are none.
+// campaign returns a Map with the UTM parameters of the campaign.
 function campaign() {
-	let campaign
-	// ES5: "URLSearchParams" is not available.
-	const search = globalThis.location.search.substring(1).replace(/\?/g, '&')
-	const params = search.split('&')
-	for (let i = 0; i < params.length; i++) {
-		const u = params[i].split('utm_')
-		if (u[0] !== '' || u[1] === undefined) {
-			continue
-		}
-		const kv = u[1].split('=')
-		if (kv[0] === '' || kv[1] === undefined || kv[1] === '') {
-			continue
-		}
-		try {
-			// ES5: "replaceAll" is not available.
-			const v = decodeURIComponent(kv[1].replace(/\+/g, ' '))
-			campaign = campaign || {}
-			const k = kv[0] === 'campaign' ? 'name' : kv[0]
-			campaign[k] = v
-		} catch {
-			// nothing.
-		}
+	const campaign = parseQueryString(globalThis.location.search, 'utm_')
+	if (campaign.has('campaign')) {
+		campaign.set('name', campaign.get('campaign'))
+		campaign.delete('campaign')
 	}
 	return campaign
 }
@@ -150,6 +132,36 @@ function onVisibilityChange(cb) {
 	addEventListener('pageshow', change)
 }
 
+// parseQueryString parses the provided query string, beginning with '?', and
+// returns a Map with keys starting with the given prefix. If a key is repeated,
+// only the value of the last occurrence is returned.
+function parseQueryString(query, prefix) {
+	const values = new Map()
+	// ES5: "URLSearchParams" is not available.
+	const search = query.substring(1).replace(/\?/g, '&')
+	const params = search.split('&')
+	for (let i = 0; i < params.length; i++) {
+		let p = params[i].indexOf(prefix)
+		if (p !== 0) {
+			continue
+		}
+		const kv = params[i].substring(prefix.length)
+		p = kv.indexOf('=')
+		if (p < 0) {
+			p = kv.length
+		}
+		const k = kv.substring(0, p)
+		const v = kv.substring(p + 1)
+		try {
+			// ES5: "replaceAll" is not available.
+			values.set(k, decodeURIComponent(v.replace(/\+/g, ' ')))
+		} catch {
+			// nothing.
+		}
+	}
+	return values
+}
+
 // _uuid_imp returns a function that returns random UUIDs or undefined if the
 // browser is not supported.
 function _uuid_imp() {
@@ -198,5 +210,6 @@ export {
 	isURL,
 	log,
 	onVisibilityChange,
+	parseQueryString,
 	uuid,
 }

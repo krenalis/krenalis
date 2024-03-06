@@ -24,6 +24,7 @@ Deno.test('Options', () => {
 			type: 'multiStorage',
 		},
 		timeout: 30 * 60000,
+		useQueryString: true,
 	}
 
 	const tests = [
@@ -128,6 +129,9 @@ Deno.test('Options', () => {
 		{ options: { debug: true }, ...base, debug: true },
 		{ options: { debug: 0 }, ...base },
 		{ options: { debug: 1 }, ...base, debug: true },
+		{ options: { useQueryString: true }, ...base },
+		{ options: { useQueryString: false }, ...base, useQueryString: false },
+		{ options: { useQueryString: 0 }, ...base, useQueryString: false },
 	]
 
 	for (let i = 0; i < tests.length; i++) {
@@ -142,6 +146,7 @@ Deno.test('Options', () => {
 		assertEquals(options.storage.type, test.storage.type)
 		assertEquals(options.sessions.autoTrack, test.autoTrack)
 		assertEquals(options.sessions.timeout, test.timeout)
+		assertEquals(options.useQueryString, test.useQueryString)
 	}
 
 	// Test invalid setCookieDomain values.

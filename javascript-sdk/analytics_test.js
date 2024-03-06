@@ -222,6 +222,49 @@ Deno.test('Analytics', async (t) => {
 		}
 	})
 
+	await t.step('Querystring API', async () => {
+		const location = globalThis.location
+		const query =
+			'?ajs_uid=179362&ajs_event=click&ajs_aid=90261537&ajs_prop_a=foo&ajs_prop_b=&ajs_prop_c=boo&ajs_trait_name=John&ajs_trait_age=32'
+		const url = new URL(`https://example.com/${query}`)
+		globalThis.location = {
+			href: url.toString(),
+			protocol: url.protocol,
+			host: url.host,
+			hostname: url.hostname,
+			port: url.port,
+			pathname: url.pathname,
+			search: url.search,
+			hash: url.hash,
+			origin: url.origin,
+		}
+		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
+		fetch.install()
+		let a
+		try {
+			a = newAnalytics()
+			await a.ready()
+			assertEquals(a.user().anonymousId(), '90261537')
+			const events = await fetch.events(2)
+			assertEquals(events.length, 2)
+			assertEquals(events[0].type, 'identify')
+			assertEquals(events[0].anonymousId, '90261537')
+			assertEquals(events[0].userId, '179362')
+			assertEquals(events[0].traits, { name: 'John', age: '32' })
+			assertEquals(events[1].type, 'track')
+			assertEquals(events[1].event, 'click')
+			assertEquals(events[1].anonymousId, '90261537')
+			assertEquals(events[1].userId, '179362')
+			assertEquals(events[1].properties, { a: 'foo', b: '', c: 'boo' })
+		} finally {
+			globalThis.location = location
+			if (a != null) {
+				a.close()
+			}
+			fetch.restore()
+		}
+	})
+
 	await t.step('sessions without auto tracking', async () => {
 		const time = new FakeTime()
 		const a = await newAnalytics({ sessions: { autoTrack: false } }, null, 10)
