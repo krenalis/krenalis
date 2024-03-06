@@ -223,8 +223,14 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
     </pre>
 
     </details>
-4. In the pasted code, replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with the key in "Settings > API keys" of the connection. 
-5. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/index.html.
+4. In the pasted code, replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with the key in "Settings > API keys" of the connection.
+5. Build the JavaScript SDK:
+
+    ```sh
+    cd javascript-sdk
+    npm run build
+    ```
+6. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/index.html.
 
 ## Interact with Chichi using `chichi-cli`
 

@@ -4,8 +4,9 @@
 - [Build `dist/chichi.min.js`](#build-distchichiminjs)
 - [Add the snippet to an HTML page](#add-the-snippet-to-an-html-page)
 - [Minimum Supported Browsers](#minimum-supported-browsers)
-- [ES6 Module Integration](#es6-module-integration)
+- [ES6 Module](#es6-module)
   - [ES6 Module Compatibility](#es6-module-compatibility)
+- [CJS Module](#cjs-module)
 - [Execute Tests](#execute-tests)
 
 ### Install dependencies
@@ -71,11 +72,19 @@ URL of the `dist/chichi.min.js` script.
 * Opera 14
 * IE 11
 
-## ES6 Module Integration
+## ES6 Module
 
-To integrate the JavaScript SDK into a browser application as an ES6 module, follow these steps:
+To import the JavaScript SDK into an application as an ES6 module:
 
-1. Build the `chichi.es6.min.js` module file:
+```javascript
+import Analytics from "../chichi/javascript-sdk";
+const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+analytics.page("home");
+```
+
+To import the JavaScript SDK into a browser as an ES6 module, follow these steps:
+
+1. Build the `dist/chichi.es6.min.js` module file:
 
    ```sh
    npm run build:es6
@@ -83,17 +92,35 @@ To integrate the JavaScript SDK into a browser application as an ES6 module, fol
 
 2. Import the module in the browser:
 
-    ```html
-    <script type="module">
-        import Analytics from "../dist/chichi.es6.min.js";
-        const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
-        analytics.page();
-    </script>
-    ```
+   ```html
+   <script type="module">
+       import Analytics from "https://example.com/chichi.es6.min.js";
+       const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+       analytics.page("home");
+   </script>
+   ```
 
 ### ES6 Module Compatibility
 
 Check the browser compatibility for ES6 module usage and dynamic import: https://caniuse.com/es6-module-dynamic-import
+
+## CJS Module
+
+To import the JavaScript SDK into an application using CommonJS (CJS) using the `require` function, follow these steps:
+
+1. Build the CJS module:
+
+   ```sh
+   npm run build:cjs
+   ```
+
+2. Import the module in the application:
+
+    ```javascript
+    const { Analytics } = require("../chichi/javascript-sdk");
+    const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+    analytics.page("home");
+    ```
 
 ## Execute Tests
 
