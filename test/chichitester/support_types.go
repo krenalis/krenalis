@@ -64,6 +64,13 @@ type ConnectionToAdd struct {
 	Settings    json.RawMessage
 }
 
+type DisplayedProperties struct {
+	Image       string
+	FirstName   string
+	LastName    string
+	Information string
+}
+
 type ExportMode string
 
 // These variables have been introduced to simplify the writing of tests.
@@ -112,6 +119,13 @@ type MatchingProperties struct {
 	External types.Property
 }
 
+type PrivacyRegion string
+
+const (
+	PrivacyRegionNotSpecified PrivacyRegion = ""
+	PrivacyRegionEurope       PrivacyRegion = "Europe"
+)
+
 type Role int
 
 const (
@@ -141,4 +155,13 @@ type Transformation struct {
 type TransformationFunction struct {
 	Source   string
 	Language Language
+}
+
+type Workspace struct {
+	ID                  int
+	Name                string
+	UsersSchema         types.Type
+	Identifiers         []string
+	PrivacyRegion       PrivacyRegion
+	DisplayedProperties DisplayedProperties
 }

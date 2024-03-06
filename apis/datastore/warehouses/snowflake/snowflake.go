@@ -447,11 +447,11 @@ func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.Record
 // connections holds the identifiers of the connections of the workspace and may
 // be empty to indicate that no connections are present in the workspace.
 //
-// identifiers are the properties of the 'users_identities' schema which are
-// identifiers, ordered by priority.
+// Identifiers are the Workspace Identity Resolution identifiers, ordered by
+// priority.
 //
-// usersSchema is the schema of the 'users' table, which will be populated
-// during the users synchronization.
+// usersSchema is the "users" schema, as the "users" table on the data
+// warehouse is rebuilt by this procedure.
 func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 	panic("not implemented")
 }
@@ -468,10 +468,21 @@ func (warehouse *Snowflake) Settings() []byte {
 	return s
 }
 
-// Tables returns the tables of the data warehouse.
+type warehouseTable struct {
+	Name   string
+	Schema types.Type
+}
+
+// tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'users_identities', 'groups',
 // 'groups_identities' and 'events'.
-func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, error) {
+func (warehouse *Snowflake) tables(ctx context.Context) ([]*warehouseTable, error) {
+
+	// TODO(Gianluca): this method has been kept (and made unexported) as it
+	// may be useful in the future when we will complete the implementation of
+	// the Snowflake driver.
+	//
+	// This is related to https://github.com/open2b/chichi/issues/582.
 
 	// Get the connection.
 	db, err := warehouse.connection()
@@ -608,7 +619,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 	}
 
 	// Transform the Snowflake columns in properties.
-	whTables := make([]*warehouses.Table, len(tables))
+	whTables := make([]*warehouseTable, len(tables))
 	for i, t := range tables {
 		props, err := warehouses.ColumnsToProperties(t.Columns)
 		if err != nil {
@@ -618,7 +629,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		if err != nil {
 			return nil, warehouses.Error(err)
 		}
-		whTables[i] = &warehouses.Table{
+		whTables[i] = &warehouseTable{
 			Name:   t.Name,
 			Schema: schema,
 		}

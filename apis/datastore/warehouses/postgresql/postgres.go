@@ -436,11 +436,11 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 // connections holds the identifiers of the connections of the workspace and may
 // be empty to indicate that no connections are present in the workspace.
 //
-// identifiers are the properties of the 'users_identities' schema which are
-// identifiers, ordered by priority.
+// Identifiers are the Workspace Identity Resolution identifiers, ordered by
+// priority.
 //
-// usersSchema is the schema of the 'users' table, which will be populated
-// during the users synchronization.
+// usersSchema is the "users" schema, as the "users" table on the data
+// warehouse is rebuilt by this procedure.
 func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 
 	db, err := warehouse.connection()
@@ -605,32 +605,6 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 func (warehouse *PostgreSQL) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
 	return s
-}
-
-// Tables returns the tables of the data warehouse.
-// It returns only the tables 'users', 'users_identities', 'groups',
-// 'groups_identities' and 'events'.
-func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
-	tables, err := warehouse.tables(ctx)
-	if err != nil {
-		return nil, warehouses.Error(err)
-	}
-	whTables := make([]*warehouses.Table, len(tables))
-	for i, t := range tables {
-		props, err := warehouses.ColumnsToProperties(t.columns)
-		if err != nil {
-			return nil, warehouses.Error(err)
-		}
-		schema, err := types.ObjectOf(props)
-		if err != nil {
-			return nil, warehouses.Error(err)
-		}
-		whTables[i] = &warehouses.Table{
-			Name:   t.name,
-			Schema: schema,
-		}
-	}
-	return whTables, nil
 }
 
 func (warehouse *PostgreSQL) tables(ctx context.Context) ([]*tableSchema, error) {

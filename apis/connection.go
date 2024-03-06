@@ -63,9 +63,7 @@ const (
 	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
 	NoColumns            errors.Code = "NoColumns"
-	NoGroupsSchema       errors.Code = "NoGroupsSchema"
 	NoStorage            errors.Code = "NoStorage"
-	NoUsersSchema        errors.Code = "NoUsersSchema"
 	NotCompatibleSchema  errors.Code = "NotCompatibleSchema"
 	ReadFileFailed       errors.Code = "ReadFileFailed"
 	SheetNotExist        errors.Code = "SheetNotExist"
@@ -151,14 +149,19 @@ type ActionSchemasMatchings struct {
 	Internal, External types.Type
 }
 
+// dummyGroupsSchema is a dummy "groups" schema, that is used until the groups
+// management is properly implemented in Chichi. For now, it serves only as a
+// placeholder.
+var dummyGroupsSchema = types.Object([]types.Property{
+	{Name: "id", Type: types.Int(32)},
+})
+
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
 //
 // It returns an errors.UnprocessableError error with code
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FetchSchemaFailed, if an error occurred fetching the schema.
-//   - NoGroupsSchema, if the data warehouse does not have groups schema.
-//   - NoUsersSchema, if the data warehouse does not have users schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
 
@@ -179,11 +182,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
-	// Read the schemas from the data warehouse.
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return nil, err
-	}
+	users := this.connection.Workspace().UsersSchema
+	groups := dummyGroupsSchema
 
 	c := this.connection
 
@@ -198,19 +198,11 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			if c.Role == state.Source {
-				usersIdentities, ok := schemas["users_identities"]
-				if !ok {
-					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
 					In:  schema,
-					Out: removeMetaProperties(usersIdentities),
+					Out: removeMetaProperties(users),
 				}, nil
 			} else {
-				users, ok := schemas["users"]
-				if !ok {
-					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-				}
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
 				if err != nil {
 					return nil, err
@@ -232,19 +224,11 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			if c.Role == state.Source {
-				groupsIdentities, ok := schemas["groups_identities"]
-				if !ok {
-					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
 					In:  schema,
-					Out: removeMetaProperties(groupsIdentities),
+					Out: removeMetaProperties(groups),
 				}, nil
 			} else {
-				groups, ok := schemas["groups"]
-				if !ok {
-					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
-				}
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
 				if err != nil {
 					return nil, err
@@ -274,36 +258,20 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
-				usersIdentities, ok := schemas["users_identities"]
-				if !ok {
-					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
-					Out: removeMetaProperties(usersIdentities),
+					Out: removeMetaProperties(users),
 				}, nil
 			} else {
-				users, ok := schemas["users"]
-				if !ok {
-					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
 					In: users, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
-				groupsIdentities, ok := schemas["groups_identities"]
-				if !ok {
-					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
-					Out: removeMetaProperties(groupsIdentities),
+					Out: removeMetaProperties(groups),
 				}, nil
 			} else {
-				groups, ok := schemas["groups"]
-				if !ok {
-					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
 					In: groups, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
@@ -314,36 +282,20 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
-				usersIdentities, ok := schemas["users_identities"]
-				if !ok {
-					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
-					Out: removeMetaProperties(usersIdentities),
+					Out: removeMetaProperties(users),
 				}, nil
 			} else {
-				users, ok := schemas["users"]
-				if !ok {
-					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
 					In: users, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
-				groupsIdentities, ok := schemas["groups_identities"]
-				if !ok {
-					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
-					Out: removeMetaProperties(groupsIdentities),
+					Out: removeMetaProperties(groups),
 				}, nil
 			} else {
-				groups, ok := schemas["groups"]
-				if !ok {
-					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
-				}
 				return &ActionSchemas{
 					In: groups, // don't remove meta properties here, they may be useful in transformations.
 				}, nil
@@ -359,22 +311,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		// have any user associated.
 		switch target {
 		case Users:
-			usersIdentities, ok := schemas["users_identities"]
-			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
-			}
 			return &ActionSchemas{
 				In:  eventschema.SchemaWithoutGID,
-				Out: removeMetaProperties(usersIdentities),
+				Out: removeMetaProperties(users),
 			}, nil
 		case Groups:
-			groupsIdentities, ok := schemas["groups_identities"]
-			if !ok {
-				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
-			}
 			return &ActionSchemas{
 				In:  eventschema.SchemaWithoutGID,
-				Out: removeMetaProperties(groupsIdentities),
+				Out: removeMetaProperties(groups),
 			}, nil
 		}
 		return &ActionSchemas{}, nil
@@ -1537,11 +1481,10 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 
 // ActionType represents an action type.
 type ActionType struct {
-	Name          string
-	Description   string
-	Target        Target
-	EventType     *string
-	MissingSchema bool
+	Name        string
+	Description string
+	Target      Target
+	EventType   *string
 }
 
 // Keys returns the write keys of the connection.
@@ -1571,10 +1514,6 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 	var actionTypes []ActionType
 	c := this.connection
 	connector := c.Connector()
-	wsSchemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return nil, err
-	}
 	targets := connector.Targets
 	if targets.Contains(state.Users) {
 		switch typ := c.Connector().Type; typ {
@@ -1583,7 +1522,6 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.DatabaseType,
 			state.FileType:
 			var name, description string
-			var haveSchema bool
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForUsers
 				description = "Import the " + connector.TermForUsers
@@ -1591,7 +1529,6 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as users"
 				}
 				description += " from " + connector.Name
-				_, haveSchema = wsSchemas["users_identities"]
 			} else {
 				name = "Export " + connector.TermForUsers
 				description = "Export the users "
@@ -1599,13 +1536,11 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as " + connector.TermForUsers
 				}
 				description += " to " + connector.Name
-				_, haveSchema = wsSchemas["users"]
 			}
 			at := ActionType{
-				Name:          name,
-				Description:   description,
-				Target:        Users,
-				MissingSchema: !haveSchema,
+				Name:        name,
+				Description: description,
+				Target:      Users,
 			}
 			actionTypes = append(actionTypes, at)
 		case
@@ -1613,12 +1548,10 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.ServerType,
 			state.WebsiteType:
 			if c.Role == state.Source {
-				_, haveSchema := wsSchemas["users_identities"]
 				at := ActionType{
-					Name:          "Import users",
-					Description:   "Import users from the events of the " + connector.Name,
-					Target:        Users,
-					MissingSchema: !haveSchema,
+					Name:        "Import users",
+					Description: "Import users from the events of the " + connector.Name,
+					Target:      Users,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -1631,7 +1564,6 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.DatabaseType,
 			state.FileType:
 			var name, description string
-			var haveSchema bool
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForGroups
 				description = "Import the " + connector.TermForGroups
@@ -1639,7 +1571,6 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as groups"
 				}
 				description += " from " + connector.Name
-				_, haveSchema = wsSchemas["groups_identities"]
 			} else {
 				name = "Export " + connector.TermForGroups
 				description = "Export the groups "
@@ -1647,13 +1578,11 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as " + connector.TermForGroups
 				}
 				description += " to " + connector.Name
-				_, haveSchema = wsSchemas["groups"]
 			}
 			at := ActionType{
-				Name:          name,
-				Description:   description,
-				Target:        Groups,
-				MissingSchema: !haveSchema,
+				Name:        name,
+				Description: description,
+				Target:      Groups,
 			}
 			actionTypes = append(actionTypes, at)
 		case
@@ -1661,12 +1590,10 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.ServerType,
 			state.WebsiteType:
 			if c.Role == state.Source {
-				_, haveSchema := wsSchemas["groups"]
 				at := ActionType{
-					Name:          "Import groups",
-					Description:   "Import groups from the events of the " + connector.Name,
-					Target:        Groups,
-					MissingSchema: !haveSchema,
+					Name:        "Import groups",
+					Description: "Import groups from the events of the " + connector.Name,
+					Target:      Groups,
 				}
 				actionTypes = append(actionTypes, at)
 			}

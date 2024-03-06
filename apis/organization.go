@@ -14,6 +14,7 @@ import (
 	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"html"
 	"math"
 	"math/big"
@@ -28,6 +29,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/connector/types"
 
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
@@ -134,6 +136,15 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	return err
 }
 
+// defaultUsersSchema is the default "users" schema.
+// It must kept in sync with the SQL script that initializes the data
+// warehouse.
+// Will be removed in future versions of Chichi.
+var defaultUsersSchema = types.Object([]types.Property{
+	{Name: "Id", Type: types.Int(32)},
+	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
+})
+
 // AddWorkspace adds a workspace with the given name and privacy region, and
 // returns its identifier. name must be between 1 and 100 runes long.
 //
@@ -155,6 +166,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	n := state.AddWorkspace{
 		Organization:  this.organization.ID,
 		Name:          name,
+		UsersSchema:   defaultUsersSchema,
 		PrivacyRegion: state.PrivacyRegion(region),
 	}
 
@@ -165,9 +177,15 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		return 0, err
 	}
 
+	// Encode the "users" schema to JSON.
+	usersSchema, err := json.Marshal(n.UsersSchema)
+	if err != nil {
+		return 0, err
+	}
+
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name, privacy_region) VALUES ($1, $2, $3, $4)",
-			n.ID, n.Organization, n.Name, n.PrivacyRegion)
+		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name, users_schema, privacy_region) VALUES ($1, $2, $3, $4, $5)",
+			n.ID, n.Organization, n.Name, usersSchema, n.PrivacyRegion)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
@@ -449,6 +467,7 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		workspace:           ws,
 		ID:                  ws.ID,
 		Name:                ws.Name,
+		UsersSchema:         ws.UsersSchema,
 		Identifiers:         ws.Identifiers,
 		PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
@@ -469,6 +488,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			workspace:           ws,
 			ID:                  ws.ID,
 			Name:                ws.Name,
+			UsersSchema:         ws.UsersSchema,
 			Identifiers:         ws.Identifiers,
 			PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 			DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),

@@ -60,7 +60,6 @@ interface ActionType {
 	Description: string;
 	Target: ActionTarget;
 	EventType: string;
-	MissingSchema: boolean;
 }
 
 interface ActionToSet {

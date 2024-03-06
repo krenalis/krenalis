@@ -219,21 +219,11 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		connections[i] = c.ID
 	}
 
-	// Retrieve the "users_identities" schema.
-	schemas, err := store.Schemas(ctx)
-	if err != nil {
-		return err
-	}
-	usersIdentities, ok := schemas["users_identities"]
-	if !ok {
-		return errors.New("missing 'users_identities' schema")
-	}
-
 	// Determine the identifiers properties.
 	identifiers := make([]types.Property, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
 		path := strings.Split(ident, ".")
-		identifier, err := usersIdentities.PropertyByPath(path)
+		identifier, err := ws.UsersSchema.PropertyByPath(path)
 		if err != nil {
 			return err
 		}
@@ -243,13 +233,7 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		identifiers[i] = identifier
 	}
 
-	// Take the 'users' schema.
-	usersSchema, ok := schemas["users"]
-	if !ok {
-		return errors.New("missing 'users' schema")
-	}
-
-	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersSchema)
+	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, ws.UsersSchema)
 }
 
 // SetDestinationUser sets the destination user relative to the action, with
@@ -260,27 +244,6 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
 	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
-}
-
-// Schemas returns the schemas of users, groups, and events for the relative
-// tables. If a table doesn't exist, it won't be included in returned schemas.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) {
-	store.mustBeOpen()
-	tables, err := store.warehouse.Tables(ctx)
-	if err != nil {
-		return nil, err
-	}
-	schemas := make(map[string]types.Type)
-	for _, table := range tables {
-		switch table.Name {
-		case "users", "users_identities", "groups", "groups_identities", "events":
-			schemas[table.Name] = table.Schema
-		}
-	}
-	return schemas, nil
 }
 
 type Records = warehouses.Records

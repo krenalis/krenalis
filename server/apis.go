@@ -291,13 +291,8 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				})
 				router.Route("/user-schema", func(router chi.Router) {
 					router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-						schema, err := workspace.Schema(ctx, "users")
-						if err != nil {
-							respond(w, err)
-							return
-						}
 						w.Header().Add("Content-Type", "application/json")
-						_ = json.NewEncoder(w).Encode(schema)
+						_ = json.NewEncoder(w).Encode(workspace.UsersSchema)
 					})
 				})
 				router.Route("/identifiers-schema", func(router chi.Router) {

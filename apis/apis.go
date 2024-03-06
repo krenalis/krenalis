@@ -708,6 +708,7 @@ type Workspace struct {
 	workspace           *state.Workspace
 	ID                  int
 	Name                string
+	UsersSchema         types.Type
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties

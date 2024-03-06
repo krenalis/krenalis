@@ -410,18 +410,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		return err
-	}
-	current, ok := schemas["users"]
-	if !ok {
-		return fmt.Errorf(`schema "users" not loaded from data warehouse`)
-	}
-	current = removeMetaProperties(current)
+	current := removeMetaProperties(this.workspace.UsersSchema)
 	schema = removeMetaProperties(schema)
 	operations, err := diffschemas.Diff(current, schema, rePaths, "")
 	if err != nil {
@@ -430,6 +419,35 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	if len(operations) == 0 {
 		return nil
 	}
+
+	// Add the "Id" meta property.
+	// TODO(Gianluca): see https://github.com/open2b/chichi/issues/573.
+	schema = types.Object(append([]types.Property{
+		{Name: "Id", Type: types.Int(32)},
+	}, schema.Properties()...))
+
+	// Update the database and send the notification.
+	n := state.SetWorkspaceUsersSchema{
+		Workspace:   this.ID,
+		UsersSchema: schema,
+	}
+	usersSchemaJSON, err := json.Marshal(schema)
+	if err != nil {
+		return err
+	}
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET users_schema = $1 WHERE id = $2",
+			usersSchemaJSON, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Alter the schema on the data warehouse.
 	err = this.store.AlterSchema(ctx, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
@@ -440,6 +458,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 		}
 		return err
 	}
+
 	return nil
 }
 
@@ -470,17 +489,7 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	if this.store == nil {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", this.workspace.ID)
 	}
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		return nil, err
-	}
-	users, ok := schemas["users"]
-	if !ok {
-		return nil, fmt.Errorf(`schema "users" not loaded from data warehouse`)
-	}
+	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)
 	schema = removeMetaProperties(schema)
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
@@ -797,7 +806,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 }
 
 // IdentifiersSchema returns the identifiers schema, based on the properties of
-// the 'users_identities' table schema.
+// the "users" schema.
 // If none of the properties of this table is allowed as an identifier, this
 // method returns the invalid schema.
 //
@@ -807,22 +816,8 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error) {
 	this.apis.mustBeOpen()
-	if this.store == nil {
-		return types.Type{}, errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
-	}
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return types.Type{}, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		return types.Type{}, err
-	}
-	usersIdentities, ok := schemas["users_identities"]
-	if !ok {
-		return types.Type{}, nil
-	}
 	var properties []types.Property
-	for _, p := range usersIdentities.Properties() {
+	for _, p := range this.workspace.UsersSchema.Properties() {
 		if isMetaProperty(p.Name) {
 			continue
 		}
@@ -1038,27 +1033,6 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 		return tx.Notify(ctx, n)
 	})
 	return err
-}
-
-// Schema returns the schema, with the given name, of the workspace. If the
-// schema does not exist, it returns an invalid schema.
-func (this *Workspace) Schema(ctx context.Context, name string) (types.Type, error) {
-	this.apis.mustBeOpen()
-	if this.store == nil {
-		return types.Type{}, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", this.workspace.ID)
-	}
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return types.Type{}, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		return types.Type{}, err
-	}
-	schema, ok := schemas[name]
-	if !ok {
-		return types.Type{}, nil
-	}
-	return schema, nil
 }
 
 // ServeUI serves the user interface for the given connector, with the given
@@ -1324,7 +1298,6 @@ func (this *Workspace) User(id int) (*User, error) {
 // It returns an errors.UnprocessableError error with code
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - NoUsersSchema, if the data warehouse does not have users schema.
 //   - NoWarehouse, if the workspace does not have a data store.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
@@ -1340,22 +1313,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", ws.ID)
 	}
 
-	// Read the schema.
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return nil, types.Type{}, 0, err
-	}
-	usersSchema, ok := schemas["users"]
-	if !ok {
-		return nil, types.Type{}, 0, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
-	}
-
 	// Validate the arguments.
 	if len(properties) == 0 {
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
 	}
 	propertyByName := map[string]types.Property{}
-	for _, p := range usersSchema.Properties() {
+	for _, p := range ws.UsersSchema.Properties() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {
@@ -1371,14 +1334,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	var where expr.Expr
 	if filter != nil {
-		_, err := validateFilter(filter, usersSchema)
+		_, err := validateFilter(filter, ws.UsersSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where, _ = convertFilterToExpr(filter, usersSchema)
+		where, _ = convertFilterToExpr(filter, ws.UsersSchema)
 	}
 	var orderProperty types.Property
 	if order != "" {
@@ -1410,7 +1373,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		propsPaths = append(propsPaths, types.Path{p})
 	}
 	records, count, err := this.store.Users(ctx, datastore.UsersQuery{
-		Schema:     usersSchema,
+		Schema:     ws.UsersSchema,
 		Properties: propsPaths,
 		Where:      where,
 		OrderBy:    orderProperty,

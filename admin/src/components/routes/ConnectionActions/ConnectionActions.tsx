@@ -111,9 +111,7 @@ const ConnectionActions = () => {
 									icon={getConnectorLogo(connection.connector.icon)}
 									name={actionType.Name}
 									description={actionType.Description}
-									disabled={actionType.MissingSchema}
 									className='actionType'
-									disablingReason={actionType.MissingSchema ? 'Missing schema' : ''}
 									action={
 										<SlButton
 											size='small'

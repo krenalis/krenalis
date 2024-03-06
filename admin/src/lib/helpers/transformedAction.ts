@@ -72,7 +72,6 @@ interface TransformedActionType {
 	Description: string;
 	Target: ActionTarget;
 	EventType: string;
-	MissingSchema: boolean;
 	InputSchema: ObjectType;
 	OutputSchema: ObjectType;
 	InputMatchingSchema: ObjectType | null;
@@ -176,7 +175,6 @@ const transformActionType = (
 		Description: actionType.Description,
 		Target: actionType.Target,
 		EventType: actionType.EventType,
-		MissingSchema: actionType.MissingSchema,
 		InputSchema: inputSchema,
 		OutputSchema: outputSchema,
 		InputMatchingSchema: inputMatchingSchema,

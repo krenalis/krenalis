@@ -284,6 +284,7 @@ type Workspace struct {
 	ID                  int
 	organization        *Organization
 	Name                string
+	UsersSchema         types.Type
 	resources           map[int]*Resource
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion

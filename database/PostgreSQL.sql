@@ -62,6 +62,7 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
+    users_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     identifiers text[] NOT NULL DEFAULT '{}',
     privacy_region privacy_region NOT NULL DEFAULT '',
     displayed_image varchar(100) NOT NULL DEFAULT '',
@@ -71,8 +72,8 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, organization, name, warehouse_type, warehouse_settings)
-VALUES (1, 1, 'Workspace', NULL, '');
+INSERT INTO workspaces (id, organization, name, users_schema, warehouse_type, warehouse_settings)
+VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name": "Id","type":{"name":"Int","bitSize":32}},{"name": "email","type":{"name":"Text","charLen":300},"nullable":true}]}', NULL, '');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 

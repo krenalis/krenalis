@@ -495,6 +495,20 @@ func (c *Chichi) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int
 	}
 }
 
+func (c *Chichi) Workspace() Workspace {
+	response := c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(c.workspace), nil)
+	jsonWs, err := json.Marshal(response)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	var ws Workspace
+	err = json.Unmarshal(jsonWs, &ws)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	return ws
+}
+
 func JSONEncodeSettings(settings map[string]any) []byte {
 	data, err := json.Marshal(settings)
 	if err != nil {

@@ -179,7 +179,7 @@ func (state *State) Load() error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_settings,\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_settings, users_schema,\n"+
 			"identifiers, privacy_region, displayed_image, displayed_first_name, displayed_last_name, displayed_information\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
@@ -189,6 +189,7 @@ func (state *State) Load() error {
 				var displayedFirstName string
 				var displayedLastName string
 				var displayedInformation string
+				var usersSchema []byte
 				var warehouseSettings []byte
 				for rows.Next() {
 					ws := &Workspace{
@@ -197,7 +198,7 @@ func (state *State) Load() error {
 						resources:   map[int]*Resource{},
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseSettings,
-						&ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
+						&usersSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
 						&displayedFirstName, &displayedLastName, &displayedInformation); err != nil {
 						return err
 					}
@@ -207,6 +208,10 @@ func (state *State) Load() error {
 							Type:     *warehouseType,
 							Settings: warehouseSettings,
 						}
+					}
+					err = json.Unmarshal(usersSchema, &ws.UsersSchema)
+					if err != nil {
+						return err
 					}
 					ws.DisplayedProperties = DisplayedProperties{
 						Image:       displayedImage,

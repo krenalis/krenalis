@@ -136,7 +136,6 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 // It returns an errors.UnprocessableError error with code
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - NoUsersSchema, if the data warehouse does not have users schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Traits(ctx context.Context) ([]byte, error) {
 
@@ -149,23 +148,15 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Read the users schema and determine the properties to select.
-	schemas, err := this.store.Schemas(ctx)
-	if err != nil {
-		return nil, err
-	}
-	usersSchema := schemas["users"]
-	if !usersSchema.Valid() {
-		return nil, errors.Unprocessable(NoUsersSchema, "missing users schema")
-	}
+	// Determine the properties to select.
 	properties := []types.Path{}
-	for _, p := range usersSchema.PropertiesNames() {
+	for _, p := range ws.UsersSchema.PropertiesNames() {
 		properties = append(properties, types.Path{p})
 	}
 
 	// Retrieve the user traits as records.
 	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
-		Schema:     usersSchema,
+		Schema:     ws.UsersSchema,
 		Properties: properties,
 		Where:      expr.NewBaseExpr("Id", expr.OperatorEqual, this.id),
 		Limit:      1,
@@ -196,5 +187,5 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
 
-	return encoding.Marshal(usersSchema, traits)
+	return encoding.Marshal(ws.UsersSchema, traits)
 }

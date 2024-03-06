@@ -26,6 +26,11 @@ func TestChangeUsersSchema(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
+	ws := c.Workspace()
+	if n := len(ws.UsersSchema.Properties()); n != 11 {
+		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
+	}
+
 	// Read the schema in "tests_users_schema.json".
 	f, err := os.Open("tests_users_schema.json")
 	if err != nil {
@@ -50,6 +55,11 @@ func TestChangeUsersSchema(t *testing.T) {
 	}
 	c.ChangeUsersSchema(file.Schema, file.RePaths) // this should do nothing.
 
+	ws = c.Workspace()
+	if n := len(ws.UsersSchema.Properties()); n != 11 {
+		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
+	}
+
 	// Add a single property.
 	schema := types.Object(append(file.Schema.Properties(), types.Property{
 		Name: "newProp", Type: types.Text(),
@@ -65,5 +75,10 @@ func TestChangeUsersSchema(t *testing.T) {
 		t.Fatalf("expected queries %v, got %v", expectedQueries, queries)
 	}
 	c.ChangeUsersSchema(schema, nil)
+
+	ws = c.Workspace()
+	if n := len(ws.UsersSchema.Properties()); n != 12 {
+		t.Fatalf("expected 12 properties in the \"users\" schema, got %d", n)
+	}
 
 }

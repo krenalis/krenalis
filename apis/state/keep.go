@@ -133,6 +133,8 @@ func (state *State) keepState() {
 			state.setWorkspace(n)
 		case "SetWorkspaceIdentifiers":
 			state.setWorkspaceIdentifiers(n)
+		case "SetWorkspaceUsersSchema":
+			state.setWorkspaceUsersSchema(n)
 		default:
 			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
@@ -512,6 +514,7 @@ type AddWorkspace struct {
 	ID                  int
 	Organization        int
 	Name                string
+	UsersSchema         types.Type
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
 }
@@ -529,6 +532,7 @@ func (state *State) addWorkspace(n notification) {
 		ID:                  e.ID,
 		organization:        organization,
 		Name:                e.Name,
+		UsersSchema:         e.UsersSchema,
 		PrivacyRegion:       e.PrivacyRegion,
 		DisplayedProperties: e.DisplayedProperties,
 	}
@@ -1050,6 +1054,24 @@ func (state *State) setWorkspaceIdentifiers(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Identifiers = e.Identifiers
+	})
+}
+
+// SetWorkspaceUsersSchema is the event sent when the "users" schema of a
+// workspace is changed.
+type SetWorkspaceUsersSchema struct {
+	Workspace   int
+	UsersSchema types.Type
+}
+
+// setWorkspaceUsersSchema sets the "users" schema of a workspace.
+func (state *State) setWorkspaceUsersSchema(n notification) {
+	e := SetWorkspaceUsersSchema{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.UsersSchema = e.UsersSchema
 	})
 }
 

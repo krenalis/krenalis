@@ -225,10 +225,21 @@ func (warehouse *ClickHouse) Settings() []byte {
 	return s
 }
 
+type warehouseTable struct {
+	Name   string
+	Schema types.Type
+}
+
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'users_identities', 'groups',
 // 'groups_identities' and 'events'.
-func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, error) {
+func (warehouse *ClickHouse) tables(ctx context.Context) ([]*warehouseTable, error) {
+
+	// TODO(Gianluca): this method has been kept (and made unexported) as it
+	// may be useful in the future when we will complete the implementation of
+	// the ClickHouse driver.
+	//
+	// This is related to https://github.com/open2b/chichi/issues/582.
 
 	// Get the connection.
 	conn, err := warehouse.connection()
@@ -290,7 +301,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 	}
 
 	// Transform the ClickHouse columns in properties.
-	whTables := make([]*warehouses.Table, len(tables))
+	whTables := make([]*warehouseTable, len(tables))
 	for i, t := range tables {
 		props, err := warehouses.ColumnsToProperties(t.Columns)
 		if err != nil {
@@ -300,7 +311,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if err != nil {
 			return nil, warehouses.Error(err)
 		}
-		whTables[i] = &warehouses.Table{
+		whTables[i] = &warehouseTable{
 			Name:   t.Name,
 			Schema: schema,
 		}
@@ -328,11 +339,11 @@ func (warehouse *ClickHouse) Records(ctx context.Context, query warehouses.Recor
 // connections holds the identifiers of the connections of the workspace and may
 // be empty to indicate that no connections are present in the workspace.
 //
-// identifiers are the properties of the 'users_identities' schema which are
-// identifiers, ordered by priority.
+// Identifiers are the Workspace Identity Resolution identifiers, ordered by
+// priority.
 //
-// usersSchema is the schema of the 'users' table, which will be populated
-// during the users synchronization.
+// usersSchema is the "users" schema, as the "users" table on the data
+// warehouse is rebuilt by this procedure.
 func (warehouse *ClickHouse) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 	panic("TODO: not implemented")
 }

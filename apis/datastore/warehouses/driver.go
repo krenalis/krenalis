@@ -168,11 +168,11 @@ type Warehouse interface {
 	// connections holds the identifiers of the connections of the workspace and may
 	// be empty to indicate that no connections are present in the workspace.
 	//
-	// identifiers are the properties of the 'users_identities' schema which are
-	// identifiers, ordered by priority.
+	// Identifiers are the Workspace Identity Resolution identifiers, ordered by
+	// priority.
 	//
-	// usersSchema is the schema of the 'users' table, which will be populated
-	// during the users synchronization.
+	// usersSchema is the "users" schema, as the "users" table on the data
+	// warehouse is rebuilt by this procedure.
 	RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error
 
 	// SetDestinationUser sets the destination user relative to the action, with
@@ -181,18 +181,6 @@ type Warehouse interface {
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte
-
-	// Tables returns the tables of the data warehouse.
-	//
-	// The returned tables shall contain properties instead of columns, as each
-	// driver should be free to represent and support multiple representations
-	// for objects, not just the one that uses underscores, so the
-	// transformation between columns and properties must happen within the
-	// driver.
-	//
-	// It returns only the tables 'users', 'users_identities', 'groups',
-	// 'groups_identities' and 'events'.
-	Tables(ctx context.Context) ([]*Table, error)
 
 	// Records returns an iterator over the results of the query and an estimated
 	// count of the records that would be returned if First and Limit were not
@@ -321,12 +309,6 @@ type Record struct {
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
 	Err error
-}
-
-// Table represents a table.
-type Table struct {
-	Name   string
-	Schema types.Type
 }
 
 // Row returns a single row as a result of calling QueryRow.
