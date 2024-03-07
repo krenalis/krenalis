@@ -805,15 +805,10 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 	return err
 }
 
-// IdentifiersSchema returns the identifiers schema, based on the properties of
-// the "users" schema.
-// If none of the properties of this table is allowed as an identifier, this
-// method returns the invalid schema.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - NotConnected, if the workspace is not connected to a data warehouse
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+// IdentifiersSchema returns the properties of the "users" schema that can be
+// used as identifiers in the Workspace Identity Resolution.
+// If none of the properties can be an identifier, this method returns the
+// invalid schema.
 func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error) {
 	this.apis.mustBeOpen()
 	var properties []types.Property
