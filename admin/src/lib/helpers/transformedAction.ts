@@ -306,7 +306,7 @@ const transformInActionToSet = async (
 
 	if (action.Transformation.Function != null) {
 		inSchema = actionType.InputSchema;
-		outSchema = { name: 'Object', properties: [] };
+		outSchema = actionType.OutputSchema;
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
