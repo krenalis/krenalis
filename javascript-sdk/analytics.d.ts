@@ -21,6 +21,17 @@ export class Analytics {
     getSessionId(): string;
 
     group(): Group;
+    group(
+        groupId: string,
+        traits?: Record<string, unknown>,
+        options?: Record<string, unknown>,
+        callback?: () => void
+    ): Promise<SentEvent>;
+    group(
+        traits: Record<string, unknown>,
+        options?: Record<string, unknown>,
+        callback?: () => void
+    ): Promise<SentEvent>;
 
     identify(
         userId: string,
