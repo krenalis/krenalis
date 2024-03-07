@@ -60,9 +60,11 @@ class Analytics {
 		this.#endpoint = endpoint
 		this.#ready = new Ready()
 		this.#options = new Options(writeKey, endpoint, options, (error) => {
-			this.#ready.emit(error)
-			if (error == null && this.#options.useQueryString) {
-				this.#processQuerystring()
+			if (this.#ready) {
+				this.#ready.emit(error)
+				if (error == null && this.#options.useQueryString) {
+					this.#processQuerystring()
+				}
 			}
 		})
 		this.#storage = new Storage(writeKey, this.#options.storage)
@@ -122,6 +124,8 @@ class Analytics {
 			this.#sender.close()
 		}
 		this.#queue.close()
+		this.#ready.close()
+		this.#ready = null
 		this.#debug?.('Analytics closed')
 	}
 
@@ -767,6 +771,12 @@ class Ready {
 	addListener(resolve, reject) {
 		this.#listeners.push([resolve, reject])
 		if (this.#emitted) {
+			this.#notify()
+		}
+	}
+	close() {
+		if (!this.#emitted) {
+			this.#error = new Error('Analytics instance has been closed')
 			this.#notify()
 		}
 	}
