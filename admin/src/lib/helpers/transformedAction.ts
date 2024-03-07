@@ -105,6 +105,79 @@ interface TransformedAction {
 	ExportOnDuplicatedUsers?: boolean | null;
 }
 
+const hasTransformationFunction = (action: ActionToSet) => {
+	return action.transformation?.Function != null;
+};
+
+const hasValidTransformation = (action: ActionToSet) => {
+	return (
+		(hasTransformationFunction(action) || action.transformation?.Mapping != null) &&
+		action.inSchema?.properties.length > 0 &&
+		action.outSchema?.properties.length > 0
+	);
+};
+
+const validateTransformation = (
+	connection: TransformedConnection,
+	actionType: TransformedActionType,
+	action: ActionToSet,
+) => {
+	if (connection.isSource) {
+		if (connection.isApp) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (!hasValidTransformation(action)) {
+					throw new Error('Action must have a valid transformation');
+				}
+			}
+		} else if (connection.isDatabase) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (!hasValidTransformation(action)) {
+					throw new Error('Action must have a valid transformation');
+				}
+			}
+		} else if (connection.isFile) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (!hasValidTransformation(action)) {
+					throw new Error('Action must have a valid transformation');
+				}
+			}
+		} else if (connection.isMobile || connection.isServer || connection.isWebsite) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (hasValidTransformation(action)) {
+					if (hasTransformationFunction(action)) {
+						throw new Error(`Action supports only transformations via mapping`);
+					}
+				}
+			}
+			if (actionType.Target === 'Events') {
+				if (hasValidTransformation) {
+					throw new Error('Action does not support transformations');
+				}
+			}
+		}
+	} else {
+		if (connection.isApp) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (!hasValidTransformation(action)) {
+					throw new Error('Action must have a valid transformation');
+				}
+			}
+		} else if (connection.isDatabase) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (!hasValidTransformation(action)) {
+					throw new Error('Action must have a valid transformation');
+				}
+			}
+		} else if (connection.isFile) {
+			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+				if (hasValidTransformation) {
+					throw new Error('Action does not support transformations');
+				}
+			}
+		}
+	}
+};
+
 // TODO: do not set the value and the required values here (this should only
 // return the flattened schema). Add a new 'getDefaultMapping' function that
 // takes the flatten schema and add values, and disableds. In
@@ -437,6 +510,12 @@ const transformInActionToSet = async (
 		matchingProperties: action.MatchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	};
+
+	try {
+		validateTransformation(connection, actionType, actionToSet);
+	} catch (err) {
+		throw err;
+	}
 
 	return actionToSet;
 };
