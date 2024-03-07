@@ -10,18 +10,13 @@
 }
 
 .identifiers__no-schema {
-	max-width: 900px;
-	margin: auto;
+	text-align: center;
 }
 
-.identifiers__no-schema-title {
-	font-size: 23px;
-	font-weight: 600;
-}
-
-.identifiers__connect-warehouse-button {
+.identifiers__no-schema-description {
+	max-width: 600px;
 	margin: auto;
-	margin-top: 15px;
+	margin-bottom: 15px;
 }
 
 .identifiers__save-button {

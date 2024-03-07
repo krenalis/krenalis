@@ -15,6 +15,7 @@ import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import { ObjectType } from '../../../types/external/types';
 import { Identifiers } from '../../../types/external/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 
 const Identifiers = () => {
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
@@ -39,13 +40,13 @@ const Identifiers = () => {
 				return;
 			}
 			setIdentifiersSchema(identifiersSchema);
-			setIsLoading(false);
+			setTimeout(() => setIsLoading(false), 150);
 		};
 		fetchData();
 	}, [selectedWorkspace]);
 
-	const onConnectDataWarehouse = () => {
-		redirect('settings/data-warehouse');
+	const onSeeSchema = () => {
+		redirect('schema');
 	};
 
 	const onSelectIdentifier = (input, value) => {
@@ -144,18 +145,12 @@ const Identifiers = () => {
 				></SlSpinner>
 			) : identifiersSchema == null ? (
 				<div className='identifiers__no-schema'>
-					<div className='identifiers__no-schema-title'>Connect a data warehouse</div>
+					<IconWrapper name='person-exclamation' size={40} />
 					<div className='identifiers__no-schema-description'>
-						The identifiers are chosen from among the data warehouse columns. For this reason, before you
-						can set the identifiers you must connect a data warehouse.
+						The current user schema doesn't include any property that can be used as an identifier
 					</div>
-					<SlButton
-						variant='primary'
-						className='identifiers__connect-warehouse-button'
-						onClick={onConnectDataWarehouse}
-					>
-						<SlIcon name='database' slot='prefix' />
-						Connect a data warehouse...
+					<SlButton variant='primary' className='identifiers__no-schema-button' onClick={onSeeSchema}>
+						See schema
 					</SlButton>
 				</div>
 			) : (
