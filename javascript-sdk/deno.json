@@ -1,6 +1,6 @@
 {
   "imports": {
-    "std/": "https://deno.land/std@0.218.0/"
+    "std/": "https://deno.land/std@0.219.0/"
   },
   "tasks": {
     "test": "deno lint *_test.js test_* *_test_* && deno test *_test.js",
