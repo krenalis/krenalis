@@ -142,23 +142,23 @@ func (file *File) Read(ctx context.Context, name, sheet, businessIDColumn string
 	return rw.properties, rw.records, nil
 }
 
-// Records returns an iterator to iterate over the records, conforming to
-// the provided schema, of the file at the provided path name.
+// Records returns an iterator to iterate over the records, conforming to the
+// provided schema, of the file at the provided path name.
 //
-// If the file connection supports multiple sheets, sheet is a valid sheet name;
-// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
-// has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
-// // case-insensitive.
+// If the file connection supports multiple sheets, sheet is a valid sheet
+// name; otherwise, it must be an empty string. A valid sheet name is UTF-8
+// encoded, has a length in the range [1, 31], does not start or end with "'",
+// and does not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet
+// names are case-insensitive.
 //
 // identityColumn is the name of the column to use as an identity. schema must
 // have a property with this name, and if the kind of the file's column is
 // different from the type of this property, the iterator returns an error.
 //
 // timestampColumn contains the name and format of the column to use as a
-// timestamp, if any. If the name is not empty, schema must have a property with
-// this name, and if the kind of the file's column is different from the type of
-// this property, the iterator returns an error.
+// timestamp, if any. If the name is not empty, schema must have a property
+// with this name, and if the kind of the file's column is different from the
+// type of this property, the iterator returns an error.
 //
 // businessIDColumn, when not empty, is the name of the column to use as
 // Business ID for an identity.
