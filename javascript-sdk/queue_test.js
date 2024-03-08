@@ -1,5 +1,5 @@
-import { assert, assertEquals, assertThrows } from 'https://deno.land/std@0.218.0/assert/mod.ts'
-import { FakeTime } from 'https://deno.land/std@0.218.0/testing/time.ts'
+import { assert, assertEquals, assertThrows } from 'std/assert/mod.ts'
+import { FakeTime } from 'std/testing/time.ts'
 import * as fake from './test_fake.js'
 import { getTime } from './utils.js'
 import { ItemTooLargeError, Queue } from './queue.js'

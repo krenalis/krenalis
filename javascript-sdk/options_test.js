@@ -1,4 +1,4 @@
-import { assert, assertEquals, AssertionError } from 'https://deno.land/std@0.218.0/assert/mod.ts'
+import { assert, assertEquals, AssertionError } from 'std/assert/mod.ts'
 import { isStrategy, Options } from './options.js'
 
 const oneYear = 365 * 24 * 60 * 60 * 1000

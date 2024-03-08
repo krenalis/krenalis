@@ -1,5 +1,5 @@
-import { assert, assertEquals, AssertionError } from 'https://deno.land/std@0.218.0/assert/mod.ts'
-import { FakeTime } from 'https://deno.land/std@0.218.0/testing/time.ts'
+import { assert, assertEquals, AssertionError } from 'std/assert/mod.ts'
+import { FakeTime } from 'std/testing/time.ts'
 import { uuid } from './utils.js'
 import Elections from './elections.js'
 

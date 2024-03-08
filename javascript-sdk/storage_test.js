@@ -1,5 +1,5 @@
-import { assert, assertEquals } from 'https://deno.land/std@0.218.0/assert/mod.ts'
-import { FakeTime } from 'https://deno.land/std@0.218.0/testing/time.ts'
+import { assert, assertEquals } from 'std/assert/mod.ts'
+import { FakeTime } from 'std/testing/time.ts'
 import * as fake from './test_fake.js'
 import Storage, { base64Storage, cookieStorage, memoryStorage, multiStorage, noStorage, webStorage } from './storage.js'
 

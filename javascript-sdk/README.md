@@ -27,7 +27,7 @@ npm install
 Run:
 
 ```sh
-npm run fmt
+deno task fmt
 ```
 
 ## Build `dist/chichi.min.js`
@@ -35,20 +35,20 @@ npm run fmt
 Run:
 
 ```sh
-npm run build
+deno task build
 ```
 
 As an alternative, you can perform the build in three steps:
 
 ```sh
-npm run bundle
-npm run transpile
-npm run minify
+deno task bundle
+deno task transpile
+deno task minify
 ```
 
-* `npm run bundle` bundles the `chichi.js` file and creates the `build/chichi.bundle.js` file.
-* `npm run transpile` transpiles the `build/chichi.bundle.js` file to ES5 and creates the `build/chichi.es5.js` file.
-* `npm run minify` minifies the `build/chichi.es5.js` file and creates the `dist/chichi.min.js` file.
+* `deno task bundle` bundles the `chichi.js` file and creates the `build/chichi.bundle.js` file.
+* `deno task transpile` transpiles the `build/chichi.bundle.js` file to ES5 and creates the `build/chichi.es5.js` file.
+* `deno task minify` minifies the `build/chichi.es5.js` file and creates the `dist/chichi.min.js` file.
 
 ## Add the snippet to an HTML page
 
@@ -87,7 +87,7 @@ To import the JavaScript SDK into a browser as an ES6 module, follow these steps
 1. Build the `dist/chichi.es6.min.js` module file:
 
    ```sh
-   npm run build:es6
+   deno task build:es6
    ```
 
 2. Import the module in the browser:
@@ -111,7 +111,7 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 1. Build the CJS module:
 
    ```sh
-   npm run build:cjs
+   deno task build:cjs
    ```
 
 2. Import the module in the application:
@@ -127,5 +127,5 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 Run:
 
 ```sh
-npm run test
+deno task test
 ```

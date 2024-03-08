@@ -134,8 +134,8 @@ func main() {
 	cmd("npm", []string{"run", "typecheck"}, repo, "admin", true)
 
 	// Format and test the files in the 'javascript-sdk' directory.
-	cmd("npm", []string{"run", "fmt"}, repo, "javascript-sdk", true)
-	cmd("npm", []string{"run", "test"}, repo, "javascript-sdk", true)
+	cmd("deno", []string{"task", "fmt"}, repo, "javascript-sdk", true)
+	cmd("deno", []string{"task", "test"}, repo, "javascript-sdk", true)
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }

@@ -1,0 +1,16 @@
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.218.0/"
+  },
+  "tasks": {
+    "test": "deno lint *_test.js test_* *_test_* && deno test *_test.js",
+    "fmt": "deno fmt --use-tabs --single-quote --options-no-semicolons --line-width=120 *.js *.cjs",
+    "lint": "deno lint analytics.cjs analytics.js chichi.js elections.js group.js options.js queue.js sender.js session.js storage.js user.js utils.js",
+    "bundle": "deno task lint && deno task test --fail-fast && npx esbuild chichi.js --bundle --sourcemap --outfile=build/chichi.bundle.js",
+    "transpile": "npx swc build/chichi.bundle.js -o build/chichi.es5.js",
+    "minify": "npx esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --sourcemap --format=iife --target=es5",
+    "build": "deno task bundle && deno task transpile && deno task minify",
+    "build:es6": "deno task lint && deno task test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=esm --target=es6 --minify --outfile=dist/chichi.es6.min.js",
+    "build:cjs": "deno task lint && deno task test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=cjs --target=esnext --outfile=dist/analytics.bundle.cjs"
+  }
+}

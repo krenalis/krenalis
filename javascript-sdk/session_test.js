@@ -1,5 +1,5 @@
-import { assertEquals } from 'https://deno.land/std@0.218.0/assert/mod.ts'
-import { FakeTime } from 'https://deno.land/std@0.218.0/testing/time.ts'
+import { assertEquals } from 'std/assert/mod.ts'
+import { FakeTime } from 'std/testing/time.ts'
 import Storage from './storage.js'
 import Session from './session.js'
 
