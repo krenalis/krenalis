@@ -462,7 +462,6 @@ func setSettingsFunc(st *state.State, c *state.Connection) _connector.SetSetting
 }
 
 // setSettings sets the settings of the provided connection.
-// It is a copy of the apis.setSettings function, so keep in sync.
 func setSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
