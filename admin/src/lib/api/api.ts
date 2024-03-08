@@ -45,6 +45,7 @@ import {
 	Member,
 	MemberInvitationResponse,
 	UserIdentitiesResponse,
+	ConnectionIdentitiesResponse,
 } from '../../types/external/api';
 
 class API {
@@ -181,6 +182,13 @@ class Connections {
 
 	executions = async (connection: number): Promise<Execution[]> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/executions`, http.GET);
+	};
+
+	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/identities`, http.POST, {
+			first,
+			limit,
+		});
 	};
 
 	query = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {

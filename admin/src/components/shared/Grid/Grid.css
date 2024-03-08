@@ -40,6 +40,30 @@
 	padding: 15px 0;
 }
 
+.grid .gridHeaderCell .cellContent {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.grid .gridHeaderCell .cellContent .gridHeaderExplanationIcon {
+	color: var(--sl-color-neutral-500);
+}
+
+.grid .gridHeaderCell .cellContent .gridHeaderExplanationTooltip::part(body) {
+	background-color: var(--sl-color-primary-500);
+	padding: 12px;
+	font-size: 13px;
+}
+
+.grid .gridHeaderCell .cellContent .gridHeaderExplanationTooltip::part(base__arrow) {
+	background-color: var(--sl-color-primary-500);
+}
+
+sl-popup::part(arrow) {
+	background-color: var(--sl-color-primary-500);
+}
+
 .grid .gridRow.selected .gridCell {
 	background-color: var(--sl-color-primary-50) !important;
 }

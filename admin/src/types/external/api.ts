@@ -110,6 +110,11 @@ interface UserIdentitiesResponse {
 	count: number;
 }
 
+interface ConnectionIdentitiesResponse {
+	identities: UserIdentity[];
+	count: number;
+}
+
 interface EventPreviewResponse {
 	preview: string;
 }
@@ -178,6 +183,7 @@ export type {
 	UserEventsResponse,
 	userTraitsResponse,
 	UserIdentitiesResponse,
+	ConnectionIdentitiesResponse,
 	EventPreviewResponse,
 	ObservedEvent,
 	Member,

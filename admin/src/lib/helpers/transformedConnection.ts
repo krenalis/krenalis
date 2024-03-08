@@ -122,6 +122,14 @@ class TransformedConnection {
 	get isDestination() {
 		return this.role === 'Destination';
 	}
+
+	get hasIdentities() {
+		return this.role === 'Source' && this.type !== 'Storage' && this.type !== 'Stream';
+	}
+
+	get hasAnonymousIdentifiers() {
+		return this.type === 'Mobile' || this.type === 'Server' || this.type === 'Website';
+	}
 }
 
 const getActionTypeFromConnection = (

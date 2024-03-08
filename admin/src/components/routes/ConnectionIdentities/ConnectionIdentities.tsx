@@ -1,0 +1,36 @@
+import React from 'react';
+import './ConnectionIdentities.css';
+import { useConnectionIdentities } from './useConnectionIdentities';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import Grid from '../../shared/Grid/Grid';
+import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+
+const ConnectionIdentities = () => {
+	const { isLoading, identityColumns, identitiesRows } = useConnectionIdentities();
+
+	return (
+		<div className={`connection-identities${isLoading ? ' loading' : ''}`}>
+			{isLoading ? (
+				<SlSpinner
+					style={
+						{
+							fontSize: '3rem',
+							'--track-width': '6px',
+						} as React.CSSProperties
+					}
+				></SlSpinner>
+			) : identitiesRows.length === 0 ? (
+				<div className='connection-identities__no-identity'>
+					<IconWrapper name='person-exclamation' size={40} />
+					<div className='connection-identities__no-identity-description'>
+						No identity has been imported yet
+					</div>
+				</div>
+			) : (
+				<Grid columns={identityColumns} rows={identitiesRows} />
+			)}
+		</div>
+	);
+};
+
+export { ConnectionIdentities };

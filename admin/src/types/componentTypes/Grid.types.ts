@@ -4,6 +4,7 @@ interface GridColumn {
 	name: string;
 	type?: string;
 	alignment?: 'left' | 'center' | 'right' | 'header-left' | 'header-center' | 'header-right';
+	explanation?: string;
 }
 
 type GridRow = StandardGridRow | NestedGridRows;

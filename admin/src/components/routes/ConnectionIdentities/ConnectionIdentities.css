@@ -1,0 +1,31 @@
+.connection-identities.loading {
+	text-align: center;
+	padding-top: 50px;
+}
+
+.connection-identities .connection-identities__no-identity {
+	text-align: center;
+}
+
+.connection-identities .connection-identities__no-identity-description {
+	max-width: 600px;
+	margin: auto;
+	margin-bottom: 15px;
+}
+
+.connection-identities .grid label {
+	font-weight: 500;
+	font-size: 13px;
+}
+
+.connection-identities .grid code {
+	background-color: var(--sl-color-neutral-100);
+	font-size: 13px;
+	border-radius: 5px;
+	padding: 0 3px;
+	margin-left: 5px;
+}
+
+.connection-identities .grid code:first-child {
+	margin-left: 0;
+}

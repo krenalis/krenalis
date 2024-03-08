@@ -23,6 +23,10 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 		redirect(`connections/${connection.id}/events`);
 	};
 
+	const onIdentitiesClick = () => {
+		redirect(`connections/${connection.id}/identities`);
+	};
+
 	const onSettingsClick = () => {
 		redirect(`connections/${connection.id}/settings`);
 	};
@@ -45,6 +49,12 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 				<div className={`link${tab === 'events' ? ' selected' : ''}`} onClick={onEventsClick}>
 					<SlIcon name='play'></SlIcon>
 					Live events
+				</div>
+			)}
+			{connection.hasIdentities && (
+				<div className={`link${tab === 'identities' ? ' selected' : ''}`} onClick={onIdentitiesClick}>
+					<SlIcon name='people'></SlIcon>
+					Identities
 				</div>
 			)}
 			<div className={`link${tab === 'settings' ? ' selected' : ''}`} onClick={onSettingsClick}>

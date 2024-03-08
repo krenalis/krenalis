@@ -124,7 +124,7 @@ interface UserIdentity {
 	Connection: number;
 	ExternalId: UserIdentityLabelValue;
 	BusinessId: UserIdentityLabelValue;
-	AnonymousIds: string[];
+	AnonymousIds: string[] | null;
 	UpdatedAt: string;
 }
 

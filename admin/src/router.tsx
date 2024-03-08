@@ -19,6 +19,7 @@ import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEve
 import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
 import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
+import { ConnectionIdentities } from './components/routes/ConnectionIdentities/ConnectionIdentities';
 import Identifiers from './components/routes/Identifiers/Identifiers';
 import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
@@ -66,6 +67,7 @@ const router = createBrowserRouter([
 									{ path: 'overview', element: <ConnectionOverview /> },
 									{ path: 'events', element: <ConnectionEvents /> },
 									{ path: 'settings', element: <ConnectionSettings /> },
+									{ path: 'identities', element: <ConnectionIdentities /> },
 								],
 							},
 						],

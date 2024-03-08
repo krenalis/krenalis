@@ -18,6 +18,7 @@ const GridHeaderRow = ({ columns }: GridHeaderRowProps) => {
 				className={`gridHeaderCell ${className}`}
 				value={column.name}
 				alignment={column.alignment}
+				explanation={column.explanation}
 			/>,
 		);
 	}
