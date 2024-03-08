@@ -61,10 +61,10 @@ class Analytics {
 		this.#ready = new Ready()
 		this.#options = new Options(writeKey, endpoint, options, (error) => {
 			if (this.#ready) {
-				this.#ready.emit(error)
-				if (error == null && this.#options.useQueryString) {
+				if (error == null && this.#options.useQueryString != null) {
 					this.#processQuerystring()
 				}
+				this.#ready.emit(error)
 			}
 		})
 		this.#storage = new Storage(writeKey, this.#options.storage)
@@ -311,11 +311,11 @@ class Analytics {
 				return props
 			}
 			const aid = qs.get('aid')
-			if (aid) {
+			if (this.#options.useQueryString.aid.test(aid)) {
 				this.#user.anonymousId(aid)
 			}
 			const uid = qs.get('uid')
-			if (uid) {
+			if (this.#options.useQueryString.uid.test(uid)) {
 				void this.#send('identify', this.#setIdentifyArguments, [uid, extract('trait_')])
 			}
 			const event = qs.get('event')

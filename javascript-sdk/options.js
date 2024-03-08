@@ -1,5 +1,6 @@
 import { debug, isPlainObject, log } from './utils.js'
 
+const matchAll = /\s\S/
 const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
 const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
 
@@ -20,7 +21,10 @@ class Options {
 		type: 'multiStorage',
 	}
 	strategy = 'AB-C'
-	useQueryString = true
+	useQueryString = {
+		aid: matchAll,
+		uid: matchAll,
+	}
 
 	constructor(writeKey, endpoint, options, ready) {
 		if (options != null) {
@@ -78,8 +82,16 @@ class Options {
 					}
 				}
 			}
-			if (options.useQueryString != null) {
-				this.useQueryString = !!options.useQueryString
+			const qs = options.useQueryString
+			if (qs === false) {
+				this.useQueryString = null
+			} else if (typeof qs === 'object' && qs != null) {
+				if (qs.aid instanceof RegExp) {
+					this.useQueryString.aid = qs.aid
+				}
+				if (qs.uid instanceof RegExp) {
+					this.useQueryString.uid = qs.uid
+				}
 			}
 		}
 		// Asynchronously load settings from the endpoint.

@@ -115,6 +115,11 @@ export enum StorageType {
     none = "none",
 }
 
+interface UseQueryString {
+    aid: RegExp;
+    uid: RegExp;
+}
+
 interface Options {
     debug?: boolean;
     sessions?: {
@@ -131,6 +136,7 @@ interface Options {
         };
         type?: StorageType;
     };
+    useQueryString?: boolean | UseQueryString;
 }
 
 interface SentEvent {

@@ -24,7 +24,10 @@ Deno.test('Options', () => {
 			type: 'multiStorage',
 		},
 		timeout: 30 * 60000,
-		useQueryString: true,
+		useQueryString: {
+			aid: /\s\S/,
+			uid: /\s\S/,
+		},
 	}
 
 	const tests = [
@@ -130,8 +133,26 @@ Deno.test('Options', () => {
 		{ options: { debug: 0 }, ...base },
 		{ options: { debug: 1 }, ...base, debug: true },
 		{ options: { useQueryString: true }, ...base },
-		{ options: { useQueryString: false }, ...base, useQueryString: false },
-		{ options: { useQueryString: 0 }, ...base, useQueryString: false },
+		{ options: { useQueryString: false }, ...base, useQueryString: null },
+		{ options: { useQueryString: 0 }, ...base },
+		{ options: { useQueryString: { aid: null } }, ...base },
+		{ options: { useQueryString: { uid: 'a' } }, ...base },
+		{
+			options: { useQueryString: { uid: /^[a-z]+$/ } },
+			...base,
+			useQueryString: {
+				aid: /\s\S/,
+				uid: /^[a-z]+$/,
+			},
+		},
+		{
+			options: { useQueryString: { aid: /\S+/ } },
+			...base,
+			useQueryString: {
+				aid: /\S+/,
+				uid: /\s\S/,
+			},
+		},
 	]
 
 	for (let i = 0; i < tests.length; i++) {

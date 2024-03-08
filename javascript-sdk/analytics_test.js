@@ -225,7 +225,7 @@ Deno.test('Analytics', async (t) => {
 	await t.step('Querystring API', async () => {
 		const location = globalThis.location
 		const query =
-			'?ajs_uid=179362&ajs_event=click&ajs_aid=90261537&ajs_prop_a=foo&ajs_prop_b=&ajs_prop_c=boo&ajs_trait_name=John&ajs_trait_age=32'
+			'?ajs_uid=u179362&ajs_event=click&ajs_aid=90261537&ajs_prop_a=foo&ajs_prop_b=&ajs_prop_c=boo&ajs_trait_name=John&ajs_trait_age=32'
 		const url = new URL(`https://example.com/${query}`)
 		globalThis.location = {
 			href: url.toString(),
@@ -242,20 +242,32 @@ Deno.test('Analytics', async (t) => {
 		fetch.install()
 		let a
 		try {
-			a = newAnalytics()
+			a = newAnalytics({ useQueryString: { aid: /^\d+$/, uid: /^u\d+$/ } })
 			await a.ready()
 			assertEquals(a.user().anonymousId(), '90261537')
-			const events = await fetch.events(2)
+			let events = await fetch.events(2)
 			assertEquals(events.length, 2)
 			assertEquals(events[0].type, 'identify')
 			assertEquals(events[0].anonymousId, '90261537')
-			assertEquals(events[0].userId, '179362')
+			assertEquals(events[0].userId, 'u179362')
 			assertEquals(events[0].traits, { name: 'John', age: '32' })
 			assertEquals(events[1].type, 'track')
 			assertEquals(events[1].event, 'click')
 			assertEquals(events[1].anonymousId, '90261537')
-			assertEquals(events[1].userId, '179362')
+			assertEquals(events[1].userId, 'u179362')
 			assertEquals(events[1].properties, { a: 'foo', b: '', c: 'boo' })
+			a.close()
+
+			a = newAnalytics({ useQueryString: { aid: /^[a-z]+$/, uid: /^[A-Za-z\-]+$/ } })
+			await a.ready()
+			assertNotEquals(a.user().anonymousId(), '90261537')
+			events = await fetch.events(1)
+			assertEquals(events.length, 1)
+			assertEquals(events[0].type, 'track')
+			assertEquals(events[0].event, 'click')
+			assertNotEquals(events[0].anonymousId, '90261537')
+			assertEquals(events[0].userId, null)
+			assertEquals(events[0].properties, { a: 'foo', b: '', c: 'boo' })
 		} finally {
 			globalThis.location = location
 			if (a != null) {
