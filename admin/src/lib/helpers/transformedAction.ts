@@ -150,7 +150,7 @@ const validateTransformation = (
 				}
 			}
 			if (actionType.Target === 'Events') {
-				if (hasValidTransformation) {
+				if (hasValidTransformation(action)) {
 					throw new Error('Action does not support transformations');
 				}
 			}
@@ -170,7 +170,7 @@ const validateTransformation = (
 			}
 		} else if (connection.isFile) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
-				if (hasValidTransformation) {
+				if (hasValidTransformation(action)) {
 					throw new Error('Action does not support transformations');
 				}
 			}
