@@ -293,12 +293,14 @@
 
 .users-list .user-drawer .user-drawer__identity {
 	margin-bottom: 15px;
+	display: grid;
+	grid-template-columns: 25px auto;
+	gap: 5px;
 }
 
-.users-list .user-drawer .user-drawer__identity-head {
-	display: flex;
-	gap: 5px;
-	align-items: center;
+.users-list .user-drawer .user-drawer__identity-connection-logo .littleLogo {
+	position: relative;
+	top: 1px;
 }
 
 .users-list .user-drawer .user-drawer__identity-connection-logo,
@@ -310,15 +312,11 @@
 	padding-top: 4px;
 }
 
-.users-list .user-drawer .user-drawer__identity-external-id,
-.user-drawer__identity-business-id,
-.user-drawer__identity-anonymous-ids {
-	background-color: var(--sl-color-neutral-50);
-	padding: 5px;
-	margin: 4px;
-	border-radius: 3px;
-	font-size: 15px;
-	font-weight: 500;
+.users-list .user-drawer .user-drawer__identity-connection-date {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	margin-bottom: 3px;
 }
 
 .users-list .user-drawer .user-drawer__identity-date {
@@ -326,4 +324,19 @@
 	opacity: 0.8;
 	position: relative;
 	left: 2px;
+}
+
+.users-list .user-drawer .user-drawer__identity-external-id,
+.users-list .user-drawer .user-drawer__identity-business-id,
+.users-list .user-drawer .user-drawer__identity-anonymous-ids {
+	font-weight: 500;
+	font-size: 13px;
+	margin-bottom: 2px;
+}
+
+.users-list .user-drawer code {
+	background-color: var(--sl-color-neutral-100);
+	font-size: 13px;
+	border-radius: 5px;
+	padding: 0 3px;
 }

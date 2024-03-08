@@ -246,18 +246,28 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								const logo = getConnectorLogo(connection.connector.icon);
 								return (
 									<div className='user-drawer__identity' key={identity.UpdatedAt}>
-										<div className='user-drawer__identity-head'>
-											<div
-												className='user-drawer__identity-connection-logo'
-												onClick={() => onConnectionClick(connection.id)}
-											>
-												{logo}
-											</div>
-											<div
-												className='user-drawer__identity-connection-name'
-												onClick={() => onConnectionClick(connection.id)}
-											>
-												{connection.name}
+										<div
+											className='user-drawer__identity-connection-logo'
+											onClick={() => onConnectionClick(connection.id)}
+										>
+											{logo}
+										</div>
+										<div className='user-drawer__identity-info'>
+											<div className='user-drawer__identity-connection-date'>
+												<div
+													className='user-drawer__identity-connection-name'
+													onClick={() => onConnectionClick(connection.id)}
+												>
+													{connection.name}
+												</div>
+												<div className='user-drawer__identity-date'>
+													{new Date(toJSDateString(identity.UpdatedAt)).toLocaleString(
+														'it-IT',
+														{
+															timeZone: 'Europe/Rome',
+														},
+													)}
+												</div>
 											</div>
 											<div className='user-drawer__identity-external-id'>
 												{identity.ExternalId.Label}: <code>{identity.ExternalId.Value}</code>
@@ -270,11 +280,6 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 													Anonymous IDs: <code>{identity.AnonymousIds.join(', ')}</code>
 												</div>
 											)}
-										</div>
-										<div className='user-drawer__identity-date'>
-											{new Date(toJSDateString(identity.UpdatedAt)).toLocaleString('it-IT', {
-												timeZone: 'Europe/Rome',
-											})}
 										</div>
 									</div>
 								);
