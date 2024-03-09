@@ -18,6 +18,7 @@ if (analytics.load) {
   var methods = [
     "alias",
     "anonymize",
+    "close",
     "debug",
     "endSession",
     "getAnonymousId",

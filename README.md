@@ -229,6 +229,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
                 var methods = [
                     "alias",
                     "anonymize",
+                    "close",
                     "debug",
                     "endSession",
                     "getAnonymousId",

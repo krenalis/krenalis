@@ -24,6 +24,7 @@ function main() {
 		const methods = [
 			'alias',
 			'anonymize',
+			'close',
 			'debug',
 			'endSession',
 			'getAnonymousId',
