@@ -7,7 +7,7 @@ function main() {
 		return
 	}
 
-	const analytics = globalThis.chichianalytics
+	const analytics = globalThis.chichiAnalytics
 
 	let a
 	try {
@@ -52,7 +52,7 @@ function main() {
 		// empty the array.
 		analytics.length = 0
 
-		globalThis.chichianalytics = a
+		globalThis.chichiAnalytics = a
 	})
 }
 

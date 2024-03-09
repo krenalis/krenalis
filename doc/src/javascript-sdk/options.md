@@ -24,7 +24,7 @@ Where `<options>` represent one or more of the options shown below.
 When importing the package using `import` or `require`, pass an additional argument to the `Analytics` constructor.  
 
 ```javascript
-const analytics = new Analytics('<write key>', '<endpoint>', { <options> });
+const chichiAnalytics = new Analytics('<write key>', '<endpoint>', { <options> });
 ```
 
 Where `<options>` represent one or more of the options shown below.

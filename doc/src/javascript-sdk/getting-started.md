@@ -53,8 +53,8 @@ The JavaScript SDK can be imported with `import` into TypeScript and JavaScript 
     ```javascript
     import Analytics from 'chichi-javascript-sdk';
    
-    const analytics = new Analytics('<write key>', '<endpoint>');
-    analytics.page('home');
+    const chichiAnalytics = new Analytics('<write key>', '<endpoint>');
+    chichiAnalytics.page('home');
     ```
 
 ### Import into an Application using `require`
@@ -78,8 +78,8 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
     ```javascript
     const { Analytics } = require('chichi-javascript-sdk');
    
-    const analytics = new Analytics('<write key>', '<endpoint>');
-    analytics.page('home');
+    const chichiAnalytics = new Analytics('<write key>', '<endpoint>');
+    chichiAnalytics.page('home');
     ```
 
 ## Step 3: Add an Action

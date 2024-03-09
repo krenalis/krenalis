@@ -1,5 +1,5 @@
 !(function () {
-	var a = (window.chichianalytics = window.chichianalytics || []);
+	var a = (window.chichiAnalytics = window.chichiAnalytics || []);
 	if (a.load) {
 		window.console && console.error && console.error('The ChiChi snippet is included twice');
 		return;

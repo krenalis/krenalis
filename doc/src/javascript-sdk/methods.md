@@ -4,7 +4,7 @@ The JavaScript SDK is equipped to handle all essential event calls, including `p
 
 With these capabilities, you can seamlessly track and analyze user interactions across different platforms, facilitating a comprehensive understanding of user behavior and engagement.
 
-Below the javaScript SDK methods:
+Below the JavaScript SDK methods:
 
 - [page](#page)
 
@@ -92,7 +92,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichianalytics.page('Shirt', {
+chichiAnalytics.page('Shirt', {
     productId: 308263,
 }).then(() => console.log('event queued'));
 ```
@@ -155,7 +155,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichianalytics.screen('Order Completed', {
+chichiAnalytics.screen('Order Completed', {
 	items: 3,
     total: 274.99,
 }).then(() => console.log('event queued'));
@@ -203,7 +203,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichianalytics.screen('Order Completed', {
+chichiAnalytics.screen('Order Completed', {
 	items: 3,
 	total: 274.99,
 });
@@ -361,11 +361,11 @@ If no arguments are provided, it returns an instance of the [Group](#group-class
 #### Example
 
 ```javascript
-const groupId = chichianalytics.group().id();
+const groupId = chichiAnalytics.group().id();
 ```
 
 ```javascript
-chichianalytics.group('84s76y49tb28v1jxq', {
+chichiAnalytics.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",
 	industry: "Technology",
 	employeeCount: 100
@@ -400,7 +400,7 @@ Returns an instance of the [`User`](#user-class) class representing the user.
 #### Example
 
 ```javascript
-const traits = chichianalytics.user().traits();
+const traits = chichiAnalytics.user().traits();
 ```
 
 ## getSessionId
@@ -429,7 +429,7 @@ There are no parameters. Returns a `Number` representing the current session ide
 #### Example
 
 ```javascript
-const sessionId = chichianalytics.getSessionId();
+const sessionId = chichiAnalytics.getSessionId();
 ```
 
 ## startSession
@@ -460,7 +460,7 @@ startSession(id?: number): void
 #### Example
 
 ```javascript
-chichianalytics.startSession();
+chichiAnalytics.startSession();
 ```
 
 ## endSession
@@ -489,7 +489,7 @@ There are no parameters.
 #### Example
 
 ```javascript
-chichianalytics.endSession();
+chichiAnalytics.endSession();
 ```
 
 ## ready
@@ -522,13 +522,13 @@ It returns a `Promise` that resolves or rejects when Analytics finishes initiali
 #### Example
 
 ```javascript
-chichianalytics.ready(() => console.log('Analytics has been inizialized'));
+chichiAnalytics.ready(() => console.log('Analytics has been inizialized'));
 ```
 
 ```javascript
 import Analytics from 'chichi-javascript-sdk';
-const analytics = new Analytics('<write key>', '<endpoint>');
-await analytics.ready();
+const chichiAnalytics = new Analytics('<write key>', '<endpoint>');
+await chichiAnalytics.ready();
 ```
 
 ## reset
@@ -559,7 +559,7 @@ There are no parameters.
 #### Example
 
 ```javascript
-chichianalytics.reset();
+chichiAnalytics.reset();
 ```
 
 ## debug
@@ -591,7 +591,7 @@ debug(on: boolean): void
 #### Example
 
 ```javascript
-chichianalytics.debug(true);
+chichiAnalytics.debug(true);
 ```
 
 ## close
@@ -620,5 +620,5 @@ There are no parameters.
 #### Example
 
 ```javascript
-chichianalytics.close();
+chichiAnalytics.close();
 ```

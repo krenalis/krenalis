@@ -3,7 +3,7 @@
 The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods.md#user) method of `Analytics`. For example:
 
 ```javascript
-const userId = chichianalytics.user().id();
+const userId = chichiAnalytics.user().id();
 ```
 
 ## id
@@ -41,15 +41,15 @@ id(id?: string | null): string | null
 #### Examples
 
 ```javascript
-const userId = chichianalytics.user().id();
+const userId = chichiAnalytics.user().id();
 ```
 
 ```javascript
-chichianalytics.user().id(null);
+chichiAnalytics.user().id(null);
 ```
 
 ```javascript
-chichianalytics.user().id('509284521');
+chichiAnalytics.user().id('509284521');
 ```
 
 ## anonymousId
@@ -87,7 +87,7 @@ anonymousId(id?: string | null): string
 #### Examples
 
 ```javascript
-const anonymousId = chichianalytics.user().anonymousId();
+const anonymousId = chichiAnalytics.user().anonymousId();
 ```
 
 ```javascript
@@ -133,14 +133,14 @@ traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 #### Examples
 
 ```javascript
-const traits = chichianalytics.user().traits();
+const traits = chichiAnalytics.user().traits();
 ```
 
 ```javascript
-chichianalytics.user().traits(null);
+chichiAnalytics.user().traits(null);
 ```
 
 ```javascript
-chichianalytics.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
+chichiAnalytics.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
 ```
 
