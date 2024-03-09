@@ -47,6 +47,33 @@ The page call allows you to capture when a user views a page on your website, in
 ```javascript
 page(category, name, properties, options, callback)
 ```
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+page(
+    name: string,
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+
+page(
+    category: string,
+    name: string,
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+
+page(
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+```
+
+</details>
 
 #### Parameters 
 
@@ -81,6 +108,35 @@ The screen call enables you to capture instances when a user views a screen and 
 ```javascript
 screen(category, name, properties, options, callback)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+screen(
+    name: string,
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+
+screen(
+    category: string,
+    name: string,
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+
+screen(
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+```
+
+</details>
+
 
 #### Parameters
 
@@ -117,6 +173,20 @@ The track call is used to send specific events or actions, and associated proper
 track(name, properties, options, callback)
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+track(
+    name: string,
+    properties?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+```
+
+</details>
+
 #### Parameters
 
 Only `name` is required, the other parameters are optional. A single `Object` parameter signifies `properties`.
@@ -150,6 +220,26 @@ Through an identify call, you can connect previous and upcoming events to a reco
 ```javascript
 identify(userId, traits, options, callback)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+identify(
+    userId: string,
+    traits?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+
+identify(
+    traits?: string,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+```
+
+</details>
 
 #### Parameters
 
@@ -193,6 +283,15 @@ The anonymize call serves the purpose of anonymizing a previously identified use
 anonymize()
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+anonymize(): Promise<SentEvent>
+```
+
+</details>
+
 #### Parameters
 
 There is no parameters.
@@ -214,14 +313,37 @@ When called with arguments, implements the [group call](../events/group.md). The
 #### Syntax
 
 ```javascript
-// returns a Group instance.
+// returns a Group instance
 group()
-```
 
-```javascript
-// implements the group call.
+// implements the group call
 group(groupId, traits, options, callback)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+// returns a Group instance
+group(): Group
+
+// implements the group call
+group(
+    groupId: string,
+    traits?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+
+// implements the group call
+group(
+    traits: Record<string, unknown>,
+    options?: Record<string, unknown>,
+    callback?: () => void
+): Promise<SentEvent>
+```
+
+</details>
 
 #### Parameters
 
@@ -260,6 +382,15 @@ The `user` method returns an instance of the [`User`](user-class.md) class to re
 user()
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+user(): User
+```
+
+</details>
+
 #### Parameters
 
 There are no parameters.
@@ -282,6 +413,15 @@ The `getSessionId` method returns the current session identifier.
 getSessionId()
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+getSessionId(): number
+```
+
+</details>
+
 #### Parameters
 
 There are no parameters. Returns a `Number` representing the current session identifier, or `null` if there is no session.  
@@ -301,6 +441,15 @@ The `startSession` method starts a new session using the provided identifier. If
 ```javascript
 startSession(id)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+startSession(id?: number): void
+```
+
+</details>
 
 #### Parameters
 
@@ -324,6 +473,15 @@ The `endSession` method ends the session.
 endSession()
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+endSession(): void
+```
+
+</details>
+
 #### Parameters
 
 There are no parameters.
@@ -343,6 +501,15 @@ The `ready` method calls a callback after the Analytics finishes initializing. I
 ```javascript
 ready(callback)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+ready(callback?: () => void): Promise<void>
+```
+
+</details>
 
 #### Parameters
 
@@ -376,6 +543,15 @@ The `reset` method resets the user and group identifiers, and traits removing th
 reset()
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+reset(): void
+```
+
+</details>
+
 #### Parameters
 
 There are no parameters.
@@ -395,6 +571,15 @@ The `debug` method toggles debug mode.
 ```javascript
 debug(on)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+debug(on: boolean): void
+```
+
+</details>
 
 #### Parameters
 
@@ -418,6 +603,15 @@ The `close` method closes the Analytics instance. It tries to preserve the queue
 ```javascript
 close()
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+close(): void
+```
+
+</details>
 
 #### Parameters
 

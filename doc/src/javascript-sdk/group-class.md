@@ -19,14 +19,23 @@ To set the group's identifier, call the `id` method with an argument:
 #### Syntax
 
 ```javascript
-id(groupId)
+id(id)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+id(id?: string | null): string | null
+```
+
+</details>
 
 #### Parameters
 
-| Name      | Type                           | Required | Description                                                                  |
-|-----------|--------------------------------|----------|------------------------------------------------------------------------------|
-| `groupId` | `String`&nbsp;or&nbsp;`Number` |          | Group identifier to set. If it is `null`, the group's identifier is removed. |
+| Name | Type                           | Required | Description                                                                  |
+|------|--------------------------------|----------|------------------------------------------------------------------------------|
+| `id` | `String`&nbsp;or&nbsp;`Number` |          | Group identifier to set. If it is `null`, the group's identifier is removed. |
 
 
 #### Examples
@@ -58,6 +67,15 @@ To modify the group's traits, utilize the `traits` method with an argument:
 ```javascript
 traits(traits)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+traits(traits?: Record<string, unknown> | null): Record<string, unknown>
+```
+
+</details>
 
 #### Parameters
 

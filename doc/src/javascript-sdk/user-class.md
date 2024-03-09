@@ -19,14 +19,23 @@ To set the user's identifier, call the `id` method with an argument:
 #### Syntax
 
 ```javascript
-id(userId)
+id(id)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+id(id?: string | null): string | null
+```
+
+</details>
 
 #### Parameters
 
-| Name     | Type                           | Required | Description                                                                |
-|----------|--------------------------------|----------|----------------------------------------------------------------------------|
-| `userId` | `String`&nbsp;or&nbsp;`Number` |          | User identifier to set. If it is `null`, the user's identifier is removed. |
+| Name | Type                           | Required | Description                                                                |
+|------|--------------------------------|----------|----------------------------------------------------------------------------|
+| `id` | `String`&nbsp;or&nbsp;`Number` |          | User identifier to set. If it is `null`, the user's identifier is removed. |
 
 
 #### Examples
@@ -59,6 +68,15 @@ To modify the Anonymous ID, call the `anonymous` method with an argument:
 anonymousId(id)
 ```
 
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+anonymousId(id?: string | null): string
+```
+
+</details>
+
 #### Parameters
 
 | Name | Type                           | Required | Description          |
@@ -73,7 +91,11 @@ const anonymousId = chichianalytics.user().anonymousId();
 ```
 
 ```javascript
-chichianalytics.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
+chichiAnalytics.user().anonymousId(null);
+```
+
+```javascript
+chichiAnalytics.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
 ```
 
 ## traits
@@ -91,6 +113,15 @@ To modify the user's traits, call the `traits` method with an argument:
 ```javascript
 traits(traits)
 ```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+traits(traits?: Record<string, unknown> | null): Record<string, unknown>
+```
+
+</details>
 
 #### Parameters
 
