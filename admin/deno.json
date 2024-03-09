@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "minify-javascript-snippet": "npx esbuild javascript-snippet.js --minify --format=iife --target=es5 --outfile=javascript-snippet.min.js"
+  }
+}

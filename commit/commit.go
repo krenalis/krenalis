@@ -130,6 +130,9 @@ func main() {
 	// Format the files in the admin.
 	cmd("npm", []string{"run", "prettier"}, repo, "admin", true)
 
+	// Minify the JavaScript snippet in the admin.
+	cmd("deno", []string{"task", "minify-javascript-snippet"}, repo, "admin", true)
+
 	// Typecheck the Typescript code in the admin.
 	cmd("npm", []string{"run", "typecheck"}, repo, "admin", true)
 
