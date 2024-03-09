@@ -20,10 +20,6 @@ Below the javaScript SDK methods:
 
 - [user](#user)
 
-- [getAnonymousId](#getanonymousid)
-
-- [setAnonymousId](#setanonymousid)
-
 - [getSessionId](#getsessionid)
 
 - [startSession](#startsession)
@@ -37,6 +33,8 @@ Below the javaScript SDK methods:
 - [debug](#debug)
 
 - [close](#close)
+
+> The JavaScript SDK also supports the `getAnonymousId` and `setAnonymousId` methods of the RudderStack SDK that can be used as an alternative to the [`user().anonymousId`](user-class.html#anonymousid) method.
 
 ## page
 
@@ -272,54 +270,6 @@ Returns an instance of the [`User`](#user-class) class representing the user.
 
 ```javascript
 const traits = chichianalytics.user().traits();
-```
-
-## getAnonymousId
-
-The `getAnonymousId` method returns the Anonymous ID.
-
-> Note that `getAnonymousId()` is the same of `user().anonymousId()`. 
-
-#### Syntax
-
-```javascript
-getAnonymousId()
-```
-
-#### Parameters
-
-There are no parameters. Returns a `String` representing the Anonymous ID.
-
-#### Example
-
-```javascript
-const anonymousId = chichianalytics.getAnonymousId();
-```
-
-## setAnonymousId
-
-The `setAnonymousId` sets the Anonymous ID or, if `id` is `undefined`, returns the current Anonymous ID.
-
-> Note that `setAnonymousId()` is the same of `user().anonymousId(id)`.  
-
-#### Syntax
-
-```javascript
-setAnonymousId(id)
-```
-
-#### Parameters
-
-| Name | Type       | Required | Description          |
-|------|------------|----------|----------------------|
-| `id` | `String`   |          | Anonymous ID to set. |
-
-If `id` is `undefined`, it returns the current Anonymous ID, otherwise returns `undefined`.  
-
-#### Example
-
-```javascript
-chichianalytics.setAnonymousId(anonymousId);
 ```
 
 ## getSessionId
