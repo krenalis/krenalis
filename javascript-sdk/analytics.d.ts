@@ -18,7 +18,7 @@ export class Analytics {
 
     getAnonymousId(): string;
 
-    getSessionId(): string;
+    getSessionId(): number;
 
     group(): Group;
     group(
