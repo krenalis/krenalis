@@ -20,6 +20,10 @@ And below are the types of information that the JavaScript SDK stores in these s
 - Leader information
 - Event queues
 
+### Data Encoding
+
+Data is encoded in Base64, unless otherwise specified. Notably, in Internet Explorer 11, data is encoded in Base64 starting from UTF-16 rather than UTF-8, distinguished by an underscore ('_') prefix.
+
 ## cookies
 
 Below are the cookies that the SDK stores in the user browser.
@@ -35,7 +39,7 @@ All cookie names are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` rep
 | `userId`      | User ID.                            |
 | `userTraits`  | User traits.                        |
 
-Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is `z43tavAOsBB8RY50nAtItXMMIipGKEOC`, the cookie names would be `chichi.z43tavA.anonymousId`, `chichi.z43tavA.groupId`, and so on. Cookie values are Base64 encoded.
+Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is `z43tavAOsBB8RY50nAtItXMMIipGKEOC`, the cookie names would be `chichi.z43tavA.anonymousId`, `chichi.z43tavA.groupId`, and so on.
 
 When the SDK persists user data in cookies, you can use the [`store.cookie`](options.md#storagecookie-option) option to control some specific settings.
 
@@ -57,7 +61,7 @@ All keys are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents 
 | `userTraits`      | User traits.                                                                                                     |
 | `<tabId>.queue`   | Tracks the events in the queue of the tab with identifier `<tabId>`. `<tabId>` is a UUID v4.                     |
 
-Apart from the leader keys, the values are Base64 encoded.
+The values of the leader keys are not Base64 encoded.
 
 ## sessionStorage
 
@@ -74,4 +78,3 @@ All keys are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents 
 | `userId`      | User ID.                            |
 | `userTraits`  | User traits.                        |
 
-The values are Base64 encoded.
