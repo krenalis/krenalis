@@ -87,7 +87,7 @@ export class Analytics {
         callback?: () => void
     ): Promise<SentEvent>;
 
-    setAnonymousId(id?: string): string;
+    setAnonymousId(id?: string): string | undefined;
 
     startSession(id?: number): void;
 
