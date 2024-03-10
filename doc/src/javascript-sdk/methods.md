@@ -20,6 +20,8 @@ Below the JavaScript SDK methods:
 
 - [user](#user)
 
+- [setAnonymousId](#setanonymousid)
+
 - [getSessionId](#getsessionid)
 
 - [startSession](#startsession)
@@ -34,7 +36,7 @@ Below the JavaScript SDK methods:
 
 - [close](#close)
 
-> The JavaScript SDK also supports the `getAnonymousId` and `setAnonymousId` methods of the RudderStack SDK that can be used as an alternative to the [`user().anonymousId`](user-class.html#anonymousid) method.
+> The JavaScript SDK also supports the `getAnonymousId` method of the RudderStack SDK that can be used as an alternative to the [`user().anonymousId`](user-class.html#anonymousid).
 
 ## page
 
@@ -401,6 +403,47 @@ Returns an instance of the [`User`](#user-class) class representing the user.
 
 ```javascript
 const traits = chichiAnalytics.user().traits();
+```
+
+## setAnonymousId
+
+The `setAnonymousId` method is used to set the Anonymous ID. It's necessary because you can't call the `user().anonymousId` method before `Analytics` is ready. If you need to set the Anonymous ID before `Analytics` is ready, using the `setAnonymousId` method is your only option.
+
+Call the `setAnonymousId` method with an argument:
+
+- to reset the Anonymous ID with a newly generated value, pass `null`.
+
+- to set the Anonymous ID with a specified value, pass a non-empty `String` or a `Number` (the number will be converted to a `String`).
+
+If it is called after `Analytics` is ready, it also returns the Anonymous ID.
+
+#### Syntax
+
+```javascript
+setAnonymousId(id)
+```
+
+<details>
+<summary>TypeScript syntax</summary>
+
+```typescript
+setAnonymousId(id?: string): string | undefined
+```
+
+</details>
+
+#### Parameters
+
+| Name | Type       | Required | Description                                            |
+|------|------------|----------|--------------------------------------------------------|
+| `id` | `String`   |          | Anonymous ID to set. If it is missing it does nothing. |
+
+It returns the Anonymous ID, if called after `Analytics` is ready.
+
+#### Example
+
+```javascript
+chichianalytics.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
 ```
 
 ## getSessionId
