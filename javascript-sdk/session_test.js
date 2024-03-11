@@ -27,7 +27,7 @@ Deno.test('Session', async (t) => {
 		localStorage.clear()
 		const time = new FakeTime()
 
-		const storage = new Storage(writeKey, { type: 'localStorage' })
+		const storage = new Storage(writeKey, { storage: { type: 'localStorage' } })
 		session = new Session(storage, false, tenMinutes)
 		session.debug(DEBUG)
 
@@ -66,7 +66,7 @@ Deno.test('Session', async (t) => {
 
 		const startedAt = new Date().getTime()
 
-		const storage = new Storage(writeKey, { type: 'localStorage' })
+		const storage = new Storage(writeKey, { storage: { type: 'localStorage' } })
 		session = new Session(storage, true, tenMinutes)
 		session.debug(DEBUG)
 

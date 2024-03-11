@@ -35,11 +35,11 @@ class Storage {
 				}
 			}
 		}
-		switch (options.type) {
+		switch (options.storage.type) {
 			case 'multiStorage':
 			case 'cookieStorage':
 				tryStorage(() => new cookieStorage(options.cookie))
-				if (options.type === 'multiStorage' || !storage) {
+				if (options.storage.type === 'multiStorage' || !storage) {
 					tryStorage(() => new webStorage(localStorage))
 					if (!storage) {
 						tryStorage(() => new webStorage(sessionStorage))
@@ -56,7 +56,7 @@ class Storage {
 				storage = new noStorage()
 		}
 		if (storage) {
-			if (options.type !== 'none') {
+			if (options.storage.type !== 'none') {
 				storage = new base64Storage(storage)
 			}
 		} else {

@@ -13,7 +13,7 @@ Deno.test('User', () => {
 		addEventListener: addEventListener.bind(globalThis),
 	}
 
-	const user = new User(new Storage(writeKey, new Options().storage))
+	const user = new User(new Storage(writeKey, new Options()))
 
 	assertEquals(user.id(), null)
 	assert(uuid.validate(user.anonymousId()))

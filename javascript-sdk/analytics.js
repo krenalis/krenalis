@@ -67,7 +67,7 @@ class Analytics {
 				this.#ready.emit(error)
 			}
 		})
-		this.#storage = new Storage(writeKey, this.#options.storage)
+		this.#storage = new Storage(writeKey, this.#options)
 		this.#session = new Session(
 			this.#storage,
 			this.#options.sessions.autoTrack,

@@ -5,19 +5,19 @@ const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
 const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
 
 class Options {
+	cookie = {
+		domain: null,
+		maxAge: 365 * 24 * 60 * 60 * 1000, // one year
+		path: '/',
+		sameSite: 'lax',
+		secure: false,
+	}
 	debug = false
 	sessions = {
 		autoTrack: true,
 		timeout: 30 * 60000, // 30 minutes.
 	}
 	storage = {
-		cookie: {
-			domain: null,
-			maxAge: 365 * 24 * 60 * 60 * 1000, // one year
-			path: '/',
-			sameSite: 'lax',
-			secure: false,
-		},
 		type: 'multiStorage',
 	}
 	strategy = 'AB-C'
@@ -27,46 +27,54 @@ class Options {
 	}
 
 	constructor(writeKey, endpoint, options, ready) {
-		if (options != null) {
+		const setCookie = (cookie, rs) => {
+			if (isPlainObject(cookie)) {
+				if (cookie.domain === '' || isDomainName(cookie.domain)) {
+					this.cookie.domain = cookie.domain
+				}
+				const maxAge = asPositiveFiniteNumber(cookie.maxage)
+				if (maxAge != null) {
+					this.cookie.maxAge = maxAge * (rs ? 1 : 24 * 60 * 60 * 1000)
+				}
+				if (canBeUsedAsCookiePath(cookie.path)) {
+					this.cookie.path = cookie.path
+				}
+				const sameSite = rs ? cookie.samesite : cookie.sameSite
+				if (isSameSite(sameSite)) {
+					this.cookie.sameSite = sameSite.toLowerCase()
+				}
+				if ('secure' in cookie) {
+					this.cookie.secure = !!cookie.secure
+				}
+			}
+		}
+		if (typeof options === 'object' && options != null) {
 			if (options.debug != null) {
 				this.debug = !!options.debug
 			}
-			if (options.sameDomainCookiesOnly) {
-				this.storage.cookie.domain = ''
-			}
-			if (isSameSite(options.sameSiteCookie)) {
-				this.storage.cookie.sameSite = options.sameSiteCookie.toLowerCase()
-			}
-			if (options.secureCookie) {
-				this.storage.cookie.secure = !!options.secureCookie
-			}
-			if (isDomainName(options.setCookieDomain)) {
-				this.storage.cookie.domain = options.setCookieDomain
-			}
-			if (isPlainObject(options.storage)) {
-				// 'storage.cookie' overwrites 'sameDomainCookiesOnly', 'sameSiteCookie', 'secureCookie', and 'setCookieDomain' options.
-				const cookie = options.storage.cookie
-				if (isPlainObject(cookie)) {
-					if (cookie.domain === '' || isDomainName(cookie.domain)) {
-						this.storage.cookie.domain = cookie.domain
-					}
-					const maxAge = asPositiveFiniteNumber(cookie.maxage)
-					if (maxAge != null) {
-						this.storage.cookie.maxAge = maxAge
-					}
-					if (canBeUsedAsCookiePath(cookie.path)) {
-						this.storage.cookie.path = cookie.path
-					}
-					if (isSameSite(cookie.samesite)) {
-						this.storage.cookie.sameSite = cookie.samesite.toLowerCase()
-					}
-					if ('secure' in cookie) {
-						this.storage.cookie.secure = !!cookie.secure
-					}
+			if ('cookie' in options) {
+				// 'options.cookie' overwrites 'storage.cookie', 'sameDomainCookiesOnly', 'sameSiteCookie', 'secureCookie', and 'setCookieDomain' options.
+				setCookie(options.cookie, false)
+			} else {
+				if (options.sameDomainCookiesOnly) {
+					this.cookie.domain = ''
 				}
-				if (isStorage(options.storage.type)) {
-					this.storage.type = options.storage.type
+				if (isSameSite(options.sameSiteCookie)) {
+					this.cookie.sameSite = options.sameSiteCookie.toLowerCase()
 				}
+				if (options.secureCookie) {
+					this.cookie.secure = !!options.secureCookie
+				}
+				if (isDomainName(options.setCookieDomain)) {
+					this.cookie.domain = options.setCookieDomain
+				}
+				if (isPlainObject(options.storage)) {
+					// 'storage.cookie' overwrites 'sameDomainCookiesOnly', 'sameSiteCookie', 'secureCookie', and 'setCookieDomain' options.
+					setCookie(options.storage.cookie, true)
+				}
+			}
+			if (isPlainObject(options.storage) && isStorage(options.storage.type)) {
+				this.storage.type = options.storage.type
 			}
 			if (isPlainObject(options.sessions)) {
 				const s = options.sessions

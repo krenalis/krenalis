@@ -12,7 +12,7 @@ Deno.test('Group', () => {
 		addEventListener: addEventListener.bind(globalThis),
 	}
 
-	const group = new Group(new Storage(writeKey, new Options().storage))
+	const group = new Group(new Storage(writeKey, new Options()))
 
 	assertEquals(group.id(), null)
 	assertEquals(group.traits(), {})

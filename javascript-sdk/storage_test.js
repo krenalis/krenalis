@@ -9,7 +9,7 @@ const oneYear = 365 * 24 * 60 * 60 * 1000
 Deno.test('Storage', () => {
 	localStorage.clear()
 
-	const storage = new Storage(writeKey, { type: 'localStorage' })
+	const storage = new Storage(writeKey, { storage: { type: 'localStorage' } })
 
 	function expectAnonymousId(id) {
 		assertEquals(storage.anonymousId(), id)

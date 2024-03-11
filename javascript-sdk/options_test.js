@@ -1,26 +1,26 @@
 import { assert, assertEquals, AssertionError } from 'std/assert/mod.ts'
 import { isStrategy, Options } from './options.js'
 
-const oneYear = 365 * 24 * 60 * 60 * 1000
+const days = 24 * 60 * 60 * 1000
 
 Deno.test('Options', () => {
 	localStorage.clear()
 
 	const base = {
 		autoTrack: true,
+		cookie: {
+			domain: null,
+			maxAge: 365 * days,
+			path: '/',
+			sameSite: 'lax',
+			secure: false,
+		},
 		debug: false,
 		sameDomainCookiesOnly: false,
 		sameSiteCookie: 'lax',
 		secureCookie: false,
 		setCookieDomain: null,
 		storage: {
-			cookie: {
-				domain: null,
-				maxAge: oneYear,
-				path: '/',
-				sameSite: 'lax',
-				secure: false,
-			},
 			type: 'multiStorage',
 		},
 		timeout: 30 * 60000,
@@ -41,26 +41,42 @@ Deno.test('Options', () => {
 		{ options: { storage: { cookie: null } }, ...base },
 		{ options: { storage: { cookie: {} } }, ...base },
 		{
-			options: { storage: { cookie: { domain: null, maxage: oneYear, path: '/', samesite: 'Lax', secure: false } } },
+			options: { cookie: { domain: null, maxage: 365, path: '/', sameSite: 'Lax', secure: false } },
 			...base,
+		},
+		{
+			options: { storage: { cookie: { domain: null, maxage: 365 * days, path: '/', samesite: 'Lax', secure: false } } },
+			...base,
+		},
+		{
+			options: { cookie: { domain: '', sameSite: 'Strict', secure: true } },
+			...base,
+			cookie: { ...base.cookie, domain: '', sameSite: 'strict', secure: true },
 		},
 		{
 			options: { storage: { cookie: { domain: '', samesite: 'Strict', secure: true } } },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: '', sameSite: 'strict', secure: true } },
+			cookie: { ...base.cookie, domain: '', sameSite: 'strict', secure: true },
 		},
 		{
-			options: { storage: { cookie: { domain: 'example.com', maxage: 10000000, secure: {} } } },
+			options: { cookie: { domain: 'example.com', maxage: 30, secure: {} } },
 			...base,
-			storage: {
-				...base.storage,
-				cookie: { ...base.storage.cookie, domain: 'example.com', maxAge: 10000000, secure: true },
-			},
+			cookie: { ...base.cookie, domain: 'example.com', maxAge: 30 * days, secure: true },
+		},
+		{
+			options: { storage: { cookie: { domain: 'example.com', maxage: 30 * days, secure: {} } } },
+			...base,
+			cookie: { ...base.cookie, domain: 'example.com', maxAge: 30 * days, secure: true },
+		},
+		{
+			options: { cookie: { path: '/store/' } },
+			...base,
+			cookie: { ...base.cookie, path: '/store/' },
 		},
 		{
 			options: { storage: { cookie: { path: '/store/' } } },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, path: '/store/' } },
+			cookie: { ...base.cookie, path: '/store/' },
 		},
 		{ options: { storage: { type: 'multiStorage' } }, ...base },
 		{
@@ -87,25 +103,25 @@ Deno.test('Options', () => {
 		{
 			options: { sameDomainCookiesOnly: true },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: '' } },
+			cookie: { ...base.cookie, domain: '' },
 		},
 		{ options: { sameDomainCookiesOnly: false }, ...base },
 		{
 			options: { secureCookie: true },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, secure: true } },
+			cookie: { ...base.cookie, secure: true },
 		},
 		{ options: { secureCookie: false }, ...base },
 		{ options: { sameSiteCookie: 'Lax' }, ...base },
 		{
 			options: { sameSiteCookie: 'Strict' },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, sameSite: 'strict' } },
+			cookie: { ...base.cookie, sameSite: 'strict' },
 		},
 		{
 			options: { sameSiteCookie: 'None' },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, sameSite: 'none' } },
+			cookie: { ...base.cookie, sameSite: 'none' },
 		},
 		{ options: { sameSiteCookie: 'lax' }, ...base },
 		{ options: { sameSiteCookie: 'strict' }, ...base },
@@ -126,7 +142,7 @@ Deno.test('Options', () => {
 		{
 			options: { setCookieDomain: 'example.com' },
 			...base,
-			storage: { ...base.storage, cookie: { ...base.storage.cookie, domain: 'example.com' } },
+			cookie: { ...base.cookie, domain: 'example.com' },
 		},
 		{ options: { debug: false }, ...base },
 		{ options: { debug: true }, ...base, debug: true },
@@ -159,11 +175,11 @@ Deno.test('Options', () => {
 		const test = tests[i]
 		const options = new Options(null, null, test.options)
 		assertEquals(test.debug, test.debug)
-		assertEquals(options.storage.cookie.domain, test.storage.cookie.domain)
-		assertEquals(options.storage.cookie.maxAge, test.storage.cookie.maxAge)
-		assertEquals(options.storage.cookie.path, test.storage.cookie.path)
-		assertEquals(options.storage.cookie.sameSite, test.storage.cookie.sameSite)
-		assertEquals(options.storage.cookie.secure, test.storage.cookie.secure)
+		assertEquals(options.cookie.domain, test.cookie.domain)
+		assertEquals(options.cookie.maxAge, test.cookie.maxAge)
+		assertEquals(options.cookie.path, test.cookie.path)
+		assertEquals(options.cookie.sameSite, test.cookie.sameSite)
+		assertEquals(options.cookie.secure, test.cookie.secure)
 		assertEquals(options.storage.type, test.storage.type)
 		assertEquals(options.sessions.autoTrack, test.autoTrack)
 		assertEquals(options.sessions.timeout, test.timeout)
@@ -185,7 +201,7 @@ Deno.test('Options', () => {
 	for (let i = 0; i < invalids.length; i++) {
 		const setCookieDomain = invalids[i]
 		const options = new Options(null, null, { setCookieDomain })
-		if (options.storage.cookie.domain !== base.storage.cookie.domain) {
+		if (options.cookie.domain !== base.cookie.domain) {
 			throw new AssertionError(`'${setCookieDomain}' is not a domain name for the setCookieDomain option`)
 		}
 	}
@@ -195,8 +211,8 @@ Deno.test('Options', () => {
 	for (let i = 0; i < invalids.length; i++) {
 		const sameSiteCookie = invalids[i]
 		const options = new Options(null, null, { sameSiteCookie })
-		const cookie = options.storage.cookie
-		if (cookie.sameSite !== base.storage.cookie.sameSite) {
+		const cookie = options.cookie
+		if (cookie.sameSite !== base.cookie.sameSite) {
 			throw new AssertionError(`'${sameSiteCookie}' is not a SameSite value, but no error has been returned`)
 		}
 	}
