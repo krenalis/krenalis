@@ -103,19 +103,30 @@
 	gap: 15px;
 }
 
-.connectionSettings .snippetCopy {
-	display: flex;
-	align-items: center;
-	gap: 5px;
+.connectionSettings .snippetCopy .editorWrapper {
 	margin-top: 10px;
+	width: 100%;
 }
 
-.connectionSettings .snippetCopy > sl-input {
-	width: 400px;
+.connectionSettings .snippetCopy .editorWrapper * {
+	font-size: 14px !important;
 }
 
-.connectionSettings .snippetCopy > sl-input::part(base) {
-	font-size: 14px;
+.connectionSettings .snippetCopy sl-copy-button {
+	margin-top: 20px;
+	width: 100%;
+}
+
+.connectionSettings .snippetCopy sl-copy-button::part(button) {
+	gap: 8px;
+	background-color: var(--color-primary-600);
+	color: var(--text-onaccent);
+	padding: 12px 20px;
+	margin-left: auto;
+}
+
+.connectionSettings .snippetCopy sl-copy-button::part(button)::after {
+	content: 'Copy';
 }
 
 .connectionSettings .dangerZone .label {

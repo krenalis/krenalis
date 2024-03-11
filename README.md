@@ -197,7 +197,8 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 
 1. Add a JavaScript source connection with host `localhost:9090`.
 2. Add an action with type "Collect events" (and/or an action "Import users", depending on what you want to test) and enable it.
-3. Save the following HTML code into a file (let's suppose `javascript-sdk/mywebsite/index.html`) or paste the script from that code into another HTML page:
+3. Copy the snippet in "Settings > Snippet" of the connection.
+4. Paste the snippet into your website between &lt;head&gt; and &lt;/head&gt;. You can also save the following HTML code into a file (let's suppose `javascript-sdk/mywebsite/index.html`):
    <details>
     <summary>Minimal HTML5 page</summary>
 
@@ -207,57 +208,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
     &lt;head&gt;
         &lt;meta charset=&quot;utf-8&quot;&gt;
         &lt;title&gt;Test website&lt;/title&gt;
-
-        &lt;script type=&quot;text/javascript&quot;&gt;
-        (function() {
-            var analytics = window.chichiAnalytics = window.chichiAnalytics || [];
-            if (analytics.load) {
-                window.console && console.error &&
-                    console.error("The ChiChi snippet is included twice");
-            } else {
-                analytics.load = function (key, url, options) {
-                    analytics.key = key;
-                    analytics.url = url;
-                    analytics.options = options;
-                    var script = document.createElement("script");
-                    script.async = !0;
-                    script.type = "text/javascript";
-                    script.src = "/javascript-sdk/dist/chichi.min.js";
-                    var elem = document.getElementsByTagName("script")[0];
-                    elem.parentNode.insertBefore(script, elem);
-                };
-                var methods = [
-                    "alias",
-                    "anonymize",
-                    "close",
-                    "debug",
-                    "endSession",
-                    "getAnonymousId",
-                    "getSessionId",
-                    "group",
-                    "identify",
-                    "page",
-                    "ready",
-                    "reset",
-                    "screen",
-                    "setAnonymousId",
-                    "startSession",
-                    "track",
-                    "user",
-                ];
-                for (var i = 0; i < methods.length; i++) {
-                    (function (name) {
-                        analytics[name] = function () {
-                            analytics.push([name].concat(array.prototype.slice.call(arguments)));
-                            return analytics;
-                        };
-                    })(methods[i]);
-                }
-                chichiAnalytics.load("write key", "https://localhost:9090/api/v1/");
-            }
-        })();
-        &lt;/script&gt;
-
+        &lt;!-- Paste the snippet here  --&gt;
     &lt;/head&gt;
     &lt;body&gt;
         &lt;p&gt;Test website&lt;/p&gt;
@@ -266,7 +217,6 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
     </pre>
 
     </details>
-4. In the HTML page, replace `write key` with the key in "Settings > API keys" of the connection.
 5. Build the JavaScript SDK:
 
     ```sh

@@ -19,11 +19,12 @@ interface EditorWrapperProps {
 	height?: number;
 	name: string;
 	value: string;
-	onChange: (value: string | undefined) => void | Promise<void>;
+	onChange?: (value: string | undefined) => void | Promise<void>;
 	onClick?: () => void;
 	onMount?: (editor: any) => void;
 	isReadOnly?: boolean;
 	showHeading?: boolean;
+	hideGutter?: boolean;
 	className?: string;
 }
 
@@ -42,6 +43,7 @@ const EditorWrapper = ({
 	onClick,
 	onMount,
 	showHeading,
+	hideGutter,
 	className,
 	...delegated
 }: EditorWrapperProps) => {
@@ -60,7 +62,10 @@ const EditorWrapper = ({
 	const languageLogo = getLanguageLogo(language);
 
 	return (
-		<div className={`editorWrapper${className ? ' ' + className : ''}`} onClick={onClick}>
+		<div
+			className={`editorWrapper${className ? ' ' + className : ''}${hideGutter ? ' hideGutter' : ''}`}
+			onClick={onClick}
+		>
 			{showHeading && (
 				<div className='heading'>
 					<div className='logoAndLanguage'>
@@ -112,6 +117,11 @@ const EditorWrapper = ({
 						scrollBeyondLastLine: false,
 						renderWhitespace: 'none',
 						readOnly: isReadOnly,
+						lineNumbers: hideGutter ? 'off' : undefined,
+						glyphMargin: hideGutter ? false : undefined,
+						folding: hideGutter ? false : undefined,
+						lineDecorationsWidth: hideGutter ? 0 : undefined,
+						lineNumbersMinChars: hideGutter ? 0 : undefined,
 					}}
 					loading={<SlSpinner style={{ fontSize: '30px' }}></SlSpinner>}
 					{...delegated}

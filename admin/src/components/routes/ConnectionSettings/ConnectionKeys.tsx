@@ -15,7 +15,7 @@ interface KeysProps {
 const ConnectionKeys = ({ connection: c }: KeysProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
 
-	const { api, showStatus, handleError, redirect } = useContext(AppContext);
+	const { api, showStatus, handleError, redirect, setIsLoadingConnections } = useContext(AppContext);
 
 	useEffect(() => {
 		const fetchKeys = async () => {
@@ -58,6 +58,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 		}
 		const ks = [...keys, key];
 		setKeys(ks);
+		setIsLoadingConnections(true);
 	};
 
 	const onRevokeKey = async (key: string) => {
@@ -87,6 +88,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			if (k !== key) ks.push(k);
 		}
 		setKeys(ks);
+		setIsLoadingConnections(true);
 	};
 
 	return (

@@ -1,10 +1,11 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { NotFoundError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import AppContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import { SNIPPET } from '../../../constants/javascriptSnippet';
+import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
 
 const ConnectionSnippet = () => {
 	const [keys, setKeys] = useState<string[]>([]);
@@ -30,14 +31,27 @@ const ConnectionSnippet = () => {
 			return;
 		};
 		fetchKeys();
-	}, []);
+	}, [c]);
+
+	const snippet = useMemo<string>(() => {
+		const r1 = SNIPPET.replace('"writekey"', `"${keys[0]}"`);
+		const r2 = r1.replace('"endpoint"', `"${window.location.origin}/api/v1/"`);
+		return r2;
+	}, [SNIPPET, keys]);
 
 	return (
 		<>
-			<div>You can use one of the API keys of the connection to setup your source:</div>
+			<div>Embed the snippet in your website to start sending events:</div>
 			<div className='snippetCopy'>
-				<SlInput readonly value={keys[0]} />
-				<SlCopyButton value={keys[0]} />
+				<EditorWrapper
+					name='snippetEditor'
+					language='html'
+					height={180}
+					value={snippet}
+					isReadOnly={true}
+					hideGutter={true}
+				></EditorWrapper>
+				<SlCopyButton value={snippet}></SlCopyButton>
 			</div>
 		</>
 	);

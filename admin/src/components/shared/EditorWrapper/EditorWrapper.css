@@ -49,6 +49,10 @@
 	padding: 20px 20px 20px 10px;
 }
 
+.editorWrapper.hideGutter .editor {
+	padding: 20px 25px;
+}
+
 .editorWrapper .decorationsOverviewRuler {
 	border-radius: 5px;
 }
