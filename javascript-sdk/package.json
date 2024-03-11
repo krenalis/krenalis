@@ -1,16 +1,16 @@
 {
-  "name": "chichi-javascript-sdk",
-  "version": "0.0.1",
-  "main": "analytics.cjs",
-  "module": "analytics.js",
-  "exports": {
-    "require": "./analytics.cjs",
-    "import": "./analytics.js"
-  },
-  "type": "module",
-  "devDependencies": {
-    "@swc/cli": "0.3.10",
-    "@swc/core": "1.4.6",
-    "esbuild": "0.20.1"
-  }
+	"name": "chichi-javascript-sdk",
+	"version": "0.0.1",
+	"main": "analytics.cjs",
+	"module": "analytics.js",
+	"exports": {
+		"require": "./analytics.cjs",
+		"import": "./analytics.js"
+	},
+	"type": "module",
+	"devDependencies": {
+		"@swc/cli": "0.3.10",
+		"@swc/core": "1.4.6",
+		"esbuild": "0.20.1"
+	}
 }

@@ -26,7 +26,7 @@ npm install
 Run:
 
 ```sh
-deno task fmt
+deno fmt
 ```
 
 ## Build `dist/chichi.min.js`
