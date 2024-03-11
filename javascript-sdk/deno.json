@@ -3,13 +3,12 @@
 		"std/": "https://deno.land/std@0.219.0/"
 	},
 	"tasks": {
-		"test": "deno lint *_test.js test_* *_test_* && deno test *_test.js",
-		"bundle": "deno lint && deno task test --fail-fast && npx esbuild chichi.js --bundle --sourcemap --outfile=build/chichi.bundle.js",
+		"bundle": "deno lint && deno test --fail-fast && npx esbuild chichi.js --bundle --sourcemap --outfile=build/chichi.bundle.js",
 		"transpile": "npx swc build/chichi.bundle.js -o build/chichi.es5.js",
 		"minify": "npx esbuild build/chichi.es5.js --outfile=dist/chichi.min.js --minify --sourcemap --format=iife --target=es5",
 		"build": "deno task bundle && deno task transpile && deno task minify",
-		"build:es6": "deno lint && deno task test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=esm --target=es6 --minify --outfile=dist/chichi.es6.min.js",
-		"build:cjs": "deno lint && deno task test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=cjs --target=esnext --outfile=dist/analytics.bundle.cjs"
+		"build:es6": "deno lint && deno test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=esm --target=es6 --minify --outfile=dist/chichi.es6.min.js",
+		"build:cjs": "deno lint && deno test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=cjs --target=esnext --outfile=dist/analytics.bundle.cjs"
 	},
 	"fmt": {
 		"lineWidth": 120,

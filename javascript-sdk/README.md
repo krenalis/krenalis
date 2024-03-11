@@ -113,5 +113,5 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 Run:
 
 ```sh
-deno task test
+deno test
 ```
