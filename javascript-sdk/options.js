@@ -3,6 +3,7 @@ import { debug, isPlainObject, log } from './utils.js'
 const matchAll = /\s\S/
 const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
 const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
+const stores = ['cookie', 'localStorage', 'sessionStorage', 'memory']
 
 class Options {
 	cookie = {
@@ -13,17 +14,25 @@ class Options {
 		secure: false,
 	}
 	debug = false
+	group = {
+		storage: {
+			stores: null,
+		},
+	}
 	sessions = {
 		autoTrack: true,
 		timeout: 30 * 60000, // 30 minutes.
 	}
-	storage = {
-		type: 'multiStorage',
-	}
+	stores = ['localStorage', 'cookie', 'memory']
 	strategy = 'AB-C'
 	useQueryString = {
 		aid: matchAll,
 		uid: matchAll,
+	}
+	user = {
+		storage: {
+			stores: null,
+		},
 	}
 
 	constructor(writeKey, endpoint, options, ready) {
@@ -73,9 +82,6 @@ class Options {
 					setCookie(options.storage.cookie, true)
 				}
 			}
-			if (isPlainObject(options.storage) && isStorage(options.storage.type)) {
-				this.storage.type = options.storage.type
-			}
 			if (isPlainObject(options.sessions)) {
 				const s = options.sessions
 				if (s.autoTrack === false) {
@@ -88,6 +94,46 @@ class Options {
 					} else {
 						this.sessions.autoTrack = false
 					}
+				}
+			}
+			if (isPlainObject(options.storage)) {
+				const stores = parseStores(options.storage.stores)
+				if (stores != null) {
+					// 'options.storage.stores' overwrites 'options.storage.type'.
+					this.stores = stores
+				} else if (isStorage(options.storage.type)) {
+					let stores
+					switch (options.storage.type) {
+						case 'cookieStorage':
+							stores = ['cookie', 'localStorage', 'sessionStorage', 'memory']
+							break
+						case 'localStorage':
+							stores = ['localStorage', 'memory']
+							break
+						case 'sessionStorage':
+							stores = ['sessionStorage', 'memory']
+							break
+						case 'memoryStorage':
+							stores = ['memory']
+							break
+						case 'none':
+							stores = []
+					}
+					this.stores = stores
+				}
+			}
+			if (isPlainObject(options.user) && isPlainObject(options.user.storage)) {
+				// 'options.storage.user.stores' overwrites 'options.storage.stores' and 'options.storage.type'.
+				const stores = parseStores(options.user.storage.stores)
+				if (stores != null) {
+					this.user.storage.stores = stores
+				}
+			}
+			if (isPlainObject(options.group) && isPlainObject(options.group.storage)) {
+				// 'options.storage.group.stores' overwrites 'options.storage.stores' and 'options.storage.type'.
+				const stores = parseStores(options.group.storage.stores)
+				if (stores != null) {
+					this.group.storage.stores = stores
 				}
 			}
 			const qs = options.useQueryString
@@ -202,6 +248,34 @@ function isDomainName(s) {
 // isSameSite reports whether s is a SameSite value.
 function isSameSite(s) {
 	return typeof s === 'string' && ['Lax', 'Strict', 'None'].indexOf(s) >= 0
+}
+
+// isStore reports whether s is a store.
+function isStore(s) {
+	for (let i = 0; i < stores.length; i++) {
+		if (s === stores[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// parseStores parses stores as an array of stores and returns a copy of the
+// array with unique values. If stores it is not valid, it returns null.
+function parseStores(stores) {
+	if (!Array.isArray(stores)) {
+		return null
+	}
+	const s = []
+	for (let i = 0; i < stores.length; i++) {
+		if (!isStore(stores[i])) {
+			return false
+		}
+		if (s.indexOf(stores[i]) === -1) {
+			s.push(stores[i])
+		}
+	}
+	return s
 }
 
 // isStorage reports whether s is a storage.

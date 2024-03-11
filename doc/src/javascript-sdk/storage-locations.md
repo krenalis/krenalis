@@ -1,15 +1,15 @@
-# Data Storages
+# Storage Locations
 
-The JavaScript SDK is designed to store user data directly within the user's browser. Through the [`store.type`](options.md#storagetype-option) option, you can control which storages the data will be saved to, or choose not to save them at all. This capability is particularly important in ensuring compliance with privacy regulations, as selecting the appropriate storage method can significantly impact the level of user data protection and privacy afforded by the application.
+The JavaScript SDK is designed to store user data directly within the user's browser. Through the [`storage`](options.md#storage-option) option, you can control which storage locations the data will be saved to, or choose not to save them at all. This capability is particularly important in ensuring compliance with privacy regulations, as selecting the appropriate storage method can significantly impact the level of user data protection and privacy afforded by the application.
 
-Below are the browser storages that the JavaScript SDK can use to store user data:
+Below are the browser storage locations that the JavaScript SDK can use to store data:
 
-- cookies
+- cookie
 - localStorage
 - sessionStorage
 - memory
 
-And below are the types of information that the JavaScript SDK stores in these storages:
+And below are the types of information that the JavaScript SDK stores in these storage locations:
 
 - Anonymous ID
 - Session
@@ -24,7 +24,7 @@ And below are the types of information that the JavaScript SDK stores in these s
 
 Data is encoded in Base64, unless otherwise specified. Notably, in Internet Explorer 11, data is encoded in Base64 starting from UTF-16 rather than UTF-8, distinguished by an underscore ('_') prefix.
 
-## cookies
+## cookie
 
 Below are the cookies that the SDK stores in the user browser.
 
@@ -41,7 +41,7 @@ All cookie names are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` rep
 
 Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is `z43tavAOsBB8RY50nAtItXMMIipGKEOC`, the cookie names would be `chichi.z43tavA.anonymousId`, `chichi.z43tavA.groupId`, and so on.
 
-When the SDK persists user data in cookies, you can use the [`store.cookie`](options.md#storagecookie-option) option to control some specific settings.
+When the SDK persists user data in cookies, you can use the [`cookie`](options.md#cookie-option) option to control some specific settings.
 
 ## localStorage
 

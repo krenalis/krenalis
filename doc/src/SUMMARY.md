@@ -21,7 +21,7 @@
     - [Methods](javascript-sdk/methods.md)
       - [User Class](javascript-sdk/user-class.md)
       - [Group Class](javascript-sdk/group-class.md)
-    - [Data Storages](javascript-sdk/data-storages.md)
+    - [Storage&nbsp;Locations](javascript-sdk/storage-locations.md)
     - [Querystring API](javascript-sdk/querystring-api.md)
     - [FAQ](javascript-sdk/faq.md)
 - [Data Validation](./data-validation.md)

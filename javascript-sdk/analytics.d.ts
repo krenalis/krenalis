@@ -112,7 +112,15 @@ export enum StorageType {
 	cookieStorage = 'cookieStorage',
 	localStorage = 'localStorage',
 	sessionStorage = 'sessionStorage',
+	memoryStorage = 'memoryStorage',
 	none = 'none',
+}
+
+export enum Store {
+	cookie = 'cookie',
+	localStorage = 'localStorage',
+	sessionStorage = 'sessionStorage',
+	memory = 'memory',
 }
 
 interface UseQueryString {
@@ -121,7 +129,19 @@ interface UseQueryString {
 }
 
 interface Options {
+	cookie?: {
+		domain?: string | null
+		maxAge?: number
+		path?: string
+		sameSite?: SameSite
+		secure?: boolean
+	}
 	debug?: boolean
+	group?: {
+		storage: {
+			stores: Store[]
+		}
+	}
 	sessions?: {
 		autoTrack?: boolean
 		timeout?: number
@@ -134,9 +154,15 @@ interface Options {
 			sameSite?: SameSite
 			secure?: boolean
 		}
+		stores: Store[]
 		type?: StorageType
 	}
 	useQueryString?: boolean | UseQueryString
+	user?: {
+		storage: {
+			stores: Store[]
+		}
+	}
 }
 
 interface SentEvent {

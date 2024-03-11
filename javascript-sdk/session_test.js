@@ -2,6 +2,7 @@ import { assertEquals } from 'std/assert/mod.ts'
 import { FakeTime } from 'std/testing/time.ts'
 import Storage from './storage.js'
 import Session from './session.js'
+import Options from './options.js'
 
 const DEBUG = false
 
@@ -27,7 +28,9 @@ Deno.test('Session', async (t) => {
 		localStorage.clear()
 		const time = new FakeTime()
 
-		const storage = new Storage(writeKey, { storage: { type: 'localStorage' } })
+		const options = new Options()
+		options.stores = ['localStorage']
+		const storage = new Storage(writeKey, options)
 		session = new Session(storage, false, tenMinutes)
 		session.debug(DEBUG)
 
@@ -66,7 +69,9 @@ Deno.test('Session', async (t) => {
 
 		const startedAt = new Date().getTime()
 
-		const storage = new Storage(writeKey, { storage: { type: 'localStorage' } })
+		const options = new Options()
+		options.stores = ['localStorage']
+		const storage = new Storage(writeKey, options)
 		session = new Session(storage, true, tenMinutes)
 		session.debug(DEBUG)
 

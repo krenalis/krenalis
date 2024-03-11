@@ -1,7 +1,8 @@
 import { assert, assertEquals } from 'std/assert/mod.ts'
 import { FakeTime } from 'std/testing/time.ts'
 import * as fake from './test_fake.js'
-import Storage, { base64Storage, cookieStorage, memoryStorage, multiStorage, noStorage, webStorage } from './storage.js'
+import Options from './options.js'
+import Storage, { base64Store, cookieStore, memoryStore, multiStore, noStore, webStore } from './storage.js'
 
 const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
 const oneYear = 365 * 24 * 60 * 60 * 1000
@@ -9,7 +10,9 @@ const oneYear = 365 * 24 * 60 * 60 * 1000
 Deno.test('Storage', () => {
 	localStorage.clear()
 
-	const storage = new Storage(writeKey, { storage: { type: 'localStorage' } })
+	const options = new Options()
+	options.stores = ['localStorage']
+	const storage = new Storage(writeKey, options)
 
 	function expectAnonymousId(id) {
 		assertEquals(storage.anonymousId(), id)
@@ -158,7 +161,7 @@ Deno.test('Storage', () => {
 	expectEmptySuspended()
 })
 
-Deno.test('cookieStorage', () => {
+Deno.test('cookieStore', () => {
 	const time = new FakeTime()
 
 	function expires(maxAge) {
@@ -170,7 +173,7 @@ Deno.test('cookieStorage', () => {
 	globalThis.location = new URL('https://c.b.a.example.com/account/')
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	let storage = new cookieStorage({ domain: null, maxAge: oneYear / 2, path: '/', sameSite: 'lax', secure: false })
+	let storage = new cookieStore({ domain: null, maxAge: oneYear / 2, path: '/', sameSite: 'lax', secure: false })
 
 	assertEquals(storage.get(''), null)
 	storage.set('', '')
@@ -205,7 +208,7 @@ Deno.test('cookieStorage', () => {
 	assertEquals(storage.get('ab'), '3')
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	storage = new cookieStorage({ domain: '', maxAge: oneYear, path: '/store/', sameSite: 'lax', secure: true })
+	storage = new cookieStore({ domain: '', maxAge: oneYear, path: '/store/', sameSite: 'lax', secure: true })
 	storage.set('boo', 'foo')
 	cookie = document.getCookie('boo', undefined)
 	assertEquals(cookie.domain, undefined)
@@ -215,7 +218,7 @@ Deno.test('cookieStorage', () => {
 	assert(cookie.secure)
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	storage = new cookieStorage({ domain: 'b.a.example.com', maxAge: oneYear, path: '/', sameSite: 'lax', secure: true })
+	storage = new cookieStore({ domain: 'b.a.example.com', maxAge: oneYear, path: '/', sameSite: 'lax', secure: true })
 	storage.set('boo', 'foo')
 	cookie = globalThis.document.getCookie('boo', 'b.a.example.com')
 	assertEquals(cookie.domain, 'b.a.example.com')
@@ -225,7 +228,7 @@ Deno.test('cookieStorage', () => {
 	assert(cookie.secure)
 
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	storage = new cookieStorage({ domain: null, maxAge: oneYear * 2, path: '/', sameSite: 'strict', secure: true })
+	storage = new cookieStore({ domain: null, maxAge: oneYear * 2, path: '/', sameSite: 'strict', secure: true })
 	storage.set('boo', 'foo')
 	cookie = document.getCookie('boo', 'a.example.com')
 	assertEquals(cookie.domain, 'a.example.com')
@@ -236,7 +239,7 @@ Deno.test('cookieStorage', () => {
 
 	globalThis.location = new URL('https://172.16.254.1/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, '172.16.254.1')
-	storage = new cookieStorage({ domain: null, maxAge: oneYear, path: '/', sameSite: 'none', secure: true })
+	storage = new cookieStore({ domain: null, maxAge: oneYear, path: '/', sameSite: 'none', secure: true })
 	assertEquals(storage.get('boo'), null)
 	storage.set('boo', 'foo')
 	assertEquals(storage.get('boo'), 'foo')
@@ -250,7 +253,7 @@ Deno.test('cookieStorage', () => {
 
 	globalThis.location = new URL('https://c.b.a.example.com./account/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'example.com.')
-	storage = new cookieStorage({ domain: null, maxAge: oneYear, path: '/', sameSite: 'strict', secure: false })
+	storage = new cookieStore({ domain: null, maxAge: oneYear, path: '/', sameSite: 'strict', secure: false })
 	storage.set('boo', 'foo')
 	cookie = document.getCookie('boo', 'example.com.')
 	assertEquals(cookie.domain, 'example.com.')
@@ -261,9 +264,9 @@ Deno.test('cookieStorage', () => {
 	time.restore()
 })
 
-Deno.test('base64Storage', () => {
-	const memory = new memoryStorage()
-	const storage = new base64Storage(memory)
+Deno.test('base64Store', () => {
+	const memory = new memoryStore()
+	const storage = new base64Store(memory)
 	assertEquals(storage.get('k'), null)
 	storage.set('k', "Let's watch a 🎥. 🍔 & 🍟 for dinner!")
 	assertEquals(
@@ -276,8 +279,8 @@ Deno.test('base64Storage', () => {
 	assertEquals(storage.get('k'), null)
 })
 
-Deno.test('memoryStorage', () => {
-	const storage = new memoryStorage()
+Deno.test('memoryStore', () => {
+	const storage = new memoryStore()
 	assertEquals(storage.get('key'), null)
 	storage.set('key', 'value')
 	assertEquals(storage.get('key'), 'value')
@@ -285,14 +288,14 @@ Deno.test('memoryStorage', () => {
 	assertEquals(storage.get('key'), null)
 })
 
-Deno.test('multiStorage', () => {
+Deno.test('multiStore', () => {
 	localStorage.clear()
 
 	globalThis.location = new URL('https://c.b.a.example.com/account/')
 	globalThis.document = new fake.CookieDocument(globalThis.location, 'a.example.com')
-	const cs = new cookieStorage({ domain: null, maxAge: oneYear, path: '/', sameSite: 'lax', secure: false })
-	const lss = new webStorage(localStorage)
-	const storage = new multiStorage([cs, lss])
+	const cs = new cookieStore({ domain: null, maxAge: oneYear, path: '/', sameSite: 'lax', secure: false })
+	const lss = new webStore(localStorage)
+	const storage = new multiStore([cs, lss])
 
 	assertEquals(storage.get('key'), null)
 	assertEquals(cs.get('key'), null)
@@ -309,8 +312,8 @@ Deno.test('multiStorage', () => {
 	assertEquals(lss.get('key'), null)
 })
 
-Deno.test('noStorage', () => {
-	const storage = new noStorage()
+Deno.test('noStore', () => {
+	const storage = new noStore()
 	assertEquals(storage.get('key'), null)
 	storage.set('key', 'value')
 	assertEquals(storage.get('key'), null)
@@ -318,8 +321,8 @@ Deno.test('noStorage', () => {
 	assertEquals(storage.get('key'), null)
 })
 
-Deno.test('webStorage', () => {
-	let storage = new webStorage(localStorage)
+Deno.test('webStore', () => {
+	let storage = new webStore(localStorage)
 	assertEquals(storage.get('k'), null)
 	storage.set('k', 'v')
 	assertEquals(storage.get('k'), 'v')
@@ -327,7 +330,7 @@ Deno.test('webStorage', () => {
 	assertEquals(storage.get('k'), null)
 
 	// Exceptions are handled and not propagated.
-	storage = new webStorage(new fake.Storage())
+	storage = new webStore(new fake.Storage())
 	assertEquals(storage.get('k'), null)
 	storage.set('k', 'v')
 	assertEquals(storage.get('k'), null)

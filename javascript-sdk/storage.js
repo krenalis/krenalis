@@ -1,11 +1,13 @@
 import { decodeBase64, encodeBase64 } from './utils.js'
 
-const storageNotSupported = new Error('storage is not supported')
+const storeNotSupported = new Error('store is not supported')
 const warnMsg = 'Analytics: cannot stringify traits'
 
 class Storage {
 	#key
-	#storage
+	#store
+	#userStore
+	#groupStore
 
 	constructor(writeKey, options) {
 		const prefix = `chichi.${writeKey.slice(0, 7)}.`
@@ -20,66 +22,30 @@ class Storage {
 			session: prefix + 'session',
 			suspended: prefix + 'suspended',
 		}
-		let storage
-		const tryStorage = (newStorage) => {
-			try {
-				const s = newStorage()
-				if (storage == null) {
-					storage = s
-				} else {
-					storage = new multiStorage([storage, s])
-				}
-			} catch (error) {
-				if (error !== storageNotSupported) {
-					throw error
-				}
-			}
-		}
-		switch (options.storage.type) {
-			case 'multiStorage':
-			case 'cookieStorage':
-				tryStorage(() => new cookieStorage(options.cookie))
-				if (options.storage.type === 'multiStorage' || !storage) {
-					tryStorage(() => new webStorage(localStorage))
-					if (!storage) {
-						tryStorage(() => new webStorage(sessionStorage))
-					}
-				}
-				break
-			case 'localStorage':
-				tryStorage(() => new webStorage(localStorage))
-				break
-			case 'sessionStorage':
-				tryStorage(() => new webStorage(sessionStorage))
-				break
-			case 'none':
-				storage = new noStorage()
-		}
-		if (storage) {
-			if (options.storage.type !== 'none') {
-				storage = new base64Storage(storage)
-			}
-		} else {
-			storage = new memoryStorage()
-		}
-		this.#storage = storage
+		this.#store = this.#makeStore(options.stores, options.cookie)
+		this.#userStore = options.user.storage.stores == null
+			? this.#store
+			: this.#makeStore(options.user.storage.stores, options.cookie)
+		this.#groupStore = options.group.storage.stores == null
+			? this.#store
+			: this.#makeStore(options.group.storage.stores, options.cookie)
 	}
 
 	anonymousId() {
-		return this.#storage.get(this.#key.anonymousId)
+		return this.#userStore.get(this.#key.anonymousId)
 	}
 
 	groupId() {
-		return this.#storage.get(this.#key.groupId)
+		return this.#groupStore.get(this.#key.groupId)
 	}
 
 	removeSuspended() {
-		this.#storage.delete(this.#key.suspended)
+		this.#userStore.delete(this.#key.suspended)
 	}
 
 	restore() {
 		let session, anonymousId, userTraits, groupId, groupTraits
-		const suspended = this.#storage.get(this.#key.suspended)
+		const suspended = this.#userStore.get(this.#key.suspended)
 		if (suspended != null) {
 			;[session, anonymousId, userTraits, groupId, groupTraits] = JSON.parse(suspended)
 		}
@@ -91,11 +57,11 @@ class Storage {
 		this.setTraits('user', userTraits)
 		this.setGroupId(groupId)
 		this.setTraits('group', groupTraits)
-		this.#storage.delete(this.#key.suspended)
+		this.#userStore.delete(this.#key.suspended)
 	}
 
 	session() {
-		const session = this.#storage.get(this.#key.session)
+		const session = this.#store.get(this.#key.session)
 		if (session == null) {
 			return [null, 0, false]
 		}
@@ -103,7 +69,8 @@ class Storage {
 	}
 
 	traits(kind) {
-		const traits = this.#storage.get(this.#key.traits[kind])
+		const store = kind === 'user' ? this.#userStore : this.#groupStore
+		const traits = store.get(this.#key.traits[kind])
 		if (traits == null) {
 			return {}
 		}
@@ -112,34 +79,35 @@ class Storage {
 
 	setAnonymousId(id) {
 		if (id == null) {
-			this.#storage.delete(this.#key.anonymousId)
+			this.#userStore.delete(this.#key.anonymousId)
 			return
 		}
-		this.#storage.set(this.#key.anonymousId, id)
+		this.#userStore.set(this.#key.anonymousId, id)
 	}
 
 	setGroupId(id) {
 		if (id == null) {
-			this.#storage.delete(this.#key.groupId)
+			this.#groupStore.delete(this.#key.groupId)
 			return
 		}
-		this.#storage.set(this.#key.groupId, id)
+		this.#groupStore.set(this.#key.groupId, id)
 	}
 
 	setSession(id, expiration, start) {
 		if (id == null) {
-			this.#storage.delete(this.#key.session)
+			this.#store.delete(this.#key.session)
 			return
 		}
-		this.#storage.set(this.#key.session, JSON.stringify([id, expiration, start]))
+		this.#store.set(this.#key.session, JSON.stringify([id, expiration, start]))
 	}
 
 	setTraits(kind, traits) {
 		if (typeof kind !== 'string') {
 			throw new Error('kind is ' + (typeof kind))
 		}
+		const store = kind === 'user' ? this.#userStore : this.#groupStore
 		if (traits == null) {
-			this.#storage.delete(this.#key.traits[kind])
+			store.delete(this.#key.traits[kind])
 			return
 		}
 		const type = typeof traits
@@ -158,14 +126,14 @@ class Storage {
 			console.warn(`${warnMsg}: ${error.message}`)
 			return
 		}
-		this.#storage.set(this.#key.traits[kind], value)
+		this.#store.set(this.#key.traits[kind], value)
 	}
 
 	setUserId(id) {
 		if (id == null) {
-			this.#storage.delete(this.#key.userId)
+			this.#userStore.delete(this.#key.userId)
 		} else {
-			this.#storage.set(this.#key.userId, id)
+			this.#userStore.set(this.#key.userId, id)
 		}
 	}
 
@@ -176,23 +144,58 @@ class Storage {
 		const groupId = this.groupId()
 		const groupTraits = this.traits('group')
 		const suspended = [session, anonymousId, userTraits, groupId, groupTraits]
-		this.#storage.set(this.#key.suspended, JSON.stringify(suspended))
+		this.#userStore.set(this.#key.suspended, JSON.stringify(suspended))
 	}
 
 	userId() {
-		return this.#storage.get(this.#key.userId)
+		return this.#userStore.get(this.#key.userId)
+	}
+
+	#makeStore(stores, cookie) {
+		let store = null
+		for (let i = 0; i < stores.length; i++) {
+			try {
+				let s
+				switch (stores[i]) {
+					case 'cookie':
+						s = new cookieStore(cookie)
+						break
+					case 'localStorage':
+						s = new webStore(localStorage)
+						break
+					case 'sessionStorage':
+						s = new webStore(sessionStorage)
+						break
+					case 'memory':
+						s = new memoryStore()
+				}
+				if (store == null) {
+					store = s
+				} else {
+					store = new multiStore([store, s])
+				}
+			} catch (error) {
+				if (error !== storeNotSupported) {
+					throw error
+				}
+			}
+		}
+		if (store == null) {
+			return new noStore()
+		}
+		return new base64Store(store)
 	}
 }
 
-// base64Storage is a storage that stores the key/value pairs in another storage
+// base64Store is a store that stores the key/value pairs in another store
 // encoding and decoding the values in base64.
-class base64Storage {
-	#storage
-	constructor(storage) {
-		this.#storage = storage
+class base64Store {
+	#store
+	constructor(store) {
+		this.#store = store
 	}
 	get(key) {
-		let value = this.#storage.get(key)
+		let value = this.#store.get(key)
 		if (value != null) {
 			try {
 				value = decodeBase64(value)
@@ -203,22 +206,22 @@ class base64Storage {
 		return value
 	}
 	set(key, value) {
-		this.#storage.set(key, encodeBase64(value))
+		this.#store.set(key, encodeBase64(value))
 	}
 	delete(key) {
-		this.#storage.delete(key)
+		this.#store.delete(key)
 	}
 }
 
-// cookieStorage stores key/value pairs in cookies.
-class cookieStorage {
+// cookieStore stores key/value pairs in cookies.
+class cookieStore {
 	#domain
 	#maxAge
 	#path
 	#sameSite
 	#secure
 
-	// constructor returns a new cookieStorage given the following options:
+	// constructor returns a new cookieStore given the following options:
 	//
 	// * domain, if not null or empty, specifies the domain to use for cookies.
 	//   If it is empty, cookies are restricted to the exact domain where they
@@ -240,7 +243,7 @@ class cookieStorage {
 	constructor(options) {
 		if (document?.cookie == null) {
 			// Only in tests.
-			throw storageNotSupported
+			throw storeNotSupported
 		}
 		this.#domain = options.domain
 		this.#maxAge = options.maxAge
@@ -321,12 +324,12 @@ class cookieStorage {
 				return
 			}
 		}
-		throw storageNotSupported
+		throw storeNotSupported
 	}
 }
 
-// memoryStorage stores key/value pairs in memory.
-class memoryStorage {
+// memoryStore stores key/value pairs in memory.
+class memoryStore {
 	#data = {}
 	get(key) {
 		const value = this.#data[key]
@@ -340,20 +343,20 @@ class memoryStorage {
 	}
 }
 
-// multiStorage stores key/value pairs across multiple storages. The get
-// method retrieves the key from the first storage, the set method updates the
-// key in all storages, and the delete method removes the key from all storages.
-class multiStorage {
-	#storages
-	// constructor returns a new multiStorage that stores key/value pairs in
-	// the provided storages.
-	constructor(storages) {
-		this.#storages = storages
+// multiStore stores key/value pairs across multiple stores. The get method
+// retrieves the key from the first store, the set method updates the key in
+// all stores, and the delete method removes the key from all stores.
+class multiStore {
+	#stores
+	// constructor returns a new multiStore that stores key/value pairs in
+	// the provided stores.
+	constructor(stores) {
+		this.#stores = stores
 	}
 	get(key) {
 		let value = null
-		for (let i = 0; i < this.#storages.length; i++) {
-			value = this.#storages[i].get(key)
+		for (let i = 0; i < this.#stores.length; i++) {
+			value = this.#stores[i].get(key)
 			if (value != null) {
 				break
 			}
@@ -361,19 +364,19 @@ class multiStorage {
 		return value
 	}
 	set(key, value) {
-		for (let i = 0; i < this.#storages.length; i++) {
-			this.#storages[i].set(key, value)
+		for (let i = 0; i < this.#stores.length; i++) {
+			this.#stores[i].set(key, value)
 		}
 	}
 	delete(key) {
-		for (let i = 0; i < this.#storages.length; i++) {
-			this.#storages[i].delete(key)
+		for (let i = 0; i < this.#stores.length; i++) {
+			this.#stores[i].delete(key)
 		}
 	}
 }
 
-// noStorage is a storage that does not store key/value pairs.
-class noStorage {
+// noStore is a store that does not store key/value pairs.
+class noStore {
 	get() {
 		return null
 	}
@@ -381,11 +384,11 @@ class noStorage {
 	delete() {}
 }
 
-// webStorage stores key/value pairs in a Web Storage.
-class webStorage {
+// webStore stores key/value pairs in a Web Storage.
+class webStore {
 	#storage
 
-	// constructor returns a new webStorage based on the provided Web Storage,
+	// constructor returns a new webStore based on the provided Web Storage,
 	// such as localStorage or sessionStorage. If the provided storage cannot be
 	// used, it raises an exception with the storeNotSupported error.
 	constructor(storage) {
@@ -393,7 +396,7 @@ class webStorage {
 			storage.setItem('__test__', '')
 			storage.removeItem('__test__')
 		} catch {
-			throw storageNotSupported
+			throw storeNotSupported
 		}
 		this.#storage = storage
 	}
@@ -421,4 +424,4 @@ class webStorage {
 }
 
 export default Storage
-export { base64Storage, cookieStorage, memoryStorage, multiStorage, noStorage, webStorage }
+export { base64Store, cookieStore, memoryStore, multiStore, noStore, webStore }

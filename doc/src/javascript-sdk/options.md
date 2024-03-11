@@ -37,11 +37,13 @@ Below are the options that control various aspects of the JavaScript SDK.
 |--------------------------------------------|--------------------------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------|
 | [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                         |
 | `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the `debug` method. |
+| [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                  |
 | [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../events/session-tracking.md) is automatic or not, and sets its timeout.                               |
-| [`storage`](#storage-option)               | `Object`                             |         | Customizes various storage-related functionalities, such as selecting preferred storages and configuring cookie settings.                       |
+| [`storage`](#storage-option)               | `Object`                             |         | Customize the global storage priority.                                                                                                          |
 | [`useQueryString`](#usequerystring-option) | `Boolean`<center>or</center>`Object` | `true`  | Indicates whether to process query parameters using the [Querystring API](querystring-api.md), and if enforce validation rules.                 |
+| [`user`](#user-option)                     | `Object`                             |         | Customize the storage priority for user data.                                                                                                   |
 
-> The JavaScript SDK also supports the following options that can be used when migrating from the RudderStack SDK: `secureCookie`, `sameDomainCookiesOnly`, `sameSiteCookie`, and `setCookieDomain`.
+> The JavaScript SDK also supports the following options from the RudderStack SDK: `secureCookie`, `sameDomainCookiesOnly`, `sameSiteCookie`, `setCookieDomain`, `storage.cookie`, and `storage.type`.
 
 ### cookie option
 
@@ -51,8 +53,8 @@ The `cookie` option has the following sub-options:
 |------------|-----------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `domain`   | `String`  | `null`  | The "domain" attribute of cookies. If it is an empty string, it refers to that of the current page, and if it is `null`, it refers to the top-level domain of the current page. See below for more details. |
 | `maxage`   | `Number`  | 365     | The "maxage" attribute of cookies in days.                                                                                                                                                                  |
-| `path`     | `String`  | `"/"`   | The "path" attribute of cookies.                                                                                                                                                                            |
-| `sameSite` | `String`  | `"Lax"` | The "sameSite" attribute of cookies. It can be `"Lax"`, `"Strict"`, or `"None"`.                                                                                                                            |
+| `path`     | `String`  | `'/'`   | The "path" attribute of cookies.                                                                                                                                                                            |
+| `sameSite` | `String`  | `'Lax'` | The "sameSite" attribute of cookies. It can be `'Lax'`, `'Strict'`, or `'None'`.                                                                                                                            |
 | `secure`   | `Boolean` | `false` | The "secure" attribute of cookies.                                                                                                                                                                          |
 
 #### domain
@@ -66,12 +68,32 @@ If you prefer a different approach, you have options. You can set the domain to 
 ```javascript
 chichiAnalytics.load('<write key>', '<endpoint>', {
     cookie: {
-        domain: "www.example.com",
+        domain: 'www.example.com',
         maxage: 365,
-        path: "/",
-        sameSite: "Strict",
+        path: '/',
+        sameSite: 'Strict',
         secure: true
     }
+});
+```
+
+### group option
+
+The `group` option has the following sub-option:
+
+| Option                       | Type     | Default | Description                                    |
+|------------------------------|----------|---------|------------------------------------------------|
+| [`storage`](#storage-option) | `Object` |         | Customize the storage priority for group data. |
+
+#### Example:
+
+```javascript
+chichiAnalytics.load('<write key>', '<endpoint>', {
+	group: {
+		storage: {
+			stores: ['cookies', 'memory']
+		}
+	}
 });
 ```
 
@@ -95,53 +117,6 @@ chichiAnalytics.load('<write key>', '<endpoint>', {
 });
 ```
 
-### storage option
-
-The `storage` option has the following sub-options:
-
-| Option                        | Type     | Default          | Description                                                                                                                                                  |
-|-------------------------------|----------|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `cookie`                      | `Object` |                  | Controls specific cookie settings when used as storage. **This option is present for compatibility with the same option of the RudderStack JavaScript SDK.** |
-| [`type`](#storagetype-option) | `String` | `"multiStorage"` | Determines witch storage to use for user data. See also [Data Storages](data-storages.md).                                                                   |
-
-#### Example:
-
-```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
-	storage: {
-		cookie: {
-			secure: true
-		},
-        type: "localStorage"
-    }
-});
-```
-
-### storage.type option
-
-Below are the possible values that can be used for the option `store.type`:
-
-| Storage Type       | Description                                                                                                                                                                               |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `"multiStorage"`   | Attempt to store the data in both **cookies** and, depending on availability, in one of the following: **local storage**, **session storage**, and **memory**. This is the default value. |
-| `"cookieStorage"`  | Prioritize storing user data in the following order: **cookies**, **local storage**, **session storage**, and **memory**, utilizing the first available storage option.                   |
-| `"localStorage"`   | Prioritize storing user data in the following order: **local storage**, and **memory**, utilizing the first available storage option.                                                     |
-| `"sessionStorage"` | Prioritize storing user data in the following order: **session storage**, and **memory**, utilizing the first available storage option.                                                   |
-| `"memoryStorage"`  | Store user data in **memory**.                                                                                                                                                            |
-| `"none"`           | Do not store user data.                                                                                                                                                                   |
-
-See also [Data Storages](data-storages.md).
-
-#### Example:
-
-```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
-	storage: {
-		type: "localStorage" 
-    }
-});
-```
-
 ### useQueryString option
 
 The `useQueryString` option provides control over how query parameters are handled, as defined in the [Querystring API](querystring-api.md). You can deactivate query string processing entirely by setting `useQueryString` to `false`.
@@ -161,5 +136,62 @@ chichiAnalytics.load('<write key>', '<endpoint>', {
 	useQueryString: {
 		aid: /^[a-z0-9]+$/
     }
+});
+```
+
+### user option
+
+The `user` option has the following sub-option:
+
+| Option                       | Type     | Default | Description                                   |
+|------------------------------|----------|---------|-----------------------------------------------|
+| [`storage`](#storage-option) | `Object` |         | Customize the storage priority for user data. |
+
+#### Example:
+
+```javascript
+chichiAnalytics.load('<write key>', '<endpoint>', {
+	user: {
+		storage: {
+			stores: ['cookies', 'memory']
+		}
+	}
+});
+```
+
+### Storage option
+
+The JavaScript SDK enables configuration of the preferred storage location. By default, it stores data in the browser's localStorage and cookies. You have the flexibility to modify this default setting globally or specifically for user or group data.
+
+The `storage` option has the following sub-option:
+
+| Option    | Type    | Default                     | Description                           |
+|-----------|---------|-----------------------------|---------------------------------------|
+| `stores`  | `Array` | `['localStorage','cookie']` | Storage locations used to store data. |
+
+The `storage.stores` option specifies the preferred storage locations in order of priority: localStorage, sessionStorage, cookie, and memory. If `storage.stores` is empty, no data will be stored. 
+
+See also [Storage&nbsp;Locations](storage-locations.md).
+
+#### Example:
+
+```javascript
+chichiAnalytics.load('<write key>', '<endpoint>', {
+	// Global storage locations.
+	storage: {
+        stores: ['cookies', 'localStorage', 'memory'] 
+    },
+	// Storage locations to user data.
+	user: {
+		storage: {
+			stores: ['cookies', 'memory'] 
+		}
+	},
+	// Storage locations to group data.
+	group: {
+		storage: {
+			stores: ['localStorage', 'memory'] 
+		}
+	}
 });
 ```
