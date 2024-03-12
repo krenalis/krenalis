@@ -193,6 +193,7 @@
 
 .action .specialProperties .timestampColumn {
 	display: flex;
+	align-items: baseline;
 	gap: 15px;
 }
 
@@ -207,9 +208,14 @@
 
 .action .specialProperties .timestampColumn .format {
 	display: flex;
-	align-items: center;
 	gap: 15px;
-	width: 100%;
+}
+
+.action .specialProperties .timestampColumn .timestampFormat,
+.action .specialProperties .timestampColumn .timestampCustomFormat {
+	display: flex;
+	align-items: baseline;
+	gap: 15px;
 }
 
 .action .specialProperties .timestampColumn .format .label {

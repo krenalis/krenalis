@@ -285,6 +285,15 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		// Mappings are selected but there is nothing mapped.
 		actionMapping = {};
 	}
+
+	if (
+		action.TimestampFormat != '' &&
+		action.TimestampFormat.startsWith("'") &&
+		action.TimestampFormat.endsWith("'")
+	) {
+		action.TimestampFormat = action.TimestampFormat.substring(1, action.TimestampFormat.length - 1);
+	}
+
 	return {
 		ID: action.ID,
 		Connection: action.Connection,
@@ -434,6 +443,7 @@ const transformInActionToSet = async (
 		}
 	}
 
+	let timestampFormat: string;
 	if (action.TimestampColumn != null && action.TimestampColumn !== '') {
 		const isPropertyAlreadyInSchema =
 			inSchema.properties!.findIndex((p) => p.name === action.TimestampColumn) !== -1;
@@ -443,6 +453,17 @@ const transformInActionToSet = async (
 				throw 'Timestamp must be a valid property';
 			}
 			inSchema.properties.push(timestampColumnProperty.full);
+		}
+		if (
+			action.TimestampFormat !== 'ISO8601' &&
+			action.TimestampFormat !== 'Excel' &&
+			action.TimestampFormat !== 'DateTime' &&
+			action.TimestampFormat !== 'DateOnly'
+		) {
+			// wrap the format in single quotes.
+			timestampFormat = `'${action.TimestampFormat}'`;
+		} else {
+			timestampFormat = action.TimestampFormat;
 		}
 	}
 
@@ -506,7 +527,7 @@ const transformInActionToSet = async (
 		exportMode: action.ExportMode,
 		IdentityColumn: action.IdentityColumn,
 		TimestampColumn: action.TimestampColumn,
-		TimestampFormat: action.TimestampFormat,
+		TimestampFormat: timestampFormat,
 		matchingProperties: action.MatchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	};

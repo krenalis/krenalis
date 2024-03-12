@@ -66,6 +66,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
+	const [isCustomTimestampSelected, setIsCustomTimestampSelected] = useState<boolean>(false);
 
 	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
@@ -104,6 +105,17 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			setSelectedLanguage(action.Transformation.Function.Language);
 		} else {
 			setMode('mappings');
+		}
+	}, []);
+
+	useEffect(() => {
+		if (action.TimestampColumn === '') {
+			return;
+		}
+		// check if the timestamp format is custom.
+		const formats = Object.values(timestampFormats);
+		if (!formats.includes(action.TimestampFormat)) {
+			setIsCustomTimestampSelected(true);
 		}
 	}, []);
 
@@ -250,6 +262,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		const a = { ...action };
 		a.TimestampColumn = value;
 		if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
+			setIsCustomTimestampSelected(false);
 			a.TimestampFormat = '';
 		}
 		setAction(a);
@@ -257,7 +270,20 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	const onChangeTimestampFormat = (e) => {
 		const a = { ...action };
-		a.TimestampFormat = timestampFormats[e.target.value];
+		const v = e.target.value;
+		if (v === 'custom') {
+			setIsCustomTimestampSelected(true);
+			a.TimestampFormat = '';
+		} else {
+			setIsCustomTimestampSelected(false);
+			a.TimestampFormat = timestampFormats[e.target.value];
+		}
+		setAction(a);
+	};
+
+	const onInputTimestampCustomFormat = (e) => {
+		const a = { ...action };
+		a.TimestampFormat = e.target.value;
 		setAction(a);
 	};
 
@@ -336,26 +362,43 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								/>
 							</div>
 							<div className='format'>
-								<div className='label'>with format:</div>
-								<SlSelect
-									onSlChange={onChangeTimestampFormat}
-									value={
-										action.TimestampColumn
-											? Object.keys(timestampFormats).find(
-													(key) => timestampFormats[key] === action.TimestampFormat,
-											  )
-											: ''
-									}
-									name='timestampFormat'
-									disabled={!needFormat}
-									size='small'
-								>
-									<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
-									<SlOption value='dateOnly'>2006-01-02</SlOption>
-									<SlOption value='iso8601'>ISO 8601</SlOption>
-									<SlOption value='excel'>Excel</SlOption>
-									<SlOption value='(custom)'>Custom (not supported in the UI)</SlOption>
-								</SlSelect>
+								<div className='timestampFormat'>
+									<div className='label'>with format:</div>
+									<SlSelect
+										onSlChange={onChangeTimestampFormat}
+										value={
+											isCustomTimestampSelected
+												? 'custom'
+												: action.TimestampColumn
+												? Object.keys(timestampFormats).find(
+														(key) => timestampFormats[key] === action.TimestampFormat,
+												  )
+												: ''
+										}
+										name='timestampFormat'
+										disabled={!needFormat}
+										size='small'
+									>
+										<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
+										<SlOption value='dateOnly'>2006-01-02</SlOption>
+										<SlOption value='iso8601'>ISO 8601</SlOption>
+										<SlOption value='excel'>Excel</SlOption>
+										<SlOption value='custom'>Custom...</SlOption>
+									</SlSelect>
+								</div>
+								{needFormat && isCustomTimestampSelected && (
+									<div className='timestampCustomFormat'>
+										<div className='label'>custom format:</div>
+										<SlInput
+											onSlInput={onInputTimestampCustomFormat}
+											value={action.TimestampFormat}
+											name='timestampCustomFormat'
+											placeholder='%Y-%m-%d'
+											helpText='A C89 "strftime" format string'
+											size='small'
+										></SlInput>
+									</div>
+								)}
 							</div>
 						</div>
 					</div>
