@@ -2372,6 +2372,8 @@ func validateTimestampFormat(format string) error {
 	}
 	switch format {
 	case
+		"DateTime",
+		"DateOnly",
 		"ISO8601",
 		"Excel":
 		return nil

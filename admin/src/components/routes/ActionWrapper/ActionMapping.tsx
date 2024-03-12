@@ -56,8 +56,8 @@ const defaultTransformationParameterByTarget = {
 };
 
 const timestampFormats = {
-	standard: "'%Y-%m-%d %H:%M:%S'",
-	dateOnly: "'%Y-%m-%d'",
+	dateTime: 'DateTime',
+	dateOnly: 'DateOnly',
 	iso8601: 'ISO8601',
 	excel: 'Excel',
 };
@@ -350,7 +350,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									disabled={!needFormat}
 									size='small'
 								>
-									<SlOption value='standard'>2006-01-02 15:04:05</SlOption>
+									<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
 									<SlOption value='dateOnly'>2006-01-02</SlOption>
 									<SlOption value='iso8601'>ISO 8601</SlOption>
 									<SlOption value='excel'>Excel</SlOption>

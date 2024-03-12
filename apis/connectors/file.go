@@ -960,6 +960,8 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 //
 // Accepted values for format are:
 //
+//   - "DateTime", to parse timestamps in the format "2006-01-02 15:04:05"
+//   - "DateOnly", to parse date-only timestamps in the format "2006-01-02"
 //   - "ISO8601", to parse the timestamp as a ISO 8601 timestamp.
 //   - "Excel", to parse the timestamp as a string representing a float value
 //     stored in a Excel cell representing a date / datetime.
@@ -969,6 +971,18 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 // NOTE: keep in sync with the function 'apis.validateTimestampFormat'.
 func parseTimestamp(format, timestamp string) (time.Time, error) {
 	switch format {
+	case "DateTime":
+		dt, err := time.Parse("2006-01-02 15:04:05", timestamp)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp has not the format '2006-01-02 15:04:05'")
+		}
+		return dt.UTC(), nil
+	case "DateOnly":
+		date, err := time.Parse("2006-01-02", timestamp)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp has not the format '2006-01-02'")
+		}
+		return date.UTC(), nil
 	case "ISO8601":
 		dt, err := iso8601.ParseString(timestamp)
 		if err != nil {

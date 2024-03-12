@@ -21,6 +21,30 @@ func Test_parseTimestamp(t *testing.T) {
 		expectedErr string
 	}{
 		{
+			name:     "DateTime",
+			format:   "DateTime",
+			value:    "2033-12-14 13:52:00",
+			expected: time.Date(2033, 12, 14, 13, 52, 0, 0, time.UTC),
+		},
+		{
+			name:        "DateTime but an empty string is passed",
+			format:      "DateTime",
+			value:       "",
+			expectedErr: `timestamp has not the format '2006-01-02 15:04:05'`,
+		},
+		{
+			name:     "DateOnly",
+			format:   "DateOnly",
+			value:    "2033-12-14",
+			expected: time.Date(2033, 12, 14, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name:        "DateOnly but hour-minute-second is passed",
+			format:      "DateOnly",
+			value:       "2033-12-14 13:32:12",
+			expectedErr: `timestamp has not the format '2006-01-02'`,
+		},
+		{
 			name:     "ISO8601",
 			format:   "ISO8601",
 			value:    "2033-12-14T13:52Z",

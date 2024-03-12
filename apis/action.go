@@ -655,6 +655,8 @@ type ActionToSet struct {
 	//
 	// In case it is provided, accepted values are:
 	//
+	//   - "DateTime", to parse timestamps in the format "2006-01-02 15:04:05"
+	//   - "DateOnly", to parse date-only timestamps in the format "2006-01-02"
 	//   - "ISO8601", to parse timestamps as a ISO 8601 timestamps.
 	//   - "Excel", to parse timestamps as strings representing a float value
 	//     stored in a Excel cell representing a date / datetime.

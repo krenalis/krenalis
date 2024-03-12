@@ -95,6 +95,8 @@ func Test_validateTimestampFormat(t *testing.T) {
 		err    string
 	}{
 		// Valid.
+		{format: "DateTime"},
+		{format: "DateOnly"},
 		{format: "'%Y'"},
 		{format: "Excel"},
 		{format: "ISO8601"},
@@ -103,6 +105,7 @@ func Test_validateTimestampFormat(t *testing.T) {
 		{format: "%Y", err: `invalid timestamp format "%Y"`},
 		{format: "'%Y", err: `invalid timestamp format "'%Y"`},
 		{format: "%Y'", err: `invalid timestamp format "%Y'"`},
+		{format: "Date", err: `invalid timestamp format "Date"`},
 		{format: "excel", err: `invalid timestamp format "excel"`},
 		{format: "iso8601", err: `invalid timestamp format "iso8601"`},
 		{format: "\xc3\x28", err: "timestamp format must be UTF-8 valid"},
