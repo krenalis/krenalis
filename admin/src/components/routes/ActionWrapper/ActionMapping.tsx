@@ -1,5 +1,5 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
-import { updateMappingProperty, autocompleteExpression } from './Action.helpers';
+import { updateMappingProperty } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import {
 	TransformedAction,
@@ -48,6 +48,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import Workspace from '../../../types/external/workspace';
 import { ActionToSet, TransformationFunction } from '../../../types/external/action';
+import { debounceWithAbort } from '../../../lib/utils/debounce';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -188,7 +189,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const updateProperty = async (name, value) => {
+	const updateProperty = async (name: string, value: string, signal?: AbortSignal) => {
 		let errorMessage = '';
 		if (value !== '') {
 			try {
@@ -198,8 +199,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					action.Transformation.Mapping![name].full.type,
 					action.Transformation.Mapping![name].full.required,
 					action.Transformation.Mapping![name].full.nullable,
+					signal,
 				);
 			} catch (err) {
+				if (err.name === 'AbortError') {
+					return;
+				}
 				handleError(err);
 				return;
 			}
@@ -208,26 +213,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(updatedAction);
 	};
 
-	const onUpdateProperty = async (e) => {
+	const debouncedUpdateProperty = useMemo(() => debounceWithAbort(updateProperty, 500), [actionType, action]);
+
+	const onUpdateProperty = async (e: any) => {
 		const target = e.target;
 		let { name, value } = target;
-		const oldValue = action.Transformation.Mapping![name].value;
-		const isPasted = Math.abs(oldValue.length - value.length) > 1;
-		const isBackspaced = oldValue.length > value.length;
-		const isEqual = oldValue.length === value.length;
-		let newCursorPosition: number | undefined;
-		if (!isPasted && !isBackspaced && !isEqual) {
-			const currentCursorPosition = target.shadowRoot.querySelector('input').selectionStart;
-			const { autocompleted, cursorPosition } = autocompleteExpression(value, currentCursorPosition);
-			value = autocompleted;
-			newCursorPosition = cursorPosition;
-		}
-		await updateProperty(name, value);
-		if (newCursorPosition) {
-			setTimeout(() => {
-				target.setSelectionRange(newCursorPosition, newCursorPosition);
-			});
-		}
+		debouncedUpdateProperty(name, value);
 	};
 
 	const onSelectProperty = async (input, value) => {
@@ -429,7 +420,7 @@ interface TransformationBoxProps {
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction>>;
 	propertiesListRef: React.MutableRefObject<any>;
-	onUpdateProperty: (e: any) => Promise<void>;
+	onUpdateProperty: (...args: any) => void;
 	isMappingSectionDisabled: boolean;
 	disabledReason: string;
 	transformationLanguages: string[];
@@ -601,6 +592,7 @@ const TransformationBox = ({
 						className='inputProperty'
 						size='small'
 						error={action.Transformation.Mapping[k].error}
+						autocompleteExpressions={true}
 					>
 						{action.Transformation.Mapping[k].required && (
 							<div className='propertyIcon' slot='prefix'>

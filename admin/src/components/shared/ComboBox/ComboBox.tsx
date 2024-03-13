@@ -6,6 +6,7 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { ComboboxItem, Size } from '../../../types/internal/app';
+import { autocompleteExpression } from './ComboBox.helpers';
 
 interface ComboBoxListProps {
 	items: ComboboxItem[];
@@ -110,7 +111,7 @@ const ComboBoxList = forwardRef<ComboBoxListRef, ComboBoxListProps>(({ items, on
 
 interface ComboBoxInputProps {
 	comboBoxListRef: React.RefObject<ComboBoxListRef>;
-	onInput: (...args: any) => any;
+	onInput: (...args: any) => void;
 	value: string;
 	name?: string;
 	label?: string;
@@ -120,6 +121,7 @@ interface ComboBoxInputProps {
 	size?: Size;
 	disabled?: boolean;
 	readonly?: boolean;
+	autocompleteExpressions?: boolean;
 }
 
 const ComboBoxInput = ({
@@ -134,10 +136,16 @@ const ComboBoxInput = ({
 	size = 'medium',
 	disabled,
 	readonly,
+	autocompleteExpressions,
 	...delegated
 }: ComboBoxInputProps) => {
 	const onKeyUpRef = useRef<any>();
 	const previousListSiblingRef = useRef<any>();
+	const lastValue = useRef<string>(value);
+
+	useEffect(() => {
+		lastValue.current = value;
+	}, [value]);
 
 	const onKeyUp = (e) => {
 		if (e.key === 'Escape') {
@@ -163,10 +171,7 @@ const ComboBoxInput = ({
 		});
 	};
 
-	const onInputBlur = (e?) => {
-		if (e != null) {
-			onInputProp(e);
-		}
+	const onInputBlur = () => {
 		window.removeEventListener('keyup', onKeyUpRef.current!);
 		setTimeout(() => {
 			const isComboBoxListFocused = document.activeElement!.closest('[data-is-combobox-list]');
@@ -183,7 +188,25 @@ const ComboBoxInput = ({
 	};
 
 	const onInput = (e) => {
-		comboBoxListRef.current!.updateSearchTerm(e.target.value);
+		let newValue = e.target.value;
+		if (autocompleteExpressions) {
+			const isPasted = Math.abs(lastValue.current.length - newValue.length) > 1;
+			const isBackspaced = lastValue.current.length > newValue.length;
+			const isEqual = lastValue.current.length === newValue.length;
+			if (!isPasted && !isBackspaced && !isEqual) {
+				const cursorPosition = e.target.shadowRoot.querySelector('input').selectionStart;
+				const autocompleted = autocompleteExpression(newValue, cursorPosition);
+				if (autocompleted != null) {
+					newValue = autocompleted;
+					e.target.value = autocompleted;
+					setTimeout(() => {
+						e.target.setSelectionRange(cursorPosition, cursorPosition);
+					});
+				}
+			}
+		}
+		lastValue.current = newValue;
+		comboBoxListRef.current!.updateSearchTerm(newValue);
 		onInputProp(e);
 	};
 

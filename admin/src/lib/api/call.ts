@@ -1,8 +1,9 @@
 import { NotFoundError, BadRequestError, UnprocessableError, LoginRequiredError } from './errors';
 
-const call = async (url: string, method: string, body?: any) => {
+const call = async (url: string, method: string, body?: any, opt?: any) => {
 	const request: RequestInit = {
 		method: method,
+		...opt,
 	};
 
 	if (body !== undefined) request.body = JSON.stringify(body);
@@ -11,6 +12,9 @@ const call = async (url: string, method: string, body?: any) => {
 	try {
 		res = await fetch(url, request);
 	} catch (err) {
+		if (err.name === 'AbortError') {
+			throw err;
+		}
 		throw new Error(`error while fetching ${url}: ${err.message}`);
 	}
 

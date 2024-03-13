@@ -78,14 +78,20 @@ class API {
 		type: Type,
 		required: boolean,
 		nullable: boolean,
+		signal?: AbortSignal,
 	): Promise<string> => {
-		return await call(`${this.apiURL}/validate-expression`, http.POST, {
-			expression,
-			properties,
-			type: type,
-			required: required,
-			nullable: nullable,
-		});
+		return await call(
+			`${this.apiURL}/validate-expression`,
+			http.POST,
+			{
+				expression,
+				properties,
+				type: type,
+				required: required,
+				nullable: nullable,
+			},
+			{ signal },
+		);
 	};
 
 	expressionsProperties = async (expressions: ExpressionToBeExtracted[], schema: Type): Promise<string[]> => {
