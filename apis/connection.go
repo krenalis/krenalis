@@ -1617,7 +1617,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					Description: description,
 					Target:      Events,
 				}
-				actionTypes = append(actionTypes, at)
+				actionTypes = slices.Insert(actionTypes, 0, at)
 			}
 		case state.AppType:
 			eventTypes, err := this.app().EventTypes(ctx)
