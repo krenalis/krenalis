@@ -541,13 +541,15 @@ inherit the disabled style */
 	flex-flow: row nowrap;
 	align-items: center;
 	gap: 3px;
+	overflow-wrap: anywhere;
 }
 
-.action .fullscreenTransformation .property .name .label {
-	margin-left: 3px;
+.action .fullscreenTransformation .property .label {
 	font-size: 13px;
 	opacity: 0.7;
 	font-family: monospace;
+	margin-top: -5px;
+	display: block;
 }
 
 .action .fullscreenTransformation .property .type {

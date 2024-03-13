@@ -1508,7 +1508,6 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 					</SlTooltip>
 				)}
 				{property.name}
-				{property.label != null && property.label !== '' && <span className='label'>({property.label})</span>}
 				<SlCopyButton
 					className='copyProperty'
 					value={property.name}
@@ -1517,6 +1516,7 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 					errorLabel='Copying to clipboard is not supported by your browser'
 				/>
 			</div>
+			{property.label != null && property.label !== '' && <span className='label'>{property.label}</span>}
 			<div className='type'>
 				{language === ''
 					? property.type.name
