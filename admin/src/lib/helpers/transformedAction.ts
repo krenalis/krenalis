@@ -287,6 +287,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 	}
 
 	if (
+		action.TimestampFormat != null &&
 		action.TimestampFormat != '' &&
 		action.TimestampFormat.startsWith("'") &&
 		action.TimestampFormat.endsWith("'")
