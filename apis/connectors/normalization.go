@@ -49,9 +49,19 @@ func normalizeAppProperty(name string, typ types.Type, src any, nullable bool, l
 	var valid bool
 	switch k := typ.Kind(); k {
 	case types.BooleanKind:
-		if _, ok := src.(bool); ok {
+		switch src.(type) {
+		case bool:
 			value = src
 			valid = true
+		case string:
+			switch src {
+			case "true":
+				value = true
+				valid = true
+			case "false":
+				value = false
+				valid = true
+			}
 		}
 	case types.IntKind:
 		var v int64
