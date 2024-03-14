@@ -151,6 +151,28 @@ func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID Busin
 		Settings:   []byte("{}"),
 	})
 }
+func (c *Chichi) AddJavaScriptSource(name, host string) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:        name,
+		Role:        Source,
+		Enabled:     true,
+		Connector:   12, // JavaScript.
+		Strategy:    &defaultStrategy,
+		WebsiteHost: host,
+	})
+}
+
+func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID BusinessID) int {
+	return c.AddConnection(ConnectionToAdd{
+		Name:        name,
+		Role:        Source,
+		Enabled:     true,
+		Connector:   12, // JavaScript.
+		Strategy:    &defaultStrategy,
+		WebsiteHost: host,
+		BusinessID:  businessID,
+	})
+}
 
 func (c *Chichi) AddSourceCSV(filesystem int) int {
 	return c.AddConnection(ConnectionToAdd{
@@ -302,29 +324,6 @@ func (c *Chichi) IdentifiersSchema() types.Type {
 		c.t.Fatalf("cannot parse schema: %s", err)
 	}
 	return schema
-}
-
-func (c *Chichi) AddJavaScriptSource(name, host string) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:        name,
-		Role:        Source,
-		Enabled:     true,
-		Connector:   12, // JavaScript.
-		Strategy:    &defaultStrategy,
-		WebsiteHost: host,
-	})
-}
-
-func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID BusinessID) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:        name,
-		Role:        Source,
-		Enabled:     true,
-		Connector:   12, // JavaScript.
-		Strategy:    &defaultStrategy,
-		WebsiteHost: host,
-		BusinessID:  businessID,
-	})
 }
 
 func (c *Chichi) RunWorkspaceIdentityResolution() {
