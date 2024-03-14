@@ -79,20 +79,6 @@ func SuggestPropertyName(s string) string {
 	return ""
 }
 
-// Type represents a connector type.
-type Type int
-
-const (
-	AppType Type = iota + 1
-	DatabaseType
-	FileType
-	MobileType
-	ServerType
-	StorageType
-	StreamType
-	WebsiteType
-)
-
 // A SetSettingsFunc value is a function used by connectors to set settings.
 type SetSettingsFunc func(context.Context, []byte) error
 
