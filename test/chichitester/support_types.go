@@ -14,6 +14,38 @@ import (
 	"chichi/connector/types"
 )
 
+const (
+	HubSpotConnector = iota + 1
+	MySQLConnector
+	DummyConnector
+	MailchimpConnector
+	CSVConnector
+	SFTPConnector
+	HTTPConnector
+	ExcelConnector
+	S3Connector
+	PostgreSQLConnector
+	ParquetConnector
+	JavaScriptConnector
+	KafkaConnector
+	RabbitMQConnector
+	UISampleConnector
+	DotNetConnector
+	KlaviyoConnector
+	GoogleConnector
+	FilesystemConnector
+	ClickHouseConnector
+	JSONConnector
+	MixpanelConnector
+	SnowflakeConnector
+	StripeConnector
+	GoConnector
+	JavaConnector
+	NodeConnector
+	PHPConnector
+	PythonConnector
+)
+
 // These data types are copy-paste of the types defined within the APIs.
 
 type ActionToSet struct {

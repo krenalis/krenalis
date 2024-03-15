@@ -38,7 +38,7 @@ func Test_UsersIdentities(t *testing.T) {
 		Name:      "CSV",
 		Role:      chichitester.Source,
 		Enabled:   true,
-		Connector: 5, // CSV.
+		Connector: chichitester.CSVConnector,
 		Storage:   fs,
 		BusinessID: chichitester.BusinessID{
 			Name:  "email",
@@ -53,7 +53,7 @@ func Test_UsersIdentities(t *testing.T) {
 		Name:      "CSV",
 		Role:      chichitester.Source,
 		Enabled:   true,
-		Connector: 5, // CSV.
+		Connector: chichitester.CSVConnector,
 		Storage:   fs,
 		BusinessID: chichitester.BusinessID{
 			Name:  "email",

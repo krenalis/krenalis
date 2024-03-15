@@ -94,7 +94,7 @@ func (c *Chichi) AddDestinationCSV(filesystem int) int {
 		Name:      "CSV",
 		Role:      Destination,
 		Enabled:   true,
-		Connector: 5, // CSV.
+		Connector: CSVConnector,
 		Storage:   filesystem,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Comma":          ",",
@@ -108,7 +108,7 @@ func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
 		Name:      "Filesystem",
 		Role:      Destination,
 		Enabled:   true,
-		Connector: 19, // Filesystem.
+		Connector: FilesystemConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
@@ -120,7 +120,7 @@ func (c *Chichi) AddDestinationPostgreSQL() int {
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
 		Enabled:   true,
-		Connector: 10, // PostgreSQL.
+		Connector: PostgreSQLConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
@@ -136,7 +136,7 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 		Name:      name,
 		Role:      role,
 		Enabled:   true,
-		Connector: 3, // Dummy.
+		Connector: DummyConnector,
 		Settings:  []byte("{}"),
 	})
 }
@@ -146,7 +146,7 @@ func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID Busin
 		Name:       name,
 		Role:       role,
 		Enabled:    true,
-		Connector:  3, // Dummy.
+		Connector:  DummyConnector,
 		BusinessID: businessID,
 		Settings:   []byte("{}"),
 	})
@@ -156,7 +156,7 @@ func (c *Chichi) AddJavaScriptSource(name, host string) int {
 		Name:        name,
 		Role:        Source,
 		Enabled:     true,
-		Connector:   12, // JavaScript.
+		Connector:   JavaScriptConnector,
 		Strategy:    &defaultStrategy,
 		WebsiteHost: host,
 	})
@@ -167,7 +167,7 @@ func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID
 		Name:        name,
 		Role:        Source,
 		Enabled:     true,
-		Connector:   12, // JavaScript.
+		Connector:   JavaScriptConnector,
 		Strategy:    &defaultStrategy,
 		WebsiteHost: host,
 		BusinessID:  businessID,
@@ -179,7 +179,7 @@ func (c *Chichi) AddSourceCSV(filesystem int) int {
 		Name:      "CSV",
 		Role:      Source,
 		Enabled:   true,
-		Connector: 5, // CSV.
+		Connector: CSVConnector,
 		Storage:   filesystem,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Comma":          ",",
@@ -193,7 +193,7 @@ func (c *Chichi) AddSourceCSVWithBusinessID(filesystem int, businessID BusinessI
 		Name:       "CSV",
 		Role:       Source,
 		Enabled:    true,
-		Connector:  5, // CSV.
+		Connector:  CSVConnector,
 		Storage:    filesystem,
 		BusinessID: businessID,
 		Settings: JSONEncodeSettings(map[string]any{
@@ -208,7 +208,7 @@ func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 		Name:      "Filesystem",
 		Role:      Source,
 		Enabled:   true,
-		Connector: 19, // Filesystem.
+		Connector: FilesystemConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
@@ -221,7 +221,7 @@ func (c *Chichi) AddSourceJSON(filesystem int) int {
 		Role:      Source,
 		Enabled:   true,
 		Storage:   filesystem,
-		Connector: 21, // JSON.
+		Connector: JSONConnector,
 		Settings:  []byte("{}"),
 	})
 }
@@ -231,7 +231,7 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
 		Enabled:   true,
-		Connector: 10, // PostgreSQL.
+		Connector: PostgreSQLConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,

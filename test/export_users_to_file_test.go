@@ -73,7 +73,7 @@ func TestExportUsersToFile(t *testing.T) {
 		Name:      "Filesystem",
 		Role:      chichitester.Destination,
 		Enabled:   true,
-		Connector: 19, // Filesystem.
+		Connector: chichitester.FilesystemConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
 			"Root": storage.Root(),
 		}),
@@ -84,7 +84,7 @@ func TestExportUsersToFile(t *testing.T) {
 		Name:      "CSV",
 		Role:      chichitester.Destination,
 		Enabled:   true,
-		Connector: 5, // CSV.
+		Connector: chichitester.CSVConnector,
 		Storage:   fsID,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
 			"Comma": ",",
