@@ -9,6 +9,7 @@ package events
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"chichi/apis/connectors"
@@ -40,12 +41,25 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 					}
 					// TODO(Gianluca): use correct error handling here.
 					app := st.connectors.App(c)
-					err := app.SendEvent(ctx, event.eventType, event.inEvent, event.values, event.valuesSchema)
+					req, err := app.EventRequest(ctx, event.eventType, event.inEvent, event.values, false, event.valuesSchema)
 					if err != nil && err != connectors.ErrEventTypeNotExist {
 						if err != context.Canceled {
 							slog.Error("cannot send event", "err", err)
 						}
 						continue
+					}
+					if req.URL != "https://example.com/" {
+						res, err := app.SendEvent(ctx, req)
+						if err != nil {
+							if err != context.Canceled {
+								slog.Error("cannot send event", "err", err)
+							}
+							continue
+						}
+						if res.StatusCode < 200 || res.StatusCode >= 300 {
+							slog.Error(fmt.Sprintf("%q returned status code %d", req.URL, res.StatusCode))
+							continue
+						}
 					}
 					done <- event
 				case <-stop:

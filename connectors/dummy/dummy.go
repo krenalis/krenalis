@@ -9,7 +9,6 @@
 package dummy
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -116,6 +115,28 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 	return nil
 }
 
+// EventRequest returns an event request associated with the provided event
+// type, event, and transformation data. If redacted is true, sensitive
+// authentication data will be redacted in the returned request.
+// This method is safe for concurrent use by multiple goroutines.
+// If the specified event type does not exist, it returns the
+// ErrEventTypeNotExist error.
+func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
+	req := &connector.EventRequest{
+		Method: "POST",
+		URL:    "https://example.com/",
+		Header: http.Header{},
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	var err error
+	req.Body, err = json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	if c.conf.Role == connector.Source {
@@ -171,22 +192,6 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-// PreviewSendEvent returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) PreviewSendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) ([]byte, error) {
-	var b bytes.Buffer
-	b.WriteString("POST https://example.com/api\n")
-	b.WriteString("Accept: application/json\n")
-	b.WriteString("Content-Type: application/json\n\n")
-	body, err := json.MarshalIndent(data, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	b.Write(body)
-	return b.Bytes(), nil
-}
-
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
@@ -237,15 +242,6 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 	}
 
 	return form, nil, nil
-}
-
-// SendEvent sends the event, along with the given mapped data.
-// eventType specifies the event type corresponding to the event.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) SendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) error {
-	log.Printf("dummy: sending event %#v, %#v", event, data)
-	time.Sleep(50 * time.Millisecond)
-	return nil
 }
 
 // ValidateSettings validates the settings received from the UI and returns them

@@ -10,9 +10,9 @@
 package mixpanel
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,6 +69,112 @@ func new(conf *connector.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
+// EventRequest returns an event request associated with the provided event
+// type, event, and transformation data. If redacted is true, sensitive
+// authentication data will be redacted in the returned request.
+// This method is safe for concurrent use by multiple goroutines.
+// If the specified event type does not exist, it returns the
+// ErrEventTypeNotExist error.
+func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
+
+	if data["event"].(string) == "" {
+		return nil, errors.New("event cannot be empty")
+	}
+
+	req := &connector.EventRequest{
+		Method: "POST",
+		URL:    "https://api.mixpanel.com/",
+		Header: http.Header{},
+	}
+	if c.conf.Region == connector.PrivacyRegionEurope {
+		req.URL = "https://api-eu.mixpanel.com/"
+	}
+	req.URL += "import?strict=0&project_id=" + c.settings.ProjectID
+	req.Header.Set("Content-Type", "application/x-ndjson")
+	authorization := base64.StdEncoding.EncodeToString([]byte(c.settings.Username + ":" + c.settings.Secret))
+	if redacted {
+		authorization = "[REDACTED]"
+	}
+	req.Header.Set("Authorization", authorization)
+
+	body := data["properties"].(map[string]any)
+	body["$insert_id"] = event.MessageId
+	body["time"] = formatTimestamp(event.Timestamp)
+	distinctID := event.AnonymousId
+	if event.UserId != "" {
+		distinctID = event.UserId
+	}
+	body["distinct_id"] = distinctID
+	body["$device_id"] = event.AnonymousId
+	if event.Context.IP == "" {
+		if event.Context.Location.Country != "" {
+			body["mp_country_code"] = event.Context.Location.Country
+		}
+		if event.Context.Location.City != "" {
+			body["$city"] = event.Context.Location.City
+		}
+	} else {
+		body["ip"] = event.Context.IP
+		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
+		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
+		// enrichment occurs for all or none of them.
+		if event.Context.Location.Country != "" || event.Context.Location.City != "" {
+			if event.Context.Location.Country != "" {
+				body["mp_country_code"] = event.Context.Location.Country
+			} else {
+				body["mp_country_code"] = nil
+			}
+			if event.Context.Location.City != "" {
+				body["$city"] = event.Context.Location.City
+			} else {
+				body["$city"] = nil
+			}
+		}
+	}
+	if event.Context.OS.Name != "" {
+		body["$os"] = event.Context.OS.Name
+	}
+	if event.Context.Browser.Name != "" {
+		body["$browser"] = event.Context.Browser.Name
+	} else if event.Context.Browser.Other != "" {
+		body["$browser"] = event.Context.Browser.Other
+	}
+	if event.Context.Browser.Version != "" {
+		body["$browser_version"] = event.Context.Browser.Version
+	}
+	if event.Context.Page.Referrer != "" {
+		u, err := url.Parse(event.Context.Page.Referrer)
+		if err == nil {
+			body["$referrer"] = event.Context.Page.Referrer
+			body["$referring_domain"] = u.Hostname()
+		}
+	}
+	if event.Context.Page.URL != "" {
+		body["$current_url"] = event.Context.Page.URL
+		body["current_page_title"] = event.Context.Page.Title
+		u, err := url.Parse(event.Context.Page.URL)
+		if err == nil {
+			body["current_domain"] = u.Hostname()
+			body["current_url_path"] = u.Path
+			body["current_url_protocol"] = u.Scheme + ":"
+		}
+	}
+	if event.Context.Screen.Width != 0 {
+		body["$screen_width"] = event.Context.Screen.Width
+	}
+	if event.Context.Screen.Height != 0 {
+		body["$screen_height"] = event.Context.Screen.Height
+	}
+
+	var err error
+	req.Body, err = json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	if c.conf.Role != connector.Destination {
@@ -103,40 +209,9 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-// PreviewSendEvent returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) PreviewSendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) ([]byte, error) {
-	var b bytes.Buffer
-	if c.conf.Region == connector.PrivacyRegionEurope {
-		b.WriteString("POST https://api-eu.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
-	} else {
-		b.WriteString("POST https://api.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
-	}
-	b.WriteString("Authorization: Basic REDACTED\n")
-	b.WriteString("Content-Type: application/x-ndjson\n\n")
-	body, err := json.MarshalIndent(eventBody(event, data), "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	b.Write(body)
-	return b.Bytes(), nil
-}
-
 // Resource returns the resource.
 func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
-}
-
-// SendEvent sends the event, along with the given mapped data.
-// eventType specifies the event type corresponding to the event.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) SendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) error {
-	b, err := json.Marshal(eventBody(event, data))
-	if err != nil {
-		return err
-	}
-	return c.call(ctx, "POST", "/import", bytes.NewReader(b), 200, nil)
 }
 
 // ServeUI serves the connector's user interface.
@@ -240,85 +315,6 @@ func formatTimestamp(t time.Time) string {
 		return "0." + ms
 	}
 	return ms[:l-3] + "." + ms[l-3:]
-}
-
-func eventBody(event *connector.Event, data map[string]any) any {
-
-	if e := data["event"].(string); e == "" {
-		return errors.New("event cannot be empty")
-	}
-
-	p := data["properties"].(map[string]any)
-
-	p["$insert_id"] = event.MessageId
-	p["time"] = formatTimestamp(event.Timestamp)
-	distinctID := event.AnonymousId
-	if event.UserId != "" {
-		distinctID = event.UserId
-	}
-	p["distinct_id"] = distinctID
-	p["$device_id"] = event.AnonymousId
-	if event.Context.IP == "" {
-		if event.Context.Location.Country != "" {
-			p["mp_country_code"] = event.Context.Location.Country
-		}
-		if event.Context.Location.City != "" {
-			p["$city"] = event.Context.Location.City
-		}
-	} else {
-		p["ip"] = event.Context.IP
-		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
-		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
-		// enrichment occurs for all or none of them.
-		if event.Context.Location.Country != "" || event.Context.Location.City != "" {
-			if event.Context.Location.Country != "" {
-				p["mp_country_code"] = event.Context.Location.Country
-			} else {
-				p["mp_country_code"] = nil
-			}
-			if event.Context.Location.City != "" {
-				p["$city"] = event.Context.Location.City
-			} else {
-				p["$city"] = nil
-			}
-		}
-	}
-	if event.Context.OS.Name != "" {
-		p["$os"] = event.Context.OS.Name
-	}
-	if event.Context.Browser.Name != "" {
-		p["$browser"] = event.Context.Browser.Name
-	} else if event.Context.Browser.Other != "" {
-		p["$browser"] = event.Context.Browser.Other
-	}
-	if event.Context.Browser.Version != "" {
-		p["$browser_version"] = event.Context.Browser.Version
-	}
-	if event.Context.Page.Referrer != "" {
-		u, err := url.Parse(event.Context.Page.Referrer)
-		if err == nil {
-			p["$referrer"] = event.Context.Page.Referrer
-			p["$referring_domain"] = u.Hostname()
-		}
-	}
-	if event.Context.Page.URL != "" {
-		p["$current_url"] = event.Context.Page.URL
-		p["current_page_title"] = event.Context.Page.Title
-		u, err := url.Parse(event.Context.Page.URL)
-		if err == nil {
-			p["current_domain"] = u.Hostname()
-			p["current_url_path"] = u.Path
-			p["current_url_protocol"] = u.Scheme + ":"
-		}
-	}
-	if event.Context.Screen.Width != 0 {
-		p["$screen_width"] = event.Context.Screen.Width
-	}
-	if event.Context.Screen.Height != 0 {
-		p["$screen_height"] = event.Context.Screen.Height
-	}
-
-	return data
 }
 
 type mixpanelError struct {

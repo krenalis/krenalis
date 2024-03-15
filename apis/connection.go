@@ -1203,7 +1203,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	preview, err := this.app().PreviewSendEvent(ctx, eventType, ev.ToConnectorEvent(), values, outSchema)
+	req, err := this.app().EventRequest(ctx, eventType, ev.ToConnectorEvent(), values, true, outSchema)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
 			return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
@@ -1214,7 +1214,31 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, err
 	}
 
-	return preview, nil
+	// Construct the preview.
+	var b bytes.Buffer
+	b.WriteString(req.Method)
+	b.WriteString(" ")
+	b.WriteString(req.URL)
+	b.WriteByte('\n')
+	err = req.Header.Write(&b)
+	if err != nil {
+		return nil, err
+	}
+	b.WriteByte('\n')
+	ct := req.Header.Get("Content-Type")
+	switch ct {
+	case "application/json":
+		err = json.Indent(&b, req.Body, "", "\t")
+		if err != nil {
+			return nil, err
+		}
+	case "application/x-ndjson":
+		b.Write(req.Body)
+	default:
+		_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(req.Body))
+	}
+
+	return b.Bytes(), nil
 }
 
 // Set sets the connection.

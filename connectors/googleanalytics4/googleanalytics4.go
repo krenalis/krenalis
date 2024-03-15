@@ -10,14 +10,10 @@
 package googleanalytics4
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"log"
 	"net/http"
 	_url "net/url"
 	"strings"
@@ -31,8 +27,7 @@ import (
 var icon = "<svg></svg>"
 
 // sendToDebugServer controls whether the events should be sent to the debug
-// server instead of the production server; it also enables printing some debug
-// information on the log.
+// server instead of the production server.
 //
 // See
 // https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
@@ -74,6 +69,62 @@ type settings struct {
 	APISecret     string
 }
 
+// EventRequest returns an event request associated with the provided event
+// type, event, and transformation data. If redacted is true, sensitive
+// authentication data will be redacted in the returned request.
+// This method is safe for concurrent use by multiple goroutines.
+// If the specified event type does not exist, it returns the
+// ErrEventTypeNotExist error.
+func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
+	req := &connector.EventRequest{
+		Method: "POST",
+		URL:    "https://www.google-analytics.com/",
+		Header: http.Header{},
+	}
+	if sendToDebugServer {
+		req.URL += "debug/"
+	}
+	secret := c.settings.APISecret
+	if redacted {
+		secret = "REDACTED"
+	}
+	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(c.settings.MeasurementID)
+	req.Header.Set("Content-Type", "application/json")
+	var ev map[string]any
+	switch eventType.ID {
+	case "page_view":
+		ev = map[string]any{
+			"page_location": event.Context.Page.URL,
+			"page_referrer": event.Context.Page.Referrer,
+			"page_title":    event.Context.Page.Title,
+		}
+	case "share":
+		ev = map[string]any{}
+		if method, ok := data["method"].(string); ok {
+			ev["method"] = method
+		}
+		if contentType, ok := data["content_type"].(string); ok {
+			ev["content_type"] = contentType
+		}
+		if itemID, ok := data["item_id"].(string); ok {
+			ev["item_id"] = itemID
+		}
+	}
+	body := map[string]any{
+		// TODO(Gianluca): consider sending the user ID as the client_id, if
+		// defined, otherwise the anonymousID.
+		"client_id": event.AnonymousId,
+		"user_id":   event.UserId,
+		"events":    []map[string]any{ev},
+	}
+	var err error
+	req.Body, err = json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	if c.conf.Role == connector.Source {
@@ -101,31 +152,9 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-// PreviewSendEvent returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) PreviewSendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) ([]byte, error) {
-	var b bytes.Buffer
-	b.WriteString("POST https://www.google-analytics.com/mp/collect?api_secret=REDACTED&measurement_id=" + _url.QueryEscape(c.settings.MeasurementID) + "\n")
-	b.WriteString("Content-Type: application/json\n\n")
-	body, err := json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	b.Write(body)
-	return b.Bytes(), nil
-}
-
 // Resource returns the resource from a client token.
 func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
-}
-
-// SendEvent sends the event, along with the given mapped data.
-// eventType specifies the event type corresponding to the event.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) SendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) error {
-	return c.collect(eventBody(eventType, event, data))
 }
 
 // ServeUI serves the connector's user interface.
@@ -189,83 +218,4 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		}
 	}
 	return json.Marshal(&s)
-}
-
-func (c *connection) collect(body any) error {
-
-	// Build the URL.
-	url := &_url.URL{
-		Scheme: "https",
-		Host:   "www.google-analytics.com",
-		Path:   "/mp/collect",
-	}
-	if sendToDebugServer {
-		url.Path = "/debug/mp/collect"
-	}
-	values := url.Query()
-	values.Add("api_secret", c.settings.APISecret)
-	values.Add("measurement_id", c.settings.MeasurementID)
-	url.RawQuery = values.Encode()
-
-	var b bytes.Buffer
-	err := json.NewEncoder(&b).Encode(body)
-	if err != nil {
-		return err
-	}
-
-	// Issue the POST request to www.google-analytics.com.
-	req, err := http.NewRequest("POST", url.String(), &b)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.conf.HTTPClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("%q returned status code %d", url, resp.StatusCode)
-	}
-
-	// Print some information, if in test mode.
-	if sendToDebugServer {
-		response, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		log.Printf("%q returned status code %d and this content: %s", url, resp.StatusCode, response)
-	}
-
-	return nil
-}
-
-func eventBody(eventType *connector.EventType, event *connector.Event, data map[string]any) any {
-	var ev map[string]any
-	switch eventType.ID {
-	case "page_view":
-		ev = map[string]any{
-			"page_location": event.Context.Page.URL,
-			"page_referrer": event.Context.Page.Referrer,
-			"page_title":    event.Context.Page.Title,
-		}
-	case "share":
-		ev = map[string]any{}
-		if method, ok := data["method"].(string); ok {
-			ev["method"] = method
-		}
-		if contentType, ok := data["content_type"].(string); ok {
-			ev["content_type"] = contentType
-		}
-		if itemID, ok := data["item_id"].(string); ok {
-			ev["item_id"] = itemID
-		}
-	}
-	body := map[string]any{
-		// TODO(Gianluca): consider sending the user ID as the client_id, if
-		// defined, otherwise the anonymousID.
-		"client_id": event.AnonymousId,
-		"user_id":   event.UserId,
-		"events":    []map[string]any{ev},
-	}
-	return body
 }

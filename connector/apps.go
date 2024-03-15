@@ -90,6 +90,14 @@ type AppConnection interface {
 	Resource(ctx context.Context) (string, error)
 }
 
+// EventRequest represents an event request.
+type EventRequest struct {
+	Method string
+	URL    string
+	Header http.Header
+	Body   []byte
+}
+
 // AppEventsConnection is the interface implemented by app connections to which
 // events can be sent.
 type AppEventsConnection interface {
@@ -98,15 +106,13 @@ type AppEventsConnection interface {
 	// EventTypes returns the connection's event types.
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
-	// PreviewSendEvent returns a preview of the event that would be sent when
-	// calling SendEvent with the same arguments.
-	// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-	PreviewSendEvent(ctx context.Context, eventType *EventType, event *Event, data map[string]any) ([]byte, error)
-
-	// SendEvent sends the event, along with the given mapped data.
-	// Can be used by multiple goroutines at the same time.
-	// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-	SendEvent(ctx context.Context, eventType *EventType, event *Event, data map[string]any) error
+	// EventRequest returns an event request associated with the provided event
+	// type, event, and transformation data. If redacted is true, sensitive
+	// authentication data will be redacted in the returned request.
+	// This method is safe for concurrent use by multiple goroutines.
+	// If the specified event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
+	EventRequest(ctx context.Context, eventType *EventType, event *Event, data map[string]any, redacted bool) (*EventRequest, error)
 }
 
 // Cursor represents a cursor used to implement pagination.

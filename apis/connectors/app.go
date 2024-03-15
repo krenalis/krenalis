@@ -8,29 +8,36 @@
 package connectors
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"slices"
 	"strings"
 
+	"chichi/apis/connectors/httpclient"
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
 
-type WebhookPayload = _connector.WebhookPayload
+type (
+	EventRequest   = _connector.EventRequest
+	WebhookPayload = _connector.WebhookPayload
+)
 
 // App represents the app of an app connection.
 type App struct {
-	name    string
-	role    state.Role
-	layouts *state.Layouts
-	users   schema
-	inner   _connector.AppConnection
-	err     error
+	name       string
+	role       state.Role
+	layouts    *state.Layouts
+	httpClient *httpclient.Client
+	users      schema
+	inner      _connector.AppConnection
+	err        error
 }
 
 // App returns an app for the provided connection. Errors are deferred until an
@@ -38,10 +45,11 @@ type App struct {
 func (connectors *Connectors) App(connection *state.Connection) *App {
 	connector := connection.Connector()
 	app := &App{
-		name:    connector.Name,
-		role:    connection.Role,
-		layouts: &connector.Layouts,
-		users:   schema{lock: make(chan struct{}, 1)},
+		name:       connector.Name,
+		role:       connection.Role,
+		layouts:    &connector.Layouts,
+		httpClient: connectors.http.ConnectionClient(connection.ID),
+		users:      schema{lock: make(chan struct{}, 1)},
 	}
 	var resourceID int
 	var resourceCode string
@@ -54,25 +62,18 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		Settings:    connection.Settings,
 		SetSettings: setSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
-		HTTPClient:  connectors.http.ConnectionClient(connection.ID),
+		HTTPClient:  app.httpClient,
 		Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:  webhookURL(connection, resourceID),
 	})
 	return app
 }
 
-// EventTypes returns the app's event types.
-// It panics if the app does not support the events target.
-func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
-	if app.err != nil {
-		return nil, app.err
-	}
-	return app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
-}
-
-// PreviewSendEvent returns a preview of the event that would be sent when
-// calling SendEvent along with the provided values. valuesSchema is the schema
-// of the values, and can be the invalid schema if there are no values.
+// EventRequest returns an event request associated with the provided event
+// type, event, and transformation data. If redacted is true, sensitive
+// authentication data will be redacted in the returned request. valuesSchema is
+// the schema of the values, and can be the invalid schema if there are no
+// values.
 //
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
 // If the schema of values is incompatible with the event type's schema, it
@@ -80,7 +81,7 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 //
 // It panics if the app does not support the Events target, or if valuesSchema
 // is valid but not an Object.
-func (app *App) PreviewSendEvent(ctx context.Context, eventType string, event *Event, values map[string]any, valuesSchema types.Type) ([]byte, error) {
+func (app *App) EventRequest(ctx context.Context, eventType string, event *Event, data map[string]any, redacted bool, valuesSchema types.Type) (*EventRequest, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -92,12 +93,17 @@ func (app *App) PreviewSendEvent(ctx context.Context, eventType string, event *E
 	if err = verifySchemaCompatibilityForSendEvents(valuesSchema, et.Schema); err != nil {
 		return nil, err
 	}
-	// Get a preview of the event.
-	preview, err := app.inner.(_connector.AppEventsConnection).PreviewSendEvent(ctx, et, event, values)
-	if err != nil {
-		return nil, err
+	// Return the event request.
+	return app.inner.(_connector.AppEventsConnection).EventRequest(ctx, et, event, data, redacted)
+}
+
+// EventTypes returns the app's event types.
+// It panics if the app does not support the events target.
+func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
+	if app.err != nil {
+		return nil, app.err
 	}
-	return preview, nil
+	return app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
 }
 
 // Schema returns the app's schema for the provided target. If target is
@@ -157,30 +163,14 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	panic("unexpected target")
 }
 
-// SendEvent sends an event with the given event type, along with the provided
-// values. valuesSchema is the schema of the values, and can be the invalid
-// schema if there are no values.
-//
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-// If the schema of values is incompatible with the event type's schema, it
-// returns a *SchemaError error.
-//
-// It panics if the app does not support the Events target, or if valuesSchema
-// is valid but not an Object.
-func (app *App) SendEvent(ctx context.Context, eventType string, event *Event, data map[string]any, valuesSchema types.Type) error {
-	if app.err != nil {
-		return app.err
-	}
-	et, err := app.eventType(ctx, eventType)
+// SendEvent sends an event to the app and returns the HTTP response.
+func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Response, error) {
+	r, err := http.NewRequestWithContext(ctx, req.Method, req.URL, bytes.NewReader(req.Body))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Check compatibility between the schema of the values and the schema of the event type.
-	if err = verifySchemaCompatibilityForSendEvents(valuesSchema, et.Schema); err != nil {
-		return err
-	}
-	// Send the event.
-	return app.inner.(_connector.AppEventsConnection).SendEvent(ctx, et, event, data)
+	r.Header = req.Header.Clone()
+	return app.httpClient.Do(r)
 }
 
 // Users returns an iterator to iterate over the app's users, conforming to the

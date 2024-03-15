@@ -10,7 +10,6 @@
 package klaviyo
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -73,6 +72,55 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 	panic("TODO: not implemented")
 }
 
+// EventRequest returns an event request associated with the provided event
+// type, event, and transformation data. If redacted is true, sensitive
+// authentication data will be redacted in the returned request.
+// This method is safe for concurrent use by multiple goroutines.
+// If the specified event type does not exist, it returns the
+// ErrEventTypeNotExist error.
+func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
+	req := &connector.EventRequest{
+		Method: "POST",
+		URL:    "https://a.klaviyo.com/api/events/",
+		Header: http.Header{},
+	}
+	key := c.settings.PrivateAPIKey
+	if redacted {
+		key = "[REDACTED]"
+	}
+	req.Header.Set("Authorization", "Klaviyo-API-Key "+key)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Revision", "2023-01-24")
+	var body struct {
+		Data struct {
+			Type       string `json:"type"`
+			Attributes struct {
+				Profile struct {
+					Email string `json:"$email"`
+				} `json:"profile"`
+				Metric struct {
+					Name string `json:"name"`
+				} `json:"metric"`
+				Properties map[string]any `json:"properties"`
+				Time       string         `json:"time"`
+				Value      any            `json:"value"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	body.Data.Type = "event"
+	body.Data.Attributes.Profile.Email = data["email"].(string)
+	body.Data.Attributes.Metric.Name = data["metric_name"].(string)
+	body.Data.Attributes.Properties = data
+	body.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
+	var err error
+	req.Body, err = json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	if c.conf.Role == connector.Source {
@@ -92,24 +140,6 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	return eventTypes, nil
 }
 
-// PreviewSendEvent returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) PreviewSendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) ([]byte, error) {
-	var b bytes.Buffer
-	b.WriteString("POST https://a.klaviyo.com/api/events/\n")
-	b.WriteString("Authorization: Klaviyo-API-Key REDACTED\n")
-	b.WriteString("Accept: application/json\n")
-	b.WriteString("Content-Type: application/json\n")
-	b.WriteString("Revision: 2023-01-24\n\n")
-	body, err := json.MarshalIndent(eventBody(event, data), "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	b.Write(body)
-	return b.Bytes(), nil
-}
-
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
@@ -120,17 +150,6 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 // Resource returns the resource from a client token.
 func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
-}
-
-// SendEvent sends the event, along with the given mapped data.
-// eventType specifies the event type corresponding to the event.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-func (c *connection) SendEvent(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any) error {
-	b, err := json.Marshal(eventBody(event, data))
-	if err != nil {
-		return err
-	}
-	return c.call(ctx, "POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(b), 202, nil)
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
@@ -469,29 +488,4 @@ func (c *connection) call(ctx context.Context, method, url string, body io.Reade
 	}
 
 	return nil
-}
-
-func eventBody(event *connector.Event, data map[string]any) any {
-	var msg struct {
-		Data struct {
-			Type       string `json:"type"`
-			Attributes struct {
-				Profile struct {
-					Email string `json:"$email"`
-				} `json:"profile"`
-				Metric struct {
-					Name string `json:"name"`
-				} `json:"metric"`
-				Properties map[string]any `json:"properties"`
-				Time       string         `json:"time"`
-				Value      any            `json:"value"`
-			} `json:"attributes"`
-		} `json:"data"`
-	}
-	msg.Data.Type = "event"
-	msg.Data.Attributes.Profile.Email = data["email"].(string)
-	msg.Data.Attributes.Metric.Name = data["metric_name"].(string)
-	msg.Data.Attributes.Properties = data
-	msg.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
-	return &msg
 }

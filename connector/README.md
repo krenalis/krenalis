@@ -4,13 +4,12 @@
 | Method           | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
 |------------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
 | CreateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| EventRequest     | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | EventTypes       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | Groups           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | GroupSchema      | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| PreviewSendEvent | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ReceiveWebhook   | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
 | Resource         | -    | -              | -              | -                       | ✓                       | ✓                       |
-| SendEvent        | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ServeUI          | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
 | SetGroup         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | UpdateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
