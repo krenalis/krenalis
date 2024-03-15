@@ -72,8 +72,8 @@
     "packageJson": {
       "dependencies": [
         "npm:@swc/cli@0.3.10",
-        "npm:@swc/core@1.4.6",
-        "npm:esbuild@0.20.1"
+        "npm:@swc/core@1.4.8",
+        "npm:esbuild@0.20.2"
       ]
     }
   }
