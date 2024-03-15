@@ -16,7 +16,6 @@ import (
 	"slices"
 	"strings"
 
-	"chichi/apis/connectors/httpclient"
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
@@ -29,7 +28,6 @@ type App struct {
 	name    string
 	role    state.Role
 	layouts *state.Layouts
-	http    *httpclient.HTTP
 	users   schema
 	inner   _connector.AppConnection
 	err     error
@@ -43,7 +41,6 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		name:    connector.Name,
 		role:    connection.Role,
 		layouts: &connector.Layouts,
-		http:    connectors.http,
 		users:   schema{lock: make(chan struct{}, 1)},
 	}
 	var resourceID int
