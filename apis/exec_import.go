@@ -88,7 +88,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.ImportedStep)
 		}
 	}
-	iw := this.connection.store.IdentitiesWriter(ctx, this.action.OutSchema, this.action.Connection().ID, false, ack)
+	iw := this.connection.store.IdentitiesWriter(ctx, this.action.OutSchema, connection.ID, false, ack)
 	defer iw.Close(ctx)
 
 	var (
