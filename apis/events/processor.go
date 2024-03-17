@@ -73,7 +73,11 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 			for {
 				select {
 				case event := <-events:
-					for _, action := range st.Actions() {
+					connection, ok := st.state.Connection(event.source)
+					if !ok {
+						continue
+					}
+					for _, action := range st.Actions(connection.Workspace()) {
 						// Convert the collectedEvent to a map of properties.
 						eventAsMap := event.ToMap()
 						// Check if the filter applies.

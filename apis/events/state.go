@@ -40,16 +40,16 @@ func (st *eventsState) ConnectionByKey(key string) (*state.Connection, bool) {
 	return nil, false
 }
 
-// Actions returns the app destination actions that are enabled, have the Events
-// target, and their connection is enabled.
-func (st *eventsState) Actions() []*state.Action {
+// Actions returns the app destination actions of the provided workspace that
+// are enabled, have the Events target, and their connection is enabled.
+func (st *eventsState) Actions(ws *state.Workspace) []*state.Action {
 	var actions []*state.Action
 	for _, action := range st.state.Actions() {
 		if !action.Enabled || action.Target != state.Events {
 			continue
 		}
 		c := action.Connection()
-		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.AppType {
+		if !c.Enabled || c.Role != state.Destination || c.Workspace() != ws || c.Connector().Type != state.AppType {
 			continue
 		}
 		actions = append(actions, action)
