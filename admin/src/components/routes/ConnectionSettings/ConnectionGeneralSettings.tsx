@@ -134,8 +134,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	}
 
 	const showStrategy =
-		connection.role === 'Source' &&
-		(connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website');
+		connection.role === 'Source' && (connection.type === 'Mobile' || connection.type === 'Website');
 
 	const showBusinessID =
 		connection.role === 'Source' && connection.type !== 'Storage' && connection.type !== 'Stream';

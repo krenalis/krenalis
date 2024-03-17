@@ -24,7 +24,7 @@ import { validateConnectorSettings } from '../../../lib/helpers/validateConnecto
 const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
-	return connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website');
+	return connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Website');
 };
 
 const ConnectorSettings = () => {

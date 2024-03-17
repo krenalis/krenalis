@@ -146,7 +146,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	// Validate the strategy.
 	if connection.Role == Source {
 		switch c.Type {
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.MobileType, state.WebsiteType:
 			if connection.Strategy == nil {
 				return 0, errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}

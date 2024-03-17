@@ -1307,7 +1307,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	// Validate the strategy.
 	if this.connection.Role == state.Source {
 		switch c.Type {
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.MobileType, state.WebsiteType:
 			if connection.Strategy == nil {
 				return errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
