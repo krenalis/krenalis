@@ -355,8 +355,9 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	span.Log("action validated successfully")
 
+	connector := this.connection.Connector()
 	inSchema := action.InSchema
-	if importsUsersIdentitiesFromEvents(this.connection.Connector().Type, this.connection.Role, state.Target(target)) {
+	if importsUsersIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target)) {
 		// The input schema is the events schema without GID because this
 		// actions imports users identities from incoming events, which,
 		// clearly, still do not have any user associated.
@@ -459,13 +460,13 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		switch n.Target {
 		case state.Events:
-			switch typ := this.connection.Connector().Type; typ {
+			switch connector.Type {
 			case state.MobileType, state.ServerType, state.WebsiteType:
 				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != sql.ErrNoRows {
 					if err == nil {
 						err = errors.Unprocessable(TargetAlreadyExist,
-							"action with target %s already exists for %s connection %d", n.Target, typ, n.Connection)
+							"action with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
 					}
 					return err
 				}
