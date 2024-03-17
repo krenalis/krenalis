@@ -1309,15 +1309,15 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		switch c.Type {
 		case state.MobileType, state.ServerType, state.WebsiteType:
 			if connection.Strategy == nil {
-				return errors.BadRequest("%s connections must have a strategy", c.Type)
+				return errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
 		default:
 			if connection.Strategy != nil {
-				return errors.BadRequest("%s connections cannot have a strategy", c.Type)
+				return errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
 			}
 		}
 	} else if connection.Strategy != nil {
-		return errors.BadRequest("connection destinations cannot have a strategy")
+		return errors.BadRequest("destination connections cannot have a strategy")
 	}
 
 	// Validate the website host.

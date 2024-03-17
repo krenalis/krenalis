@@ -97,7 +97,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			return 0, errors.BadRequest("strategy %q is not valid", *s)
 		}
 		if connection.Role == Destination {
-			return 0, errors.BadRequest("connection destinations cannot have a strategy")
+			return 0, errors.BadRequest("destination connections cannot have a strategy")
 		}
 	}
 
@@ -148,11 +148,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		switch c.Type {
 		case state.MobileType, state.ServerType, state.WebsiteType:
 			if connection.Strategy == nil {
-				return 0, errors.BadRequest("%s connections must have a strategy", c.Type)
+				return 0, errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
 		default:
 			if connection.Strategy != nil {
-				return 0, errors.BadRequest("%s connections cannot have a strategy", c.Type)
+				return 0, errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
 			}
 		}
 	}
