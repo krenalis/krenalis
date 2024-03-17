@@ -21,6 +21,7 @@ import (
 	_ "chichi/connectors/klaviyo"
 	_ "chichi/connectors/mailchimp"
 	_ "chichi/connectors/mixpanel"
+	_ "chichi/connectors/mobile"
 	_ "chichi/connectors/mysql"
 	_ "chichi/connectors/parquet"
 	_ "chichi/connectors/postgresql"

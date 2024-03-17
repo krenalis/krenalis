@@ -18,6 +18,7 @@ replace (
 	chichi/connectors/klaviyo => ./connectors/klaviyo
 	chichi/connectors/mailchimp => ./connectors/mailchimp
 	chichi/connectors/mixpanel => ./connectors/mixpanel
+	chichi/connectors/mobile => ./connectors/mobile
 	chichi/connectors/mysql => ./connectors/mysql
 	chichi/connectors/parquet => ./connectors/parquet
 	chichi/connectors/postgresql => ./connectors/postgresql
@@ -45,6 +46,7 @@ require (
 	chichi/connectors/klaviyo v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
 	chichi/connectors/mixpanel v0.0.0-00010101000000-000000000000
+	chichi/connectors/mobile v0.0.0-00010101000000-000000000000
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
 	chichi/connectors/parquet v0.0.0-00010101000000-000000000000
 	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000

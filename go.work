@@ -16,6 +16,7 @@ use (
 	./connectors/klaviyo
 	./connectors/mailchimp
 	./connectors/mixpanel
+	./connectors/mobile
 	./connectors/mysql
 	./connectors/parquet
 	./connectors/postgresql

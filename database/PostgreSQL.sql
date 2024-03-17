@@ -43,7 +43,9 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('Java', 'Server', '', ''),
     ('Node.js', 'Server', '', ''),
     ('PHP', 'Server', '', ''),
-    ('Python', 'Server', '', '');
+    ('Python', 'Server', '', ''),
+    ('Android', 'Mobile', '', ''),
+    ('Apple', 'Mobile', '', '');
 
 CREATE TABLE organizations (
     id SERIAL,

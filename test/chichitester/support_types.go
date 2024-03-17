@@ -44,6 +44,8 @@ const (
 	NodeConnector
 	PHPConnector
 	PythonConnector
+	AndroidConnector
+	AppleConnector
 )
 
 // These data types are copy-paste of the types defined within the APIs.
