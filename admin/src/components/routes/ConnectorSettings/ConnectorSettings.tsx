@@ -13,10 +13,9 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { BusinessID, Compression, ConnectionRole, ConnectionToAdd, Strategy } from '../../../types/external/connection';
+import { BusinessID, ConnectionRole, ConnectionToAdd, Strategy } from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
@@ -30,9 +29,6 @@ const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): b
 const ConnectorSettings = () => {
 	const [connector, setConnector] = useState<TransformedConnector | null>(null);
 	const [name, setName] = useState<string>('');
-	const [storage, setStorage] = useState<number>(0);
-	const [storages, setStorages] = useState<TransformedConnection[]>([]);
-	const [compression, setCompression] = useState<Compression>('');
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [businessID, setBusinessID] = useState<BusinessID>({ Name: '', Label: '' });
@@ -42,17 +38,8 @@ const ConnectorSettings = () => {
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
-	const {
-		api,
-		handleError,
-		showStatus,
-		redirect,
-		connectors,
-		connections,
-		setIsLoadingConnections,
-		setTitle,
-		selectedWorkspace,
-	} = useContext(AppContext);
+	const { api, handleError, showStatus, redirect, connectors, setIsLoadingConnections, setTitle, selectedWorkspace } =
+		useContext(AppContext);
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
@@ -71,6 +58,13 @@ const ConnectorSettings = () => {
 	} else {
 		OAuthToken = token;
 	}
+
+	useEffect(() => {
+		const connector = connectors.find((c) => c.id === connectorID);
+		if (connector.isFile) {
+			redirect(`connectors/file/${connector.id}?role=${connectionRole}`);
+		}
+	}, []);
 
 	useEffect(() => {
 		if (newConnectionID > 0) {
@@ -98,13 +92,6 @@ const ConnectorSettings = () => {
 			if (hasStrategy(connectionRole, connector)) {
 				setStrategy(strategyOptions[0]);
 			}
-			const storages: TransformedConnection[] = [];
-			if (connector.type === 'File') {
-				for (const c of connections) {
-					if (c.type === 'Storage' && c.role === connectionRole) storages.push(c);
-				}
-			}
-			setStorages(storages);
 			if (connector.hasSettings === false) return;
 			let ui: UIResponse;
 			try {
@@ -174,8 +161,6 @@ const ConnectorSettings = () => {
 					role: connectionRole,
 					enabled: true,
 					connector: connectorID,
-					storage: storage,
-					compression: compression,
 					strategy: strategy,
 					websiteHost: websiteHost,
 					businessID: businessID,
@@ -252,10 +237,6 @@ const ConnectorSettings = () => {
 		setValues((prevValues) => ({ ...prevValues, [name]: value }));
 	};
 
-	const onCreateNewStorageClick = () => {
-		redirect(`connectors?role=${connectionRole}`);
-	};
-
 	const onSave = async () => {
 		try {
 			validateConnectorSettings(values, fields);
@@ -270,8 +251,6 @@ const ConnectorSettings = () => {
 				role: connectionRole,
 				enabled: true,
 				connector: connectorID,
-				storage: storage,
-				compression: compression,
 				strategy: strategy,
 				websiteHost: websiteHost,
 				businessID: businessID,
@@ -398,60 +377,6 @@ const ConnectorSettings = () => {
 								</>
 							)}
 						</div>
-						{c!.type === 'File' && (
-							<div className='inputWrapper'>
-								{storages.length === 0 ? (
-									<div className='noStorages'>
-										<div className='text'>
-											Currently there are no storage {connectionRole.toLowerCase()}s available
-										</div>
-										<SlButton variant='neutral' onClick={onCreateNewStorageClick}>
-											Create one...
-										</SlButton>
-									</div>
-								) : (
-									<SlSelect
-										className='storage'
-										name='storage'
-										value={String(storage)}
-										label='Storage'
-										onSlChange={(e) => {
-											const target = e.currentTarget as ShoelaceEventTarget;
-											setStorage(Number(target.value));
-										}}
-									>
-										{storages.map((s) => {
-											return (
-												<SlOption key={s.id} value={String(s.id)}>
-													{s.name}
-												</SlOption>
-											);
-										})}
-									</SlSelect>
-								)}
-							</div>
-						)}
-						{c!.type === 'File' && (
-							<div className='inputWrapper'>
-								<SlSelect
-									className='compression'
-									name='compression'
-									value={compression}
-									label='Compression'
-									disabled={storage === 0}
-									onSlChange={(e) => {
-										const target = e.currentTarget as ShoelaceEventTarget;
-										const value = target.value as Compression;
-										setCompression(value);
-									}}
-								>
-									<SlOption value=''>None</SlOption>
-									<SlOption value='Zip'>Zip</SlOption>
-									<SlOption value='Gzip'>Gzip</SlOption>
-									<SlOption value='Snappy'>Snappy</SlOption>
-								</SlSelect>
-							</div>
-						)}
 						{showStrategy && (
 							<div className='inputWrapper'>
 								<SlSelect

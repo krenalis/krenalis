@@ -30,11 +30,6 @@ const statuses: Record<string, Status> = {
 		icon: icons.FORBIDDEN,
 		text: 'There is already an import in progress',
 	},
-	noStorage: {
-		variant: variants.DANGER,
-		icon: icons.FORBIDDEN,
-		text: 'Please, ensure that a storage connection is associated before starting an import',
-	},
 	noTransformationNorMappings: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,

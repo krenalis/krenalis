@@ -79,23 +79,11 @@ func TestExportUsersToFile(t *testing.T) {
 		}),
 	})
 
-	// Create the CSV connection.
-	csvID := c.AddConnection(chichitester.ConnectionToAdd{
-		Name:      "CSV",
-		Role:      chichitester.Destination,
-		Enabled:   true,
-		Connector: chichitester.CSVConnector,
-		Storage:   fsID,
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
-			"Comma": ",",
-		}),
-	})
-
 	exportedFilename := "exported-users.tmp.csv"
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 	// Add an action to the CSV for exporting the users.
-	exportUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{
+	exportUsersActionID := c.AddAction(fsID, "Users", chichitester.ActionToSet{
 		Name: "Export users to the CSV on Filesystem",
 		Path: exportedFilename,
 		OutSchema: types.Object([]types.Property{
@@ -103,6 +91,10 @@ func TestExportUsersToFile(t *testing.T) {
 			{Name: "firstName", Type: types.Text(), Nullable: true},
 			{Name: "lastName", Type: types.Text(), Nullable: true},
 			{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
+		}),
+		Connector: chichitester.CSVConnector,
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma": ",",
 		}),
 	})
 
@@ -133,20 +125,27 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("POST", "/api/workspaces/1/connections/"+strconv.Itoa(csvID), map[string]any{
-			"Connection": map[string]any{
-				"Name":        "CSV",
-				"Enabled":     true,
-				"Storage":     fsID,
-				"Compression": compression,
-			},
+		c.MustCall("PUT", "/api/workspaces/1/connections/"+strconv.Itoa(fsID)+"/actions/"+strconv.Itoa(exportUsersActionID), chichitester.ActionToSet{
+			Name: "Export users to the CSV on Filesystem",
+			Path: exportedFilename,
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text(), Nullable: true},
+				{Name: "firstName", Type: types.Text(), Nullable: true},
+				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
+			}),
+			Connector: chichitester.CSVConnector,
+			Settings: chichitester.JSONEncodeSettings(map[string]any{
+				"Comma": ",",
+			}),
+			Compression: chichitester.Compression(compression),
 		})
 
 		// Execute the action that export users.
-		c.ExecuteAction(csvID, exportUsersActionID, true)
+		c.ExecuteAction(fsID, exportUsersActionID, true)
 
 		// Wait for the import to finish.
-		c.WaitActionsToFinish(csvID)
+		c.WaitActionsToFinish(fsID)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath + ext)

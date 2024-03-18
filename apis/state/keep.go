@@ -117,6 +117,8 @@ func (state *State) keepState() {
 			state.setAction(n)
 		case "SetActionSchedulePeriod":
 			state.setActionSchedulePeriod(n)
+		case "SetActionSettings":
+			state.setActionSettings(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
 		case "SetActionUserCursor":
@@ -190,26 +192,6 @@ func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
 	ws.mu.Lock()
 	ws.connections[id] = cc
 	ws.mu.Unlock()
-	// Update the storage in the connections.
-	if c.connector.Type == StorageType {
-		for _, connection := range ws.connections {
-			if connection == c {
-				continue
-			}
-			if connection.storage == c {
-				connection.mu.Lock()
-				connection.storage = cc
-				connection.mu.Unlock()
-			}
-			for _, action := range connection.actions {
-				if ex := action.execution; ex != nil && ex.storage == c {
-					ex.mu.Lock()
-					ex.storage = cc
-					ex.mu.Unlock()
-				}
-			}
-		}
-	}
 	// Update the actions.
 	for _, action := range c.actions {
 		action.mu.Lock()
@@ -293,9 +275,12 @@ type AddAction struct {
 	Filter                  *Filter
 	Transformation          Transformation
 	Query                   string
+	Connector               int
 	Path                    string
-	TableName               string
 	Sheet                   string
+	Compression             Compression
+	Settings                []byte
+	TableName               string
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
@@ -311,10 +296,12 @@ func (state *State) addAction(n notification) {
 		return
 	}
 	c := state.connections[e.Connection]
+	connector := state.connectors[e.Connector]
 	action := &Action{
 		mu:                      new(sync.Mutex),
 		ID:                      e.ID,
 		connection:              c,
+		connector:               connector,
 		Target:                  e.Target,
 		Name:                    e.Name,
 		Enabled:                 e.Enabled,
@@ -327,8 +314,10 @@ func (state *State) addAction(n notification) {
 		Transformation:          e.Transformation,
 		Query:                   e.Query,
 		Path:                    e.Path,
-		TableName:               e.TableName,
 		Sheet:                   e.Sheet,
+		Compression:             e.Compression,
+		Settings:                e.Settings,
+		TableName:               e.TableName,
 		IdentityColumn:          e.IdentityColumn,
 		TimestampColumn:         e.TimestampColumn,
 		TimestampFormat:         e.TimestampFormat,
@@ -349,15 +338,13 @@ func (state *State) addAction(n notification) {
 
 // AddConnection is the event sent when a new connection is added.
 type AddConnection struct {
-	Workspace   int         // workspace identifier
-	ID          int         // identifier
-	Name        string      // name
-	Role        Role        // role
-	Enabled     bool        // enabled or disabled
-	Connector   int         // connector identifier
-	Storage     int         // storage identifier, can be zero
-	Compression Compression // compression
-	Resource    struct {    // resource.
+	Workspace int      // workspace identifier
+	ID        int      // identifier
+	Name      string   // name
+	Role      Role     // role
+	Enabled   bool     // enabled or disabled
+	Connector int      // connector identifier
+	Resource  struct { // resource.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
 		AccessToken  string    // access token, can be empty.
@@ -423,8 +410,6 @@ func (state *State) addConnection(n notification) {
 		Role:         e.Role,
 		Enabled:      e.Enabled,
 		connector:    connector,
-		storage:      state.connections[e.Storage],
-		Compression:  e.Compression,
 		resource:     r,
 		Strategy:     e.Strategy,
 		WebsiteHost:  e.WebsiteHost,
@@ -602,14 +587,6 @@ func (state *State) deleteConnection(n notification) {
 	ws.mu.Lock()
 	delete(ws.connections, e.ID)
 	ws.mu.Unlock()
-	// Update the connections.
-	for _, c := range e.connection.workspace.connections {
-		if c.storage == e.connection {
-			c.mu.Lock()
-			c.storage = nil
-			c.mu.Unlock()
-		}
-	}
 	// Update the actions.
 	state.mu.Lock()
 	for _, a := range e.connection.actions {
@@ -823,9 +800,12 @@ type SetAction struct {
 	Filter                  *Filter
 	Transformation          Transformation
 	Query                   string
+	Connector               int
 	Path                    string
-	TableName               string
 	Sheet                   string
+	Compression             Compression
+	Settings                []byte
+	TableName               string
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
@@ -840,7 +820,9 @@ func (state *State) setAction(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
+	connector := state.connectors[e.Connector]
 	state.replaceAction(e.ID, func(a *Action) {
+		a.connector = connector
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.InSchema = e.InSchema
@@ -849,8 +831,10 @@ func (state *State) setAction(n notification) {
 		a.Transformation = e.Transformation
 		a.Query = e.Query
 		a.Path = e.Path
-		a.TableName = e.TableName
 		a.Sheet = e.Sheet
+		a.Compression = e.Compression
+		a.Settings = e.Settings
+		a.TableName = e.TableName
 		a.IdentityColumn = e.IdentityColumn
 		a.TimestampColumn = e.TimestampColumn
 		a.TimestampFormat = e.TimestampFormat
@@ -924,8 +908,6 @@ type SetConnection struct {
 	Connection  int
 	Name        string
 	Enabled     bool
-	Storage     int
-	Compression Compression
 	Strategy    *Strategy
 	WebsiteHost string
 	BusinessID  BusinessID
@@ -940,8 +922,6 @@ func (state *State) setConnection(n notification) {
 	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Name = e.Name
 		c.Enabled = e.Enabled
-		c.storage = state.connections[e.Storage]
-		c.Compression = e.Compression
 		c.Strategy = e.Strategy
 		c.WebsiteHost = e.WebsiteHost
 		c.BusinessID = e.BusinessID
@@ -949,6 +929,24 @@ func (state *State) setConnection(n notification) {
 	for _, listener := range state.listeners.SetConnection {
 		listener(e)
 	}
+}
+
+// SetActionSettings is the event sent when the settings of an action is
+// changed.
+type SetActionSettings struct {
+	Action   int
+	Settings []byte
+}
+
+// setConnectionSettings sets the settings of an action.
+func (state *State) setActionSettings(n notification) {
+	e := SetActionSettings{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.Action, func(a *Action) {
+		a.Settings = e.Settings
+	})
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is

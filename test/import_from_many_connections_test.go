@@ -70,7 +70,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Imports users from CSV.
-	var csv int
+	var fs int
 	t.Log("importing from CSV file...")
 	{
 		// Determine the storage directory and assert that such directory exists.
@@ -85,9 +85,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		if !stat.IsDir() {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
-		fs := c.AddSourceFilesystem(storageDir)
-		csv = c.AddSourceCSVWithBusinessID(fs, chichitester.BusinessID{Name: "email", Label: "CSV email"})
-		csvAction := c.AddAction(csv, "Users", chichitester.ActionToSet{
+		fs = c.AddSourceFilesystemWithBusinessID(storageDir, chichitester.BusinessID{Name: "email", Label: "CSV email"})
+		csvAction := c.AddAction(fs, "Users", chichitester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
 			InSchema: types.Object([]types.Property{
@@ -109,9 +108,14 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			IdentityColumn:  "csv_id",
 			TimestampColumn: "timestamp",
 			TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
+			Connector:       chichitester.CSVConnector,
+			Settings: chichitester.JSONEncodeSettings(map[string]any{
+				"Comma":          ",",
+				"HasColumnNames": true,
+			}),
 		})
-		c.ExecuteAction(csv, csvAction, true)
-		c.WaitActionsToFinish(csv)
+		c.ExecuteAction(fs, csvAction, true)
+		c.WaitActionsToFinish(fs)
 	}
 
 	// Ensure that there are 13 users (10 from Dummy + 3 from CSV).
@@ -228,7 +232,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		csvIdentity := identities[1]
 		assertEqualIdentity(csvIdentity, chichitester.UserIdentity{
-			Connection: csv,
+			Connection: fs,
 			ExternalId: chichitester.LabelValue{
 				Label: "ID",
 				Value: "1",

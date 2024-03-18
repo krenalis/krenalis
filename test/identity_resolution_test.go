@@ -60,9 +60,6 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the Filesystem connection.
 	fsID := c.AddSourceFilesystem(storageDir)
 
-	// Create the JSON connection.
-	jsonID := c.AddSourceJSON(fsID)
-
 	allProps := []string{"dummyId", "email", "phoneNumbers"}
 	identifiers := []string{"dummyId", "email"}
 	inSchemaProps := []types.Property{
@@ -85,7 +82,7 @@ func TestIdentityResolution(t *testing.T) {
 	}
 
 	// Add the action A.
-	actionA := c.AddAction(jsonID, "Users", chichitester.ActionToSet{
+	actionA := c.AddAction(fsID, "Users", chichitester.ActionToSet{
 		Name:      "Action A",
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
@@ -94,10 +91,12 @@ func TestIdentityResolution(t *testing.T) {
 			Mapping: mapping,
 		},
 		IdentityColumn: "dummyId",
+		Connector:      chichitester.JSONConnector,
+		Settings:       []byte("{}"),
 	})
 
 	// Add the action B.
-	actionB := c.AddAction(jsonID, "Users", chichitester.ActionToSet{
+	actionB := c.AddAction(fsID, "Users", chichitester.ActionToSet{
 		Name:      "Action B",
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
@@ -106,6 +105,8 @@ func TestIdentityResolution(t *testing.T) {
 			Mapping: mapping,
 		},
 		IdentityColumn: "dummyId",
+		Connector:      chichitester.JSONConnector,
+		Settings:       []byte("{}"),
 	})
 
 	// Define a function "expectUsers" which checks if the expected users match
@@ -157,8 +158,8 @@ func TestIdentityResolution(t *testing.T) {
 		}
 
 		// Import the users in the JSON.
-		c.ExecuteAction(jsonID, action, true)
-		c.WaitActionsToFinish(jsonID)
+		c.ExecuteAction(fsID, action, true)
+		c.WaitActionsToFinish(fsID)
 
 	}
 

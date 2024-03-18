@@ -76,29 +76,17 @@ func TestExportZeroUsers(t *testing.T) {
 			Name:      "Filesystem",
 			Role:      chichitester.Destination,
 			Enabled:   true,
-			Connector: chichitester.FilesystemConnector,
+			Connector: chichitester.FilesystemConnector, // Filesystem.
 			Settings: chichitester.JSONEncodeSettings(map[string]any{
 				"Root": storage.Root(),
-			}),
-		})
-
-		// Create the CSV connection.
-		csvID := c.AddConnection(chichitester.ConnectionToAdd{
-			Name:      "CSV",
-			Role:      chichitester.Destination,
-			Enabled:   true,
-			Connector: chichitester.CSVConnector,
-			Storage:   fsID,
-			Settings: chichitester.JSONEncodeSettings(map[string]any{
-				"Comma": ",",
 			}),
 		})
 
 		exportedFilename := "exported-users.tmp.csv"
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-		// Add an action to the CSV for exporting the users.
-		exportUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{
+		// Add an action to the Filesystem for exporting the users.
+		exportUsersActionID := c.AddAction(fsID, "Users", chichitester.ActionToSet{
 			Name: "Export users to the CSV on Filesystem",
 			Path: exportedFilename,
 			OutSchema: types.Object([]types.Property{
@@ -106,6 +94,10 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "firstName", Type: types.Text(), Nullable: true},
 				{Name: "lastName", Type: types.Text(), Nullable: true},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
+			}),
+			Connector: chichitester.CSVConnector,
+			Settings: chichitester.JSONEncodeSettings(map[string]any{
+				"Comma": ",",
 			}),
 		})
 
@@ -115,20 +107,19 @@ func TestExportZeroUsers(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("POST", "/api/workspaces/1/connections/"+strconv.Itoa(csvID), map[string]any{
+		c.MustCall("POST", "/api/workspaces/1/connections/"+strconv.Itoa(fsID), map[string]any{
 			"Connection": map[string]any{
-				"Name":        "CSV",
+				"Name":        "Storage",
 				"Enabled":     true,
-				"Storage":     fsID,
 				"Compression": apis.NoCompression,
 			},
 		})
 
 		// Execute the action that export users.
-		c.ExecuteAction(csvID, exportUsersActionID, true)
+		c.ExecuteAction(fsID, exportUsersActionID, true)
 
 		// Wait for the import to finish.
-		c.WaitActionsToFinish(csvID)
+		c.WaitActionsToFinish(fsID)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

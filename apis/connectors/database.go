@@ -41,7 +41,7 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 	database.inner, database.err = _connector.RegisteredDatabase(connection.Connector().Name).New(&_connector.DatabaseConfig{
 		Role:        _connector.Role(connection.Role),
 		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.state, connection),
+		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
 	return database
 }

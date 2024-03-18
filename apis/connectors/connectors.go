@@ -162,7 +162,6 @@ var (
 	ErrEventNotExist       = errors.New("user interface event does not exist")
 	ErrEventTypeNotExist   = errors.New("event type does not exist")
 	ErrNoColumns           = errors.New("file has no columns")
-	ErrNoStorage           = errors.New("file has no storage")
 	ErrNoUserInterface     = errors.New("connector has no user interface")
 	ErrNoWebhooks          = errors.New("app has no webhooks")
 	ErrSheetNotExist       = errors.New("sheet does not exist")
@@ -269,7 +268,7 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	inner, err := _connector.RegisteredApp(connector.Name).New(&_connector.AppConfig{
 		Role:        _connector.Role(connection.Role),
 		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.state, connection),
+		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
 		HTTPClient:  connectors.http.ConnectionClient(connection.ID),
 		Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),
@@ -453,16 +452,46 @@ func businessIDToString(value any) (string, error) {
 	return s, nil
 }
 
-// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
-// settings for the connection.
-func setSettingsFunc(st *state.State, c *state.Connection) _connector.SetSettingsFunc {
+// setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
+// the settings for the action.
+func setActionSettingsFunc(st *state.State, a *state.Action) _connector.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
-		return setSettings(ctx, st, c.ID, settings)
+		return setActionSettings(ctx, st, a.ID, settings)
 	}
 }
 
-// setSettings sets the settings of the provided connection.
-func setSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
+// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
+// settings for the connection.
+func setConnectionSettingsFunc(st *state.State, c *state.Connection) _connector.SetSettingsFunc {
+	return func(ctx context.Context, settings []byte) error {
+		return setConnectionSettings(ctx, st, c.ID, settings)
+	}
+}
+
+// setActionSettings sets the settings of the provided action.
+func setActionSettings(ctx context.Context, st *state.State, action int, settings []byte) error {
+	if !utf8.Valid(settings) {
+		return errors.New("settings is not valid UTF-8")
+	}
+	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
+		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
+	}
+	n := state.SetActionSettings{
+		Action:   action,
+		Settings: settings,
+	}
+	err := st.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE actions SET settings = $1 WHERE id = $2", n.Settings, n.Action)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// setConnectionSettings sets the settings of the provided connection.
+func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
 	}

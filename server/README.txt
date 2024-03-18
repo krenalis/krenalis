@@ -11,6 +11,7 @@ DELETE  /api/workspaces/{id}/connections/{id}/actions/{id}                      
 POST    /api/workspaces/{id}/connections/{id}/actions/{id}/execute               Execute an action of a connection.
 POST    /api/workspaces/{id}/connections/{id}/actions/{id}/schedule-period       Set the schedule period of an action of a connection.
 POST    /api/workspaces/{id}/connections/{id}/actions/{id}/status                Set the status of an action of a connection.
+GET     /api/workspaces/{id}/connections/{id}/actions/{id}/ui-event              Execute the user interface event of an action.
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Users               Get the input and output schemas of the Users action type.
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Groups              Get the input and output schemas of the Groups action type.
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events              Get the input and output schemas of the Events action type with no event type.
@@ -21,8 +22,8 @@ POST    /api/workspaces/{id}/connections/{id}/event-preview                     
 POST    /api/workspaces/{id}/connections/{id}/exec-query                         Execute the query of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/executions                         Return the executions of a connection.
 POST    /api/workspaces/{id}/connections/{id}/identities                         List the user identities of a connection.
-GET     /api/workspaces/{id}/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection.
-GET     /api/workspaces/{id}/connections/{id}/sheets                             List the sheets of a multiple sheets file connection.
+POST    /api/workspaces/{id}/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection.
+POST    /api/workspaces/{id}/connections/{id}/sheets                             List the sheets of a multiple sheets file connection.        
 GET     /api/workspaces/{id}/connections/{id}/stats                              Get the stats of a connection.
 GET     /api/workspaces/{id}/connections/{id}/tables/{table}/schema              Return the schema of the given table of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/keys                               Get the write keys of a connection.

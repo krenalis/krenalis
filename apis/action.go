@@ -19,6 +19,7 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events/eventschema"
+	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
@@ -46,9 +47,12 @@ type Action struct {
 	Filter                  *Filter
 	Transformation          Transformation
 	Query                   *string
+	Connector               int
 	Path                    *string
-	Table                   *string
 	Sheet                   *string
+	Compression             Compression
+	Settings                json.RawMessage `json:",omitempty"`
+	Table                   *string
 	IdentityColumn          *string
 	TimestampColumn         *string
 	TimestampFormat         *string
@@ -131,18 +135,24 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		query := action.Query
 		this.Query = &query
 	}
+	if c := action.Connector(); c != nil {
+		this.Connector = c.ID
+	}
 	if action.Path != "" {
 		path := action.Path
 		this.Path = &path
-	}
-	if action.TableName != "" {
-		table := action.TableName
-		this.Table = &table
 	}
 	if action.Sheet != "" {
 		sheet := action.Sheet
 		this.Sheet = &sheet
 	}
+	this.Compression = Compression(action.Compression)
+	this.Settings = action.Settings
+	if action.TableName != "" {
+		table := action.TableName
+		this.Table = &table
+	}
+
 	if action.IdentityColumn != "" {
 		column := action.IdentityColumn
 		this.IdentityColumn = &column
@@ -237,14 +247,39 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// Execute executes the action, which must be an app, database, or file action
-// with a target of Users or Groups.
+// ServeUI serves the user interface for the file action (on a storage connection). event
+// is the event and values contains the form values in JSON format.
+//
+// If the event does not exist, it returns an errors.UnprocessableError error with code
+// EventNotExist.
+func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
+	this.apis.mustBeOpen()
+	// TODO: check and delete alternative fieldsets keys that have 'null' value
+	// before saving to database
+	connector := this.action.Connection().Connector()
+	if connector.Type != state.StorageType {
+		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
+	}
+	b, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
+	if err != nil {
+		switch err {
+		case connectors.ErrNoUserInterface:
+			err = errors.BadRequest("connector %d does not have a UI", connector.ID)
+		case connectors.ErrEventNotExist:
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
+		}
+		return nil, err
+	}
+	return b, nil
+}
+
+// Execute executes the action, which must be an app, database, or storage
+// action with a target of Users or Groups.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
 // It returns an errors.UnprocessableError error with code
 //   - ExecutionInProgress, if the action is already in progress.
-//   - NoStorage, if the connection of the action is a file and has no storage.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	this.apis.mustBeOpen()
@@ -262,11 +297,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
 	switch typ := c.Connector().Type; typ {
-	case state.AppType, state.DatabaseType:
-	case state.FileType:
-		if _, ok := c.Storage(); !ok {
-			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
-		}
+	case state.AppType, state.DatabaseType, state.StorageType:
 	default:
 		return errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
 	}
@@ -277,8 +308,10 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 //
 // Refer to the specifications in the file "apis/Actions.md" for more details.
 //
-// It returns an errors.UnprocessableError error with code LanguageNotSupported,
-// if the transformation language is not supported.
+// It returns an errors.UnprocessableError error with code:
+//   - ConnectorNotExist, if the connector does not exist.
+//   - InvalidSettings, if the settings are not valid.
+//   - LanguageNotSupported, if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	this.apis.mustBeOpen()
@@ -286,8 +319,31 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
 
+	// Validate the connector.
+	actionOnFile := this.action.Connection().Connector().Type == state.StorageType
+	if actionOnFile && action.Connector == 0 {
+		return errors.BadRequest("actions on Storage connections must have a connector")
+	}
+	if !actionOnFile && action.Connector != 0 {
+		return errors.BadRequest("actions on %v connections cannot have a connector", this.action.Connection().Connector().Type)
+	}
+	var fileConnector *state.Connector
+	if action.Connector != 0 {
+		if action.Connector < 1 || action.Connector > maxInt32 {
+			return errors.BadRequest("connector identifier %d is not valid", action.Connector)
+		}
+		var ok bool
+		fileConnector, ok = this.apis.state.Connector(action.Connector)
+		if !ok {
+			return errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", action.Connector)
+		}
+		if fileConnector.Type != state.FileType {
+			return errors.BadRequest("type of the action's connector must be File, got %v", fileConnector.Type)
+		}
+	}
+
 	// Validate the action.
-	err := this.connection.validateActionToSet(action, this.action.Target)
+	err := this.connection.validateActionToSet(action, this.action.Target, fileConnector)
 	if err != nil {
 		return err
 	}
@@ -295,7 +351,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	c := this.action.Connection()
 
 	inSchema := action.InSchema
-	if importsUsersIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
+	if importsUsersIdentitiesFromEvents(this.action.Connection().Connector().Type, c.Role, this.action.Target) {
 		// Use the schema without GID because incoming events do not have a GID.
 		inSchema = eventschema.SchemaWithoutGID
 	}
@@ -312,9 +368,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			Mapping: action.Transformation.Mapping,
 		},
 		Query:                   action.Query,
+		Connector:               action.Connector,
 		Path:                    action.Path,
-		TableName:               action.TableName,
 		Sheet:                   action.Sheet,
+		Compression:             state.Compression(action.Compression),
+		TableName:               action.TableName,
 		IdentityColumn:          action.IdentityColumn,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
@@ -345,6 +403,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// Determine the connector ID, for file actions.
+	var connectorID *int
+	if fileConnector != nil {
+		id := fileConnector.ID
+		connectorID = &id
 	}
 
 	if props := action.MatchingProperties; props != nil {
@@ -384,6 +449,40 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
 		if err != nil {
 			return err
+		}
+	}
+
+	// Validate the settings.
+	if action.Settings != nil {
+		if fileConnector == nil {
+			return errors.BadRequest("settings cannot be provided because there is no connector")
+		}
+		if !fileConnector.HasSettings {
+			return errors.BadRequest("settings cannot be provided because the File connector has no settings")
+		}
+	}
+	if fileConnector != nil && fileConnector.HasSettings {
+		settings := action.Settings
+		if settings == nil {
+			settings = json.RawMessage("{}")
+		}
+		conf := &connectors.ConnectorConfig{
+			Role:   this.action.Connection().Role,
+			Region: state.PrivacyRegion(this.action.Connection().Workspace().PrivacyRegion),
+		}
+		var err error
+		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, fileConnector, conf, settings)
+		if err != nil {
+			if err != connectors.ErrNoUserInterface {
+				return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+			}
+			if action.Settings != nil {
+				return errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
+					strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+			}
+		} else if action.Settings == nil {
+			return errors.BadRequest("settings must be provided because %s connector %s has a UI",
+				strings.ToLower(this.connection.Role.String()), fileConnector.Name)
 		}
 	}
 
@@ -434,18 +533,25 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			function = *n.Transformation.Function
 		}
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, transformation_mapping = $6, "+
-			"transformation_source = $7, transformation_language = $8, transformation_version = $9, "+
-			"query = $10, path = $11, table_name = $12, sheet = $13, identity_column = $14, "+
-			"timestamp_column = $15, timestamp_format = $16, export_mode = $17, "+
-			"matching_properties_internal = $18, matching_properties_external = $19, "+
-			"export_on_duplicated_users = $20\nWHERE id = $21",
+			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
+			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
+			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
+			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_column = $17, "+
+			"timestamp_column = $18, timestamp_format = $19, export_mode = $20, "+
+			"matching_properties_internal = $21, matching_properties_external = $22, "+
+			"export_on_duplicated_users = $23 \nWHERE id = $24",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, function.Source,
-			function.Language, function.Version, n.Query, n.Path, n.TableName, n.Sheet,
+			function.Language, function.Version, n.Query, connectorID, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
 			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
 		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				switch postgres.ErrConstraintName(err) {
+				case "actions_connector_fkey":
+					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+				}
+			}
 			return err
 		}
 		if result.RowsAffected() == 0 {
@@ -561,7 +667,7 @@ func (this *Action) isLanguageSupported() bool {
 
 // file returns the file of the action.
 func (this *Action) file() *connectors.File {
-	return this.apis.connectors.File(this.action.Connection())
+	return this.apis.connectors.File(this.action, this.connection.connection.Role)
 }
 
 // ActionToSet represents an action to set in a connection, by adding a new
@@ -618,14 +724,13 @@ type ActionToSet struct {
 	// empty string.
 	Query string
 
+	// Connector is the connector of the action on Storage connections.
+	// In any other case, must be 0.
+	Connector int
+
 	// Path is the path of the file. It cannot be longer than 1024 runes,
 	// and it is empty for non-file actions.
 	Path string
-
-	// TableName is the name of the table for the export and it is defined for
-	// destination database-actions; in any other case, it is the empty string.
-	// It cannot be longer than 1024 runes.
-	TableName string
 
 	// Sheet is the sheet name for multiple sheets file actions. It must be UTF-8
 	// encoded, have a length in the range [1, 31], should not start or end with
@@ -633,6 +738,19 @@ type ActionToSet struct {
 	// empty for non-file and non-multipart sheets actions. Sheet names are
 	// case-insensitive.
 	Sheet string
+
+	// Compression is the compression of the action on Storage connections.
+	// In any other case, must be 0.
+	Compression Compression
+
+	// Settings are the settings of the action on Storage connections.
+	// In any other case, must be nil.
+	Settings json.RawMessage
+
+	// TableName is the name of the table for the export and it is defined for
+	// destination database-actions; in any other case, it is the empty string.
+	// It cannot be longer than 1024 runes.
+	TableName string
 
 	// IdentityColumn is the column name used as identity in source file
 	// connections.

@@ -7,12 +7,15 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { authCodeURLResponse } from '../../../types/external/api';
+import { useLocation } from 'react-router-dom';
 
 const ConnectorsList = () => {
 	const [goToConnectorSettings, setGoToConnectorSettings] = useState<number>(0);
 	const [searchTerm, setSearchTerm] = useState<string>('');
 
 	const { redirect, api, handleError, connectors, setTitle } = useContext(AppContext);
+
+	const location = useLocation();
 
 	const connectionRole = useMemo(() => {
 		const roleParam = new URL(document.location.href).searchParams.get('role');
@@ -21,14 +24,19 @@ const ConnectorsList = () => {
 		} else {
 			return roleParam;
 		}
-	}, [document.location.href]);
+	}, [location]);
 
 	useLayoutEffect(() => {
-		setTitle(`Add a ${connectionRole.toLocaleLowerCase()} connection`);
+		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
 	useEffect(() => {
 		if (goToConnectorSettings !== 0) {
+			const connector = connectors.find((c) => c.id === goToConnectorSettings);
+			if (connector.isFile) {
+				redirect(`connectors/file/${goToConnectorSettings}?role=${connectionRole}`);
+				return;
+			}
 			redirect(`connectors/${goToConnectorSettings}?role=${connectionRole}`);
 		}
 	}, [goToConnectorSettings]);

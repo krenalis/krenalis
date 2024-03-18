@@ -67,7 +67,6 @@ var (
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
-//   - StorageNotExist, if the storage does not exist.
 func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -81,17 +80,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if utf8.RuneCountInString(connection.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", connection.Name)
 	}
-	if connection.Storage < 0 || connection.Storage > maxInt32 {
-		return 0, errors.BadRequest("storage identifier %d is not valid", connection.Storage)
-	}
-	switch connection.Compression {
-	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
-	default:
-		return 0, errors.BadRequest("compression %q is not valid", connection.Compression)
-	}
-	if connection.Storage == 0 && connection.Compression != NoCompression {
-		return 0, errors.BadRequest("compression requires a storage")
-	}
+
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
 			return 0, errors.BadRequest("strategy %q is not valid", *s)
@@ -105,6 +94,9 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if !ok {
 		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connection.Connector)
 	}
+	if c.Type == state.FileType {
+		return 0, errors.BadRequest("cannot add a connection with type File")
+	}
 
 	n := state.AddConnection{
 		Workspace:   this.workspace.ID,
@@ -112,35 +104,9 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		Role:        state.Role(connection.Role),
 		Enabled:     connection.Enabled,
 		Connector:   connection.Connector,
-		Storage:     connection.Storage,
-		Compression: state.Compression(connection.Compression),
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		WebsiteHost: connection.WebsiteHost,
 		BusinessID:  state.BusinessID(connection.BusinessID),
-	}
-	if n.Name == "" {
-		n.Name = c.Name
-	}
-
-	// Validate the storage.
-	if n.Storage > 0 {
-		if c.Type != state.FileType {
-			return 0, errors.BadRequest("connector %d cannot have a storage, it's a %s",
-				c.ID, strings.ToLower(c.Type.String()))
-		}
-		s, ok := this.workspace.Connection(n.Storage)
-		if !ok {
-			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
-		}
-		if s.Connector().Type != state.StorageType {
-			return 0, errors.BadRequest("connection %d is not a storage", n.Storage)
-		}
-		if Role(s.Role) != connection.Role {
-			if connection.Role == Source {
-				return 0, errors.BadRequest("storage %d is not a source", n.Storage)
-			}
-			return 0, errors.BadRequest("storage %d is not a destination", n.Storage)
-		}
 	}
 
 	// Validate the strategy.
@@ -289,11 +255,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector, storage,"+
-			" compression, resource, strategy, website_host, business_id_name, business_id_label, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12, $13, $14, $15)",
+			"(id, workspace, name, type, role, enabled, connector,"+
+			" resource, strategy, website_host, business_id_name, business_id_label, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector,
-			n.Storage, n.Compression, n.Resource.ID, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
+			n.Resource.ID, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
 			n.BusinessID.Label, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -302,8 +268,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				case "connections_connector_fkey":
 					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
-				case "connections_storage_fkey":
-					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
 				}
 			}
 			return err
@@ -613,7 +577,6 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Role:         Role(c.Role),
 		Enabled:      c.Enabled,
 		Connector:    conn.ID,
-		Compression:  Compression(c.Compression),
 		Strategy:     (*Strategy)(c.Strategy),
 		WebsiteHost:  c.WebsiteHost,
 		BusinessID:   BusinessID(c.BusinessID),
@@ -621,10 +584,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		ActionsCount: len(c.Actions()),
 		Health:       Health(c.Health),
 	}
-	// Set the storage.
-	if s, ok := c.Storage(); ok {
-		connection.Storage = s.ID
-	}
+
 	// Set the action types.
 	ts, err := connection.actionTypes(ctx)
 	if err != nil {
@@ -658,16 +618,12 @@ func (this *Workspace) Connections() []*Connection {
 			Role:         Role(c.Role),
 			Enabled:      c.Enabled,
 			Connector:    conn.ID,
-			Compression:  Compression(c.Compression),
 			Strategy:     (*Strategy)(c.Strategy),
 			WebsiteHost:  c.WebsiteHost,
 			BusinessID:   BusinessID(c.BusinessID),
 			HasSettings:  conn.HasSettings,
 			ActionsCount: len(c.Actions()),
 			Health:       Health(c.Health),
-		}
-		if s, ok := c.Storage(); ok {
-			connection.Storage = s.ID
 		}
 		infos[i] = &connection
 	}
@@ -1448,14 +1404,6 @@ type ConnectionToAdd struct {
 	// Connector is the identifier of the connector.
 	Connector int
 
-	// Storage is the identifier of the storage of a file connection.
-	// It must be 0 if the connection is not a file or has no storage.
-	Storage int
-
-	// Compression is the compression for file connections. It must be
-	// NoCompression if there is no storage.
-	Compression Compression
-
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It must be nil for destination connections and
 	// non-event source connections.
@@ -1650,7 +1598,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 				if extIDLabel == "" {
 					extIDLabel = "ID"
 				}
-			case state.DatabaseType, state.FileType:
+			case state.DatabaseType, state.StorageType:
 				extIDLabel = "ID"
 			case state.MobileType, state.ServerType, state.WebsiteType:
 				extIDLabel = "User ID"

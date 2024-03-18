@@ -97,9 +97,6 @@ func (state *State) Load() error {
 					file := connector.RegisteredFile(c.Name)
 					c.SourceDescription = file.SourceDescription
 					c.DestinationDescription = file.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
-					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = file.Icon
 					c.FileExtension = file.Extension
 					ct = file.ConnectionReflectType()
@@ -126,6 +123,9 @@ func (state *State) Load() error {
 					storage := connector.RegisteredStorage(c.Name)
 					c.SourceDescription = storage.SourceDescription
 					c.DestinationDescription = storage.DestinationDescription
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
+					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = storage.Icon
 					ct = storage.ConnectionReflectType()
 				case StreamType:
@@ -253,14 +253,13 @@ func (state *State) Load() error {
 		// Read all connections.
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
-			" COALESCE(storage, 0), compression::TEXT, resource, strategy, website_host,"+
-			" business_id_name, business_id_label,"+
+			" resource, strategy, website_host, business_id_name, business_id_label,"+
 			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
-				var workspaceID, connector, storage, resource int
+				var workspaceID, connector, resource int
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector,
-					&storage, &c.Compression, &resource, &c.Strategy, &c.WebsiteHost,
+					&resource, &c.Strategy, &c.WebsiteHost,
 					&c.BusinessID.Name, &c.BusinessID.Label, &c.Settings, &c.Health,
 				); err != nil {
 					return err
@@ -271,14 +270,6 @@ func (state *State) Load() error {
 				c.workspace = workspace
 				c.connector = state.connectors[connector]
 				c.actions = map[int]*Action{}
-				if storage > 0 {
-					if st, ok := state.connections[storage]; ok {
-						c.storage = st
-					} else {
-						c.storage = &Connection{}
-						state.connections[storage] = c.storage
-					}
-				}
 				if resource > 0 {
 					c.resource = state.resources[resource]
 				}
@@ -323,9 +314,11 @@ func (state *State) Load() error {
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
-			"transformation_language, transformation_version, query, path, table_name, sheet, identity_column,\n"+
-			"timestamp_column, timestamp_format, (user_cursor).id, (user_cursor).timestamp, health, export_mode,\n"+
-			"matching_properties_internal, matching_properties_external, export_on_duplicated_users\nFROM actions",
+			"transformation_language, transformation_version, query, connector, path, sheet, compression::TEXT,\n"+
+			"settings, table_name, identity_column, timestamp_column, timestamp_format,\n"+
+			"(user_cursor).id, (user_cursor).timestamp, health, export_mode,\n"+
+			"matching_properties_internal, matching_properties_external, export_on_duplicated_users\n"+
+			"FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -333,17 +326,22 @@ func (state *State) Load() error {
 					var rawInSchema, rawOutSchema, filter, mapping []byte
 					var function TransformationFunction
 					var matchPropInternal, matchPropExternal []byte
+					var connector *int
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
 						&filter, &mapping, &function.Source, &function.Language, &function.Version, &action.Query,
-						&action.Path, &action.TableName, &action.Sheet, &action.IdentityColumn, &action.TimestampColumn,
+						&connector, &action.Path, &action.Sheet, &action.Compression, &action.Settings,
+						&action.TableName, &action.IdentityColumn, &action.TimestampColumn,
 						&action.TimestampFormat, &action.UserCursor.ID, &action.UserCursor.Timestamp, &action.Health,
 						&action.ExportMode, &matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)
 					if err != nil {
 						return err
 					}
 					c := state.connections[connectionID]
+					if connector != nil {
+						action.connector = state.connectors[*connector]
+					}
 					action.mu = new(sync.Mutex)
 					action.connection = c
 					action.EventType = eventType

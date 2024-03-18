@@ -10,7 +10,7 @@ for users **imported from apps**, the user is merged with other users within the
 
 for users **imported from databases**, the user is merged with other users within the same connection who share the same value for the `id` column returned by the query;
 
-for users **imported from files**, the user is merged with other users within the same connection who share the same value for the identity column specified in the action's editing page;
+for users **imported from storages**, the user is merged with other users within the same connection who share the same value for the identity column specified in the action's editing page;
 
 for users **imported from events**, if the user…
 

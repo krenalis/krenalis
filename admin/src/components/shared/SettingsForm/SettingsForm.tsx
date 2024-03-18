@@ -5,7 +5,7 @@ import { UIValues } from '../../../types/external/api';
 
 interface SettingsFormProps {
 	fields: ReactNode[];
-	actions: ReactNode[];
+	actions?: ReactNode[];
 	values: UIValues;
 	onChange: (name: string, value: any) => void;
 }
@@ -16,7 +16,7 @@ const SettingsForm = ({ fields, actions, values, onChange }: SettingsFormProps) 
 			<SettingsContext.Provider value={{ values, onChange }}>
 				<div className='settings-form__fields'>{fields}</div>
 			</SettingsContext.Provider>
-			<div className='settings-form__actions'>{actions}</div>
+			{actions && <div className='settings-form__actions'>{actions}</div>}
 		</div>
 	);
 };

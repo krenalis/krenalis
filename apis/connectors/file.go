@@ -19,7 +19,6 @@ import (
 	"math"
 	"os"
 	pathPkg "path"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -38,43 +37,25 @@ import (
 // method of the io.Reader passed to a storage within the Write method.
 var storageTimeout = 10 * time.Second
 
-// File represents the file of a file connection.
 type File struct {
-	state      *state.State
-	connection *state.Connection
-	inner      _connector.FileConnection
-	err        error
+	state  *state.State
+	action *state.Action
+	inner  _connector.FileConnection
+	err    error
 }
 
-// File returns a file for the provided connection. Errors are deferred until a
-// file's method is called. It panics if connection is not a file connections.
-func (connectors *Connectors) File(connection *state.Connection) *File {
-	file := &File{
-		state:      connectors.state,
-		connection: connection,
+// File returns a file for the provided action, on a connection with the given
+// role. Errors are deferred until a file's method is called.
+func (connectors *Connectors) File(action *state.Action, role state.Role) *File {
+	file := &File{state: connectors.state,
+		action: action,
 	}
-	file.inner, file.err = _connector.RegisteredFile(connection.Connector().Name).New(&_connector.FileConfig{
-		Role:        _connector.Role(connection.Role),
-		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.state, connection),
+	file.inner, file.err = _connector.RegisteredFile(action.Connector().Name).New(&_connector.FileConfig{
+		Role:        _connector.Role(role),
+		Settings:    action.Settings,
+		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	return file
-}
-
-// CompletePath returns the complete representation of the provided path name or
-// an InvalidPathError value if name is not valid for use in calls to Read and
-// Write. name's length in runes must be in range [1, 1024].
-//
-// It returns the ErrNoStorage error if the file does not have a storage.
-func (file *File) CompletePath(ctx context.Context, name string) (string, error) {
-	if file.err != nil {
-		return "", file.err
-	}
-	storage, err := file.storage()
-	if err != nil {
-		return "", err
-	}
-	return storage.CompletePath(ctx, name)
 }
 
 // ContentType returns the content type of the file.
@@ -83,63 +64,6 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 		return "", file.err
 	}
 	return file.inner.ContentType(ctx), nil
-}
-
-// Read reads the records from the file at the provided path name and returns
-// the columns and the records. name must be UTF-8 encoded with a length in
-// range [1, 1024].
-//
-// If the file connection supports multiple sheets, sheet is a valid sheet name;
-// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
-// has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
-// case-insensitive.
-//
-// businessIDColumn, when not empty, is the column from which the Business ID
-// should be read.
-//
-// limit restricts the number of records to
-// return and should not exceed 100. If limit is negative, there is no upper
-// limit on the number of records returned.
-//
-// If the file does not have a storage, it returns the ErrNoStorage error. If
-// the file has no columns, it returns the ErrNoColumns error. If the file does
-// not have the provided sheet, it returns the ErrSheetNotExist error.
-func (file *File) Read(ctx context.Context, name, sheet, businessIDColumn string, limit int) (columns []types.Property, rows []map[string]any, err error) {
-	if file.err != nil {
-		return nil, nil, file.err
-	}
-	if limit < 0 {
-		limit = math.MaxInt
-	}
-	storage, err := file.storage()
-	if err != nil {
-		return nil, nil, err
-	}
-	s := newCompressedStorage(storage, file.connection.Compression)
-	r, storageTimestamp, err := s.Reader(ctx, name)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer r.Close()
-	if err = validateTimestamp(storageTimestamp); err != nil {
-		return nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
-	}
-	rw := newRecordWriter(file.connection.Connector().ID, types.Type{}, "", TimestampColumn{}, businessIDColumn, storageTimestamp, limit)
-	err = file.inner.Read(ctx, r, sheet, rw)
-	if err != nil && err != errRecordStop {
-		if err == _connector.ErrSheetNotExist {
-			err = ErrSheetNotExist
-		}
-		return nil, nil, err
-	}
-	if err = r.Close(); err != nil {
-		return nil, nil, err
-	}
-	if rw.properties == nil {
-		return nil, nil, ErrNoColumns
-	}
-	return rw.properties, rw.records, nil
 }
 
 // Records returns an iterator to iterate over the records, conforming to the
@@ -163,8 +87,7 @@ func (file *File) Read(ctx context.Context, name, sheet, businessIDColumn string
 // businessIDColumn, when not empty, is the name of the column to use as
 // Business ID for an identity.
 //
-// If the file does not have a storage, it returns the ErrNoStorage error. If
-// the provided schema, that must be valid, does not conform with the file's
+// If the provided schema, that must be valid, does not conform with the file's
 // schema, it returns a *SchemaError error.
 //
 // If the specified sheet is not found in the file, the For method of the
@@ -182,7 +105,7 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	if err != nil {
 		return nil, err
 	}
-	s := newCompressedStorage(storage, file.connection.Compression)
+	s := newCompressedStorage(storage, file.action.Compression)
 	rc, storageTimestamp, err := s.Reader(ctx, name)
 	if err != nil {
 		return nil, err
@@ -190,7 +113,7 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	if err = validateTimestamp(storageTimestamp); err != nil {
 		return nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
-	rw := newRecordWriter(file.connection.Connector().ID, schema, identityColumn, timestampColumn, businessIDColumn, storageTimestamp, math.MaxInt)
+	rw := newRecordWriter(file.action.Connector().ID, schema, identityColumn, timestampColumn, businessIDColumn, storageTimestamp, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -201,40 +124,6 @@ func (file *File) Records(ctx context.Context, name, sheet string, schema types.
 	return records, nil
 }
 
-// Sheets returns the sheets of the file with the provided name. Sheet names are
-// case-insensitive. It returns the ErrNoStorage error if the file does not have
-// a storage. It panics if the file connector does not support sheets.
-func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
-	if file.err != nil {
-		return nil, file.err
-	}
-	inner := file.inner.(_connector.Sheets)
-	storage, err := file.storage()
-	if err != nil {
-		return nil, err
-	}
-	s := newCompressedStorage(storage, file.connection.Compression)
-	r, _, err := s.Reader(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	sheets, err := inner.Sheets(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-	if err = r.Close(); err != nil {
-		return nil, err
-	}
-	sheets = slices.DeleteFunc(sheets, func(name string) bool {
-		return !IsValidSheetName(name)
-	})
-	if len(sheets) == 0 {
-		return nil, errors.New("file does not contain any valid sheet names")
-	}
-	return sheets, nil
-}
-
 // Writer returns a Writer for writing records into the file located at the
 // specified path. schema contains the properties of the records to be written.
 //
@@ -243,8 +132,6 @@ func (file *File) Sheets(ctx context.Context, name string) ([]string, error) {
 // has a length in the range [1, 31], does not start or end with "'", and does
 // not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // case-insensitive.
-//
-// It returns the ErrNoStorage error if the file does not have a storage.
 func (file *File) Writer(ctx context.Context, path, sheet string, schema types.Type, ack AckFunc) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -256,8 +143,8 @@ func (file *File) Writer(ctx context.Context, path, sheet string, schema types.T
 	if err != nil {
 		return nil, err
 	}
-	s := newCompressedStorage(storage, file.connection.Compression)
-	extension := file.connection.Connector().FileExtension
+	s := newCompressedStorage(storage, file.action.Compression)
+	extension := file.action.Connector().FileExtension
 	sw, err := s.Writer(ctx, path, file.inner.ContentType(ctx), extension)
 	if err != nil {
 		return nil, err
@@ -347,17 +234,14 @@ func (w *fileWriter) Write(ctx context.Context, gid int, record Record) bool {
 	}
 }
 
-// storage returns the inner storage connection of the file. If the file does
-// not have a storage, it returns the ErrNoStorage error.
+// storage returns the inner storage connection of the file.
 func (file *File) storage() (_connector.StorageConnection, error) {
-	storage, ok := file.connection.Storage()
-	if !ok {
-		return nil, ErrNoStorage
-	}
-	return _connector.RegisteredStorage(storage.Name).New(&_connector.StorageConfig{
-		Role:        _connector.Role(storage.Role),
-		Settings:    storage.Settings,
-		SetSettings: setSettingsFunc(file.state, storage),
+	conn := file.action.Connection()
+	connector := file.action.Connection().Connector()
+	return _connector.RegisteredStorage(connector.Name).New(&_connector.StorageConfig{
+		Role:        _connector.Role(conn.Role),
+		Settings:    conn.Settings,
+		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})
 }
 

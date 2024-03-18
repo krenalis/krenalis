@@ -29,6 +29,10 @@ const useAction = (
 	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
+	const [isFileConnectorLoading, setIsFileConnectorLoading] = useState<boolean>(
+		providedAction !== null && connection.isFile && connection.isSource,
+	);
+	const [isFileConnectorChanged, setIsFileConnectorChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 
 	const { api, handleError, setIsLoadingState } = useContext(AppContext);
@@ -86,21 +90,25 @@ const useAction = (
 					inputSchema = res.Schema;
 				}
 
-				// If the action type is an import from a file source, the input
-				// schema is the schema of the file itself.
-				if (fields.includes('Path') && isEditing && isImport) {
+				// If the action type is an import from a file source,
+				// the input schema is the schema of the file itself.
+				if (fields.includes('File') && isEditing && isImport) {
 					let res: RecordsResponse;
 					res = await api.workspaces.connections.records(
 						connection.id,
+						providedAction.Connector,
 						providedAction.Path!,
 						providedAction.Sheet,
+						providedAction.Compression,
+						providedAction.Settings,
 						0,
 					);
 					inputSchema = res.schema;
 				}
 
-				// If the action type is an exrpot to a database destination, the
-				// output schema is the schema of the database table itself.
+				// If the action type is an export to a database
+				// destination, the output schema is the schema of the
+				// database table itself.
 				if (fields.includes('Table') && isEditing) {
 					let schema: ObjectType;
 					schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
@@ -204,7 +212,9 @@ const useAction = (
 
 	if (!isLoading) {
 		isMappingHidden =
-			((connection.type === 'Database' || connection.type === 'File') &&
+			isFileConnectorLoading ||
+			isFileConnectorChanged ||
+			((connection.type === 'Database' || connection.type === 'Storage') &&
 				actionType!.InputSchema == null &&
 				!isEditing) ||
 			(connection.type === 'Database' &&
@@ -217,7 +227,7 @@ const useAction = (
 			connection.role === 'Source' &&
 			actionType!.InputSchema == null &&
 			isEditing;
-		const hasRecordsError = connection.type === 'File' && actionType!.InputSchema == null && isEditing;
+		const hasRecordsError = connection.type === 'Storage' && actionType!.InputSchema == null && isEditing;
 		const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
 
 		isMappingDisabled =
@@ -242,7 +252,7 @@ const useAction = (
 		} else if (connection.type === 'Database' && connection.role === 'Destination') {
 			mappingDisabledReason =
 				'Mapping is disabled since the table name has been modified. Please confirm the table name or revert the changes before proceeding to mapping.';
-		} else if (connection.type === 'File') {
+		} else if (connection.type === 'Storage') {
 			mappingDisabledReason =
 				'Mapping is disabled since the file information has been modified. Please confirm the new file information or revert the changes before proceeding to mapping.';
 		}
@@ -261,6 +271,9 @@ const useAction = (
 		isSaveHidden,
 		setIsSaveHidden,
 		setIsFileChanged,
+		isFileConnectorLoading,
+		setIsFileConnectorLoading,
+		setIsFileConnectorChanged,
 		setIsTableChanged,
 		setIsQueryChanged,
 		isMappingHidden,

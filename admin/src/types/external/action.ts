@@ -1,4 +1,5 @@
-import { Filter } from './api';
+import { Filter, UIValues } from './api';
+import { Compression } from './connection';
 import Type, { ObjectType, Property } from './types';
 
 type ActionTarget = 'Events' | 'Users' | 'Groups';
@@ -53,6 +54,9 @@ interface Action {
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
 	ExportOnDuplicatedUsers: boolean | null;
+	Compression: Compression;
+	Connector: number;
+	Settings: UIValues;
 }
 
 interface ActionType {
@@ -79,6 +83,9 @@ interface ActionToSet {
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
 	exportOnDuplicatedUsers?: boolean | null;
+	Compression: Compression;
+	Connector: number;
+	Settings?: UIValues;
 }
 
 export type {

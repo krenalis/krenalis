@@ -61,7 +61,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		database := this.database()
 		defer database.Close()
 		records, err = database.Records(ctx, query, action.InSchema, businessID.Name)
-	case state.FileType:
+	case state.StorageType:
 		timestampColumn := connectors.TimestampColumn{
 			Name:   action.TimestampColumn,
 			Format: action.TimestampFormat,

@@ -80,7 +80,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 
 	schema := action.InSchema
-	if connector.Type == state.FileType {
+	if connector.Type == state.StorageType {
 		schema = action.OutSchema
 	}
 
@@ -156,7 +156,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		writer, err = this.app().Writer(state.Users, ack)
 	case state.DatabaseType:
 		writer, err = this.database().Writer(action.TableName, action.OutSchema, ack)
-	case state.FileType:
+	case state.StorageType:
 		var path string
 		path, err = replacePlaceholders(this.action.Path, newPathPlaceholderReplacer(time.Now().UTC()))
 		if err != nil {
@@ -237,7 +237,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	err = records.For(func(user warehouses.Record) error {
 		if user.Err != nil {
 			stats.Failed(statistics.ReceivedStep, user.ID, user.Err)
-			if connector.Type == state.FileType {
+			if connector.Type == state.StorageType {
 				return err
 			}
 			return nil

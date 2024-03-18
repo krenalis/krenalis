@@ -40,8 +40,6 @@ interface ConnectionToAdd {
 	role: string;
 	enabled: boolean;
 	connector: number;
-	storage: number;
-	compression: Compression;
 	strategy?: Strategy | null;
 	websiteHost: string;
 	businessID: BusinessID;
@@ -51,8 +49,6 @@ interface ConnectionToAdd {
 interface ConnectionToSet {
 	name: string;
 	enabled: boolean;
-	storage: number;
-	compression: Compression;
 	strategy?: Strategy | null;
 	websiteHost: string;
 	businessID: BusinessID;

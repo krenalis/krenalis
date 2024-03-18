@@ -14,13 +14,6 @@
 	margin: 50px 0;
 }
 
-.connectorSettings .basic .noStorages {
-	display: flex;
-	gap: 20px;
-	align-items: baseline;
-	margin: 50px 0;
-}
-
 .connectorSettings sl-select.strategy {
 	max-width: fit-content;
 }
@@ -38,12 +31,6 @@
 .connectorSettings sl-input.businessIDName,
 .connectorSettings sl-input.businessIDLabel {
 	padding-top: 2em;
-}
-
-.connectorSettings sl-select.storage,
-.connectorSettings sl-select.compression {
-	max-width: fit-content;
-	min-width: 280px;
 }
 
 .connectorSettings sl-input.host {

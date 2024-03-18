@@ -16,8 +16,6 @@
 
 .connectionSettings .generalSettings .nameField,
 .connectionSettings .generalSettings .enablingField,
-.connectionSettings .generalSettings .storageField,
-.connectionSettings .generalSettings .compressionField,
 .connectionSettings .generalSettings .strategyField,
 .connectionSettings .generalSettings .websiteHostField,
 .connectionSettings .generalSettings .businessIDNameField,
@@ -27,12 +25,6 @@
 
 .connectionSettings .generalSettings .nameField {
 	max-width: 280px;
-}
-
-.connectionSettings .generalSettings .storageField,
-.connectionSettings .generalSettings .compressionField {
-	max-width: fit-content;
-	min-width: 280px;
 }
 
 .connectionSettings .generalSettings .strategyField {
@@ -95,12 +87,6 @@
 
 .connectionSettings .clipboardInput {
 	margin-top: 10px;
-}
-
-.connectionSettings .storageWrapper {
-	display: flex;
-	justify-content: left;
-	gap: 15px;
 }
 
 .connectionSettings .snippetCopy .editorWrapper {

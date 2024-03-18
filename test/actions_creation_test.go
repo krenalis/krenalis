@@ -26,40 +26,22 @@ func TestActionsCreation(t *testing.T) {
 	defer c.Stop()
 
 	// Create some connections that will be used by the actions.
-	var (
-		srcCSVConnection      int
-		dstCSVConnection      int
-		postgreSQLConnection  int
-		javaScriptConnection  int
-		dummyExportConnection int
-	)
-	{
-		// CSV connection.
-		storageDir, err := filepath.Abs("testdata/storage")
-		if err != nil {
-			t.Fatal(err)
-		}
-		stat, err := os.Stat(storageDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !stat.IsDir() {
-			t.Fatalf("%q is not a dir", storageDir)
-		}
-		srcFsID := c.AddSourceFilesystem(storageDir)
-		srcCSVConnection = c.AddSourceCSV(srcFsID)
-		dstFsID := c.AddDestinationFilesystem(storageDir)
-		dstCSVConnection = c.AddDestinationCSV(dstFsID)
-		javaScriptConnection = c.AddJavaScriptSource("JavaScript (source)", "example.com")
+	storageDir, err := filepath.Abs("testdata/storage")
+	if err != nil {
+		t.Fatal(err)
 	}
-	{
-		// PostgreSQL connection.
-		postgreSQLConnection = c.AddSourcePostgreSQL()
+	stat, err := os.Stat(storageDir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	{
-		// Dummy export connection.
-		dummyExportConnection = c.AddDummy("Dummy (destination)", chichitester.Destination)
+	if !stat.IsDir() {
+		t.Fatalf("%q is not a dir", storageDir)
 	}
+	srcFsID := c.AddSourceFilesystem(storageDir)
+	dstFsID := c.AddDestinationFilesystem(storageDir)
+	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com")
+	postgreSQLConnection := c.AddSourcePostgreSQL()
+	dummyExportConnection := c.AddDummy("Dummy (destination)", chichitester.Destination)
 
 	tests := []struct {
 		conn   int
@@ -67,9 +49,9 @@ func TestActionsCreation(t *testing.T) {
 		err    string
 	}{
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from a CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "identity", Type: types.Text()},
@@ -89,10 +71,16 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:  "identity",
 				TimestampColumn: "timestamp",
 				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
+
+				Connector: chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
@@ -114,11 +102,16 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:  "identity",
 				TimestampColumn: "timestamp",
 				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
+				Connector:       chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta properties"}}`,
 		},
 		{
-			conn: dstCSVConnection,
+			conn: dstFsID,
 			action: chichitester.ActionToSet{
 				Name: "Export users to a CSV on Filesystem",
 				Path: "users.csv",
@@ -126,10 +119,15 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "Email", Type: types.Text()}, // allowed because this is a destination connection.
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
+				Connector: chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
@@ -150,11 +148,16 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityColumn:  "identity",
 				TimestampColumn: "timestamp",
+				Connector:       chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp format is required"}}`,
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
@@ -174,11 +177,16 @@ func TestActionsCreation(t *testing.T) {
 				},
 				TimestampColumn: "timestamp",
 				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
+				Connector:       chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity is mandatory"}}`,
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
@@ -197,11 +205,16 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 				IdentityColumn: "- - invalid - -",
+				Connector:      chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the identity has not a valid property name"}}`,
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
@@ -219,21 +232,31 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityColumn:  "email",
 				TimestampColumn: "timestamp",
+				Connector:       chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name:            "Import users from CSV on Filesystem",
 				Path:            "users.csv",
 				IdentityColumn:  "email",
 				TimestampColumn: "timestamp",
 				TimestampFormat: "2006-01-02 15:04:05",
+				Connector:       chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be valid"}}`,
 		},
 		{
-			conn: srcCSVConnection,
+			conn: srcFsID,
 			action: chichitester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
@@ -252,6 +275,11 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:  "email",
 				TimestampColumn: "timestamp",
 				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
+				Connector:       chichitester.CSVConnector,
+				Settings: chichitester.JSONEncodeSettings(map[string]any{
+					"Comma":          ",",
+					"HasColumnNames": true,
+				}),
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"action cannot specify a timestamp format"}}`,
 		},

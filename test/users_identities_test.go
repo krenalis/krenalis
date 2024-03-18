@@ -32,40 +32,16 @@ func Test_UsersIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs := c.AddSourceFilesystem(storageDir)
-
-	csv1 := c.AddConnection(chichitester.ConnectionToAdd{
-		Name:      "CSV",
-		Role:      chichitester.Source,
-		Enabled:   true,
-		Connector: chichitester.CSVConnector,
-		Storage:   fs,
-		BusinessID: chichitester.BusinessID{
-			Name:  "email",
-			Label: "CSV User Email",
-		},
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
-			"Comma":          ",",
-			"HasColumnNames": true,
-		}),
+	fs1 := c.AddSourceFilesystemWithBusinessID(storageDir, chichitester.BusinessID{
+		Name:  "email",
+		Label: "CSV User Email",
 	})
-	csv2 := c.AddConnection(chichitester.ConnectionToAdd{
-		Name:      "CSV",
-		Role:      chichitester.Source,
-		Enabled:   true,
-		Connector: chichitester.CSVConnector,
-		Storage:   fs,
-		BusinessID: chichitester.BusinessID{
-			Name:  "email",
-			Label: "CSV User Email",
-		},
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
-			"Comma":          ",",
-			"HasColumnNames": true,
-		}),
+	fs2 := c.AddSourceFilesystemWithBusinessID(storageDir, chichitester.BusinessID{
+		Name:  "email",
+		Label: "CSV User Email",
 	})
 
-	action1 := c.AddAction(csv1, "Users", chichitester.ActionToSet{
+	action1 := c.AddAction(fs1, "Users", chichitester.ActionToSet{
 		Name: "CSV 1",
 		Path: "users1.csv",
 		InSchema: types.Object([]types.Property{
@@ -81,9 +57,14 @@ func Test_UsersIdentities(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
+		Connector:      chichitester.CSVConnector,
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
 	})
 
-	action2 := c.AddAction(csv2, "Users", chichitester.ActionToSet{
+	action2 := c.AddAction(fs2, "Users", chichitester.ActionToSet{
 		Name: "CSV 2",
 		Path: "users2.csv",
 		InSchema: types.Object([]types.Property{
@@ -99,13 +80,18 @@ func Test_UsersIdentities(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
+		Connector:      chichitester.CSVConnector,
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
 	})
 
-	c.ExecuteAction(csv1, action1, false)
-	c.ExecuteAction(csv2, action2, false)
+	c.ExecuteAction(fs1, action1, false)
+	c.ExecuteAction(fs2, action2, false)
 
-	c.WaitActionsToFinish(csv1)
-	c.WaitActionsToFinish(csv2)
+	c.WaitActionsToFinish(fs1)
+	c.WaitActionsToFinish(fs2)
 
 	users, _, count := c.Users([]string{"Id"}, "", 0, 100)
 
@@ -140,9 +126,9 @@ func Test_UsersIdentities(t *testing.T) {
 
 			var externalIDPrefix string
 			switch identity.Connection {
-			case csv1:
+			case fs1:
 				externalIDPrefix = "users1_"
-			case csv2:
+			case fs2:
 				externalIDPrefix = "users2_"
 			default:
 				t.Fatalf("unexpected connection %d", identity.Connection)

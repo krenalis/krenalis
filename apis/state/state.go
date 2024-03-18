@@ -603,8 +603,6 @@ type Connection struct {
 	Role         Role
 	Enabled      bool
 	connector    *Connector
-	storage      *Connection
-	Compression  Compression
 	resource     *Resource
 	Strategy     *Strategy
 	WebsiteHost  string
@@ -638,15 +636,6 @@ func (connection *Connection) Connector() *Connector {
 	c := connection.connector
 	connection.mu.Unlock()
 	return c
-}
-
-// Storage returns the storage of the connection.
-// The boolean return value reports whether the connection has a storage.
-func (connection *Connection) Storage() (*Connection, bool) {
-	connection.mu.Lock()
-	s := connection.storage
-	connection.mu.Unlock()
-	return s, s != nil
 }
 
 // Resource returns the resource of the connection.
@@ -907,6 +896,7 @@ type Action struct {
 	mu                      *sync.Mutex
 	ID                      int
 	connection              *Connection
+	connector               *Connector
 	execution               *ActionExecution
 	Target                  Target
 	Name                    string
@@ -920,8 +910,10 @@ type Action struct {
 	Transformation          Transformation
 	Query                   string
 	Path                    string
-	TableName               string
 	Sheet                   string
+	Compression             Compression
+	Settings                []byte
+	TableName               string
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
@@ -1046,6 +1038,14 @@ type FilterCondition struct {
 func (action *Action) Connection() *Connection {
 	action.mu.Lock()
 	c := action.connection
+	action.mu.Unlock()
+	return c
+}
+
+// Connector returns the connector of the action.
+func (action *Action) Connector() *Connector {
+	action.mu.Lock()
+	c := action.connector
 	action.mu.Unlock()
 	return c
 }

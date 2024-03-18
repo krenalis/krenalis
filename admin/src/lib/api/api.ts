@@ -206,28 +206,36 @@ class Connections {
 
 	records = async (
 		connection: number,
+		fileConnector: number,
 		path: string,
 		sheet: string | null,
+		compression: string,
+		settings: UIValues,
 		limit: number,
 	): Promise<RecordsResponse> => {
-		let queryString = `?limit=${limit}`;
-		if (path != null) {
-			queryString += `&path=${encodeURIComponent(path)}`;
-		}
-		if (sheet != null) {
-			queryString += `&sheet=${encodeURIComponent(sheet)}`;
-		}
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/records${queryString}`,
-			http.GET,
-		);
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/records`, http.POST, {
+			FileConnector: fileConnector,
+			Path: path,
+			Sheet: sheet,
+			Compression: compression,
+			Settings: settings,
+			Limit: limit,
+		});
 	};
 
-	sheets = async (connection: number, path: string): Promise<SheetsResponse> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets?path=${encodeURIComponent(path)}`,
-			http.GET,
-		);
+	sheets = async (
+		connection: number,
+		fileConnector: number,
+		path: string,
+		compression: string,
+		settings: UIValues,
+	): Promise<SheetsResponse> => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets`, http.POST, {
+			FileConnector: fileConnector,
+			Path: path,
+			Compression: compression,
+			Settings: settings,
+		});
 	};
 
 	ui = async (connection: number): Promise<UIResponse> => {
@@ -335,6 +343,24 @@ class Connections {
 			)}/execute`,
 			http.POST,
 			{ Reimport: reimport },
+		);
+	};
+
+	actionUiEvent = async (
+		connection: number,
+		action: number,
+		event: string,
+		values: UIValues,
+	): Promise<UIResponse> => {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
+				action,
+			)}/ui-event`,
+			http.POST,
+			{
+				event: event,
+				values: values,
+			},
 		);
 	};
 

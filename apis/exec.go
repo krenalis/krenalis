@@ -40,8 +40,8 @@ func (this *Action) addExecution(ctx context.Context, reimport bool) error {
 		StartTime: time.Now().UTC(),
 	}
 	c := this.action.Connection()
-	if storage, ok := c.Storage(); ok {
-		n.Storage = storage.ID
+	if c.Connector().Type == state.StorageType {
+		n.Storage = c.ID
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -58,9 +58,6 @@ func (this *Action) addExecution(ctx context.Context, reimport bool) error {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "actions_executions_action_fkey" {
 					err = errors.NotFound("action %d does not exit", n.Action)
-				}
-				if postgres.ErrConstraintName(err) == "actions_executions_storage_fkey" {
-					err = errors.Unprocessable(NoStorage, "connection of action %d does not have a storage", n.Action)
 				}
 			}
 			return err

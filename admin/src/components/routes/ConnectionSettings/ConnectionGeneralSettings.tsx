@@ -23,8 +23,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [connectionToSet, setConnectionToSet] = useState<ConnectionToSet>({
 		name: connection.name,
 		enabled: connection.enabled,
-		storage: connection.storage,
-		compression: connection.compression,
 		strategy: connection.strategy,
 		websiteHost: connection.websiteHost,
 		businessID: connection.businessID,
@@ -32,19 +30,12 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, redirect, setIsLoadingConnections, connections } = useContext(AppContext);
+	const { api, handleError, showStatus, redirect, setIsLoadingConnections } = useContext(AppContext);
 
 	const onNameChange = async (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.name = value;
-		setConnectionToSet(c);
-	};
-
-	const onCompressionChange = async (e) => {
-		const value = e.target.value;
-		const c = { ...connectionToSet };
-		c.compression = value;
 		setConnectionToSet(c);
 	};
 
@@ -82,16 +73,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		setConnectionToSet(c);
 	};
 
-	const onStorageChange = async (e) => {
-		const v = Number(e.target.value);
-		const c = { ...connectionToSet };
-		c.storage = v;
-		if (v === 0) {
-			c.compression = '';
-		}
-		setConnectionToSet(c);
-	};
-
 	const onDeletionConfirmation = async () => {
 		try {
 			await api.workspaces.connections.delete(connection.id);
@@ -126,19 +107,12 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		}, 500);
 	};
 
-	const storages: TransformedConnection[] = [];
-	for (const cn of connections) {
-		if (cn.type === 'Storage' && cn.role === connection.role) {
-			storages.push(cn);
-		}
-	}
-
 	const showStrategy =
 		connection.role === 'Source' && (connection.type === 'Mobile' || connection.type === 'Website');
 
 	const showBusinessID =
 		connection.role === 'Source' && connection.type !== 'Storage' && connection.type !== 'Stream';
-	const businessIDKind = ['File', 'Database'].includes(connection.type) ? 'column' : 'property';
+	const businessIDKind = ['Database'].includes(connection.type) ? 'column' : 'property';
 
 	return (
 		<div className='generalSettings'>
@@ -149,37 +123,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				onSlChange={onNameChange}
 				maxlength={100}
 			/>
-
-			{connection.type === 'File' && (
-				<SlSelect
-					label='Storage'
-					className='storageField'
-					value={String(connectionToSet.storage)}
-					onSlChange={onStorageChange}
-				>
-					<SlOption value='0'>No storage</SlOption>
-					{storages.map((s) => (
-						<SlOption key={s.id} value={String(s.id)}>
-							{s.name}
-						</SlOption>
-					))}
-				</SlSelect>
-			)}
-
-			{connection.type === 'File' && (
-				<SlSelect
-					value={connectionToSet.compression}
-					label='Compression'
-					className='compressionField'
-					disabled={connectionToSet.storage === 0}
-					onSlChange={onCompressionChange}
-				>
-					<SlOption value=''>None</SlOption>
-					<SlOption value='Zip'>Zip</SlOption>
-					<SlOption value='Gzip'>Gzip</SlOption>
-					<SlOption value='Snappy'>Snappy</SlOption>
-				</SlSelect>
-			)}
 
 			{showStrategy && (
 				<SlSelect

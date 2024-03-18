@@ -34,7 +34,7 @@ func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, err
 	stream.inner, err = _connector.RegisteredStream(connection.Connector().Name).New(&_connector.StreamConfig{
 		Role:        _connector.Role(connection.Role),
 		Settings:    connection.Settings,
-		SetSettings: setSettingsFunc(connectors.state, connection),
+		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
 	if err != nil {
 		return nil, err

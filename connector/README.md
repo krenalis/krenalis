@@ -35,9 +35,9 @@
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
 | ContentType      | ✓    | ✓        | ✓           |
-| Read             | ✓    | ✓        | ✓           |
+| Read             | ✓    | ✓        | -           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
-| Sheets           | ✓    | ✓        | ✓           |
+| Sheets           | ✓    | ✓        | -           |
 | ValidateSettings | ✓    | -        | -           |
 | Write            | ✓    | ✓        | ✓           |
 

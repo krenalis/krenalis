@@ -1,0 +1,153 @@
+import './FileConnector.css';
+import React, { useState, useLayoutEffect, useContext, useMemo } from 'react';
+import appContext from '../../../context/AppContext';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import { useParams, useLocation } from 'react-router-dom';
+import LittleLogo from '../../shared/LittleLogo/LittleLogo';
+import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import getConnectorLogo from '../../helpers/getConnectorLogo';
+import ListTile from '../../shared/ListTile/ListTile';
+
+const FileConnector = () => {
+	const [selectedStorage, setSelectedStorage] = useState<number>();
+
+	const { setTitle, connectors, redirect, handleError, connections } = useContext(appContext);
+
+	const params = useParams();
+	const location = useLocation();
+
+	const file = useMemo(() => {
+		const f = connectors.find((c) => c.id === Number(params.id));
+		if (f == null) {
+			handleError(`Connector with id ${params.id} doesn't exist`);
+			redirect('connectors');
+			return;
+		}
+		return f;
+	}, [params.id]);
+
+	const role = useMemo(() => {
+		const r = new URL(document.location.href).searchParams.get('role');
+		if (r == null || r === '') {
+			return 'Source';
+		} else {
+			return r;
+		}
+	}, [location]);
+
+	const storages = useMemo(() => {
+		const s: TransformedConnection[] = [];
+		for (const c of connections) {
+			if (c.isStorage && c.role === role) {
+				s.push(c);
+			}
+		}
+		return s;
+	}, [connectors]);
+
+	useLayoutEffect(() => {
+		setTitle(`Add ${file.name} file`);
+	}, [file]);
+
+	const onStorageChange = (e) => {
+		setSelectedStorage(Number(e.target.value));
+	};
+
+	const onCreateStorageClick = () => {
+		redirect(`connectors?role=${role}`);
+	};
+
+	const onAddActionType = (target: String) => {
+		const id = storages.find((s) => s.id === selectedStorage).id;
+		redirect(`connections/${id}/actions/add/${target}?fileConnector=${file.id}`);
+	};
+
+	return (
+		<div className='file-connector'>
+			<div className='routeContent'>
+				<div className='file-connector__content'>
+					{storages.length > 0 ? (
+						<div className='file-connector__storage'>
+							<SlSelect
+								label='Storage'
+								name='storages'
+								value={String(selectedStorage)}
+								onSlChange={onStorageChange}
+							>
+								{selectedStorage != null && (
+									<div className='file-connector__storage-logo' slot='prefix'>
+										<LittleLogo
+											icon={storages.find((s) => s.id === selectedStorage).connector.icon}
+										/>
+									</div>
+								)}
+								{storages.map((s) => (
+									<SlOption key={s.id} value={String(s.id)}>
+										<div slot='prefix'>
+											<LittleLogo icon={s.connector.icon} />
+										</div>
+										{s.name}
+									</SlOption>
+								))}
+							</SlSelect>
+						</div>
+					) : (
+						<div className='file-connector__no-storage'>
+							<div>
+								Currently there are no {role === 'Source' ? 'sources' : 'destination'} storages
+								available
+							</div>
+							<SlButton variant='neutral' onClick={onCreateStorageClick}>
+								Create one...
+							</SlButton>
+						</div>
+					)}
+					{selectedStorage != null && (
+						<div className='file-connector__action-types'>
+							<ListTile
+								key={'users-action-type'}
+								icon={getConnectorLogo(file.icon)}
+								name='Import users'
+								description={`Import the users from ${file.name}`}
+								className='file-connector__action-type'
+								action={
+									<SlButton
+										size='small'
+										variant='primary'
+										onClick={() => {
+											onAddActionType('users');
+										}}
+									>
+										Add
+									</SlButton>
+								}
+							/>
+							<ListTile
+								key={'gropus-action-type'}
+								icon={getConnectorLogo(file.icon)}
+								name='Import groups'
+								description={`Import the groups from ${file.name}`}
+								className='file-connector__action-type'
+								action={
+									<SlButton
+										size='small'
+										variant='primary'
+										onClick={() => {
+											onAddActionType('groups');
+										}}
+									>
+										Add
+									</SlButton>
+								}
+							/>
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export { FileConnector };

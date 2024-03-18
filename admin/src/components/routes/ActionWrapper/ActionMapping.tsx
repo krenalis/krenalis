@@ -323,7 +323,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				padded={false}
 				className={mode}
 			>
-				{connection.isFile && connection.isSource && (
+				{connection.isStorage && connection.isSource && (
 					<div className='specialProperties'>
 						<div className='identityColumn'>
 							<div className='label'>
@@ -791,7 +791,7 @@ const FullscreenTransformation = ({
 				if (connection.isFile && connection.isSource) {
 					let res: RecordsResponse;
 					try {
-						res = await api.workspaces.connections.records(connection.id, action.Path, action.Sheet, 20);
+						// res = await api.workspaces.connections.records(connection.id, action.Path, action.Sheet, 20);
 					} catch (err) {
 						handleError(err);
 						return;

@@ -30,6 +30,7 @@ import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
 import Workspaces from './components/routes/Workspaces/Workspaces';
 import SignUp from './components/routes/SignUp/SignUp';
+import { FileConnector } from './components/routes/FileConnector/FileConnector';
 
 const router = createBrowserRouter([
 	{
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
 				element: <AppLayout />,
 				children: [
 					{ path: 'connectors/:id', element: <ConnectorSettings /> },
+					{ path: 'connectors/file/:id', element: <FileConnector /> },
 					{ path: 'connectors', element: <ConnectorsList /> },
 					{ path: 'connections/sources', element: <ConnectionsList /> },
 					{ path: 'connections/destinations', element: <ConnectionsList /> },

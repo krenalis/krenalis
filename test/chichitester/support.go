@@ -29,6 +29,21 @@ var defaultStrategy Strategy = "AB-C"
 
 // This file contains support methods which reduce verbosity of tests.
 
+func (c *Chichi) Action(connection, action int) Action {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/actions/" + strconv.Itoa(action)
+	response := c.MustCall("GET", url, nil).(map[string]any)
+	data, err := json.Marshal(response)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	var a Action
+	err = json.Unmarshal(data, &a)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	return a
+}
+
 func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
 	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
 	if eventType != "" {
@@ -87,20 +102,6 @@ func (c *Chichi) AddConnection(connection ConnectionToAdd) int {
 		c.t.Fatalf("ID %q is not integer", n)
 	}
 	return id
-}
-
-func (c *Chichi) AddDestinationCSV(filesystem int) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:      "CSV",
-		Role:      Destination,
-		Enabled:   true,
-		Connector: CSVConnector,
-		Storage:   filesystem,
-		Settings: JSONEncodeSettings(map[string]any{
-			"Comma":          ",",
-			"HasColumnNames": true,
-		}),
-	})
 }
 
 func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
@@ -174,36 +175,19 @@ func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID
 	})
 }
 
-func (c *Chichi) AddSourceCSV(filesystem int) int {
+func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:      "CSV",
+		Name:      "Filesystem",
 		Role:      Source,
 		Enabled:   true,
-		Connector: CSVConnector,
-		Storage:   filesystem,
+		Connector: FilesystemConnector, // Filesystem.
 		Settings: JSONEncodeSettings(map[string]any{
-			"Comma":          ",",
-			"HasColumnNames": true,
+			"Root": storageDir,
 		}),
 	})
 }
 
-func (c *Chichi) AddSourceCSVWithBusinessID(filesystem int, businessID BusinessID) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:       "CSV",
-		Role:       Source,
-		Enabled:    true,
-		Connector:  CSVConnector,
-		Storage:    filesystem,
-		BusinessID: businessID,
-		Settings: JSONEncodeSettings(map[string]any{
-			"Comma":          ",",
-			"HasColumnNames": true,
-		}),
-	})
-}
-
-func (c *Chichi) AddSourceFilesystem(storageDir string) int {
+func (c *Chichi) AddSourceFilesystemWithBusinessID(storageDir string, businessID BusinessID) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:      "Filesystem",
 		Role:      Source,
@@ -212,17 +196,7 @@ func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
-	})
-}
-
-func (c *Chichi) AddSourceJSON(filesystem int) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:      "JSON",
-		Role:      Source,
-		Enabled:   true,
-		Storage:   filesystem,
-		Connector: JSONConnector,
-		Settings:  []byte("{}"),
+		BusinessID: businessID,
 	})
 }
 
@@ -263,6 +237,11 @@ func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]
 		queries = append(queries, query.(string))
 	}
 	return queries
+}
+
+func (c *Chichi) CompletePath(storage int, path string) string {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(storage) + "/complete-path/" + url.PathEscape(path)
+	return c.MustCall("GET", url, nil).(map[string]any)["path"].(string)
 }
 
 func (c *Chichi) ConnectionIdentities(connection int, first, limit int) ([]UserIdentity, int) {
@@ -326,6 +305,34 @@ func (c *Chichi) IdentifiersSchema() types.Type {
 	return schema
 }
 
+func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(storage) + "/records"
+	req := map[string]any{
+		"FileConnector": fileConnector,
+		"Path":          path,
+		"Sheet":         sheet,
+		"Compression":   compression,
+		"Settings":      settings,
+		"Limit":         limit,
+	}
+	response := c.MustCall("POST", url, req).(map[string]any)
+	rawRecords := response["records"].([]any)
+	mapSchema := response["schema"].(map[string]any)
+	jsonSchema, err := json.Marshal(mapSchema)
+	if err != nil {
+		c.t.Fatalf("cannot marshal schema: %s", err)
+	}
+	schema, err := types.Parse(string(jsonSchema))
+	if err != nil {
+		c.t.Fatalf("cannot parse schema: %s", err)
+	}
+	var records []map[string]any
+	for _, b := range rawRecords {
+		records = append(records, b.(map[string]any))
+	}
+	return records, schema
+}
+
 func (c *Chichi) RunWorkspaceIdentityResolution() {
 	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/run-identity-resolution", nil)
 }
@@ -360,6 +367,21 @@ func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 		"Identifiers": identifiers,
 	}
 	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body)
+}
+
+func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression Compression, settings json.RawMessage) []string {
+	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(storage) + "/sheets"
+	req := map[string]any{
+		"FileConnector": fileConnector,
+		"Path":          path,
+		"Compression":   compression,
+		"Settings":      settings,
+	}
+	sheets := []string{}
+	for _, s := range c.MustCall("POST", url, req).(map[string]any)["sheets"].([]any) {
+		sheets = append(sheets, s.(string))
+	}
+	return sheets
 }
 
 func (c *Chichi) TableSchema(connection int, table string) types.Type {

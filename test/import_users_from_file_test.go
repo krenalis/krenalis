@@ -41,13 +41,10 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Create the Filesystem connection.
 	fsID := c.AddSourceFilesystem(storageDir)
 
-	// Create the CSV connection.
-	csvID := c.AddSourceCSV(fsID)
-
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Add an action to the CSV for importing the users.
-	importUsersActionID := c.AddAction(csvID, "Users", chichitester.ActionToSet{
+	importUsersActionID := c.AddAction(fsID, "Users", chichitester.ActionToSet{
 		Name: "Import users from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
@@ -66,13 +63,18 @@ func TestImportUsersFromFile(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
+		Connector:      chichitester.CSVConnector,
+		Settings: chichitester.JSONEncodeSettings(map[string]any{
+			"Comma":          ",",
+			"HasColumnNames": true,
+		}),
 	})
 
 	// Execute the action that imports users.
-	c.ExecuteAction(csvID, importUsersActionID, true)
+	c.ExecuteAction(fsID, importUsersActionID, true)
 
 	// Wait for the import to finish.
-	c.WaitActionsToFinish(csvID)
+	c.WaitActionsToFinish(fsID)
 
 	// Retrieve the users and test them.
 	const (

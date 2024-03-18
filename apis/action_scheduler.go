@@ -204,11 +204,6 @@ func (sc *scheduler) toExecute(action *state.Action) bool {
 	if !c.Enabled {
 		return false
 	}
-	if c.Connector().Type == state.FileType {
-		if _, ok := c.Storage(); !ok {
-			return false
-		}
-	}
 	ws := c.Workspace()
 	if ws.Warehouse == nil {
 		return false
@@ -225,7 +220,7 @@ func (sc *scheduler) toSchedule(action *state.Action) bool {
 		return false
 	}
 	typ := action.Connection().Connector().Type
-	if typ != state.AppType && typ != state.DatabaseType && typ != state.FileType {
+	if typ != state.AppType && typ != state.DatabaseType && typ != state.StorageType {
 		return false
 	}
 	return true

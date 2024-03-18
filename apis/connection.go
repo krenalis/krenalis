@@ -63,11 +63,9 @@ const (
 	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
 	NoColumns            errors.Code = "NoColumns"
-	NoStorage            errors.Code = "NoStorage"
 	NotCompatibleSchema  errors.Code = "NotCompatibleSchema"
 	ReadFileFailed       errors.Code = "ReadFileFailed"
 	SheetNotExist        errors.Code = "SheetNotExist"
-	StorageNotExist      errors.Code = "StorageNotExist"
 	TargetAlreadyExist   errors.Code = "TargetAlreadyExist"
 	TooManyKeys          errors.Code = "TooManyKeys"
 	UniqueKey            errors.Code = "UniqueKey"
@@ -108,8 +106,6 @@ type Connection struct {
 	Role         Role
 	Enabled      bool
 	Connector    int
-	Storage      int // zero if the connection is not a file or does not have a storage.
-	Compression  Compression
 	Strategy     *Strategy
 	WebsiteHost  string
 	BusinessID   BusinessID
@@ -278,7 +274,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		}
 
-	case state.FileType:
+	case state.StorageType:
 		switch target {
 		case Users:
 			if c.Role == state.Source {
@@ -337,6 +333,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
 //   - ConnectionNotExist, if the connection does not exist.
+//   - ConnectorNotExist, if the file connector of the action does not exist.
+//   - InvalidSettings, if the settings are not valid.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TargetAlreadyExist, if an action already exists for a target for the
 //     connection.
@@ -347,8 +345,31 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.AddAction", "target", target, "eventType", eventType)
 	defer span.End()
 
+	// Validate the Connector.
+	actionOnFile := this.connection.Connector().Type == state.StorageType
+	if actionOnFile && action.Connector == 0 {
+		return 0, errors.BadRequest("actions on Storage connections must have a connector")
+	}
+	if !actionOnFile && action.Connector != 0 {
+		return 0, errors.BadRequest("actions on %v connections cannot have a connector", this.connection.Connector().Type)
+	}
+	var fileConnector *state.Connector
+	if action.Connector != 0 {
+		if action.Connector < 1 || action.Connector > maxInt32 {
+			return 0, errors.BadRequest("connector identifier %d is not valid", action.Connector)
+		}
+		var ok bool
+		fileConnector, ok = this.apis.state.Connector(action.Connector)
+		if !ok {
+			return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", action.Connector)
+		}
+		if fileConnector.Type != state.FileType {
+			return 0, errors.BadRequest("type of the action's connector must be File, got %v", fileConnector.Type)
+		}
+	}
+
 	// Validate the action.
-	err := this.validateActionToSet(action, state.Target(target))
+	err := this.validateActionToSet(action, state.Target(target), fileConnector)
 	if err != nil {
 		return 0, err
 	}
@@ -378,9 +399,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			Mapping: action.Transformation.Mapping,
 		},
 		Query:                   action.Query,
+		Connector:               action.Connector,
 		Path:                    action.Path,
-		TableName:               action.TableName,
 		Sheet:                   action.Sheet,
+		Compression:             state.Compression(action.Compression),
+		TableName:               action.TableName,
 		IdentityColumn:          action.IdentityColumn,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
@@ -411,6 +434,13 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		if err != nil {
 			return 0, err
 		}
+	}
+
+	// Determine the connector ID, for file actions.
+	var connectorID *int
+	if fileConnector != nil {
+		id := fileConnector.ID
+		connectorID = &id
 	}
 
 	// Generate a random identifier.
@@ -456,6 +486,40 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		function = *n.Transformation.Function
 	}
 
+	// Validate the settings.
+	if action.Settings != nil {
+		if fileConnector == nil {
+			return 0, errors.BadRequest("settings cannot be provided because there is no connector")
+		}
+		if !fileConnector.HasSettings {
+			return 0, errors.BadRequest("settings cannot be provided because the File connector has no settings")
+		}
+	}
+	if fileConnector != nil && fileConnector.HasSettings {
+		settings := action.Settings
+		if settings == nil {
+			settings = json.RawMessage("{}")
+		}
+		conf := &connectors.ConnectorConfig{
+			Role:   this.connection.Role,
+			Region: state.PrivacyRegion(this.connection.Workspace().PrivacyRegion),
+		}
+		var err error
+		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, fileConnector, conf, settings)
+		if err != nil {
+			if err != connectors.ErrNoUserInterface {
+				return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+			}
+			if action.Settings != nil {
+				return 0, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
+					strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+			}
+		} else if action.Settings == nil {
+			return 0, errors.BadRequest("settings must be provided because %s connector %s has a UI",
+				strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+		}
+	}
+
 	// Add the action.
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		switch n.Target {
@@ -492,19 +556,27 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			}
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping," +
-			"transformation_source, transformation_language, transformation_version, query, path, table_name," +
-			"sheet, identity_column, timestamp_column, timestamp_format, export_mode, matching_properties_internal," +
+			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
+			"transformation_source, transformation_language, transformation_version, query,\n" +
+			"connector, path, sheet, compression, settings, table_name, identity_column,\n" +
+			"timestamp_column, timestamp_format, export_mode, matching_properties_internal,\n" +
 			"matching_properties_external, export_on_duplicated_users)\n" +
-			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)"
+			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
+			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
-			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
-			function.Source, function.Language, function.Version, n.Query, n.Path, n.TableName,
-			n.Sheet, n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode,
+			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
+			string(filter), mapping, function.Source, function.Language, function.Version,
+			n.Query, connectorID, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
+			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
-				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
+			if postgres.IsForeignKeyViolation(err) {
+				switch postgres.ErrConstraintName(err) {
+				case "actions_connection_fkey":
+					err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
+				case "actions_connector_fkey":
+					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+				}
 			}
 			return err
 		}
@@ -593,12 +665,11 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 //   - InvalidPath, if path is not valid for the storage connector.
 //   - InvalidPlaceholder, if path for destination connections contains an
 //     invalid placeholder.
-//   - NoStorage, if the connection does not have a storage.
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
-	if c.Connector().Type != state.FileType {
-		return "", errors.BadRequest("connection %d is not a file connection", c.ID)
+	if c.Connector().Type != state.StorageType {
+		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
 	}
 	if path == "" {
 		return "", errors.BadRequest("path is empty")
@@ -624,11 +695,8 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 			return "", errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		}
 	}
-	path, err := this.file().CompletePath(ctx, path)
+	path, err := this.storage().CompletePath(ctx, path)
 	if err != nil {
-		if err == connectors.ErrNoStorage {
-			return "", errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
-		}
 		if err, ok := err.(*connectors.InvalidPathError); ok {
 			return "", errors.Unprocessable(InvalidPath, "%w", err)
 		}
@@ -761,7 +829,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.AppType, state.DatabaseType, state.FileType, state.StreamType:
+	case state.AppType, state.DatabaseType, state.StorageType, state.StreamType:
 	default:
 		return nil, errors.BadRequest("connection %d cannot have executions, it's a %s connection",
 			c.ID, strings.ToLower(connector.Type.String()))
@@ -895,11 +963,12 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - ConnectorNotExist, if the connector does not exist.
+//   - InvalidSettings, if the settings are not valid.
 //   - NoColumns, if the file has no columns.
-//   - NoStorage, if the connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
 //   - SheetNotExist, if the file does not contain the provided sheet.
-func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([]byte, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, fileConnector int, path, sheet string, compression Compression, settings []byte, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -907,8 +976,8 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	connector := c.Connector()
 
 	// Validate the connection type.
-	if connector.Type != state.FileType {
-		return nil, types.Type{}, errors.BadRequest("connection %d is not a file connection", c.ID)
+	if connector.Type != state.StorageType {
+		return nil, types.Type{}, errors.BadRequest("connection %d is not a storage connection", c.ID)
 	}
 	// Validate the path.
 	if path == "" {
@@ -920,8 +989,51 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	if n := utf8.RuneCountInString(path); n > 1024 {
 		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
 	}
+
+	// Validate the connector.
+	if fileConnector < 1 || fileConnector > maxInt32 {
+		return nil, types.Type{}, errors.BadRequest("connector identifier %d is not valid", fileConnector)
+	}
+	file, ok := this.apis.state.Connector(fileConnector)
+	if !ok {
+		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
+	}
+	if file.Type != state.FileType {
+		return nil, types.Type{}, errors.BadRequest("type of the file connector must be File, got %v", file.Type)
+	}
+
+	// Validate the settings.
+	if settings != nil && !file.HasSettings {
+		return nil, types.Type{}, errors.BadRequest("settings cannot be provided because the File connector has no settings")
+	}
+	var validatedSettings []byte
+	if file != nil && file.HasSettings {
+		normalizedSettings := settings
+		if settings == nil {
+			normalizedSettings = json.RawMessage("{}")
+		}
+		conf := &connectors.ConnectorConfig{
+			Role:   this.connection.Role,
+			Region: state.PrivacyRegion(this.connection.Workspace().PrivacyRegion),
+		}
+		var err error
+		validatedSettings, err = this.apis.connectors.ValidateSettings(ctx, file, conf, normalizedSettings)
+		if err != nil {
+			if err != connectors.ErrNoUserInterface {
+				return nil, types.Type{}, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+			}
+			if settings != nil {
+				return nil, types.Type{}, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
+					strings.ToLower(this.connection.Role.String()), file.Name)
+			}
+		} else if settings == nil {
+			return nil, types.Type{}, errors.BadRequest("settings must be provided because %s connector %s has a UI",
+				strings.ToLower(this.connection.Role.String()), file.Name)
+		}
+	}
+
 	// Validate the sheet.
-	if connector.HasSheets {
+	if file.HasSheets {
 		if sheet == "" {
 			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
 		}
@@ -938,11 +1050,9 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.file().Read(ctx, path, sheet, c.BusinessID.Name, limit)
+	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, c.BusinessID.Name, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
-		case connectors.ErrNoStorage:
-			return nil, types.Type{}, errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
 		case connectors.ErrSheetNotExist:
 			return nil, types.Type{}, errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		case connectors.ErrNoColumns:
@@ -1243,9 +1353,6 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 }
 
 // Set sets the connection.
-//
-// It returns an errors.UnprocessableError error with code StorageNotExist, if
-// the storage does not exist.
 func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) error {
 
 	this.apis.mustBeOpen()
@@ -1256,17 +1363,6 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	if connection.Name == "" || utf8.RuneCountInString(connection.Name) > 100 {
 		return errors.BadRequest("name %q is not valid", connection.Name)
 	}
-	if connection.Storage < 0 || connection.Storage > maxInt32 {
-		return errors.BadRequest("storage identifier %d is not valid", connection.Storage)
-	}
-	switch connection.Compression {
-	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
-	default:
-		return errors.BadRequest("compression %q is not valid", connection.Compression)
-	}
-	if connection.Storage == 0 && connection.Compression != NoCompression {
-		return errors.BadRequest("compression requires a storage")
-	}
 	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
 		return errors.BadRequest("strategy %q is not valid", *s)
 	}
@@ -1275,35 +1371,12 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		Connection:  this.connection.ID,
 		Name:        connection.Name,
 		Enabled:     connection.Enabled,
-		Storage:     connection.Storage,
-		Compression: state.Compression(connection.Compression),
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		WebsiteHost: connection.WebsiteHost,
 		BusinessID:  state.BusinessID(connection.BusinessID),
 	}
 
 	c := this.connection.Connector()
-
-	// Validate the storage.
-	if n.Storage > 0 {
-		if c.Type != state.FileType {
-			return errors.BadRequest("connector %d cannot have a storage, it's a %s",
-				c.ID, strings.ToLower(c.Type.String()))
-		}
-		s, ok := this.connection.Workspace().Connection(n.Storage)
-		if !ok {
-			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
-		}
-		if s.Connector().Type != state.StorageType {
-			return errors.BadRequest("connection %d is not a storage", n.Storage)
-		}
-		if s.Role != this.connection.Role {
-			if this.connection.Role == state.Source {
-				return errors.BadRequest("storage %d is not a source", n.Storage)
-			}
-			return errors.BadRequest("storage %d is not a destination", n.Storage)
-		}
-	}
 
 	// Validate the strategy.
 	if this.connection.Role == state.Source {
@@ -1344,9 +1417,9 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" storage = NULLIF($3, 0), compression = $4, strategy = $5, website_host = $6,"+
-			" business_id_name = $7, business_id_label = $8 WHERE id = $9",
-			n.Name, n.Enabled, n.Storage, n.Compression, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
+			" strategy = $3, website_host = $4, business_id_name = $5, business_id_label = $6\n"+
+			"WHERE id = $7",
+			n.Name, n.Enabled, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
 			n.BusinessID.Label, n.Connection)
 		if err != nil {
 			return err
@@ -1390,16 +1463,13 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 // error.
 //
 // It returns an errors.UnprocessableError error with code
-//   - NoStorage, if the file connection does not have a storage.
+//   - InvalidSettings, if the settings are not valid.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Sheets(ctx context.Context, path string) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, fileConnector int, path string, settings []byte, compression Compression) ([]string, error) {
 	this.apis.mustBeOpen()
 	connector := this.connection.Connector()
-	if connector.Type != state.FileType {
-		return nil, errors.BadRequest("connection %d is not a file", this.connection.ID)
-	}
-	if !connector.HasSheets {
-		return nil, errors.BadRequest("connection %d does not supports sheets", this.connection.ID)
+	if connector.Type != state.StorageType {
+		return nil, errors.BadRequest("connection %d is not a storage", this.connection.ID)
 	}
 	if path == "" {
 		return nil, errors.BadRequest("path is empty")
@@ -1407,11 +1477,51 @@ func (this *Connection) Sheets(ctx context.Context, path string) ([]string, erro
 	if !utf8.ValidString(path) {
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
-	sheets, err := this.file().Sheets(ctx, path)
-	if err != nil {
-		if err == connectors.ErrNoStorage {
-			return nil, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", this.connection.ID)
+
+	// Validate the connector.
+	if fileConnector < 1 || fileConnector > maxInt32 {
+		return nil, errors.BadRequest("connector identifier %d is not valid", fileConnector)
+	}
+	file, ok := this.apis.state.Connector(fileConnector)
+	if !ok {
+		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
+	}
+	if file.Type != state.FileType {
+		return nil, errors.BadRequest("type of the file connector must be File, got %v", file.Type)
+	}
+
+	// Validate the settings.
+	if settings != nil && !file.HasSettings {
+		return nil, errors.BadRequest("settings cannot be provided because the file connector has no settings")
+	}
+	var validatedSettings []byte
+	if file != nil && file.HasSettings {
+		normalizedSettings := settings
+		if settings == nil {
+			normalizedSettings = json.RawMessage("{}")
 		}
+		conf := &connectors.ConnectorConfig{
+			Role:   this.connection.Role,
+			Region: state.PrivacyRegion(this.connection.Workspace().PrivacyRegion),
+		}
+		var err error
+		validatedSettings, err = this.apis.connectors.ValidateSettings(ctx, file, conf, normalizedSettings)
+		if err != nil {
+			if err != connectors.ErrNoUserInterface {
+				return nil, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+			}
+			if settings != nil {
+				return nil, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
+					strings.ToLower(this.connection.Role.String()), file.Name)
+			}
+		} else if settings == nil {
+			return nil, errors.BadRequest("settings must be provided because %s connector %s has a UI",
+				strings.ToLower(this.connection.Role.String()), file.Name)
+		}
+	}
+
+	sheets, err := this.storage().Sheets(ctx, file, path, validatedSettings, state.Compression(compression))
+	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	return sheets, nil
@@ -1545,7 +1655,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 		case
 			state.AppType,
 			state.DatabaseType,
-			state.FileType:
+			state.StorageType:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForUsers
@@ -1587,7 +1697,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 		case
 			state.AppType,
 			state.DatabaseType,
-			state.FileType:
+			state.StorageType:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForGroups
@@ -1678,9 +1788,9 @@ func (this *Connection) database() *connectors.Database {
 	return this.apis.connectors.Database(this.connection)
 }
 
-// file returns the file of the connection.
-func (this *Connection) file() *connectors.File {
-	return this.apis.connectors.File(this.connection)
+// storage returns the storage of the connection.
+func (this *Connection) storage() *connectors.Storage {
+	return this.apis.connectors.Storage(this.connection)
 }
 
 // isWriteKey reports whether key can be a write key.
@@ -1811,11 +1921,14 @@ func (this *Connection) updateConnectionsStats(ctx context.Context, count int) e
 // validateActionToSet validates the action to set (when adding or setting an
 // action) for the given target.
 //
+// fileConnector must be passed exclusively and necessarily when the connector of the
+// storage has type Storage, otherwise it must be nil.
+//
 // Refer to the specifications in the file "apis/Actions.md" for more details.
 //
 // It returns an errors.UnprocessableError error with code LanguageNotSupported,
 // if the transformation language is not supported.
-func (this *Connection) validateActionToSet(action ActionToSet, target state.Target) error {
+func (this *Connection) validateActionToSet(action ActionToSet, target state.Target, fileConnector *state.Connector) error {
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
@@ -1998,6 +2111,12 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
 	}
+	// Validate the compression.
+	switch action.Compression {
+	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
+	default:
+		return errors.BadRequest("compression %q is not valid", action.Compression)
+	}
 
 	// Second, do validations based on the workspace and the connection.
 
@@ -2015,6 +2134,20 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 			if isMetaProperty(p.Name) {
 				return errors.BadRequest("output schema cannot contain meta properties")
 			}
+		}
+	}
+
+	// Check if the settings and the compression are allowed.
+	if connector.Type == state.StorageType {
+		if action.Settings == nil {
+			return errors.BadRequest("actions on Storage connections must have settings")
+		}
+	} else {
+		if action.Settings != nil {
+			return errors.BadRequest("actions on %v connections cannot have settings", connector.Type)
+		}
+		if action.Compression != NoCompression {
+			return errors.BadRequest("actions on %v connections cannot have a compression", connector.Type)
 		}
 	}
 
@@ -2037,7 +2170,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		filtersAllowed = c.Role == state.Destination
 	case state.DatabaseType:
 		filtersAllowed = c.Role == state.Destination
-	case state.FileType:
+	case state.StorageType:
 		filtersAllowed = targetUsersOrGroups && c.Role == state.Destination
 	}
 	if action.Filter != nil && !filtersAllowed {
@@ -2045,15 +2178,15 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 
 	// Check if the path and the sheet are allowed.
-	if connector.Type == state.FileType {
+	if connector.Type == state.StorageType {
 		if action.Path == "" {
-			return errors.BadRequest("path cannot be empty for file actions")
+			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
-		if connector.HasSheets && action.Sheet == "" {
-			return errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+		if fileConnector.HasSheets && action.Sheet == "" {
+			return errors.BadRequest("sheet cannot be empty because connector %d has sheets", fileConnector.ID)
 		}
-		if !connector.HasSheets && action.Sheet != "" {
-			return errors.BadRequest("connection %d does not have sheets", c.ID)
+		if !fileConnector.HasSheets && action.Sheet != "" {
+			return errors.BadRequest("connector %d does not have sheets", fileConnector.ID)
 		}
 	} else {
 		if action.Path != "" {
@@ -2065,7 +2198,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 
 	// Check the column for the identity and for the timestamp.
-	if connector.Type == state.FileType && c.Role == state.Source {
+	if connector.Type == state.StorageType && c.Role == state.Source {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
@@ -2161,7 +2294,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// When exporting users to file, ensure that the output schema is valid, as
 	// it contains the properties that will be exported to the file.
-	if connector.Type == state.FileType && c.Role == state.Destination && target == state.Users {
+	if connector.Type == state.StorageType && c.Role == state.Destination && target == state.Users {
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema cannot be empty when exporting users to file")
 		}
@@ -2202,7 +2335,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check the connections for which the transformation is prohibited.
 	transformationProhibited := (c.Role == state.Source && eventBasedConn && target == state.Events) ||
-		(c.Role == state.Destination && connector.Type == state.FileType && targetUsersOrGroups)
+		(c.Role == state.Destination && connector.Type == state.StorageType && targetUsersOrGroups)
 	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
 	if transformationProhibited && haveTransformation {
 		return errors.BadRequest("action cannot have a transformation")
@@ -2228,7 +2361,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// contain at least one property).
 	transformationMandatory := targetUsersOrGroups &&
 		(connector.Type == state.AppType || connector.Type == state.DatabaseType ||
-			(c.Role == state.Source && connector.Type == state.FileType))
+			(c.Role == state.Source && connector.Type == state.StorageType))
 	if transformationMandatory && !haveTransformation {
 		return errors.BadRequest("action must have a transformation")
 	}
@@ -2282,14 +2415,6 @@ type ConnectionToSet struct {
 
 	// Enable reports whether the connection is enabled or disabled when added.
 	Enabled bool
-
-	// Storage is the storage of a file connection. It must be 0 if the
-	// connection is not a file or has no storage.
-	Storage int
-
-	// Compression is the compression for file connections. It must be
-	// NoCompression if there is no storage.
-	Compression Compression
 
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It must be nil for destination connections and
@@ -2365,7 +2490,7 @@ func validateBusinessID(cType state.ConnectorType, role state.Role, businessID s
 		if !types.IsValidPropertyName(businessID.Name) {
 			return errors.BadRequest("Business ID name %q is not a valid property name", businessID.Name)
 		}
-	case state.DatabaseType, state.FileType:
+	case state.DatabaseType, state.StorageType:
 		if !utf8.ValidString(businessID.Name) {
 			return errors.BadRequest("Business ID name is not UTF-8 encoded")
 		}
@@ -2549,7 +2674,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	switch connector.Type {
 	case state.AppType:
 		supported = c.Role == state.Destination || target != Events
-	case state.DatabaseType, state.FileType:
+	case state.DatabaseType, state.StorageType:
 		supported = target != Events
 	case state.MobileType, state.ServerType, state.WebsiteType:
 		supported = c.Role == state.Source

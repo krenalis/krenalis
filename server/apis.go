@@ -615,6 +615,36 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							err = action.SetStatus(ctx, req.Enabled)
 							respond(w, err)
 						})
+						router.Post("/actions/{actionID}/ui-event", func(w http.ResponseWriter, r *http.Request) {
+							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+							connection, err := workspace.Connection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							action, err := connection.Action(ctx, actionID)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							var req struct {
+								Event  string
+								Values json.RawMessage
+							}
+							err = json.NewDecoder(r.Body).Decode(&req)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							form, err := action.ServeUI(ctx, req.Event, req.Values)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							w.Header().Add("Content-Type", "application/json")
+							_, _ = w.Write(form)
+						})
 						router.Route("/action-schemas", func(router chi.Router) {
 							router.Get("/Users", func(w http.ResponseWriter, r *http.Request) {
 								id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -730,21 +760,27 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							_ = json.NewEncoder(w).Encode(map[string]any{"path": completePath})
 						})
-						router.Get("/records", func(w http.ResponseWriter, r *http.Request) {
+						router.Post("/records", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)
 							if err != nil {
 								respond(w, err)
 								return
 							}
-							path := r.URL.Query().Get("path")
-							sheet := r.URL.Query().Get("sheet")
-							limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+							var req struct {
+								FileConnector int
+								Path          string
+								Sheet         string
+								Compression   apis.Compression
+								Settings      json.RawMessage
+								Limit         int
+							}
+							err = json.NewDecoder(r.Body).Decode(&req)
 							if err != nil {
-								respond(w, errors.BadRequest("limit is not valid"))
+								respond(w, errors.BadRequest("invalid JSON"))
 								return
 							}
-							records, schema, err := connection.Records(ctx, path, sheet, limit)
+							records, schema, err := connection.Records(ctx, req.FileConnector, req.Path, req.Sheet, req.Compression, req.Settings, req.Limit)
 							if err != nil {
 								respond(w, err)
 								return
@@ -752,15 +788,25 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							_ = json.NewEncoder(w).Encode(map[string]any{"records": json.RawMessage(records), "schema": schema})
 						})
-						router.Get("/sheets", func(w http.ResponseWriter, r *http.Request) {
+						router.Post("/sheets", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)
 							if err != nil {
 								respond(w, err)
 								return
 							}
-							path := r.URL.Query().Get("path")
-							sheets, err := connection.Sheets(ctx, path)
+							var req struct {
+								FileConnector int
+								Path          string
+								Compression   apis.Compression
+								Settings      json.RawMessage
+							}
+							err = json.NewDecoder(r.Body).Decode(&req)
+							if err != nil {
+								respond(w, errors.BadRequest("invalid JSON"))
+								return
+							}
+							sheets, err := connection.Sheets(ctx, req.FileConnector, req.Path, req.Settings, req.Compression)
 							if err != nil {
 								respond(w, err)
 								return

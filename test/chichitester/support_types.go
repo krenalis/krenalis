@@ -8,7 +8,9 @@
 package chichitester
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"chichi/connector/types"
@@ -50,6 +52,35 @@ const (
 
 // These data types are copy-paste of the types defined within the APIs.
 
+type Action struct {
+	ID                      int
+	Connection              int
+	Target                  *Target
+	Name                    string
+	Enabled                 bool
+	EventType               *string
+	Running                 bool
+	ScheduleStart           *int
+	SchedulePeriod          *SchedulePeriod
+	InSchema                types.Type
+	OutSchema               types.Type
+	Filter                  *Filter
+	Transformation          Transformation
+	Query                   *string
+	Connector               int
+	Path                    *string
+	Sheet                   *string
+	Compression             Compression
+	Settings                json.RawMessage `json:",omitempty"`
+	Table                   *string
+	IdentityColumn          *string
+	TimestampColumn         *string
+	TimestampFormat         *string
+	ExportMode              *ExportMode
+	MatchingProperties      *MatchingProperties
+	ExportOnDuplicatedUsers *bool
+}
+
 type ActionToSet struct {
 	Name                    string
 	Enabled                 bool
@@ -57,10 +88,13 @@ type ActionToSet struct {
 	InSchema                types.Type
 	OutSchema               types.Type
 	Transformation          Transformation
+	Connector               int
 	Query                   string
 	Path                    string
-	TableName               string
 	Sheet                   string
+	Compression             Compression
+	Settings                json.RawMessage `json:",omitempty"`
+	TableName               string
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
@@ -90,8 +124,6 @@ type ConnectionToAdd struct {
 	Role        Role
 	Enabled     bool
 	Connector   int
-	Storage     int
-	Compression Compression
 	Strategy    *Strategy
 	WebsiteHost string
 	BusinessID  BusinessID
@@ -179,6 +211,130 @@ func (role Role) String() string {
 		return "Destination"
 	}
 	panic("invalid connection role")
+}
+
+type SchedulePeriod int
+
+func (period SchedulePeriod) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + period.String() + `"`), nil
+}
+
+func (period SchedulePeriod) String() string {
+	switch period {
+	case 5:
+		return "5m"
+	case 15:
+		return "15m"
+	case 30:
+		return "30m"
+	case 60:
+		return "1h"
+	case 120:
+		return "2h"
+	case 180:
+		return "3h"
+	case 360:
+		return "6h"
+	case 480:
+		return "8h"
+	case 720:
+		return "12h"
+	case 1440:
+		return "24h"
+	}
+	panic("invalid schedule period")
+}
+
+var null = []byte("null")
+
+func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into an apis.SchedulePeriod value: %s", err)
+	}
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an api.SchedulePeriod value", v)
+	}
+	var p SchedulePeriod
+	switch s {
+	case "5m":
+		p = 5
+	case "15m":
+		p = 15
+	case "30m":
+		p = 30
+	case "1h":
+		p = 60
+	case "2h":
+		p = 120
+	case "3h":
+		p = 180
+	case "6h":
+		p = 360
+	case "8h":
+		p = 480
+	case "12h":
+		p = 720
+	case "24h":
+		p = 1440
+	default:
+		return fmt.Errorf("invalid apis.SchedulePeriod: %s", s)
+	}
+	*period = p
+	return nil
+}
+
+type Target int
+
+const (
+	Events Target = iota + 1
+	Users
+	Groups
+)
+
+func (at Target) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + at.String() + `"`), nil
+}
+
+func (at Target) String() string {
+	switch at {
+	case Events:
+		return "Events"
+	case Users:
+		return "Users"
+	case Groups:
+		return "Groups"
+	default:
+		panic("invalid target")
+	}
+}
+
+func (at *Target) UnmarshalJSON(data []byte) error {
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a apis.Target value: %s", err)
+	}
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an api.Target value", v)
+	}
+	switch s {
+	case "Events":
+		*at = Events
+	case "Users":
+		*at = Users
+	case "Groups":
+		*at = Groups
+	default:
+		return fmt.Errorf("invalid apis.Target: %s", s)
+	}
+	return nil
 }
 
 type Transformation struct {

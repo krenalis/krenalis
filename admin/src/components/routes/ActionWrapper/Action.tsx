@@ -2,7 +2,7 @@ import React, { useState, useContext, useRef, ReactNode } from 'react';
 import './Action.css';
 import ActionHeader from './ActionHeader';
 import ActionMapping from './ActionMapping';
-import ActionPath from './ActionPath';
+import ActionFile from './ActionFile';
 import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
@@ -41,6 +41,9 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		isSaveHidden,
 		setIsSaveHidden,
 		setIsFileChanged,
+		setIsFileConnectorLoading,
+		isFileConnectorLoading,
+		setIsFileConnectorChanged,
 		setIsTableChanged,
 		setIsQueryChanged,
 		isMappingHidden,
@@ -86,6 +89,9 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				isSaveButtonLoading,
 				setIsQueryChanged,
 				setIsFileChanged,
+				setIsFileConnectorLoading,
+				isFileConnectorLoading,
+				setIsFileConnectorChanged,
 				setIsTableChanged,
 				isSaveHidden,
 				setIsSaveHidden,
@@ -96,7 +102,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				<div className='body'>
 					{actionType!.Fields.includes('Filter') && <ActionFilters />}
 					{actionType!.Fields.includes('Query') && <ActionQuery />}
-					{actionType!.Fields.includes('Path') && <ActionPath />}
+					{actionType!.Fields.includes('File') && <ActionFile />}
 					{actionType!.Fields.includes('Table') && <ActionTable />}
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}

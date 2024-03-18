@@ -10,7 +10,8 @@ import {
 	SchedulePeriod,
 	TransformationFunction,
 } from '../../types/external/action';
-import { Filter } from '../../types/external/api';
+import { Filter, UIValues } from '../../types/external/api';
+import { Compression } from '../../types/external/connection';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
 import API from '../api/api';
 import TransformedConnection from './transformedConnection';
@@ -63,8 +64,7 @@ type ActionTypeField =
 	| 'ExportOnDuplicatedUsers'
 	| 'ExportMode'
 	| 'Query'
-	| 'Path'
-	| 'Sheet'
+	| 'File'
 	| 'Table';
 
 interface TransformedActionType {
@@ -103,6 +103,9 @@ interface TransformedAction {
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: MatchingProperties | null;
 	ExportOnDuplicatedUsers?: boolean | null;
+	Compression?: Compression;
+	Connector?: number;
+	Settings?: UIValues | null;
 }
 
 const hasTransformationFunction = (action: ActionToSet) => {
@@ -135,7 +138,7 @@ const validateTransformation = (
 					throw new Error('Action must have a valid transformation');
 				}
 			}
-		} else if (connection.isFile) {
+		} else if (connection.isStorage) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					throw new Error('Action must have a valid transformation');
@@ -168,7 +171,7 @@ const validateTransformation = (
 					throw new Error('Action must have a valid transformation');
 				}
 			}
-		} else if (connection.isFile) {
+		} else if (connection.isStorage) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (hasValidTransformation(action)) {
 					throw new Error('Action does not support transformations');
@@ -322,6 +325,9 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		ExportMode: action.ExportMode,
 		MatchingProperties: action.MatchingProperties,
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
+		Connector: action.Connector,
+		Compression: action.Compression,
+		Settings: action.Settings,
 	};
 };
 
@@ -416,7 +422,7 @@ const transformInActionToSet = async (
 		}
 	}
 
-	if (connection.isDestination && connection.isFile && actionType.Target === 'Users') {
+	if (connection.isDestination && connection.isStorage && actionType.Target === 'Users') {
 		outSchema = actionType.InputSchema;
 	}
 
@@ -531,6 +537,9 @@ const transformInActionToSet = async (
 		TimestampFormat: timestampFormat,
 		matchingProperties: action.MatchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
+		Compression: action.Compression,
+		Connector: action.Connector,
+		Settings: action.Settings,
 	};
 
 	try {
@@ -543,10 +552,10 @@ const transformInActionToSet = async (
 };
 
 const computeDefaultAction = (
-	actionType: ActionType,
+	actionType: ActionType | TransformedActionType,
 	connection: TransformedConnection,
 	outputSchema: ObjectType,
-	fields: string[],
+	fields: ActionTypeField[],
 ): TransformedAction => {
 	const action: TransformedAction = {
 		Name: actionType.Name,
@@ -562,14 +571,15 @@ const computeDefaultAction = (
 	if (fields.includes('Query')) {
 		action.Query = connection.connector.sampleQuery;
 	}
-	if (fields.includes('Path')) {
+	if (fields.includes('File')) {
 		action.Path = '';
 		action.IdentityColumn = '';
 		action.TimestampColumn = '';
 		action.TimestampFormat = '';
-	}
-	if (fields.includes('Sheet')) {
-		action.Sheet = '';
+		action.Sheet = null;
+		action.Compression = '';
+		action.Connector = 0;
+		action.Settings = null;
 	}
 	if (fields.includes('Table')) {
 		action.Table = '';
@@ -597,7 +607,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (
 		connection.type === 'App' ||
 		connection.type === 'Database' ||
-		(connection.type === 'File' && connection.role === 'Source') ||
+		(connection.type === 'Storage' && connection.role === 'Source') ||
 		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
 			connection.role === 'Source' &&
 			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
@@ -618,14 +628,11 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}
-	if (connection.type === 'File') {
+	if (connection.type === 'Storage') {
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
 		}
-		fields.push('Path');
-		if (connection.connector.hasSheets) {
-			fields.push('Sheet');
-		}
+		fields.push('File');
 	}
 	if (connection.type === 'Database' && connection.role === 'Destination') {
 		fields.push('Table');
