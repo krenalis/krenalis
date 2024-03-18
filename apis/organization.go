@@ -91,10 +91,11 @@ type emailToSend struct {
 }
 
 // InviteMember sends an invitation email to the given email address using the
-// given template. It then creates a new invited member. If the email address
-// has already been invited, it returns an UnprocessableError with code
-// MemberEmailAlreadyExists. If SMTP is not configured, it returns an
-// UnprocessableError with code CannotSendEmails.
+// given template. It then creates a new invited member.
+//
+// It returns an errors.UnprocessableError error with code
+//   - MemberEmailAlreadyExists, if the email address has already been invited.
+//   - CannotSendEmails, if emails cannot be sent.
 func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
 	this.apis.mustBeOpen()
 	err := validateMemberEmail(email)
@@ -106,7 +107,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 		return err
 	}
 	if this.apis.smtp == nil {
-		return errors.Unprocessable(CannotSendEmails, "server cannot send emails")
+		return errors.Unprocessable(CannotSendEmails, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -137,9 +138,9 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 }
 
 // defaultUsersSchema is the default "users" schema.
-// It must kept in sync with the SQL script that initializes the data
+// It must be kept in sync with the SQL script that initializes the data
 // warehouse.
-// Will be removed in future versions of Chichi.
+// It will be removed in future versions of Chichi.
 var defaultUsersSchema = types.Object([]types.Property{
 	{Name: "Id", Type: types.Int(32)},
 	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
@@ -256,7 +257,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 }
 
 // DeleteMember deletes a member of the organization with identifier id.
-// If the member does not exist anymore, it returns an errors.NotFound error.
+// If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {
@@ -273,7 +274,7 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 }
 
 // Member returns the organization's member with identifier id.
-// If the member does not exist anymore, it returns an errors.NotFound error.
+// If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {
@@ -345,9 +346,9 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 // SetMember sets a member of the organization with identifier id. If password
 // is empty, it does not change the password.
 //
-// If the member does not exist anymore, it returns an errors.NotFound error. If
-// the member to set has an email that is already used by another member, it
-// returns an UnprocessableError with code MemberEmailAlreadyExists.
+// If the member does not exist, it returns an errors.NotFound error. If the
+// member to set has an email that is already used by another member, it returns
+// an errors.UnprocessableError error with code MemberEmailAlreadyExists.
 func (this *Organization) SetMember(ctx context.Context, id int, member MemberToSet) error {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {

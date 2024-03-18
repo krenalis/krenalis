@@ -371,8 +371,8 @@ func (apis *APIs) CountOrganizations(ctx context.Context) int {
 // be in range [1, 60]. password's length must be at least 8 character long.
 //
 // If an invitation with the given token does not exist, it returns a
-// NotFoundError error. If the token is expired it returns an UnprocessableError
-// with code InvitationTokenExpired.
+// NotFoundError error. If the token is expired it returns an
+// error.UnprocessableError error with code InvitationTokenExpired.
 func (apis *APIs) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
 	apis.mustBeOpen()
 	if !isValidInvitationToken(token) {
@@ -461,7 +461,8 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 // MemberInvitation returns the organization's name and email of the member
 // invited with the given invitation token. If an invitation with the given
 // token does not exist, it returns a NotFoundError error. If the token is
-// expired it returns an UnprocessableError with code InvitationTokenExpired.
+// expired it returns an errors.UnprocessableError error with code
+// InvitationTokenExpired.
 func (apis *APIs) MemberInvitation(ctx context.Context, token string) (string, string, error) {
 	apis.mustBeOpen()
 	if !isValidInvitationToken(token) {

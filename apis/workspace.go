@@ -737,8 +737,8 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 // Delete deletes the workspace with all its connections.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
-// If the workspace is currently connected to a data warehouse, it returns a
-// UnprocessableError error with code CurrentlyConnected.
+// If the workspace is currently connected to a data warehouse, it returns an
+// errors.UnprocessableError error with code CurrentlyConnected.
 func (this *Workspace) Delete(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
