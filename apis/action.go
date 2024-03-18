@@ -27,8 +27,7 @@ import (
 
 const DatabaseFailed errors.Code = "DatabaseFailed"
 
-// Action represents an action associated to a destination connection to send
-// events.
+// Action represents an action of a connection.
 type Action struct {
 	apis                    *APIs
 	action                  *state.Action
