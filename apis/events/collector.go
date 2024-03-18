@@ -329,7 +329,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	method := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 	switch method {
-	case "b":
+	case "batch", "b":
 		method = "batch"
 	case "alias", "anonymize", "group", "identify", "page", "screen", "track":
 	default:
