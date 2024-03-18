@@ -64,7 +64,7 @@ To import the JavaScript SDK into an application as an ES6 module:
 
 ```javascript
 import Analytics from "../chichi/javascript-sdk";
-const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
 analytics.page("home");
 ```
 
@@ -81,7 +81,7 @@ To import the JavaScript SDK into a browser as an ES6 module, follow these steps
    ```html
    <script type="module">
        import Analytics from "https://example.com/chichi.es6.min.js";
-       const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+       const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
        analytics.page("home");
    </script>
    ```
@@ -104,7 +104,7 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 
     ```javascript
     const { Analytics } = require("../chichi/javascript-sdk");
-    const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/batch");
+    const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
     analytics.page("home");
     ```
 

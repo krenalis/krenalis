@@ -36,7 +36,7 @@ Deno.test('Sender send', async (t) => {
 
 		try {
 			time = new FakeTime()
-			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
+			fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
 			fetch.install()
 			queue = new Queue(localStorage, 'queue', 32 * 1024)
 			queue.debug(DEBUG)
@@ -64,7 +64,7 @@ Deno.test('Sender send', async (t) => {
 
 		try {
 			time = new FakeTime()
-			fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
+			fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
 			fetch.install()
 			queue = new Queue(localStorage, 'queue', 32 * 1024)
 			queue.debug(DEBUG)
@@ -99,9 +99,9 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('sendBeacon', async () => {
 		const time = new FakeTime()
-		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'batch', DEBUG)
+		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'b', DEBUG)
 		sendBeacon.install()
-		const fetch = new fake.Fetch(writeKey, endpoint + 'batch', false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
 		fetch.install()
 		let queue
 		let sender
@@ -147,7 +147,7 @@ Deno.test('Sender send', async (t) => {
 
 	await t.step('XMLHttpRequest', async () => {
 		const time = new FakeTime()
-		fake.XMLHttpRequest.install(writeKey, endpoint + 'batch', DEBUG)
+		fake.XMLHttpRequest.install(writeKey, endpoint + 'b', DEBUG)
 		assertEquals(globalThis.XMLHttpRequest, XMLHttpRequest)
 		const fetch = globalThis.fetch
 		globalThis.fetch = undefined
