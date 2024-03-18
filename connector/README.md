@@ -32,14 +32,14 @@
 
 ## File connections
 
-| Method           | Role | Settings  | SetSettings |
-|------------------|------|-----------|-------------|
-| ContentType      | ✓    | ✓         | ✓           |
-| Read             | ✓    | ✓         | ✓           |
-| ServeUI          | ✓    | -/✓       | -/✓         |
-| Sheets           | ✓    | ✓         | ✓           |
-| ValidateSettings | ✓    | -         | -           |
-| Write            | ✓    | ✓         | ✓           |
+| Method           | Role | Settings | SetSettings |
+|------------------|------|----------|-------------|
+| ContentType      | ✓    | ✓        | ✓           |
+| Read             | ✓    | ✓        | ✓           |
+| ServeUI          | ✓    | -/✓      | -/✓         |
+| Sheets           | ✓    | ✓        | ✓           |
+| ValidateSettings | ✓    | -        | -           |
+| Write            | ✓    | ✓        | ✓           |
 
 
 ## Storage connections
