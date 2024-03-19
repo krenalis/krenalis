@@ -686,7 +686,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	}
 	path, err := this.storage().CompletePath(ctx, path)
 	if err != nil {
-		if err, ok := err.(*connectors.InvalidPathError); ok {
+		if err, ok := err.(connectors.InvalidPathError); ok {
 			return "", errors.Unprocessable(InvalidPath, "%w", err)
 		}
 		return "", err

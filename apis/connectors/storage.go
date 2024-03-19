@@ -19,6 +19,9 @@ import (
 	"chichi/connector/types"
 )
 
+// An InvalidPathError is returned when a path name is not valid.
+type InvalidPathError = _connector.InvalidPathError
+
 type Storage struct {
 	state   *state.State
 	storage *state.Connection

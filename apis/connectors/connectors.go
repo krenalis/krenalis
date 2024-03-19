@@ -145,9 +145,6 @@ type TimestampColumn struct {
 	Format string
 }
 
-// An InvalidPathError is returned when a path name is not valid.
-type InvalidPathError = _connector.InvalidPathError
-
 // An InvalidSettingsError is returned by UI-related functions when the settings
 // passed as an argument are not valid.
 type InvalidSettingsError struct {
