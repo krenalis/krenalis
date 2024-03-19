@@ -17,7 +17,7 @@ interface Connection {
 	Compression: Compression;
 	Strategy?: Strategy | null;
 	WebsiteHost: string;
-	BusinessID: BusinessID;
+	BusinessID: string;
 	HasSettings: boolean;
 	Enabled: boolean;
 	ActionsCount: number;
@@ -30,11 +30,6 @@ type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
 
 type Strategy = 'AB-C' | 'ABC' | 'A-B-C' | 'AC-B';
 
-interface BusinessID {
-	Name: string;
-	Label: string;
-}
-
 interface ConnectionToAdd {
 	name: string;
 	role: string;
@@ -42,7 +37,7 @@ interface ConnectionToAdd {
 	connector: number;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	businessID: BusinessID;
+	businessID: string;
 	settings: UIValues;
 }
 
@@ -51,7 +46,7 @@ interface ConnectionToSet {
 	enabled: boolean;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	businessID: BusinessID;
+	businessID: string;
 }
 
 interface ConnectionStats {
@@ -59,7 +54,6 @@ interface ConnectionStats {
 }
 
 export type {
-	BusinessID,
 	Connection,
 	ConnectionRole,
 	Compression,

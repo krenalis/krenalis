@@ -351,10 +351,10 @@ type AddConnection struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
-	Strategy    *Strategy  // strategy
-	WebsiteHost string     // website host in form host:port
-	BusinessID  BusinessID // Business ID
-	Key         string     // server key to add
+	Strategy    *Strategy // strategy
+	WebsiteHost string    // website host in form host:port
+	BusinessID  string    // Business ID property name or column name, depending on connection type.
+	Key         string    // server key to add
 	Settings    []byte
 }
 
@@ -910,7 +910,7 @@ type SetConnection struct {
 	Enabled     bool
 	Strategy    *Strategy
 	WebsiteHost string
-	BusinessID  BusinessID
+	BusinessID  string // property name or column name, depending on connection type.
 }
 
 // setConnection sets a connection.

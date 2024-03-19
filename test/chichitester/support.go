@@ -142,7 +142,7 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 	})
 }
 
-func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID BusinessID) int {
+func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:       name,
 		Role:       role,
@@ -163,7 +163,7 @@ func (c *Chichi) AddJavaScriptSource(name, host string) int {
 	})
 }
 
-func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID BusinessID) int {
+func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:        name,
 		Role:        Source,
@@ -187,7 +187,7 @@ func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 	})
 }
 
-func (c *Chichi) AddSourceFilesystemWithBusinessID(storageDir string, businessID BusinessID) int {
+func (c *Chichi) AddSourceFilesystemWithBusinessID(storageDir string, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:      "Filesystem",
 		Role:      Source,

@@ -106,7 +106,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		Connector:   connection.Connector,
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		WebsiteHost: connection.WebsiteHost,
-		BusinessID:  state.BusinessID(connection.BusinessID),
+		BusinessID:  connection.BusinessID,
 	}
 
 	// Validate the strategy.
@@ -256,11 +256,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, type, role, enabled, connector,"+
-			" resource, strategy, website_host, business_id_name, business_id_label, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+			" resource, strategy, website_host, business_id, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector,
-			n.Resource.ID, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
-			n.BusinessID.Label, string(n.Settings))
+			n.Resource.ID, n.Strategy, n.WebsiteHost, n.BusinessID, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				switch postgres.ErrConstraintName(err) {
@@ -579,7 +578,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Connector:    conn.ID,
 		Strategy:     (*Strategy)(c.Strategy),
 		WebsiteHost:  c.WebsiteHost,
-		BusinessID:   BusinessID(c.BusinessID),
+		BusinessID:   c.BusinessID,
 		HasSettings:  conn.HasSettings,
 		ActionsCount: len(c.Actions()),
 		Health:       Health(c.Health),
@@ -620,7 +619,7 @@ func (this *Workspace) Connections() []*Connection {
 			Connector:    conn.ID,
 			Strategy:     (*Strategy)(c.Strategy),
 			WebsiteHost:  c.WebsiteHost,
-			BusinessID:   BusinessID(c.BusinessID),
+			BusinessID:   c.BusinessID,
 			HasSettings:  conn.HasSettings,
 			ActionsCount: len(c.Actions()),
 			Health:       Health(c.Health),
@@ -1414,8 +1413,10 @@ type ConnectionToAdd struct {
 	// cannot be longer than 261 runes.
 	WebsiteHost string
 
-	// Business ID is the Business ID for source connections that import users.
-	BusinessID BusinessID
+	// BusinessID is the Business ID property or column (depending on the type of the
+	// connection) for source connections that import users. May be the empty string to
+	// indicate to not import the Business ID.
+	BusinessID string
 
 	// Settings represents the settings. It must be nil if the connection does
 	// not have settings.
@@ -1523,7 +1524,7 @@ type labelValue struct {
 type identity struct {
 	Connection   int
 	ExternalId   labelValue // zero struct for identities imported from anonymous events.
-	BusinessId   labelValue // zero struct for identities with no Business ID.
+	BusinessId   string     // empty string for identities with no Business ID.
 	AnonymousIds []string   // nil for identities not imported from events.
 	UpdatedAt    time.Time
 }
@@ -1547,10 +1548,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		{Name: "UpdatedAt", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
 		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "BusinessId", Type: types.Object([]types.Property{
-			{Name: "value", Type: types.Text()},
-			{Name: "label", Type: types.Text()},
-		})},
+		{Name: "BusinessId", Type: types.Text().WithCharLen(40)},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
 		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
@@ -1620,7 +1618,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		updatedAt := record.Properties["UpdatedAt"].(time.Time)
 
 		// Determine the Business ID.
-		businessID := record.Properties["BusinessId"].(map[string]any)
+		businessID := record.Properties["BusinessId"].(string)
 
 		identities = append(identities, identity{
 			Connection: connID,
@@ -1628,10 +1626,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 				Label: extIDLabel,
 				Value: extIDValue,
 			},
-			BusinessId: labelValue{
-				Label: businessID["label"].(string),
-				Value: businessID["value"].(string),
-			},
+			BusinessId:   businessID,
 			AnonymousIds: anonIDs,
 			UpdatedAt:    updatedAt,
 		})

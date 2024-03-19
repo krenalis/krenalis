@@ -273,7 +273,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 												{identity.ExternalId.Label}: <code>{identity.ExternalId.Value}</code>
 											</div>
 											<div className='user-drawer__identity-business-id'>
-												{identity.BusinessId.Label}: <code>{identity.BusinessId.Value}</code>
+												Business ID: <code>{identity.BusinessId}</code>
 											</div>
 											{identity.AnonymousIds !== null && (
 												<div className='user-drawer__identity-anonymous-ids'>

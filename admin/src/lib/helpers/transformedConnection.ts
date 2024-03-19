@@ -15,11 +15,6 @@ interface ConnectionStatus {
 	variant: string;
 }
 
-interface BusinessID {
-	Name: string;
-	Label: string;
-}
-
 class TransformedConnection {
 	id: number;
 	name: string;
@@ -34,7 +29,7 @@ class TransformedConnection {
 	compression: Compression;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	businessID: BusinessID;
+	businessID: string;
 	status: ConnectionStatus;
 	description: string;
 	linkedFiles?: TransformedConnection[];
@@ -55,7 +50,7 @@ class TransformedConnection {
 		compression: Compression,
 		strategy: Strategy | null,
 		websiteHost: string,
-		businessID: BusinessID,
+		businessID: string,
 		status: ConnectionStatus,
 		description: string,
 		linkedFiles?: TransformedConnection[],

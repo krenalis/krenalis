@@ -32,14 +32,8 @@ func Test_UsersIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs1 := c.AddSourceFilesystemWithBusinessID(storageDir, chichitester.BusinessID{
-		Name:  "email",
-		Label: "CSV User Email",
-	})
-	fs2 := c.AddSourceFilesystemWithBusinessID(storageDir, chichitester.BusinessID{
-		Name:  "email",
-		Label: "CSV User Email",
-	})
+	fs1 := c.AddSourceFilesystemWithBusinessID(storageDir, "email")
+	fs2 := c.AddSourceFilesystemWithBusinessID(storageDir, "email")
 
 	action1 := c.AddAction(fs1, "Users", chichitester.ActionToSet{
 		Name: "CSV 1",
@@ -145,13 +139,8 @@ func Test_UsersIdentities(t *testing.T) {
 			}
 
 			// Check the Business ID.
-			businessID := identity.BusinessId
-			const expectedBusinessIDLabel = "CSV User Email"
-			if expectedBusinessIDLabel != businessID.Label {
-				t.Fatalf("expecting Business ID label %q, got %q", expectedBusinessIDLabel, businessID.Label)
-			}
-			if !strings.Contains(businessID.Value, "@") {
-				t.Fatalf("expecting Business ID value with a '@', got %q", businessID.Value)
+			if !strings.Contains(identity.BusinessId, "@") {
+				t.Fatalf("expecting Business ID value with a '@', got %q", identity.BusinessId)
 			}
 
 			totalIdentities++

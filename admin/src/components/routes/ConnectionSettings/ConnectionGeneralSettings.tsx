@@ -53,17 +53,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		setConnectionToSet(c);
 	};
 
-	const onBusinessIDNameChange = async (e) => {
+	const onBusinessIDChange = async (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
-		c.businessID.Name = value;
-		setConnectionToSet(c);
-	};
-
-	const onBusinessIDLabelChange = async (e) => {
-		const value = e.target.value;
-		const c = { ...connectionToSet };
-		c.businessID.Label = value;
+		c.businessID = value;
 		setConnectionToSet(c);
 	};
 
@@ -148,26 +141,15 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			)}
 
 			{showBusinessID && (
-				<>
-					<SlInput
-						label='Business ID Name'
-						className='nameField'
-						helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
-						placeholder='Something like "email", "customer_id", etc...'
-						value={connectionToSet.businessID.Name}
-						onSlChange={onBusinessIDNameChange}
-						maxlength={1024}
-					/>
-					<SlInput
-						label='Business ID Label'
-						className='nameField'
-						placeholder='Something like "Email", "Customer ID", etc...'
-						helpText='A human-readable label for the Business ID. Mandatory when a Business ID name is specified.'
-						value={connectionToSet.businessID.Label}
-						onSlChange={onBusinessIDLabelChange}
-						maxlength={16}
-					/>
-				</>
+				<SlInput
+					label={`Business ID ${businessIDKind}`}
+					className='nameField'
+					helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+					placeholder='Something like "email", "customer_id", etc...'
+					value={connectionToSet.businessID}
+					onSlChange={onBusinessIDChange}
+					maxlength={1024}
+				/>
 			)}
 
 			<SlSwitch className='enablingField' onSlChange={onSwitchChange} checked={connectionToSet.enabled}>

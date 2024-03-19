@@ -202,8 +202,8 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 			}
 			// Determine the Business ID.
 			var businessID string
-			if connection.BusinessID.Name != "" {
-				v, ok := mapEvent["traits"].(map[string]any)[connection.BusinessID.Name]
+			if connection.BusinessID != "" {
+				v, ok := mapEvent["traits"].(map[string]any)[connection.BusinessID]
 				if ok {
 					switch v := v.(type) {
 					case string:
@@ -229,13 +229,7 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 				Properties:  properties,
 				AnonymousID: event.AnonymousId,
 				Timestamp:   event.timestamp,
-				BusinessID: struct {
-					Value string
-					Label string
-				}{
-					Value: businessID,
-					Label: connection.BusinessID.Label,
-				},
+				BusinessID:  businessID,
 			})
 			if !ok {
 				return iw.Close(ctx)

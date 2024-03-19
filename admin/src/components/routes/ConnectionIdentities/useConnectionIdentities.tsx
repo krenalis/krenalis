@@ -54,7 +54,7 @@ const useConnectionIdentities = () => {
 			return { identityColumns: columns, identitiesRows: rows };
 		}
 
-		const isBusinessIdDefined = identities[0].BusinessId?.Label !== '';
+		const isBusinessIdDefined = identities[0].BusinessId !== '';
 
 		const columns: GridColumn[] = [
 			{
@@ -84,7 +84,7 @@ const useConnectionIdentities = () => {
 				key: identity.ExternalId.Value,
 			};
 			if (isBusinessIdDefined) {
-				row.cells.push(identity.BusinessId.Value);
+				row.cells.push(identity.BusinessId);
 			}
 			if (connection.hasAnonymousIdentifiers) {
 				const anonymousIds: ReactNode[] = [];

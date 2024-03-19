@@ -587,12 +587,6 @@ func (resource *Resource) Connector() *Connector {
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
 type Strategy string
 
-// BusinessID represents the Business ID of a connection.
-type BusinessID struct {
-	Name  string // property name or column name, depending on connection type.
-	Label string
-}
-
 // Connection represents a connection.
 type Connection struct {
 	mu           *sync.Mutex
@@ -611,7 +605,7 @@ type Connection struct {
 	UsersQuery   string
 	actions      map[int]*Action
 	Health       Health
-	BusinessID   BusinessID
+	BusinessID   string // property name or column name, depending on connection type.
 }
 
 // Organization returns the organization of the connection.

@@ -38,7 +38,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy int
 	{
 
-		dummy = c.AddDummyWithBusinessID("Dummy", chichitester.Source, chichitester.BusinessID{Name: "email", Label: "Dummy email"})
+		dummy = c.AddDummyWithBusinessID("Dummy", chichitester.Source, "email")
 		dummyAction := c.AddAction(dummy, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
@@ -85,7 +85,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		if !stat.IsDir() {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
-		fs = c.AddSourceFilesystemWithBusinessID(storageDir, chichitester.BusinessID{Name: "email", Label: "CSV email"})
+		fs = c.AddSourceFilesystemWithBusinessID(storageDir, "email")
 		csvAction := c.AddAction(fs, "Users", chichitester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
@@ -132,7 +132,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		// events, one for importing users identities) and retrieve its key.
 		var javaScriptKey string
 		{
-			javaScript = c.AddJavaScriptSourceWithBusinessID("JavaScript (source)", "example.com", chichitester.BusinessID{Name: "email", Label: "JavaScript email"})
+			javaScript = c.AddJavaScriptSourceWithBusinessID("JavaScript (source)", "example.com", "email")
 			keys := c.ConnectionKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expecting one key, got %d keys", len(keys))
@@ -223,7 +223,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
 			Connection:   dummy,
 			ExternalId:   chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
-			BusinessId:   chichitester.LabelValue{Label: "Dummy email", Value: "kbuessen0@example.com"},
+			BusinessId:   "kbuessen0@example.com",
 			AnonymousIds: nil,
 			UpdatedAt:    time.Time{},
 		})
@@ -237,7 +237,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				Label: "ID",
 				Value: "1",
 			},
-			BusinessId:   chichitester.LabelValue{Label: "CSV email", Value: "kbuessen0@example.com"},
+			BusinessId:   "kbuessen0@example.com",
 			AnonymousIds: nil,
 			UpdatedAt:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
 		})
@@ -249,7 +249,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
 			Connection:   javaScript,
 			ExternalId:   chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
-			BusinessId:   chichitester.LabelValue{Label: "JavaScript email", Value: "kbuessen0@example.com"},
+			BusinessId:   "kbuessen0@example.com",
 			AnonymousIds: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			UpdatedAt:    time.Time{},
 		})

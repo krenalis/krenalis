@@ -103,11 +103,6 @@ type ActionToSet struct {
 	ExportOnDuplicatedUsers *bool
 }
 
-type BusinessID struct {
-	Name  string
-	Label string
-}
-
 type Compression string
 
 const (
@@ -126,7 +121,7 @@ type ConnectionToAdd struct {
 	Connector   int
 	Strategy    *Strategy
 	WebsiteHost string
-	BusinessID  BusinessID
+	BusinessID  string
 	Settings    json.RawMessage
 }
 
@@ -168,7 +163,7 @@ type FilterCondition struct {
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
 	Connection   int
 	ExternalId   LabelValue
-	BusinessId   LabelValue
+	BusinessId   string
 	AnonymousIds []string
 	UpdatedAt    time.Time
 }

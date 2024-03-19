@@ -72,17 +72,6 @@ const (
 	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
 )
 
-// BusinessID represents a Business ID of a connection.
-type BusinessID struct {
-
-	// Name is the property name or column name (depending on the connection
-	// type). Cannot be longer than 1024 runes.
-	Name string
-
-	// Business ID label. Cannot be longer than 16 runes.
-	Label string
-}
-
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
 type Strategy string
 
@@ -108,7 +97,7 @@ type Connection struct {
 	Connector    int
 	Strategy     *Strategy
 	WebsiteHost  string
-	BusinessID   BusinessID
+	BusinessID   string
 	HasSettings  bool
 	ActionsCount int
 	Health       Health
@@ -612,7 +601,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, this.connection.BusinessID.Name, cur)
+	records, err := this.app().Users(ctx, schema, this.connection.BusinessID, cur)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1050,7 +1039,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, c.BusinessID.Name, state.Compression(compression), limit)
+	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, c.BusinessID, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrSheetNotExist:
@@ -1373,7 +1362,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		Enabled:     connection.Enabled,
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		WebsiteHost: connection.WebsiteHost,
-		BusinessID:  state.BusinessID(connection.BusinessID),
+		BusinessID:  connection.BusinessID,
 	}
 
 	c := this.connection.Connector()
@@ -1417,10 +1406,8 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" strategy = $3, website_host = $4, business_id_name = $5, business_id_label = $6\n"+
-			"WHERE id = $7",
-			n.Name, n.Enabled, n.Strategy, n.WebsiteHost, n.BusinessID.Name,
-			n.BusinessID.Label, n.Connection)
+			" strategy = $3, website_host = $4, business_id = $5 WHERE id = $6",
+			n.Name, n.Enabled, n.Strategy, n.WebsiteHost, n.BusinessID, n.Connection)
 		if err != nil {
 			return err
 		}
@@ -2426,8 +2413,10 @@ type ConnectionToSet struct {
 	// cannot be longer than 261 runes.
 	WebsiteHost string
 
-	// Business ID is the Business ID for source connections that import users.
-	BusinessID BusinessID
+	// BusinessID is the Business ID property or column (depending on the type of the
+	// connection) for source connections that import users. May be the empty string to
+	// indicate to not import the Business ID.
+	BusinessID string
 }
 
 // canBeUsedAsAsMatchingProp reports whether a type with kind k can be used as a
@@ -2459,12 +2448,12 @@ func isMetaProperty(name string) bool {
 	return false
 }
 
-// validateBusinessID validates a Business ID. In case it is invalid returns an
-// errors.BadRequest, otherwise returns nil.
-func validateBusinessID(cType state.ConnectorType, role state.Role, businessID state.BusinessID) error {
+// validateBusinessID validates a Business ID name (column or property). In case it is
+// invalid returns an errors.BadRequest, otherwise returns nil.
+func validateBusinessID(cType state.ConnectorType, role state.Role, businessID string) error {
 
 	// An empty Business ID is always valid.
-	if businessID == (state.BusinessID{}) {
+	if businessID == "" {
 		return nil
 	}
 
@@ -2473,37 +2462,21 @@ func validateBusinessID(cType state.ConnectorType, role state.Role, businessID s
 		return errors.BadRequest("unexpected Business ID for destination connection")
 	}
 
-	// Both the Business ID name and label must be provided, or neither of them.
-	if businessID.Name == "" && businessID.Label != "" {
-		return errors.BadRequest("Business ID name cannot be empty when a Business ID label is specified")
-	}
-	if businessID.Name != "" && businessID.Label == "" {
-		return errors.BadRequest("Business ID label cannot be empty when a Business ID name is specified")
-	}
-
 	// Validate the Business ID name.
-	if n := utf8.RuneCountInString(businessID.Name); n > 1024 {
+	if n := utf8.RuneCountInString(businessID); n > 1024 {
 		return errors.BadRequest("Business ID name is longer than 1024 runes")
 	}
 	switch cType {
 	case state.AppType, state.MobileType, state.ServerType, state.WebsiteType:
-		if !types.IsValidPropertyName(businessID.Name) {
-			return errors.BadRequest("Business ID name %q is not a valid property name", businessID.Name)
+		if !types.IsValidPropertyName(businessID) {
+			return errors.BadRequest("Business ID name %q is not a valid property name", businessID)
 		}
 	case state.DatabaseType, state.StorageType:
-		if !utf8.ValidString(businessID.Name) {
+		if !utf8.ValidString(businessID) {
 			return errors.BadRequest("Business ID name is not UTF-8 encoded")
 		}
 	default:
 		return errors.BadRequest("unexpected Business ID for %s connection", cType)
-	}
-
-	// Validate the Business ID label.
-	if !utf8.ValidString(businessID.Label) {
-		return errors.BadRequest("Business ID label is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(businessID.Label); n > 16 {
-		return errors.BadRequest("Business ID label is longer than 16 runes")
 	}
 
 	return nil

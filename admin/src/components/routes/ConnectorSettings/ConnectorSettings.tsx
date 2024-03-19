@@ -13,7 +13,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { BusinessID, ConnectionRole, ConnectionToAdd, Strategy } from '../../../types/external/connection';
+import { ConnectionRole, ConnectionToAdd, Strategy } from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
@@ -31,7 +31,7 @@ const ConnectorSettings = () => {
 	const [name, setName] = useState<string>('');
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
-	const [businessID, setBusinessID] = useState<BusinessID>({ Name: '', Label: '' });
+	const [businessID, setBusinessID] = useState<string>('');
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [actions, setActions] = useState<ConnectorAction[]>([]);
 	const [values, setValues] = useState<UIValues>({});
@@ -339,42 +339,20 @@ const ConnectorSettings = () => {
 								}}
 							/>
 							{showBusinessID && (
-								<>
-									<SlInput
-										className='businessIDName'
-										name='businessIDName'
-										helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
-										placeholder='Something like "email", "customer_id", etc...'
-										value={businessID.Name}
-										label='Business ID Name'
-										type='text'
-										maxlength={1024}
-										onSlChange={(e) => {
-											const target = e.currentTarget as ShoelaceEventTarget;
-											setBusinessID({
-												Name: target!.value,
-												Label: businessID.Label,
-											});
-										}}
-									/>
-									<SlInput
-										className='businessIDLabel'
-										name='businessIDLabel'
-										value={businessID.Label}
-										placeholder='Something like "Email", "Customer ID", etc...'
-										helpText='A human-readable label for the Business ID. Mandatory when a Business ID name is specified.'
-										label='Business ID Label'
-										type='text'
-										maxlength={16}
-										onSlChange={(e) => {
-											const target = e.currentTarget as ShoelaceEventTarget;
-											setBusinessID({
-												Name: businessID.Name,
-												Label: target!.value,
-											});
-										}}
-									/>
-								</>
+								<SlInput
+									className='businessIDName'
+									name='businessIDName'
+									helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+									placeholder='Something like "email", "customer_id", etc...'
+									value={businessID}
+									label={`Business ID ${businessIDKind}`}
+									type='text'
+									maxlength={1024}
+									onSlChange={(e) => {
+										const target = e.currentTarget as ShoelaceEventTarget;
+										setBusinessID(target!.value);
+									}}
+								/>
 							)}
 						</div>
 						{showStrategy && (
