@@ -108,6 +108,9 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		WebsiteHost: connection.WebsiteHost,
 		BusinessID:  connection.BusinessID,
 	}
+	if n.Name == "" {
+		n.Name = c.Name
+	}
 
 	// Validate the strategy.
 	if connection.Role == Source {
