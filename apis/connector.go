@@ -27,6 +27,7 @@ type Connector struct {
 	TermForUsers           string
 	TermForGroups          string
 	Type                   ConnectorType
+	Targets                Targets
 	HasSheets              bool
 	HasSettings            bool
 	Icon                   string
@@ -118,6 +119,13 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	}
 	*typ = t
 	return nil
+}
+
+// Targets represents the supported targets by a connector.
+type Targets struct {
+	Users  bool
+	Groups bool
+	Events bool
 }
 
 // AuthCodeURL returns a URL that directs to the consent page of an OAuth 2.0

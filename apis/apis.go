@@ -319,6 +319,9 @@ func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
 		WebhooksPer:            WebhooksPer(c.WebhooksPer),
 		OAuth:                  c.OAuth != nil,
 	}
+	connector.Targets.Users = c.Targets.Contains(state.Users)
+	connector.Targets.Groups = c.Targets.Contains(state.Groups)
+	connector.Targets.Events = c.Targets.Contains(state.Events)
 	return &connector, nil
 }
 
@@ -349,6 +352,9 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 			WebhooksPer:            WebhooksPer(c.WebhooksPer),
 			OAuth:                  c.OAuth != nil,
 		}
+		connector.Targets.Users = c.Targets.Contains(state.Users)
+		connector.Targets.Groups = c.Targets.Contains(state.Groups)
+		connector.Targets.Events = c.Targets.Contains(state.Events)
 		connectors[i] = &connector
 	}
 	sort.Slice(connectors, func(i, j int) bool {
