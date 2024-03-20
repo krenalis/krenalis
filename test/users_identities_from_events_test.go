@@ -29,7 +29,7 @@ func TestUsersIdentitiesFromEvents(t *testing.T) {
 
 	var javaScriptKey string
 	{
-		javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com")
+		javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", "")
 		keys := c.ConnectionKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expecting one key, got %d keys", len(keys))

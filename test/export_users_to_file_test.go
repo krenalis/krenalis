@@ -38,7 +38,7 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
+		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source, "")
 		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{

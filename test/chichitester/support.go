@@ -104,12 +104,13 @@ func (c *Chichi) AddConnection(connection ConnectionToAdd) int {
 	return id
 }
 
-func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
+func (c *Chichi) AddDestinationFilesystem(storageDir, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:      "Filesystem",
-		Role:      Destination,
-		Enabled:   true,
-		Connector: FilesystemConnector,
+		Name:       "Filesystem",
+		Role:       Destination,
+		Enabled:    true,
+		Connector:  FilesystemConnector,
+		BusinessID: businessID,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
@@ -132,17 +133,7 @@ func (c *Chichi) AddDestinationPostgreSQL() int {
 	})
 }
 
-func (c *Chichi) AddDummy(name string, role Role) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:      name,
-		Role:      role,
-		Enabled:   true,
-		Connector: DummyConnector,
-		Settings:  []byte("{}"),
-	})
-}
-
-func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID string) int {
+func (c *Chichi) AddDummy(name string, role Role, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:       name,
 		Role:       role,
@@ -152,18 +143,8 @@ func (c *Chichi) AddDummyWithBusinessID(name string, role Role, businessID strin
 		Settings:   []byte("{}"),
 	})
 }
-func (c *Chichi) AddJavaScriptSource(name, host string) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:        name,
-		Role:        Source,
-		Enabled:     true,
-		Connector:   JavaScriptConnector,
-		Strategy:    &defaultStrategy,
-		WebsiteHost: host,
-	})
-}
 
-func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID string) int {
+func (c *Chichi) AddJavaScriptSource(name, host, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:        name,
 		Role:        Source,
@@ -175,28 +156,16 @@ func (c *Chichi) AddJavaScriptSourceWithBusinessID(name, host string, businessID
 	})
 }
 
-func (c *Chichi) AddSourceFilesystem(storageDir string) int {
+func (c *Chichi) AddSourceFilesystem(storageDir, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:      "Filesystem",
-		Role:      Source,
-		Enabled:   true,
-		Connector: FilesystemConnector, // Filesystem.
-		Settings: JSONEncodeSettings(map[string]any{
-			"Root": storageDir,
-		}),
-	})
-}
-
-func (c *Chichi) AddSourceFilesystemWithBusinessID(storageDir string, businessID string) int {
-	return c.AddConnection(ConnectionToAdd{
-		Name:      "Filesystem",
-		Role:      Source,
-		Enabled:   true,
-		Connector: FilesystemConnector,
-		Settings: JSONEncodeSettings(map[string]any{
-			"Root": storageDir,
-		}),
+		Name:       "Filesystem",
+		Role:       Source,
+		Enabled:    true,
+		Connector:  FilesystemConnector,
 		BusinessID: businessID,
+		Settings: JSONEncodeSettings(map[string]any{
+			"Root": storageDir,
+		}),
 	})
 }
 

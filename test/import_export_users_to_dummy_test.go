@@ -27,7 +27,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
+		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source, "")
 		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
@@ -51,7 +51,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Export the users to Dummy.
 	{
-		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination)
+		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination, "")
 		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
@@ -84,7 +84,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.AddDummy("Dummy (source 2)", chichitester.Source)
+		dummySrc := c.AddDummy("Dummy (source 2)", chichitester.Source, "")
 		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{

@@ -38,7 +38,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy int
 	{
 
-		dummy = c.AddDummyWithBusinessID("Dummy", chichitester.Source, "email")
+		dummy = c.AddDummy("Dummy", chichitester.Source, "email")
 		dummyAction := c.AddAction(dummy, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
@@ -85,7 +85,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		if !stat.IsDir() {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
-		fs = c.AddSourceFilesystemWithBusinessID(storageDir, "email")
+		fs = c.AddSourceFilesystem(storageDir, "email")
 		csvAction := c.AddAction(fs, "Users", chichitester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
@@ -132,7 +132,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		// events, one for importing users identities) and retrieve its key.
 		var javaScriptKey string
 		{
-			javaScript = c.AddJavaScriptSourceWithBusinessID("JavaScript (source)", "example.com", "email")
+			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", "email")
 			keys := c.ConnectionKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expecting one key, got %d keys", len(keys))

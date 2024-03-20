@@ -32,8 +32,8 @@ func Test_UsersIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs1 := c.AddSourceFilesystemWithBusinessID(storageDir, "email")
-	fs2 := c.AddSourceFilesystemWithBusinessID(storageDir, "email")
+	fs1 := c.AddSourceFilesystem(storageDir, "email")
+	fs2 := c.AddSourceFilesystem(storageDir, "email")
 
 	action1 := c.AddAction(fs1, "Users", chichitester.ActionToSet{
 		Name: "CSV 1",
