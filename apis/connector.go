@@ -37,26 +37,6 @@ type Connector struct {
 	OAuth                  bool
 }
 
-// ConnectorTargets represents connector targets.
-type ConnectorTargets int
-
-const (
-	EventsFlag = 1 << iota
-	UsersFlag
-	GroupsFlag
-)
-
-// MarshalJSON implements the json.Marshaler interface.
-func (t ConnectorTargets) MarshalJSON() ([]byte, error) {
-	b := &bytes.Buffer{}
-	b.WriteString(`{`)
-	_, _ = fmt.Fprintf(b, "\"Events\":%t", t&EventsFlag != 0)
-	_, _ = fmt.Fprintf(b, ",\"Users\":%t", t&UsersFlag != 0)
-	_, _ = fmt.Fprintf(b, ",\"Groups\":%t", t&GroupsFlag != 0)
-	b.WriteString(`}`)
-	return b.Bytes(), nil
-}
-
 // ConnectorType represents a connector type.
 type ConnectorType int
 
