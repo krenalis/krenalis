@@ -4,8 +4,6 @@ import Grid from '../../shared/Grid/Grid';
 import Section from '../../shared/Section/Section';
 import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
 import statuses from '../../../constants/statuses';
-import * as variants from '../../../constants/variants';
-import * as icons from '../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import ActionContext from '../../../context/ActionContext';
@@ -122,7 +120,7 @@ const ActionQuery = () => {
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'DatabaseFailed') {
-					showStatus({ variant: variants.DANGER, icon: icons.CODE_ERROR, text: err.cause });
+					handleError(err);
 				}
 				return;
 			}
