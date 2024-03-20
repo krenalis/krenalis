@@ -121,7 +121,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (connection.isFile && connection.isSource) {
+		if (connection.isStorage && connection.isSource) {
 			// precompile the 'IdentityColumn' and 'TimestampColumn' fields,
 			// if possible.
 			const a = { ...action };
