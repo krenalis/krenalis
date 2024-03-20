@@ -23,6 +23,28 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// InvalidPropertyNameError is returned by ObjectOf when a property name is not
+// valid.
+type InvalidPropertyNameError struct {
+	Index int
+	Name  string
+}
+
+func (err InvalidPropertyNameError) Error() string {
+	return fmt.Sprintf("property name %q is not valid", err.Name)
+}
+
+// RepeatedPropertyNameError is returned by ObjectOf when a property name is
+// repeated.
+type RepeatedPropertyNameError struct {
+	Index1, Index2 int
+	Name           string
+}
+
+func (err RepeatedPropertyNameError) Error() string {
+	return fmt.Sprintf("property name %q is repeated", err.Name)
+}
+
 // PathNotExistError is returned by PropertyByPath when the path does not exist.
 type PathNotExistError struct {
 	Path Path
@@ -402,23 +424,25 @@ func Map(t Type) Type {
 }
 
 // ObjectOf is like Object but returns an error instead of panicking if any.
+// It returns an InvalidPropertyNameError error if a property name is not
+// valid, and a RepeatedPropertyNameError error if a property name is repeated.
 func ObjectOf(properties []Property) (Type, error) {
 	if len(properties) == 0 {
 		return Type{}, errors.New("no property in type")
 	}
-	exists := make(map[string]struct{}, len(properties))
+	indexOf := make(map[string]int, len(properties))
 	ps := make([]Property, len(properties))
 	for i, property := range properties {
 		if property.Name == "" {
 			return Type{}, errors.New("property name is empty")
 		}
 		if !IsValidPropertyName(property.Name) {
-			return Type{}, errors.New("invalid property name")
+			return Type{}, InvalidPropertyNameError{i, property.Name}
 		}
-		if _, ok := exists[property.Name]; ok {
-			return Type{}, fmt.Errorf("property %s name is repeated", property.Name)
+		if j, ok := indexOf[property.Name]; ok {
+			return Type{}, RepeatedPropertyNameError{j, i, property.Name}
 		}
-		exists[property.Name] = struct{}{}
+		indexOf[property.Name] = i
 		label, err := normalizedUTF8(property.Label)
 		if err != nil {
 			return Type{}, err

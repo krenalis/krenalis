@@ -263,6 +263,53 @@ func TestAsRole(t *testing.T) {
 
 }
 
+func Test_ObjectOf_Errors(t *testing.T) {
+
+	// Test InvalidPropertyNameError.
+	_, err := ObjectOf([]Property{
+		{Name: "firstName", Type: Text()},
+		{Name: "last name", Type: Text()},
+		{Name: "phone", Type: Text()},
+	})
+	if err == nil {
+		t.Error("expected InvalidPropertyNameError error, got no error")
+	}
+	if err, ok := err.(InvalidPropertyNameError); ok {
+		if err.Index != 1 {
+			t.Errorf("expected index 1, got %d", err.Index)
+		}
+		if err.Name != "last name" {
+			t.Errorf("expected name \"last name\" , got %q", err.Name)
+		}
+	} else {
+		t.Errorf("expected InvalidPropertyNameError error, got a %T error", err)
+	}
+
+	// Test RepeatedPropertyNameError.
+	_, err = ObjectOf([]Property{
+		{Name: "firstName", Type: Text()},
+		{Name: "lastName", Type: Text()},
+		{Name: "firstName", Type: Text()},
+	})
+	if err == nil {
+		t.Error("expected RepeatedPropertyNameError error, got no error")
+	}
+	if err, ok := err.(RepeatedPropertyNameError); ok {
+		if err.Index1 != 0 {
+			t.Errorf("expected index1 0, got %d", err.Index1)
+		}
+		if err.Index2 != 2 {
+			t.Errorf("expected index2 2, got %d", err.Index2)
+		}
+		if err.Name != "firstName" {
+			t.Errorf("expected name \"firstName\" , got %q", err.Name)
+		}
+	} else {
+		t.Errorf("expected InvalidPropertyNameError error, got a %T error", err)
+	}
+
+}
+
 func Test_IsValidPropertyPath(t *testing.T) {
 	tests := []struct {
 		path     string
