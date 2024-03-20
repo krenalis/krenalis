@@ -757,10 +757,9 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	IdentityColumn string
 
-	// TimestampColumn is the column name used as timestamp in source file
-	// connections. May be empty to indicate that no properties should be used as
-	// timestamp.
-	// When not empty, requires a TimestampFormat.
+	// TimestampColumn is the column name used as timestamp in source file connections.
+	// May be empty to indicate that no properties should be used as timestamp. Also
+	// refer to the documentation of TimestampFormat, which is strictly related to this.
 	// It cannot be longer than 1024 runes.
 	TimestampColumn string
 
