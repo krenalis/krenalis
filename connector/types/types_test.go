@@ -305,7 +305,7 @@ func Test_ObjectOf_Errors(t *testing.T) {
 			t.Errorf("expected name \"firstName\" , got %q", err.Name)
 		}
 	} else {
-		t.Errorf("expected InvalidPropertyNameError error, got a %T error", err)
+		t.Errorf("expected RepeatedPropertyNameError error, got a %T error", err)
 	}
 
 }
