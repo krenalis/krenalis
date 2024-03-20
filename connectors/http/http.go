@@ -70,7 +70,7 @@ type settings struct {
 // InvalidPathError if name is not valid for use in calls to Reader and Write.
 func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
 	if name[0] != '/' {
-		return "", connector.InvalidPathErrorf("path must start with a slash")
+		name = "/" + name
 	}
 	path, query := name, ""
 	parsingQuery := false
