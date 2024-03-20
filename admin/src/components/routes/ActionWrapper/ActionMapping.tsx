@@ -121,7 +121,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (connection.isStorage && connection.isSource) {
+		if (connection.isSource && (connection.isStorage || connection.isDatabase)) {
 			// precompile the 'IdentityColumn' and 'TimestampColumn' fields,
 			// if possible.
 			const a = { ...action };
@@ -323,7 +323,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				padded={false}
 				className={mode}
 			>
-				{connection.isStorage && connection.isSource && (
+				{connection.isSource && (connection.isStorage || connection.isDatabase) && (
 					<div className='specialProperties'>
 						<div className='identityColumn'>
 							<div className='label'>

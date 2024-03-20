@@ -81,16 +81,14 @@ const ActionQuery = () => {
 			queryConfirmButtonRef.current.stop();
 			return;
 		}
-		const hasIDColumn = res.Schema.properties.findIndex((property) => property.name === 'id') !== -1;
-		if (!hasIDColumn) {
-			queryConfirmButtonRef.current.stop();
-			handleError(`Schema must contain the "id" property`);
-			return;
-		}
 		queryConfirmButtonRef.current.confirm();
 		setTimeout(() => {
+			const a = { ...action };
 			const actionTyp = { ...actionType };
 			actionTyp.InputSchema = res.Schema;
+			a.IdentityColumn = '';
+			a.TimestampColumn = '';
+			setAction(a);
 			setActionType(actionTyp);
 			setTimeout(() => {
 				const top = mappingSectionRef.current.getBoundingClientRect().top;

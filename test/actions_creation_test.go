@@ -290,6 +290,7 @@ func TestActionsCreation(t *testing.T) {
 				Query: `SELECT "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -299,8 +300,10 @@ func TestActionsCreation(t *testing.T) {
 						"email": "email",
 					},
 				},
+				IdentityColumn:  "my_id_column",
+				TimestampColumn: "timestamp",
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"identity column \"id\" not found within input schema"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"identity column \"my_id_column\" not found within input schema"}}`,
 		},
 		{
 			conn: postgreSQLConnection,
@@ -310,6 +313,7 @@ func TestActionsCreation(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -319,6 +323,8 @@ func TestActionsCreation(t *testing.T) {
 						"email": "email",
 					},
 				},
+				IdentityColumn:  "id",
+				TimestampColumn: "timestamp",
 			},
 		},
 		{
@@ -339,18 +345,20 @@ func TestActionsCreation(t *testing.T) {
 						"email": "email",
 					},
 				},
+				IdentityColumn:  "id",
+				TimestampColumn: "timestamp",
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp column \"timestamp\" has kind Text instead of DateTime"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"timestamp format is required"}}`,
 		},
 		{
 			conn: postgreSQLConnection,
 			action: chichitester.ActionToSet{
 				Name:  "Import users from PostgreSQL",
-				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
+				Query: `SELECT "id", "email", "my_updated_at" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "my_updated_at", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -360,6 +368,8 @@ func TestActionsCreation(t *testing.T) {
 						"email": "email",
 					},
 				},
+				IdentityColumn:  "id",
+				TimestampColumn: "my_updated_at",
 			},
 		},
 		{

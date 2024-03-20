@@ -1039,6 +1039,8 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
+	// TODO(Gianluca): we should review the passing of parameters here, see the issue
+	// https://github.com/open2b/chichi/issues/608.
 	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, c.BusinessID, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
@@ -1772,7 +1774,10 @@ func (this *Connection) app() *connectors.App {
 // The caller must call the database's Close method when the database is no
 // longer needed.
 func (this *Connection) database() *connectors.Database {
-	return this.apis.connectors.Database(this.connection)
+	// TODO(Gianluca): here we are not passing the identity and timestamp columns names.
+	// And what about the Business ID? We should review this, see the issue
+	// https://github.com/open2b/chichi/issues/608.
+	return this.apis.connectors.Database(this.connection, "", "", "")
 }
 
 // storage returns the storage of the connection.
@@ -2185,7 +2190,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 
 	// Check the column for the identity and for the timestamp.
-	if connector.Type == state.StorageType && c.Role == state.Source {
+	importFromColumns := c.Role == state.Source &&
+		(connector.Type == state.StorageType || connector.Type == state.DatabaseType)
+	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
@@ -2250,32 +2257,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 		if action.TimestampFormat != "" {
 			return errors.BadRequest("action cannot specify a timestamp format")
-		}
-	}
-
-	// When importing from databases, check if the "id" and (eventually) the
-	// "timestamp" columns are defined and have a correct type.
-	if connector.Type == state.DatabaseType && c.Role == state.Source {
-		if !inSchema.Valid() {
-			return errors.BadRequest("input schema must be valid")
-		}
-		// Validate the identity column "id".
-		id, ok := inSchema.Property("id")
-		if !ok {
-			return errors.BadRequest("identity column \"id\" not found within input schema")
-		}
-		usedInPaths = append(usedInPaths, types.Path{"id"})
-		switch k := id.Type.Kind(); k {
-		case types.IntKind, types.UintKind, types.UUIDKind, types.TextKind:
-		default:
-			return errors.BadRequest("identity column \"id\" has kind %s instead of Int, Uint, UUID or Text", k)
-		}
-		// Validate the timestamp column "timestamp", if present.
-		if timestamp, ok := inSchema.Property("timestamp"); ok {
-			if k := timestamp.Type.Kind(); k != types.DateTimeKind {
-				return errors.BadRequest("timestamp column \"timestamp\" has kind %s instead of DateTime", k)
-			}
-			usedInPaths = append(usedInPaths, types.Path{"timestamp"})
 		}
 	}
 

@@ -22,21 +22,38 @@ import (
 
 // Database represents the database of a database connection.
 type Database struct {
-	closed    bool
-	connector int
-	inner     _connector.DatabaseConnection
-	err       error
+	closed          bool
+	connector       int
+	inner           _connector.DatabaseConnection
+	identityColumn  string
+	timestampColumn struct {
+		name   string
+		format string
+	}
+	err error
 }
 
 // Database returns a database for the provided connection. Errors are deferred
 // until a database's method is called. It panics if connection is not a
 // database connection.
 //
+// For the identity and timestamp column parameters, refer to the issue
+// https://github.com/open2b/chichi/issues/608.
+//
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (connectors *Connectors) Database(connection *state.Connection) *Database {
+func (connectors *Connectors) Database(connection *state.Connection, identityColumn,
+	timestampColumnName, timestampColumnFormat string) *Database {
 	database := &Database{
-		connector: connection.Connector().ID,
+		connector:      connection.Connector().ID,
+		identityColumn: identityColumn,
+		timestampColumn: struct {
+			name   string
+			format string
+		}{
+			name:   timestampColumnName,
+			format: timestampColumnFormat,
+		},
 	}
 	database.inner, database.err = _connector.RegisteredDatabase(connection.Connector().Name).New(&_connector.DatabaseConfig{
 		Role:        _connector.Role(connection.Role),
@@ -83,10 +100,8 @@ func (database *Database) Query(ctx context.Context, query string) (*Rows, error
 // Records executes a query and returns an iterator to iterate over the
 // database's records, conforming to the provided schema.
 //
-// The query must be such that its execution returns a column named "id" (the
-// identity column) with type Int, Uint, UUID, or Text. Additionally, if the
-// query execution returns a column named "timestamp", that column is considered
-// the timestamp column and must have the DateTime type.
+// For the Business ID column name, refer to the issue
+// https://github.com/open2b/chichi/issues/608.
 //
 // If the provided schema, which must be valid, does not conform to the query's
 // results schema, it returns a *SchemaError error.
@@ -109,23 +124,28 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 		}
 	}()
 	// Validate the identity and timestamp columns.
-	var hasIdentityColumn bool
+	var identityColumn, timestampColumn types.Property
 	for _, c := range columns {
-		switch c.Name {
-		case "id":
-			property, _ := schema.Property("id")
+		if c.Name == database.identityColumn { // TODO(Gianluca): see https://github.com/open2b/chichi/issues/608.
+			property, _ := schema.Property(database.identityColumn)
 			if c.Type.Kind() != property.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`identity column "id" has type %s instead of %s`, c.Type.Kind(), property.Type.Kind())}
+				return nil, &SchemaError{fmt.Sprintf(`identity column %q has type %s instead of %s`, database.identityColumn, c.Type.Kind(), property.Type.Kind())}
 			}
-			hasIdentityColumn = true
-		case "timestamp":
-			if c.Type.Kind() != types.DateTimeKind {
-				return nil, &SchemaError{fmt.Sprintf(`timestamp column "timestamp" has type %s instead of DateTime`, c.Type.Kind())}
+			identityColumn = property
+		}
+		if database.timestampColumn.name != "" && c.Name == database.timestampColumn.name {
+			property, _ := schema.Property(database.timestampColumn.name)
+			if c.Type.Kind() != property.Type.Kind() {
+				return nil, &SchemaError{fmt.Sprintf(`timestamp column %q has type %s instead of %s`, database.timestampColumn.name, c.Type.Kind(), property.Type.Kind())}
 			}
+			timestampColumn = property
 		}
 	}
-	if !hasIdentityColumn {
-		return nil, &SchemaError{`there is no identity column "id"`}
+	if identityColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", database.identityColumn)}
+	}
+	if database.timestampColumn.name != "" && timestampColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no timestamp column %q", database.timestampColumn.name)}
 	}
 	// Check that schema is compatible with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
@@ -147,7 +167,8 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 	}
 
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, schema.Properties(), businessIDColumn)
+	records = newDatabaseRecords(rows, columns, schema.Properties(), identityColumn,
+		timestampColumn, database.timestampColumn.format, businessIDColumn)
 	return records, nil
 }
 
@@ -300,17 +321,25 @@ type databaseRecords struct {
 	rows             _connector.Rows
 	propertyOf       map[string]types.Property
 	dst              []any
+	identityColumn   types.Property
+	timestampColumn  types.Property
+	timestampFormat  string
 	businessIDColumn types.Property
 	err              error
 	closed           bool
 }
 
-func newDatabaseRecords(rows _connector.Rows, columns, properties []types.Property, businessIDColumn types.Property) *databaseRecords {
+func newDatabaseRecords(rows _connector.Rows, columns, properties []types.Property,
+	identityColumn, timestampColumn types.Property, timestampFormat string,
+	businessIDColumn types.Property) *databaseRecords {
 	records := databaseRecords{
 		columns:          columns,
 		rows:             rows,
 		dst:              make([]any, len(columns)),
 		propertyOf:       make(map[string]types.Property, len(properties)),
+		identityColumn:   identityColumn,
+		timestampColumn:  timestampColumn,
+		timestampFormat:  timestampFormat,
 		businessIDColumn: businessIDColumn,
 	}
 	for _, p := range properties {
@@ -349,6 +378,9 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 			r.dst[i] = recordsScanValue{
 				property:         r.propertyOf[c.Name],
 				record:           &record,
+				identityColumn:   r.identityColumn,
+				timestampColumn:  r.timestampColumn,
+				timestampFormat:  r.timestampFormat,
 				businessIDColumn: r.businessIDColumn,
 			}
 		}
@@ -374,6 +406,9 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 type recordsScanValue struct {
 	property         types.Property
 	record           *Record
+	identityColumn   types.Property
+	timestampColumn  types.Property
+	timestampFormat  string
 	businessIDColumn types.Property
 }
 
@@ -384,7 +419,7 @@ func (sv recordsScanValue) Scan(src any) error {
 	}
 
 	switch p.Name {
-	case "id":
+	case sv.identityColumn.Name:
 		if src == nil {
 			return errors.New("identity value is NULL")
 		}
@@ -394,10 +429,16 @@ func (sv recordsScanValue) Scan(src any) error {
 		}
 		sv.record.ID = id
 		return nil
-	case "timestamp":
+	case sv.timestampColumn.Name:
 		if src == nil {
 			return errors.New("timestamp value is NULL")
 		}
+		ts, err := parseTimestampColumn(p.Name, p.Type, sv.timestampFormat, src)
+		if err != nil {
+			return err
+		}
+		sv.record.Timestamp = ts
+		return nil
 	case sv.businessIDColumn.Name:
 		col := sv.businessIDColumn
 		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
@@ -417,12 +458,5 @@ func (sv recordsScanValue) Scan(src any) error {
 		return err
 	}
 	sv.record.Properties[p.Name] = value
-	if p.Name == "timestamp" {
-		timestamp := value.(time.Time)
-		if err := validateTimestamp(timestamp); err != nil {
-			return err
-		}
-		sv.record.Timestamp = timestamp
-	}
 	return nil
 }

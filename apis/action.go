@@ -649,7 +649,8 @@ func (this *Action) app() *connectors.App {
 // The caller must call the database's Close method when the database is no
 // longer needed.
 func (this *Action) database() *connectors.Database {
-	return this.apis.connectors.Database(this.action.Connection())
+	a := this.action
+	return this.apis.connectors.Database(a.Connection(), a.IdentityColumn, a.TimestampColumn, a.TimestampFormat)
 }
 
 // isLanguageSupported reports whether the transformation language of the action
@@ -752,14 +753,15 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	TableName string
 
-	// IdentityColumn is the column name used as identity in source file
-	// connections.
+	// IdentityColumn is the column name used as identity when importing from a file or
+	// from a database.
 	// It cannot be longer than 1024 runes.
 	IdentityColumn string
 
-	// TimestampColumn is the column name used as timestamp in source file connections.
-	// May be empty to indicate that no properties should be used as timestamp. Also
-	// refer to the documentation of TimestampFormat, which is strictly related to this.
+	// TimestampColumn is the column name used as timestamp when importing from a file or
+	// from a database. May be empty to indicate that no properties should be used as
+	// timestamp. Also refer to the documentation of TimestampFormat, which is strictly
+	// related to this.
 	// It cannot be longer than 1024 runes.
 	TimestampColumn string
 
