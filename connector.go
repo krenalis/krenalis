@@ -23,7 +23,7 @@ type Connector interface {
 	ConnectionReflectType() reflect.Type
 }
 
-// Record represents a record.
+// Record represents an app record.
 type Record struct {
 	ID         string         // Identifier.
 	Properties map[string]any // Properties.
