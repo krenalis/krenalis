@@ -27,8 +27,6 @@ func (this *Action) importUsers(ctx context.Context) error {
 	connection := action.Connection()
 	connector := connection.Connector()
 
-	businessID := connection.BusinessID
-
 	stats := this.apis.statistics.Action(action.ID)
 
 	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
@@ -60,14 +58,14 @@ func (this *Action) importUsers(ctx context.Context) error {
 		}
 		database := this.database()
 		defer database.Close()
-		records, err = database.Records(ctx, query, action.InSchema, businessID)
+		records, err = database.Records(ctx, query, action.InSchema, connection.BusinessID)
 	case state.StorageType:
 		timestampColumn := connectors.TimestampColumn{
 			Name:   action.TimestampColumn,
 			Format: action.TimestampFormat,
 		}
 		records, err = this.file().Records(ctx, action.Path, action.Sheet, action.InSchema,
-			action.IdentityColumn, timestampColumn, businessID)
+			action.IdentityColumn, timestampColumn, connection.BusinessID)
 	}
 	if err != nil {
 		if err, ok := err.(*connectors.SchemaError); ok {
