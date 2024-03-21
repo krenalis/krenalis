@@ -88,7 +88,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // Business ID for an identity.
 //
 // If the provided schema, that must be valid, does not conform with the file's
-// schema, it returns a *SchemaError error.
+// schema, the iterator will return a *SchemaError error.
 //
 // If the specified sheet is not found in the file, the For method of the
 // iterator returns immediately, and a subsequent call to the Err method will
