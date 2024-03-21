@@ -20,9 +20,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -31,10 +31,10 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ connector.UI = (*connection)(nil)
+var _ chichi.UI = (*connection)(nil)
 
 func init() {
-	connector.RegisterDatabase(connector.Database{
+	chichi.RegisterDatabase(chichi.Database{
 		Name:                   "MySQL",
 		SourceDescription:      "import users and groups from a MySQL database",
 		DestinationDescription: "export users and groups to a MySQL database",
@@ -44,7 +44,7 @@ func init() {
 }
 
 // new returns a new MySQL connection.
-func new(conf *connector.DatabaseConfig) (*connection, error) {
+func new(conf *chichi.DatabaseConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,7 +56,7 @@ func new(conf *connector.DatabaseConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.DatabaseConfig
+	conf     *chichi.DatabaseConfig
 	settings *settings
 	db       *sql.DB
 }
@@ -89,7 +89,7 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (c *connection) Query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
+func (c *connection) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
 	return c.query(ctx, query)
 }
 
@@ -262,7 +262,7 @@ func (c *connection) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (c *connection) query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
+func (c *connection) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
 	if err := c.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -400,5 +400,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "YEAR":
 		return types.Year(), nil
 	}
-	return types.Type{}, connector.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 }

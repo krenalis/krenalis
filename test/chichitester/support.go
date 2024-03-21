@@ -20,7 +20,7 @@ import (
 
 	"chichi/apis"
 	"chichi/backoff"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/segmentio/analytics-go/v3"
 )

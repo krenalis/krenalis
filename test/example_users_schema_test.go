@@ -12,8 +12,8 @@ import (
 	"os"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestExampleUsersSchema(t *testing.T) {

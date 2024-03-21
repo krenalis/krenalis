@@ -17,19 +17,19 @@ import (
 	"fmt"
 	"io"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector icon.
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ connector.UI = (*connection)(nil)
+var _ chichi.UI = (*connection)(nil)
 
 func init() {
-	connector.RegisterFile(connector.File{
+	chichi.RegisterFile(chichi.File{
 		Name:                   "JSON",
 		DestinationDescription: "export users to a JSON file",
 		Icon:                   icon,
@@ -38,7 +38,7 @@ func init() {
 }
 
 // new returns a new JSON connection.
-func new(conf *connector.FileConfig) (*connection, error) {
+func new(conf *chichi.FileConfig) (*connection, error) {
 	c := connection{role: conf.Role, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -50,9 +50,9 @@ func new(conf *connector.FileConfig) (*connection, error) {
 }
 
 type connection struct {
-	role        connector.Role
+	role        chichi.Role
 	settings    *settings
-	setSettings connector.SetSettingsFunc
+	setSettings chichi.SetSettingsFunc
 }
 
 type settings struct {
@@ -67,7 +67,7 @@ func (c *connection) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records connector.RecordWriter) error {
+func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
 
 	var err error
 	var tok json.Token
@@ -120,7 +120,7 @@ Records:
 					return fmt.Errorf("key %q does not exist for the first object", key)
 				}
 			} else {
-				name = connector.SuggestPropertyName(key)
+				name = chichi.SuggestPropertyName(key)
 				if name == "" {
 					return fmt.Errorf("key %q cannot be converted to a valid property name", key)
 				}
@@ -228,7 +228,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
 	s := c.settings
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error

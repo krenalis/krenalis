@@ -18,12 +18,12 @@ import (
 	"strings"
 	"time"
 
+	"chichi"
 	"chichi/apis/datastore/expr"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -106,7 +106,7 @@ func (this *Action) exec(ctx context.Context) {
 		default:
 			if e, ok := err.(actionExecutionError); ok {
 				errorMessage = errors.Abbreviate(e.Error(), 1000)
-				if _, ok := e.err.(*connector.AccessDeniedError); ok {
+				if _, ok := e.err.(*chichi.AccessDeniedError); ok {
 					health = state.AccessDenied
 				}
 			} else {

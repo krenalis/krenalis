@@ -19,7 +19,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events/eventschema"
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // User represents a user.

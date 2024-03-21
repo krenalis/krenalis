@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestImportObjectsIntoWarehouse(t *testing.T) {

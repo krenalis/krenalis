@@ -14,18 +14,18 @@ import (
 	"math"
 	"slices"
 
+	"chichi"
 	"chichi/apis/state"
-	_connector "chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // An InvalidPathError is returned when a path name is not valid.
-type InvalidPathError = _connector.InvalidPathError
+type InvalidPathError = chichi.InvalidPathError
 
 type Storage struct {
 	state   *state.State
 	storage *state.Connection
-	inner   _connector.StorageConnection
+	inner   chichi.StorageConnection
 	err     error
 }
 
@@ -36,8 +36,8 @@ func (connectors *Connectors) Storage(storage *state.Connection) *Storage {
 		state:   connectors.state,
 		storage: storage,
 	}
-	s.inner, s.err = _connector.RegisteredStorage(storage.Connector().Name).New(&_connector.StorageConfig{
-		Role:        _connector.Role(storage.Role),
+	s.inner, s.err = chichi.RegisteredStorage(storage.Connector().Name).New(&chichi.StorageConfig{
+		Role:        chichi.Role(storage.Role),
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
 	})
@@ -89,15 +89,15 @@ func (storage *Storage) Read(ctx context.Context, file *state.Connector, name, s
 		return nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
-	_file, err := _connector.RegisteredFile(file.Name).New(&_connector.FileConfig{
-		Role:     _connector.Role(storage.storage.Role),
+	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
+		Role:     chichi.Role(storage.storage.Role),
 		Settings: settings,
 	})
 
 	rw := newRecordWriter(file.ID, types.Type{}, "", TimestampColumn{}, businessIDColumn, storageTimestamp, limit)
 	err = _file.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
-		if err == _connector.ErrSheetNotExist {
+		if err == chichi.ErrSheetNotExist {
 			err = ErrSheetNotExist
 		}
 		return nil, nil, err
@@ -119,15 +119,15 @@ func (storage *Storage) Sheets(ctx context.Context, file *state.Connector, name 
 		return nil, storage.err
 	}
 
-	_file, err := _connector.RegisteredFile(file.Name).New(&_connector.FileConfig{
-		Role:     _connector.Role(storage.storage.Role),
+	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
+		Role:     chichi.Role(storage.storage.Role),
 		Settings: settings,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	sheetsFile := _file.(_connector.Sheets)
+	sheetsFile := _file.(chichi.Sheets)
 	s := newCompressedStorage(storage.inner, compression)
 	r, _, err := s.Reader(ctx, name)
 	if err != nil {

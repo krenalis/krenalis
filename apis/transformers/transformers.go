@@ -8,7 +8,7 @@ import (
 
 	"chichi/apis/state"
 	"chichi/apis/transformers/mappings"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // Transformer represents a transformer.

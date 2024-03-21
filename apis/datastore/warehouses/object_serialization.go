@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // ColumnsToProperties returns the type properties of columns.

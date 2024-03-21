@@ -23,8 +23,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connector"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -32,19 +32,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the UI and the StorageConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.StorageConnection
+	chichi.UI
+	chichi.StorageConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterStorage(connector.Storage{
+	chichi.RegisterStorage(chichi.Storage{
 		Name: "HTTP",
 		Icon: icon,
 	}, new)
 }
 
 // new returns a new HTTP connection.
-func new(conf *connector.StorageConfig) (*connection, error) {
+func new(conf *chichi.StorageConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,7 +56,7 @@ func new(conf *connector.StorageConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.StorageConfig
+	conf     *chichi.StorageConfig
 	settings *settings
 }
 
@@ -77,10 +77,10 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
-			return "", connector.InvalidPathErrorf("path cannot contains “#“, and control characters")
+			return "", chichi.InvalidPathErrorf("path cannot contains “#“, and control characters")
 		}
 		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
-			return "", connector.InvalidPathErrorf("path contains an invalid escape sequence")
+			return "", chichi.InvalidPathErrorf("path contains an invalid escape sequence")
 		}
 		if c == '?' && !parsingQuery {
 			path, query = name[:i], name[i+1:]

@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"chichi"
 	"chichi/apis/postgres"
-	"chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"
@@ -551,7 +551,7 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 
 // An OAuth represents OAuth data required to authenticate with a connector.
 type OAuth struct {
-	connector.OAuth
+	chichi.OAuth
 	ClientID     string
 	ClientSecret string
 }

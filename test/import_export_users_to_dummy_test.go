@@ -10,8 +10,8 @@ package test
 import (
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestImportExportUsersToDummy(t *testing.T) {

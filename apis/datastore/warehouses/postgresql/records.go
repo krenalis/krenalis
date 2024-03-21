@@ -17,7 +17,7 @@ import (
 
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )

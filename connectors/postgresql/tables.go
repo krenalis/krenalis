@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

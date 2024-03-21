@@ -86,7 +86,7 @@ the `chichi` executable, as well as a `cert.pem` and `key.pem` certificate files
 Within the root of this repository execute:
 
 ```bash
-go build -tags osusergo,netgo -trimpath
+go build -tags osusergo,netgo -trimpath -o chichi ./server/cmd
 ```
 
 ### 4. Populate the database

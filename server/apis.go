@@ -22,8 +22,8 @@ import (
 	"chichi/apis"
 	"chichi/apis/errors"
 	"chichi/apis/events/eventschema"
-	"chichi/connector/types"
 	"chichi/telemetry"
+	"chichi/types"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/securecookie"

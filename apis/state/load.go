@@ -12,16 +12,16 @@ import (
 	"reflect"
 	"sync"
 
+	"chichi"
 	"chichi/apis/postgres"
-	"chichi/connector"
 )
 
 var (
-	uiType                  = reflect.TypeOf((*connector.UI)(nil)).Elem()
-	appEventsConnectionType = reflect.TypeOf((*connector.AppEventsConnection)(nil)).Elem()
-	appUsersConnectionType  = reflect.TypeOf((*connector.AppUsersConnection)(nil)).Elem()
-	appGroupsConnectionType = reflect.TypeOf((*connector.AppGroupsConnection)(nil)).Elem()
-	sheetsType              = reflect.TypeOf((*connector.Sheets)(nil)).Elem()
+	uiType                  = reflect.TypeOf((*chichi.UI)(nil)).Elem()
+	appEventsConnectionType = reflect.TypeOf((*chichi.AppEventsConnection)(nil)).Elem()
+	appUsersConnectionType  = reflect.TypeOf((*chichi.AppUsersConnection)(nil)).Elem()
+	appGroupsConnectionType = reflect.TypeOf((*chichi.AppGroupsConnection)(nil)).Elem()
+	sheetsType              = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
 )
 
 // Load loads the state.
@@ -55,7 +55,7 @@ func (state *State) Load() error {
 				var ct reflect.Type
 				switch c.Type {
 				case AppType:
-					app := connector.RegisteredApp(c.Name)
+					app := chichi.RegisteredApp(c.Name)
 					c.SourceDescription = app.SourceDescription
 					c.DestinationDescription = app.DestinationDescription
 					c.TermForUsers = app.TermForUsers
@@ -84,7 +84,7 @@ func (state *State) Load() error {
 					c.Layouts.Date = app.DateLayout
 					c.Layouts.Time = app.TimeLayout
 				case DatabaseType:
-					database := connector.RegisteredDatabase(c.Name)
+					database := chichi.RegisteredDatabase(c.Name)
 					c.SourceDescription = database.SourceDescription
 					c.DestinationDescription = database.DestinationDescription
 					c.TermForUsers = "users"
@@ -94,7 +94,7 @@ func (state *State) Load() error {
 					c.SampleQuery = database.SampleQuery
 					ct = database.ConnectionReflectType()
 				case FileType:
-					file := connector.RegisteredFile(c.Name)
+					file := chichi.RegisteredFile(c.Name)
 					c.SourceDescription = file.SourceDescription
 					c.DestinationDescription = file.DestinationDescription
 					c.Icon = file.Icon
@@ -102,7 +102,7 @@ func (state *State) Load() error {
 					ct = file.ConnectionReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
 				case MobileType:
-					mobile := connector.RegisteredMobile(c.Name)
+					mobile := chichi.RegisteredMobile(c.Name)
 					c.SourceDescription = mobile.SourceDescription
 					c.DestinationDescription = mobile.DestinationDescription
 					c.TermForUsers = "users"
@@ -111,7 +111,7 @@ func (state *State) Load() error {
 					c.Icon = mobile.Icon
 					ct = mobile.ConnectionReflectType()
 				case ServerType:
-					server := connector.RegisteredServer(c.Name)
+					server := chichi.RegisteredServer(c.Name)
 					c.SourceDescription = server.SourceDescription
 					c.DestinationDescription = server.DestinationDescription
 					c.TermForUsers = "users"
@@ -120,7 +120,7 @@ func (state *State) Load() error {
 					c.Icon = server.Icon
 					ct = server.ConnectionReflectType()
 				case StorageType:
-					storage := connector.RegisteredStorage(c.Name)
+					storage := chichi.RegisteredStorage(c.Name)
 					c.SourceDescription = storage.SourceDescription
 					c.DestinationDescription = storage.DestinationDescription
 					c.TermForUsers = "users"
@@ -129,14 +129,14 @@ func (state *State) Load() error {
 					c.Icon = storage.Icon
 					ct = storage.ConnectionReflectType()
 				case StreamType:
-					stream := connector.RegisteredStream(c.Name)
+					stream := chichi.RegisteredStream(c.Name)
 					c.SourceDescription = stream.SourceDescription
 					c.DestinationDescription = stream.DestinationDescription
 					c.Targets = EventsFlag
 					c.Icon = stream.Icon
 					ct = stream.ConnectionReflectType()
 				case WebsiteType:
-					website := connector.RegisteredWebsite(c.Name)
+					website := chichi.RegisteredWebsite(c.Name)
 					c.SourceDescription = website.SourceDescription
 					c.DestinationDescription = website.DestinationDescription
 					c.TermForUsers = "users"

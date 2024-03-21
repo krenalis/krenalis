@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 type ProcessedEvent struct {

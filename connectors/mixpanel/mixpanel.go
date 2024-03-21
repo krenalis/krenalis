@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -34,12 +34,12 @@ var icon = "<svg></svg>"
 // Make sure it implements the UI, the AppEventsConnection, and the
 // AppUsersConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.AppEventsConnection
+	chichi.UI
+	chichi.AppEventsConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "Mixpanel",
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
@@ -47,7 +47,7 @@ func init() {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 
@@ -58,7 +58,7 @@ type settings struct {
 }
 
 // new returns a new Mixpanel connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -75,18 +75,18 @@ func new(conf *connector.AppConfig) (*connection, error) {
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
+func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
 
 	if data["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
 	}
 
-	req := &connector.EventRequest{
+	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://api.mixpanel.com/",
 		Header: http.Header{},
 	}
-	if c.conf.Region == connector.PrivacyRegionEurope {
+	if c.conf.Region == chichi.PrivacyRegionEurope {
 		req.URL = "https://api-eu.mixpanel.com/"
 	}
 	req.URL += "import?strict=0&project_id=" + c.settings.ProjectID
@@ -176,8 +176,8 @@ func (c *connection) EventRequest(ctx context.Context, eventType *connector.Even
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role != connector.Destination {
+func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if c.conf.Role != chichi.Destination {
 		return nil, nil
 	}
 	schema := func(placeholder string) types.Type {
@@ -186,7 +186,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 			{Name: "properties", Label: "Your Properties", Type: types.Map(types.JSON()), Required: true},
 		})
 	}
-	eventTypes := []*connector.EventType{
+	eventTypes := []*chichi.EventType{
 		{
 			ID:          "track",
 			Name:        "Send track events",
@@ -274,7 +274,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 func (c *connection) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
 
 	u := "https://api.mixpanel.com"
-	if c.conf.Region == connector.PrivacyRegionEurope {
+	if c.conf.Region == chichi.PrivacyRegionEurope {
 		u = "https://api-eu.mixpanel.com"
 	}
 	u += path + "?strict=0&project_id=" + c.settings.ProjectID

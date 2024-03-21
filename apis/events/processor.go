@@ -11,10 +11,10 @@ import (
 	"context"
 	"sync"
 
+	"chichi"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
-	"chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 const pipeSize = 100
@@ -34,7 +34,7 @@ type processedEvent struct {
 	endpoint     int
 	values       map[string]any
 	valuesSchema types.Type
-	inEvent      *connector.Event
+	inEvent      *chichi.Event
 	err          error
 }
 

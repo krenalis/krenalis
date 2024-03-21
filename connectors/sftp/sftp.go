@@ -25,8 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connector"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/ui"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -37,19 +37,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the UI and the StorageConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.StorageConnection
+	chichi.UI
+	chichi.StorageConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterStorage(connector.Storage{
+	chichi.RegisterStorage(chichi.Storage{
 		Name: "SFTP",
 		Icon: icon,
 	}, new)
 }
 
 // new returns a new SFTP connection.
-func new(conf *connector.StorageConfig) (*connection, error) {
+func new(conf *chichi.StorageConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -61,7 +61,7 @@ func new(conf *connector.StorageConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.StorageConfig
+	conf     *chichi.StorageConfig
 	settings *settings
 }
 
@@ -194,7 +194,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		return nil, ui.Errorf("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
-	if c.conf.Role == connector.Destination {
+	if c.conf.Role == chichi.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
 			return nil, ui.Errorf("length of temporary directory path must be in range [1,1000]")
 		}

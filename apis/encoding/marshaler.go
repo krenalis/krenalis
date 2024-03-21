@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/shopspring/decimal"

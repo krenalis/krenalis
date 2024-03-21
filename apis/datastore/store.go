@@ -19,7 +19,7 @@ import (
 	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 type Store struct {

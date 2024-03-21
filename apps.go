@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package connector
+package chichi
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 )

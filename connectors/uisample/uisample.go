@@ -13,15 +13,15 @@ import (
 	"encoding/json"
 	"errors"
 
-	"chichi/connector"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/ui"
 )
 
 // Make sure it implements the UI interface.
-var _ connector.UI = (*connection)(nil)
+var _ chichi.UI = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
@@ -29,7 +29,7 @@ func init() {
 }
 
 // new returns a new UISample connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -41,7 +41,7 @@ func new(conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 

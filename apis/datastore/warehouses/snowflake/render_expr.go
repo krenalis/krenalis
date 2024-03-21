@@ -19,7 +19,7 @@ import (
 	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 )

@@ -23,7 +23,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 	"github.com/snowflakedb/gosnowflake"

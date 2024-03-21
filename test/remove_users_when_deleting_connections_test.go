@@ -10,8 +10,8 @@ package test
 import (
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {

@@ -10,7 +10,7 @@ package clickhouse
 import (
 	"testing"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func TestTypes(t *testing.T) {

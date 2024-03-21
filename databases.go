@@ -5,13 +5,13 @@
 // Copyright (c) 2022 Open2b
 //
 
-package connector
+package chichi
 
 import (
 	"context"
 	"reflect"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // Database represents a database connector.

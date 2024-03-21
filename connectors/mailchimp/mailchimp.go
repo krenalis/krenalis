@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -36,22 +36,22 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the UI and the AppUsersConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.AppUsersConnection
+	chichi.UI
+	chichi.AppUsersConnection
 } = (*connection)(nil)
 
 // Make sure it implements the AppUsersConnection interface.
-var _ connector.AppUsersConnection = (*connection)(nil)
+var _ chichi.AppUsersConnection = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "Mailchimp",
 		SourceDescription:      "import contacts as users from Mailchimp",
 		DestinationDescription: "export users as contacts to Mailchimp",
 		TermForUsers:           "contacts",
 		Icon:                   icon,
-		WebhooksPer:            connector.WebhooksPerSource,
-		OAuth: connector.OAuth{
+		WebhooksPer:            chichi.WebhooksPerSource,
+		OAuth: chichi.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
@@ -60,7 +60,7 @@ func init() {
 }
 
 // new returns a new Mailchimp connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -77,7 +77,7 @@ func new(conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 
@@ -89,7 +89,7 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
 	if c.settings.WebhookSecret == "" {
 		// Webhooks are not set up.
@@ -117,24 +117,24 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 	user := r.Form.Get("data[id]")
 
 	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]connector.WebhookPayload, 1)
+	var events = make([]chichi.WebhookPayload, 1)
 	switch r.Form.Get("type") {
 	case "subscribe":
 		// User subscribed.
-		events[0] = connector.UserCreateEvent{
+		events[0] = chichi.UserCreateEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
 	case "unsubscribe", "profile", "upemail":
 		// User profile updated.
-		events[0] = connector.UserChangeEvent{
+		events[0] = chichi.UserChangeEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
 	case "cleaned":
 		// User profile deleted.
 		// TODO(carlo): couldn't trigger this webhook, so the effective content is unknown.
-		events[0] = connector.UserDeleteEvent{
+		events[0] = chichi.UserDeleteEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
@@ -473,7 +473,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	path := "/lists/" + c.settings.List + "/members"
 	values := url.Values{
@@ -502,9 +502,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	users := make([]connector.Record, len(response.Members))
+	users := make([]chichi.Record, len(response.Members))
 	for i, member := range response.Members {
-		users[i] = connector.Record{
+		users[i] = chichi.Record{
 			ID:         member.ID,
 			Properties: member.Properties(),
 			Timestamp:  member.LastChanged.UTC(),

@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 )

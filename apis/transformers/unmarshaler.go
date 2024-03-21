@@ -22,7 +22,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/google/uuid"

@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"chichi-cli/chichiapis"
 

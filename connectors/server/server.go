@@ -12,7 +12,7 @@ package server
 import (
 	_ "embed"
 
-	"chichi/connector"
+	"chichi"
 )
 
 // Connector icon.
@@ -34,7 +34,7 @@ var iconPHP = "<svg></svg>"
 var iconPython = "<svg></svg>"
 
 func init() {
-	servers := []connector.Server{
+	servers := []chichi.Server{
 		{
 			Name:              ".NET",
 			SourceDescription: "collect events, and import users and groups from a server using .NET",
@@ -67,12 +67,12 @@ func init() {
 		},
 	}
 	for _, srv := range servers {
-		connector.RegisterServer(srv, new)
+		chichi.RegisterServer(srv, new)
 	}
 }
 
 // new returns a new Server connection.
-func new(*connector.ServerConfig) (*connection, error) {
+func new(*chichi.ServerConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

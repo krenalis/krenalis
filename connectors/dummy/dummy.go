@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -41,13 +41,13 @@ var jsonUsers []byte
 // Make sure it implements the AppEventsConnection and the AppUsersConnection
 // interfaces.
 var _ interface {
-	connector.AppEventsConnection
-	connector.AppUsersConnection
-	connector.UI
+	chichi.AppEventsConnection
+	chichi.AppUsersConnection
+	chichi.UI
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "Dummy",
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
@@ -58,7 +58,7 @@ func init() {
 }
 
 // new returns a new Dummy connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -70,7 +70,7 @@ func new(conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 
@@ -121,8 +121,8 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
-	req := &connector.EventRequest{
+func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://example.com/",
 		Header: http.Header{},
@@ -138,11 +138,11 @@ func (c *connection) EventRequest(ctx context.Context, eventType *connector.Even
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role == connector.Source {
+func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if c.conf.Role == chichi.Source {
 		return nil, nil
 	}
-	eventTypes := []*connector.EventType{
+	eventTypes := []*chichi.EventType{
 		{
 			ID:          "send_add_to_cart",
 			Name:        "Send Add to Cart",
@@ -195,7 +195,7 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	panic("not implemented")
 }
 
@@ -303,7 +303,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -311,9 +311,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 	}
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	users := make([]connector.Record, 0, len(allUsers))
+	users := make([]chichi.Record, 0, len(allUsers))
 	for id, props := range allUsers {
-		users = append(users, connector.Record{
+		users = append(users, chichi.Record{
 			ID:         id,
 			Properties: props,
 			Timestamp:  usersTimestamps[id],

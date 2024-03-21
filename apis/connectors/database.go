@@ -15,16 +15,16 @@ import (
 	"slices"
 	"time"
 
+	"chichi"
 	"chichi/apis/state"
-	_connector "chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // Database represents the database of a database connection.
 type Database struct {
 	closed          bool
 	connector       int
-	inner           _connector.DatabaseConnection
+	inner           chichi.DatabaseConnection
 	identityColumn  string
 	timestampColumn struct {
 		name   string
@@ -55,8 +55,8 @@ func (connectors *Connectors) Database(connection *state.Connection, identityCol
 			format: timestampColumnFormat,
 		},
 	}
-	database.inner, database.err = _connector.RegisteredDatabase(connection.Connector().Name).New(&_connector.DatabaseConfig{
-		Role:        _connector.Role(connection.Role),
+	database.inner, database.err = chichi.RegisteredDatabase(connection.Connector().Name).New(&chichi.DatabaseConfig{
+		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
@@ -198,7 +198,7 @@ type databaseWriter struct {
 	schema  types.Type
 	columns []types.Property
 	rows    []map[string]any
-	inner   _connector.DatabaseConnection
+	inner   chichi.DatabaseConnection
 	closed  bool
 }
 
@@ -241,13 +241,13 @@ func (w *databaseWriter) upsert(ctx context.Context) {
 
 // Rows is the result of a query.
 type Rows struct {
-	rows    _connector.Rows
+	rows    chichi.Rows
 	columns []types.Property
 	dst     []any
 	closed  bool
 }
 
-func newRows(rows _connector.Rows, columns []types.Property) *Rows {
+func newRows(rows chichi.Rows, columns []types.Property) *Rows {
 	rs := &Rows{
 		rows:    rows,
 		columns: columns,
@@ -318,7 +318,7 @@ func (sv queryScanValue) Scan(src any) error {
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
 	columns          []types.Property
-	rows             _connector.Rows
+	rows             chichi.Rows
 	propertyOf       map[string]types.Property
 	dst              []any
 	identityColumn   types.Property
@@ -329,7 +329,7 @@ type databaseRecords struct {
 	closed           bool
 }
 
-func newDatabaseRecords(rows _connector.Rows, columns, properties []types.Property,
+func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 	identityColumn, timestampColumn types.Property, timestampFormat string,
 	businessIDColumn types.Property) *databaseRecords {
 	records := databaseRecords{

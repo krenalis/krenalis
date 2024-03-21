@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package connector
+package chichi
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 )

@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 const maxEventPayload = 1024 * 1024
@@ -48,28 +48,28 @@ type settings struct {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 
 // Make sure it implements the AppUsersConnection interface.
 var _ interface {
-	connector.AppUsersConnection
+	chichi.AppUsersConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "Stripe",
 		SourceDescription:      "import customers as users",
 		DestinationDescription: "export users as customers",
 		TermForUsers:           "customers",
 		Icon:                   icon,
-		WebhooksPer:            connector.WebhooksPerSource,
+		WebhooksPer:            chichi.WebhooksPerSource,
 	}, new)
 }
 
 // new returns a new Stripe connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -104,7 +104,7 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
 	// Extract signature from Stripe-Signature header.
 	var timestamp time.Time
@@ -115,7 +115,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 			if strings.HasPrefix(part, "t=") {
 				ts, err := strconv.ParseInt(part[2:], 10, 64)
 				if err != nil {
-					return nil, connector.ErrWebhookUnauthorized
+					return nil, chichi.ErrWebhookUnauthorized
 				}
 				timestamp = time.Unix(ts, 0)
 				continue
@@ -128,7 +128,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 			}
 		}
 		if len(signatures) == 0 {
-			return nil, connector.ErrWebhookUnauthorized
+			return nil, chichi.ErrWebhookUnauthorized
 		}
 	}
 
@@ -156,7 +156,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 		}
 	}
 	if !isValidSignature {
-		return nil, connector.ErrWebhookUnauthorized
+		return nil, chichi.ErrWebhookUnauthorized
 	}
 
 	var message struct {
@@ -174,25 +174,25 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 		return nil, errors.New("webhook message is malformed")
 	}
 
-	var events []connector.WebhookPayload
+	var events []chichi.WebhookPayload
 	tmp := time.UnixMilli(message.Created).UTC()
 	switch message.Type {
 	case "customer.created":
-		event := connector.UserCreateEvent{
+		event := chichi.UserCreateEvent{
 			Timestamp:  tmp,
 			User:       message.Data.Object["id"].(string),
 			Properties: message.Data.Object,
 		}
 		events = append(events, event)
 	case "customer.deleted":
-		event := connector.UserDeleteEvent{
+		event := chichi.UserDeleteEvent{
 			Timestamp: tmp,
 			User:      message.Data.Object["id"].(string),
 		}
 		events = append(events, event)
 	case "customer.updated":
 		for modifiedAttributeName := range message.Data.PreviousAttributes {
-			events = append(events, connector.UserPropertyChangeEvent{
+			events = append(events, chichi.UserPropertyChangeEvent{
 				Timestamp: tmp,
 				User:      message.Data.Object["id"].(string),
 				Name:      modifiedAttributeName,
@@ -232,7 +232,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var body io.Reader
 	if cursor.ID != "" {
@@ -255,9 +255,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	users := make([]connector.Record, len(response.Data))
+	users := make([]chichi.Record, len(response.Data))
 	for i, customer := range response.Data {
-		users[i] = connector.Record{
+		users[i] = chichi.Record{
 			ID:         customer["id"].(string),
 			Properties: customer,
 			Timestamp:  time.Now().UTC(),

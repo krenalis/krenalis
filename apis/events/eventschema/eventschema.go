@@ -7,7 +7,7 @@
 
 package eventschema
 
-import "chichi/connector/types"
+import "chichi/types"
 
 // SchemaWithGID is the schema of an event which includes the GID property.
 var SchemaWithGID = types.Object(append(

@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"chichi/apis"
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 
 	"github.com/golang/snappy"
 )

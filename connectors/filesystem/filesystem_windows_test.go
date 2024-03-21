@@ -10,13 +10,13 @@ package filesystem
 import (
 	"testing"
 
-	"chichi/connector"
+	"chichi"
 )
 
 func TestPathConvert(t *testing.T) {
 	c := &connection{settings: &settings{Root: "C:\\"}}
 	c2 := &connection{settings: &settings{Root: "C:\\root"}}
-	tests := []connector.CompletePathTest{
+	tests := []chichi.CompletePathTest{
 		{Name: "a", Expected: "C:\\a"},
 		{Name: "a.e", Expected: "C:\\a.e"},
 		{Name: "a/b.e", Expected: "C:\\a\\b.e"},
@@ -34,7 +34,7 @@ func TestPathConvert(t *testing.T) {
 		{Name: "a/b", Expected: "C:\\a\\b"},
 		{Name: "/a/b", Expected: "C:\\a\\b"},
 	}
-	err := connector.TestCompletePath(c, tests)
+	err := chichi.TestCompletePath(c, tests)
 	if err != nil {
 		t.Errorf("Filesystem connector: %s", err)
 	}

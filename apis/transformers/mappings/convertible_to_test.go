@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"testing"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func TestConvertibleTo(t *testing.T) {

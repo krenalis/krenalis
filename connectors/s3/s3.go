@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/ui"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -33,19 +33,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the UI and the StorageConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.StorageConnection
+	chichi.UI
+	chichi.StorageConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterStorage(connector.Storage{
+	chichi.RegisterStorage(chichi.Storage{
 		Name: "S3",
 		Icon: icon,
 	}, new)
 }
 
 // new returns a new S3 connection.
-func new(conf *connector.StorageConfig) (*connection, error) {
+func new(conf *chichi.StorageConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -57,7 +57,7 @@ func new(conf *connector.StorageConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.StorageConfig
+	conf     *chichi.StorageConfig
 	settings *settings
 }
 
@@ -72,7 +72,7 @@ type settings struct {
 // InvalidPathError if name is not valid for use in calls to Reader and Write.
 func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
-		return "", connector.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
+		return "", chichi.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]

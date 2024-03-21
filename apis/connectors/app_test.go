@@ -11,9 +11,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/shopspring/decimal"
+	"chichi/types"
 
-	"chichi/connector/types"
+	"github.com/shopspring/decimal"
 )
 
 // object returns an Object type with a property named "p" with type t.

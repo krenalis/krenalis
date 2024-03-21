@@ -29,7 +29,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"

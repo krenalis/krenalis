@@ -16,7 +16,7 @@ import (
 
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // AlterSchema alters the "users" (and the "users_identities") schema applying

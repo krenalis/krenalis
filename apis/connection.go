@@ -36,8 +36,8 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/mappings"
-	"chichi/connector/types"
 	"chichi/telemetry"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/jxskiss/base62"

@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func Test_unusedProperties(t *testing.T) {

@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // validationError implements the ValidationError interface of apis.

@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // columnType returns the types.Type corresponding to the ClickHouse type typ

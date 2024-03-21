@@ -22,8 +22,8 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
-	"chichi/connector/types"
 	"chichi/telemetry"
+	"chichi/types"
 )
 
 const DatabaseFailed errors.Code = "DatabaseFailed"

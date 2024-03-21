@@ -16,7 +16,7 @@ import (
 	"testing"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func TestDiff(t *testing.T) {

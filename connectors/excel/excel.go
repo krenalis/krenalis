@@ -18,9 +18,9 @@ import (
 	"io"
 	"strconv"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -29,10 +29,10 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the Sheets interface.
-var _ connector.Sheets = (*connection)(nil)
+var _ chichi.Sheets = (*connection)(nil)
 
 func init() {
-	connector.RegisterFile(connector.File{
+	chichi.RegisterFile(chichi.File{
 		Name:              "Excel",
 		SourceDescription: "import users from an Excel file",
 		Icon:              icon,
@@ -41,7 +41,7 @@ func init() {
 }
 
 // new returns a new Excel connection.
-func new(conf *connector.FileConfig) (*connection, error) {
+func new(conf *chichi.FileConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -53,7 +53,7 @@ func new(conf *connector.FileConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.FileConfig
+	conf     *chichi.FileConfig
 	settings *settings
 }
 
@@ -68,8 +68,8 @@ func (c *connection) ContentType(ctx context.Context) string {
 
 // Read reads the records from r and writes them to records. sheet is the name
 // of the sheet to be read. If the provided sheet does not exist, it returns the
-// connector.ErrSheetNotExist error.
-func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, records connector.RecordWriter) error {
+// chichi.ErrSheetNotExist error.
+func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -85,7 +85,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 	rows, err := f.Rows(sheet)
 	if err != nil {
 		if _, ok := err.(excelize.ErrSheetNotExist); ok {
-			return connector.ErrSheetNotExist
+			return chichi.ErrSheetNotExist
 		}
 		return err
 	}
@@ -106,7 +106,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 			for i := range columns {
 				if c.settings.HasColumnNames {
 					header := record[i]
-					name := connector.SuggestPropertyName(header)
+					name := chichi.SuggestPropertyName(header)
 					if name == "" {
 						return fmt.Errorf("header %q, of column %s, cannot be converted to a valid property name", header, columnNumberToName(i+1))
 					}
@@ -212,7 +212,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	if c.conf.Role != connector.Source {
+	if c.conf.Role != chichi.Source {
 		s.HasColumnNames = false
 	}
 	return json.Marshal(&s)
@@ -220,7 +220,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 
 // Write writes to w the records read from records.
 // sheet is the name of the sheet to be written to.
-func (c *connection) Write(ctx context.Context, w io.Writer, sheet string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()

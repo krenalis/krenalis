@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/types"
+	"chichi"
+	"chichi/types"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
@@ -33,7 +33,7 @@ import (
 var icon = "<svg></svg>"
 
 func init() {
-	connector.RegisterFile(connector.File{
+	chichi.RegisterFile(chichi.File{
 		Name:              "Parquet",
 		SourceDescription: "import users and groups from a parquet file",
 		Icon:              icon,
@@ -42,7 +42,7 @@ func init() {
 }
 
 // new returns a new Parquet connection.
-func new(conf *connector.FileConfig) (*connection, error) {
+func new(conf *chichi.FileConfig) (*connection, error) {
 	return &connection{}, nil
 }
 
@@ -54,7 +54,7 @@ func (c *connection) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records connector.RecordWriter) error {
+func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -138,7 +138,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
 	// TODO(marco)
 	return nil
 }
@@ -272,7 +272,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		return types.Text(), nil
 	}
 
-	return types.Type{}, connector.NewNotSupportedTypeError(column, (*elem.Type).String())
+	return types.Type{}, chichi.NewNotSupportedTypeError(column, (*elem.Type).String())
 }
 
 // Convert an int96 type value to a time.Time value.

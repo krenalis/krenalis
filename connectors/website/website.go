@@ -11,14 +11,14 @@ package website
 import (
 	_ "embed"
 
-	"chichi/connector"
+	"chichi"
 )
 
 // Connector icon.
 var iconJavaScript = "<svg></svg>"
 
 func init() {
-	websites := []connector.Website{
+	websites := []chichi.Website{
 		{
 			Name:              "JavaScript",
 			SourceDescription: "collect events, and import users and groups from a website using JavaScript",
@@ -26,12 +26,12 @@ func init() {
 		},
 	}
 	for _, ws := range websites {
-		connector.RegisterWebsite(ws, new)
+		chichi.RegisterWebsite(ws, new)
 	}
 }
 
 // new returns a new Website connection.
-func new(*connector.WebsiteConfig) (*connection, error) {
+func new(*chichi.WebsiteConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

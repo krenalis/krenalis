@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestImportUsersFromFile(t *testing.T) {

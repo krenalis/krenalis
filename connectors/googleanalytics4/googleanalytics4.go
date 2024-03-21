@@ -18,9 +18,9 @@ import (
 	_url "net/url"
 	"strings"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -35,12 +35,12 @@ const sendToDebugServer = false
 
 // Make sure it implements the UI and the AppEventsConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.AppEventsConnection
+	chichi.UI
+	chichi.AppEventsConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "Google Analytics 4",
 		DestinationDescription: "send events to Google Analytics 4",
 		Icon:                   icon,
@@ -48,7 +48,7 @@ func init() {
 }
 
 // new returns a new Google Analytics 4 connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -60,7 +60,7 @@ func new(conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 
@@ -75,8 +75,8 @@ type settings struct {
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
-	req := &connector.EventRequest{
+func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
 		Header: http.Header{},
@@ -126,11 +126,11 @@ func (c *connection) EventRequest(ctx context.Context, eventType *connector.Even
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role == connector.Source {
+func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if c.conf.Role == chichi.Source {
 		return nil, nil
 	}
-	eventTypes := []*connector.EventType{
+	eventTypes := []*chichi.EventType{
 		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
 		{
 			ID:          "page_view",

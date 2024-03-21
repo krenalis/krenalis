@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestStorage(t *testing.T) {

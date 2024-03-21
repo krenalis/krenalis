@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // typeCheck type checks the expression expr. schema is the schema of the

@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"chichi/apis/postgres"
-	"chichi/connector/types"
 	"chichi/server"
+	"chichi/types"
 )
 
 // launchChichiExternally determines if Chichi should be launched externally

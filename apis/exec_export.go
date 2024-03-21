@@ -24,7 +24,7 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/statistics"
 	"chichi/apis/transformers"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // exportUsers exports the users for the action.

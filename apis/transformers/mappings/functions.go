@@ -10,7 +10,7 @@ package mappings
 import (
 	"errors"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 var jsonArrayType = types.Array(types.JSON())

@@ -10,17 +10,17 @@ package connectors
 import (
 	"context"
 
+	"chichi"
 	"chichi/apis/state"
-	_connector "chichi/connector"
 )
 
 // SendOptions are the stream's Send options.
-type SendOptions = _connector.SendOptions
+type SendOptions = chichi.SendOptions
 
 // Stream represents the stream of a stream connection.
 type Stream struct {
 	closed bool
-	inner  _connector.StreamConnection
+	inner  chichi.StreamConnection
 }
 
 // Stream returns a stream for the provided connection. It panics if connection
@@ -31,8 +31,8 @@ type Stream struct {
 func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, error) {
 	stream := &Stream{}
 	var err error
-	stream.inner, err = _connector.RegisteredStream(connection.Connector().Name).New(&_connector.StreamConfig{
-		Role:        _connector.Role(connection.Role),
+	stream.inner, err = chichi.RegisteredStream(connection.Connector().Name).New(&chichi.StreamConfig{
+		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

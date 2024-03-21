@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"chichi/apis/datastore"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func Test_CanBeIdentifier(t *testing.T) {

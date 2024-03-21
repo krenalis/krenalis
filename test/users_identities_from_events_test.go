@@ -12,8 +12,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 
 	"github.com/segmentio/analytics-go/v3"
 )

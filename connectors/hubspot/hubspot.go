@@ -25,8 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connector"
-	"chichi/connector/types"
+	"chichi"
+	"chichi/types"
 )
 
 // Connector icon.
@@ -35,12 +35,12 @@ var icon = "<svg></svg>"
 // Make sure it implements the AppUsersConnection and the AppGroupsConnection
 // interfaces.
 var _ interface {
-	connector.AppUsersConnection
-	connector.AppGroupsConnection
+	chichi.AppUsersConnection
+	chichi.AppGroupsConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "HubSpot",
 		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
 		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
@@ -48,8 +48,8 @@ func init() {
 		TermForGroups:          "companies",
 		ExternalIDLabel:        "HubSpot ID",
 		Icon:                   icon,
-		WebhooksPer:            connector.WebhooksPerConnector,
-		OAuth: connector.OAuth{
+		WebhooksPer:            chichi.WebhooksPerConnector,
+		OAuth: chichi.OAuth{
 			AuthURL:  "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL: "https://api.hubapi.com/oauth/v1/token",
 			Scopes:   []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
@@ -58,7 +58,7 @@ func init() {
 }
 
 // new returns a new HubSpot connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{
 		setSettings: conf.SetSettings,
 		httpClient:  conf.HTTPClient,
@@ -67,8 +67,8 @@ func new(conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	setSettings connector.SetSettingsFunc
-	httpClient  connector.HTTPClient
+	setSettings chichi.SetSettingsFunc
+	httpClient  chichi.HTTPClient
 	buf         bytes.Buffer
 }
 
@@ -93,7 +93,7 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
+func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	return nil, nil
 }
 
@@ -104,7 +104,7 @@ func (c *connection) GroupSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) Groups(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	objects, after, err := c.objects(ctx, "Company", properties, cursor)
 	for _, object := range objects {
 		contacts, err := c.companyContacts(ctx, object.ID)
@@ -119,7 +119,7 @@ func (c *connection) Groups(ctx context.Context, properties []string, cursor con
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	// See https://developers.hubspot.com/docs/api/webhooks.
 
 	// Check if the webhook is valid.
@@ -128,10 +128,10 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 		return nil, err
 	}
 	if !isValidWebhook(clientSecret, r) {
-		return nil, connector.ErrWebhookUnauthorized
+		return nil, chichi.ErrWebhookUnauthorized
 	}
 
-	var events []connector.WebhookPayload
+	var events []chichi.WebhookPayload
 
 	// Read the requests.
 	var requests []struct {
@@ -147,12 +147,12 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 		return nil, err
 	}
 	for _, req := range requests {
-		var event connector.WebhookPayload
+		var event chichi.WebhookPayload
 		timestamp := time.UnixMilli(req.OccurredAt).UTC()
 		resource := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {
 		case "company.propertyChange":
-			event = connector.GroupPropertyChangeEvent{
+			event = chichi.GroupPropertyChangeEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				Group:     strconv.Itoa(req.ObjectId),
@@ -160,7 +160,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 				Value:     req.PropertyValue,
 			}
 		case "contact.propertyChange":
-			event = connector.UserPropertyChangeEvent{
+			event = chichi.UserPropertyChangeEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
@@ -168,13 +168,13 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 				Value:     req.PropertyValue,
 			}
 		case "company.creation":
-			event = connector.GroupCreateEvent{
+			event = chichi.GroupCreateEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.creation":
-			event = connector.UserCreateEvent{
+			event = chichi.UserCreateEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
@@ -183,13 +183,13 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload
 				},
 			}
 		case "company.deletion":
-			event = connector.GroupDeleteEvent{
+			event = chichi.GroupDeleteEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.deletion":
-			event = connector.UserDeleteEvent{
+			event = chichi.UserDeleteEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
@@ -318,13 +318,13 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	return c.objects(ctx, "Contact", properties, cursor)
 }
 
 // objects returns the contacts, if typ is "Contact", or the companies, if typ
 // is "Company", starting from the given cursor.
-func (c *connection) objects(ctx context.Context, typ string, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) objects(ctx context.Context, typ string, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
@@ -376,9 +376,9 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 		return nil, "", io.EOF
 	}
 
-	objects := make([]connector.Record, len(response.Results))
+	objects := make([]chichi.Record, len(response.Results))
 	for i, result := range response.Results {
-		objects[i] = connector.Record{
+		objects[i] = chichi.Record{
 			ID: result.ID,
 		}
 		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
@@ -533,5 +533,5 @@ func propertyType(c, t string) (types.Type, error) {
 	case "string", "phone_number":
 		return types.Text(), nil
 	}
-	return types.Type{}, connector.NewNotSupportedTypeError(c, t)
+	return types.Type{}, chichi.NewNotSupportedTypeError(c, t)
 }

@@ -23,7 +23,7 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/embed"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 type function struct {

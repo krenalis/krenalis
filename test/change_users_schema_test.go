@@ -13,8 +13,8 @@ import (
 	"slices"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestChangeUsersSchema(t *testing.T) {

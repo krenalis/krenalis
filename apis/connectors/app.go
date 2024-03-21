@@ -18,15 +18,15 @@ import (
 	"slices"
 	"strings"
 
+	"chichi"
 	"chichi/apis/connectors/httpclient"
 	"chichi/apis/state"
-	_connector "chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 type (
-	EventRequest   = _connector.EventRequest
-	WebhookPayload = _connector.WebhookPayload
+	EventRequest   = chichi.EventRequest
+	WebhookPayload = chichi.WebhookPayload
 )
 
 // App represents the app of an app connection.
@@ -36,7 +36,7 @@ type App struct {
 	layouts    *state.Layouts
 	httpClient *httpclient.Client
 	users      schema
-	inner      _connector.AppConnection
+	inner      chichi.AppConnection
 	err        error
 }
 
@@ -57,13 +57,13 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		resourceID = r.ID
 		resourceCode = r.Code
 	}
-	app.inner, app.err = _connector.RegisteredApp(app.name).New(&_connector.AppConfig{
-		Role:        _connector.Role(connection.Role),
+	app.inner, app.err = chichi.RegisteredApp(app.name).New(&chichi.AppConfig{
+		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
 		HTTPClient:  app.httpClient,
-		Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),
+		Region:      chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:  webhookURL(connection, resourceID),
 	})
 	return app
@@ -94,7 +94,7 @@ func (app *App) EventRequest(ctx context.Context, eventType string, event *Event
 		return nil, err
 	}
 	// Return the event request.
-	return app.inner.(_connector.AppEventsConnection).EventRequest(ctx, et, event, data, redacted)
+	return app.inner.(chichi.AppEventsConnection).EventRequest(ctx, et, event, data, redacted)
 }
 
 // EventTypes returns the app's event types.
@@ -103,7 +103,7 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	return app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
+	return app.inner.(chichi.AppEventsConnection).EventTypes(ctx)
 }
 
 // Schema returns the app's schema for the provided target. If target is
@@ -127,7 +127,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	}
 	switch target {
 	case state.Events:
-		eventTypes, err := app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
+		eventTypes, err := app.inner.(chichi.AppEventsConnection).EventTypes(ctx)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -147,7 +147,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	case state.Users:
 		return app.usersSchema(ctx, types.Role(role))
 	case state.Groups:
-		schema, err := app.inner.(_connector.AppGroupsConnection).GroupSchema(ctx)
+		schema, err := app.inner.(chichi.AppGroupsConnection).GroupSchema(ctx)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -233,7 +233,7 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 	}
 	w := appWriter{
 		ack:   ack,
-		users: app.inner.(_connector.AppUsersConnection),
+		users: app.inner.(chichi.AppUsersConnection),
 	}
 	return &w, nil
 }
@@ -241,8 +241,8 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 // eventType returns the app's event type with identifier id. It the event type
 // does not exist, it returns the ErrEventTypeNotExist error.
 // It panics if the app does not support the Events target.
-func (app *App) eventType(ctx context.Context, id string) (*_connector.EventType, error) {
-	eventTypes, err := app.inner.(_connector.AppEventsConnection).EventTypes(ctx)
+func (app *App) eventType(ctx context.Context, id string) (*chichi.EventType, error) {
+	eventTypes, err := app.inner.(chichi.AppEventsConnection).EventTypes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,7 @@ func (app *App) eventType(ctx context.Context, id string) (*_connector.EventType
 type appWriter struct {
 	ack    AckFunc
 	closed bool
-	users  _connector.AppUsersConnection
+	users  chichi.AppUsersConnection
 }
 
 func (w *appWriter) Close(ctx context.Context) error {
@@ -287,7 +287,7 @@ type appRecords struct {
 	layouts            *state.Layouts
 	cursor             state.Cursor
 	appName            string
-	inner              _connector.AppConnection
+	inner              chichi.AppConnection
 	err                error
 	closed             bool
 	businessIDProperty types.Property
@@ -309,7 +309,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 		return nil
 	}
 
-	cursor := _connector.Cursor{
+	cursor := chichi.Cursor{
 		ID:        r.cursor.ID,
 		Timestamp: r.cursor.Timestamp,
 	}
@@ -329,7 +329,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 	for {
 
 		// Retrieve the users.
-		users, next, err := r.inner.(_connector.AppUsersConnection).Users(r.ctx, names, cursor)
+		users, next, err := r.inner.(chichi.AppUsersConnection).Users(r.ctx, names, cursor)
 		eof := err == io.EOF
 		if err != nil && !eof {
 			r.err = err
@@ -441,7 +441,7 @@ func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, e
 	if schema := app.users.schemas[role]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(_connector.AppUsersConnection).UserSchema(ctx)
+	schema, err := app.inner.(chichi.AppUsersConnection).UserSchema(ctx)
 	if err != nil {
 		return types.Type{}, err
 	}

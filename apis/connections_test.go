@@ -11,7 +11,7 @@ import (
 	"errors"
 	"testing"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func Test_isMetaProperty(t *testing.T) {

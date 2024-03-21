@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package connector
+package chichi
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"io"
 	"reflect"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // ErrSheetNotExist indicates that a file does not contain a sheet.

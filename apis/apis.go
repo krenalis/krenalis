@@ -33,8 +33,8 @@ import (
 	"chichi/apis/transformers/lambda"
 	"chichi/apis/transformers/local"
 	"chichi/apis/transformers/mappings"
-	"chichi/connector/types"
 	"chichi/telemetry"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

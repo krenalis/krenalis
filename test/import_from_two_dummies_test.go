@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestImportFromTwoDummies(t *testing.T) {

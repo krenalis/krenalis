@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 )

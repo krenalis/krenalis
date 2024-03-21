@@ -21,9 +21,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 
 	"github.com/shopspring/decimal"
 )
@@ -32,10 +32,10 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ connector.UI = (*connection)(nil)
+var _ chichi.UI = (*connection)(nil)
 
 func init() {
-	connector.RegisterFile(connector.File{
+	chichi.RegisterFile(chichi.File{
 		Name:              "CSV",
 		SourceDescription: "import users from a CSV file",
 		Icon:              icon,
@@ -44,7 +44,7 @@ func init() {
 }
 
 // new returns a new CSV connection.
-func new(conf *connector.FileConfig) (*connection, error) {
+func new(conf *chichi.FileConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,7 +56,7 @@ func new(conf *connector.FileConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.FileConfig
+	conf     *chichi.FileConfig
 	settings *settings
 }
 
@@ -76,7 +76,7 @@ func (c *connection) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records connector.RecordWriter) error {
+func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)
@@ -106,7 +106,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records co
 			for i := range columns {
 				if c.settings.HasColumnNames {
 					header := record[i]
-					name := connector.SuggestPropertyName(header)
+					name := chichi.SuggestPropertyName(header)
 					if name == "" {
 						return fmt.Errorf("column name %q cannot be converted to a valid property name", header)
 					}
@@ -212,7 +212,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
 		return nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
-	if c.conf.Role == connector.Source {
+	if c.conf.Role == chichi.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {
@@ -239,7 +239,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
@@ -312,7 +312,7 @@ func toString(v any, t types.Type) string {
 	case types.JSONKind:
 		return string(v.(json.RawMessage))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:
-		return string(connector.MarshalJSON(v, t))
+		return string(chichi.MarshalJSON(v, t))
 	default:
 		panic(fmt.Sprintf("unexpected kind %s", k))
 	}

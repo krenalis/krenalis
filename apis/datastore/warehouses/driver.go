@@ -21,7 +21,7 @@ import (
 	"chichi/apis/datastore/expr"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"

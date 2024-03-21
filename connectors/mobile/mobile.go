@@ -11,7 +11,7 @@ package mobile
 import (
 	_ "embed"
 
-	"chichi/connector"
+	"chichi"
 )
 
 // Connector icon.
@@ -21,7 +21,7 @@ var iconAndroid = "<svg></svg>"
 var iconApple = "<svg></svg>"
 
 func init() {
-	mobiles := []connector.Mobile{
+	mobiles := []chichi.Mobile{
 		{
 			Name:              "Android",
 			SourceDescription: "collect events, and import users and groups from an Android mobile device",
@@ -34,12 +34,12 @@ func init() {
 		},
 	}
 	for _, srv := range mobiles {
-		connector.RegisterMobile(srv, new)
+		chichi.RegisterMobile(srv, new)
 	}
 }
 
 // new returns a new Mobile connection.
-func new(*connector.MobileConfig) (*connection, error) {
+func new(*chichi.MobileConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

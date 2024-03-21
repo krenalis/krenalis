@@ -15,7 +15,7 @@ import (
 
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/events/eventschema"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse

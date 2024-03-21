@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"time"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 const (

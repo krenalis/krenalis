@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func Test_UsersIdentities(t *testing.T) {

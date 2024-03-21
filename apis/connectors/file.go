@@ -24,9 +24,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi"
 	"chichi/apis/state"
-	_connector "chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/golang/snappy"
 	"github.com/itchyny/timefmt-go"
@@ -40,7 +40,7 @@ var storageTimeout = 10 * time.Second
 type File struct {
 	state  *state.State
 	action *state.Action
-	inner  _connector.FileConnection
+	inner  chichi.FileConnection
 	err    error
 }
 
@@ -50,8 +50,8 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 	file := &File{state: connectors.state,
 		action: action,
 	}
-	file.inner, file.err = _connector.RegisteredFile(action.Connector().Name).New(&_connector.FileConfig{
-		Role:        _connector.Role(role),
+	file.inner, file.err = chichi.RegisteredFile(action.Connector().Name).New(&chichi.FileConfig{
+		Role:        chichi.Role(role),
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -235,11 +235,11 @@ func (w *fileWriter) Write(ctx context.Context, gid int, record Record) bool {
 }
 
 // storage returns the inner storage connection of the file.
-func (file *File) storage() (_connector.StorageConnection, error) {
+func (file *File) storage() (chichi.StorageConnection, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
-	return _connector.RegisteredStorage(connector.Name).New(&_connector.StorageConfig{
-		Role:        _connector.Role(conn.Role),
+	return chichi.RegisteredStorage(connector.Name).New(&chichi.StorageConfig{
+		Role:        chichi.Role(conn.Role),
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})
@@ -251,7 +251,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  _connector.FileConnection
+	inner  chichi.FileConnection
 	err    error
 	closed bool
 }
@@ -289,7 +289,7 @@ func (r *fileRecords) For(yield func(Record) error) error {
 		if err, ok := err.(yieldError); ok {
 			return err.err
 		}
-		if err == _connector.ErrSheetNotExist {
+		if err == chichi.ErrSheetNotExist {
 			err = ErrSheetNotExist
 		}
 		r.err = err
@@ -937,14 +937,14 @@ func isExcelSimpleFloat(s string) bool {
 // compressorStorage implements a storage capable of compressing and
 // decompressing data read from or written to a connector.StorageConnection.
 type compressorStorage struct {
-	storage     _connector.StorageConnection
+	storage     chichi.StorageConnection
 	compression state.Compression
 }
 
 // newCompressedStorage returns a compressor storage that wraps s and performs
 // file compression and decompression using c as the compression method.
 // If c is NoCompression, it does not perform any compression or decompression.
-func newCompressedStorage(s _connector.StorageConnection, c state.Compression) *compressorStorage {
+func newCompressedStorage(s chichi.StorageConnection, c state.Compression) *compressorStorage {
 	return &compressorStorage{s, c}
 }
 

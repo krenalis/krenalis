@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 )

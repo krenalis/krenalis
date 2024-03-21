@@ -10,7 +10,7 @@ package eventschema
 import (
 	"testing"
 
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func Test_SchemaWithoutGID(t *testing.T) {

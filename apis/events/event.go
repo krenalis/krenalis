@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"chichi/connector"
+	"chichi"
 
 	"github.com/segmentio/ksuid"
 	"github.com/shopspring/decimal"
@@ -21,7 +21,7 @@ import (
 // Event represents an event as returned by the ParseObservedEvent method of the
 // *Events type.
 type Event interface {
-	ToConnectorEvent() *connector.Event
+	ToConnectorEvent() *chichi.Event
 	ToMap() map[string]any
 }
 
@@ -144,13 +144,13 @@ type eventContext struct {
 
 // ToConnectorEvent returns event as a connector event to be passed as an
 // argument to the SendEvent and PreviewSendEvent methods of an app connector.
-func (event *collectedEvent) ToConnectorEvent() *connector.Event {
+func (event *collectedEvent) ToConnectorEvent() *chichi.Event {
 	// Keep in sync with the connector.Event type.
 	groupId := event.GroupId
 	if event.GroupId == "" {
 		groupId = event.Context.GroupId
 	}
-	e := connector.Event{}
+	e := chichi.Event{}
 	e.AnonymousId = event.AnonymousId
 	e.Category = event.Category
 	e.Context.App.Name = event.Context.App.Name

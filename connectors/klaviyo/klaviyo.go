@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -31,13 +31,13 @@ var icon = "<svg></svg>"
 // Make sure it implements the UI, the AppEventsConnection, and the
 // AppUsersConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.AppEventsConnection
-	connector.AppUsersConnection
+	chichi.UI
+	chichi.AppEventsConnection
+	chichi.AppUsersConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterApp(connector.App{
+	chichi.RegisterApp(chichi.App{
 		Name:                   "Klaviyo",
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
@@ -47,7 +47,7 @@ func init() {
 }
 
 // new returns a new Klaviyo connection.
-func new(conf *connector.AppConfig) (*connection, error) {
+func new(conf *chichi.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -59,7 +59,7 @@ func new(conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.AppConfig
+	conf     *chichi.AppConfig
 	settings *settings
 }
 
@@ -78,8 +78,8 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *connector.EventType, event *connector.Event, data map[string]any, redacted bool) (*connector.EventRequest, error) {
-	req := &connector.EventRequest{
+func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://a.klaviyo.com/api/events/",
 		Header: http.Header{},
@@ -122,11 +122,11 @@ func (c *connection) EventRequest(ctx context.Context, eventType *connector.Even
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
-	if c.conf.Role == connector.Source {
+func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if c.conf.Role == chichi.Source {
 		return nil, nil
 	}
-	eventTypes := []*connector.EventType{
+	eventTypes := []*chichi.EventType{
 		{
 			ID:          "create_event",
 			Name:        "Create Event",
@@ -143,8 +143,8 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookPayload, error) {
-	return nil, connector.ErrWebhookUnauthorized
+func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+	return nil, chichi.ErrWebhookUnauthorized
 }
 
 // Resource returns the resource from a client token.
@@ -340,7 +340,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor connector.Cursor) ([]connector.Record, string, error) {
+func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var hasUpdatedProperty bool
 
@@ -385,9 +385,9 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor conn
 		return nil, "", io.EOF
 	}
 
-	users := make([]connector.Record, len(response.Data))
+	users := make([]chichi.Record, len(response.Data))
 	for i, data := range response.Data {
-		users[i] = connector.Record{
+		users[i] = chichi.Record{
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)

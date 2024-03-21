@@ -11,8 +11,8 @@ import (
 	"context"
 	"testing"
 
-	"chichi/connector/types"
 	"chichi/test/chichitester"
+	"chichi/types"
 )
 
 func TestExportToPostgreSQL(t *testing.T) {

@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"chichi/connector"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/ui"
 )
 
 // Connector icon.
@@ -29,19 +29,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the UI and the StorageConnection interfaces.
 var _ interface {
-	connector.UI
-	connector.StorageConnection
+	chichi.UI
+	chichi.StorageConnection
 } = (*connection)(nil)
 
 func init() {
-	connector.RegisterStorage(connector.Storage{
+	chichi.RegisterStorage(chichi.Storage{
 		Name: "Filesystem",
 		Icon: icon,
 	}, new)
 }
 
 // new returns a new Filesystem connection.
-func new(conf *connector.StorageConfig) (*connection, error) {
+func new(conf *chichi.StorageConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -53,7 +53,7 @@ func new(conf *connector.StorageConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.StorageConfig
+	conf     *chichi.StorageConfig
 	settings *settings
 }
 
@@ -68,15 +68,15 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
 		if name == "/" {
-			return "", connector.InvalidPathErrorf("path name cannot be “" + originalName + "“")
+			return "", chichi.InvalidPathErrorf("path name cannot be “" + originalName + "“")
 		}
 		name = name[1:]
 	}
 	if name[len(name)-1] == '/' {
-		return "", connector.InvalidPathErrorf("path name cannot end with a slash")
+		return "", chichi.InvalidPathErrorf("path name cannot end with a slash")
 	}
 	if name == "." || !fs.ValidPath(name) {
-		return "", connector.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+		return "", chichi.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
 	return filepath.Join(c.settings.Root, name), nil
 }

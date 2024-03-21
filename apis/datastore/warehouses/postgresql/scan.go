@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 )

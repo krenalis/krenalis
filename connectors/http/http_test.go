@@ -10,13 +10,13 @@ package http
 import (
 	"testing"
 
-	"chichi/connector"
+	"chichi"
 )
 
 func TestCompletePath(t *testing.T) {
 	c := &connection{settings: &settings{Host: "example.com", Port: 443}}
 	c2 := &connection{settings: &settings{Host: "example.com", Port: 8080}}
-	tests := []connector.CompletePathTest{
+	tests := []chichi.CompletePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},
 		{Name: "/a/b", Expected: "https://example.com/a/b"},
@@ -29,7 +29,7 @@ func TestCompletePath(t *testing.T) {
 		{Name: "/a/b?x=y#"},
 		{Name: "/a", Expected: "https://example.com:8080/a", Connection: c2},
 	}
-	err := connector.TestCompletePath(c, tests)
+	err := chichi.TestCompletePath(c, tests)
 	if err != nil {
 		t.Errorf("HTTP connector: %s", err)
 	}

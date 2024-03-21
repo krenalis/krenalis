@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // Diff returns the differences between oldSchema and newSchema.

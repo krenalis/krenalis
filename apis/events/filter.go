@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // filterApplies reports whether the filter applies to props, which can be an

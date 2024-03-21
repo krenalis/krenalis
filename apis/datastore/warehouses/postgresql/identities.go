@@ -15,7 +15,7 @@ import (
 
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"golang.org/x/exp/maps"
 )

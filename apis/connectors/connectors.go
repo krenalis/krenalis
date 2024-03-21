@@ -22,11 +22,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi"
 	"chichi/apis/connectors/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	_connector "chichi/connector"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/shopspring/decimal"
 )
@@ -65,8 +65,8 @@ func newValidationErrorf(path string, format string, a ...any) error {
 	}
 }
 
-type Event = _connector.Event
-type EventType = _connector.EventType
+type Event = chichi.Event
+type EventType = chichi.EventType
 
 // Record represents a record. If an error occurs during the reading or
 // validation of the record, the Err field contains the specific error,
@@ -210,9 +210,9 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	cc, err := _connector.RegisteredApp(connector.Name).New(&_connector.AppConfig{
+	cc, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
 		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken),
-		Region:     _connector.PrivacyRegion(region),
+		Region:     chichi.PrivacyRegion(region),
 	})
 	if err != nil {
 		return nil, err
@@ -278,13 +278,13 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 		resourceID = r.ID
 		resourceCode = r.Code
 	}
-	inner, err := _connector.RegisteredApp(connector.Name).New(&_connector.AppConfig{
-		Role:        _connector.Role(connection.Role),
+	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
+		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
 		HTTPClient:  connectors.http.ConnectionClient(connection.ID),
-		Region:      _connector.PrivacyRegion(connection.Workspace().PrivacyRegion),
+		Region:      chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:  webhookURL(connection, resourceID),
 	})
 	if err != nil {
@@ -293,7 +293,7 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	if inner, ok := inner.(webhookReceiver); ok {
 		payload, err := inner.ReceiveWebhook(req)
 		if err != nil {
-			if err == _connector.ErrWebhookUnauthorized {
+			if err == chichi.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
 			}
 			return nil, err
@@ -313,8 +313,8 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if connector.WebhooksPer != state.WebhooksPerConnector {
 		return nil, ErrNoWebhooks
 	}
-	inner, err := _connector.RegisteredApp(connector.Name).New(&_connector.AppConfig{
-		Role: _connector.Source,
+	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
+		Role: chichi.Source,
 	})
 	if err != nil {
 		return nil, err
@@ -322,7 +322,7 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if inner, ok := inner.(webhookReceiver); ok {
 		payload, err := inner.ReceiveWebhook(req)
 		if err != nil {
-			if err == _connector.ErrWebhookUnauthorized {
+			if err == chichi.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
 			}
 			return nil, err
@@ -343,22 +343,22 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 	if connector.WebhooksPer != state.WebhooksPerResource {
 		return nil, ErrNoWebhooks
 	}
-	config := &_connector.AppConfig{
-		Role:     _connector.Source,
+	config := &chichi.AppConfig{
+		Role:     chichi.Source,
 		Resource: resource.Code,
 	}
 	if connector.OAuth != nil {
 		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, resource.AccessToken)
 	}
-	config.Region = _connector.PrivacyRegion(resource.Workspace().PrivacyRegion)
-	inner, err := _connector.RegisteredApp(connector.Name).New(config)
+	config.Region = chichi.PrivacyRegion(resource.Workspace().PrivacyRegion)
+	inner, err := chichi.RegisteredApp(connector.Name).New(config)
 	if err != nil {
 		return nil, err
 	}
 	if inner, ok := inner.(webhookReceiver); ok {
 		payload, err := inner.ReceiveWebhook(req)
 		if err != nil {
-			if err == _connector.ErrWebhookUnauthorized {
+			if err == chichi.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
 			}
 			return nil, err
@@ -467,7 +467,7 @@ func businessIDToString(value any) (string, error) {
 
 // setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
 // the settings for the action.
-func setActionSettingsFunc(st *state.State, a *state.Action) _connector.SetSettingsFunc {
+func setActionSettingsFunc(st *state.State, a *state.Action) chichi.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setActionSettings(ctx, st, a.ID, settings)
 	}
@@ -475,7 +475,7 @@ func setActionSettingsFunc(st *state.State, a *state.Action) _connector.SetSetti
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
 // settings for the connection.
-func setConnectionSettingsFunc(st *state.State, c *state.Connection) _connector.SetSettingsFunc {
+func setConnectionSettingsFunc(st *state.State, c *state.Connection) chichi.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setConnectionSettings(ctx, st, c.ID, settings)
 	}

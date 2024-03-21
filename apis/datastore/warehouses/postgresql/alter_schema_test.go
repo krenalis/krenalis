@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func Test_alterSchemaQueries(t *testing.T) {

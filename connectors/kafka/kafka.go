@@ -20,8 +20,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connector"
-	"chichi/connector/ui"
+	"chichi"
+	"chichi/ui"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
@@ -31,17 +31,17 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ connector.UI = (*connection)(nil)
+var _ chichi.UI = (*connection)(nil)
 
 func init() {
-	connector.RegisterStream(connector.Stream{
+	chichi.RegisterStream(chichi.Stream{
 		Name: "Kafka",
 		Icon: icon,
 	}, new)
 }
 
 // new returns a new Kafka connection.
-func new(conf *connector.StreamConfig) (*connection, error) {
+func new(conf *chichi.StreamConfig) (*connection, error) {
 	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -53,7 +53,7 @@ func new(conf *connector.StreamConfig) (*connection, error) {
 }
 
 type connection struct {
-	conf     *connector.StreamConfig
+	conf     *chichi.StreamConfig
 	settings *settings
 	client   *kgo.Client
 	iter     *fetchesRecordIter
@@ -107,7 +107,7 @@ func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
 // function has been called.
 //
 // Send can be used by multiple goroutines at the same time.
-func (c *connection) Send(ctx context.Context, event []byte, options connector.SendOptions, ack func(err error)) error {
+func (c *connection) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
 	err := c.connect()
 	if err != nil {
 		return err

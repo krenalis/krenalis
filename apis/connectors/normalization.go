@@ -22,7 +22,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"

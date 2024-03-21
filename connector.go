@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package connector
+package chichi
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/connector/types"
-	"chichi/connector/ui"
+	"chichi/types"
+	"chichi/ui"
 )
 
 // Connector is the interface implemented by connectors.

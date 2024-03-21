@@ -7,7 +7,7 @@
 
 package mappings
 
-import "chichi/connector/types"
+import "chichi/types"
 
 // convertMatrix is a matrix which holds information about valid conversions.
 //

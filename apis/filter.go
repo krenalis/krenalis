@@ -19,7 +19,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/datastore/expr"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"

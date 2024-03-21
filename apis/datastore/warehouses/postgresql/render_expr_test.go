@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"chichi/apis/datastore/expr"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 func Test_renderExpr(t *testing.T) {

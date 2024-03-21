@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"chichi/apis/datastore/warehouses"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 // scanValue implements the sql.Scanner interface to read the database values.

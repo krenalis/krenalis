@@ -35,7 +35,7 @@ import (
 	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/maps"

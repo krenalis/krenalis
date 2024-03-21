@@ -12,7 +12,7 @@ import (
 	"errors"
 
 	"chichi/apis/state"
-	"chichi/connector/types"
+	"chichi/types"
 )
 
 var (

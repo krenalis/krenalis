@@ -23,7 +23,7 @@ import (
 	"chichi/apis/transformers"
 	"chichi/apis/transformers/embed"
 	"chichi/backoff"
-	"chichi/connector/types"
+	"chichi/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
