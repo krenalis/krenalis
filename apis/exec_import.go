@@ -46,7 +46,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			cursor.ID = action.UserCursor.ID
 			cursor.Timestamp = action.UserCursor.Timestamp
 		}
-		records, err = this.app().Users(ctx, action.InSchema, businessID, cursor)
+		records, err = this.app().Users(ctx, action.InSchema, cursor)
 	case state.DatabaseType:
 		var query string
 		query, err = replacePlaceholders(action.Query, func(name string) (string, bool) {

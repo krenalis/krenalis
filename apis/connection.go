@@ -601,7 +601,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, this.connection.BusinessID, cur)
+	records, err := this.app().Users(ctx, schema, cur)
 	if err != nil {
 		return nil, "", err
 	}
