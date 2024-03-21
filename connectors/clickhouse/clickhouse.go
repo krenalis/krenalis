@@ -31,7 +31,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*ClickHouse)(nil)
 
 func init() {
 	chichi.RegisterDatabase(chichi.Database{
@@ -40,12 +40,12 @@ func init() {
 		DestinationDescription: "export users and groups to a ClickHouse database",
 		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new ClickHouse connection.
-func new(conf *chichi.DatabaseConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new ClickHouse connection.
+func New(conf *chichi.DatabaseConfig) (*ClickHouse, error) {
+	c := ClickHouse{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -55,7 +55,7 @@ func new(conf *chichi.DatabaseConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type ClickHouse struct {
 	conf     *chichi.DatabaseConfig
 	settings *settings
 	db       driver.Conn
@@ -63,21 +63,21 @@ type connection struct {
 
 // Close closes the database. When Close is called, no other calls to connection
 // methods are in progress and no more will be made.
-func (c *connection) Close() error {
-	if c.db == nil {
+func (ch *ClickHouse) Close() error {
+	if ch.db == nil {
 		return nil
 	}
-	return c.db.Close()
+	return ch.db.Close()
 }
 
 // Columns returns the columns of the given table.
-func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]types.Property, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := c.query(ctx, "SELECT * FROM "+table)
+	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table)
 	if err != nil {
 		return nil, err
 	}
@@ -89,26 +89,26 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (c *connection) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	return c.query(ctx, query)
+func (ch *ClickHouse) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	return ch.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the UI.
 		var s settings
-		if c.settings == nil {
+		if ch.settings == nil {
 			s.Port = 9000
 		} else {
-			s = *c.settings
+			s = *ch.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := ch.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -118,7 +118,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = ch.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -149,7 +149,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 // The columns parameter specifies the columns of the rows, including a column
 // named "id" that serves as the table's key. If a column's value is not
 // specified in a row, the default column value is used.
-func (c *connection) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (ch *ClickHouse) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 
 	var err error
 	table, err = quoteTable(table)
@@ -188,17 +188,17 @@ func (c *connection) Upsert(ctx context.Context, table string, rows []map[string
 	}
 	query := b.String()
 
-	if err = c.openDB(); err != nil {
+	if err = ch.openDB(); err != nil {
 		return err
 	}
-	err = c.db.Exec(ctx, query)
+	err = ch.db.Exec(ctx, query)
 
 	return err
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (ch *ClickHouse) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -232,24 +232,24 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (c *connection) openDB() error {
-	if c.db != nil {
+func (ch *ClickHouse) openDB() error {
+	if ch.db != nil {
 		return nil
 	}
-	db, err := clickhouse.Open(c.settings.options())
+	db, err := clickhouse.Open(ch.settings.options())
 	if err != nil {
 		return err
 	}
-	c.db = db
+	ch.db = db
 	return nil
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (c *connection) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	if err := c.openDB(); err != nil {
+func (ch *ClickHouse) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	if err := ch.openDB(); err != nil {
 		return nil, nil, err
 	}
-	rows, err := c.db.Query(ctx, query)
+	rows, err := ch.db.Query(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}

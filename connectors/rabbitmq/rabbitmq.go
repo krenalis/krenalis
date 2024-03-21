@@ -28,18 +28,18 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*RabbitMQ)(nil)
 
 func init() {
 	chichi.RegisterStream(chichi.Stream{
 		Name: "RabbitMQ",
 		Icon: icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new RabbitMQ connection.
-func new(conf *chichi.StreamConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new RabbitMQ connection.
+func New(conf *chichi.StreamConfig) (*RabbitMQ, error) {
+	c := RabbitMQ{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -49,7 +49,7 @@ func new(conf *chichi.StreamConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type RabbitMQ struct {
 	conf       *chichi.StreamConfig
 	settings   *settings
 	conn       *amqp.Connection
@@ -59,17 +59,17 @@ type connection struct {
 
 // Close closes the stream. When Close is called, no other calls to connection
 // methods are in progress and no more will be made.
-func (c *connection) Close() error {
-	if c.conn == nil {
+func (rmq *RabbitMQ) Close() error {
+	if rmq.conn == nil {
 		return nil
 	}
-	c.deliveries = nil
-	err := c.ch.Close()
-	if err2 := c.conn.Close(); err == nil {
+	rmq.deliveries = nil
+	err := rmq.ch.Close()
+	if err2 := rmq.conn.Close(); err == nil {
 		err = err2
 	}
-	c.ch = nil
-	c.conn = nil
+	rmq.ch = nil
+	rmq.conn = nil
 	return err
 }
 
@@ -81,16 +81,16 @@ func (c *connection) Close() error {
 // retained after the ack function has been called.
 //
 // Receive can be used by multiple goroutines at the same time.
-func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
-	err := c.connect(ctx, true)
+func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
+	err := rmq.connect(ctx, true)
 	if err != nil {
 		return nil, nil, err
 	}
 	select {
-	case delivery := <-c.deliveries:
+	case delivery := <-rmq.deliveries:
 		tag := delivery.DeliveryTag
 		ack := func() {
-			_ = c.ch.Ack(tag, false)
+			_ = rmq.ch.Ack(tag, false)
 		}
 		return delivery.Body, ack, nil
 	case <-ctx.Done():
@@ -105,13 +105,13 @@ func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
 // function has been called.
 //
 // Send can be used by multiple goroutines at the same time.
-func (c *connection) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
-	err := c.connect(ctx, true)
+func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
+	err := rmq.connect(ctx, true)
 	if err != nil {
 		return err
 	}
 	msg := amqp.Publishing{Body: event}
-	dc, err := c.ch.PublishWithDeferredConfirmWithContext(ctx, "", c.settings.Queue, false, false, msg)
+	dc, err := rmq.ch.PublishWithDeferredConfirmWithContext(ctx, "", rmq.settings.Queue, false, false, msg)
 	if err != nil {
 		return err
 	}
@@ -128,19 +128,19 @@ func (c *connection) Send(ctx context.Context, event []byte, options chichi.Send
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the UI.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if rmq.settings != nil {
+			s = *rmq.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := rmq.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -150,7 +150,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = rmq.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -176,7 +176,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (rmq *RabbitMQ) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -196,7 +196,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if strings.HasPrefix(s.Queue, "amq.") {
 		return nil, ui.Errorf("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
-	err = c.testConnection(ctx)
+	err = rmq.testConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -212,8 +212,8 @@ const defaultConnectionTimeout = 30 * time.Second
 
 // connect establishes a connection to RabbitMQ. If deliveries is true, it also
 // sets the deliveries channel.
-func (c *connection) connect(ctx context.Context, deliveries bool) (err error) {
-	if c.conn != nil {
+func (rmq *RabbitMQ) connect(ctx context.Context, deliveries bool) (err error) {
+	if rmq.conn != nil {
 		return nil
 	}
 	var netConn net.Conn
@@ -236,7 +236,7 @@ func (c *connection) connect(ctx context.Context, deliveries bool) (err error) {
 			return netConn, nil
 		},
 	}
-	conn, err := amqp.DialConfig(c.settings.URL, config)
+	conn, err := amqp.DialConfig(rmq.settings.URL, config)
 	if err != nil {
 		return err
 	}
@@ -246,22 +246,22 @@ func (c *connection) connect(ctx context.Context, deliveries bool) (err error) {
 		return err
 	}
 	if deliveries {
-		c.deliveries, err = ch.Consume(c.settings.Queue, "", false, false, false, false, nil)
+		rmq.deliveries, err = ch.Consume(rmq.settings.Queue, "", false, false, false, false, nil)
 		if err != nil {
 			_ = ch.Close()
 			_ = conn.Close()
 			return err
 		}
 	}
-	c.conn = conn
-	c.ch = ch
+	rmq.conn = conn
+	rmq.ch = ch
 	go func() {
 		select {
 		case <-ctx.Done():
-			_ = c.ch.Close()
-			_ = c.conn.Close()
-			c.ch = nil
-			c.conn = nil
+			_ = rmq.ch.Close()
+			_ = rmq.conn.Close()
+			rmq.ch = nil
+			rmq.conn = nil
 		}
 	}()
 	return nil
@@ -269,7 +269,7 @@ func (c *connection) connect(ctx context.Context, deliveries bool) (err error) {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func (c *connection) testConnection(ctx context.Context) error {
-	return c.connect(ctx, false) // TO FIX
+func (rmq *RabbitMQ) testConnection(ctx context.Context) error {
+	return rmq.connect(ctx, false) // TO FIX
 
 }

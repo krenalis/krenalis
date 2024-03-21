@@ -36,17 +36,17 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.UI
 	chichi.AppEventsConnection
-} = (*connection)(nil)
+} = (*Mixpanel)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
 		Name:                   "Mixpanel",
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-type connection struct {
+type Mixpanel struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
@@ -57,9 +57,9 @@ type settings struct {
 	Secret    string
 }
 
-// new returns a new Mixpanel connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Mixpanel connection.
+func New(conf *chichi.AppConfig) (*Mixpanel, error) {
+	c := Mixpanel{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -75,7 +75,7 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+func (mp *Mixpanel) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
 
 	if data["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
@@ -86,12 +86,12 @@ func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventTy
 		URL:    "https://api.mixpanel.com/",
 		Header: http.Header{},
 	}
-	if c.conf.Region == chichi.PrivacyRegionEurope {
+	if mp.conf.Region == chichi.PrivacyRegionEurope {
 		req.URL = "https://api-eu.mixpanel.com/"
 	}
-	req.URL += "import?strict=0&project_id=" + c.settings.ProjectID
+	req.URL += "import?strict=0&project_id=" + mp.settings.ProjectID
 	req.Header.Set("Content-Type", "application/x-ndjson")
-	authorization := base64.StdEncoding.EncodeToString([]byte(c.settings.Username + ":" + c.settings.Secret))
+	authorization := base64.StdEncoding.EncodeToString([]byte(mp.settings.Username + ":" + mp.settings.Secret))
 	if redacted {
 		authorization = "[REDACTED]"
 	}
@@ -176,8 +176,8 @@ func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventTy
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if c.conf.Role != chichi.Destination {
+func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if mp.conf.Role != chichi.Destination {
 		return nil, nil
 	}
 	schema := func(placeholder string) types.Type {
@@ -210,28 +210,28 @@ func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error
 }
 
 // Resource returns the resource.
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (mp *Mixpanel) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if mp.settings != nil {
+			s = *mp.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := mp.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(ctx, s)
+		return nil, nil, mp.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -253,7 +253,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (mp *Mixpanel) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -271,23 +271,23 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	return json.Marshal(&s)
 }
 
-func (c *connection) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
 
 	u := "https://api.mixpanel.com"
-	if c.conf.Region == chichi.PrivacyRegionEurope {
+	if mp.conf.Region == chichi.PrivacyRegionEurope {
 		u = "https://api-eu.mixpanel.com"
 	}
-	u += path + "?strict=0&project_id=" + c.settings.ProjectID
+	u += path + "?strict=0&project_id=" + mp.settings.ProjectID
 
 	req, err := http.NewRequestWithContext(ctx, method, u, body)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(c.settings.Username, c.settings.Secret)
+	req.SetBasicAuth(mp.settings.Username, mp.settings.Secret)
 	req.Header.Set("Content-Type", "application/x-ndjson")
 
-	res, err := c.conf.HTTPClient.Do(req)
+	res, err := mp.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

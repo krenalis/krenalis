@@ -34,13 +34,13 @@ func init() {
 		},
 	}
 	for _, srv := range mobiles {
-		chichi.RegisterMobile(srv, new)
+		chichi.RegisterMobile(srv, New)
 	}
 }
 
-// new returns a new Mobile connection.
-func new(*chichi.MobileConfig) (*connection, error) {
-	return &connection{}, nil
+// New returns a new Mobile connection.
+func New(*chichi.MobileConfig) (*Mobile, error) {
+	return &Mobile{}, nil
 }
 
-type connection struct{}
+type Mobile struct{}

@@ -67,13 +67,13 @@ func init() {
 		},
 	}
 	for _, srv := range servers {
-		chichi.RegisterServer(srv, new)
+		chichi.RegisterServer(srv, New)
 	}
 }
 
-// new returns a new Server connection.
-func new(*chichi.ServerConfig) (*connection, error) {
-	return &connection{}, nil
+// New returns a new Server connection.
+func New(*chichi.ServerConfig) (*Server, error) {
+	return &Server{}, nil
 }
 
-type connection struct{}
+type Server struct{}

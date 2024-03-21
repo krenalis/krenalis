@@ -26,7 +26,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*JSON)(nil)
 
 func init() {
 	chichi.RegisterFile(chichi.File{
@@ -34,12 +34,12 @@ func init() {
 		DestinationDescription: "export users to a JSON file",
 		Icon:                   icon,
 		Extension:              "json",
-	}, new)
+	}, New)
 }
 
-// new returns a new JSON connection.
-func new(conf *chichi.FileConfig) (*connection, error) {
-	c := connection{role: conf.Role, setSettings: conf.SetSettings}
+// New returns a new JSON connection.
+func New(conf *chichi.FileConfig) (*JSON, error) {
+	c := JSON{role: conf.Role, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -49,7 +49,7 @@ func new(conf *chichi.FileConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type JSON struct {
 	role        chichi.Role
 	settings    *settings
 	setSettings chichi.SetSettingsFunc
@@ -62,12 +62,12 @@ type settings struct {
 }
 
 // ContentType returns the content type of the file.
-func (c *connection) ContentType(ctx context.Context) string {
+func (j *JSON) ContentType(ctx context.Context) string {
 	return "application/json; charset=UTF-8"
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
+func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
 
 	var err error
 	var tok json.Token
@@ -176,23 +176,23 @@ Records:
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if j.settings != nil {
+			s = *j.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := j.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.setSettings(ctx, s)
+		err = j.setSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -218,7 +218,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (j *JSON) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -228,8 +228,8 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
-	s := c.settings
+func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
+	s := j.settings
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
 	var record []any

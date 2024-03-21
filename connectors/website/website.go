@@ -26,13 +26,13 @@ func init() {
 		},
 	}
 	for _, ws := range websites {
-		chichi.RegisterWebsite(ws, new)
+		chichi.RegisterWebsite(ws, New)
 	}
 }
 
-// new returns a new Website connection.
-func new(*chichi.WebsiteConfig) (*connection, error) {
-	return &connection{}, nil
+// New returns a new Website connection.
+func New(*chichi.WebsiteConfig) (*Website, error) {
+	return &Website{}, nil
 }
 
-type connection struct{}
+type Website struct{}

@@ -33,7 +33,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*PostgreSQL)(nil)
 
 func init() {
 	chichi.RegisterDatabase(chichi.Database{
@@ -42,12 +42,12 @@ func init() {
 		DestinationDescription: "export users and groups to a PostgreSQL database",
 		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new PostgreSQL connection.
-func new(conf *chichi.DatabaseConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new PostgreSQL connection.
+func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error) {
+	c := PostgreSQL{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -57,7 +57,7 @@ func new(conf *chichi.DatabaseConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type PostgreSQL struct {
 	conf     *chichi.DatabaseConfig
 	settings *settings
 	db       *sql.DB
@@ -65,19 +65,19 @@ type connection struct {
 
 // Close closes the database. When Close is called, no other calls to connection
 // methods are in progress and no more will be made.
-func (c *connection) Close() error {
-	if c.db == nil {
+func (ps *PostgreSQL) Close() error {
+	if ps.db == nil {
 		return nil
 	}
-	return c.db.Close()
+	return ps.db.Close()
 }
 
 // Columns returns the columns of the given table.
-func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
-	if err := c.openDB(); err != nil {
+func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]types.Property, error) {
+	if err := ps.openDB(); err != nil {
 		return nil, err
 	}
-	conn, err := c.db.Conn(ctx)
+	conn, err := ps.db.Conn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +108,11 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (c *connection) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	if err := c.openDB(); err != nil {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	if err := ps.openDB(); err != nil {
 		return nil, nil, err
 	}
-	rows, err := c.db.QueryContext(ctx, query)
+	rows, err := ps.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -140,21 +140,21 @@ func (c *connection) Query(ctx context.Context, query string) (chichi.Rows, []ty
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the UI.
 		var s settings
-		if c.settings == nil {
+		if ps.settings == nil {
 			s.Port = 5432
 		} else {
-			s = *c.settings
+			s = *ps.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := ps.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -164,7 +164,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = ps.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -195,7 +195,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 // The columns parameter specifies the columns of the rows, including a column
 // named "id" that serves as the table's key. If a column's value is not
 // specified in a row, the default column value is used.
-func (c *connection) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (ps *PostgreSQL) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 
 	var b strings.Builder
 	b.WriteString("INSERT INTO ")
@@ -245,17 +245,17 @@ func (c *connection) Upsert(ctx context.Context, table string, rows []map[string
 	}
 	query := b.String()
 
-	if err := c.openDB(); err != nil {
+	if err := ps.openDB(); err != nil {
 		return err
 	}
-	_, err := c.db.ExecContext(ctx, query)
+	_, err := ps.db.ExecContext(ctx, query)
 
 	return err
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (ps *PostgreSQL) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -308,16 +308,16 @@ func (s *settings) dsn() string {
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (c *connection) openDB() error {
-	if c.db != nil {
+func (ps *PostgreSQL) openDB() error {
+	if ps.db != nil {
 		return nil
 	}
-	db, err := sql.Open("pgx", c.settings.dsn())
+	db, err := sql.Open("pgx", ps.settings.dsn())
 	if err != nil {
 		return err
 	}
 	db.SetMaxIdleConns(0)
-	c.db = db
+	ps.db = db
 	return nil
 }
 

@@ -44,7 +44,7 @@ var _ interface {
 	chichi.AppEventsConnection
 	chichi.AppUsersConnection
 	chichi.UI
-} = (*connection)(nil)
+} = (*Dummy)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
@@ -54,12 +54,12 @@ func init() {
 		TermForUsers:           "users",
 		ExternalIDLabel:        "Dummy Unique ID",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new Dummy connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Dummy connection.
+func New(conf *chichi.AppConfig) (*Dummy, error) {
+	c := Dummy{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -69,7 +69,7 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type Dummy struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
@@ -85,7 +85,7 @@ func newUserID() string {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
+func (dummy *Dummy) CreateUser(ctx context.Context, user map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -121,7 +121,7 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+func (dummy *Dummy) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://example.com/",
@@ -138,8 +138,8 @@ func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventTy
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if c.conf.Role == chichi.Source {
+func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if dummy.conf.Role == chichi.Source {
 		return nil, nil
 	}
 	eventTypes := []*chichi.EventType{
@@ -195,11 +195,11 @@ func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (dummy *Dummy) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	panic("not implemented")
 }
 
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (dummy *Dummy) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
@@ -208,23 +208,23 @@ type settings struct {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if dummy.settings != nil {
+			s = *dummy.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := dummy.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = dummy.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -246,7 +246,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (dummy *Dummy) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var settings settings
 	err := json.Unmarshal(values, &settings)
 	if err != nil {
@@ -256,7 +256,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
+func (dummy *Dummy) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -298,12 +298,12 @@ var userSchema = types.Object([]types.Property{
 })
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
+func (dummy *Dummy) UserSchema(ctx context.Context) (types.Type, error) {
 	return userSchema, nil
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (dummy *Dummy) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -320,7 +320,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 		})
 	}
 	sort.Slice(users, func(i, j int) bool { return users[i].ID < users[j].ID })
-	if !c.settings.LargeDataset {
+	if !dummy.settings.LargeDataset {
 		users = users[:10]
 	}
 	return users, "", io.EOF

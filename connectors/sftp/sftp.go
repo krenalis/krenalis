@@ -39,18 +39,18 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.UI
 	chichi.StorageConnection
-} = (*connection)(nil)
+} = (*SFTP)(nil)
 
 func init() {
 	chichi.RegisterStorage(chichi.Storage{
 		Name: "SFTP",
 		Icon: icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new SFTP connection.
-func new(conf *chichi.StorageConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new SFTP connection.
+func New(conf *chichi.StorageConfig) (*SFTP, error) {
+	c := SFTP{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -60,7 +60,7 @@ func new(conf *chichi.StorageConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type SFTP struct {
 	conf     *chichi.StorageConfig
 	settings *settings
 }
@@ -75,10 +75,10 @@ type settings struct {
 
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Reader and Write.
-func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
+func (sf *SFTP) CompletePath(ctx context.Context, name string) (string, error) {
 	u := url.URL{
 		Scheme: "sftp",
-		Host:   net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
+		Host:   net.JoinHostPort(sf.settings.Host, strconv.Itoa(sf.settings.Port)),
 		Path:   name,
 	}
 	return u.String(), nil
@@ -89,8 +89,8 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 // context is extended to the Read method calls. After the context is canceled,
 // any subsequent Read invocations will result in an error.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	client, err := openClient(ctx, c.settings)
+func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	client, err := openClient(ctx, sf.settings)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -118,21 +118,21 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings == nil {
+		if sf.settings == nil {
 			s.Port = 22
 		} else {
-			s = *c.settings
+			s = *sf.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := sf.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -142,7 +142,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = sf.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -171,7 +171,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (sf *SFTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -194,7 +194,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		return nil, ui.Errorf("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
-	if c.conf.Role == chichi.Destination {
+	if sf.conf.Role == chichi.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
 			return nil, ui.Errorf("length of temporary directory path must be in range [1,1000]")
 		}
@@ -210,8 +210,8 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) error {
-	client, err := openClient(ctx, c.settings)
+func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
+	client, err := openClient(ctx, sf.settings)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) err
 	if name[0] != '/' {
 		name = "/" + name
 	}
-	if c.settings.TempPath == "" {
+	if sf.settings.TempPath == "" {
 		var f *sftp.File
 		f, err = client.sftp.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 		if err != nil {
@@ -237,7 +237,7 @@ func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) err
 	// Create the file atomically.
 	base := path.Base(name)
 	ext := path.Ext(name)
-	tempPath := c.settings.TempPath
+	tempPath := sf.settings.TempPath
 	if tempPath[0] != '/' {
 		tempPath = "/" + tempPath
 	}

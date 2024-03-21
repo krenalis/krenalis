@@ -37,19 +37,19 @@ const sendToDebugServer = false
 var _ interface {
 	chichi.UI
 	chichi.AppEventsConnection
-} = (*connection)(nil)
+} = (*GoogleAnalytics)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
 		Name:                   "Google Analytics 4",
 		DestinationDescription: "send events to Google Analytics 4",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new Google Analytics 4 connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Google Analytics 4 connection.
+func New(conf *chichi.AppConfig) (*GoogleAnalytics, error) {
+	c := GoogleAnalytics{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -59,7 +59,7 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type GoogleAnalytics struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
@@ -75,7 +75,7 @@ type settings struct {
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+func (ga *GoogleAnalytics) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
@@ -84,11 +84,11 @@ func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventTy
 	if sendToDebugServer {
 		req.URL += "debug/"
 	}
-	secret := c.settings.APISecret
+	secret := ga.settings.APISecret
 	if redacted {
 		secret = "REDACTED"
 	}
-	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(c.settings.MeasurementID)
+	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(ga.settings.MeasurementID)
 	req.Header.Set("Content-Type", "application/json")
 	var ev map[string]any
 	switch eventType.ID {
@@ -126,8 +126,8 @@ func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventTy
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if c.conf.Role == chichi.Source {
+func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if ga.conf.Role == chichi.Source {
 		return nil, nil
 	}
 	eventTypes := []*chichi.EventType{
@@ -153,28 +153,28 @@ func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (ga *GoogleAnalytics) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ga *GoogleAnalytics) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if ga.settings != nil {
+			s = *ga.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := ga.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(ctx, s)
+		return nil, nil, ga.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -196,7 +196,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (ga *GoogleAnalytics) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {

@@ -29,7 +29,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*Snowflake)(nil)
 
 func init() {
 	chichi.RegisterDatabase(chichi.Database{
@@ -38,12 +38,12 @@ func init() {
 		DestinationDescription: "export users and groups to a Snowflake database",
 		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new Snowflake connection.
-func new(conf *chichi.DatabaseConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Snowflake connection.
+func New(conf *chichi.DatabaseConfig) (*Snowflake, error) {
+	c := Snowflake{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -53,7 +53,7 @@ func new(conf *chichi.DatabaseConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type Snowflake struct {
 	conf     *chichi.DatabaseConfig
 	settings *settings
 	db       *sql.DB
@@ -61,16 +61,16 @@ type connection struct {
 
 // Close closes the database. When Close is called, no other calls to connection
 // methods are in progress and no more will be made.
-func (c *connection) Close() error {
-	if c.db == nil {
+func (sf *Snowflake) Close() error {
+	if sf.db == nil {
 		return nil
 	}
-	return c.db.Close()
+	return sf.db.Close()
 }
 
 // Columns returns the columns of the given table.
-func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
-	rows, columns, err := c.query(ctx, "SELECT * FROM "+quoteTable(table))
+func (sf *Snowflake) Columns(ctx context.Context, table string) ([]types.Property, error) {
+	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table))
 	if err != nil {
 		return nil, err
 	}
@@ -82,24 +82,24 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (c *connection) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	return c.query(ctx, query)
+func (sf *Snowflake) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	return sf.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the UI.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if sf.settings != nil {
+			s = *sf.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := sf.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -109,7 +109,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = sf.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -142,13 +142,13 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 // The columns parameter specifies the columns of the rows, including a column
 // named "id" that serves as the table's key. If a column's value is not
 // specified in a row, the default column value is used.
-func (c *connection) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (sf *Snowflake) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 	return errors.New("not implemented")
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (sf *Snowflake) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -214,22 +214,22 @@ func (s *settings) connector() gosnowflake.Connector {
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (c *connection) openDB() error {
-	if c.db != nil {
+func (sf *Snowflake) openDB() error {
+	if sf.db != nil {
 		return nil
 	}
-	db := sql.OpenDB(c.settings.connector())
+	db := sql.OpenDB(sf.settings.connector())
 	db.SetMaxIdleConns(0)
-	c.db = db
+	sf.db = db
 	return nil
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (c *connection) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	if err := c.openDB(); err != nil {
+func (sf *Snowflake) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	if err := sf.openDB(); err != nil {
 		return nil, nil, err
 	}
-	rows, err := c.db.QueryContext(ctx, query)
+	rows, err := sf.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}

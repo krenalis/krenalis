@@ -18,19 +18,19 @@ import (
 )
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*UISample)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
-	}, new)
+	}, New)
 }
 
-// new returns a new UISample connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new UISample connection.
+func New(conf *chichi.AppConfig) (*UISample, error) {
+	c := UISample{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -40,33 +40,33 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type UISample struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (uiSample *UISample) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if uiSample.settings != nil {
+			s = *uiSample.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := uiSample.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = uiSample.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -139,7 +139,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (uiSample *UISample) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {

@@ -29,7 +29,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the Sheets interface.
-var _ chichi.Sheets = (*connection)(nil)
+var _ chichi.Sheets = (*Excel)(nil)
 
 func init() {
 	chichi.RegisterFile(chichi.File{
@@ -37,12 +37,12 @@ func init() {
 		SourceDescription: "import users from an Excel file",
 		Icon:              icon,
 		Extension:         "xlsx",
-	}, new)
+	}, New)
 }
 
-// new returns a new Excel connection.
-func new(conf *chichi.FileConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Excel connection.
+func New(conf *chichi.FileConfig) (*Excel, error) {
+	c := Excel{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -52,7 +52,7 @@ func new(conf *chichi.FileConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type Excel struct {
 	conf     *chichi.FileConfig
 	settings *settings
 }
@@ -62,14 +62,14 @@ type settings struct {
 }
 
 // ContentType returns the content type of the file.
-func (c *connection) ContentType(ctx context.Context) string {
+func (exel *Excel) ContentType(ctx context.Context) string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
 // Read reads the records from r and writes them to records. sheet is the name
 // of the sheet to be read. If the provided sheet does not exist, it returns the
 // chichi.ErrSheetNotExist error.
-func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
+func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -104,7 +104,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 		if first {
 			columns := make([]types.Property, len(record))
 			for i := range columns {
-				if c.settings.HasColumnNames {
+				if exel.settings.HasColumnNames {
 					header := record[i]
 					name := chichi.SuggestPropertyName(header)
 					if name == "" {
@@ -137,7 +137,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 				return err
 			}
 			first = false
-			if c.settings.HasColumnNames {
+			if exel.settings.HasColumnNames {
 				continue
 			}
 		}
@@ -152,23 +152,23 @@ func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, record
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if exel.settings != nil {
+			s = *exel.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := exel.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = exel.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -191,7 +191,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 }
 
 // Sheets returns the sheets of the file read from r.
-func (c *connection) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
+func (exel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 	f, err := excelize.OpenReader(r)
 	if err != nil {
 		// Don't return a Zip error because it might be misleading.
@@ -206,13 +206,13 @@ func (c *connection) Sheets(ctx context.Context, r io.Reader) ([]string, error) 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (exel *Excel) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return nil, err
 	}
-	if c.conf.Role != chichi.Source {
+	if exel.conf.Role != chichi.Source {
 		s.HasColumnNames = false
 	}
 	return json.Marshal(&s)
@@ -220,7 +220,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 
 // Write writes to w the records read from records.
 // sheet is the name of the sheet to be written to.
-func (c *connection) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
+func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()

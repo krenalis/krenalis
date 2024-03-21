@@ -14,14 +14,14 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	c := &connection{settings: &settings{Host: "example.com", Port: 22}}
+	sf := &SFTP{settings: &settings{Host: "example.com", Port: 22}}
 	tests := []chichi.CompletePathTest{
 		{Name: "/a", Expected: "sftp://example.com:22/a"},
 		{Name: "/a/b", Expected: "sftp://example.com:22/a/b"},
 		{Name: "a", Expected: "sftp://example.com:22/a"},
 		{Name: "/\x00", Expected: "sftp://example.com:22/%00"},
 	}
-	err := chichi.TestCompletePath(c, tests)
+	err := chichi.TestCompletePath(sf, tests)
 	if err != nil {
 		t.Errorf("SFTP connector: %s", err)
 	}

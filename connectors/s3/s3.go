@@ -35,18 +35,18 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.UI
 	chichi.StorageConnection
-} = (*connection)(nil)
+} = (*S3)(nil)
 
 func init() {
 	chichi.RegisterStorage(chichi.Storage{
 		Name: "S3",
 		Icon: icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new S3 connection.
-func new(conf *chichi.StorageConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new S3 connection.
+func New(conf *chichi.StorageConfig) (*S3, error) {
+	c := S3{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -56,7 +56,7 @@ func new(conf *chichi.StorageConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type S3 struct {
 	conf     *chichi.StorageConfig
 	settings *settings
 }
@@ -70,14 +70,14 @@ type settings struct {
 
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Reader and Write.
-func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
+func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
 		return "", chichi.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
 	}
-	return "s3://" + c.settings.Bucket + "/" + name, nil
+	return "s3://" + ss3.settings.Bucket + "/" + name, nil
 }
 
 // Reader opens the file at the given path name and returns a ReadCloser from
@@ -85,13 +85,13 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 // context is extended to the Read method calls. After the context is canceled,
 // any subsequent Read invocations will result in an error.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
 		return nil, time.Time{}, ui.Errorf("object key cannot be longer than 1024 bytes")
 	}
-	client := c.client()
+	client := ss3.client()
 	res, err := client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(c.settings.Bucket),
+		Bucket: aws.String(ss3.settings.Bucket),
 		Key:    aws.String(name),
 	})
 	if err != nil {
@@ -109,23 +109,23 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if ss3.settings != nil {
+			s = *ss3.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := ss3.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(ctx, s)
+		return nil, nil, ss3.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -172,7 +172,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (ss3 *S3) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -206,16 +206,16 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(ctx context.Context, p io.Reader, name, contentType string) error {
+func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
 		return ui.Errorf("object key cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
 	}
-	client := c.client()
+	client := ss3.client()
 	_, err := client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(c.settings.Bucket),
+		Bucket:      aws.String(ss3.settings.Bucket),
 		Key:         aws.String(name),
 		Body:        p,
 		ContentType: &contentType,
@@ -225,11 +225,11 @@ func (c *connection) Write(ctx context.Context, p io.Reader, name, contentType s
 
 // client returns a S3 client.
 // (https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/).
-func (c *connection) client() *s3.Client {
+func (ss3 *S3) client() *s3.Client {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion(c.settings.Region),
+		config.WithRegion(ss3.settings.Region),
 		config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(c.settings.AccessKeyID, c.settings.SecretAccessKey, "")))
+			credentials.NewStaticCredentialsProvider(ss3.settings.AccessKeyID, ss3.settings.SecretAccessKey, "")))
 	if err != nil {
 		return nil
 	}

@@ -34,7 +34,7 @@ var _ interface {
 	chichi.UI
 	chichi.AppEventsConnection
 	chichi.AppUsersConnection
-} = (*connection)(nil)
+} = (*Klavyio)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
@@ -43,12 +43,12 @@ func init() {
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "users",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new Klaviyo connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Klaviyo connection.
+func New(conf *chichi.AppConfig) (*Klavyio, error) {
+	c := Klavyio{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -58,7 +58,7 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type Klavyio struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
@@ -68,7 +68,7 @@ type settings struct {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
+func (ky *Klavyio) CreateUser(ctx context.Context, user map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -78,13 +78,13 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 // This method is safe for concurrent use by multiple goroutines.
 // If the specified event type does not exist, it returns the
 // ErrEventTypeNotExist error.
-func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+func (ky *Klavyio) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://a.klaviyo.com/api/events/",
 		Header: http.Header{},
 	}
-	key := c.settings.PrivateAPIKey
+	key := ky.settings.PrivateAPIKey
 	if redacted {
 		key = "[REDACTED]"
 	}
@@ -122,8 +122,8 @@ func (c *connection) EventRequest(ctx context.Context, eventType *chichi.EventTy
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if c.conf.Role == chichi.Source {
+func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+	if ky.conf.Role == chichi.Source {
 		return nil, nil
 	}
 	eventTypes := []*chichi.EventType{
@@ -143,38 +143,38 @@ func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	return nil, chichi.ErrWebhookUnauthorized
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (ky *Klavyio) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
+func (ky *Klavyio) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 	panic("TODO: not implemented")
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if ky.settings != nil {
+			s = *ky.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := ky.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(ctx, s)
+		return nil, nil, ky.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -193,7 +193,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 }
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
+func (ky *Klavyio) UserSchema(ctx context.Context) (types.Type, error) {
 	// The fields which are not marked as "required" in the documentation
 	// (available here:
 	// https://developers.klaviyo.com/en/reference/get_profiles) are declared as
@@ -340,7 +340,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (ky *Klavyio) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var hasUpdatedProperty bool
 
@@ -374,7 +374,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 		}
 	}
 
-	err := c.call(ctx, "GET", url, nil, 200, &response)
+	err := ky.call(ctx, "GET", url, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -412,7 +412,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (ky *Klavyio) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -458,19 +458,19 @@ func (err *klaviyoError) Error() string {
 	return fmt.Sprintf("unexpected error from Klaviyo (%d): %s", err.statusCode, &msg)
 }
 
-func (c *connection) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {
+func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Klaviyo-API-Key "+c.settings.PrivateAPIKey)
+	req.Header.Set("Authorization", "Klaviyo-API-Key "+ky.settings.PrivateAPIKey)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Revision", "2023-01-24")
 
-	res, err := c.conf.HTTPClient.Do(req)
+	res, err := ky.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

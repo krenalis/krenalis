@@ -31,18 +31,18 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*Kafka)(nil)
 
 func init() {
 	chichi.RegisterStream(chichi.Stream{
 		Name: "Kafka",
 		Icon: icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new Kafka connection.
-func new(conf *chichi.StreamConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Kafka connection.
+func New(conf *chichi.StreamConfig) (*Kafka, error) {
+	c := Kafka{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -52,7 +52,7 @@ func new(conf *chichi.StreamConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type Kafka struct {
 	conf     *chichi.StreamConfig
 	settings *settings
 	client   *kgo.Client
@@ -61,12 +61,12 @@ type connection struct {
 
 // Close closes the stream. When Close is called, no other calls to connection
 // methods are in progress and no more will be made.
-func (c *connection) Close() error {
-	if c.client == nil {
+func (kafka *Kafka) Close() error {
+	if kafka.client == nil {
 		return nil
 	}
-	c.client.Close()
-	c.client = nil
+	kafka.client.Close()
+	kafka.client = nil
 	return nil
 }
 
@@ -78,24 +78,24 @@ func (c *connection) Close() error {
 // retained after the ack function has been called.
 //
 // Receive can be used by multiple goroutines at the same time.
-func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
-	err := c.connect()
+func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
+	err := kafka.connect()
 	if err != nil {
 		return nil, nil, err
 	}
 	// Fetch the event.
-	if c.iter == nil {
-		c.iter = &fetchesRecordIter{}
+	if kafka.iter == nil {
+		kafka.iter = &fetchesRecordIter{}
 	}
-	if c.iter.Done() {
-		c.iter.fetches = c.client.PollFetches(ctx)
+	if kafka.iter.Done() {
+		kafka.iter.fetches = kafka.client.PollFetches(ctx)
 	}
-	record, err := c.iter.Next()
+	record, err := kafka.iter.Next()
 	if err != nil {
 		return nil, nil, err
 	}
 	ack := func() {
-		_ = c.client.CommitRecords(ctx, record)
+		_ = kafka.client.CommitRecords(ctx, record)
 	}
 	return record.Value, ack, nil
 }
@@ -107,8 +107,8 @@ func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
 // function has been called.
 //
 // Send can be used by multiple goroutines at the same time.
-func (c *connection) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
-	err := c.connect()
+func (kafka *Kafka) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
+	err := kafka.connect()
 	if err != nil {
 		return err
 	}
@@ -120,32 +120,32 @@ func (c *connection) Send(ctx context.Context, event []byte, options chichi.Send
 	record := &kgo.Record{
 		Key:   key,
 		Value: event,
-		Topic: c.settings.Topic,
+		Topic: kafka.settings.Topic,
 	}
 	var promise func(*kgo.Record, error)
 	if ack != nil {
 		promise = func(r *kgo.Record, err error) { ack(err) }
 	}
-	c.client.Produce(ctx, record, promise)
+	kafka.client.Produce(ctx, record, promise)
 	return nil
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the UI.
 		var s settings
-		if c.settings == nil {
+		if kafka.settings == nil {
 			s.Kafka = &kafkaSettings{Port: 9092}
 		} else {
-			s = *c.settings
+			s = *kafka.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := kafka.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -155,7 +155,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = kafka.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -203,7 +203,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (kafka *Kafka) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -293,15 +293,15 @@ func (s *settings) opts() []kgo.Opt {
 }
 
 // connect establishes a connection to Kafka.
-func (c *connection) connect() error {
-	if c.client != nil {
+func (kafka *Kafka) connect() error {
+	if kafka.client != nil {
 		return nil
 	}
-	cl, err := kgo.NewClient(c.settings.opts()...)
+	cl, err := kgo.NewClient(kafka.settings.opts()...)
 	if err != nil {
 		return err
 	}
-	c.client = cl
+	kafka.client = cl
 	return nil
 }
 

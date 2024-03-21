@@ -34,18 +34,18 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.UI
 	chichi.StorageConnection
-} = (*connection)(nil)
+} = (*HTTP)(nil)
 
 func init() {
 	chichi.RegisterStorage(chichi.Storage{
 		Name: "HTTP",
 		Icon: icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new HTTP connection.
-func new(conf *chichi.StorageConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new HTTP connection.
+func New(conf *chichi.StorageConfig) (*HTTP, error) {
+	c := HTTP{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -55,7 +55,7 @@ func new(conf *chichi.StorageConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type HTTP struct {
 	conf     *chichi.StorageConfig
 	settings *settings
 }
@@ -68,7 +68,7 @@ type settings struct {
 
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Reader and Write.
-func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
+func (h *HTTP) CompletePath(ctx context.Context, name string) (string, error) {
 	if name[0] != '/' {
 		name = "/" + name
 	}
@@ -87,9 +87,9 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 			parsingQuery = true
 		}
 	}
-	host := c.settings.Host
-	if c.settings.Port != 443 {
-		host = net.JoinHostPort(host, strconv.Itoa(c.settings.Port))
+	host := h.settings.Host
+	if h.settings.Port != 443 {
+		host = net.JoinHostPort(host, strconv.Itoa(h.settings.Port))
 	}
 	u := url.URL{
 		Scheme:   "https",
@@ -105,8 +105,8 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 // context is extended to the Read method calls. After the context is canceled,
 // any subsequent Read invocations will result in an error.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	u, err := c.CompletePath(ctx, name)
+func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	u, err := h.CompletePath(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -128,25 +128,25 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings == nil {
+		if h.settings == nil {
 			s.Port = 443
 		} else {
-			s = *c.settings
+			s = *h.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := h.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = h.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -175,7 +175,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (h *HTTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -203,8 +203,8 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	u, err := c.CompletePath(ctx, name)
+func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+	u, err := h.CompletePath(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func (c *connection) Write(ctx context.Context, r io.Reader, name, contentType s
 		return err
 	}
 	req.Header.Set("Content-Type", contentType)
-	for name, value := range c.settings.Headers {
+	for name, value := range h.settings.Headers {
 		req.Header[name] = []string{value}
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)

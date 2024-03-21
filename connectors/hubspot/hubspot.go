@@ -37,7 +37,7 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.AppUsersConnection
 	chichi.AppGroupsConnection
-} = (*connection)(nil)
+} = (*HubSpot)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
@@ -54,32 +54,32 @@ func init() {
 			TokenURL: "https://api.hubapi.com/oauth/v1/token",
 			Scopes:   []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-	}, new)
+	}, New)
 }
 
-// new returns a new HubSpot connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{
+// New returns a new HubSpot connection.
+func New(conf *chichi.AppConfig) (*HubSpot, error) {
+	c := HubSpot{
 		setSettings: conf.SetSettings,
 		httpClient:  conf.HTTPClient,
 	}
 	return &c, nil
 }
 
-type connection struct {
+type HubSpot struct {
 	setSettings chichi.SetSettingsFunc
 	httpClient  chichi.HTTPClient
 	buf         bytes.Buffer
 }
 
 // CreateGroup creates a group with the given properties.
-func (c *connection) CreateGroup(ctx context.Context, group map[string]any) error {
+func (hs *HubSpot) CreateGroup(ctx context.Context, group map[string]any) error {
 	// TODO(marco): implement
 	return nil
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
+func (hs *HubSpot) CreateUser(ctx context.Context, user map[string]any) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"properties":`)
@@ -89,25 +89,25 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 	}
 	body.WriteString("}")
 
-	return c.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
+	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+func (hs *HubSpot) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	return nil, nil
 }
 
 // GroupSchema returns the group schema.
-func (c *connection) GroupSchema(ctx context.Context) (types.Type, error) {
+func (hs *HubSpot) GroupSchema(ctx context.Context) (types.Type, error) {
 	// TODO(marco): implement
 	return types.Type{}, nil
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
-	objects, after, err := c.objects(ctx, "Company", properties, cursor)
+func (hs *HubSpot) Groups(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+	objects, after, err := hs.objects(ctx, "Company", properties, cursor)
 	for _, object := range objects {
-		contacts, err := c.companyContacts(ctx, object.ID)
+		contacts, err := hs.companyContacts(ctx, object.ID)
 		if err != nil {
 			return nil, "", err
 		}
@@ -119,11 +119,11 @@ func (c *connection) Groups(ctx context.Context, properties []string, cursor chi
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (hs *HubSpot) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	// See https://developers.hubspot.com/docs/api/webhooks.
 
 	// Check if the webhook is valid.
-	clientSecret, err := c.httpClient.ClientSecret()
+	clientSecret, err := hs.httpClient.ClientSecret()
 	if err != nil {
 		return nil, err
 	}
@@ -202,11 +202,11 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (hs *HubSpot) Resource(ctx context.Context) (string, error) {
 	var res struct {
 		PortalId int
 	}
-	err := c.call(ctx, "GET", "/account-info/v3/details", nil, 200, &res)
+	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, 200, &res)
 	if err != nil {
 		return "", err
 	}
@@ -218,14 +218,14 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 
 // UpdateGroup updates the group with identifier id setting the given
 // properties.
-func (c *connection) UpdateGroup(ctx context.Context, id string, group map[string]any) error {
+func (hs *HubSpot) UpdateGroup(ctx context.Context, id string, group map[string]any) error {
 	// TODO(marco): implement
 	return nil
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
+func (hs *HubSpot) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -239,11 +239,11 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 	}
 	body.WriteString(`}]}`)
 
-	return c.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
+func (hs *HubSpot) UserSchema(ctx context.Context) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -262,7 +262,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 			}
 		}
 	}
-	err := c.call(ctx, "GET", "/crm/v3/properties/contact", nil, 200, &response)
+	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -318,13 +318,13 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
-	return c.objects(ctx, "Contact", properties, cursor)
+func (hs *HubSpot) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+	return hs.objects(ctx, "Contact", properties, cursor)
 }
 
 // objects returns the contacts, if typ is "Contact", or the companies, if typ
 // is "Company", starting from the given cursor.
-func (c *connection) objects(ctx context.Context, typ string, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (hs *HubSpot) objects(ctx context.Context, typ string, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
@@ -336,24 +336,24 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 		propertyName = "hs_lastmodifieddate"
 	}
 
-	c.buf.Reset()
-	c.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
+	hs.buf.Reset()
+	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
 	if cursor.Timestamp.IsZero() {
-		c.buf.WriteByte('0')
+		hs.buf.WriteByte('0')
 	} else {
-		c.buf.WriteString(strconv.FormatInt(cursor.Timestamp.UnixMilli(), 10))
+		hs.buf.WriteString(strconv.FormatInt(cursor.Timestamp.UnixMilli(), 10))
 	}
-	c.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
+	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
 		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
 	for i, p := range properties {
 		if i > 0 {
-			c.buf.WriteByte(',')
+			hs.buf.WriteByte(',')
 		}
-		c.buf.WriteByte('"')
-		c.buf.WriteString(p)
-		c.buf.WriteByte('"')
+		hs.buf.WriteByte('"')
+		hs.buf.WriteString(p)
+		hs.buf.WriteByte('"')
 	}
-	c.buf.WriteString(`]}`)
+	hs.buf.WriteString(`]}`)
 
 	var response struct {
 		Results []struct {
@@ -368,7 +368,7 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 		}
 	}
 
-	err := c.call(ctx, "POST", path, &c.buf, 200, &response)
+	err := hs.call(ctx, "POST", path, &hs.buf, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -398,7 +398,7 @@ func (c *connection) objects(ctx context.Context, typ string, properties []strin
 }
 
 // companyContacts returns the contacts of the given company.
-func (c *connection) companyContacts(ctx context.Context, company string) ([]string, error) {
+func (hs *HubSpot) companyContacts(ctx context.Context, company string) ([]string, error) {
 	contacts := []string{}
 	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
@@ -417,7 +417,7 @@ func (c *connection) companyContacts(ctx context.Context, company string) ([]str
 		if after != "" {
 			requestURL += "?after=" + url.QueryEscape(after)
 		}
-		err := c.call(ctx, "GET", requestURL, nil, 200, &response)
+		err := hs.call(ctx, "GET", requestURL, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -433,13 +433,13 @@ func (c *connection) companyContacts(ctx context.Context, company string) ([]str
 	return contacts, nil
 }
 
-func (c *connection) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
 	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	res, err := c.httpClient.Do(req)
+	res, err := hs.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

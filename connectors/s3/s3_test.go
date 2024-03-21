@@ -15,7 +15,7 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	c := &connection{settings: &settings{Bucket: "my-example-bucket"}}
+	s3 := &S3{settings: &settings{Bucket: "my-example-bucket"}}
 	tests := []chichi.CompletePathTest{
 		{Name: "a", Expected: "s3://my-example-bucket/a"},
 		{Name: "a/b", Expected: "s3://my-example-bucket/a/b"},
@@ -25,7 +25,7 @@ func TestPathConvert(t *testing.T) {
 		{Name: "/" + strings.Repeat("x", 1023), Expected: "s3://my-example-bucket/" + strings.Repeat("x", 1023)},
 		{Name: strings.Repeat("x", 1025)},
 	}
-	err := chichi.TestCompletePath(c, tests)
+	err := chichi.TestCompletePath(s3, tests)
 	if err != nil {
 		t.Errorf("S3 connector: %s", err)
 	}

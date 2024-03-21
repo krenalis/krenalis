@@ -38,23 +38,23 @@ func init() {
 		SourceDescription: "import users and groups from a parquet file",
 		Icon:              icon,
 		Extension:         "parquet",
-	}, new)
+	}, New)
 }
 
-// new returns a new Parquet connection.
-func new(conf *chichi.FileConfig) (*connection, error) {
-	return &connection{}, nil
+// New returns a new Parquet connection.
+func New(conf *chichi.FileConfig) (*Parquet, error) {
+	return &Parquet{}, nil
 }
 
-type connection struct{}
+type Parquet struct{}
 
 // ContentType returns the content type of the file.
-func (c *connection) ContentType(ctx context.Context) string {
+func (pq *Parquet) ContentType(ctx context.Context) string {
 	return "" // TODO: implement file writing for Parquet.
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
+func (pq *Parquet) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -138,7 +138,7 @@ func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records ch
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
+func (pq *Parquet) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
 	// TODO(marco)
 	return nil
 }

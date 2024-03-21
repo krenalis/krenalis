@@ -31,18 +31,18 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.UI
 	chichi.StorageConnection
-} = (*connection)(nil)
+} = (*Filesystem)(nil)
 
 func init() {
 	chichi.RegisterStorage(chichi.Storage{
 		Name: "Filesystem",
 		Icon: icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new Filesystem connection.
-func new(conf *chichi.StorageConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Filesystem connection.
+func New(conf *chichi.StorageConfig) (*Filesystem, error) {
+	c := Filesystem{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -52,7 +52,7 @@ func new(conf *chichi.StorageConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type Filesystem struct {
 	conf     *chichi.StorageConfig
 	settings *settings
 }
@@ -63,7 +63,7 @@ type settings struct {
 
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Reader and Write.
-func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
+func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (string, error) {
 	originalName := name
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
@@ -78,7 +78,7 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 	if name == "." || !fs.ValidPath(name) {
 		return "", chichi.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
-	return filepath.Join(c.settings.Root, name), nil
+	return filepath.Join(filesystem.settings.Root, name), nil
 }
 
 // Reader opens the file at the given path name and returns a ReadCloser from
@@ -86,8 +86,8 @@ func (c *connection) CompletePath(ctx context.Context, name string) (string, err
 // context is extended to the Read method calls. After the context is canceled,
 // any subsequent Read invocations will result in an error.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	path, _ := c.CompletePath(ctx, name)
+func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	path, _ := filesystem.CompletePath(ctx, name)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -100,23 +100,23 @@ func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, ti
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if filesystem.settings != nil {
+			s = *filesystem.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := filesystem.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = filesystem.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -141,7 +141,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (filesystem *Filesystem) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -167,8 +167,8 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	path, _ := c.CompletePath(ctx, name)
+func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+	path, _ := filesystem.CompletePath(ctx, name)
 	tmpPath := path + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {

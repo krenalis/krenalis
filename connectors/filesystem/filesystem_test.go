@@ -16,8 +16,8 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	c := &connection{settings: &settings{Root: "/"}}
-	c2 := &connection{settings: &settings{Root: "/root"}}
+	fs := &Filesystem{settings: &settings{Root: "/"}}
+	fs2 := &Filesystem{settings: &settings{Root: "/root"}}
 	tests := []chichi.CompletePathTest{
 		{Name: "a", Expected: "/a"},
 		{Name: "a.e", Expected: "/a.e"},
@@ -30,10 +30,10 @@ func TestPathConvert(t *testing.T) {
 		{Name: "a/.."},
 		{Name: "../a"},
 		{Name: "a/"},
-		{Name: "a", Expected: "/root/a", Connection: c2},
-		{Name: "/a", Expected: "/root/a", Connection: c2},
+		{Name: "a", Expected: "/root/a", Connection: fs2},
+		{Name: "/a", Expected: "/root/a", Connection: fs2},
 	}
-	err := chichi.TestCompletePath(c, tests)
+	err := chichi.TestCompletePath(fs, tests)
 	if err != nil {
 		t.Errorf("Filesystem connector: %s", err)
 	}

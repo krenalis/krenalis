@@ -47,7 +47,7 @@ type settings struct {
 	webhook webhookSettings
 }
 
-type connection struct {
+type Stripe struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
@@ -55,7 +55,7 @@ type connection struct {
 // Make sure it implements the AppUsersConnection interface.
 var _ interface {
 	chichi.AppUsersConnection
-} = (*connection)(nil)
+} = (*Stripe)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
@@ -65,12 +65,12 @@ func init() {
 		TermForUsers:           "customers",
 		Icon:                   icon,
 		WebhooksPer:            chichi.WebhooksPerSource,
-	}, new)
+	}, New)
 }
 
-// new returns a new Stripe connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Stripe connection.
+func New(conf *chichi.AppConfig) (*Stripe, error) {
+	c := Stripe{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -85,12 +85,12 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 }
 
 // Resource returns the resource.
-func (c *connection) Resource(ctx context.Context) (string, error) {
+func (stripe *Stripe) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
+func (stripe *Stripe) CreateUser(ctx context.Context, user map[string]any) error {
 
 	var body bytes.Buffer
 	err := encodeRequest(&body, user, nil)
@@ -98,13 +98,13 @@ func (c *connection) CreateUser(ctx context.Context, user map[string]any) error 
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
 
-	return c.call(ctx, "POST", "/v1/customers", &body, 200, nil)
+	return stripe.call(ctx, "POST", "/v1/customers", &body, 200, nil)
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (stripe *Stripe) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
 	// Extract signature from Stripe-Signature header.
 	var timestamp time.Time
@@ -142,7 +142,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 
 	// Calculate the message signature and check if it matches one of the
 	// signatures in the header.
-	mac := hmac.New(sha256.New, []byte(c.settings.webhook.secret))
+	mac := hmac.New(sha256.New, []byte(stripe.settings.webhook.secret))
 	mac.Write([]byte(fmt.Sprintf("%d", timestamp.Unix())))
 	mac.Write([]byte("."))
 	mac.Write(body)
@@ -206,7 +206,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 }
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
+func (stripe *Stripe) UserSchema(ctx context.Context) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object
 	//
 	// currently the user schema is the standard schema of the user returned
@@ -220,7 +220,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
+func (stripe *Stripe) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	var body bytes.Buffer
 	err := encodeRequest(&body, user, nil)
@@ -228,11 +228,11 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
 
-	return c.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
+	return stripe.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (stripe *Stripe) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var body io.Reader
 	if cursor.ID != "" {
@@ -246,7 +246,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 		Data []map[string]any
 	}
 
-	err := c.call(ctx, "GET", "/v1/customers", body, 200, &response)
+	err := stripe.call(ctx, "GET", "/v1/customers", body, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -268,23 +268,23 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if stripe.settings != nil {
+			s = *stripe.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := stripe.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(ctx, s)
+		return nil, nil, stripe.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -302,7 +302,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (stripe *Stripe) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -314,13 +314,13 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	return json.Marshal(&s)
 }
 
-func (c *connection) setupWebhooksEndpoint() error {
-	if c.conf.SetSettings == nil || c.settings.webhook.secret != "" {
+func (stripe *Stripe) setupWebhooksEndpoint() error {
+	if stripe.conf.SetSettings == nil || stripe.settings.webhook.secret != "" {
 		return nil
 	}
 
 	form := url.Values{
-		"url":              {c.conf.WebhookURL},
+		"url":              {stripe.conf.WebhookURL},
 		"enabled_events[]": {"customer.created", "customer.deleted", "customer.updated"},
 	}
 	body := strings.NewReader(form.Encode())
@@ -329,13 +329,13 @@ func (c *connection) setupWebhooksEndpoint() error {
 		ID     string
 		Secret string
 	}{}
-	err := c.call(context.TODO(), "POST", "/v1/webhook_endpoints", body, 200, &response)
+	err := stripe.call(context.TODO(), "POST", "/v1/webhook_endpoints", body, 200, &response)
 	if err != nil {
 		return err
 	}
 
 	settings := settings{
-		APIKey: c.settings.APIKey,
+		APIKey: stripe.settings.APIKey,
 		webhook: webhookSettings{
 			id:     response.ID,
 			secret: response.Secret,
@@ -348,22 +348,22 @@ func (c *connection) setupWebhooksEndpoint() error {
 	}
 
 	// Save the settings.
-	s, err := c.ValidateSettings(context.TODO(), values)
+	s, err := stripe.ValidateSettings(context.TODO(), values)
 	if err != nil {
 		return err
 	}
 
-	return c.conf.SetSettings(context.TODO(), s)
+	return stripe.conf.SetSettings(context.TODO(), s)
 }
 
-func (c *connection) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
 	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Bearer "+c.settings.APIKey)
-	res, err := c.conf.HTTPClient.Do(req)
+	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
+	res, err := stripe.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

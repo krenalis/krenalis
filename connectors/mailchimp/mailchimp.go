@@ -38,10 +38,10 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.UI
 	chichi.AppUsersConnection
-} = (*connection)(nil)
+} = (*MailChimp)(nil)
 
 // Make sure it implements the AppUsersConnection interface.
-var _ chichi.AppUsersConnection = (*connection)(nil)
+var _ chichi.AppUsersConnection = (*MailChimp)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.App{
@@ -56,12 +56,12 @@ func init() {
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
 		},
-	}, new)
+	}, New)
 }
 
-// new returns a new Mailchimp connection.
-func new(conf *chichi.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new Mailchimp connection.
+func New(conf *chichi.AppConfig) (*MailChimp, error) {
+	c := MailChimp{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -76,22 +76,22 @@ func new(conf *chichi.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type MailChimp struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(ctx context.Context, user map[string]any) error {
+func (mc *MailChimp) CreateUser(ctx context.Context, user map[string]any) error {
 	panic("TODO: not implemented")
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized. The context is the request's context.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (mc *MailChimp) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
-	if c.settings.WebhookSecret == "" {
+	if mc.settings.WebhookSecret == "" {
 		// Webhooks are not set up.
 		if r.Method == "GET" && r.Header.Get("User-Agent") == "MailChimp.com WebHook Validator" {
 			// Setup call from Mailchimp.
@@ -100,7 +100,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 		return nil, errors.New("unexpected webhook")
 	}
 
-	if r.URL.Query().Get("secret") != c.settings.WebhookSecret {
+	if r.URL.Query().Get("secret") != mc.settings.WebhookSecret {
 		// The webhook is not authenticated.
 		return nil, errors.New("unauthorized webhook")
 	}
@@ -143,35 +143,35 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 }
 
 // Resource returns the resource.
-func (c *connection) Resource(ctx context.Context) (string, error) {
-	_, resource, err := c.metadata()
+func (mc *MailChimp) Resource(ctx context.Context) (string, error) {
+	_, resource, err := mc.metadata()
 	return resource, err
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the Form.
 		var s settings
-		if c.settings != nil {
-			s = *c.settings
+		if mc.settings != nil {
+			s = *mc.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := mc.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(ctx, s)
+		return nil, nil, mc.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
 
 	// Get the lists.
-	lists, err := c.lists(ctx)
+	lists, err := mc.lists(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -194,12 +194,12 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]any) error {
+func (mc *MailChimp) UpdateUser(ctx context.Context, id string, user map[string]any) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
 	}
-	var basePath = "/lists/" + c.settings.List + "/members/"
+	var basePath = "/lists/" + mc.settings.List + "/members/"
 	body, err := json.Marshal(user)
 	if err != nil {
 		return err
@@ -216,7 +216,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 	}
 
 	var response batchResponse
-	err = c.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
+	err = mc.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 		response := batchResponse{}
 		for i := 0; i < 5; i++ {
 			time.Sleep(time.Minute)
-			err = c.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
+			err = mc.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
 			if err != nil {
 				return err
 			}
@@ -245,7 +245,7 @@ func (c *connection) UpdateUser(ctx context.Context, id string, user map[string]
 }
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
+func (mc *MailChimp) UserSchema(ctx context.Context) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -259,7 +259,7 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 			Type string
 		} `json:"merge_fields"`
 	}
-	err := c.call(ctx, "GET", "/lists/"+c.settings.List+"/merge-fields", params, nil, 200, &res)
+	err := mc.call(ctx, "GET", "/lists/"+mc.settings.List+"/merge-fields", params, nil, 200, &res)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -473,9 +473,9 @@ func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (mc *MailChimp) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
-	path := "/lists/" + c.settings.List + "/members"
+	path := "/lists/" + mc.settings.List + "/members"
 	values := url.Values{
 		"fields":     {serializeProperties(properties)},
 		"sort_field": {"last_changed"},
@@ -494,7 +494,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 		TotalItems int `json:"total_items"`
 	}
 
-	err := c.call(ctx, "GET", path, values, nil, 200, &response)
+	err := mc.call(ctx, "GET", path, values, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -527,7 +527,7 @@ func (c *connection) Users(ctx context.Context, properties []string, cursor chic
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (mc *MailChimp) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s struct {
 		List string
 	}
@@ -539,7 +539,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		return nil, ui.Errorf("list length must be in range [1, 100]")
 	}
 	// Check if the list exists.
-	lists, err := c.lists(ctx)
+	lists, err := mc.lists(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +553,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	if !found {
 		return nil, ui.Errorf("list does not exist")
 	}
-	dataCenter, _, err := c.metadata()
+	dataCenter, _, err := mc.metadata()
 	if err != nil {
 		return nil, err
 	}
@@ -692,17 +692,17 @@ func serializeProperties(properties []string) string {
 }
 
 // call calls the Mailchimp API.
-func (c *connection) call(ctx context.Context, method, path string, params url.Values, body io.Reader, expectedStatus int, response any) error {
+func (mc *MailChimp) call(ctx context.Context, method, path string, params url.Values, body io.Reader, expectedStatus int, response any) error {
 
 	var dataCenter string
-	if c.settings == nil {
+	if mc.settings == nil {
 		var err error
-		dataCenter, _, err = c.metadata()
+		dataCenter, _, err = mc.metadata()
 		if err != nil {
 			return err
 		}
 	} else {
-		dataCenter = c.settings.DataCenter
+		dataCenter = mc.settings.DataCenter
 	}
 
 	var u = "https://" + dataCenter + ".api.mailchimp.com/3.0/" + path[1:]
@@ -716,7 +716,7 @@ func (c *connection) call(ctx context.Context, method, path string, params url.V
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	res, err := c.conf.HTTPClient.Do(req)
+	res, err := mc.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -745,7 +745,7 @@ type list struct {
 }
 
 // lists returns the lists.
-func (c *connection) lists(ctx context.Context) ([]list, error) {
+func (mc *MailChimp) lists(ctx context.Context) ([]list, error) {
 	params := url.Values{
 		"fields":     {"lists.name,lists.id"},
 		"count":      {"1000"},
@@ -760,7 +760,7 @@ func (c *connection) lists(ctx context.Context) ([]list, error) {
 		var response struct {
 			Lists []list
 		}
-		err := c.call(ctx, "GET", "/lists", params, nil, 200, &response)
+		err := mc.call(ctx, "GET", "/lists", params, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -791,12 +791,12 @@ type webhook struct {
 }
 
 // initWebhooks initializes webhooks.
-func (c *connection) initWebhooks(ctx context.Context) error {
-	if c.conf.SetSettings == nil || c.settings.WebhookSecret != "" {
+func (mc *MailChimp) initWebhooks(ctx context.Context) error {
+	if mc.conf.SetSettings == nil || mc.settings.WebhookSecret != "" {
 		return nil
 	}
-	baseURL := c.conf.WebhookURL
-	webhooks, err := c.webhooks(ctx, c.settings.List)
+	baseURL := mc.conf.WebhookURL
+	webhooks, err := mc.webhooks(ctx, mc.settings.List)
 	if err != nil {
 		return err
 	}
@@ -819,7 +819,7 @@ func (c *connection) initWebhooks(ctx context.Context) error {
 					webhook.Events.Unsubscribe &&
 					webhook.Events.Upemail &&
 					!webhook.Events.Campaign) {
-					err = c.updateWebhook(ctx, c.settings.List, webhook.ID)
+					err = mc.updateWebhook(ctx, mc.settings.List, webhook.ID)
 					if err != nil {
 						return err
 					}
@@ -827,31 +827,31 @@ func (c *connection) initWebhooks(ctx context.Context) error {
 				continue
 			}
 		}
-		_ = c.deleteWebhook(ctx, c.settings.List, webhook.ID)
+		_ = mc.deleteWebhook(ctx, mc.settings.List, webhook.ID)
 	}
 	if secret == "" {
-		secret, err = c.createWebhook(ctx, c.settings.List)
+		secret, err = mc.createWebhook(ctx, mc.settings.List)
 		if err != nil {
 			return fmt.Errorf("cannot create webhook: %s", err)
 		}
 	}
-	c.settings.WebhookSecret = secret
-	b, err := json.Marshal(&c.settings)
+	mc.settings.WebhookSecret = secret
+	b, err := json.Marshal(&mc.settings)
 	if err != nil {
 		return err
 	}
-	return c.conf.SetSettings(ctx, b)
+	return mc.conf.SetSettings(ctx, b)
 }
 
 var errListNotExist = errors.New("list does not exist")
 
 // webhooks returns the webhooks for list.
 // If list does not exist, it returns the errListNotExist error.
-func (c *connection) webhooks(ctx context.Context, list string) ([]webhook, error) {
+func (mc *MailChimp) webhooks(ctx context.Context, list string) ([]webhook, error) {
 	var response struct {
 		Webhooks []webhook
 	}
-	err := c.call(ctx, "GET", "/lists/"+url.PathEscape(list)+"/webhooks", nil, nil, 200, &response)
+	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(list)+"/webhooks", nil, nil, 200, &response)
 	if err != nil {
 		if err, ok := err.(*mailchimpError); ok && err.Status == 404 {
 			return nil, errListNotExist
@@ -862,16 +862,16 @@ func (c *connection) webhooks(ctx context.Context, list string) ([]webhook, erro
 }
 
 // createWebhook creates a webhook for list and returns its secret.
-func (c *connection) createWebhook(ctx context.Context, list string) (string, error) {
+func (mc *MailChimp) createWebhook(ctx context.Context, list string) (string, error) {
 	path := "/lists/" + url.PathEscape(list) + "/webhooks"
 	secret, err := generateRandomString(20)
 	if err != nil {
 		return "", err
 	}
-	webhookURL, _ := json.Marshal(c.conf.WebhookURL + "?secret=" + url.QueryEscape(secret))
+	webhookURL, _ := json.Marshal(mc.conf.WebhookURL + "?secret=" + url.QueryEscape(secret))
 	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
 		`"sources":{"user":true,"admin":true,"api":true},"url":` + string(webhookURL) + `}`
-	err = c.call(ctx, "POST", path, nil, strings.NewReader(body), 200, nil)
+	err = mc.call(ctx, "POST", path, nil, strings.NewReader(body), 200, nil)
 	if err != nil {
 		return "", err
 	}
@@ -879,8 +879,8 @@ func (c *connection) createWebhook(ctx context.Context, list string) (string, er
 }
 
 // deleteWebhook deletes webhook. It does nothing if the webhook does not exist.
-func (c *connection) deleteWebhook(ctx context.Context, list, webhook string) error {
-	err := c.call(ctx, "DELETE", "/lists/"+url.PathEscape(list)+"/webhooks/"+url.PathEscape(webhook), nil, nil, 204, nil)
+func (mc *MailChimp) deleteWebhook(ctx context.Context, list, webhook string) error {
+	err := mc.call(ctx, "DELETE", "/lists/"+url.PathEscape(list)+"/webhooks/"+url.PathEscape(webhook), nil, nil, 204, nil)
 	if e, ok := err.(*mailchimpError); ok && e.Status == 404 {
 		err = nil
 	}
@@ -888,11 +888,11 @@ func (c *connection) deleteWebhook(ctx context.Context, list, webhook string) er
 }
 
 // updateWebhook updates the webhook for list.
-func (c *connection) updateWebhook(ctx context.Context, list, webhook string) error {
+func (mc *MailChimp) updateWebhook(ctx context.Context, list, webhook string) error {
 	path := "/lists/" + url.PathEscape(list) + "/webhooks/" + url.PathEscape(webhook)
 	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
 		`"sources":{"user":true,"admin":true,"api":true}`
-	return c.call(ctx, "PATCH", path, nil, strings.NewReader(body), 200, nil)
+	return mc.call(ctx, "PATCH", path, nil, strings.NewReader(body), 200, nil)
 }
 
 // parseCursor parses a cursor and returns the last modified datetime and offset.
@@ -1008,14 +1008,14 @@ func (m *Member) Properties() map[string]any {
 }
 
 // metadata returns the datacenter and the account id.
-func (c *connection) metadata() (string, string, error) {
+func (mc *MailChimp) metadata() (string, string, error) {
 	// Retrieve the datacenter calling the Metadata endpoint.
 	// https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/#implement-the-oauth-2-workflow-on-your-server
 	req, err := http.NewRequest("GET", "https://login.mailchimp.com/oauth2/metadata", nil)
 	if err != nil {
 		return "", "", err
 	}
-	res, err := c.conf.HTTPClient.Do(req)
+	res, err := mc.conf.HTTPClient.Do(req)
 	if err != nil {
 		return "", "", err
 	}

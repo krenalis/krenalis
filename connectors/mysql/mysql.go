@@ -31,7 +31,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the UI interface.
-var _ chichi.UI = (*connection)(nil)
+var _ chichi.UI = (*MySQL)(nil)
 
 func init() {
 	chichi.RegisterDatabase(chichi.Database{
@@ -40,12 +40,12 @@ func init() {
 		DestinationDescription: "export users and groups to a MySQL database",
 		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
 		Icon:                   icon,
-	}, new)
+	}, New)
 }
 
-// new returns a new MySQL connection.
-func new(conf *chichi.DatabaseConfig) (*connection, error) {
-	c := connection{conf: conf}
+// New returns a new MySQL connection.
+func New(conf *chichi.DatabaseConfig) (*MySQL, error) {
+	c := MySQL{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -55,7 +55,7 @@ func new(conf *chichi.DatabaseConfig) (*connection, error) {
 	return &c, nil
 }
 
-type connection struct {
+type MySQL struct {
 	conf     *chichi.DatabaseConfig
 	settings *settings
 	db       *sql.DB
@@ -63,21 +63,21 @@ type connection struct {
 
 // Close closes the database. When Close is called, no other calls to connection
 // methods are in progress and no more will be made.
-func (c *connection) Close() error {
-	if c.db == nil {
+func (my *MySQL) Close() error {
+	if my.db == nil {
 		return nil
 	}
-	return c.db.Close()
+	return my.db.Close()
 }
 
 // Columns returns the columns of the given table.
-func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (my *MySQL) Columns(ctx context.Context, table string) ([]types.Property, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := c.query(ctx, "SELECT * FROM "+table+" LIMIT 0")
+	rows, columns, err := my.query(ctx, "SELECT * FROM "+table+" LIMIT 0")
 	if err != nil {
 		return nil, err
 	}
@@ -89,25 +89,25 @@ func (c *connection) Columns(ctx context.Context, table string) ([]types.Propert
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (c *connection) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	return c.query(ctx, query)
+func (my *MySQL) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	return my.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
 		// Load the UI.
 		var s settings
-		if c.settings == nil {
+		if my.settings == nil {
 			s.Port = 3306
 		} else {
-			s = *c.settings
+			s = *my.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := my.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -117,7 +117,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 		if event == "test" {
 			return nil, nil, nil
 		}
-		err = c.conf.SetSettings(ctx, s)
+		err = my.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -148,7 +148,7 @@ func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (
 // The columns parameter specifies the columns of the rows, including a column
 // named "id" that serves as the table's key. If a column's value is not
 // specified in a row, the default column value is used.
-func (c *connection) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (my *MySQL) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 
 	var err error
 	table, err = quoteTable(table)
@@ -203,17 +203,17 @@ func (c *connection) Upsert(ctx context.Context, table string, rows []map[string
 	}
 	query := b.String()
 
-	if err = c.openDB(); err != nil {
+	if err = my.openDB(); err != nil {
 		return err
 	}
-	_, err = c.db.ExecContext(ctx, query)
+	_, err = my.db.ExecContext(ctx, query)
 
 	return err
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (my *MySQL) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -247,26 +247,26 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (c *connection) openDB() error {
-	if c.db != nil {
+func (my *MySQL) openDB() error {
+	if my.db != nil {
 		return nil
 	}
-	mysqlConnector, err := mysql.NewConnector(c.settings.config())
+	mysqlConnector, err := mysql.NewConnector(my.settings.config())
 	if err != nil {
 		return err
 	}
 	db := sql.OpenDB(mysqlConnector)
 	db.SetMaxIdleConns(0)
-	c.db = db
+	my.db = db
 	return nil
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (c *connection) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
-	if err := c.openDB(); err != nil {
+func (my *MySQL) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+	if err := my.openDB(); err != nil {
 		return nil, nil, err
 	}
-	rows, err := c.db.QueryContext(ctx, query)
+	rows, err := my.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}
