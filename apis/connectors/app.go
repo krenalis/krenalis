@@ -175,11 +175,12 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 	return app.httpClient.Do(r)
 }
 
-// Users returns an iterator to iterate over the app's users, conforming to the
-// provided schema, starting from a cursor.
+// Users returns an iterator to iterate over the app's users, starting from a cursor.
+// Each returned record will contain, in the Properties field, the properties in schema,
+// with the same types.
 //
-// If the provided schema, that must be valid, does not conform with the app's
-// source users schema, it returns a *SchemaError error.
+// If the provided schema, that must be valid, does not conform with the app's source
+// users schema, it returns a *SchemaError error.
 func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Cursor) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
