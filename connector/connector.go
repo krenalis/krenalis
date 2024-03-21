@@ -29,10 +29,6 @@ type Record struct {
 	Properties map[string]any // Properties.
 	Timestamp  time.Time      // Last modification time, in UTC.
 
-	// BusinessID, if any, otherwise the empty string. Cannot be longer than 40
-	// runes.
-	BusinessID string
-
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
 	Associations []string

@@ -347,19 +347,23 @@ func (r *appRecords) For(yield func(Record) error) error {
 		}
 
 		// Normalize the returned users.
-		for _, user := range users {
+		for _, appUser := range users {
+
+			user := Record{
+				ID:           appUser.ID,
+				Associations: appUser.Associations,
+			}
 
 			// Read the Business ID.
-			var businessID string
 			if r.businessIDProperty.Name != "" {
-				for p, v := range user.Properties {
+				for p, v := range appUser.Properties {
 					if p == r.businessIDProperty.Name {
 						normalizedValue, err := normalizeAppProperty(r.businessIDProperty.Name, r.businessIDProperty.Type, v, r.businessIDProperty.Nullable, r.layouts)
 						if err != nil {
 							slog.Warn("Business ID value cannot be normalized", "err", err)
 							break
 						}
-						businessID, err = businessIDToString(normalizedValue)
+						user.BusinessID, err = businessIDToString(normalizedValue)
 						if err != nil {
 							slog.Warn("invalid Business ID value", "err", err)
 							break
@@ -369,8 +373,10 @@ func (r *appRecords) For(yield func(Record) error) error {
 				}
 			}
 
+			// Read the properties.
+			user.Properties = make(map[string]any, len(properties))
 			for _, p := range properties {
-				value, ok := user.Properties[p.Name]
+				value, ok := appUser.Properties[p.Name]
 				if !ok {
 					user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
 					break
@@ -382,22 +388,24 @@ func (r *appRecords) For(yield func(Record) error) error {
 				}
 				user.Properties[p.Name] = value
 			}
-			// Users method of the connector is permitted to return more properties than those requested,
-			// so if necessary, remove those that are not requested.
 			if len(user.Properties) != len(properties) {
+				// Users method of the connector is permitted to return more properties
+				// than those requested, so if necessary, remove those that are not
+				// requested.
 				for name := range user.Properties {
 					if _, ok := propertyByName[name]; !ok {
 						delete(propertyByName, name)
 					}
 				}
 			}
-			timestamp := user.Timestamp.UTC()
-			if err = validateTimestamp(timestamp); err != nil {
+
+			// Read the timestamp.
+			user.Timestamp = appUser.Timestamp.UTC()
+			if err = validateTimestamp(user.Timestamp); err != nil {
 				return err
 			}
-			user.Timestamp = timestamp
-			user.BusinessID = businessID
-			if err := yield(Record(user)); err != nil {
+
+			if err := yield(user); err != nil {
 				return err
 			}
 		}
