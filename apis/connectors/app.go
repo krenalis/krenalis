@@ -397,7 +397,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 			}
 			user.Timestamp = timestamp
 			user.BusinessID = businessID
-			if err := yield(user); err != nil {
+			if err := yield(Record(user)); err != nil {
 				return err
 			}
 		}

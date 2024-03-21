@@ -71,7 +71,23 @@ type EventType = _connector.EventType
 // Record represents a record. If an error occurs during the reading or
 // validation of the record, the Err field contains the specific error,
 // which type implements the ValidationError interface of apis.
-type Record = _connector.Record
+type Record struct {
+	ID         string         // Identifier.
+	Properties map[string]any // Properties.
+	Timestamp  time.Time      // Last modification time, in UTC.
+
+	// BusinessID, if any, otherwise the empty string. Cannot be longer than 40
+	// runes.
+	BusinessID string
+
+	// Associations contains the identifiers of the user's groups or the group's users.
+	// It is not significant if it is nil.
+	Associations []string
+
+	// Err reports an error that occurred while reading the record.
+	// If Err is not nil, only the ID field is significant.
+	Err error
+}
 
 // Records is the iterator interface used to iterate over the records read from
 // apps, databases, and files.
