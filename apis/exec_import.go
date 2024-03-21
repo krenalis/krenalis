@@ -60,12 +60,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		defer database.Close()
 		records, err = database.Records(ctx, query, action.InSchema, connection.BusinessID)
 	case state.StorageType:
-		timestampColumn := connectors.TimestampColumn{
-			Name:   action.TimestampColumn,
-			Format: action.TimestampFormat,
-		}
-		records, err = this.file().Records(ctx, action.Path, action.Sheet, action.InSchema,
-			action.IdentityColumn, timestampColumn, connection.BusinessID)
+		records, err = this.file().Records(ctx)
 	}
 	if err != nil {
 		if err, ok := err.(*connectors.SchemaError); ok {

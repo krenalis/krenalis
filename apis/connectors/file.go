@@ -66,59 +66,54 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 	return file.inner.ContentType(ctx), nil
 }
 
-// Records returns an iterator to iterate over the records, conforming to the
-// provided schema, of the file at the provided path name.
+// Records returns an iterator to iterate over the file's records. Each
+// returned record will contain, in the Properties field, the properties of the
+// input schema of the action passed to the constructor of File, with the same
+// types.
 //
-// If the file connection supports multiple sheets, sheet is a valid sheet
-// name; otherwise, it must be an empty string. A valid sheet name is UTF-8
-// encoded, has a length in the range [1, 31], does not start or end with "'",
-// and does not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet
-// names are case-insensitive.
+// If the schema of the action of the File (that must be valid) does not
+// conform with the schema read from the file, the iterator will return a
+// *SchemaError error.
 //
-// identityColumn is the name of the column to use as an identity. schema must
-// have a property with this name, and if the kind of the file's column is
-// different from the type of this property, the iterator returns an error.
+// If the identity column specified in the action of the file is found within
+// the file schema but its type is different, the iterator will return an
+// error. The same applies for the timestamp, if specified.
 //
-// timestampColumn contains the name and format of the column to use as a
-// timestamp, if any. If the name is not empty, schema must have a property
-// with this name, and if the kind of the file's column is different from the
-// type of this property, the iterator returns an error.
-//
-// businessIDColumn, when not empty, is the name of the column to use as
-// Business ID for an identity.
-//
-// If the provided schema, that must be valid, does not conform with the file's
-// schema, the iterator will return a *SchemaError error.
-//
-// If the specified sheet is not found in the file, the For method of the
+// If the action's sheet is not found in the file, the For method of the
 // iterator returns immediately, and a subsequent call to the Err method will
 // return the ErrSheetNotExist error. The same occurs if the file has no
 // columns; in this case, the error is ErrNoColumns.
-func (file *File) Records(ctx context.Context, name, sheet string, schema types.Type, identityColumn string, timestampColumn TimestampColumn, businessIDColumn string) (Records, error) {
+func (file *File) Records(ctx context.Context) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
-	if !schema.Valid() {
-		return nil, fmt.Errorf("schema is not valid")
+	if !file.action.InSchema.Valid() {
+		return nil, fmt.Errorf("action input schema is not valid")
 	}
 	storage, err := file.storage()
 	if err != nil {
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.action.Compression)
-	rc, storageTimestamp, err := s.Reader(ctx, name)
+	rc, storageTimestamp, err := s.Reader(ctx, file.action.Path)
 	if err != nil {
 		return nil, err
 	}
 	if err = validateTimestamp(storageTimestamp); err != nil {
 		return nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
-	rw := newRecordWriter(file.action.Connector().ID, schema, identityColumn, timestampColumn, businessIDColumn, storageTimestamp, math.MaxInt)
+	timestampColumn := TimestampColumn{
+		Name:   file.action.TimestampColumn,
+		Format: file.action.TimestampFormat,
+	}
+	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
+		file.action.IdentityColumn, timestampColumn, file.action.Connection().BusinessID,
+		storageTimestamp, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
 		rc:    rc,
-		sheet: sheet,
+		sheet: file.action.Sheet,
 		inner: file.inner,
 	}
 	return records, nil
