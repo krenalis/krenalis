@@ -157,9 +157,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	case state.DatabaseType:
 		writer, err = this.database().Writer(action.TableName, action.OutSchema, ack)
 	case state.StorageType:
-		path := this.action.Path
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
-		writer, err = this.file().Writer(ctx, path, action.Sheet, schema, ack, replacer)
+		writer, err = this.file().Writer(ctx, schema, ack, replacer)
 		if err, ok := err.(connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}

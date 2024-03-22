@@ -119,19 +119,14 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 	return records, nil
 }
 
-// Writer returns a Writer for writing records into the file located at the
-// specified path. schema contains the properties of the records to be written.
-//
-// If the file connection supports multiple sheets, sheet is a valid sheet name;
-// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
-// has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
-// case-insensitive.
+// Writer returns a Writer for writing records into the file located at the path
+// of the file's action. schema contains the properties of the records to be
+// written.
 //
 // If pathReplacer is not nil, then the placeholders in path are replaced using
 // it; in this case, a PlaceholderError error may be returned in case of an
 // error with placeholders.
-func (file *File) Writer(ctx context.Context, path, sheet string, schema types.Type, ack AckFunc, pathReplacer PlaceholderReplacer) (Writer, error) {
+func (file *File) Writer(ctx context.Context, schema types.Type, ack AckFunc, pathReplacer PlaceholderReplacer) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
@@ -144,6 +139,7 @@ func (file *File) Writer(ctx context.Context, path, sheet string, schema types.T
 	}
 	s := newCompressedStorage(storage, file.action.Compression)
 	extension := file.action.Connector().FileExtension
+	path := file.action.Path
 	if pathReplacer != nil {
 		var err error
 		path, err = ReplacePlaceholders(path, pathReplacer)
@@ -162,7 +158,7 @@ func (file *File) Writer(ctx context.Context, path, sheet string, schema types.T
 	// Call the connector's Write method in its own goroutine.
 	go func() {
 		r := newRecordReader(columns, records, ack)
-		err = file.inner.Write(writeCtx, sw, sheet, r)
+		err = file.inner.Write(writeCtx, sw, file.action.Sheet, r)
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
 		}
