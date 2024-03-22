@@ -169,12 +169,13 @@ func (c *Chichi) AddSourceFilesystem(storageDir, businessID string) int {
 	})
 }
 
-func (c *Chichi) AddSourcePostgreSQL() int {
+func (c *Chichi) AddSourcePostgreSQL(businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:      "PostgreSQL (destination)",
-		Role:      Source,
-		Enabled:   true,
-		Connector: PostgreSQLConnector,
+		Name:       "PostgreSQL (destination)",
+		Role:       Source,
+		Enabled:    true,
+		Connector:  PostgreSQLConnector,
+		BusinessID: businessID,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,

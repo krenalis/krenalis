@@ -387,8 +387,15 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 			Properties: make(map[string]any, len(r.propertyOf)),
 		}
 		for i, c := range r.columns {
+			p := r.propertyOf[c.Name]
+			if c.Name == r.businessIDColumn.Name {
+				// This is necessary as the Business ID property is not
+				// necessarily included in "propertyOf"; even if it is, the type
+				// of its property must be taken from the query.
+				p = r.businessIDColumn
+			}
 			r.dst[i] = recordsScanValue{
-				property:         r.propertyOf[c.Name],
+				property:         p,
 				record:           &record,
 				identityColumn:   r.identityColumn,
 				timestampColumn:  r.timestampColumn,
@@ -426,8 +433,24 @@ type recordsScanValue struct {
 
 func (sv recordsScanValue) Scan(src any) error {
 	p := sv.property
+
 	if !p.Type.Valid() {
 		return nil
+	}
+
+	if p.Name == sv.businessIDColumn.Name {
+		col := sv.businessIDColumn
+		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
+		if err != nil {
+			slog.Warn("Business ID value cannot be normalized", "err", err)
+		} else {
+			businessID, err := businessIDToString(normalizedValue)
+			if err != nil {
+				slog.Warn("invalid Business ID value", "err", err)
+			} else {
+				sv.record.BusinessID = businessID
+			}
+		}
 	}
 
 	switch p.Name {
@@ -451,19 +474,6 @@ func (sv recordsScanValue) Scan(src any) error {
 		}
 		sv.record.Timestamp = ts
 		return nil
-	case sv.businessIDColumn.Name:
-		col := sv.businessIDColumn
-		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
-		if err != nil {
-			slog.Warn("Business ID value cannot be normalized", "err", err)
-		} else {
-			businessID, err := businessIDToString(normalizedValue)
-			if err != nil {
-				slog.Warn("invalid Business ID value", "err", err)
-			} else {
-				sv.record.BusinessID = businessID
-			}
-		}
 	}
 	value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
 	if err != nil {
