@@ -127,7 +127,11 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 // has a length in the range [1, 31], does not start or end with "'", and does
 // not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // case-insensitive.
-func (file *File) Writer(ctx context.Context, path, sheet string, schema types.Type, ack AckFunc) (Writer, error) {
+//
+// If pathReplacer is not nil, then the placeholders in path are replaced using
+// it; in this case, a PlaceholderError error may be returned in case of an
+// error with placeholders.
+func (file *File) Writer(ctx context.Context, path, sheet string, schema types.Type, ack AckFunc, pathReplacer PlaceholderReplacer) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
@@ -140,6 +144,13 @@ func (file *File) Writer(ctx context.Context, path, sheet string, schema types.T
 	}
 	s := newCompressedStorage(storage, file.action.Compression)
 	extension := file.action.Connector().FileExtension
+	if pathReplacer != nil {
+		var err error
+		path, err = ReplacePlaceholders(path, pathReplacer)
+		if err != nil {
+			return nil, err
+		}
+	}
 	sw, err := s.Writer(ctx, path, file.inner.ContentType(ctx), extension)
 	if err != nil {
 		return nil, err

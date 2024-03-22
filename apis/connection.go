@@ -669,25 +669,25 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if n := utf8.RuneCountInString(path); n > 1024 {
 		return "", errors.BadRequest("path is longer than 1024 runes")
 	}
+	var replacer connectors.PlaceholderReplacer
 	switch c.Role {
 	case state.Source:
-		_, err := replacePlaceholders(path, func(_ string) (string, bool) {
+		_, err := connectors.ReplacePlaceholders(path, func(_ string) (string, bool) {
 			return "", false
 		})
 		if err != nil {
 			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
 		}
 	case state.Destination:
-		var err error
-		path, err = replacePlaceholders(path, newPathPlaceholderReplacer(time.Now().UTC()))
-		if err != nil {
-			return "", errors.Unprocessable(InvalidPlaceholder, "%s", err)
-		}
+		replacer = newPathPlaceholderReplacer(time.Now().UTC())
 	}
-	path, err := this.storage().CompletePath(ctx, path)
+	path, err := this.storage().CompletePath(ctx, path, replacer)
 	if err != nil {
-		if err, ok := err.(connectors.InvalidPathError); ok {
+		switch err := err.(type) {
+		case connectors.InvalidPathError:
 			return "", errors.Unprocessable(InvalidPath, "%w", err)
+		case connectors.PlaceholderError:
+			return "", errors.Unprocessable(InvalidPlaceholder, "%w", err)
 		}
 		return "", err
 	}
@@ -762,19 +762,19 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	}
 
 	// Execute the query.
-	query, err := replacePlaceholders(query, func(name string) (string, bool) {
+	replacer := func(name string) (string, bool) {
 		if strings.ToLower(name) == "limit" {
 			return strconv.Itoa(limit), true
 		}
 		return "", false
-	})
-	if err != nil {
-		return nil, types.Type{}, errors.Unprocessable(InvalidPlaceholder, "%s", err)
 	}
 	database := this.database()
 	defer database.Close()
-	rows, err := database.Query(ctx, query)
+	rows, err := database.Query(ctx, query, replacer)
 	if err != nil {
+		if err, ok := err.(connectors.PlaceholderError); ok {
+			return nil, types.Type{}, errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		}
 		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
 	defer rows.Close()
@@ -2048,14 +2048,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 		switch this.connection.Role {
 		case state.Source:
-			_, err := replacePlaceholders(action.Path, func(_ string) (string, bool) {
+			_, err := connectors.ReplacePlaceholders(action.Path, func(_ string) (string, bool) {
 				return "", false
 			})
 			if err != nil {
 				return errors.BadRequest("placeholders syntax is not supported by source actions")
 			}
 		case state.Destination:
-			_, err := replacePlaceholders(action.Path, func(name string) (string, bool) {
+			_, err := connectors.ReplacePlaceholders(action.Path, func(name string) (string, bool) {
 				name = strings.ToLower(name)
 				return "", name == "today" || name == "now" || name == "unix"
 			})
@@ -2502,44 +2502,6 @@ func validateTimestampFormat(format string) error {
 		}
 		return nil
 	}
-}
-
-// replacePlaceholders replaces the placeholders in s with the values read
-// calling the f function with the name of each placeholder as argument.
-// If f is nil, it returns an error when s contains a placeholder.
-func replacePlaceholders(s string, f func(name string) (string, bool)) (string, error) {
-	var b strings.Builder
-	var name string
-	var value string
-	var ok bool
-	for {
-		i := strings.Index(s, "${")
-		if i < 0 {
-			break
-		}
-		b.WriteString(s[:i])
-		s = s[i+2:]
-		i = strings.IndexByte(s, '}')
-		if i < 0 {
-			return "", fmt.Errorf("a placeholder is not closed")
-		}
-		name, s = strings.TrimSpace(s[:i]), s[i+1:]
-		if strings.Contains(name, "${") {
-			return "", fmt.Errorf("a placeholder is not closed")
-		}
-		if f != nil {
-			value, ok = f(name)
-		}
-		if !ok {
-			return "", fmt.Errorf("placeholder %q does not exist", name)
-		}
-		b.WriteString(value)
-	}
-	if b.Len() == 0 {
-		return s, nil
-	}
-	b.WriteString(s)
-	return b.String(), nil
 }
 
 // marshalSchema marshals the given schema.

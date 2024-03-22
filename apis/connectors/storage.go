@@ -47,9 +47,20 @@ func (connectors *Connectors) Storage(storage *state.Connection) *Storage {
 // CompletePath returns the complete representation of the provided path name or
 // an InvalidPathError value if name is not valid for use in calls to Read and
 // Write. name's length in runes must be in range [1, 1024].
-func (storage *Storage) CompletePath(ctx context.Context, name string) (string, error) {
+//
+// If nameReplacer is not nil, then the placeholders in name are replaced using
+// it; in this case, a PlaceholderError error may be returned in case of an
+// error with placeholders.
+func (storage *Storage) CompletePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
+	}
+	if nameReplacer != nil {
+		var err error
+		name, err = ReplacePlaceholders(name, nameReplacer)
+		if err != nil {
+			return "", err
+		}
 	}
 	return storage.inner.CompletePath(ctx, name)
 }

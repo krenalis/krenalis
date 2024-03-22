@@ -10,6 +10,8 @@ package apis
 import (
 	"testing"
 	"time"
+
+	"chichi/apis/connectors"
 )
 
 func Test_newPathPlaceholderReplacer(t *testing.T) {
@@ -37,7 +39,10 @@ func Test_newPathPlaceholderReplacer(t *testing.T) {
 	replacer := newPathPlaceholderReplacer(now)
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got, gotErr := replacePlaceholders(test.path, replacer)
+			// This test here tests the "newPathPlaceholderReplacer" function,
+			// and assumes that connectors.ReplacePlaceholders is correct and
+			// already tested elsewhere.
+			got, gotErr := connectors.ReplacePlaceholders(test.path, replacer)
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()

@@ -86,9 +86,19 @@ func (database *Database) Columns(ctx context.Context, table string) ([]types.Pr
 }
 
 // Query executes a query and returns the resulting rows.
-func (database *Database) Query(ctx context.Context, query string) (*Rows, error) {
+// If queryReplacer is not nil, then the placeholders in the query are replaced
+// using it; in this case, a PlaceholderError error may be returned in case of
+// an error with placeholders.
+func (database *Database) Query(ctx context.Context, query string, queryReplacer PlaceholderReplacer) (*Rows, error) {
 	if database.err != nil {
 		return nil, database.err
+	}
+	if queryReplacer != nil {
+		var err error
+		query, err = ReplacePlaceholders(query, queryReplacer)
+		if err != nil {
+			return nil, err
+		}
 	}
 	rows, columns, err := database.inner.Query(ctx, query)
 	if err != nil {
@@ -103,14 +113,26 @@ func (database *Database) Query(ctx context.Context, query string) (*Rows, error
 // For the Business ID column name, refer to the issue
 // https://github.com/open2b/chichi/issues/608.
 //
+// If queryReplacer is not nil, then the placeholders in the query are replaced
+// using it; in this case, a PlaceholderError error may be returned in case of
+// an error with placeholders.
+//
 // If the provided schema, which must be valid, does not conform to the query's
 // results schema, it returns a *SchemaError error.
-func (database *Database) Records(ctx context.Context, query string, schema types.Type, businessIDColumnName string) (Records, error) {
+func (database *Database) Records(ctx context.Context, query string, schema types.Type, businessIDColumnName string, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
 	if !schema.Valid() {
 		return nil, fmt.Errorf("schema is not valid")
+	}
+	// Replace the placeholders in query, if necessary.
+	if queryReplacer != nil {
+		var err error
+		query, err = ReplacePlaceholders(query, queryReplacer)
+		if err != nil {
+			panic(err)
+		}
 	}
 	// Execute the query.
 	rows, columns, err := database.inner.Query(ctx, query)

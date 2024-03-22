@@ -46,19 +46,15 @@ func (this *Action) importUsers(ctx context.Context) error {
 		}
 		records, err = this.app().Users(ctx, action.InSchema, cursor)
 	case state.DatabaseType:
-		var query string
-		query, err = replacePlaceholders(action.Query, func(name string) (string, bool) {
+		replacer := func(name string) (string, bool) {
 			if name == "limit" {
 				return strconv.FormatUint(math.MaxInt64, 10), true
 			}
 			return "", false
-		})
-		if err != nil {
-			return actionExecutionError{err}
 		}
 		database := this.database()
 		defer database.Close()
-		records, err = database.Records(ctx, query, action.InSchema, connection.BusinessID)
+		records, err = database.Records(ctx, action.Query, action.InSchema, connection.BusinessID, replacer)
 	case state.StorageType:
 		records, err = this.file().Records(ctx)
 	}

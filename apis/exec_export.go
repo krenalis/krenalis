@@ -157,14 +157,17 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	case state.DatabaseType:
 		writer, err = this.database().Writer(action.TableName, action.OutSchema, ack)
 	case state.StorageType:
-		var path string
-		path, err = replacePlaceholders(this.action.Path, newPathPlaceholderReplacer(time.Now().UTC()))
-		if err != nil {
+		path := this.action.Path
+		replacer := newPathPlaceholderReplacer(time.Now().UTC())
+		writer, err = this.file().Writer(ctx, path, action.Sheet, schema, ack, replacer)
+		if err, ok := err.(connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
-		writer, err = this.file().Writer(ctx, path, action.Sheet, schema, ack)
 	}
 	if err != nil {
+		if err, ok := err.(connectors.PlaceholderError); ok {
+			return fmt.Errorf("invalid file path: %s", err)
+		}
 		return actionExecutionError{err}
 	}
 	defer writer.Close(ctx)

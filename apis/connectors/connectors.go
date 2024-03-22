@@ -368,6 +368,57 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 	return nil, ErrNoWebhooks
 }
 
+// PlaceholderError is an error representing a placeholder error.
+type PlaceholderError string
+
+// Error implements the interface "error" for PlaceholderError.
+func (e PlaceholderError) Error() string {
+	return string(e)
+}
+
+// PlaceholderReplacer is the type of functions accepted by ReplacePlaceholders,
+// where name is the name of the placeholder, and the returned values are the
+// value to replace (if any, otherwise the empty string) and a boolean
+// indicating if a placeholder with that name is allowed or not.
+type PlaceholderReplacer func(name string) (string, bool)
+
+// ReplacePlaceholders replaces the placeholders in s with the values read
+// calling the f function (that must be non-nil) with the name of each
+// placeholder as argument.
+// In case of error, returns "" and a PlaceholderError error.
+func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
+	var b strings.Builder
+	var name string
+	var value string
+	var ok bool
+	for {
+		i := strings.Index(s, "${")
+		if i < 0 {
+			break
+		}
+		b.WriteString(s[:i])
+		s = s[i+2:]
+		i = strings.IndexByte(s, '}')
+		if i < 0 {
+			return "", PlaceholderError("a placeholder is not closed")
+		}
+		name, s = strings.TrimSpace(s[:i]), s[i+1:]
+		if strings.Contains(name, "${") {
+			return "", PlaceholderError("a placeholder is not closed")
+		}
+		value, ok = f(name)
+		if !ok {
+			return "", PlaceholderError(fmt.Sprintf("placeholder %q does not exist", name))
+		}
+		b.WriteString(value)
+	}
+	if b.Len() == 0 {
+		return s, nil
+	}
+	b.WriteString(s)
+	return b.String(), nil
+}
+
 // yieldError is an error returned by the yield function of Records when
 // iterating over records.
 type yieldError struct {
