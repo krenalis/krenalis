@@ -731,8 +731,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 // connection.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
-// must contain the '$limit' variable (between '{{' and '}}'). limit must be
-// in range [0, 100].
+// must contain the "limit" placeholder. limit must be in range [0, 100].
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If a database error occurred, it returns an errors.UnprocessableError with
