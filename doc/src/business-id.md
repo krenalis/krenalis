@@ -4,7 +4,7 @@ The Business ID helps you visually recognize the identities imported from the co
 
 It does not impact in any way the behavior of the software or the [Identity Resolution](./identity-resolution.md); it is purely a visual piece of information used to identify more clearly the identities associated with a user.
 
-For source connections, a **Business ID name** and a **Business ID label** can be specified.
+For source connections, a **Business ID name** can be specified.
 
 ## Business ID name
 
@@ -28,23 +28,8 @@ The Business ID can be imported only from properties (or column) with one of tho
 * `JSON`, but only if the JSON value is Number or String
 * `Text`
 
-## Business ID label
-
-The **Business ID label** is a label shown in the UI that helps you visually recognize an identity by giving a context to the Business ID value.
-
-For example, if the Business ID name is `email`, you may whish to use something like `Email` as Business ID label, so that the identities will show something like:
-
-```
-╒═══════════════════════════════════════╕
-│  ...  Email: john_1@example.com  ...  │
-╘═══════════════════════════════════════╛
-╒═══════════════════════════════════════╕
-│  ...  Email: john_2@example.com  ...  │
-╘═══════════════════════════════════════╛
-```
-
 ## Changing the Business ID
 
-Any changes to the Business ID name and/or label **becomes effective** on to the identities of a connection **when the corresponding import action is executed**.
+Any changes to the Business ID name **becomes effective** on to the identities of a connection **when the corresponding import action is executed**.
 
 Until that moment, the identities will continue to show the settings and the value of the Business ID present at the time when the import of such identities occurred.
