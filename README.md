@@ -85,8 +85,17 @@ the `chichi` executable, as well as a `cert.pem` and `key.pem` certificate files
 
 Within the root of this repository execute:
 
+On **Linux** / **Unix**-like systems:
+
+
 ```bash
 go build -tags osusergo,netgo -trimpath -o chichi ./server/cmd
+```
+
+On **Windows**:
+
+```bash
+go build -tags osusergo,netgo -trimpath -o chichi.exe ./server/cmd
 ```
 
 ### 4. Populate the database
