@@ -652,8 +652,8 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 //
 // It returns an errors.UnprocessableError error with code:
 //   - InvalidPath, if path is not valid for the storage connector.
-//   - InvalidPlaceholder, if path for destination connections contains an
-//     invalid placeholder.
+//   - InvalidPlaceholder, if path for source connections contains a placeholder
+//     or path for destination connections contains an invalid placeholder.
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
