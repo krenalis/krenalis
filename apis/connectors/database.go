@@ -131,7 +131,7 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 		var err error
 		query, err = ReplacePlaceholders(query, queryReplacer)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 	// Execute the query.
