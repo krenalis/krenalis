@@ -54,7 +54,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		}
 		database := this.database()
 		defer database.Close()
-		records, err = database.Records(ctx, action.Query, action.InSchema, connection.BusinessID, replacer)
+		records, err = database.Records(ctx, action, replacer)
 	case state.StorageType:
 		records, err = this.file().Records(ctx)
 	}

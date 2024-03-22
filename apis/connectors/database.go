@@ -22,15 +22,11 @@ import (
 
 // Database represents the database of a database connection.
 type Database struct {
-	closed          bool
-	connector       int
-	inner           chichi.DatabaseConnection
-	identityColumn  string
-	timestampColumn struct {
-		name   string
-		format string
-	}
-	err error
+	closed     bool
+	connector  int
+	inner      chichi.DatabaseConnection
+	businessID string
+	err        error
 }
 
 // Database returns a database for the provided connection. Errors are deferred
@@ -45,15 +41,8 @@ type Database struct {
 func (connectors *Connectors) Database(connection *state.Connection, identityColumn,
 	timestampColumnName, timestampColumnFormat string) *Database {
 	database := &Database{
-		connector:      connection.Connector().ID,
-		identityColumn: identityColumn,
-		timestampColumn: struct {
-			name   string
-			format string
-		}{
-			name:   timestampColumnName,
-			format: timestampColumnFormat,
-		},
+		connector:  connection.Connector().ID,
+		businessID: connection.BusinessID,
 	}
 	database.inner, database.err = chichi.RegisteredDatabase(connection.Connector().Name).New(&chichi.DatabaseConfig{
 		Role:        chichi.Role(connection.Role),
@@ -107,25 +96,24 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	return newRows(rows, columns), nil
 }
 
-// Records executes a query and returns an iterator to iterate over the
-// database's records, conforming to the provided schema.
-//
-// For the Business ID column name, refer to the issue
-// https://github.com/open2b/chichi/issues/608.
+// Records executes the action's query and returns an iterator to iterate over
+// the database's records. Each returned record will contain, in the Properties
+// field, the properties of the action's input schema, with the same types.
 //
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a PlaceholderError error may be returned in case of
 // an error with placeholders.
 //
-// If the provided schema, which must be valid, does not conform to the query's
-// results schema, it returns a *SchemaError error.
-func (database *Database) Records(ctx context.Context, query string, schema types.Type, businessIDColumnName string, queryReplacer PlaceholderReplacer) (Records, error) {
+// If the action's input schema, which must be valid, does not conform to the
+// query's results schema, it returns a *SchemaError error.
+func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
-	if !schema.Valid() {
-		return nil, fmt.Errorf("schema is not valid")
+	if !action.InSchema.Valid() {
+		return nil, fmt.Errorf("action's input schema is not valid")
 	}
+	query := action.Query
 	// Replace the placeholders in query, if necessary.
 	if queryReplacer != nil {
 		var err error
@@ -148,49 +136,51 @@ func (database *Database) Records(ctx context.Context, query string, schema type
 	// Validate the identity and timestamp columns.
 	var identityColumn, timestampColumn types.Property
 	for _, c := range columns {
-		if c.Name == database.identityColumn { // TODO(Gianluca): see https://github.com/open2b/chichi/issues/608.
-			property, _ := schema.Property(database.identityColumn)
+		if c.Name == action.IdentityColumn {
+			property, _ := action.InSchema.Property(action.IdentityColumn)
 			if c.Type.Kind() != property.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`identity column %q has type %s instead of %s`, database.identityColumn, c.Type.Kind(), property.Type.Kind())}
+				return nil, &SchemaError{fmt.Sprintf(`identity column %q has type %s instead of %s`,
+					action.IdentityColumn, c.Type.Kind(), property.Type.Kind())}
 			}
 			identityColumn = property
 		}
-		if database.timestampColumn.name != "" && c.Name == database.timestampColumn.name {
-			property, _ := schema.Property(database.timestampColumn.name)
+		if action.TimestampColumn != "" && c.Name == action.TimestampColumn {
+			property, _ := action.InSchema.Property(action.TimestampColumn)
 			if c.Type.Kind() != property.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`timestamp column %q has type %s instead of %s`, database.timestampColumn.name, c.Type.Kind(), property.Type.Kind())}
+				return nil, &SchemaError{fmt.Sprintf(`timestamp column %q has type %s instead of %s`,
+					action.TimestampColumn, c.Type.Kind(), property.Type.Kind())}
 			}
 			timestampColumn = property
 		}
 	}
 	if identityColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", database.identityColumn)}
+		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.TimestampColumn)}
 	}
-	if database.timestampColumn.name != "" && timestampColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no timestamp column %q", database.timestampColumn.name)}
+	if action.TimestampColumn != "" && timestampColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no timestamp column %q", action.TimestampColumn)}
 	}
 	// Check that schema is compatible with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
 	if err != nil {
 		return nil, fmt.Errorf("connector %d has returned invalid columns: %s", database.connector, err)
 	}
-	err = checkConformity("", schema, querySchema)
+	err = checkConformity("", action.InSchema, querySchema)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the Business ID, if necessary.
 	var businessIDColumn types.Property
-	if businessIDColumnName != "" {
-		businessIDColumn, err = businessIDFromSchema(querySchema, businessIDColumnName)
+	if database.businessID != "" {
+		businessIDColumn, err = businessIDFromSchema(querySchema, database.businessID)
 		if err != nil {
 			slog.Warn("cannot determine the Business ID column", "err", err)
 		}
 	}
 
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, schema.Properties(), identityColumn,
-		timestampColumn, database.timestampColumn.format, businessIDColumn)
+	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityColumn,
+		timestampColumn, action.TimestampFormat, businessIDColumn)
 	return records, nil
 }
 
