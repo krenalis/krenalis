@@ -734,8 +734,10 @@ func (this *Connection) Delete(ctx context.Context) error {
 // must contain the "limit" placeholder. limit must be in range [0, 100].
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-// If a database error occurred, it returns an errors.UnprocessableError with
-// code DatabaseFailed.
+// It returns an errors.UnprocessableError error with code:
+//
+//   - DatabaseFailed, if a database error occurred.
+//   - InvalidPlaceholder, if the query contains an invalid placeholder.
 func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
@@ -767,7 +769,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		return "", false
 	})
 	if err != nil {
-		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
+		return nil, types.Type{}, errors.Unprocessable(InvalidPlaceholder, "%s", err)
 	}
 	database := this.database()
 	defer database.Close()
