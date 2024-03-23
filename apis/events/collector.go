@@ -443,7 +443,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
-	if !c.state.HasEnabledActions(source) {
+	if !c.state.CanCollectEvents(source) {
 		c.setEventsAsReceived(events.Batch)
 		writeOK(w, origin)
 		return nil
@@ -468,17 +468,24 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	// Send a successful response to the client.
 	writeOK(w, origin)
 
-	// Store the events into the data warehouse.
-	c.storeEvents(source.Workspace().ID, events.Batch)
-
-	// Import the users identities.
-	err = c.importUsersIdentities(ctx, source, events.Batch)
-	if err != nil {
-		return err
+	if c.state.HasImportEventsAction(source) {
+		// Store the events into the data warehouse.
+		c.storeEvents(source.Workspace().ID, events.Batch)
 	}
-	// Send the events to the next stage.
-	for _, event := range events.Batch {
-		c.events <- event
+
+	if c.state.HasImportUsersAction(source) {
+		// Import the users identities.
+		err = c.importUsersIdentities(ctx, source, events.Batch)
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.state.HasEventDestinations(source) {
+		// Send the events to the next stage.
+		for _, event := range events.Batch {
+			c.events <- event
+		}
 	}
 
 	return nil

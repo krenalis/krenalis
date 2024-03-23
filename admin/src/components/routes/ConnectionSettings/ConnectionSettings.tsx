@@ -9,12 +9,23 @@ import { ConnectionContext } from '../../../context/providers/ConnectionProvider
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
+import { isEventConnection } from '../../../lib/helpers/transformedConnection';
+import { EventConnections } from './EventConnections';
 
 const ConnectionSettings = () => {
 	const [isDeleted, setIsDeleted] = useState<boolean>(false);
+	const [isEventConnectionsPanelShown, setIsEventConnectionsPanelShown] = useState<boolean>(false); // used to recompute the event connections grid.
 
 	const { redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
+
+	const onTabShow = (e) => {
+		if (e.detail.name === 'event-connections') {
+			setIsEventConnectionsPanelShown(true);
+			return;
+		}
+		setIsEventConnectionsPanelShown(false);
+	};
 
 	useEffect(() => {
 		if (isDeleted) {
@@ -24,7 +35,7 @@ const ConnectionSettings = () => {
 
 	return (
 		<div className='connectionSettings'>
-			<SlTabGroup placement='start'>
+			<SlTabGroup onSlTabShow={onTabShow} placement='start'>
 				<SlTab slot='nav' panel='general'>
 					General
 				</SlTab>
@@ -32,6 +43,18 @@ const ConnectionSettings = () => {
 					<div className='panelTitle'>General</div>
 					<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
 				</SlTabPanel>
+
+				{isEventConnection(c.role, c.type, c.connector.targets) && (
+					<>
+						<SlTab slot='nav' panel='event-connections'>
+							{c.isSource ? 'Event Destinations' : 'Event Sources'}
+						</SlTab>
+						<SlTabPanel name='event-connections'>
+							<div className='panelTitle'>{c.isSource ? 'Event Destinations' : 'Event Sources'}</div>
+							<EventConnections connection={c} isShown={isEventConnectionsPanelShown} />
+						</SlTabPanel>
+					</>
+				)}
 
 				{(c.type === 'Website' || c.type === 'Mobile') && c.role === 'Source' && (
 					<>

@@ -7,7 +7,7 @@
 | Source **App**                            | Import users[^1] | Import groups[^1] | —               |
 | Source **Database**                       | Import users     | Import groups     | —               |
 | Source **Storage**                        | Import users     | Import groups     | —               |
-| Source **Mobile / Server / Website**      | Import users     | Import groups     | Collect events  |
+| Source **Mobile / Server / Website**      | Import users     | Import groups     | Import events   |
 | Source **Storage**                        | —                | —                 | —               |
 | Source **Stream**                         | —                | —                 | —               |
 | Destination **App**                       | Export users[^1] | Export groups[^1] | Send events[^1] |

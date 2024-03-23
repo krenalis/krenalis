@@ -20,15 +20,19 @@ interface GridProps {
 	showRowBorder?: boolean;
 	isLoading?: boolean;
 	noRowsMessage?: string;
+
+	// used to recompute the table if at first rendering it wasn't in the
+	// viewport (for instance, because it was inside a tab panel group).
+	isShown?: boolean;
 }
 
-const Grid = ({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage }: GridProps) => {
+const Grid = ({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }: GridProps) => {
 	const [columnsWidths, setColumnsWidths] = useState('');
 
 	const gridRef = useRef<any>(null);
 
 	useLayoutEffect(() => {
-		if (isLoading) {
+		if (isLoading || (isShown != null && !isShown)) {
 			return;
 		}
 		const widthsOfColumn = {};
@@ -59,7 +63,7 @@ const Grid = ({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRow
 			}
 		}
 		setColumnsWidths(columnsWidths);
-	}, [isLoading, rows, columns]);
+	}, [isLoading, rows, columns, isShown]);
 
 	const rowComponents = [] as ReactNode[];
 	for (const [i, row] of rows.entries()) {

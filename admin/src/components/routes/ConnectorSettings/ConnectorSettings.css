@@ -37,6 +37,14 @@
 	max-width: 350px;
 }
 
+.connectorSettings .eventConnections {
+	margin-bottom: 50px;
+}
+
+.connectorSettings .eventConnectionLabel {
+	font-weight: 600;
+}
+
 .connectorSettings .saveWrapper {
 	text-align: center;
 }

@@ -39,7 +39,7 @@ func TestActionsCreation(t *testing.T) {
 	}
 	srcFsID := c.AddSourceFilesystem(storageDir, "")
 	dstFsID := c.AddDestinationFilesystem(storageDir, "")
-	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com", "")
+	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil, "")
 	postgreSQLConnection := c.AddSourcePostgreSQL("")
 	dummyExportConnection := c.AddDummy("Dummy (destination)", chichitester.Destination, "")
 

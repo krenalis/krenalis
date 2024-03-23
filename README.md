@@ -205,7 +205,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 ## How to test events (and eventually import users identities)
 
 1. Add a JavaScript source connection with host `localhost:9090`.
-2. Add an action with type "Collect events" (and/or an action "Import users", depending on what you want to test) and enable it.
+2. Add an action with type "Import events" (and/or an action "Import users", depending on what you want to test) and enable it.
 3. Copy the snippet in "Settings > Snippet" of the connection.
 4. Paste the snippet into your website between &lt;head&gt; and &lt;/head&gt;. You can also save the following HTML code into a file (let's suppose `javascript-sdk/mywebsite/index.html`):
    <details>

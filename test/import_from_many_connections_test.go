@@ -132,7 +132,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		// events, one for importing users identities) and retrieve its key.
 		var javaScriptKey string
 		{
-			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", "email")
+			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil, "email")
 			keys := c.ConnectionKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expecting one key, got %d keys", len(keys))

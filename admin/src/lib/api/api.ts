@@ -403,6 +403,24 @@ class Connections {
 			transformation: transformation,
 		});
 	};
+
+	removeEventConnection = async (connection: number, eventConnection: number): Promise<void> => {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-connections/${encodeURIComponent(
+				eventConnection,
+			)}`,
+			http.DELETE,
+		);
+	};
+
+	addEventConnection = async (connection: number, eventConnection: number): Promise<void> => {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-connections/${encodeURIComponent(
+				eventConnection,
+			)}`,
+			http.POST,
+		);
+	};
 }
 
 class Eventlisteners {

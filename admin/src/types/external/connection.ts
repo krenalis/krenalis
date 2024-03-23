@@ -24,6 +24,7 @@ interface Connection {
 	Health: Health;
 	ActionTypes?: ActionType[];
 	Actions?: Action[];
+	EventConnections?: Number[];
 }
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
@@ -39,6 +40,7 @@ interface ConnectionToAdd {
 	websiteHost: string;
 	businessID: string;
 	settings: UIValues;
+	eventConnections: Number[] | null;
 }
 
 interface ConnectionToSet {

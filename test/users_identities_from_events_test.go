@@ -29,14 +29,18 @@ func TestUsersIdentitiesFromEvents(t *testing.T) {
 
 	var javaScriptKey string
 	{
-		javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", "")
+		javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil, "")
 		keys := c.ConnectionKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expecting one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
+		c.AddAction(javaScriptID, "Events", chichitester.ActionToSet{
+			Name:    "JavaScript events",
+			Enabled: true,
+		})
 		c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
-			Name:     "JavaScript",
+			Name:     "JavaScript users",
 			Enabled:  true,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{

@@ -88,7 +88,7 @@ When the JavaScript SDK is installed on your website, using the snippet or impor
 
 1. Go to the JavaScript connection you just created and click on **Actions**.
 
-2. Under the **Collect Events** action, click on **Add**.
+2. Under the **Import Events** action, click on **Add**.
 
 3. Confirm by clicking **Add**.
 

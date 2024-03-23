@@ -66,6 +66,7 @@ var (
 //
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the connector does not exist.
+//   - EventConnectionNotExist, if an event connection does not exist.
 //   - InvalidSettings, if the settings are not valid.
 func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
@@ -98,19 +99,27 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		return 0, errors.BadRequest("cannot add a connection with type File")
 	}
 
+	// Validate the event connections.
+	err := validateEventConnections(connection.EventConnections, c, this.workspace, state.Role(connection.Role))
+	if err != nil {
+		return 0, err
+	}
+
 	n := state.AddConnection{
-		Workspace:   this.workspace.ID,
-		Name:        connection.Name,
-		Role:        state.Role(connection.Role),
-		Enabled:     connection.Enabled,
-		Connector:   connection.Connector,
-		Strategy:    (*state.Strategy)(connection.Strategy),
-		WebsiteHost: connection.WebsiteHost,
-		BusinessID:  connection.BusinessID,
+		Workspace:        this.workspace.ID,
+		Name:             connection.Name,
+		Role:             state.Role(connection.Role),
+		Enabled:          connection.Enabled,
+		Connector:        connection.Connector,
+		Strategy:         (*state.Strategy)(connection.Strategy),
+		WebsiteHost:      connection.WebsiteHost,
+		EventConnections: connection.EventConnections,
+		BusinessID:       connection.BusinessID,
 	}
 	if n.Name == "" {
 		n.Name = c.Name
 	}
+	slices.Sort(n.EventConnections)
 
 	// Validate the strategy.
 	if connection.Role == Source {
@@ -142,7 +151,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	}
 
 	// Validate the Business ID.
-	err := validateBusinessID(c.Type, n.Role, n.BusinessID)
+	err = validateBusinessID(c.Type, n.Role, n.BusinessID)
 	if err != nil {
 		return 0, err
 	}
@@ -230,6 +239,25 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
+	// Build the query to add and remove the connection from the respective event connections.
+	var add string
+	if n.EventConnections != nil {
+		var ids string
+		if n.EventConnections != nil {
+			var b strings.Builder
+			for i, id := range n.EventConnections {
+				if i > 0 {
+					b.WriteByte(',')
+				}
+				b.WriteString(strconv.Itoa(id))
+			}
+			ids = b.String()
+		}
+		add = "UPDATE connections\n" +
+			"SET event_connections = (SELECT ARRAY(SELECT unnest(array_append(event_connections, $1)) ORDER BY 1))\n" +
+			"WHERE id IN (" + ids + ")"
+	}
+
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		if n.Resource.Code != "" {
 			if n.Resource.ID == 0 {
@@ -258,11 +286,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector,"+
-			" resource, strategy, website_host, business_id, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector,
-			n.Resource.ID, n.Strategy, n.WebsiteHost, n.BusinessID, string(n.Settings))
+			"(id, workspace, name, type, role, enabled, connector, resource,"+
+			" strategy, website_host, event_connections, business_id, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Resource.ID,
+			n.Strategy, n.WebsiteHost, n.EventConnections, n.BusinessID, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				switch postgres.ErrConstraintName(err) {
@@ -273,6 +301,16 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 				}
 			}
 			return err
+		}
+		// Add the connection to the event connections.
+		if n.EventConnections != nil {
+			result, err := tx.Exec(ctx, add, n.ID)
+			if err != nil {
+				return err
+			}
+			if int(result.RowsAffected()) < len(n.EventConnections) {
+				return errors.Unprocessable(EventConnectionNotExist, "an event connection does not exist")
+			}
 		}
 		if n.Key != "" {
 			// Insert the server key.
@@ -570,21 +608,22 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 	}
 
 	connection := Connection{
-		apis:         this.apis,
-		store:        this.store,
-		connection:   c,
-		ID:           c.ID,
-		Name:         c.Name,
-		Type:         ConnectorType(conn.Type),
-		Role:         Role(c.Role),
-		Enabled:      c.Enabled,
-		Connector:    conn.ID,
-		Strategy:     (*Strategy)(c.Strategy),
-		WebsiteHost:  c.WebsiteHost,
-		BusinessID:   c.BusinessID,
-		HasSettings:  conn.HasSettings,
-		ActionsCount: len(c.Actions()),
-		Health:       Health(c.Health),
+		apis:             this.apis,
+		store:            this.store,
+		connection:       c,
+		ID:               c.ID,
+		Name:             c.Name,
+		Type:             ConnectorType(conn.Type),
+		Role:             Role(c.Role),
+		Enabled:          c.Enabled,
+		Connector:        conn.ID,
+		Strategy:         (*Strategy)(c.Strategy),
+		WebsiteHost:      c.WebsiteHost,
+		EventConnections: slices.Clone(c.EventConnections),
+		BusinessID:       c.BusinessID,
+		HasSettings:      conn.HasSettings,
+		ActionsCount:     len(c.Actions()),
+		Health:           Health(c.Health),
 	}
 
 	// Set the action types.
@@ -611,21 +650,22 @@ func (this *Workspace) Connections() []*Connection {
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			apis:         this.apis,
-			store:        this.store,
-			connection:   c,
-			ID:           c.ID,
-			Name:         c.Name,
-			Type:         ConnectorType(conn.Type),
-			Role:         Role(c.Role),
-			Enabled:      c.Enabled,
-			Connector:    conn.ID,
-			Strategy:     (*Strategy)(c.Strategy),
-			WebsiteHost:  c.WebsiteHost,
-			BusinessID:   c.BusinessID,
-			HasSettings:  conn.HasSettings,
-			ActionsCount: len(c.Actions()),
-			Health:       Health(c.Health),
+			apis:             this.apis,
+			store:            this.store,
+			connection:       c,
+			ID:               c.ID,
+			Name:             c.Name,
+			Type:             ConnectorType(conn.Type),
+			Role:             Role(c.Role),
+			Enabled:          c.Enabled,
+			Connector:        conn.ID,
+			Strategy:         (*Strategy)(c.Strategy),
+			WebsiteHost:      c.WebsiteHost,
+			EventConnections: slices.Clone(c.EventConnections),
+			BusinessID:       c.BusinessID,
+			HasSettings:      conn.HasSettings,
+			ActionsCount:     len(c.Actions()),
+			Health:           Health(c.Health),
 		}
 		infos[i] = &connection
 	}
@@ -1415,6 +1455,11 @@ type ConnectionToAdd struct {
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
 	WebsiteHost string
+
+	// EventConnections, for connections supporting events, indicate the
+	// connections to which events can be sent or received. It is nil if
+	// there are no connections or if the connection do not support events.
+	EventConnections []int
 
 	// BusinessID is the Business ID property or column (depending on the type of the
 	// connection) for source connections that import users. May be the empty string to

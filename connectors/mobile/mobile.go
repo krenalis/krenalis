@@ -24,12 +24,12 @@ func init() {
 	mobiles := []chichi.Mobile{
 		{
 			Name:              "Android",
-			SourceDescription: "collect events, and import users and groups from an Android mobile device",
+			SourceDescription: "import events, users and groups from an Android mobile device",
 			Icon:              iconAndroid,
 		},
 		{
 			Name:              "Apple",
-			SourceDescription: "collect events, and import users and groups from an Apple mobile device",
+			SourceDescription: "import events, users and groups from an Apple mobile device",
 			Icon:              iconApple,
 		},
 	}

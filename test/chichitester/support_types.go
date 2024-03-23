@@ -115,14 +115,15 @@ const (
 type Strategy string
 
 type ConnectionToAdd struct {
-	Name        string
-	Role        Role
-	Enabled     bool
-	Connector   int
-	Strategy    *Strategy
-	WebsiteHost string
-	BusinessID  string
-	Settings    json.RawMessage
+	Name             string
+	Role             Role
+	Enabled          bool
+	Connector        int
+	Strategy         *Strategy
+	WebsiteHost      string
+	EventConnections []int
+	BusinessID       string
+	Settings         json.RawMessage
 }
 
 type DisplayedProperties struct {

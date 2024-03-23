@@ -19,6 +19,8 @@ import ConnectorFieldInterface, { ConnectorAction } from '../../../types/externa
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
+import { isEventConnection } from '../../../lib/helpers/transformedConnection';
+import { EventConnectionSelector } from '../../shared/EventConnectionSelector/EventConnectionSelector';
 
 const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
 
@@ -32,14 +34,24 @@ const ConnectorSettings = () => {
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [businessID, setBusinessID] = useState<string>('');
+	const [eventConnections, setEventConnections] = useState<Number[]>();
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [actions, setActions] = useState<ConnectorAction[]>([]);
 	const [values, setValues] = useState<UIValues>({});
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, redirect, connectors, setIsLoadingConnections, setTitle, selectedWorkspace } =
-		useContext(AppContext);
+	const {
+		api,
+		handleError,
+		showStatus,
+		redirect,
+		connectors,
+		connections,
+		setIsLoadingConnections,
+		setTitle,
+		selectedWorkspace,
+	} = useContext(AppContext);
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
@@ -165,6 +177,7 @@ const ConnectorSettings = () => {
 					websiteHost: websiteHost,
 					businessID: businessID,
 					settings: values,
+					eventConnections: eventConnections,
 				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
 			} catch (err) {
@@ -255,6 +268,7 @@ const ConnectorSettings = () => {
 				websiteHost: websiteHost,
 				businessID: businessID,
 				settings: values,
+				eventConnections: eventConnections,
 			};
 			id = await api.workspaces.addConnection(connection, OAuthToken);
 		} catch (err) {
@@ -320,6 +334,30 @@ const ConnectorSettings = () => {
 	const showStrategy = hasStrategy(connectionRole, c);
 	const showBusinessID = connectionRole === 'Source' && c.type !== 'Storage' && c.type !== 'Stream';
 	const businessIDKind = ['File', 'Database'].includes(c.type) ? 'column' : 'property';
+
+	let eventConnectionsContainer: ReactNode = null;
+	if (isEventConnection(connectionRole, connector.type, connector.targets)) {
+		eventConnectionsContainer = (
+			<div className='eventConnections'>
+				<EventConnectionSelector
+					eventConnections={eventConnections}
+					setEventConnections={setEventConnections}
+					connections={connections}
+					role={connectionRole}
+					title={
+						<div className='eventConnectionLabel'>
+							Event {connectionRole === 'Source' ? 'destinations' : 'sources'}
+						</div>
+					}
+					description={
+						connectionRole === 'Source'
+							? 'The destinations to which to send the received events.'
+							: 'The sources from which to receive events to send.'
+					}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className='connectorSettings'>
@@ -399,14 +437,19 @@ const ConnectorSettings = () => {
 							actions={actionsToRender}
 							values={values}
 							onChange={onFieldChange}
-						/>
+						>
+							{eventConnectionsContainer}
+						</SettingsForm>
 					)}
 					{fieldsToRender.length === 0 && actionsToRender.length === 0 && (
-						<div className='saveWrapper'>
-							<SlButton className='saveButton' variant='primary' onClick={onSave}>
-								Save
-							</SlButton>
-						</div>
+						<>
+							{eventConnectionsContainer}
+							<div className='saveWrapper'>
+								<SlButton className='saveButton' variant='primary' onClick={onSave}>
+									Save
+								</SlButton>
+							</div>
+						</>
 					)}
 				</div>
 			</div>

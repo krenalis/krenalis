@@ -1,3 +1,4 @@
+import { ActionTarget } from '../../types/external/action';
 import { ConnectorType, WebhooksPer } from '../../types/external/connector';
 
 class TransformedConnector {
@@ -15,6 +16,7 @@ class TransformedConnector {
 	oAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
+	targets: Record<ActionTarget, boolean>;
 
 	constructor(
 		id: number,
@@ -31,6 +33,7 @@ class TransformedConnector {
 		destinationDescription: string,
 		termForUsers: string,
 		termForGroups: string,
+		targets: Record<ActionTarget, boolean>,
 	) {
 		this.id = id;
 		this.name = name;
@@ -46,6 +49,7 @@ class TransformedConnector {
 		this.destinationDescription = destinationDescription;
 		this.termForUsers = termForUsers;
 		this.termForGroups = termForGroups;
+		this.targets = targets;
 	}
 
 	get isApp() {

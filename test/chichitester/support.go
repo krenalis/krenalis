@@ -144,15 +144,16 @@ func (c *Chichi) AddDummy(name string, role Role, businessID string) int {
 	})
 }
 
-func (c *Chichi) AddJavaScriptSource(name, host, businessID string) int {
+func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int, businessID string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:        name,
-		Role:        Source,
-		Enabled:     true,
-		Connector:   JavaScriptConnector,
-		Strategy:    &defaultStrategy,
-		WebsiteHost: host,
-		BusinessID:  businessID,
+		Name:             name,
+		Role:             Source,
+		Enabled:          true,
+		Connector:        JavaScriptConnector,
+		Strategy:         &defaultStrategy,
+		WebsiteHost:      host,
+		EventConnections: eventConnections,
+		BusinessID:       businessID,
 	})
 }
 

@@ -1,3 +1,5 @@
+import { ActionTarget } from './action';
+
 type ConnectorType = 'App' | 'Database' | 'File' | 'Mobile' | 'Server' | 'Storage' | 'Stream' | 'Website';
 
 type WebhooksPer = 'None' | 'Connector' | 'Resource' | 'Source';
@@ -17,6 +19,7 @@ interface Connector {
 	OAuth: boolean;
 	TermForUsers: string;
 	TermForGroups: string;
+	Targets: Record<ActionTarget, boolean>;
 }
 
 export type { Connector, ConnectorType, WebhooksPer };

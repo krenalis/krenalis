@@ -911,6 +911,44 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							w.Header().Add("Content-Type", "application/json")
 							_, _ = w.Write(form)
 						})
+						router.Delete("/event-connections/{id}", func(w http.ResponseWriter, r *http.Request) {
+							connectionID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							idString, err := url.PathUnescape(chi.URLParam(r, "id"))
+							if err != nil {
+								respond(w, errors.BadRequest("invalid event connection id"))
+								return
+							}
+							connection, err := workspace.Connection(ctx, connectionID)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							id, _ := strconv.Atoi(idString)
+							err = connection.RemoveEventConnection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+						})
+						router.Post("/event-connections/{id}", func(w http.ResponseWriter, r *http.Request) {
+							connectionID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							idString, err := url.PathUnescape(chi.URLParam(r, "id"))
+							if err != nil {
+								respond(w, errors.BadRequest("invalid event connection id"))
+								return
+							}
+							connection, err := workspace.Connection(ctx, connectionID)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							id, _ := strconv.Atoi(idString)
+							err = connection.AddEventConnection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+						})
 						router.Post("/event-preview", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)

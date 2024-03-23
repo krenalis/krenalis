@@ -91,6 +91,7 @@ const useApp = (
 						c.DestinationDescription,
 						c.TermForUsers,
 						c.TermForGroups,
+						c.Targets,
 					),
 				);
 			}
@@ -150,6 +151,9 @@ const useApp = (
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
+				if (c.EventConnections) {
+					transformedConnection.eventConnections = c.EventConnections;
+				}
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -218,6 +222,9 @@ const useApp = (
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
+				if (c.EventConnections) {
+					transformedConnection.eventConnections = c.EventConnections;
+				}
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {

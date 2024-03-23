@@ -21,7 +21,7 @@ func init() {
 	websites := []chichi.Website{
 		{
 			Name:              "JavaScript",
-			SourceDescription: "collect events, and import users and groups from a website using JavaScript",
+			SourceDescription: "import events, users and groups from a website using JavaScript",
 			Icon:              iconJavaScript,
 		},
 	}

@@ -52,24 +52,25 @@ const (
 )
 
 const (
-	ConnectionNotExist   errors.Code = "ConnectionNotExist"
-	ConnectorNotExist    errors.Code = "ConnectorNotExist"
-	EventNotExist        errors.Code = "EventNotExist"
-	EventTypeNotExist    errors.Code = "EventTypeNotExist"
-	FetchSchemaFailed    errors.Code = "FetchSchemaFailed"
-	InvalidPath          errors.Code = "InvalidPath"
-	InvalidPlaceholder   errors.Code = "InvalidPlaceholder"
-	InvalidTable         errors.Code = "InvalidTable"
-	KeyNotExist          errors.Code = "KeyNotExist"
-	LanguageNotSupported errors.Code = "LanguageNotSupported"
-	NoColumns            errors.Code = "NoColumns"
-	NotCompatibleSchema  errors.Code = "NotCompatibleSchema"
-	ReadFileFailed       errors.Code = "ReadFileFailed"
-	SheetNotExist        errors.Code = "SheetNotExist"
-	TargetAlreadyExist   errors.Code = "TargetAlreadyExist"
-	TooManyKeys          errors.Code = "TooManyKeys"
-	UniqueKey            errors.Code = "UniqueKey"
-	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
+	ConnectionNotExist      errors.Code = "ConnectionNotExist"
+	ConnectorNotExist       errors.Code = "ConnectorNotExist"
+	EventConnectionNotExist errors.Code = "EventConnectionNotExist"
+	EventNotExist           errors.Code = "EventNotExist"
+	EventTypeNotExist       errors.Code = "EventTypeNotExist"
+	FetchSchemaFailed       errors.Code = "FetchSchemaFailed"
+	InvalidPath             errors.Code = "InvalidPath"
+	InvalidPlaceholder      errors.Code = "InvalidPlaceholder"
+	InvalidTable            errors.Code = "InvalidTable"
+	KeyNotExist             errors.Code = "KeyNotExist"
+	LanguageNotSupported    errors.Code = "LanguageNotSupported"
+	NoColumns               errors.Code = "NoColumns"
+	NotCompatibleSchema     errors.Code = "NotCompatibleSchema"
+	ReadFileFailed          errors.Code = "ReadFileFailed"
+	SheetNotExist           errors.Code = "SheetNotExist"
+	TargetAlreadyExist      errors.Code = "TargetAlreadyExist"
+	TooManyKeys             errors.Code = "TooManyKeys"
+	UniqueKey               errors.Code = "UniqueKey"
+	WorkspaceNotExist       errors.Code = "WorkspaceNotExist"
 )
 
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
@@ -86,21 +87,22 @@ func isValidStrategy(s Strategy) bool {
 
 // Connection represents a connection.
 type Connection struct {
-	apis         *APIs
-	connection   *state.Connection
-	store        *datastore.Store
-	ID           int
-	Name         string
-	Type         ConnectorType
-	Role         Role
-	Enabled      bool
-	Connector    int
-	Strategy     *Strategy
-	WebsiteHost  string
-	BusinessID   string
-	HasSettings  bool
-	ActionsCount int
-	Health       Health
+	apis             *APIs
+	connection       *state.Connection
+	store            *datastore.Store
+	ID               int
+	Name             string
+	Type             ConnectorType
+	Role             Role
+	Enabled          bool
+	Connector        int
+	Strategy         *Strategy
+	WebsiteHost      string
+	EventConnections []int
+	BusinessID       string
+	HasSettings      bool
+	ActionsCount     int
+	Health           Health
 
 	// ActionTypes and Actions are populated only by the (*Workspace).Connection method.
 	ActionTypes *[]ActionType `json:",omitempty"`
@@ -579,6 +581,51 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	return n.ID, nil
 }
 
+// AddEventConnection adds the connection with identifier id to the event
+// connections of the connection and vice versa.
+// If the connection to add does not exist, it returns an
+// errors.UnprocessableError error with code EventConnectionNotExist.
+func (this *Connection) AddEventConnection(ctx context.Context, id int) error {
+	this.apis.mustBeOpen()
+	// If the connection already has the event connection,
+	// it can return without additional validation.
+	if slices.Contains(this.connection.EventConnections, id) {
+		return nil
+	}
+	// Validate the event connection.
+	c := this.connection.Connector()
+	ws := this.connection.Workspace()
+	role := this.connection.Role
+	err := validateEventConnections([]int{id}, c, ws, role)
+	if err != nil {
+		return err
+	}
+	n := state.AddEventConnection{
+		Connections: [2]int{this.connection.ID, id},
+	}
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		const add = "UPDATE connections\n" +
+			"SET event_connections = (SELECT ARRAY(SELECT DISTINCT unnest(array_append(event_connections, $1)) ORDER BY 1))\n" +
+			"WHERE id = $2"
+		result, err := tx.Exec(ctx, add, n.Connections[1], n.Connections[0])
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		result, err = tx.Exec(ctx, add, n.Connections[0], n.Connections[1])
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.Unprocessable(EventConnectionNotExist, "event connection %d does not exist", n.Connections[1])
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // AppUsers returns the users of an app connection and the cursor to get the
 // next users. The returned cursor is empty if there are no other users.
 func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) ([]byte, string, error) {
@@ -704,6 +751,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 		ID: this.connection.ID,
 	}
 	connector := this.connection.Connector()
+	workspace := this.connection.Workspace()
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
@@ -711,6 +759,22 @@ func (this *Connection) Delete(ctx context.Context) error {
 		}
 		if result.RowsAffected() == 0 {
 			return errors.NotFound("connection %d does not exist", n.ID)
+		}
+		role := "Source"
+		if this.connection.Role == state.Source {
+			role = "Destination"
+		}
+		// Remove the connection from the event connections.
+		_, err = tx.Exec(ctx, "UPDATE connections\n"+
+			"SET event_connections =\n"+
+			"\tCASE\n"+
+			"\t\tWHEN array_remove(event_connections, $1) = '{}' THEN NULL\n"+
+			"\t\tELSE array_remove(event_connections, $1)\n"+
+			"\tEND\n"+
+			"WHERE workspace = $2 AND role = $3 AND event_connections IS NOT NULL AND $1 = ANY(event_connections)",
+			n.ID, workspace.ID, role)
+		if err != nil {
+			return err
 		}
 		if connector.OAuth != nil {
 			// Delete the resource of the deleted connection if it has no other connections.
@@ -1069,6 +1133,54 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 	}
 
 	return marshaledRecords, schema, nil
+}
+
+// RemoveEventConnection removes the connection with identifier id from the
+// event connections of the connection and vice versa.
+// If the connection to remove does not exist, it returns an
+// errors.UnprocessableError error with code EventConnectionNotExist.
+func (this *Connection) RemoveEventConnection(ctx context.Context, id int) error {
+	this.apis.mustBeOpen()
+	// Validate the event connection.
+	c := this.connection.Connector()
+	ws := this.connection.Workspace()
+	role := this.connection.Role
+	err := validateEventConnections([]int{id}, c, ws, role)
+	if err != nil {
+		return err
+	}
+	// If the connection does not have the event connection, it can return.
+	if !slices.Contains(this.connection.EventConnections, id) {
+		return nil
+	}
+	n := state.RemoveEventConnection{
+		Connections: [2]int{this.connection.ID, id},
+	}
+	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		const remove = "UPDATE connections\n" +
+			"SET event_connections =\n" +
+			"\tCASE\n" +
+			"\t\tWHEN array_remove(event_connections, $1) = '{}' THEN NULL\n" +
+			"\t\tELSE array_remove(event_connections, $1)\n" +
+			"\tEND\n" +
+			"WHERE id = $2 AND $1 = ANY(event_connections)"
+		result, err := tx.Exec(ctx, remove, n.Connections[1], n.Connections[0])
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		result, err = tx.Exec(ctx, remove, n.Connections[0], n.Connections[1])
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.Unprocessable(EventConnectionNotExist, "event connection %d does not exist", n.Connections[1])
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }
 
 // Rename renames the connection with the given new name.
@@ -1737,7 +1849,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 		switch typ := c.Connector().Type; typ {
 		case state.MobileType, state.ServerType, state.WebsiteType:
 			if c.Role == state.Source {
-				description := "Collect events from the "
+				description := "Import events from the "
 				switch typ {
 				case state.MobileType:
 					description += "mobile app"
@@ -1747,7 +1859,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += "website"
 				}
 				at := ActionType{
-					Name:        "Collect events",
+					Name:        "Import events",
 					Description: description,
 					Target:      Events,
 				}
@@ -1793,6 +1905,47 @@ func (this *Connection) database() *connectors.Database {
 // storage returns the storage of the connection.
 func (this *Connection) storage() *connectors.Storage {
 	return this.apis.connectors.Storage(this.connection)
+}
+
+// validateEventConnections validates the given event connections for a
+// connection with the provided connector, workspace and role. If they are not
+// valid, it returns an errors.BadRequestError error. If a connection does not
+// exist, it returns an errors.UnprocessableError error with code
+// EventConnectionNotExist.
+func validateEventConnections(connections []int, c *state.Connector, ws *state.Workspace, role state.Role) error {
+	if connections == nil {
+		return nil
+	}
+	if len(connections) == 0 {
+		return errors.BadRequest("event connections cannot be empty")
+	}
+	if !c.Targets.Contains(state.Events) {
+		return errors.BadRequest("connector %d does not support event connections", c.ID)
+	}
+	for i, id := range connections {
+		if id < 1 || id > maxInt32 {
+			return errors.BadRequest("event connection %d is not a valid connection identifier", id)
+		}
+		for j := i + 1; j < len(connections); j++ {
+			if connections[j] == id {
+				return errors.BadRequest("event connection %d is repeated", id)
+			}
+		}
+		ec, ok := ws.Connection(id)
+		if !ok {
+			return errors.Unprocessable(EventConnectionNotExist, "event connection %d does not exist", id)
+		}
+		if !ec.Connector().Targets.Contains(state.Events) {
+			return errors.BadRequest("event connection %d does not support events", id)
+		}
+		if ec.Role == role {
+			if ec.Role == state.Source {
+				return errors.BadRequest("event connection %d is not a destination", id)
+			}
+			return errors.BadRequest("event connection %d is not a source", id)
+		}
+	}
+	return nil
 }
 
 // isWriteKey reports whether key can be a write key.

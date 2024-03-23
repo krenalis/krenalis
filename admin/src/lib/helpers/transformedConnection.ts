@@ -35,6 +35,7 @@ class TransformedConnection {
 	linkedFiles?: TransformedConnection[];
 	actionTypes?: ActionType[];
 	actions?: Action[];
+	eventConnections?: Number[];
 
 	constructor(
 		id: number,
@@ -56,6 +57,7 @@ class TransformedConnection {
 		linkedFiles?: TransformedConnection[],
 		actionTypes?: ActionType[],
 		actions?: Action[],
+		eventConnections?: Number[],
 	) {
 		this.id = id;
 		this.name = name;
@@ -76,6 +78,9 @@ class TransformedConnection {
 		this.linkedFiles = linkedFiles;
 		this.actionTypes = actionTypes == null ? [] : actionTypes;
 		this.actions = actions == null ? [] : actions;
+		if (eventConnections) {
+			this.eventConnections = eventConnections;
+		}
 	}
 
 	get isApp() {
@@ -178,6 +183,17 @@ const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 	}
 };
 
+const isEventConnection = (
+	role: ConnectionRole,
+	type: ConnectorType,
+	targets: Record<ActionTarget, boolean>,
+): boolean => {
+	return (
+		(role === 'Source' && (type === 'Website' || type === 'Server' || type === 'Mobile')) ||
+		(role === 'Destination' && type === 'App' && targets.Events)
+	);
+};
+
 const getStorageFileConnections = (
 	storageID: number,
 	connections: TransformedConnection[],
@@ -192,5 +208,6 @@ export {
 	getConnectionFullConnector,
 	getConnectionStatus,
 	getStorageFileConnections,
+	isEventConnection,
 };
 export type { ConnectionStatus };

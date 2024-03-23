@@ -40,31 +40,67 @@ func (st *eventsState) ConnectionByKey(key string) (*state.Connection, bool) {
 	return nil, false
 }
 
-// Actions returns the app destination actions of the provided workspace that
-// are enabled, have the Events target, and their connection is enabled.
-func (st *eventsState) Actions(ws *state.Workspace) []*state.Action {
+// Actions returns the destination actions where events received from the
+// provided source are to be sent. Only active actions of active connections are
+// returned.
+func (st *eventsState) Actions(source *state.Connection) []*state.Action {
 	var actions []*state.Action
-	for _, action := range st.state.Actions() {
-		if !action.Enabled || action.Target != state.Events {
+	for _, id := range source.EventConnections {
+		c, ok := st.state.Connection(id)
+		if !ok || !c.Enabled {
 			continue
 		}
-		c := action.Connection()
-		if !c.Enabled || c.Role != state.Destination || c.Workspace() != ws || c.Connector().Type != state.AppType {
-			continue
+		for _, action := range c.Actions() {
+			if action.Enabled && action.Target == state.Events {
+				actions = append(actions, action)
+			}
 		}
-		actions = append(actions, action)
 	}
 	return actions
 }
 
-// HasEnabledActions reports whether connection is enabled and has at least one
-// enabled action.
-func (st *eventsState) HasEnabledActions(connection *state.Connection) bool {
-	if !connection.Enabled {
-		return false
+// CanCollectEvents reports whether source can collect events.
+// It can collect events if it is enabled and has an enabled action, or is
+// enabled and has an enabled event destination with an enabled action on
+// events.
+func (st *eventsState) CanCollectEvents(source *state.Connection) bool {
+	return source.Enabled && (st.HasImportEventsAction(source) ||
+		st.HasImportUsersAction(source) || st.HasEventDestinations(source))
+}
+
+// HasEventDestinations reports whether source has an enabled event destination
+// with an enabled action on events.
+func (st *eventsState) HasEventDestinations(source *state.Connection) bool {
+	for _, id := range source.EventConnections {
+		c, ok := st.state.Connection(id)
+		if !ok || !c.Enabled {
+			continue
+		}
+		for _, action := range c.Actions() {
+			if action.Enabled && action.Target == state.Events {
+				return true
+			}
+		}
 	}
-	for _, a := range connection.Actions() {
-		if a.Enabled {
+	return false
+}
+
+// HasImportEventsAction reports whether source has an enabled action that
+// import the events.
+func (st *eventsState) HasImportEventsAction(source *state.Connection) bool {
+	for _, a := range source.Actions() {
+		if a.Enabled && a.Target == state.Events {
+			return true
+		}
+	}
+	return false
+}
+
+// HasImportUsersAction reports whether source has an enabled action that
+// import the users.
+func (st *eventsState) HasImportUsersAction(source *state.Connection) bool {
+	for _, a := range source.Actions() {
+		if a.Enabled && a.Target == state.Users {
 			return true
 		}
 	}

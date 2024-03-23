@@ -1,0 +1,59 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2024 Open2b
+//
+
+package state
+
+import (
+	"slices"
+	"testing"
+)
+
+func TestAddAndRemoveEventConnection(t *testing.T) {
+
+	tests := []struct {
+		id      int
+		with    []int
+		without []int
+	}{
+		{1, []int{1}, nil},
+		{1, []int{1, 2}, []int{2}},
+		{2, []int{1, 2}, []int{1}},
+		{8, []int{2, 5, 8, 15, 16}, []int{2, 5, 15, 16}},
+		{16, []int{1, 8, 15, 16}, []int{1, 8, 15}},
+	}
+
+	// Test the addEventConnection function.
+	for _, test := range tests {
+		without := slices.Clone(test.without)
+		got := addEventConnection(test.without, test.id)
+		if got == nil {
+			t.Fatalf("expected %#v, got nil", test.with)
+		}
+		if !slices.Equal(test.with, got) {
+			t.Fatalf("expected %#v, got %#v", test.with, got)
+		}
+		if !slices.Equal(without, test.without) {
+			t.Fatalf("the 'without' slice has been changed")
+		}
+	}
+
+	// Test the removeEventConnection function.
+	for _, test := range tests {
+		with := slices.Clone(test.with)
+		got := removeEventConnection(test.with, test.id)
+		if test.without == nil && got != nil {
+			t.Fatalf("expected nil, got %#v", got)
+		}
+		if !slices.Equal(test.without, got) {
+			t.Fatalf("expected %#v, got %#v", test.without, got)
+		}
+		if !slices.Equal(with, test.with) {
+			t.Fatalf("the 'with' slice has been changed")
+		}
+	}
+
+}

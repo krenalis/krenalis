@@ -18,6 +18,8 @@ GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events             
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events/{eventType}  Get the input and output schemas of the Events action type for the event type.
 POST    /api/workspaces/{id}/connections/{id}/app-users                          Get the app users.
 GET     /api/workspaces/{id}/connections/{id}/complete-path/{path}               Return the complete representation of a path for a connection storage.
+DELETE  /api/workspaces/{id}/connections/{id}/event-connections/{id}             Delete an event connection.
+POST    /api/workspaces/{id}/connections/{id}/event-connections/{id}             Add an event connection.
 POST    /api/workspaces/{id}/connections/{id}/event-preview                      Return an event preview.
 POST    /api/workspaces/{id}/connections/{id}/exec-query                         Execute the query of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/executions                         Return the executions of a connection.

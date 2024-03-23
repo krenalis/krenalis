@@ -589,23 +589,24 @@ type Strategy string
 
 // Connection represents a connection.
 type Connection struct {
-	mu           *sync.Mutex
-	organization *Organization
-	workspace    *Workspace
-	ID           int
-	Name         string
-	Role         Role
-	Enabled      bool
-	connector    *Connector
-	resource     *Resource
-	Strategy     *Strategy
-	WebsiteHost  string
-	Keys         []string
-	Settings     []byte
-	UsersQuery   string
-	actions      map[int]*Action
-	Health       Health
-	BusinessID   string // property name or column name, depending on connection type.
+	mu               *sync.Mutex
+	organization     *Organization
+	workspace        *Workspace
+	ID               int
+	Name             string
+	Role             Role
+	Enabled          bool
+	connector        *Connector
+	resource         *Resource
+	Strategy         *Strategy
+	WebsiteHost      string
+	EventConnections []int
+	Keys             []string
+	Settings         []byte
+	UsersQuery       string
+	actions          map[int]*Action
+	Health           Health
+	BusinessID       string // property name or column name, depending on connection type.
 }
 
 // Organization returns the organization of the connection.

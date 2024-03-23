@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -89,6 +90,8 @@ func (state *State) keepState() {
 			state.addConnection(n)
 		case "AddConnectionKey":
 			state.addConnectionKey(n)
+		case "AddEventConnection":
+			state.addEventConnection(n)
 		case "AddWorkspace":
 			state.addWorkspace(n)
 		case "DeleteAction":
@@ -105,6 +108,8 @@ func (state *State) keepState() {
 			state.executeAction(n)
 		case "LoadState":
 			state.loadState(n)
+		case "RemoveEventConnection":
+			state.removeEventConnection(n)
 		case "RenameConnection":
 			state.renameConnection(n)
 		case "RenameWorkspace":
@@ -351,11 +356,12 @@ type AddConnection struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
-	Strategy    *Strategy // strategy
-	WebsiteHost string    // website host in form host:port
-	BusinessID  string    // Business ID property name or column name, depending on connection type.
-	Key         string    // server key to add
-	Settings    []byte
+	Strategy         *Strategy // strategy
+	WebsiteHost      string    // website host in form host:port
+	EventConnections []int     // event connections
+	BusinessID       string    // Business ID property name or column name, depending on connection type.
+	Key              string    // server key to add
+	Settings         []byte
 }
 
 // addConnection adds a new connection.
@@ -402,20 +408,21 @@ func (state *State) addConnection(n notification) {
 		}
 	}
 	c := &Connection{
-		mu:           new(sync.Mutex),
-		organization: workspace.organization,
-		workspace:    workspace,
-		ID:           e.ID,
-		Name:         e.Name,
-		Role:         e.Role,
-		Enabled:      e.Enabled,
-		connector:    connector,
-		resource:     r,
-		Strategy:     e.Strategy,
-		WebsiteHost:  e.WebsiteHost,
-		BusinessID:   e.BusinessID,
-		Settings:     e.Settings,
-		actions:      map[int]*Action{},
+		mu:               new(sync.Mutex),
+		organization:     workspace.organization,
+		workspace:        workspace,
+		ID:               e.ID,
+		Name:             e.Name,
+		Role:             e.Role,
+		Enabled:          e.Enabled,
+		connector:        connector,
+		resource:         r,
+		Strategy:         e.Strategy,
+		WebsiteHost:      e.WebsiteHost,
+		EventConnections: e.EventConnections,
+		BusinessID:       e.BusinessID,
+		Settings:         e.Settings,
+		actions:          map[int]*Action{},
 	}
 	if e.Key != "" {
 		c.Keys = []string{e.Key}
@@ -430,6 +437,12 @@ func (state *State) addConnection(n notification) {
 	workspace.mu.Lock()
 	workspace.connections[c.ID] = c
 	workspace.mu.Unlock()
+	// Update the event connections.
+	for _, ec := range c.EventConnections {
+		state.replaceConnection(ec, func(ec *Connection) {
+			ec.EventConnections = addEventConnection(ec.EventConnections, c.ID)
+		})
+	}
 	for _, listener := range state.listeners.AddConnection {
 		listener(e)
 	}
@@ -457,6 +470,28 @@ func (state *State) addConnectionKey(n notification) {
 	state.mu.Lock()
 	state.connectionsByKey[e.Value] = c
 	state.mu.Unlock()
+}
+
+// AddEventConnection is the event sent when a connection is added as event
+// connection.
+type AddEventConnection struct {
+	Connections [2]int
+}
+
+// addEventConnection adds a connection as event connection.
+func (state *State) addEventConnection(n notification) {
+	e := AddEventConnection{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connections[0]]
+	if !slices.Contains(c.EventConnections, e.Connections[1]) {
+		for i := range 2 {
+			state.replaceConnection(e.Connections[i], func(c *Connection) {
+				c.EventConnections = addEventConnection(c.EventConnections, e.Connections[(i+1)%2])
+			})
+		}
+	}
 }
 
 // ExecuteAction is the event sent when an action is executed.
@@ -593,6 +628,12 @@ func (state *State) deleteConnection(n notification) {
 		delete(state.actions, a.ID)
 	}
 	state.mu.Unlock()
+	// Remove the connection from event connections.
+	for _, ec := range e.connection.EventConnections {
+		state.replaceConnection(ec, func(ec *Connection) {
+			ec.EventConnections = removeEventConnection(ec.EventConnections, e.ID)
+		})
+	}
 	for _, listener := range state.listeners.DeleteConnection {
 		listener(e)
 	}
@@ -706,6 +747,28 @@ func (state *State) loadState(n notification) {
 		state.election.lastSeen = time.Now()
 		state.mu.Unlock()
 		go state.keepElections()
+	}
+}
+
+// RemoveEventConnection is the event sent when a connection is removed as event
+// connection.
+type RemoveEventConnection struct {
+	Connections [2]int
+}
+
+// removeEventConnection removes a connection as event connection.
+func (state *State) removeEventConnection(n notification) {
+	e := RemoveEventConnection{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connections[0]]
+	if slices.Contains(c.EventConnections, e.Connections[1]) {
+		for i := range 2 {
+			state.replaceConnection(e.Connections[i], func(c *Connection) {
+				c.EventConnections = removeEventConnection(c.EventConnections, e.Connections[(i+1)%2])
+			})
+		}
 	}
 }
 
@@ -1071,6 +1134,50 @@ func (state *State) setWorkspaceUsersSchema(n notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.UsersSchema = e.UsersSchema
 	})
+}
+
+// addEventConnection adds id to connections. It returns a copy of connections
+// with id added in numerical order. It is assumed that connections is already
+// sorted and id does not already exist in connections.
+func addEventConnection(connections []int, id int) []int {
+	cc := make([]int, len(connections)+1)
+	j := 0
+	var added bool
+	for _, c := range connections {
+		if !added && id < c {
+			added = true
+			cc[j] = id
+			j++
+		}
+		cc[j] = c
+		j++
+	}
+	if !added {
+		cc[j] = id
+	}
+	return cc
+}
+
+// removeEventConnection removes id from connections. It returns a copy of
+// connections with id removed. It is assumed that connections is sorted and id
+// exists in connections. If id is the sole connection in connections, it
+// returns nil.
+func removeEventConnection(connections []int, id int) []int {
+	if len(connections) == 1 {
+		return nil
+	}
+	cc := make([]int, len(connections)-1)
+	j := 0
+	var removed bool
+	for _, c := range connections {
+		if !removed && id == c {
+			removed = true
+			continue
+		}
+		cc[j] = c
+		j++
+	}
+	return cc
 }
 
 // WarehouseType represents a data warehouse type.

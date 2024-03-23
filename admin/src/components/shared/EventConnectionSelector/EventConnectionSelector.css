@@ -1,0 +1,70 @@
+.event-connection-selector .event-connection-selector__head {
+	margin-bottom: 15px;
+	display: flex;
+	align-items: end;
+	min-height: 40px;
+}
+
+.event-connection-selector .event-connection-selector__head--flex {
+	display: flex;
+	justify-content: space-between;
+	align-items: end;
+}
+
+.event-connection-selector .event-connection-selector__head-description {
+	font-size: 14px;
+}
+
+.event-connection-selector .event-connection-selector__dropdown sl-menu-item:hover::part(base) {
+	background-color: var(--sl-color-primary-500);
+	color: var(--text-onaccent);
+}
+
+.event-connection-selector .event-connection-selector__dropdown sl-menu-item::part(base) {
+	padding-right: 15px;
+}
+
+.event-connection-selector .event-connection-selector__dropdown sl-menu-item::part(label) {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.event-connection-selector .event-connection-selector__dropdown .littleLogo svg {
+	height: 18px;
+}
+
+.event-connection-selector .event-connection-grid__name,
+.event-connection-selector .event-connection-grid__status {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.event-connection-selector .event-connection-grid__name .littleLogo svg {
+	height: 20px;
+}
+
+.event-connection-selector .event-connection-grid__status {
+	gap: 0;
+}
+
+.event-connection-selector .grid .gridHeaderCell {
+	font-weight: 400;
+}
+
+.event-connection-selector .grid .noRows {
+	padding-top: 40px;
+	padding-bottom: 50px;
+}
+
+.event-connection-selector .grid .noRows > sl-icon {
+	display: none;
+}
+
+.event-connection-selector .event-connection-selector__no-connection-message {
+	margin-top: 8px;
+	font-size: 14px;
+	opacity: 0.6;
+	text-align: center;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, ReactNode } from 'react';
 import './ConnectionsList.css';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import Grid from '../../shared/Grid/Grid';
@@ -10,28 +10,11 @@ import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import { ConnectionRole } from '../../../types/external/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-
-const GRID_COLUMNS: GridColumn[] = [
-	{
-		name: 'Name',
-	},
-	{
-		name: 'Type',
-	},
-	{
-		name: 'Connector',
-	},
-	{
-		name: 'Health',
-	},
-	{
-		name: 'Actions',
-		alignment: 'center',
-	},
-];
+import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 
 const ConnectionsList = () => {
 	const [connectionsRows, setConnectionsRows] = useState<GridRow[]>([]);
+	const [connectionsColumns, setConnectionColumns] = useState<GridColumn[]>([]);
 	const [role, setRole] = useState<ConnectionRole>();
 
 	const { redirect, connections, setTitle } = useContext(AppContext);
@@ -44,31 +27,75 @@ const ConnectionsList = () => {
 				roleConnections.push(c);
 			}
 		}
+
+		const columns: GridColumn[] = [
+			{
+				name: 'Name',
+			},
+			{
+				name: 'Type',
+			},
+			{
+				name: 'Connector',
+			},
+			{
+				name: 'Health',
+			},
+			{
+				name: 'Actions',
+				alignment: 'center',
+			},
+		];
+
 		if (roleConnections.length === 0) {
 			setConnectionsRows([]);
+			setConnectionColumns(columns);
 			return;
 		}
+
+		const hasEventConnections = roleConnections.findIndex((c) => c.eventConnections != null) !== -1;
+		if (hasEventConnections) {
+			columns.push({
+				name: `${role === 'Source' ? 'Event destinations' : 'Event sources'}`,
+				alignment: 'left',
+			});
+		}
+
 		const rows: GridRow[] = [];
 		for (const c of roleConnections) {
+			const cells = [
+				<div className='connectionNameCell'>
+					{getConnectorLogo(c.connector.icon)} {c.name}
+				</div>,
+				c.type,
+				c.connector.name,
+				<div className='connectionStatusCell'>
+					<StatusDot status={c.status} />
+					{c.status.text}
+				</div>,
+				c.actionsCount,
+			];
+			if (hasEventConnections) {
+				if (c.eventConnections != null) {
+					const connectionLogos: ReactNode[] = [];
+					for (const ec of c.eventConnections) {
+						const connection = connections.find((connection) => connection.id === ec);
+						connectionLogos.push(<LittleLogo key={String(ec)} icon={connection.connector.icon} />);
+					}
+					cells.push(<div className='connectionEventConnectionsCell'>{connectionLogos}</div>);
+				} else {
+					cells.push('-');
+				}
+			}
 			rows.push({
-				cells: [
-					<div className='connectionNameCell'>
-						{getConnectorLogo(c.connector.icon)} {c.name}
-					</div>,
-					c.type,
-					c.connector.name,
-					<div className='connectionStatusCell'>
-						<StatusDot status={c.status} />
-						{c.status.text}
-					</div>,
-					c.actionsCount,
-				],
+				cells: cells,
 				onClick: () => {
 					redirect(`connections/${c.id}/actions`);
 				},
 			});
 		}
 		setConnectionsRows(rows);
+		setConnectionColumns(columns);
 	}, [connections, role]);
 
 	const path = window.location.pathname;
@@ -116,7 +143,7 @@ const ConnectionsList = () => {
 							<SlIcon slot='suffix' name='plus-circle' />
 							Add a new {role?.toLowerCase()}
 						</SlButton>
-						<Grid columns={GRID_COLUMNS} rows={connectionsRows} />
+						<Grid columns={connectionsColumns} rows={connectionsRows} />
 					</>
 				)}
 			</div>

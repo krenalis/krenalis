@@ -165,7 +165,6 @@ sl-popup::part(arrow) {
 }
 
 .grid .noRows {
-	font-weight: 600;
 	color: var(--sl-color-neutral-400);
 	display: flex;
 	flex-flow: column;

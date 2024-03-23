@@ -37,6 +37,16 @@
 	align-items: center;
 }
 
+.connectionsList .connectionEventConnectionsCell {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.connectionsList .connectionEventConnectionsCell .littleLogo svg {
+	height: 21px;
+}
+
 .connectionsList .statusDot .hoverArea {
 	width: unset;
 	height: unset;
