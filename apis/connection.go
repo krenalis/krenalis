@@ -959,6 +959,22 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byt
 	return data, count, err
 }
 
+// Keys returns the write keys of the connection.
+// The connection must be a source mobile, server or website connection.
+func (this *Connection) Keys() ([]string, error) {
+	this.apis.mustBeOpen()
+	c := this.connection
+	switch c.Connector().Type {
+	case state.MobileType, state.ServerType, state.WebsiteType:
+	default:
+		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
+	}
+	if c.Role != state.Source {
+		return nil, errors.BadRequest("connection %d is not a source", c.ID)
+	}
+	return slices.Clone(c.Keys), nil
+}
+
 // GenerateKey generates a new write key for the connection. The connection must
 // be a source mobile, server or website connection.
 //
@@ -1731,22 +1747,6 @@ type ActionType struct {
 	Description string
 	Target      Target
 	EventType   *string
-}
-
-// Keys returns the write keys of the connection.
-// The connection must be a source mobile, server or website connection.
-func (this *Connection) Keys() ([]string, error) {
-	this.apis.mustBeOpen()
-	c := this.connection
-	switch c.Connector().Type {
-	case state.MobileType, state.ServerType, state.WebsiteType:
-	default:
-		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
-	}
-	if c.Role != state.Source {
-		return nil, errors.BadRequest("connection %d is not a source", c.ID)
-	}
-	return slices.Clone(c.Keys), nil
 }
 
 // actionTypes returns the action types for the connection.
