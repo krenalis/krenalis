@@ -95,16 +95,16 @@ class TransformedConnection {
 		return this.type === 'File' && this.storage !== 0;
 	}
 
+	get isFileStorage() {
+		return this.type === 'FileStorage';
+	}
+
 	get isMobile() {
 		return this.type === 'Mobile';
 	}
 
 	get isServer() {
 		return this.type === 'Server';
-	}
-
-	get isStorage() {
-		return this.type === 'Storage';
 	}
 
 	get isStream() {
@@ -124,7 +124,7 @@ class TransformedConnection {
 	}
 
 	get hasIdentities() {
-		return this.role === 'Source' && this.type !== 'Storage' && this.type !== 'Stream';
+		return this.role === 'Source' && this.type !== 'FileStorage' && this.type !== 'Stream';
 	}
 
 	get hasAnonymousIdentifiers() {
@@ -194,7 +194,7 @@ const isEventConnection = (
 	);
 };
 
-const getStorageFileConnections = (
+const getFileStorageConnections = (
 	storageID: number,
 	connections: TransformedConnection[],
 ): TransformedConnection[] => {
@@ -207,7 +207,7 @@ export {
 	getConnectionDescription,
 	getConnectionFullConnector,
 	getConnectionStatus,
-	getStorageFileConnections,
+	getFileStorageConnections,
 	isEventConnection,
 };
 export type { ConnectionStatus };

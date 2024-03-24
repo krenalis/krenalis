@@ -96,6 +96,12 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		})
 		defer database.Close()
 		inner = database
+	case state.FileStorageType:
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{
+			Role:        role,
+			Settings:    connection.Settings,
+			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+		})
 	case state.MobileType:
 		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{
 			Role:        role,
@@ -104,12 +110,6 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		})
 	case state.ServerType:
 		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{
-			Role:        role,
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
-		})
-	case state.StorageType:
-		inner, err = chichi.RegisteredStorage(c.Name).New(&chichi.StorageConfig{
 			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
@@ -183,12 +183,12 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 		inner = database
 	case state.FileType:
 		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: r})
+	case state.FileStorageType:
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: r})
 	case state.MobileType:
 		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: r})
 	case state.ServerType:
 		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: r})
-	case state.StorageType:
-		inner, err = chichi.RegisteredStorage(c.Name).New(&chichi.StorageConfig{Role: r})
 	case state.StreamType:
 		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: r})
 	case state.WebsiteType:
@@ -243,8 +243,8 @@ func (connectors *Connectors) ValidateSettings(ctx context.Context, connector *s
 		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: r})
 	case state.ServerType:
 		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: r})
-	case state.StorageType:
-		inner, err = chichi.RegisteredStorage(c.Name).New(&chichi.StorageConfig{Role: r})
+	case state.FileStorageType:
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: r})
 	case state.StreamType:
 		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: r})
 	case state.WebsiteType:

@@ -1,7 +1,7 @@
 import { Action, ActionType } from './action';
 import { UIValues } from './api';
 
-type ConnectorType = 'App' | 'Database' | 'File' | 'Mobile' | 'Server' | 'Storage' | 'Stream' | 'Website';
+type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
 
 type ConnectionRole = 'Source' | 'Destination';
 

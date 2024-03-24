@@ -55,7 +55,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		database := this.database()
 		defer database.Close()
 		records, err = database.Records(ctx, action, replacer)
-	case state.StorageType:
+	case state.FileStorageType:
 		records, err = this.file().Records(ctx)
 	}
 	if err != nil {

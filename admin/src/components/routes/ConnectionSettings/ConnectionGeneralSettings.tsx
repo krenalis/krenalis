@@ -104,7 +104,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		connection.role === 'Source' && (connection.type === 'Mobile' || connection.type === 'Website');
 
 	const showBusinessID =
-		connection.role === 'Source' && connection.type !== 'Storage' && connection.type !== 'Stream';
+		connection.role === 'Source' && connection.type !== 'FileStorage' && connection.type !== 'Stream';
 	const businessIDKind = ['Database'].includes(connection.type) ? 'column' : 'property';
 
 	return (

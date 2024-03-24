@@ -332,7 +332,7 @@ const ConnectorSettings = () => {
 	}
 
 	const showStrategy = hasStrategy(connectionRole, c);
-	const showBusinessID = connectionRole === 'Source' && c.type !== 'Storage' && c.type !== 'Stream';
+	const showBusinessID = connectionRole === 'Source' && c.type !== 'FileStorage' && c.type !== 'Stream';
 	const businessIDKind = ['File', 'Database'].includes(c.type) ? 'column' : 'property';
 
 	let eventConnectionsContainer: ReactNode = null;

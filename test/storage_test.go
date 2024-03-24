@@ -27,7 +27,7 @@ func TestStorage(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Create a Storage connection.
+	// Create a file storage connection.
 	storageDir, err := filepath.Abs("testdata/storage")
 	if err != nil {
 		t.Fatal(err)

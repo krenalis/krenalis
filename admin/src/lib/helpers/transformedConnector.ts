@@ -64,16 +64,16 @@ class TransformedConnector {
 		return this.type === 'File';
 	}
 
+	get isFileStorage() {
+		return this.type === 'FileStorage';
+	}
+
 	get isMobile() {
 		return this.type === 'Mobile';
 	}
 
 	get isServer() {
 		return this.type === 'Server';
-	}
-
-	get isStorage() {
-		return this.type === 'Storage';
 	}
 
 	get isStream() {

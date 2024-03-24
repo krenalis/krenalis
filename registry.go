@@ -19,18 +19,18 @@ var (
 		apps      map[string]AppInfo
 		databases map[string]DatabaseInfo
 		files     map[string]FileInfo
+		storages  map[string]FileStorageInfo
 		mobiles   map[string]MobileInfo
 		servers   map[string]ServerInfo
-		storages  map[string]StorageInfo
 		streams   map[string]StreamInfo
 		websites  map[string]WebsiteInfo
 	}{
 		apps:      make(map[string]AppInfo),
 		databases: make(map[string]DatabaseInfo),
 		files:     make(map[string]FileInfo),
+		storages:  make(map[string]FileStorageInfo),
 		mobiles:   make(map[string]MobileInfo),
 		servers:   make(map[string]ServerInfo),
-		storages:  make(map[string]StorageInfo),
 		streams:   make(map[string]StreamInfo),
 		websites:  make(map[string]WebsiteInfo),
 	}
@@ -85,6 +85,23 @@ func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
 	registry.files[file.Name] = file
 }
 
+// RegisterFileStorage makes a file storage connector available by the provided
+// name. If RegisterFileStorage is called twice with the same name or if fn is
+// nil, it panics.
+func RegisterFileStorage[T FileStorage](storage FileStorageInfo, new FileStorageNewFunc[T]) {
+	if new == nil {
+		panic("connector: new function is nil")
+	}
+	storage.newFunc = reflect.ValueOf(new)
+	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if _, dup := registry.storages[storage.Name]; dup {
+		panic("connector: RegisterFileStorage called twice for connector " + storage.Name)
+	}
+	registry.storages[storage.Name] = storage
+}
+
 // RegisterMobile makes a mobile connector available by the provided name. If
 // RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
@@ -117,23 +134,6 @@ func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
 		panic("connector: RegisterServer called twice for connector " + server.Name)
 	}
 	registry.servers[server.Name] = server
-}
-
-// RegisterStorage makes a storage connector available by the provided name. If
-// RegisterStorage is called twice with the same name or if fn is nil, it
-// panics.
-func RegisterStorage[T Storage](storage StorageInfo, new StorageNewFunc[T]) {
-	if new == nil {
-		panic("connector: new function is nil")
-	}
-	storage.newFunc = reflect.ValueOf(new)
-	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	if _, dup := registry.storages[storage.Name]; dup {
-		panic("connector: RegisterStorage called twice for connector " + storage.Name)
-	}
-	registry.storages[storage.Name] = storage
 }
 
 // RegisterStream makes a stream connector available by the provided name.
@@ -218,6 +218,18 @@ func RegisteredFile(name string) FileInfo {
 	return file
 }
 
+// RegisteredFileStorage returns the file storage registered with the given
+// name. If a file storage with this name is not registered, it panics.
+func RegisteredFileStorage(name string) FileStorageInfo {
+	registryMu.Lock()
+	storage, ok := registry.storages[name]
+	registryMu.Unlock()
+	if !ok {
+		panic(fmt.Errorf("connector: unknown file storage connector %q (forgotten import?)", name))
+	}
+	return storage
+}
+
 // RegisteredMobile returns the mobile registered with the given name.
 // If a mobile with this name is not registered, it panics.
 func RegisteredMobile(name string) MobileInfo {
@@ -240,18 +252,6 @@ func RegisteredServer(name string) ServerInfo {
 		panic(fmt.Errorf("connector: unknown server connector %q (forgotten import?)", name))
 	}
 	return server
-}
-
-// RegisteredStorage returns the storage registered with the given name.
-// If a storage with this name is not registered, it panics.
-func RegisteredStorage(name string) StorageInfo {
-	registryMu.Lock()
-	storage, ok := registry.storages[name]
-	registryMu.Unlock()
-	if !ok {
-		panic(fmt.Errorf("connector: unknown storage connector %q (forgotten import?)", name))
-	}
-	return storage
 }
 
 // RegisteredWebsite returns the website registered with the given name.

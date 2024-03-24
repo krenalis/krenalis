@@ -101,6 +101,15 @@ func (state *State) Load() error {
 					c.FileExtension = file.Extension
 					ct = file.ReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
+				case FileStorageType:
+					storage := chichi.RegisteredFileStorage(c.Name)
+					c.SourceDescription = storage.SourceDescription
+					c.DestinationDescription = storage.DestinationDescription
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
+					c.Targets = UsersFlag | GroupsFlag
+					c.Icon = storage.Icon
+					ct = storage.ReflectType()
 				case MobileType:
 					mobile := chichi.RegisteredMobile(c.Name)
 					c.SourceDescription = mobile.SourceDescription
@@ -119,15 +128,6 @@ func (state *State) Load() error {
 					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = server.Icon
 					ct = server.ReflectType()
-				case StorageType:
-					storage := chichi.RegisteredStorage(c.Name)
-					c.SourceDescription = storage.SourceDescription
-					c.DestinationDescription = storage.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
-					c.Targets = UsersFlag | GroupsFlag
-					c.Icon = storage.Icon
-					ct = storage.ReflectType()
 				case StreamType:
 					stream := chichi.RegisteredStream(c.Name)
 					c.SourceDescription = stream.SourceDescription

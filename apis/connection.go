@@ -265,7 +265,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		}
 
-	case state.StorageType:
+	case state.FileStorageType:
 		switch target {
 		case Users:
 			if c.Role == state.Source {
@@ -337,9 +337,9 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	defer span.End()
 
 	// Validate the Connector.
-	actionOnFile := this.connection.Connector().Type == state.StorageType
+	actionOnFile := this.connection.Connector().Type == state.FileStorageType
 	if actionOnFile && action.Connector == 0 {
-		return 0, errors.BadRequest("actions on Storage connections must have a connector")
+		return 0, errors.BadRequest("actions on file storage connections must have a connector")
 	}
 	if !actionOnFile && action.Connector != 0 {
 		return 0, errors.BadRequest("actions on %v connections cannot have a connector", this.connection.Connector().Type)
@@ -698,14 +698,14 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 // cannot be longer than 1024 runes, and must be UTF-8 encoded.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - InvalidPath, if path is not valid for the storage connector.
+//   - InvalidPath, if path is not valid for the file storage connector.
 //   - InvalidPlaceholder, if path for source connections contains a placeholder
 //     or path for destination connections contains an invalid placeholder.
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
-	if c.Connector().Type != state.StorageType {
-		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
+	if c.Connector().Type != state.FileStorageType {
+		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 	if path == "" {
 		return "", errors.BadRequest("path is empty")
@@ -892,7 +892,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.AppType, state.DatabaseType, state.StorageType, state.StreamType:
+	case state.AppType, state.DatabaseType, state.FileStorageType, state.StreamType:
 	default:
 		return nil, errors.BadRequest("connection %d cannot have executions, it's a %s connection",
 			c.ID, strings.ToLower(connector.Type.String()))
@@ -1055,8 +1055,8 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 	connector := c.Connector()
 
 	// Validate the connection type.
-	if connector.Type != state.StorageType {
-		return nil, types.Type{}, errors.BadRequest("connection %d is not a storage connection", c.ID)
+	if connector.Type != state.FileStorageType {
+		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 	// Validate the path.
 	if path == "" {
@@ -1595,8 +1595,8 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 func (this *Connection) Sheets(ctx context.Context, fileConnector int, path string, settings []byte, compression Compression) ([]string, error) {
 	this.apis.mustBeOpen()
 	connector := this.connection.Connector()
-	if connector.Type != state.StorageType {
-		return nil, errors.BadRequest("connection %d is not a storage", this.connection.ID)
+	if connector.Type != state.FileStorageType {
+		return nil, errors.BadRequest("connection %d is not a file storage", this.connection.ID)
 	}
 	if path == "" {
 		return nil, errors.BadRequest("path is empty")
@@ -1766,7 +1766,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 		case
 			state.AppType,
 			state.DatabaseType,
-			state.StorageType:
+			state.FileStorageType:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForUsers
@@ -1808,7 +1808,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 		case
 			state.AppType,
 			state.DatabaseType,
-			state.StorageType:
+			state.FileStorageType:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForGroups
@@ -1903,8 +1903,8 @@ func (this *Connection) database() *connectors.Database {
 }
 
 // storage returns the storage of the connection.
-func (this *Connection) storage() *connectors.Storage {
-	return this.apis.connectors.Storage(this.connection)
+func (this *Connection) storage() *connectors.FileStorage {
+	return this.apis.connectors.FileStorage(this.connection)
 }
 
 // validateEventConnections validates the given event connections for a
@@ -2293,9 +2293,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 
 	// Check if the settings and the compression are allowed.
-	if connector.Type == state.StorageType {
+	if connector.Type == state.FileStorageType {
 		if action.Settings == nil {
-			return errors.BadRequest("actions on Storage connections must have settings")
+			return errors.BadRequest("actions on file storage connections must have settings")
 		}
 	} else {
 		if action.Settings != nil {
@@ -2325,7 +2325,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		filtersAllowed = c.Role == state.Destination
 	case state.DatabaseType:
 		filtersAllowed = c.Role == state.Destination
-	case state.StorageType:
+	case state.FileStorageType:
 		filtersAllowed = targetUsersOrGroups && c.Role == state.Destination
 	}
 	if action.Filter != nil && !filtersAllowed {
@@ -2333,7 +2333,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	}
 
 	// Check if the path and the sheet are allowed.
-	if connector.Type == state.StorageType {
+	if connector.Type == state.FileStorageType {
 		if action.Path == "" {
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
@@ -2354,7 +2354,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check the column for the identity and for the timestamp.
 	importFromColumns := c.Role == state.Source &&
-		(connector.Type == state.StorageType || connector.Type == state.DatabaseType)
+		(connector.Type == state.DatabaseType || connector.Type == state.FileStorageType)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
@@ -2425,7 +2425,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// When exporting users to file, ensure that the output schema is valid, as
 	// it contains the properties that will be exported to the file.
-	if connector.Type == state.StorageType && c.Role == state.Destination && target == state.Users {
+	if connector.Type == state.FileStorageType && c.Role == state.Destination && target == state.Users {
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema cannot be empty when exporting users to file")
 		}
@@ -2466,7 +2466,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Check the connections for which the transformation is prohibited.
 	transformationProhibited := (c.Role == state.Source && eventBasedConn && target == state.Events) ||
-		(c.Role == state.Destination && connector.Type == state.StorageType && targetUsersOrGroups)
+		(c.Role == state.Destination && connector.Type == state.FileStorageType && targetUsersOrGroups)
 	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
 	if transformationProhibited && haveTransformation {
 		return errors.BadRequest("action cannot have a transformation")
@@ -2492,7 +2492,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	// contain at least one property).
 	transformationMandatory := targetUsersOrGroups &&
 		(connector.Type == state.AppType || connector.Type == state.DatabaseType ||
-			(c.Role == state.Source && connector.Type == state.StorageType))
+			(c.Role == state.Source && connector.Type == state.FileStorageType))
 	if transformationMandatory && !haveTransformation {
 		return errors.BadRequest("action must have a transformation")
 	}
@@ -2615,7 +2615,7 @@ func validateBusinessID(cType state.ConnectorType, role state.Role, businessID s
 		if !types.IsValidPropertyName(businessID) {
 			return errors.BadRequest("Business ID name %q is not a valid property name", businessID)
 		}
-	case state.DatabaseType, state.StorageType:
+	case state.DatabaseType, state.FileStorageType:
 		if !utf8.ValidString(businessID) {
 			return errors.BadRequest("Business ID name is not UTF-8 encoded")
 		}
@@ -2753,7 +2753,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	switch connector.Type {
 	case state.AppType:
 		supported = c.Role == state.Destination || target != Events
-	case state.DatabaseType, state.StorageType:
+	case state.DatabaseType, state.FileStorageType:
 		supported = target != Events
 	case state.MobileType, state.ServerType, state.WebsiteType:
 		supported = c.Role == state.Source

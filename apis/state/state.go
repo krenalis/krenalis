@@ -419,9 +419,9 @@ const (
 	AppType ConnectorType = iota + 1
 	DatabaseType
 	FileType
+	FileStorageType
 	MobileType
 	ServerType
-	StorageType
 	StreamType
 	WebsiteType
 )
@@ -440,12 +440,12 @@ func (typ *ConnectorType) Scan(src any) error {
 		t = DatabaseType
 	case "File":
 		t = FileType
+	case "FileStorage":
+		t = FileStorageType
 	case "Mobile":
 		t = MobileType
 	case "Server":
 		t = ServerType
-	case "Storage":
-		t = StorageType
 	case "Stream":
 		t = StreamType
 	case "Website":
@@ -477,12 +477,12 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 		return "Database", nil
 	case FileType:
 		return "File", nil
+	case FileStorageType:
+		return "FileStorage", nil
 	case MobileType:
 		return "Mobile", nil
 	case ServerType:
 		return "Server", nil
-	case StorageType:
-		return "Storage", nil
 	case StreamType:
 		return "Stream", nil
 	case WebsiteType:

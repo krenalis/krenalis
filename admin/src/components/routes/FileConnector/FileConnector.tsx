@@ -40,7 +40,7 @@ const FileConnector = () => {
 	const storages = useMemo(() => {
 		const s: TransformedConnection[] = [];
 		for (const c of connections) {
-			if (c.isStorage && c.role === role) {
+			if (c.isFileStorage && c.role === role) {
 				s.push(c);
 			}
 		}

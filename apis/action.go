@@ -247,17 +247,18 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// ServeUI serves the user interface for the file action (on a storage connection). event
-// is the event and values contains the form values in JSON format.
+// ServeUI serves the user interface for the file action (on a file storage
+// connection). event is the event and values contains the form values in JSON
+// format.
 //
-// If the event does not exist, it returns an errors.UnprocessableError error with code
-// EventNotExist.
+// If the event does not exist, it returns an errors.UnprocessableError error
+// with code EventNotExist.
 func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
 	this.apis.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
 	connector := this.action.Connection().Connector()
-	if connector.Type != state.StorageType {
+	if connector.Type != state.FileStorageType {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
 	b, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
@@ -273,7 +274,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 	return b, nil
 }
 
-// Execute executes the action, which must be an app, database, or storage
+// Execute executes the action, which must be an app, database, or file storage
 // action with a target of Users or Groups.
 //
 // It returns an errors.NotFoundError error if the action does not exist
@@ -297,7 +298,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
 	switch typ := c.Connector().Type; typ {
-	case state.AppType, state.DatabaseType, state.StorageType:
+	case state.AppType, state.DatabaseType, state.FileStorageType:
 	default:
 		return errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
 	}
@@ -320,9 +321,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	defer span.End()
 
 	// Validate the connector.
-	actionOnFile := this.action.Connection().Connector().Type == state.StorageType
+	actionOnFile := this.action.Connection().Connector().Type == state.FileStorageType
 	if actionOnFile && action.Connector == 0 {
-		return errors.BadRequest("actions on Storage connections must have a connector")
+		return errors.BadRequest("actions on file storage connections must have a connector")
 	}
 	if !actionOnFile && action.Connector != 0 {
 		return errors.BadRequest("actions on %v connections cannot have a connector", this.action.Connection().Connector().Type)
@@ -725,7 +726,7 @@ type ActionToSet struct {
 	// empty string.
 	Query string
 
-	// Connector is the connector of the action on Storage connections.
+	// Connector is the connector of the action on file storage connections.
 	// In any other case, must be 0.
 	Connector int
 
@@ -740,11 +741,11 @@ type ActionToSet struct {
 	// case-insensitive.
 	Sheet string
 
-	// Compression is the compression of the action on Storage connections.
+	// Compression is the compression of the action on file storage connections.
 	// In any other case, must be 0.
 	Compression Compression
 
-	// Settings are the settings of the action on Storage connections.
+	// Settings are the settings of the action on file storage connections.
 	// In any other case, must be nil.
 	Settings json.RawMessage
 

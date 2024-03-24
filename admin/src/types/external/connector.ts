@@ -1,6 +1,6 @@
 import { ActionTarget } from './action';
 
-type ConnectorType = 'App' | 'Database' | 'File' | 'Mobile' | 'Server' | 'Storage' | 'Stream' | 'Website';
+type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
 
 type WebhooksPer = 'None' | 'Connector' | 'Resource' | 'Source';
 

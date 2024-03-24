@@ -237,10 +237,10 @@ func (w *fileWriter) Write(ctx context.Context, gid int, record Record) bool {
 }
 
 // storage returns the inner storage connection of the file.
-func (file *File) storage() (chichi.Storage, error) {
+func (file *File) storage() (chichi.FileStorage, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
-	return chichi.RegisteredStorage(connector.Name).New(&chichi.StorageConfig{
+	return chichi.RegisteredFileStorage(connector.Name).New(&chichi.FileStorageConfig{
 		Role:        chichi.Role(conn.Role),
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
@@ -937,16 +937,16 @@ func isExcelSimpleFloat(s string) bool {
 }
 
 // compressorStorage implements a storage capable of compressing and
-// decompressing data read from or written to a connector.StorageConnection.
+// decompressing data read from or written to a FileStorage.
 type compressorStorage struct {
-	storage     chichi.Storage
+	storage     chichi.FileStorage
 	compression state.Compression
 }
 
 // newCompressedStorage returns a compressor storage that wraps s and performs
 // file compression and decompression using c as the compression method.
 // If c is NoCompression, it does not perform any compression or decompression.
-func newCompressedStorage(s chichi.Storage, c state.Compression) *compressorStorage {
+func newCompressedStorage(s chichi.FileStorage, c state.Compression) *compressorStorage {
 	return &compressorStorage{s, c}
 }
 

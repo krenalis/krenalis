@@ -40,7 +40,7 @@ func (this *Action) addExecution(ctx context.Context, reimport bool) error {
 		StartTime: time.Now().UTC(),
 	}
 	c := this.action.Connection()
-	if c.Connector().Type == state.StorageType {
+	if c.Connector().Type == state.FileStorageType {
 		n.Storage = c.ID
 	}
 

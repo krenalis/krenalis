@@ -31,21 +31,21 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Storage and the UI interfaces.
+// Make sure it implements the FileStorage and the UI interfaces.
 var _ interface {
-	chichi.Storage
+	chichi.FileStorage
 	chichi.UI
 } = (*S3)(nil)
 
 func init() {
-	chichi.RegisterStorage(chichi.StorageInfo{
+	chichi.RegisterFileStorage(chichi.FileStorageInfo{
 		Name: "S3",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new S3 connector instance.
-func New(conf *chichi.StorageConfig) (*S3, error) {
+func New(conf *chichi.FileStorageConfig) (*S3, error) {
 	c := S3{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -57,7 +57,7 @@ func New(conf *chichi.StorageConfig) (*S3, error) {
 }
 
 type S3 struct {
-	conf     *chichi.StorageConfig
+	conf     *chichi.FileStorageConfig
 	settings *settings
 }
 

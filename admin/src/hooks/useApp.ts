@@ -6,7 +6,7 @@ import TransformedConnection, {
 	getConnectionFullConnector,
 	getConnectionStatus,
 	getConnectionDescription,
-	getStorageFileConnections,
+	getFileStorageConnections,
 } from '../lib/helpers/transformedConnection';
 import { Location } from 'react-router-dom';
 import { adminBasePath } from '../constants/path';
@@ -157,8 +157,8 @@ const useApp = (
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
-				if (c.isStorage) {
-					c.linkedFiles = getStorageFileConnections(c.id, transformedConnections);
+				if (c.isFileStorage) {
+					c.linkedFiles = getFileStorageConnections(c.id, transformedConnections);
 				}
 			}
 			setConnections(transformedConnections);
@@ -228,8 +228,8 @@ const useApp = (
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
-				if (c.isStorage) {
-					c.linkedFiles = getStorageFileConnections(c.id, transformedConnections);
+				if (c.isFileStorage) {
+					c.linkedFiles = getFileStorageConnections(c.id, transformedConnections);
 				}
 			}
 			setConnections(transformedConnections);

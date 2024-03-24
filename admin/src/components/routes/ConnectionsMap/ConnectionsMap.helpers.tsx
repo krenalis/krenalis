@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import LinkedConnectionBlocks from './LinkedConnectionBlocks';
 import ConnectionBlock from './ConnectionBlock';
-import TransformedConnection, { getStorageFileConnections } from '../../../lib/helpers/transformedConnection';
+import TransformedConnection, { getFileStorageConnections } from '../../../lib/helpers/transformedConnection';
 
 const getConnectionsBlocks = (connections: TransformedConnection[], newConnectionID: number) => {
 	const blocks: ReactNode[] = [];
@@ -9,8 +9,8 @@ const getConnectionsBlocks = (connections: TransformedConnection[], newConnectio
 		if (c.isFile) {
 			continue;
 		}
-		if (c.isStorage) {
-			const linkedFiles = getStorageFileConnections(c.id, connections);
+		if (c.isFileStorage) {
+			const linkedFiles = getFileStorageConnections(c.id, connections);
 			blocks.push(
 				<LinkedConnectionBlocks
 					key={c.id}

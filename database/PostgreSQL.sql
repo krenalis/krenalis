@@ -2,7 +2,7 @@
 
 CREATE COLLATION case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
 
-CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Stream', 'Website');
+CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
 CREATE TYPE action_target AS ENUM ('Events', 'Users', 'Groups');
 
 CREATE TABLE connectors (
@@ -20,10 +20,10 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('Dummy', 'App', '', ''),
     ('Mailchimp', 'App', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac'),
     ('CSV', 'File', '', ''),
-    ('SFTP', 'Storage', '', ''),
-    ('HTTP', 'Storage', '', ''),
+    ('SFTP', 'FileStorage', '', ''),
+    ('HTTP', 'FileStorage', '', ''),
     ('Excel', 'File', '', ''),
-    ('S3', 'Storage', '', ''),
+    ('S3', 'FileStorage', '', ''),
     ('PostgreSQL', 'Database', '', ''),
     ('Parquet', 'File', '', ''),
     ('JavaScript', 'Website', '', ''),
@@ -33,7 +33,7 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('.NET', 'Server', '', ''),
     ('Klaviyo', 'App', '', ''),
     ('Google Analytics 4', 'App', '', ''),
-    ('Filesystem', 'Storage', '', ''),
+    ('Filesystem', 'FileStorage', '', ''),
     ('ClickHouse', 'Database', '', ''),
     ('JSON', 'File', '', ''),
     ('Mixpanel', 'App', '', ''),

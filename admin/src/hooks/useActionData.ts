@@ -214,7 +214,7 @@ const useAction = (
 		isMappingHidden =
 			isFileConnectorLoading ||
 			isFileConnectorChanged ||
-			((connection.type === 'Database' || connection.type === 'Storage') &&
+			((connection.type === 'Database' || connection.type === 'FileStorage') &&
 				actionType!.InputSchema == null &&
 				!isEditing) ||
 			(connection.type === 'Database' &&
@@ -227,7 +227,7 @@ const useAction = (
 			connection.role === 'Source' &&
 			actionType!.InputSchema == null &&
 			isEditing;
-		const hasRecordsError = connection.type === 'Storage' && actionType!.InputSchema == null && isEditing;
+		const hasRecordsError = connection.type === 'FileStorage' && actionType!.InputSchema == null && isEditing;
 		const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
 
 		isMappingDisabled =
@@ -252,7 +252,7 @@ const useAction = (
 		} else if (connection.type === 'Database' && connection.role === 'Destination') {
 			mappingDisabledReason =
 				'Mapping is disabled since the table name has been modified. Please confirm the table name or revert the changes before proceeding to mapping.';
-		} else if (connection.type === 'Storage') {
+		} else if (connection.type === 'FileStorage') {
 			mappingDisabledReason =
 				'Mapping is disabled since the file information has been modified. Please confirm the new file information or revert the changes before proceeding to mapping.';
 		}

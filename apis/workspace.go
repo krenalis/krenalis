@@ -1644,7 +1644,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 				if extIDLabel == "" {
 					extIDLabel = "ID"
 				}
-			case state.DatabaseType, state.StorageType:
+			case state.DatabaseType, state.FileStorageType:
 				extIDLabel = "ID"
 			case state.MobileType, state.ServerType, state.WebsiteType:
 				extIDLabel = "User ID"

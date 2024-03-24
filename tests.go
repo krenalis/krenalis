@@ -12,16 +12,16 @@ import (
 	"fmt"
 )
 
-// CompletePathTest is a test for Storage.CompletePath.
+// CompletePathTest is a test for FileStorage.CompletePath.
 type CompletePathTest struct {
-	Name     string  // path name.
-	Expected string  // expected complete path.
-	Storage  Storage // storage to use, if not nil.
+	Name     string      // path name.
+	Expected string      // expected complete path.
+	Storage  FileStorage // storage to use, if not nil.
 }
 
-// TestCompletePath tests Storage.CompletePath of the connector executing the
+// TestCompletePath tests FileStorage.CompletePath of the connector executing the
 // given tests. It returns an error if a test fails.
-func TestCompletePath(storage Storage, tests []CompletePathTest) error {
+func TestCompletePath(storage FileStorage, tests []CompletePathTest) error {
 	ctx := context.Background()
 	for _, test := range tests {
 		s := storage

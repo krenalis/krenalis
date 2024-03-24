@@ -181,8 +181,8 @@ var (
 	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
 )
 
-// Connectors allows to interact with the apps, databases, files, mobile,
-// servers, storage, streams, and websites connectors.
+// Connectors allows to interact with the apps, databases, files, file storages,
+// mobile, streams, and websites connectors.
 type Connectors struct {
 	state *state.State
 	http  *httpclient.HTTP

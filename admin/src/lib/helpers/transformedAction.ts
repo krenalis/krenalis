@@ -138,7 +138,7 @@ const validateTransformation = (
 					throw new Error('Action must have a valid transformation');
 				}
 			}
-		} else if (connection.isStorage) {
+		} else if (connection.isFileStorage) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					throw new Error('Action must have a valid transformation');
@@ -171,7 +171,7 @@ const validateTransformation = (
 					throw new Error('Action must have a valid transformation');
 				}
 			}
-		} else if (connection.isStorage) {
+		} else if (connection.isFileStorage) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (hasValidTransformation(action)) {
 					throw new Error('Action does not support transformations');
@@ -422,7 +422,7 @@ const transformInActionToSet = async (
 		}
 	}
 
-	if (connection.isDestination && connection.isStorage && actionType.Target === 'Users') {
+	if (connection.isDestination && connection.isFileStorage && actionType.Target === 'Users') {
 		outSchema = actionType.InputSchema;
 	}
 
@@ -607,7 +607,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (
 		connection.type === 'App' ||
 		connection.type === 'Database' ||
-		(connection.type === 'Storage' && connection.role === 'Source') ||
+		(connection.type === 'FileStorage' && connection.role === 'Source') ||
 		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
 			connection.role === 'Source' &&
 			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
@@ -628,7 +628,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}
-	if (connection.type === 'Storage') {
+	if (connection.type === 'FileStorage') {
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
 		}

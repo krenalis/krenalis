@@ -22,21 +22,21 @@ import (
 // An InvalidPathError is returned when a path name is not valid.
 type InvalidPathError = chichi.InvalidPathError
 
-type Storage struct {
+type FileStorage struct {
 	state   *state.State
 	storage *state.Connection
-	inner   chichi.Storage
+	inner   chichi.FileStorage
 	err     error
 }
 
-// Storage returns a storage on the provided connection storage. Errors are deferred
-// until a storage's method is called.
-func (connectors *Connectors) Storage(storage *state.Connection) *Storage {
-	s := &Storage{
+// FileStorage returns a file storage on the provided file storage connection.
+// Errors are deferred until a file storage's method is called.
+func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorage {
+	s := &FileStorage{
 		state:   connectors.state,
 		storage: storage,
 	}
-	s.inner, s.err = chichi.RegisteredStorage(storage.Connector().Name).New(&chichi.StorageConfig{
+	s.inner, s.err = chichi.RegisteredFileStorage(storage.Connector().Name).New(&chichi.FileStorageConfig{
 		Role:        chichi.Role(storage.Role),
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
@@ -51,7 +51,7 @@ func (connectors *Connectors) Storage(storage *state.Connection) *Storage {
 // If nameReplacer is not nil, then the placeholders in name are replaced using
 // it; in this case, a PlaceholderError error may be returned in case of an
 // error with placeholders.
-func (storage *Storage) CompletePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
+func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
 	}
@@ -83,7 +83,7 @@ func (storage *Storage) CompletePath(ctx context.Context, name string, nameRepla
 //
 // If the file has no columns, it returns the ErrNoColumns error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
-func (storage *Storage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings []byte, businessIDColumn string, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
+func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings []byte, businessIDColumn string, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if storage.err != nil {
 		return nil, nil, storage.err
 	}
@@ -125,7 +125,7 @@ func (storage *Storage) Read(ctx context.Context, file *state.Connector, name, s
 // Sheets returns the sheets of the file with the provided name. Sheet names
 // are case-insensitive. It panics if the file connector does not support
 // sheets.
-func (storage *Storage) Sheets(ctx context.Context, file *state.Connector, name string, settings []byte, compression state.Compression) ([]string, error) {
+func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, settings []byte, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
 		return nil, storage.err
 	}

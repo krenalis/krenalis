@@ -45,9 +45,9 @@ const (
 	AppType ConnectorType = iota + 1
 	DatabaseType
 	FileType
+	FileStorageType
 	MobileType
 	ServerType
-	StorageType
 	StreamType
 	WebsiteType
 )
@@ -68,12 +68,12 @@ func (typ ConnectorType) String() string {
 		return "Database"
 	case FileType:
 		return "File"
+	case FileStorageType:
+		return "FileStorage"
 	case MobileType:
 		return "Mobile"
 	case ServerType:
 		return "Server"
-	case StorageType:
-		return "Storage"
 	case StreamType:
 		return "Stream"
 	case WebsiteType:
@@ -104,12 +104,12 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 		t = DatabaseType
 	case "File":
 		t = FileType
+	case "FileStorage":
+		t = FileStorageType
 	case "Mobile":
 		t = MobileType
 	case "Server":
 		t = ServerType
-	case "Storage":
-		t = StorageType
 	case "Stream":
 		t = StreamType
 	case "Website":
