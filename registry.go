@@ -16,29 +16,29 @@ import (
 var (
 	registryMu sync.RWMutex
 	registry   = struct {
-		apps      map[string]App
-		databases map[string]Database
-		files     map[string]File
-		mobiles   map[string]Mobile
-		servers   map[string]Server
-		storages  map[string]Storage
-		streams   map[string]Stream
-		websites  map[string]Website
+		apps      map[string]AppInfo
+		databases map[string]DatabaseInfo
+		files     map[string]FileInfo
+		mobiles   map[string]MobileInfo
+		servers   map[string]ServerInfo
+		storages  map[string]StorageInfo
+		streams   map[string]StreamInfo
+		websites  map[string]WebsiteInfo
 	}{
-		apps:      make(map[string]App),
-		databases: make(map[string]Database),
-		files:     make(map[string]File),
-		mobiles:   make(map[string]Mobile),
-		servers:   make(map[string]Server),
-		storages:  make(map[string]Storage),
-		streams:   make(map[string]Stream),
-		websites:  make(map[string]Website),
+		apps:      make(map[string]AppInfo),
+		databases: make(map[string]DatabaseInfo),
+		files:     make(map[string]FileInfo),
+		mobiles:   make(map[string]MobileInfo),
+		servers:   make(map[string]ServerInfo),
+		storages:  make(map[string]StorageInfo),
+		streams:   make(map[string]StreamInfo),
+		websites:  make(map[string]WebsiteInfo),
 	}
 )
 
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if fn is nil, it panics.
-func RegisterApp[T AppConnection](app App, new AppNewFunc[T]) {
+func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -55,7 +55,7 @@ func RegisterApp[T AppConnection](app App, new AppNewFunc[T]) {
 // RegisterDatabase makes a database connector available by the provided name.
 // If RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterDatabase[T DatabaseConnection](database Database, new DatabaseNewFunc[T]) {
+func RegisterDatabase[T Database](database DatabaseInfo, new DatabaseNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -71,7 +71,7 @@ func RegisterDatabase[T DatabaseConnection](database Database, new DatabaseNewFu
 
 // RegisterFile makes a file connector available by the provided name. If
 // RegisterFile is called twice with the same name or if fn is nil, it panics.
-func RegisterFile[T FileConnection](file File, new FileNewFunc[T]) {
+func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -88,7 +88,7 @@ func RegisterFile[T FileConnection](file File, new FileNewFunc[T]) {
 // RegisterMobile makes a mobile connector available by the provided name. If
 // RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterMobile[T MobileConnection](mobile Mobile, new MobileNewFunc[T]) {
+func RegisterMobile[T Mobile](mobile MobileInfo, new MobileNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -105,7 +105,7 @@ func RegisterMobile[T MobileConnection](mobile Mobile, new MobileNewFunc[T]) {
 // RegisterServer makes a server connector available by the provided name. If
 // RegisterServer is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterServer[T ServerConnection](server Server, new ServerNewFunc[T]) {
+func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -122,7 +122,7 @@ func RegisterServer[T ServerConnection](server Server, new ServerNewFunc[T]) {
 // RegisterStorage makes a storage connector available by the provided name. If
 // RegisterStorage is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterStorage[T StorageConnection](storage Storage, new StorageNewFunc[T]) {
+func RegisterStorage[T Storage](storage StorageInfo, new StorageNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -139,7 +139,7 @@ func RegisterStorage[T StorageConnection](storage Storage, new StorageNewFunc[T]
 // RegisterStream makes a stream connector available by the provided name.
 // If RegisterStream is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterStream[T StreamConnection](stream Stream, new StreamNewFunc[T]) {
+func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -156,7 +156,7 @@ func RegisterStream[T StreamConnection](stream Stream, new StreamNewFunc[T]) {
 // RegisterWebsite makes a website connector available by the provided name. If
 // RegisterWebsite is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterWebsite[T WebsiteConnection](website Website, new WebsiteNewFunc[T]) {
+func RegisterWebsite[T Website](website WebsiteInfo, new WebsiteNewFunc[T]) {
 	if new == nil {
 		panic("connector: new function is nil")
 	}
@@ -172,7 +172,7 @@ func RegisterWebsite[T WebsiteConnection](website Website, new WebsiteNewFunc[T]
 
 // RegisteredApp returns the app registered with the given name.
 // If an app with this name is not registered, it panics.
-func RegisteredApp(name string) App {
+func RegisteredApp(name string) AppInfo {
 	registryMu.Lock()
 	app, ok := registry.apps[name]
 	registryMu.Unlock()
@@ -184,7 +184,7 @@ func RegisteredApp(name string) App {
 
 // RegisteredDatabase returns the database registered with the given name.
 // If a database with this name is not registered, it panics.
-func RegisteredDatabase(name string) Database {
+func RegisteredDatabase(name string) DatabaseInfo {
 	registryMu.Lock()
 	database, ok := registry.databases[name]
 	registryMu.Unlock()
@@ -196,7 +196,7 @@ func RegisteredDatabase(name string) Database {
 
 // RegisteredStream returns the stream registered with the given name.
 // If a stream with this name is not registered, it panics.
-func RegisteredStream(name string) Stream {
+func RegisteredStream(name string) StreamInfo {
 	registryMu.Lock()
 	stream, ok := registry.streams[name]
 	registryMu.Unlock()
@@ -208,7 +208,7 @@ func RegisteredStream(name string) Stream {
 
 // RegisteredFile returns the file registered with the given name.
 // If a file with this name is not registered, it panics.
-func RegisteredFile(name string) File {
+func RegisteredFile(name string) FileInfo {
 	registryMu.Lock()
 	file, ok := registry.files[name]
 	registryMu.Unlock()
@@ -220,7 +220,7 @@ func RegisteredFile(name string) File {
 
 // RegisteredMobile returns the mobile registered with the given name.
 // If a mobile with this name is not registered, it panics.
-func RegisteredMobile(name string) Mobile {
+func RegisteredMobile(name string) MobileInfo {
 	registryMu.Lock()
 	mobile, ok := registry.mobiles[name]
 	registryMu.Unlock()
@@ -232,7 +232,7 @@ func RegisteredMobile(name string) Mobile {
 
 // RegisteredServer returns the server registered with the given name.
 // If a server with this name is not registered, it panics.
-func RegisteredServer(name string) Server {
+func RegisteredServer(name string) ServerInfo {
 	registryMu.Lock()
 	server, ok := registry.servers[name]
 	registryMu.Unlock()
@@ -244,7 +244,7 @@ func RegisteredServer(name string) Server {
 
 // RegisteredStorage returns the storage registered with the given name.
 // If a storage with this name is not registered, it panics.
-func RegisteredStorage(name string) Storage {
+func RegisteredStorage(name string) StorageInfo {
 	registryMu.Lock()
 	storage, ok := registry.storages[name]
 	registryMu.Unlock()
@@ -256,7 +256,7 @@ func RegisteredStorage(name string) Storage {
 
 // RegisteredWebsite returns the website registered with the given name.
 // If a website with this name is not registered, it panics.
-func RegisteredWebsite(name string) Website {
+func RegisteredWebsite(name string) WebsiteInfo {
 	registryMu.Lock()
 	website, ok := registry.websites[name]
 	registryMu.Unlock()

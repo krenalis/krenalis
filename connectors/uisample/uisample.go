@@ -21,20 +21,20 @@ import (
 var _ chichi.UI = (*UISample)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
 	}, New)
 }
 
-// New returns a new UISample connection.
+// New returns a new UISample connector instance.
 func New(conf *chichi.AppConfig) (*UISample, error) {
 	c := UISample{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of UISample connection")
+			return nil, errors.New("cannot unmarshal settings of UISample connector")
 		}
 	}
 	return &c, nil

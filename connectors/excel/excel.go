@@ -32,7 +32,7 @@ var icon = "<svg></svg>"
 var _ chichi.Sheets = (*Excel)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.File{
+	chichi.RegisterFile(chichi.FileInfo{
 		Name:              "Excel",
 		SourceDescription: "import users from an Excel file",
 		Icon:              icon,
@@ -40,13 +40,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Excel connection.
+// New returns a new Excel connector instance.
 func New(conf *chichi.FileConfig) (*Excel, error) {
 	c := Excel{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connection")
+			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
 	}
 	return &c, nil

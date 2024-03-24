@@ -34,7 +34,7 @@ var iconPHP = "<svg></svg>"
 var iconPython = "<svg></svg>"
 
 func init() {
-	servers := []chichi.Server{
+	servers := []chichi.ServerInfo{
 		{
 			Name:              ".NET",
 			SourceDescription: "import events, users and groups from a server using .NET",
@@ -71,7 +71,7 @@ func init() {
 	}
 }
 
-// New returns a new Server connection.
+// New returns a new Server connector instance.
 func New(*chichi.ServerConfig) (*Server, error) {
 	return &Server{}, nil
 }

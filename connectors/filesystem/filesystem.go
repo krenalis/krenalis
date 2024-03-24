@@ -27,26 +27,26 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI and the StorageConnection interfaces.
+// Make sure it implements the UI and the Storage interfaces.
 var _ interface {
 	chichi.UI
-	chichi.StorageConnection
+	chichi.Storage
 } = (*Filesystem)(nil)
 
 func init() {
-	chichi.RegisterStorage(chichi.Storage{
+	chichi.RegisterStorage(chichi.StorageInfo{
 		Name: "Filesystem",
 		Icon: icon,
 	}, New)
 }
 
-// New returns a new Filesystem connection.
+// New returns a new Filesystem connector instance.
 func New(conf *chichi.StorageConfig) (*Filesystem, error) {
 	c := Filesystem{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Filesystem connection")
+			return nil, errors.New("cannot unmarshal settings of Filesystem connector")
 		}
 	}
 	return &c, nil

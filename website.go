@@ -11,8 +11,8 @@ import (
 	"reflect"
 )
 
-// Website represents a website connector.
-type Website struct {
+// WebsiteInfo represents a website connector info.
+type WebsiteInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -22,29 +22,30 @@ type Website struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the website
-// connection.
-func (website Website) ConnectionReflectType() reflect.Type {
-	return website.ct
+// ReflectType returns the type of the value implementing the website connector
+// info.
+func (info WebsiteInfo) ReflectType() reflect.Type {
+	return info.ct
 }
 
-// New returns a new website connection.
-func (website Website) New(conf *WebsiteConfig) (WebsiteConnection, error) {
-	out := website.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(WebsiteConnection)
+// New returns a new website connector instance.
+func (info WebsiteInfo) New(conf *WebsiteConfig) (Website, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	c := out[0].Interface().(Website)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// WebsiteConfig represents the configuration of a website connection.
+// WebsiteConfig represents the configuration of a website connector.
 type WebsiteConfig struct {
 	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// WebsiteNewFunc represents functions that create new website connections.
-type WebsiteNewFunc[T WebsiteConnection] func(*WebsiteConfig) (T, error)
+// WebsiteNewFunc represents functions that create new website connector
+// instances.
+type WebsiteNewFunc[T Website] func(*WebsiteConfig) (T, error)
 
-// WebsiteConnection is the interface implemented by website connections.
-type WebsiteConnection interface{}
+// Website is the interface implemented by website connectors.
+type Website interface{}

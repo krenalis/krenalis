@@ -24,7 +24,7 @@ import (
 type Database struct {
 	closed     bool
 	connector  int
-	inner      chichi.DatabaseConnection
+	inner      chichi.Database
 	businessID string
 	err        error
 }
@@ -210,7 +210,7 @@ type databaseWriter struct {
 	schema  types.Type
 	columns []types.Property
 	rows    []map[string]any
-	inner   chichi.DatabaseConnection
+	inner   chichi.Database
 	closed  bool
 }
 

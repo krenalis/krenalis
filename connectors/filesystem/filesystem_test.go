@@ -30,8 +30,8 @@ func TestPathConvert(t *testing.T) {
 		{Name: "a/.."},
 		{Name: "../a"},
 		{Name: "a/"},
-		{Name: "a", Expected: "/root/a", Connection: fs2},
-		{Name: "/a", Expected: "/root/a", Connection: fs2},
+		{Name: "a", Expected: "/root/a", Storage: fs2},
+		{Name: "/a", Expected: "/root/a", Storage: fs2},
 	}
 	err := chichi.TestCompletePath(fs, tests)
 	if err != nil {

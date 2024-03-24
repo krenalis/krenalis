@@ -35,26 +35,26 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI and the StorageConnection interfaces.
+// Make sure it implements the UI and the Storage interfaces.
 var _ interface {
 	chichi.UI
-	chichi.StorageConnection
+	chichi.Storage
 } = (*SFTP)(nil)
 
 func init() {
-	chichi.RegisterStorage(chichi.Storage{
+	chichi.RegisterStorage(chichi.StorageInfo{
 		Name: "SFTP",
 		Icon: icon,
 	}, New)
 }
 
-// New returns a new SFTP connection.
+// New returns a new SFTP connector instance.
 func New(conf *chichi.StorageConfig) (*SFTP, error) {
 	c := SFTP{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of SFTP connection")
+			return nil, errors.New("cannot unmarshal settings of SFTP connector")
 		}
 	}
 	return &c, nil

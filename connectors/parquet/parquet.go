@@ -33,7 +33,7 @@ import (
 var icon = "<svg></svg>"
 
 func init() {
-	chichi.RegisterFile(chichi.File{
+	chichi.RegisterFile(chichi.FileInfo{
 		Name:              "Parquet",
 		SourceDescription: "import users and groups from a parquet file",
 		Icon:              icon,
@@ -41,7 +41,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new Parquet connection.
+// New returns a new Parquet connector instance.
 func New(conf *chichi.FileConfig) (*Parquet, error) {
 	return &Parquet{}, nil
 }

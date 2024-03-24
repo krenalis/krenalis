@@ -23,8 +23,8 @@ import (
 // request was not authorized.
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
-// App represents an app connector.
-type App struct {
+// AppInfo represents an app connector info.
+type AppInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -44,21 +44,21 @@ type App struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the app
-// connection.
-func (app App) ConnectionReflectType() reflect.Type {
+// ReflectType returns the type of the value implementing the app connector
+// info.
+func (app AppInfo) ReflectType() reflect.Type {
 	return app.ct
 }
 
-// New returns a new app connection.
-func (app App) New(conf *AppConfig) (AppConnection, error) {
+// New returns a new app connector instance.
+func (app AppInfo) New(conf *AppConfig) (App, error) {
 	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(AppConnection)
+	c := out[0].Interface().(App)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// AppConfig represents the configuration of an app connection.
+// AppConfig represents the configuration of an app connector.
 type AppConfig struct {
 	Role        Role
 	Settings    []byte
@@ -77,14 +77,14 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
-// AppNewFunc represents functions that create new app connections.
-type AppNewFunc[T AppConnection] func(*AppConfig) (T, error)
+// AppNewFunc represents functions that create new app connector instances.
+type AppNewFunc[T App] func(*AppConfig) (T, error)
 
-// AppConnection is the interface implemented by app connections.
+// App is the interface implemented by app connectors.
 //
-// An app connection also implements at least one of the interfaces
-// AppEventsConnection, AppUsersConnection, and AppUsersGroupsConnection.
-type AppConnection interface {
+// An app connector also implements at least one of the interfaces AppEvents,
+// AppUsers, and AppUsersGroups.
+type App interface {
 
 	// Resource returns the resource.
 	Resource(ctx context.Context) (string, error)
@@ -98,12 +98,12 @@ type EventRequest struct {
 	Body   []byte
 }
 
-// AppEventsConnection is the interface implemented by app connections to which
-// events can be sent.
-type AppEventsConnection interface {
-	AppConnection
+// AppEvents is the interface implemented by app connectors to which events can
+// be sent.
+type AppEvents interface {
+	App
 
-	// EventTypes returns the connection's event types.
+	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// EventRequest returns an event request associated with the provided event
@@ -122,10 +122,9 @@ type Cursor struct {
 	Next      string    // Returned string value of the last call to Users or Groups.
 }
 
-// AppUsersConnection is the interface implemented by app connections that
-// manage users.
-type AppUsersConnection interface {
-	AppConnection
+// AppUsers is the interface implemented by app connectors that manage users.
+type AppUsers interface {
+	App
 
 	// CreateUser creates a user with the given properties.
 	CreateUser(ctx context.Context, user map[string]any) error
@@ -146,10 +145,9 @@ type AppUsersConnection interface {
 	Users(ctx context.Context, properties []string, cursor Cursor) (users []Record, next string, err error)
 }
 
-// AppGroupsConnection is the interface implemented by app connections that
-// manage groups.
-type AppGroupsConnection interface {
-	AppConnection
+// AppGroups is the interface implemented by app connectors that manage groups.
+type AppGroups interface {
+	App
 
 	// CreateGroup creates a group with the given properties.
 	CreateGroup(ctx context.Context, group map[string]any) error

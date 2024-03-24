@@ -29,7 +29,7 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*JSON)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.File{
+	chichi.RegisterFile(chichi.FileInfo{
 		Name:                   "JSON",
 		DestinationDescription: "export users to a JSON file",
 		Icon:                   icon,
@@ -37,13 +37,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new JSON connection.
+// New returns a new JSON connector instance.
 func New(conf *chichi.FileConfig) (*JSON, error) {
 	c := JSON{role: conf.Role, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of JSON connection")
+			return nil, errors.New("cannot unmarshal settings of JSON connector")
 		}
 	}
 	return &c, nil

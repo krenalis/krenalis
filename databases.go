@@ -14,8 +14,8 @@ import (
 	"chichi/types"
 )
 
-// Database represents a database connector.
-type Database struct {
+// DatabaseInfo represents a database connector info.
+type DatabaseInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -26,35 +26,36 @@ type Database struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the database
-// connection.
-func (database Database) ConnectionReflectType() reflect.Type {
-	return database.ct
+// ReflectType returns the type of the value implementing the database
+// connector info.
+func (info DatabaseInfo) ReflectType() reflect.Type {
+	return info.ct
 }
 
-// New returns a new database connection.
-func (database Database) New(conf *DatabaseConfig) (DatabaseConnection, error) {
-	out := database.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(DatabaseConnection)
+// New returns a new database connector instance.
+func (info DatabaseInfo) New(conf *DatabaseConfig) (Database, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	c := out[0].Interface().(Database)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// DatabaseConfig represents the configuration of a database connection.
+// DatabaseConfig represents the configuration of a database connector.
 type DatabaseConfig struct {
 	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// DatabaseNewFunc represents functions that create new database connections.
-type DatabaseNewFunc[T DatabaseConnection] func(*DatabaseConfig) (T, error)
+// DatabaseNewFunc represents functions that create new database connector
+// instances.
+type DatabaseNewFunc[T Database] func(*DatabaseConfig) (T, error)
 
-// DatabaseConnection is the interface implemented by database connections.
-type DatabaseConnection interface {
+// Database is the interface implemented by database connectors.
+type Database interface {
 
-	// Close closes the database. When Close is called, no other calls to connection
-	// methods are in progress and no more will be made.
+	// Close closes the database. When Close is called, no other calls to
+	// connector's methods are in progress and no more will be made.
 	Close() error
 
 	// Columns returns the columns of the given table.

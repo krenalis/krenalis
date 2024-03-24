@@ -30,14 +30,14 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI and the StorageConnection interfaces.
+// Make sure it implements the UI and the Storage interfaces.
 var _ interface {
 	chichi.UI
-	chichi.StorageConnection
+	chichi.Storage
 } = (*HTTP)(nil)
 
 func init() {
-	chichi.RegisterStorage(chichi.Storage{
+	chichi.RegisterStorage(chichi.StorageInfo{
 		Name: "HTTP",
 		Icon: icon,
 	}, New)
@@ -49,7 +49,7 @@ func New(conf *chichi.StorageConfig) (*HTTP, error) {
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of HTTP connection")
+			return nil, errors.New("cannot unmarshal settings of HTTP connector")
 		}
 	}
 	return &c, nil

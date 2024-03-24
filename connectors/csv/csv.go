@@ -35,7 +35,7 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*CSV)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.File{
+	chichi.RegisterFile(chichi.FileInfo{
 		Name:              "CSV",
 		SourceDescription: "import users from a CSV file",
 		Icon:              icon,
@@ -43,13 +43,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new CSV connection.
+// New returns a new CSV connector instance.
 func New(conf *chichi.FileConfig) (*CSV, error) {
 	c := CSV{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connection")
+			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
 	}
 	return &c, nil

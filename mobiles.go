@@ -11,8 +11,8 @@ import (
 	"reflect"
 )
 
-// Mobile represents a mobile connector.
-type Mobile struct {
+// MobileInfo represents a mobile connector info.
+type MobileInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -22,29 +22,30 @@ type Mobile struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the mobile
-// connection.
-func (mobile Mobile) ConnectionReflectType() reflect.Type {
-	return mobile.ct
+// ReflectType returns the type of the value implementing the mobile connector
+// info.
+func (info MobileInfo) ReflectType() reflect.Type {
+	return info.ct
 }
 
-// New returns a new mobile connection.
-func (mobile Mobile) New(conf *MobileConfig) (MobileConnection, error) {
-	out := mobile.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(MobileConnection)
+// New returns a new mobile connector instance.
+func (info MobileInfo) New(conf *MobileConfig) (Mobile, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	c := out[0].Interface().(Mobile)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// MobileConfig represents the configuration of a mobile connection.
+// MobileConfig represents the configuration of a mobile connector.
 type MobileConfig struct {
 	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// MobileNewFunc represents functions that create new mobile connections.
-type MobileNewFunc[T MobileConnection] func(*MobileConfig) (T, error)
+// MobileNewFunc represents functions that create new mobile connector
+// instances.
+type MobileNewFunc[T Mobile] func(*MobileConfig) (T, error)
 
-// MobileConnection is the interface implemented by mobile connections.
-type MobileConnection interface{}
+// Mobile is the interface implemented by mobile connectors.
+type Mobile interface{}

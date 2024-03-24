@@ -32,7 +32,7 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*Snowflake)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.Database{
+	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:                   "Snowflake",
 		SourceDescription:      "import users and groups from a Snowflake database",
 		DestinationDescription: "export users and groups to a Snowflake database",
@@ -41,13 +41,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Snowflake connection.
+// New returns a new Snowflake connector instance.
 func New(conf *chichi.DatabaseConfig) (*Snowflake, error) {
 	c := Snowflake{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Snowflake connection")
+			return nil, errors.New("cannot unmarshal settings of Snowflake connector")
 		}
 	}
 	return &c, nil

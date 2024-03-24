@@ -40,7 +40,7 @@ var storageTimeout = 10 * time.Second
 type File struct {
 	state  *state.State
 	action *state.Action
-	inner  chichi.FileConnection
+	inner  chichi.File
 	err    error
 }
 
@@ -237,7 +237,7 @@ func (w *fileWriter) Write(ctx context.Context, gid int, record Record) bool {
 }
 
 // storage returns the inner storage connection of the file.
-func (file *File) storage() (chichi.StorageConnection, error) {
+func (file *File) storage() (chichi.Storage, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
 	return chichi.RegisteredStorage(connector.Name).New(&chichi.StorageConfig{
@@ -253,7 +253,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  chichi.FileConnection
+	inner  chichi.File
 	err    error
 	closed bool
 }
@@ -939,14 +939,14 @@ func isExcelSimpleFloat(s string) bool {
 // compressorStorage implements a storage capable of compressing and
 // decompressing data read from or written to a connector.StorageConnection.
 type compressorStorage struct {
-	storage     chichi.StorageConnection
+	storage     chichi.Storage
 	compression state.Compression
 }
 
 // newCompressedStorage returns a compressor storage that wraps s and performs
 // file compression and decompression using c as the compression method.
 // If c is NoCompression, it does not perform any compression or decompression.
-func newCompressedStorage(s chichi.StorageConnection, c state.Compression) *compressorStorage {
+func newCompressedStorage(s chichi.Storage, c state.Compression) *compressorStorage {
 	return &compressorStorage{s, c}
 }
 

@@ -34,17 +34,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI and the AppUsersConnection interfaces.
+// Make sure it implements the UI and the AppUsers interfaces.
 var _ interface {
 	chichi.UI
-	chichi.AppUsersConnection
+	chichi.AppUsers
 } = (*MailChimp)(nil)
 
-// Make sure it implements the AppUsersConnection interface.
-var _ chichi.AppUsersConnection = (*MailChimp)(nil)
+// Make sure it implements the AppUsers interface.
+var _ chichi.AppUsers = (*MailChimp)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Mailchimp",
 		SourceDescription:      "import contacts as users from Mailchimp",
 		DestinationDescription: "export users as contacts to Mailchimp",
@@ -59,13 +59,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Mailchimp connection.
+// New returns a new Mailchimp connector instance.
 func New(conf *chichi.AppConfig) (*MailChimp, error) {
 	c := MailChimp{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Mailchimp connection")
+			return nil, errors.New("cannot unmarshal settings of Mailchimp connector")
 		}
 		// TODO(marco): re-enable webhooks when a public IP is used.
 		//err = c.initWebhooks()

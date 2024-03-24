@@ -21,7 +21,7 @@ var iconAndroid = "<svg></svg>"
 var iconApple = "<svg></svg>"
 
 func init() {
-	mobiles := []chichi.Mobile{
+	mobiles := []chichi.MobileInfo{
 		{
 			Name:              "Android",
 			SourceDescription: "import events, users and groups from an Android mobile device",
@@ -38,7 +38,7 @@ func init() {
 	}
 }
 
-// New returns a new Mobile connection.
+// New returns a new Mobile connector instance.
 func New(*chichi.MobileConfig) (*Mobile, error) {
 	return &Mobile{}, nil
 }

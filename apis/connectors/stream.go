@@ -20,7 +20,7 @@ type SendOptions = chichi.SendOptions
 // Stream represents the stream of a stream connection.
 type Stream struct {
 	closed bool
-	inner  chichi.StreamConnection
+	inner  chichi.Stream
 }
 
 // Stream returns a stream for the provided connection. It panics if connection

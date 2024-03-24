@@ -34,7 +34,7 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*MySQL)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.Database{
+	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:                   "MySQL",
 		SourceDescription:      "import users and groups from a MySQL database",
 		DestinationDescription: "export users and groups to a MySQL database",
@@ -43,13 +43,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new MySQL connection.
+// New returns a new MySQL connector instance.
 func New(conf *chichi.DatabaseConfig) (*MySQL, error) {
 	c := MySQL{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of MySQL connection")
+			return nil, errors.New("cannot unmarshal settings of MySQL connector")
 		}
 	}
 	return &c, nil
@@ -61,8 +61,8 @@ type MySQL struct {
 	db       *sql.DB
 }
 
-// Close closes the database. When Close is called, no other calls to connection
-// methods are in progress and no more will be made.
+// Close closes the database. When Close is called, no other calls to
+// connector's methods are in progress and no more will be made.
 func (my *MySQL) Close() error {
 	if my.db == nil {
 		return nil

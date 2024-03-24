@@ -1,5 +1,5 @@
 
-## App connections
+## App connectors
 
 | Method           | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
 |------------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
@@ -18,7 +18,7 @@
 | ValidateSettings | ✓    | -              | -              | ✓                       | ✓                       | ✓                       |
 
 
-## Database connections
+## Database connectors
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
@@ -30,7 +30,7 @@
 | ValidateSettings | ✓    | -        | -           |
 
 
-## File connections
+## File connectors
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
@@ -42,7 +42,7 @@
 | Write            | ✓    | ✓        | ✓           |
 
 
-## Storage connections
+## Storage connectors
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
@@ -53,7 +53,7 @@
 | Write            | ✓    | ✓        | ✓           |
 
 
-## Stream connections
+## Stream connectors
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|

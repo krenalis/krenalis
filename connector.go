@@ -18,9 +18,9 @@ import (
 	"chichi/ui"
 )
 
-// Connector is the interface implemented by connectors.
-type Connector interface {
-	ConnectionReflectType() reflect.Type
+// ConnectorInfo is the interface implemented by connector infos.
+type ConnectorInfo interface {
+	ReflectType() reflect.Type
 }
 
 // Record represents an app record.
@@ -48,8 +48,8 @@ func (err *AccessDeniedError) Error() string {
 	return err.Err.Error()
 }
 
-// A NotSupportedTypeError error is returned by FileConnector.Read and
-// DatabaseConnector.Query methods when a column type is not supported.
+// A NotSupportedTypeError error is returned by File.Read and Database.Query
+// methods when a column type is not supported.
 type NotSupportedTypeError struct {
 	Column string
 	Type   string
@@ -79,7 +79,7 @@ func SuggestPropertyName(s string) string {
 type SetSettingsFunc func(context.Context, []byte) error
 
 // HTTPClient is the interface implemented by the HTTP client used by
-// connections.
+// connectors.
 type HTTPClient interface {
 
 	// Do sends an HTTP request with an Authorization header if required. It
@@ -137,7 +137,7 @@ func (role Role) String() string {
 	panic("invalid role")
 }
 
-// UI is the interface implemented by connections that have a UI.
+// UI is the interface implemented by connectors that expose a UI.
 type UI interface {
 
 	// ServeUI serves the connector's user interface.

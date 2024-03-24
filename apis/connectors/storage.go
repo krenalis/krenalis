@@ -25,7 +25,7 @@ type InvalidPathError = chichi.InvalidPathError
 type Storage struct {
 	state   *state.State
 	storage *state.Connection
-	inner   chichi.StorageConnection
+	inner   chichi.Storage
 	err     error
 }
 

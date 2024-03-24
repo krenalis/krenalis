@@ -52,13 +52,13 @@ type Stripe struct {
 	settings *settings
 }
 
-// Make sure it implements the AppUsersConnection interface.
+// Make sure it implements the AppUsers interface.
 var _ interface {
-	chichi.AppUsersConnection
+	chichi.AppUsers
 } = (*Stripe)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Stripe",
 		SourceDescription:      "import customers as users",
 		DestinationDescription: "export users as customers",
@@ -68,13 +68,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Stripe connection.
+// New returns a new Stripe connector instance.
 func New(conf *chichi.AppConfig) (*Stripe, error) {
 	c := Stripe{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Stripe connection")
+			return nil, errors.New("cannot unmarshal settings of Stripe connector")
 		}
 	}
 	err := c.setupWebhooksEndpoint()

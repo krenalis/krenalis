@@ -38,16 +38,15 @@ var (
 //go:embed users.json
 var jsonUsers []byte
 
-// Make sure it implements the AppEventsConnection and the AppUsersConnection
-// interfaces.
+// Make sure it implements the AppEvents and the AppUsers interfaces.
 var _ interface {
-	chichi.AppEventsConnection
-	chichi.AppUsersConnection
+	chichi.AppEvents
+	chichi.AppUsers
 	chichi.UI
 } = (*Dummy)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Dummy",
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
@@ -57,13 +56,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Dummy connection.
+// New returns a new Dummy connector instance.
 func New(conf *chichi.AppConfig) (*Dummy, error) {
 	c := Dummy{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connection")
+			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
 	}
 	return &c, nil
@@ -137,7 +136,7 @@ func (dummy *Dummy) EventRequest(ctx context.Context, eventType *chichi.EventTyp
 	return req, nil
 }
 
-// EventTypes returns the connection's event types.
+// EventTypes returns the event types of the connector's instance.
 func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	if dummy.conf.Role == chichi.Source {
 		return nil, nil

@@ -34,19 +34,19 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*Kafka)(nil)
 
 func init() {
-	chichi.RegisterStream(chichi.Stream{
+	chichi.RegisterStream(chichi.StreamInfo{
 		Name: "Kafka",
 		Icon: icon,
 	}, New)
 }
 
-// New returns a new Kafka connection.
+// New returns a new Kafka connector instance.
 func New(conf *chichi.StreamConfig) (*Kafka, error) {
 	c := Kafka{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Kafka connection")
+			return nil, errors.New("cannot unmarshal settings of Kafka connector")
 		}
 	}
 	return &c, nil
@@ -59,7 +59,7 @@ type Kafka struct {
 	iter     *fetchesRecordIter
 }
 
-// Close closes the stream. When Close is called, no other calls to connection
+// Close closes the stream. When Close is called, no other calls to connector's
 // methods are in progress and no more will be made.
 func (kafka *Kafka) Close() error {
 	if kafka.client == nil {

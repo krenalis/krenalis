@@ -27,7 +27,7 @@ func TestCompletePath(t *testing.T) {
 		{Name: "%5z"},
 		{Name: "/\x00"},
 		{Name: "/a/b?x=y#"},
-		{Name: "/a", Expected: "https://example.com:8080/a", Connection: http2},
+		{Name: "/a", Expected: "https://example.com:8080/a", Storage: http2},
 	}
 	err := chichi.TestCompletePath(http, tests)
 	if err != nil {

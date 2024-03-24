@@ -18,9 +18,9 @@ import (
 
 var (
 	uiType                  = reflect.TypeOf((*chichi.UI)(nil)).Elem()
-	appEventsConnectionType = reflect.TypeOf((*chichi.AppEventsConnection)(nil)).Elem()
-	appUsersConnectionType  = reflect.TypeOf((*chichi.AppUsersConnection)(nil)).Elem()
-	appGroupsConnectionType = reflect.TypeOf((*chichi.AppGroupsConnection)(nil)).Elem()
+	appEventsConnectionType = reflect.TypeOf((*chichi.AppEvents)(nil)).Elem()
+	appUsersConnectionType  = reflect.TypeOf((*chichi.AppUsers)(nil)).Elem()
+	appGroupsConnectionType = reflect.TypeOf((*chichi.AppGroups)(nil)).Elem()
 	sheetsType              = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
 )
 
@@ -61,7 +61,7 @@ func (state *State) Load() error {
 					c.TermForUsers = app.TermForUsers
 					c.TermForGroups = app.TermForGroups
 					c.ExternalIDLabel = app.ExternalIDLabel
-					ct = app.ConnectionReflectType()
+					ct = app.ReflectType()
 					if ct.Implements(appEventsConnectionType) {
 						c.Targets |= EventsFlag
 					}
@@ -92,14 +92,14 @@ func (state *State) Load() error {
 					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = database.Icon
 					c.SampleQuery = database.SampleQuery
-					ct = database.ConnectionReflectType()
+					ct = database.ReflectType()
 				case FileType:
 					file := chichi.RegisteredFile(c.Name)
 					c.SourceDescription = file.SourceDescription
 					c.DestinationDescription = file.DestinationDescription
 					c.Icon = file.Icon
 					c.FileExtension = file.Extension
-					ct = file.ConnectionReflectType()
+					ct = file.ReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
 				case MobileType:
 					mobile := chichi.RegisteredMobile(c.Name)
@@ -109,7 +109,7 @@ func (state *State) Load() error {
 					c.TermForGroups = "groups"
 					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = mobile.Icon
-					ct = mobile.ConnectionReflectType()
+					ct = mobile.ReflectType()
 				case ServerType:
 					server := chichi.RegisteredServer(c.Name)
 					c.SourceDescription = server.SourceDescription
@@ -118,7 +118,7 @@ func (state *State) Load() error {
 					c.TermForGroups = "groups"
 					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = server.Icon
-					ct = server.ConnectionReflectType()
+					ct = server.ReflectType()
 				case StorageType:
 					storage := chichi.RegisteredStorage(c.Name)
 					c.SourceDescription = storage.SourceDescription
@@ -127,14 +127,14 @@ func (state *State) Load() error {
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = storage.Icon
-					ct = storage.ConnectionReflectType()
+					ct = storage.ReflectType()
 				case StreamType:
 					stream := chichi.RegisteredStream(c.Name)
 					c.SourceDescription = stream.SourceDescription
 					c.DestinationDescription = stream.DestinationDescription
 					c.Targets = EventsFlag
 					c.Icon = stream.Icon
-					ct = stream.ConnectionReflectType()
+					ct = stream.ReflectType()
 				case WebsiteType:
 					website := chichi.RegisteredWebsite(c.Name)
 					c.SourceDescription = website.SourceDescription
@@ -143,7 +143,7 @@ func (state *State) Load() error {
 					c.TermForGroups = "groups"
 					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = website.Icon
-					ct = website.ConnectionReflectType()
+					ct = website.ReflectType()
 				}
 				c.HasSettings = ct.Implements(uiType)
 				state.connectors[c.ID] = &c

@@ -18,7 +18,7 @@ import (
 var iconJavaScript = "<svg></svg>"
 
 func init() {
-	websites := []chichi.Website{
+	websites := []chichi.WebsiteInfo{
 		{
 			Name:              "JavaScript",
 			SourceDescription: "import events, users and groups from a website using JavaScript",
@@ -30,7 +30,7 @@ func init() {
 	}
 }
 
-// New returns a new Website connection.
+// New returns a new Website connector instance.
 func New(*chichi.WebsiteConfig) (*Website, error) {
 	return &Website{}, nil
 }

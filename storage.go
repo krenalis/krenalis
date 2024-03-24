@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-// An InvalidPathError value is returned by StorageConnection.CompletePath when
-// the path name is not valid for the storage connection.
+// An InvalidPathError value is returned by Storage.CompletePath when the path
+// name is not valid for the storage connector.
 type InvalidPathError struct {
 	err error
 }
@@ -31,8 +31,8 @@ func (err InvalidPathError) Error() string {
 	return err.err.Error()
 }
 
-// Storage represents a storage connector.
-type Storage struct {
+// StorageInfo represents a storage connector info.
+type StorageInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -42,32 +42,33 @@ type Storage struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the storage
-// connection.
-func (storage Storage) ConnectionReflectType() reflect.Type {
-	return storage.ct
+// ReflectType returns the type of the value implementing the storage connector
+// info.
+func (info StorageInfo) ReflectType() reflect.Type {
+	return info.ct
 }
 
-// New returns a new instance  StorageConnection storage connection.
-func (storage Storage) New(conf *StorageConfig) (StorageConnection, error) {
-	out := storage.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(StorageConnection)
+// New returns a new storage connector instance.
+func (info StorageInfo) New(conf *StorageConfig) (Storage, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	c := out[0].Interface().(Storage)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// StorageConfig represents the configuration of a storage connection.
+// StorageConfig represents the configuration of a storage connector.
 type StorageConfig struct {
 	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// StorageNewFunc represents functions that create new storage connections.
-type StorageNewFunc[T StorageConnection] func(*StorageConfig) (T, error)
+// StorageNewFunc represents functions that create new storage connector
+// instances.
+type StorageNewFunc[T Storage] func(*StorageConfig) (T, error)
 
-// StorageConnection is the interface implemented by storage connections.
-type StorageConnection interface {
+// Storage is the interface implemented by storage connectors.
+type Storage interface {
 
 	// CompletePath returns the complete representation of the given path name or an
 	// InvalidPathError if name is not valid for use in calls to Reader and Write.

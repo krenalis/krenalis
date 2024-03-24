@@ -11,8 +11,8 @@ import (
 	"reflect"
 )
 
-// Server represents a server connector.
-type Server struct {
+// ServerInfo represents a server connector info.
+type ServerInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -22,29 +22,30 @@ type Server struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the server
-// connection.
-func (server Server) ConnectionReflectType() reflect.Type {
-	return server.ct
+// ReflectType returns the type of the value implementing the server connector
+// info.
+func (info ServerInfo) ReflectType() reflect.Type {
+	return info.ct
 }
 
-// New returns a new server connection.
-func (server Server) New(conf *ServerConfig) (ServerConnection, error) {
-	out := server.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(ServerConnection)
+// New returns a new server connector instance.
+func (info ServerInfo) New(conf *ServerConfig) (Server, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	c := out[0].Interface().(Server)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// ServerConfig represents the configuration of a server connection.
+// ServerConfig represents the configuration of a server connector.
 type ServerConfig struct {
 	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// ServerNewFunc represents functions that create new server connections.
-type ServerNewFunc[T ServerConnection] func(*ServerConfig) (T, error)
+// ServerNewFunc represents functions that create new server connector
+// instances.
+type ServerNewFunc[T Server] func(*ServerConfig) (T, error)
 
-// ServerConnection is the interface implemented by server connections.
-type ServerConnection interface{}
+// Server is the interface implemented by server connectors.
+type Server interface{}

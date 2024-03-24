@@ -34,7 +34,7 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*ClickHouse)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.Database{
+	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:                   "ClickHouse",
 		SourceDescription:      "import users and groups from a ClickHouse database",
 		DestinationDescription: "export users and groups to a ClickHouse database",
@@ -43,13 +43,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new ClickHouse connection.
+// New returns a new ClickHouse connector instance.
 func New(conf *chichi.DatabaseConfig) (*ClickHouse, error) {
 	c := ClickHouse{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of ClickHouse connection")
+			return nil, errors.New("cannot unmarshal settings of ClickHouse connector")
 		}
 	}
 	return &c, nil
@@ -61,8 +61,8 @@ type ClickHouse struct {
 	db       driver.Conn
 }
 
-// Close closes the database. When Close is called, no other calls to connection
-// methods are in progress and no more will be made.
+// Close closes the database. When Close is called, no other calls to
+// connector's methods are in progress and no more will be made.
 func (ch *ClickHouse) Close() error {
 	if ch.db == nil {
 		return nil

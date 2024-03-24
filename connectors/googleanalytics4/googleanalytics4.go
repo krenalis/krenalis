@@ -33,27 +33,27 @@ var icon = "<svg></svg>"
 // https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
 const sendToDebugServer = false
 
-// Make sure it implements the UI and the AppEventsConnection interfaces.
+// Make sure it implements the UI and the AppEvents interfaces.
 var _ interface {
 	chichi.UI
-	chichi.AppEventsConnection
+	chichi.AppEvents
 } = (*GoogleAnalytics)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Google Analytics 4",
 		DestinationDescription: "send events to Google Analytics 4",
 		Icon:                   icon,
 	}, New)
 }
 
-// New returns a new Google Analytics 4 connection.
+// New returns a new Google Analytics 4 connector instance.
 func New(conf *chichi.AppConfig) (*GoogleAnalytics, error) {
 	c := GoogleAnalytics{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Google Analytics 4 connection")
+			return nil, errors.New("cannot unmarshal settings of Google Analytics 4 connector")
 		}
 	}
 	return &c, nil
@@ -125,7 +125,7 @@ func (ga *GoogleAnalytics) EventRequest(ctx context.Context, eventType *chichi.E
 	return req, nil
 }
 
-// EventTypes returns the connection's event types.
+// EventTypes returns the event types of the connector's instance.
 func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	if ga.conf.Role == chichi.Source {
 		return nil, nil

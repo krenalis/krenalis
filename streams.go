@@ -12,8 +12,8 @@ import (
 	"reflect"
 )
 
-// Stream represents a stream connector.
-type Stream struct {
+// StreamInfo represents a stream connector info.
+type StreamInfo struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
@@ -23,29 +23,30 @@ type Stream struct {
 	ct      reflect.Type
 }
 
-// ConnectionReflectType returns the type of the value implementing the stream
-// connection.
-func (stream Stream) ConnectionReflectType() reflect.Type {
-	return stream.ct
+// ReflectType returns the type of the value implementing the stream connector
+// info.
+func (info StreamInfo) ReflectType() reflect.Type {
+	return info.ct
 }
 
-// New returns a new stream connection.
-func (stream Stream) New(conf *StreamConfig) (StreamConnection, error) {
-	out := stream.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(StreamConnection)
+// New returns a new stream connector instance.
+func (info StreamInfo) New(conf *StreamConfig) (Stream, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	c := out[0].Interface().(Stream)
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// StreamConfig represents the configuration of a stream connection.
+// StreamConfig represents the configuration of a stream connector.
 type StreamConfig struct {
 	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// StreamNewFunc represents functions that create new stream connections.
-type StreamNewFunc[T StreamConnection] func(*StreamConfig) (T, error)
+// StreamNewFunc represents functions that create new stream connector
+// instances.
+type StreamNewFunc[T Stream] func(*StreamConfig) (T, error)
 
 // SendOptions are the send options.
 type SendOptions struct {
@@ -55,12 +56,12 @@ type SendOptions struct {
 	OrderKey string
 }
 
-// StreamConnection is the interface implemented by stream connections.
-// A StreamConnection value can be used for sending or receiving but not both.
-type StreamConnection interface {
+// Stream is the interface implemented by stream connectors.
+// A Stream value can be used for sending or receiving but not both.
+type Stream interface {
 
-	// Close closes the stream. When Close is called, no other calls to connection
-	// methods are in progress and no more will be made.
+	// Close closes the stream. When Close is called, no other calls to the
+	// connector's methods are in progress and no more will be made.
 	Close() error
 
 	// Receive receives an event from the stream. Callers call the ack function to

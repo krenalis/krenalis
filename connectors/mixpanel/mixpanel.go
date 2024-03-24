@@ -31,15 +31,14 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI, the AppEventsConnection, and the
-// AppUsersConnection interfaces.
+// Make sure it implements the UI, the AppEvents, and the AppUsers interfaces.
 var _ interface {
 	chichi.UI
-	chichi.AppEventsConnection
+	chichi.AppEvents
 } = (*Mixpanel)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Mixpanel",
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
@@ -57,13 +56,13 @@ type settings struct {
 	Secret    string
 }
 
-// New returns a new Mixpanel connection.
+// New returns a new Mixpanel connector instance.
 func New(conf *chichi.AppConfig) (*Mixpanel, error) {
 	c := Mixpanel{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Mixpanel connection")
+			return nil, errors.New("cannot unmarshal settings of Mixpanel connector")
 		}
 	}
 	return &c, nil
@@ -175,7 +174,7 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, eventType *chichi.EventTyp
 	return req, nil
 }
 
-// EventTypes returns the connection's event types.
+// EventTypes returns the event types of the connector's instance.
 func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	if mp.conf.Role != chichi.Destination {
 		return nil, nil

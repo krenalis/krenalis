@@ -36,7 +36,7 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*PostgreSQL)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.Database{
+	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:                   "PostgreSQL",
 		SourceDescription:      "import users and groups from a PostgreSQL database",
 		DestinationDescription: "export users and groups to a PostgreSQL database",
@@ -45,13 +45,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new PostgreSQL connection.
+// New returns a new PostgreSQL connector instance.
 func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error) {
 	c := PostgreSQL{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of PostgreSQL connection")
+			return nil, errors.New("cannot unmarshal settings of PostgreSQL connector")
 		}
 	}
 	return &c, nil
@@ -63,8 +63,8 @@ type PostgreSQL struct {
 	db       *sql.DB
 }
 
-// Close closes the database. When Close is called, no other calls to connection
-// methods are in progress and no more will be made.
+// Close closes the database. When Close is called, no other calls to
+// connector's methods are in progress and no more will be made.
 func (ps *PostgreSQL) Close() error {
 	if ps.db == nil {
 		return nil

@@ -31,19 +31,19 @@ var icon = "<svg></svg>"
 var _ chichi.UI = (*RabbitMQ)(nil)
 
 func init() {
-	chichi.RegisterStream(chichi.Stream{
+	chichi.RegisterStream(chichi.StreamInfo{
 		Name: "RabbitMQ",
 		Icon: icon,
 	}, New)
 }
 
-// New returns a new RabbitMQ connection.
+// New returns a new RabbitMQ connector instance.
 func New(conf *chichi.StreamConfig) (*RabbitMQ, error) {
 	c := RabbitMQ{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of RabbitMQ connection")
+			return nil, errors.New("cannot unmarshal settings of RabbitMQ connector")
 		}
 	}
 	return &c, nil
@@ -57,7 +57,7 @@ type RabbitMQ struct {
 	deliveries <-chan amqp.Delivery
 }
 
-// Close closes the stream. When Close is called, no other calls to connection
+// Close closes the stream. When Close is called, no other calls to connector's
 // methods are in progress and no more will be made.
 func (rmq *RabbitMQ) Close() error {
 	if rmq.conn == nil {

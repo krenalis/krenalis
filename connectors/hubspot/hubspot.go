@@ -32,15 +32,15 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppUsersConnection and the AppGroupsConnection
+// Make sure it implements the AppUsers and the AppGroups
 // interfaces.
 var _ interface {
-	chichi.AppUsersConnection
-	chichi.AppGroupsConnection
+	chichi.AppUsers
+	chichi.AppGroups
 } = (*HubSpot)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.App{
+	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "HubSpot",
 		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
 		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
@@ -57,7 +57,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new HubSpot connection.
+// New returns a new HubSpot connector instance.
 func New(conf *chichi.AppConfig) (*HubSpot, error) {
 	c := HubSpot{
 		setSettings: conf.SetSettings,
@@ -92,7 +92,7 @@ func (hs *HubSpot) CreateUser(ctx context.Context, user map[string]any) error {
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
 }
 
-// EventTypes returns the connection's event types.
+// EventTypes returns the event types of the connector's instance.
 func (hs *HubSpot) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	return nil, nil
 }

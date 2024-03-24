@@ -88,7 +88,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			Region:      chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
 			WebhookURL:  webhookURL(connection, resourceID)})
 	case state.DatabaseType:
-		var database chichi.DatabaseConnection
+		var database chichi.Database
 		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{
 			Role:        role,
 			Settings:    connection.Settings,
@@ -177,7 +177,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 			Region:     chichi.PrivacyRegion(conf.Region),
 		})
 	case state.DatabaseType:
-		var database chichi.DatabaseConnection
+		var database chichi.Database
 		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: r})
 		defer database.Close()
 		inner = database
@@ -233,7 +233,7 @@ func (connectors *Connectors) ValidateSettings(ctx context.Context, connector *s
 			HTTPClient: connectors.http.Client(conf.ClientSecret, conf.AccessToken),
 		})
 	case state.DatabaseType:
-		var database chichi.DatabaseConnection
+		var database chichi.Database
 		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: r})
 		defer database.Close()
 		inner = database
