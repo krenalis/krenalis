@@ -27,8 +27,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI interface.
-var _ chichi.UI = (*RabbitMQ)(nil)
+// Make sure it implements the Stream and the UI interfaces.
+var _ interface {
+	chichi.Stream
+	chichi.UI
+} = (*RabbitMQ)(nil)
 
 func init() {
 	chichi.RegisterStream(chichi.StreamInfo{

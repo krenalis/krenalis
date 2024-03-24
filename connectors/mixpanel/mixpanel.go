@@ -31,10 +31,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI, the AppEvents, and the AppUsers interfaces.
+// Make sure it implements the AppEvents and UI interfaces.
 var _ interface {
-	chichi.UI
 	chichi.AppEvents
+	chichi.UI
 } = (*Mixpanel)(nil)
 
 func init() {

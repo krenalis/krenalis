@@ -28,8 +28,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI interface.
-var _ chichi.UI = (*Snowflake)(nil)
+// Make sure it implements the Database and UI interfaces.
+var _ interface {
+	chichi.Database
+	chichi.UI
+} = (*Snowflake)(nil)
 
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{

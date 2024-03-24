@@ -29,16 +29,7 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-var (
-	allUsers        map[string]map[string]any
-	usersTimestamps map[string]time.Time
-	usersLock       sync.Mutex
-)
-
-//go:embed users.json
-var jsonUsers []byte
-
-// Make sure it implements the AppEvents and the AppUsers interfaces.
+// Make sure it implements the AppEvents, AppUsers, and UI interfaces.
 var _ interface {
 	chichi.AppEvents
 	chichi.AppUsers
@@ -72,6 +63,15 @@ type Dummy struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
+
+var (
+	allUsers        map[string]map[string]any
+	usersTimestamps map[string]time.Time
+	usersLock       sync.Mutex
+)
+
+//go:embed users.json
+var jsonUsers []byte
 
 var randGenerator = rand.New(rand.NewSource(time.Now().Unix()))
 

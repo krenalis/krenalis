@@ -32,8 +32,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI interface.
-var _ chichi.UI = (*PostgreSQL)(nil)
+// Make sure it implements the Database and UI interfaces.
+var _ interface {
+	chichi.Database
+	chichi.UI
+} = (*PostgreSQL)(nil)
 
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{

@@ -26,18 +26,18 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the AppEvents and UI interfaces.
+var _ interface {
+	chichi.AppEvents
+	chichi.UI
+} = (*GoogleAnalytics)(nil)
+
 // sendToDebugServer controls whether the events should be sent to the debug
 // server instead of the production server.
 //
 // See
 // https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
 const sendToDebugServer = false
-
-// Make sure it implements the UI and the AppEvents interfaces.
-var _ interface {
-	chichi.UI
-	chichi.AppEvents
-} = (*GoogleAnalytics)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{

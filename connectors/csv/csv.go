@@ -31,8 +31,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI interface.
-var _ chichi.UI = (*CSV)(nil)
+// Make sure it implements the File and UI interfaces.
+var _ interface {
+	chichi.File
+	chichi.UI
+} = (*CSV)(nil)
 
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{

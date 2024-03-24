@@ -34,14 +34,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI and the AppUsers interfaces.
+// Make sure it implements the AppUsers and UI interfaces.
 var _ interface {
-	chichi.UI
 	chichi.AppUsers
+	chichi.UI
 } = (*MailChimp)(nil)
-
-// Make sure it implements the AppUsers interface.
-var _ chichi.AppUsers = (*MailChimp)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{

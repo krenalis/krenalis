@@ -28,8 +28,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Sheets interface.
-var _ chichi.Sheets = (*Excel)(nil)
+// Make sure it implements the File, Sheets, and UI interfaces.
+var _ interface {
+	chichi.File
+	chichi.Sheets
+	chichi.UI
+} = (*Excel)(nil)
 
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{

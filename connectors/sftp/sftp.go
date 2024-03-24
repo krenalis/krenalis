@@ -35,10 +35,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI and the Storage interfaces.
+// Make sure it implements the Storage and the UI interfaces.
 var _ interface {
-	chichi.UI
 	chichi.Storage
+	chichi.UI
 } = (*SFTP)(nil)
 
 func init() {

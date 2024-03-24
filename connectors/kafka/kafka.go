@@ -30,8 +30,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI interface.
-var _ chichi.UI = (*Kafka)(nil)
+// Make sure it implements the Stream and the UI interfaces.
+var _ interface {
+	chichi.Stream
+	chichi.UI
+} = (*Kafka)(nil)
 
 func init() {
 	chichi.RegisterStream(chichi.StreamInfo{

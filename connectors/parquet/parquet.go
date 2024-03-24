@@ -32,6 +32,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the File interface.
+var _ interface {
+	chichi.File
+} = (*Parquet)(nil)
+
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{
 		Name:              "Parquet",

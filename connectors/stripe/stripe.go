@@ -35,6 +35,12 @@ const maxEventPayload = 1024 * 1024
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the AppUsers and UI interfaces.
+var _ interface {
+	chichi.AppUsers
+	chichi.UI
+} = (*Stripe)(nil)
+
 var baseURL = "https://api.stripe.com"
 
 type webhookSettings struct {
@@ -51,11 +57,6 @@ type Stripe struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
-
-// Make sure it implements the AppUsers interface.
-var _ interface {
-	chichi.AppUsers
-} = (*Stripe)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
