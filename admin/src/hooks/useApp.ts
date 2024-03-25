@@ -161,6 +161,8 @@ const useApp = (
 					c.linkedFiles = getFileStorageConnections(c.id, transformedConnections);
 				}
 			}
+			// order the connections alphabetically.
+			transformedConnections.sort((a, b) => (a.name < b.name ? -1 : 1));
 			setConnections(transformedConnections);
 
 			// get the warehouse.
