@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -49,7 +50,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	// Test the "/complete-path" method.
-	const expectedPathSuffix = "/testdata/storage/file_with_3_sheets.xlsx"
+	expectedPathSuffix := "/testdata/storage/file_with_3_sheets.xlsx"
+	if runtime.GOOS == "windows" {
+		expectedPathSuffix = "\\testdata\\storage\\file_with_3_sheets.xlsx"
+	}
 	gotPath := c.CompletePath(storage, "file_with_3_sheets.xlsx")
 	if !strings.HasSuffix(gotPath, expectedPathSuffix) {
 		t.Fatalf("expected complete path to end with suffix %q, but it the complete path is %q", expectedPathSuffix, gotPath)
