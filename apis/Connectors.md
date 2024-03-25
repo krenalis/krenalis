@@ -42,7 +42,7 @@
 | Write            | ✓    | ✓        | ✓           |
 
 
-## Storage connectors
+## FileStorage connectors
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|

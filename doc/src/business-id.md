@@ -11,9 +11,9 @@ For source connections, a **Business ID name** can be specified.
 The **Business ID name** is a property name or a column name from which the value of the Business ID is read when importing.
 
 * For **app connections**, it must refer to a property of the app with a supported type.
-* For **storage connections**, it must be a column of the file with a supported type.
 * For **database connections**, it must be a column returned by the database query with a supported type.
 * For **events connections** (mobile, website and server), it must be the name of a field of the event's `traits` with a supported type.
+* For **file storage connections**, it must be a column of the file with a supported type.
 
 If such property / column does not exist on the source connection, or if the type is not supported, the Business ID is not imported.
 
