@@ -29,6 +29,7 @@ type Store struct {
 	mu        sync.Mutex // for the events field
 	events    []map[string]any
 	closed    atomic.Bool
+	runningIR chan struct{} // prevents concurrent executions of the Workspace Identity Resolution.
 }
 
 // newStore returns a new Store for the workspace ws.
@@ -36,6 +37,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store := &Store{
 		ds:        ds,
 		workspace: ws.ID,
+		runningIR: make(chan struct{}, 1),
 	}
 	var err error
 	store.warehouse, err = openWarehouse(ws.Warehouse.Type, ws.Warehouse.Settings)
@@ -203,6 +205,17 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
 func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
+
+	// Prevent concurrent executions of the Workspace Identity Resolution. This
+	// is a workaround for the PostgreSQL error:
+	//
+	//     duplicate key value violates unique constraint "pg_proc_proname_args_nsp_index" (SQLSTATE 23505)
+	//
+	// TODO(Gianluca): also take a look at https://github.com/open2b/chichi/issues/354.
+	store.runningIR <- struct{}{}
+	defer func() {
+		<-store.runningIR
+	}()
 
 	store.mustBeOpen()
 
