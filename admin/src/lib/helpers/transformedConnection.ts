@@ -124,7 +124,7 @@ class TransformedConnection {
 	}
 
 	get hasIdentities() {
-		return this.role === 'Source' && this.type !== 'FileStorage' && this.type !== 'Stream';
+		return this.role === 'Source' && this.type !== 'Stream';
 	}
 
 	get hasAnonymousIdentifiers() {
