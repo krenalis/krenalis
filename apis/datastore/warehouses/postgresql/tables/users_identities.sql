@@ -8,7 +8,7 @@ CREATE TABLE users_identities (
     "_business_id"   varchar(40) NOT NULL DEFAULT '',
     "__cluster__"       serial,
 
-    "email" varchar(300), -- TODO(Gianluca): TODO(Gianluca): keep this until https://github.com/open2b/chichi/issues/572 is resolved.
+    "email" varchar(300), -- TODO(Gianluca): see https://github.com/open2b/chichi/issues/628.
 
     PRIMARY KEY ("_identity_id")
 );
