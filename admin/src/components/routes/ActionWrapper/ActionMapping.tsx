@@ -49,6 +49,7 @@ import { ConnectionContext } from '../../../context/providers/ConnectionProvider
 import Workspace from '../../../types/external/workspace';
 import { ActionToSet, TransformationFunction } from '../../../types/external/action';
 import { debounceWithAbort } from '../../../lib/utils/debounce';
+import TransformedConnector from '../../../lib/helpers/transformedConnector';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -69,7 +70,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 	const [isCustomTimestampSelected, setIsCustomTimestampSelected] = useState<boolean>(false);
 
-	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 	const {
 		isMappingDisabled,
@@ -179,6 +180,13 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 		return false;
 	}, [action, actionType, isMappingDisabled]);
+
+	const fileConnector: TransformedConnector | null = useMemo(() => {
+		if (action.Connector) {
+			return connectors.find((c) => c.id === action.Connector);
+		}
+		return null;
+	}, [action]);
 
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
@@ -373,7 +381,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
 										<SlOption value='dateOnly'>2006-01-02</SlOption>
 										<SlOption value='iso8601'>ISO 8601</SlOption>
-										<SlOption value='excel'>Excel</SlOption>
+										{fileConnector?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
 										<SlOption value='custom'>Custom...</SlOption>
 									</SlSelect>
 								</div>
