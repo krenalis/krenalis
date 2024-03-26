@@ -543,7 +543,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_column = $17, "+
 			"timestamp_column = $18, timestamp_format = $19, business_id = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
-			"export_on_duplicated_users = $24 \nWHERE id = $25",
+			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
