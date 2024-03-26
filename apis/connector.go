@@ -28,6 +28,7 @@ type Connector struct {
 	TermForGroups          string
 	Type                   ConnectorType
 	Targets                Targets
+	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSettings            bool
 	Icon                   string
@@ -126,6 +127,23 @@ type Targets struct {
 	Users  bool
 	Groups bool
 	Events bool
+}
+
+// SendingMode represents a sending mode.
+type SendingMode string
+
+const (
+	Cloud    SendingMode = "Cloud"
+	Device   SendingMode = "Device"
+	Combined SendingMode = "Combined"
+)
+
+func isValidSendingMode(sm SendingMode) bool {
+	switch sm {
+	case "Cloud", "Device", "Combined":
+		return true
+	}
+	return false
 }
 
 // AuthCodeURL returns a URL that directs to the consent page of an OAuth 2.0

@@ -91,6 +91,7 @@ const useApp = (
 						c.DestinationDescription,
 						c.TermForUsers,
 						c.TermForGroups,
+						c.SendingMode,
 						c.Targets,
 					),
 				);
@@ -148,6 +149,7 @@ const useApp = (
 					c.Strategy,
 					c.WebsiteHost,
 					c.BusinessID,
+					c.SendingMode,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
@@ -221,6 +223,7 @@ const useApp = (
 					c.Strategy,
 					c.WebsiteHost,
 					c.BusinessID,
+					c.SendingMode,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);

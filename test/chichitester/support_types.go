@@ -123,6 +123,7 @@ type ConnectionToAdd struct {
 	WebsiteHost      string
 	EventConnections []int
 	BusinessID       string
+	SendingMode      *SendingMode
 	Settings         json.RawMessage
 }
 
@@ -208,6 +209,15 @@ func (role Role) String() string {
 	}
 	panic("invalid connection role")
 }
+
+// SendingMode represents a sending mode.
+type SendingMode string
+
+const (
+	Cloud    SendingMode = "Cloud"
+	Device   SendingMode = "Device"
+	Combined SendingMode = "Combined"
+)
 
 type SchedulePeriod int
 

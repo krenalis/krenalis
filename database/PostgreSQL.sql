@@ -85,6 +85,8 @@ CREATE TYPE compression AS ENUM ('', 'Zip', 'Gzip', 'Snappy');
 
 CREATE TYPE strategy AS ENUM ('AB-C', 'ABC', 'A-B-C', 'AC-B');
 
+CREATE TYPE sending_mode as ENUM ('Cloud', 'Device', 'Combined');
+
 CREATE TABLE connections (
     id integer NOT NULL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -95,6 +97,7 @@ CREATE TABLE connections (
     connector integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
     resource integer NOT NULL DEFAULT 0,
     strategy strategy DEFAULT NULL,
+    sending_mode sending_mode DEFAULT NULL,
     website_host varchar(261) NOT NULL DEFAULT '',
     event_connections integer[] DEFAULT NULL,
     business_id varchar(1024) NOT NULL DEFAULT '',

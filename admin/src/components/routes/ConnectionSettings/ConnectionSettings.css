@@ -17,6 +17,7 @@
 .connectionSettings .generalSettings .nameField,
 .connectionSettings .generalSettings .enablingField,
 .connectionSettings .generalSettings .strategyField,
+.connectionSettings .generalSettings .modeField,
 .connectionSettings .generalSettings .websiteHostField,
 .connectionSettings .generalSettings .businessIDNameField,
 .connectionSettings .generalSettings .businessIDLabelField {
@@ -27,8 +28,24 @@
 	max-width: 280px;
 }
 
-.connectionSettings .generalSettings .strategyField {
+.connectionSettings .generalSettings .strategyField,
+.connectionSettings .generalSettings .modeField {
 	max-width: fit-content;
+}
+
+.connectionSettings .modeField .modeValueIcon {
+	display: flex;
+	align-items: center;
+	margin-right: 10px;
+}
+
+.connectionSettings .modeField sl-option[aria-selected='true'] .modeIcon {
+	color: var(--text-onaccent);
+}
+
+.connectionSettings .modeField sl-option .modeIcon {
+	display: flex;
+	align-items: center;
 }
 
 .connectionSettings .generalSettings .websiteHostField {

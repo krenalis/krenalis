@@ -71,6 +71,17 @@ func (state *State) Load() error {
 					if ct.Implements(appGroupsConnectionType) {
 						c.Targets |= GroupsFlag
 					}
+					switch app.SendingMode {
+					case chichi.Cloud:
+						mode := Cloud
+						c.SendingMode = &mode
+					case chichi.Device:
+						mode := Device
+						c.SendingMode = &mode
+					case chichi.Combined:
+						mode := Combined
+						c.SendingMode = &mode
+					}
 					c.Icon = app.Icon
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
 					if app.OAuth.AuthURL != "" {
@@ -253,13 +264,13 @@ func (state *State) Load() error {
 		// Read all connections.
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
-			" resource, strategy, website_host, event_connections, business_id,"+
+			" resource, strategy, sending_mode, website_host, event_connections, business_id,"+
 			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, resource int
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector,
-					&resource, &c.Strategy, &c.WebsiteHost, &c.EventConnections, &c.BusinessID, &c.Settings, &c.Health,
+					&resource, &c.Strategy, &c.SendingMode, &c.WebsiteHost, &c.EventConnections, &c.BusinessID, &c.Settings, &c.Health,
 				); err != nil {
 					return err
 				}
@@ -271,6 +282,13 @@ func (state *State) Load() error {
 				c.actions = map[int]*Action{}
 				if resource > 0 {
 					c.resource = state.resources[resource]
+				}
+				if c.SendingMode == nil && c.connector.SendingMode != nil {
+					mode := Cloud
+					if sm := *c.connector.SendingMode; sm == Device {
+						mode = Device
+					}
+					c.SendingMode = &mode
 				}
 				if c.connector.Type == ServerType {
 					c.Keys = []string{}

@@ -91,6 +91,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
+	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
+		return 0, errors.BadRequest("sending mode %q is not valid", *sm)
+	}
+
 	c, ok := this.apis.state.Connector(connection.Connector)
 	if !ok {
 		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connection.Connector)
@@ -112,6 +116,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		Enabled:          connection.Enabled,
 		Connector:        connection.Connector,
 		Strategy:         (*state.Strategy)(connection.Strategy),
+		SendingMode:      (*state.SendingMode)(connection.SendingMode),
 		WebsiteHost:      connection.WebsiteHost,
 		EventConnections: connection.EventConnections,
 		BusinessID:       connection.BusinessID,
@@ -133,6 +138,22 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 				return 0, errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
 			}
 		}
+	}
+
+	// Validate the sending mode.
+	if connection.Role == Destination {
+		if c.SendingMode != nil {
+			if connection.SendingMode == nil {
+				return 0, errors.BadRequest("connector %s requires a sending mode", c.Name)
+			}
+			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
+				return 0, errors.BadRequest("connector %s does not support sending mode %s", c.Name, *c.SendingMode)
+			}
+		} else if connection.SendingMode != nil {
+			return 0, errors.BadRequest("connector %s does not support sending modes", c.Name)
+		}
+	} else if connection.SendingMode != nil {
+		return 0, errors.BadRequest("source connections cannot have a sending mode")
 	}
 
 	// Validate the website host.
@@ -287,10 +308,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, type, role, enabled, connector, resource,"+
-			" strategy, website_host, event_connections, business_id, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+			" strategy, sending_mode, website_host, event_connections, business_id, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Resource.ID,
-			n.Strategy, n.WebsiteHost, n.EventConnections, n.BusinessID, string(n.Settings))
+			n.Strategy, n.SendingMode, n.WebsiteHost, n.EventConnections, n.BusinessID, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				switch postgres.ErrConstraintName(err) {
@@ -618,6 +639,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Enabled:          c.Enabled,
 		Connector:        conn.ID,
 		Strategy:         (*Strategy)(c.Strategy),
+		SendingMode:      (*SendingMode)(c.SendingMode),
 		WebsiteHost:      c.WebsiteHost,
 		EventConnections: slices.Clone(c.EventConnections),
 		BusinessID:       c.BusinessID,
@@ -660,6 +682,7 @@ func (this *Workspace) Connections() []*Connection {
 			Enabled:          c.Enabled,
 			Connector:        conn.ID,
 			Strategy:         (*Strategy)(c.Strategy),
+			SendingMode:      (*SendingMode)(c.SendingMode),
 			WebsiteHost:      c.WebsiteHost,
 			EventConnections: slices.Clone(c.EventConnections),
 			BusinessID:       c.BusinessID,
@@ -1450,6 +1473,10 @@ type ConnectionToAdd struct {
 	// non-anonymous users. It must be nil for destination connections and
 	// non-event source connections.
 	Strategy *Strategy
+
+	// SendingMode is the mode used for sending events. It must be nil for
+	// source connections and connections that does not support events.
+	SendingMode *SendingMode
 
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It

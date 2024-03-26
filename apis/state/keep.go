@@ -356,11 +356,12 @@ type AddConnection struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
-	Strategy         *Strategy // strategy
-	WebsiteHost      string    // website host in form host:port
-	EventConnections []int     // event connections
-	BusinessID       string    // Business ID property name or column name, depending on connection type.
-	Key              string    // server key to add
+	Strategy         *Strategy    // strategy
+	SendingMode      *SendingMode // sending mode
+	WebsiteHost      string       // website host in form host:port
+	EventConnections []int        // event connections
+	BusinessID       string       // Business ID property name or column name, depending on connection type.
+	Key              string       // server key to add
 	Settings         []byte
 }
 
@@ -418,6 +419,7 @@ func (state *State) addConnection(n notification) {
 		connector:        connector,
 		resource:         r,
 		Strategy:         e.Strategy,
+		SendingMode:      e.SendingMode,
 		WebsiteHost:      e.WebsiteHost,
 		EventConnections: e.EventConnections,
 		BusinessID:       e.BusinessID,
@@ -972,6 +974,7 @@ type SetConnection struct {
 	Name        string
 	Enabled     bool
 	Strategy    *Strategy
+	SendingMode *SendingMode
 	WebsiteHost string
 	BusinessID  string // property name or column name, depending on connection type.
 }
@@ -986,6 +989,7 @@ func (state *State) setConnection(n notification) {
 		c.Name = e.Name
 		c.Enabled = e.Enabled
 		c.Strategy = e.Strategy
+		c.SendingMode = e.SendingMode
 		c.WebsiteHost = e.WebsiteHost
 		c.BusinessID = e.BusinessID
 	})

@@ -134,14 +134,19 @@ func (c *Chichi) AddDestinationPostgreSQL() int {
 }
 
 func (c *Chichi) AddDummy(name string, role Role, businessID string) int {
-	return c.AddConnection(ConnectionToAdd{
+	conn := ConnectionToAdd{
 		Name:       name,
 		Role:       role,
 		Enabled:    true,
 		Connector:  DummyConnector,
 		BusinessID: businessID,
 		Settings:   []byte("{}"),
-	})
+	}
+	if role == Destination {
+		mode := Cloud
+		conn.SendingMode = &mode
+	}
+	return c.AddConnection(conn)
 }
 
 func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int, businessID string) int {

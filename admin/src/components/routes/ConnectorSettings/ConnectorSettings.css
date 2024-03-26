@@ -14,8 +14,24 @@
 	margin: 50px 0;
 }
 
-.connectorSettings sl-select.strategy {
+.connectorSettings sl-select.strategy,
+.connectorSettings sl-select.mode {
 	max-width: fit-content;
+}
+
+.connectorSettings sl-select.mode .modeValueIcon {
+	display: flex;
+	align-items: center;
+	margin-right: 10px;
+}
+
+.connectorSettings sl-select.mode sl-option[aria-selected='true'] .modeIcon {
+	color: var(--text-onaccent);
+}
+
+.connectorSettings sl-select.mode sl-option .modeIcon {
+	display: flex;
+	align-items: center;
 }
 
 .connectorSettings sl-input.name {

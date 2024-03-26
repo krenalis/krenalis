@@ -42,6 +42,7 @@ func init() {
 		Name:                   "Mixpanel",
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
+		SendingMode:            chichi.Cloud,
 	}, New)
 }
 

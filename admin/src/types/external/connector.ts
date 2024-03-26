@@ -4,6 +4,8 @@ type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'S
 
 type WebhooksPer = 'None' | 'Connector' | 'Resource' | 'Source';
 
+type SendingMode = 'Cloud' | 'Device' | 'Combined';
+
 interface Connector {
 	ID: number;
 	Name: string;
@@ -19,7 +21,8 @@ interface Connector {
 	OAuth: boolean;
 	TermForUsers: string;
 	TermForGroups: string;
+	SendingMode: SendingMode | null;
 	Targets: Record<ActionTarget, boolean>;
 }
 
-export type { Connector, ConnectorType, WebhooksPer };
+export type { Connector, ConnectorType, WebhooksPer, SendingMode };

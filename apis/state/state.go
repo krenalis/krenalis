@@ -380,6 +380,7 @@ type Connector struct {
 	ExternalIDLabel        string
 	Type                   ConnectorType
 	Targets                ConnectorTargets
+	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSettings            bool
 	Icon                   string
@@ -599,6 +600,7 @@ type Connection struct {
 	connector        *Connector
 	resource         *Resource
 	Strategy         *Strategy
+	SendingMode      *SendingMode
 	WebsiteHost      string
 	EventConnections []int
 	Keys             []string
@@ -781,6 +783,19 @@ func (role Role) Value() (driver.Value, error) {
 		return "Destination", nil
 	}
 	return nil, fmt.Errorf("not a valid Role: %d", role)
+}
+
+// SendingMode represents a sending mode.
+type SendingMode string
+
+const (
+	Cloud    SendingMode = "Cloud"
+	Device   SendingMode = "Device"
+	Combined SendingMode = "Combined"
+)
+
+func (sm SendingMode) Contains(mode SendingMode) bool {
+	return sm == Combined || sm == mode
 }
 
 // Compression represents the compression of a file connection.

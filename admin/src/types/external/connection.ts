@@ -18,6 +18,7 @@ interface Connection {
 	Strategy?: Strategy | null;
 	WebsiteHost: string;
 	BusinessID: string;
+	SendingMode: SendingMode | null;
 	HasSettings: boolean;
 	Enabled: boolean;
 	ActionsCount: number;
@@ -31,6 +32,8 @@ type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
 
 type Strategy = 'AB-C' | 'ABC' | 'A-B-C' | 'AC-B';
 
+type SendingMode = 'Cloud' | 'Device' | 'Combined';
+
 interface ConnectionToAdd {
 	name: string;
 	role: string;
@@ -39,6 +42,7 @@ interface ConnectionToAdd {
 	strategy?: Strategy | null;
 	websiteHost: string;
 	businessID: string;
+	SendingMode?: SendingMode | null;
 	settings: UIValues;
 	eventConnections: Number[] | null;
 }
@@ -49,6 +53,7 @@ interface ConnectionToSet {
 	strategy?: Strategy | null;
 	websiteHost: string;
 	businessID: string;
+	SendingMode?: SendingMode | null;
 }
 
 interface ConnectionStats {
@@ -60,6 +65,7 @@ export type {
 	ConnectionRole,
 	Compression,
 	Strategy,
+	SendingMode,
 	ConnectionToAdd,
 	ConnectionToSet,
 	ConnectorType,

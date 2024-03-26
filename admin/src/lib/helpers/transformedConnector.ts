@@ -1,5 +1,5 @@
+import { ConnectorType, SendingMode, WebhooksPer } from '../../types/external/connector';
 import { ActionTarget } from '../../types/external/action';
-import { ConnectorType, WebhooksPer } from '../../types/external/connector';
 
 class TransformedConnector {
 	id: number;
@@ -16,6 +16,7 @@ class TransformedConnector {
 	oAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
+	SendingMode: SendingMode | null;
 	targets: Record<ActionTarget, boolean>;
 
 	constructor(
@@ -33,6 +34,7 @@ class TransformedConnector {
 		destinationDescription: string,
 		termForUsers: string,
 		termForGroups: string,
+		SendingMode: SendingMode,
 		targets: Record<ActionTarget, boolean>,
 	) {
 		this.id = id;
@@ -49,6 +51,7 @@ class TransformedConnector {
 		this.destinationDescription = destinationDescription;
 		this.termForUsers = termForUsers;
 		this.termForGroups = termForGroups;
+		this.SendingMode = SendingMode;
 		this.targets = targets;
 	}
 
@@ -82,6 +85,17 @@ class TransformedConnector {
 
 	get isWebsite() {
 		return this.type === 'Website';
+	}
+
+	get supportedSendingModes(): SendingMode[] {
+		switch (this.SendingMode) {
+			case null:
+				return [];
+			case 'Combined':
+				return ['Cloud', 'Device', 'Combined'];
+			default:
+				return [this.SendingMode];
+		}
 	}
 }
 

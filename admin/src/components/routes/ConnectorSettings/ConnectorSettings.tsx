@@ -11,9 +11,15 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { ConnectionRole, ConnectionToAdd, Strategy } from '../../../types/external/connection';
+import {
+	ConnectionRole,
+	ConnectionToAdd,
+	SendingMode as SendingModeType,
+	Strategy,
+} from '../../../types/external/connection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
@@ -34,6 +40,7 @@ const ConnectorSettings = () => {
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [businessID, setBusinessID] = useState<string>('');
+	const [SendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [eventConnections, setEventConnections] = useState<Number[]>();
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [actions, setActions] = useState<ConnectorAction[]>([]);
@@ -103,6 +110,10 @@ const ConnectorSettings = () => {
 			setName(connector.name);
 			if (hasStrategy(connectionRole, connector)) {
 				setStrategy(strategyOptions[0]);
+			}
+			const supportedModes = connector.supportedSendingModes;
+			if (connectionRole !== 'Source' && supportedModes.length > 0) {
+				setSendingMode(supportedModes[0]);
 			}
 			if (connector.hasSettings === false) return;
 			let ui: UIResponse;
@@ -176,6 +187,7 @@ const ConnectorSettings = () => {
 					strategy: strategy,
 					websiteHost: websiteHost,
 					businessID: businessID,
+					SendingMode: SendingMode,
 					settings: values,
 					eventConnections: eventConnections,
 				};
@@ -267,6 +279,7 @@ const ConnectorSettings = () => {
 				strategy: strategy,
 				websiteHost: websiteHost,
 				businessID: businessID,
+				SendingMode: SendingMode,
 				settings: values,
 				eventConnections: eventConnections,
 			};
@@ -408,6 +421,44 @@ const ConnectorSettings = () => {
 								>
 									{strategyOptions.map((option) => (
 										<SlOption value={option}>{option}</SlOption>
+									))}
+								</SlSelect>
+							</div>
+						)}
+						{connectionRole !== 'Source' && connector.supportedSendingModes.length > 0 && (
+							<div className='inputWrapper'>
+								<SlSelect
+									className='mode'
+									name='mode'
+									value={SendingMode}
+									label='Sending mode'
+									onSlChange={(e) => {
+										const target = e.currentTarget as ShoelaceEventTarget;
+										const value = target.value as SendingModeType;
+										setSendingMode(value);
+									}}
+								>
+									<div className='modeValueIcon' slot='prefix'>
+										<SlIcon
+											name={
+												SendingMode === 'Cloud'
+													? 'cloud'
+													: SendingMode === 'Device'
+													? 'phone'
+													: 'send'
+											}
+										/>
+									</div>
+									{connector.supportedSendingModes.map((m) => (
+										<SlOption key={m} value={m}>
+											<div slot='prefix'>
+												<SlIcon
+													className='modeIcon'
+													name={m === 'Cloud' ? 'cloud' : m === 'Device' ? 'phone' : 'send'}
+												/>
+											</div>
+											{m}
+										</SlOption>
 									))}
 								</SlSelect>
 							</div>

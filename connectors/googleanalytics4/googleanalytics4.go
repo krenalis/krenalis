@@ -44,6 +44,7 @@ func init() {
 		Name:                   "Google Analytics 4",
 		DestinationDescription: "send events to Google Analytics 4",
 		Icon:                   icon,
+		SendingMode:            chichi.Cloud,
 	}, New)
 }
 

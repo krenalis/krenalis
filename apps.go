@@ -23,6 +23,16 @@ import (
 // request was not authorized.
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
+// SendingMode represents the mode of event sending.
+type SendingMode int
+
+const (
+	None SendingMode = iota
+	Cloud
+	Device
+	Combined
+)
+
 // AppInfo represents an app connector info.
 type AppInfo struct {
 	Name                   string
@@ -34,6 +44,7 @@ type AppInfo struct {
 	Icon                   string      // icon in SVG format
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
+	SendingMode            SendingMode // mode of event sending. None for sources and non-supporting event apps.
 
 	// Layout for date and time values. If left empty, it is ISO 8601.
 	DateTimeLayout string // If left empty, values are formatted with the layout "2006-01-02T15:04:05.999Z".

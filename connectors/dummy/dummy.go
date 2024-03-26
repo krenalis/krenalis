@@ -44,6 +44,7 @@ func init() {
 		TermForUsers:           "users",
 		ExternalIDLabel:        "Dummy Unique ID",
 		Icon:                   icon,
+		SendingMode:            chichi.Combined,
 	}, New)
 }
 

@@ -97,6 +97,7 @@ type Connection struct {
 	Enabled          bool
 	Connector        int
 	Strategy         *Strategy
+	SendingMode      *SendingMode
 	WebsiteHost      string
 	EventConnections []int
 	BusinessID       string
@@ -1495,12 +1496,16 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
 		return errors.BadRequest("strategy %q is not valid", *s)
 	}
+	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
+		return errors.BadRequest("sending mode %q is not valid", *sm)
+	}
 
 	n := state.SetConnection{
 		Connection:  this.connection.ID,
 		Name:        connection.Name,
 		Enabled:     connection.Enabled,
 		Strategy:    (*state.Strategy)(connection.Strategy),
+		SendingMode: (*state.SendingMode)(connection.SendingMode),
 		WebsiteHost: connection.WebsiteHost,
 		BusinessID:  connection.BusinessID,
 	}
@@ -1521,6 +1526,22 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		}
 	} else if connection.Strategy != nil {
 		return errors.BadRequest("destination connections cannot have a strategy")
+	}
+
+	// Validate the sending mode.
+	if this.connection.Role == state.Destination {
+		if c.SendingMode != nil {
+			if connection.SendingMode == nil {
+				return errors.BadRequest("connector %s requires a sending mode", c.Name)
+			}
+			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
+				return errors.BadRequest("connector %s does not support sending mode %s", c.Name, *c.SendingMode)
+			}
+		} else if connection.SendingMode != nil {
+			return errors.BadRequest("connector %s does not support sending modes", c.Name)
+		}
+	} else if connection.SendingMode != nil {
+		return errors.BadRequest("source connections cannot have a sending mode")
 	}
 
 	// Validate the website host.
@@ -1546,8 +1567,8 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" strategy = $3, website_host = $4, business_id = $5 WHERE id = $6",
-			n.Name, n.Enabled, n.Strategy, n.WebsiteHost, n.BusinessID, n.Connection)
+			" strategy = $3, sending_mode = $4, website_host = $5, business_id = $6 WHERE id = $7",
+			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.BusinessID, n.Connection)
 		if err != nil {
 			return err
 		}
@@ -2551,6 +2572,10 @@ type ConnectionToSet struct {
 	// non-anonymous users. It must be nil for destination connections and
 	// non-event source connections.
 	Strategy *Strategy
+
+	// SendingMode is the mode used for sending events. It must be nil for
+	// source connections and connections that does not support events.
+	SendingMode *SendingMode
 
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It

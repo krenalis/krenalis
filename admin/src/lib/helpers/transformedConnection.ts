@@ -6,6 +6,7 @@ import {
 	ConnectorType,
 	Compression,
 	Strategy,
+	SendingMode,
 } from '../../types/external/connection';
 import { Action, ActionTarget, ActionType } from '../../types/external/action';
 import TransformedConnector from './transformedConnector';
@@ -30,6 +31,7 @@ class TransformedConnection {
 	strategy?: Strategy | null;
 	websiteHost: string;
 	businessID: string;
+	SendingMode: SendingMode | null;
 	status: ConnectionStatus;
 	description: string;
 	linkedFiles?: TransformedConnection[];
@@ -52,6 +54,7 @@ class TransformedConnection {
 		strategy: Strategy | null,
 		websiteHost: string,
 		businessID: string,
+		SendingMode: SendingMode | null,
 		status: ConnectionStatus,
 		description: string,
 		linkedFiles?: TransformedConnection[],
@@ -73,6 +76,7 @@ class TransformedConnection {
 		this.strategy = strategy;
 		this.websiteHost = websiteHost;
 		this.businessID = businessID;
+		this.SendingMode = SendingMode;
 		this.status = status;
 		this.description = description;
 		this.linkedFiles = linkedFiles;

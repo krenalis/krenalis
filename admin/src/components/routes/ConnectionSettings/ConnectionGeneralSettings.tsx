@@ -9,6 +9,7 @@ import Flex from '../../shared/Flex/Flex';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
@@ -26,41 +27,49 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		strategy: connection.strategy,
 		websiteHost: connection.websiteHost,
 		businessID: connection.businessID,
+		SendingMode: connection.SendingMode,
 	});
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
 	const { api, handleError, showStatus, redirect, setIsLoadingConnections } = useContext(AppContext);
 
-	const onNameChange = async (e) => {
+	const onNameChange = (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.name = value;
 		setConnectionToSet(c);
 	};
 
-	const onStrategyChange = async (e) => {
+	const onStrategyChange = (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.strategy = value;
 		setConnectionToSet(c);
 	};
 
-	const onWebsitehostChange = async (e) => {
+	const onWebsitehostChange = (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.websiteHost = value;
 		setConnectionToSet(c);
 	};
 
-	const onBusinessIDChange = async (e) => {
+	const onBusinessIDChange = (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.businessID = value;
 		setConnectionToSet(c);
 	};
 
-	const onSwitchChange = async () => {
+	const onModeChange = (e) => {
+		const value = e.target.value;
+		const c = { ...connectionToSet };
+		c.SendingMode = value;
+		setConnectionToSet(c);
+	};
+
+	const onSwitchChange = () => {
 		const c = { ...connectionToSet };
 		c.enabled = !c.enabled;
 		setConnectionToSet(c);
@@ -128,6 +137,38 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<SlOption value='ABC'>ABC</SlOption>
 					<SlOption value='A-B-C'>A-B-C</SlOption>
 					<SlOption value='AC-B'>AC-B</SlOption>
+				</SlSelect>
+			)}
+
+			{connection.isDestination && connection.connector.supportedSendingModes.length > 0 && (
+				<SlSelect
+					value={connectionToSet.SendingMode}
+					label='Sending mode'
+					className='modeField'
+					onSlChange={onModeChange}
+				>
+					<div className='modeValueIcon' slot='prefix'>
+						<SlIcon
+							name={
+								connectionToSet.SendingMode === 'Cloud'
+									? 'cloud'
+									: connectionToSet.SendingMode === 'Device'
+									? 'phone'
+									: 'send'
+							}
+						/>
+					</div>
+					{connection.connector.supportedSendingModes.map((m) => (
+						<SlOption key={m} value={m}>
+							<div slot='prefix'>
+								<SlIcon
+									className='modeIcon'
+									name={m === 'Cloud' ? 'cloud' : m === 'Device' ? 'phone' : 'send'}
+								/>
+							</div>
+							{m}
+						</SlOption>
+					))}
 				</SlSelect>
 			)}
 

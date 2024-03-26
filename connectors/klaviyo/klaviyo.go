@@ -42,6 +42,7 @@ func init() {
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "users",
 		Icon:                   icon,
+		SendingMode:            chichi.Cloud,
 	}, New)
 }
 
