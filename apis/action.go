@@ -656,7 +656,7 @@ func (this *Action) app() *connectors.App {
 // longer needed.
 func (this *Action) database() *connectors.Database {
 	a := this.action
-	return this.apis.connectors.Database(a.Connection(), a.IdentityColumn, a.TimestampColumn, a.TimestampFormat)
+	return this.apis.connectors.Database(a.Connection())
 }
 
 // isLanguageSupported reports whether the transformation language of the action

@@ -32,13 +32,9 @@ type Database struct {
 // until a database's method is called. It panics if connection is not a
 // database connection.
 //
-// For the identity and timestamp column parameters, refer to the issue
-// https://github.com/open2b/chichi/issues/608.
-//
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (connectors *Connectors) Database(connection *state.Connection, identityColumn,
-	timestampColumnName, timestampColumnFormat string) *Database {
+func (connectors *Connectors) Database(connection *state.Connection) *Database {
 	database := &Database{
 		connector: connection.Connector().ID,
 	}

@@ -1930,10 +1930,7 @@ func (this *Connection) app() *connectors.App {
 // The caller must call the database's Close method when the database is no
 // longer needed.
 func (this *Connection) database() *connectors.Database {
-	// TODO(Gianluca): here we are not passing the identity and timestamp columns names.
-	// And what about the Business ID? We should review this, see the issue
-	// https://github.com/open2b/chichi/issues/608.
-	return this.apis.connectors.Database(this.connection, "", "", "")
+	return this.apis.connectors.Database(this.connection)
 }
 
 // storage returns the storage of the connection.
