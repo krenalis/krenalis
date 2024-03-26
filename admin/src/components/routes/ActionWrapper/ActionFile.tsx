@@ -258,7 +258,7 @@ interface FileSettingsProps {
 }
 
 const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps) => {
-	const [sheets, setSheets] = useState<string[]>([]);
+	const [sheets, setSheets] = useState<Record<string, string>>({});
 	const [areSheetsLoading, setAreSheetsLoading] = useState<boolean>(false);
 	const [hasSheetsError, setHasSheetsError] = useState<boolean>(false);
 	const [completePath, setCompletePath] = useState<string>('');
@@ -327,7 +327,13 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 				setHasSheetsError(true);
 				return;
 			}
-			setSheets(res.sheets);
+			const sheets = {};
+			let i = 1;
+			for (const s of res.sheets) {
+				sheets[i] = s;
+				i++;
+			}
+			setSheets(sheets);
 		};
 		if (!hasSheets || action.Path === '') {
 			return;
@@ -376,7 +382,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 
 	const onUpdateSheet = (e) => {
 		const a = { ...action };
-		const sheet = e.currentTarget.value;
+		const sheet = sheets[e.currentTarget.value];
 		sheetRef.current.lastUpdate = sheet;
 		if (
 			sheetRef.current.lastUpdate !== sheetRef.current.lastConfirmation &&
@@ -395,7 +401,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		a.Sheet = '';
 		setAction(a);
 		sheetsSelectRef.current.classList.add('hideListbox'); // prevent the listbox from flashing.
-		setSheets([]);
+		setSheets({});
 		setAreSheetsLoading(true);
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
 		let res: SheetsResponse;
@@ -423,7 +429,13 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		setTimeout(() => {
 			setHasSheetsError(false);
 			setAreSheetsLoading(false);
-			setSheets(res.sheets);
+			const sheets = {};
+			let i = 1;
+			for (const s of res.sheets) {
+				sheets[i] = s;
+				i++;
+			}
+			setSheets(sheets);
 			sheetsSelectRef.current.classList.remove('hideListbox');
 			setTimeout(() => {
 				sheetsSelectRef.current.show();
@@ -586,7 +598,11 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 							className='sheetsSelect'
 							ref={sheetsSelectRef}
 							name='sheet'
-							value={action.Sheet == null ? undefined : action.Sheet.toLowerCase()}
+							value={
+								action.Sheet == null
+									? undefined
+									: Object.keys(sheets).find((k) => sheets[k] === action.Sheet)
+							}
 							label='Sheet'
 							onSlChange={onUpdateSheet}
 							disabled={
@@ -598,10 +614,9 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 							}
 						>
 							{areSheetsLoading && <SlSpinner slot='prefix' />}
-							{sheets.map((sheet) => {
-								const name = sheet.toLowerCase();
+							{Object.entries(sheets).map(([i, sheet]) => {
 								return (
-									<SlOption key={name} value={name}>
+									<SlOption key={i} value={i}>
 										{sheet}
 									</SlOption>
 								);
