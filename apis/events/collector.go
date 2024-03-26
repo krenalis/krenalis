@@ -179,21 +179,22 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 
 		// Import the user identities from the events batch.
 		for _, event := range eventsBatch {
-			transformation := state.Transformation{
-				Mapping:  action.Transformation.Mapping,
-				Function: action.Transformation.Function,
-			}
-			transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformer, nil)
-			if err != nil {
-				return err
-			}
-			// Transform the event.
 			mapEvent := event.ToMap()
-			properties, err := transformer.Transform(ctx, mapEvent)
-			if err != nil {
-				return err
+			var properties map[string]any
+			// If the action specifies mappings, apply them to the event and
+			// obtain the properties.
+			if m := action.Transformation.Mapping; m != nil {
+				transformation := state.Transformation{Mapping: m}
+				transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformer, nil)
+				if err != nil {
+					return err
+				}
+				properties, err = transformer.Transform(ctx, mapEvent)
+				if err != nil {
+					return err
+				}
 			}
-			// Discard anonymous events whose mapping results in no properties.
+			// Discard anonymous events with no properties.
 			if event.UserId == "" && len(properties) == 0 {
 				slog.Info("incoming event is anonymous and there are no properties returned"+
 					" by mappings, so the user identity won't be imported",
