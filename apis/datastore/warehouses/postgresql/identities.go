@@ -88,17 +88,23 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 		return false
 	}
 
-	// Check the conformity of the incoming identity schema with the schema of
-	// the 'users_identities' table on the data warehouse.
-	ti, err := iw.warehouse.tableInfo(ctx, "users_identities", false)
-	if err != nil {
-		iw.err = warehouses.Error(err)
-		return false
-	}
-	err = warehouses.CheckConformity("", iw.schema, ti.schema)
-	if err != nil {
-		iw.err = err
-		return false
+	// If the IdentitiesWriter has a schema, then check the conformity of the
+	// incoming identity schema with the schema of the 'users_identities' table
+	// on the data warehouse.
+	//
+	// TODO(Gianluca): maybe it's not necessary to do this check for every
+	// identity; see the issue https://github.com/open2b/chichi/issues/627.
+	if iw.schema.Valid() {
+		ti, err := iw.warehouse.tableInfo(ctx, "users_identities", false)
+		if err != nil {
+			iw.err = warehouses.Error(err)
+			return false
+		}
+		err = warehouses.CheckConformity("", iw.schema, ti.schema)
+		if err != nil {
+			iw.err = err
+			return false
+		}
 	}
 
 	// TODO(Gianluca): This implementation, instead of returning immediately
