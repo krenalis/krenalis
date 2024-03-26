@@ -1133,7 +1133,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 
 	// TODO(Gianluca): we should review the passing of parameters here, see the issue
 	// https://github.com/open2b/chichi/issues/608.
-	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, c.BusinessID, state.Compression(compression), limit)
+	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrSheetNotExist:

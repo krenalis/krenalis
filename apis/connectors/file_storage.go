@@ -75,15 +75,12 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
 // case-insensitive.
 //
-// businessIDColumn, when not empty, is the column from which the Business ID
-// should be read.
-//
 // limit restricts the number of records to return and should not exceed 100. If limit is
 // negative, there is no upper limit on the number of records returned.
 //
 // If the file has no columns, it returns the ErrNoColumns error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
-func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings []byte, businessIDColumn string, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
+func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if storage.err != nil {
 		return nil, nil, storage.err
 	}
@@ -105,7 +102,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		Settings: settings,
 	})
 
-	rw := newRecordWriter(file.ID, types.Type{}, "", TimestampColumn{}, businessIDColumn, storageTimestamp, limit)
+	rw := newRecordWriter(file.ID, types.Type{}, "", TimestampColumn{}, "", storageTimestamp, limit)
 	err = _file.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		if err == chichi.ErrSheetNotExist {
