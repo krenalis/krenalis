@@ -23,7 +23,7 @@ func TestImportFromDatabase(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	pgSQL := c.AddSourcePostgreSQL("customer_id")
+	pgSQL := c.AddSourcePostgreSQL()
 
 	importUsers := c.AddAction(pgSQL, "Users", chichitester.ActionToSet{
 		Name: "Import users",
@@ -43,6 +43,7 @@ func TestImportFromDatabase(t *testing.T) {
 		IdentityColumn:  "id",
 		TimestampColumn: "",
 		TimestampFormat: "",
+		BusinessID:      "customer_id",
 	})
 
 	c.ExecuteAction(pgSQL, importUsers, false)

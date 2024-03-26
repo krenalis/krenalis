@@ -127,6 +127,10 @@ class TransformedConnection {
 		return this.role === 'Destination';
 	}
 
+	get isEventBased() {
+		return this.type === 'Mobile' || this.type === 'Server' || this.type === 'Website';
+	}
+
 	get hasIdentities() {
 		return this.role === 'Source' && this.type !== 'Stream';
 	}

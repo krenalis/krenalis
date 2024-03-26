@@ -58,6 +58,7 @@ interface TransformedTransformation {
 }
 
 type ActionTypeField =
+	| 'BusinessID'
 	| 'Filter'
 	| 'Mapping'
 	| 'MatchingProperties'
@@ -100,6 +101,7 @@ interface TransformedAction {
 	IdentityColumn?: string | null;
 	TimestampColumn?: string | null;
 	TimestampFormat?: string | null;
+	BusinessID?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: MatchingProperties | null;
 	ExportOnDuplicatedUsers?: boolean | null;
@@ -322,6 +324,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		IdentityColumn: action.IdentityColumn,
 		TimestampColumn: action.TimestampColumn,
 		TimestampFormat: action.TimestampFormat,
+		BusinessID: action.BusinessID,
 		ExportMode: action.ExportMode,
 		MatchingProperties: action.MatchingProperties,
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
@@ -535,6 +538,7 @@ const transformInActionToSet = async (
 		IdentityColumn: action.IdentityColumn,
 		TimestampColumn: action.TimestampColumn,
 		TimestampFormat: timestampFormat,
+		BusinessID: action.BusinessID,
 		matchingProperties: action.MatchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Compression: action.Compression,
@@ -568,6 +572,9 @@ const computeDefaultAction = (
 		InSchema: null,
 		OutSchema: null,
 	};
+	if (fields.includes('BusinessID')) {
+		action.BusinessID = '';
+	}
 	if (fields.includes('Query')) {
 		action.Query = connection.connector.sampleQuery;
 	}
@@ -624,7 +631,12 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('ExportMode');
 		fields.push('Filter');
 	}
-
+	if (
+		connection.role === 'Source' &&
+		(connection.type === 'FileStorage' || connection.type === 'Database' || connection.isEventBased)
+	) {
+		fields.push('BusinessID');
+	}
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}

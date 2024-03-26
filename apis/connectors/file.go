@@ -107,7 +107,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Format: file.action.TimestampFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.IdentityColumn, timestampColumn, file.action.Connection().BusinessID,
+		file.action.IdentityColumn, timestampColumn, file.action.BusinessID,
 		storageTimestamp, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,

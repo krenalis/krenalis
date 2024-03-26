@@ -280,6 +280,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
+	const onBusinessIDChange = (e) => {
+		const a = { ...action };
+		a.BusinessID = e.target.value;
+		setAction(a);
+	};
+
 	const onInputTimestampCustomFormat = (e) => {
 		const a = { ...action };
 		a.TimestampFormat = e.target.value;
@@ -297,6 +303,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	if (transformationLanguages == null) {
 		return null;
 	}
+
+	const businessIDKind = ['FileStorage', 'Database'].includes(connection.type) ? 'column' : 'property';
 
 	const box = (
 		<TransformationBox
@@ -402,6 +410,20 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 						</div>
 					</div>
 				)}
+				{connection.isSource &&
+					(connection.isFileStorage || connection.isDatabase || connection.isEventBased) && (
+						<Section ref={ref} title='Business ID'>
+							<SlInput
+								label={`Business ID ${businessIDKind}`}
+								className='nameField'
+								helpText={`The name of the ${connection.type} ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+								placeholder='Something like "email", "customer_id", etc...'
+								value={action.BusinessID}
+								onSlInput={onBusinessIDChange}
+								maxlength={1024}
+							/>
+						</Section>
+					)}
 				{box}
 				<FullscreenTransformation
 					isFullscreenTransformationOpen={isFullscreenTransformationOpen}

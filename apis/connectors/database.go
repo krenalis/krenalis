@@ -22,11 +22,10 @@ import (
 
 // Database represents the database of a database connection.
 type Database struct {
-	closed     bool
-	connector  int
-	inner      chichi.Database
-	businessID string
-	err        error
+	closed    bool
+	connector int
+	inner     chichi.Database
+	err       error
 }
 
 // Database returns a database for the provided connection. Errors are deferred
@@ -41,8 +40,7 @@ type Database struct {
 func (connectors *Connectors) Database(connection *state.Connection, identityColumn,
 	timestampColumnName, timestampColumnFormat string) *Database {
 	database := &Database{
-		connector:  connection.Connector().ID,
-		businessID: connection.BusinessID,
+		connector: connection.Connector().ID,
 	}
 	database.inner, database.err = chichi.RegisteredDatabase(connection.Connector().Name).New(&chichi.DatabaseConfig{
 		Role:        chichi.Role(connection.Role),
@@ -171,8 +169,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 
 	// Determine the Business ID, if necessary.
 	var businessIDColumn types.Property
-	if database.businessID != "" {
-		businessIDColumn, err = businessIDFromSchema(querySchema, database.businessID)
+	if action.BusinessID != "" {
+		businessIDColumn, err = businessIDFromSchema(querySchema, action.BusinessID)
 		if err != nil {
 			slog.Warn("cannot determine the Business ID column", "err", err)
 		}

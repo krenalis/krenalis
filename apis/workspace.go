@@ -81,6 +81,14 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if utf8.RuneCountInString(connection.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", connection.Name)
 	}
+	if connection.BusinessID != "" {
+		if n := utf8.RuneCountInString(connection.BusinessID); n > 1024 {
+			return 0, errors.BadRequest("Business ID is longer than 1024 runes")
+		}
+		if !types.IsValidPropertyName(connection.BusinessID) {
+			return 0, errors.BadRequest("Business ID %q is not a valid property name", connection.BusinessID)
+		}
+	}
 
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
@@ -172,9 +180,13 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	}
 
 	// Validate the Business ID.
-	err = validateBusinessID(c.Type, n.Role, n.BusinessID)
-	if err != nil {
-		return 0, err
+	if n.BusinessID != "" {
+		if n.Role == state.Destination {
+			return 0, errors.BadRequest("destination connections cannot have a Business ID")
+		}
+		if c.Type != state.AppType {
+			return 0, errors.BadRequest("%s connections cannot have a Business ID", c.Type)
+		}
 	}
 
 	// Validate OAuth.
@@ -1488,9 +1500,9 @@ type ConnectionToAdd struct {
 	// there are no connections or if the connection do not support events.
 	EventConnections []int
 
-	// BusinessID is the Business ID property or column (depending on the type of the
-	// connection) for source connections that import users. May be the empty string to
-	// indicate to not import the Business ID.
+	// Business ID, for source app connections, if not empty, is the property
+	// that holds the identifier displayed in the UI for the imported user or
+	// group.
 	BusinessID string
 
 	// Settings represents the settings. It must be nil if the connection does

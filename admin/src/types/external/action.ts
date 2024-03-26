@@ -51,6 +51,7 @@ interface Action {
 	IdentityColumn: string | null;
 	TimestampColumn: string | null;
 	TimestampFormat: string | null;
+	BusinessID: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
 	ExportOnDuplicatedUsers: boolean | null;
@@ -80,6 +81,7 @@ interface ActionToSet {
 	IdentityColumn?: string | null;
 	TimestampColumn?: string | null;
 	TimestampFormat?: string | null;
+	BusinessID?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
 	exportOnDuplicatedUsers?: boolean | null;

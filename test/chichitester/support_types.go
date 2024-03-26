@@ -98,6 +98,7 @@ type ActionToSet struct {
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
+	BusinessID              string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool

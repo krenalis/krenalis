@@ -399,6 +399,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		IdentityColumn:          action.IdentityColumn,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
+		BusinessID:              action.BusinessID,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -1499,6 +1500,14 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
 		return errors.BadRequest("sending mode %q is not valid", *sm)
 	}
+	if connection.BusinessID != "" {
+		if n := utf8.RuneCountInString(connection.BusinessID); n > 1024 {
+			return errors.BadRequest("Business ID is longer than 1024 runes")
+		}
+		if !types.IsValidPropertyName(connection.BusinessID) {
+			return errors.BadRequest("Business ID %q is not a valid property name", connection.BusinessID)
+		}
+	}
 
 	n := state.SetConnection{
 		Connection:  this.connection.ID,
@@ -1560,12 +1569,16 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	}
 
 	// Validate the BusinessID.
-	err := validateBusinessID(c.Type, this.connection.Role, n.BusinessID)
-	if err != nil {
-		return errors.BadRequest(err.Error())
+	if n.BusinessID != "" {
+		if this.connection.Role == state.Destination {
+			return errors.BadRequest("destination connections cannot have a Business ID")
+		}
+		if c.Type != state.AppType {
+			return errors.BadRequest("%s connections cannot have a Business ID", c.Type)
+		}
 	}
 
-	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
 			" strategy = $3, sending_mode = $4, website_host = $5, business_id = $6 WHERE id = $7",
 			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.BusinessID, n.Connection)
@@ -2293,6 +2306,15 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 	default:
 		return errors.BadRequest("compression %q is not valid", action.Compression)
 	}
+	// Validate the Business ID.
+	if action.BusinessID != "" {
+		if !utf8.ValidString(action.BusinessID) {
+			return errors.BadRequest("Business ID is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.BusinessID); n > 1024 {
+			return errors.BadRequest("Business ID is longer than 1024 runes")
+		}
+	}
 
 	// Second, do validations based on the workspace and the connection.
 
@@ -2444,6 +2466,23 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		}
 	}
 
+	// Validate the Business ID.
+	if action.BusinessID != "" {
+		if c.Role != state.Source {
+			return errors.BadRequest("destination actions cannot have a Business ID")
+		}
+		if t := connector.Type; t == state.AppType || t == state.StreamType {
+			return errors.BadRequest("%s actions cannot have a Business ID", strings.ToLower(t.String()))
+		} else if eventBasedConn {
+			if target == state.Events {
+				return errors.BadRequest("%s actions importing events cannot have a Business ID", strings.ToLower(target.String()))
+			}
+			if !types.IsValidPropertyName(action.BusinessID) {
+				return errors.BadRequest("Business ID %q is not a valid property name", action.BusinessID)
+			}
+		}
+	}
+
 	// When exporting users to file, ensure that the output schema is valid, as
 	// it contains the properties that will be exported to the file.
 	if connector.Type == state.FileStorageType && c.Role == state.Destination && target == state.Users {
@@ -2582,9 +2621,9 @@ type ConnectionToSet struct {
 	// cannot be longer than 261 runes.
 	WebsiteHost string
 
-	// BusinessID is the Business ID property or column (depending on the type of the
-	// connection) for source connections that import users. May be the empty string to
-	// indicate to not import the Business ID.
+	// Business ID, for source app connections, if not empty, is the property
+	// that holds the identifier displayed in the UI for the imported user or
+	// group.
 	BusinessID string
 }
 
@@ -2615,40 +2654,6 @@ func isMetaProperty(name string) bool {
 		return unicode.IsUpper(r)
 	}
 	return false
-}
-
-// validateBusinessID validates a Business ID name (column or property). In case it is
-// invalid returns an errors.BadRequest, otherwise returns nil.
-func validateBusinessID(cType state.ConnectorType, role state.Role, businessID string) error {
-
-	// An empty Business ID is always valid.
-	if businessID == "" {
-		return nil
-	}
-
-	// BusinessID can be defined only for source connections.
-	if role == state.Destination {
-		return errors.BadRequest("unexpected Business ID for destination connection")
-	}
-
-	// Validate the Business ID name.
-	if n := utf8.RuneCountInString(businessID); n > 1024 {
-		return errors.BadRequest("Business ID name is longer than 1024 runes")
-	}
-	switch cType {
-	case state.AppType, state.MobileType, state.ServerType, state.WebsiteType:
-		if !types.IsValidPropertyName(businessID) {
-			return errors.BadRequest("Business ID name %q is not a valid property name", businessID)
-		}
-	case state.DatabaseType, state.FileStorageType:
-		if !utf8.ValidString(businessID) {
-			return errors.BadRequest("Business ID name is not UTF-8 encoded")
-		}
-	default:
-		return errors.BadRequest("unexpected Business ID for %s connection", cType)
-	}
-
-	return nil
 }
 
 // validateTimestampFormat validates the given timestamp format for importing

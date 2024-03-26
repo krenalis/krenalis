@@ -32,8 +32,8 @@ func Test_UsersIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs1 := c.AddSourceFilesystem(storageDir, "email")
-	fs2 := c.AddSourceFilesystem(storageDir, "email")
+	fs1 := c.AddSourceFilesystem(storageDir)
+	fs2 := c.AddSourceFilesystem(storageDir)
 
 	action1 := c.AddAction(fs1, "Users", chichitester.ActionToSet{
 		Name: "CSV 1",
@@ -51,6 +51,7 @@ func Test_UsersIdentities(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
+		BusinessID:     "email",
 		Connector:      chichitester.CSVConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
 			"Comma":          ",",
@@ -74,6 +75,7 @@ func Test_UsersIdentities(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
+		BusinessID:     "email",
 		Connector:      chichitester.CSVConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
 			"Comma":          ",",

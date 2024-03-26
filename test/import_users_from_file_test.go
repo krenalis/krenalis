@@ -39,7 +39,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	}
 
 	// Create the Filesystem connection.
-	fsID := c.AddSourceFilesystem(storageDir, "")
+	fsID := c.AddSourceFilesystem(storageDir)
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
 

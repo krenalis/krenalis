@@ -85,7 +85,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		if !stat.IsDir() {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
-		fs = c.AddSourceFilesystem(storageDir, "email")
+		fs = c.AddSourceFilesystem(storageDir)
 		csvAction := c.AddAction(fs, "Users", chichitester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
@@ -108,6 +108,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			IdentityColumn:  "csv_id",
 			TimestampColumn: "timestamp",
 			TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
+			BusinessID:      "email",
 			Connector:       chichitester.CSVConnector,
 			Settings: chichitester.JSONEncodeSettings(map[string]any{
 				"Comma":          ",",
@@ -132,7 +133,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		// events, one for importing users identities) and retrieve its key.
 		var javaScriptKey string
 		{
-			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil, "email")
+			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 			keys := c.ConnectionKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expecting one key, got %d keys", len(keys))
@@ -154,6 +155,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 						"email": "traits.email",
 					},
 				},
+				BusinessID: "email",
 			})
 		}
 

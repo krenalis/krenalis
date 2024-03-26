@@ -112,10 +112,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const showStrategy =
 		connection.role === 'Source' && (connection.type === 'Mobile' || connection.type === 'Website');
 
-	const showBusinessID =
-		connection.role === 'Source' && connection.type !== 'FileStorage' && connection.type !== 'Stream';
-	const businessIDKind = ['Database'].includes(connection.type) ? 'column' : 'property';
-
 	return (
 		<div className='generalSettings'>
 			<SlInput
@@ -181,11 +177,11 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				/>
 			)}
 
-			{showBusinessID && (
+			{connection.role === 'Source' && connection.type === 'App' && (
 				<SlInput
-					label={`Business ID ${businessIDKind}`}
+					label={`Business ID property`}
 					className='nameField'
-					helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+					helpText={`The name of the app property from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
 					placeholder='Something like "email", "customer_id", etc...'
 					value={connectionToSet.businessID}
 					onSlChange={onBusinessIDChange}

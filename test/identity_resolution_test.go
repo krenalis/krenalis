@@ -58,7 +58,7 @@ func TestIdentityResolution(t *testing.T) {
 	jsonAbsPath := filepath.Join(storageDir, jsonFilename)
 
 	// Create the Filesystem connection.
-	fsID := c.AddSourceFilesystem(storageDir, "")
+	fsID := c.AddSourceFilesystem(storageDir)
 
 	allProps := []string{"dummyId", "email", "phoneNumbers"}
 	identifiers := []string{"dummyId", "email"}

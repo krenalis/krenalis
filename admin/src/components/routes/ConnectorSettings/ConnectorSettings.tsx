@@ -345,8 +345,6 @@ const ConnectorSettings = () => {
 	}
 
 	const showStrategy = hasStrategy(connectionRole, c);
-	const showBusinessID = connectionRole === 'Source' && c.type !== 'FileStorage' && c.type !== 'Stream';
-	const businessIDKind = ['File', 'Database'].includes(c.type) ? 'column' : 'property';
 
 	let eventConnectionsContainer: ReactNode = null;
 	if (isEventConnection(connectionRole, connector.type, connector.targets)) {
@@ -389,14 +387,14 @@ const ConnectorSettings = () => {
 									setName(target!.value);
 								}}
 							/>
-							{showBusinessID && (
+							{connectionRole === 'Source' && c.type === 'App' && (
 								<SlInput
 									className='businessIDName'
 									name='businessIDName'
-									helpText={`The name of the ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+									helpText={`The name of the app property from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
 									placeholder='Something like "email", "customer_id", etc...'
 									value={businessID}
-									label={`Business ID ${businessIDKind}`}
+									label={`Business ID property`}
 									type='text'
 									maxlength={1024}
 									onSlChange={(e) => {

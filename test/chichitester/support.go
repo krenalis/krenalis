@@ -104,13 +104,12 @@ func (c *Chichi) AddConnection(connection ConnectionToAdd) int {
 	return id
 }
 
-func (c *Chichi) AddDestinationFilesystem(storageDir, businessID string) int {
+func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:       "Filesystem",
-		Role:       Destination,
-		Enabled:    true,
-		Connector:  FilesystemConnector,
-		BusinessID: businessID,
+		Name:      "Filesystem",
+		Role:      Destination,
+		Enabled:   true,
+		Connector: FilesystemConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
@@ -149,7 +148,7 @@ func (c *Chichi) AddDummy(name string, role Role, businessID string) int {
 	return c.AddConnection(conn)
 }
 
-func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int, businessID string) int {
+func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:             name,
 		Role:             Source,
@@ -158,30 +157,27 @@ func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int, 
 		Strategy:         &defaultStrategy,
 		WebsiteHost:      host,
 		EventConnections: eventConnections,
-		BusinessID:       businessID,
 	})
 }
 
-func (c *Chichi) AddSourceFilesystem(storageDir, businessID string) int {
+func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:       "Filesystem",
-		Role:       Source,
-		Enabled:    true,
-		Connector:  FilesystemConnector,
-		BusinessID: businessID,
+		Name:      "Filesystem",
+		Role:      Source,
+		Enabled:   true,
+		Connector: FilesystemConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
 	})
 }
 
-func (c *Chichi) AddSourcePostgreSQL(businessID string) int {
+func (c *Chichi) AddSourcePostgreSQL() int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:       "PostgreSQL (destination)",
-		Role:       Source,
-		Enabled:    true,
-		Connector:  PostgreSQLConnector,
-		BusinessID: businessID,
+		Name:      "PostgreSQL (destination)",
+		Role:      Source,
+		Enabled:   true,
+		Connector: PostgreSQLConnector,
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
