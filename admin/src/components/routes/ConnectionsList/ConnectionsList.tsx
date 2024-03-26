@@ -77,10 +77,22 @@ const ConnectionsList = () => {
 			];
 			if (hasEventConnections) {
 				if (c.eventConnections != null) {
+					const fullEventConnections: TransformedConnection[] = [];
+					for (const id of c.eventConnections) {
+						const fullConnection = connections.find((c) => c.id === id);
+						fullEventConnections.push(fullConnection);
+					}
+					fullEventConnections.sort((a, b) => {
+						if (a.name < b.name) {
+							return -1;
+						} else if (a.name > b.name) {
+							return 1;
+						}
+						return 0;
+					});
 					const connectionLogos: ReactNode[] = [];
-					for (const ec of c.eventConnections) {
-						const connection = connections.find((connection) => connection.id === ec);
-						connectionLogos.push(<LittleLogo key={String(ec)} icon={connection.connector.icon} />);
+					for (const ec of fullEventConnections) {
+						connectionLogos.push(<LittleLogo key={String(ec.id)} icon={ec.connector.icon} />);
 					}
 					cells.push(<div className='connectionEventConnectionsCell'>{connectionLogos}</div>);
 				} else {
