@@ -22,7 +22,7 @@ import (
 )
 
 // buildChichi builds Chichi and copies files needed for the execution.
-func buildChichi(repo, chichiDir string, ctx context.Context, setts *cmd.Settings) error {
+func buildChichi(repo, chichiDir string, ctx context.Context) error {
 
 	// Build Chichi.
 	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(chichiDir, chichiExecFilename()), "./cmd/chichi")

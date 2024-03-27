@@ -197,7 +197,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 			t.Fatalf("cannot write the YAML config file: %s", err)
 		}
 		if !chichiAlreadyBuilt {
-			err := buildChichi(repo, chichiDir, ctx, &setts)
+			err := buildChichi(repo, chichiDir, ctx)
 			if err != nil {
 				t.Fatalf("cannot build Chichi: %s", err)
 			}
