@@ -10,7 +10,7 @@ package http
 import (
 	"testing"
 
-	"chichi"
+	"github.com/open2b/chichi"
 )
 
 func TestCompletePath(t *testing.T) {

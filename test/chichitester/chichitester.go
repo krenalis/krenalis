@@ -29,9 +29,9 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/postgres"
-	"chichi/server"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/cmd"
+	"github.com/open2b/chichi/types"
 )
 
 // launchChichiExternally determines if Chichi should be launched externally
@@ -155,7 +155,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 		sessionKey = base64.StdEncoding.EncodeToString(key)
 	}
 
-	setts := server.Settings{}
+	setts := cmd.Settings{}
 	setts.Main.Host = testsSettings.ChichiHost
 	setts.Admin.SessionKey = sessionKey
 	setts.PostgreSQL.Host = testsSettings.Database.Host
@@ -220,7 +220,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 			t.Fatal(err)
 		}
 		go func() {
-			err := server.Run(ctxWithCancel, &setts)
+			err := cmd.Run(ctxWithCancel, &setts)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return

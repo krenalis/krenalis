@@ -16,16 +16,16 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"chichi/server"
+	"github.com/open2b/chichi/cmd"
 
 	"gopkg.in/yaml.v3"
 )
 
 // buildChichi builds Chichi and copies files needed for the execution.
-func buildChichi(repo, chichiDir string, ctx context.Context, setts *server.Settings) error {
+func buildChichi(repo, chichiDir string, ctx context.Context, setts *cmd.Settings) error {
 
 	// Build Chichi.
-	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(chichiDir, chichiExecFilename()), "./server/cmd")
+	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(chichiDir, chichiExecFilename()), "./cmd/chichi")
 	cmd.Dir = repo
 	err := cmd.Run()
 	if err != nil {
@@ -49,7 +49,7 @@ func buildChichi(repo, chichiDir string, ctx context.Context, setts *server.Sett
 	return nil
 }
 
-func writeConfigYAMLFile(chichiDir string, setts *server.Settings) error {
+func writeConfigYAMLFile(chichiDir string, setts *cmd.Settings) error {
 	err := validDatabaseNameForTests(setts.PostgreSQL.Database)
 	if err != nil {
 		return err

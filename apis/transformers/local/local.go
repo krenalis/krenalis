@@ -20,10 +20,10 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/apis/state"
-	"chichi/apis/transformers"
-	"chichi/apis/transformers/embed"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/transformers/embed"
+	"github.com/open2b/chichi/types"
 )
 
 type function struct {

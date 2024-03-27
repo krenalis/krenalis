@@ -15,8 +15,8 @@ import (
 	"slices"
 	"testing"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/types"
 )
 
 func TestDiff(t *testing.T) {

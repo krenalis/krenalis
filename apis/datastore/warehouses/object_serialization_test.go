@@ -10,7 +10,7 @@ package warehouses
 import (
 	"testing"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 
 	"github.com/google/go-cmp/cmp"
 )

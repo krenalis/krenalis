@@ -22,11 +22,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/apis/connectors/httpclient"
-	"chichi/apis/postgres"
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/connectors/httpclient"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 
 	"github.com/shopspring/decimal"
 )

@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"chichi"
-	"chichi/apis/postgres"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"

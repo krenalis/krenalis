@@ -13,11 +13,11 @@ import (
 	"math"
 	"strconv"
 
-	"chichi/apis/connectors"
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/state"
-	"chichi/apis/statistics"
-	"chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/statistics"
+	"github.com/open2b/chichi/apis/transformers"
 )
 
 // importUsers imports the users of the action.

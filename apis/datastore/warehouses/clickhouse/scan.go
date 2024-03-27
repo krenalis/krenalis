@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/types"
 
 	"github.com/shopspring/decimal"
 )

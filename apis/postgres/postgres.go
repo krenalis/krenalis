@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"chichi/telemetry"
+	"github.com/open2b/chichi/telemetry"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

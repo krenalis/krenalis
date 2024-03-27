@@ -8,7 +8,7 @@
 package events
 
 import (
-	"chichi/backoff"
+	"github.com/open2b/chichi/backoff"
 )
 
 // dispatcherQueue represents an event dispatcher warehouseQueue.

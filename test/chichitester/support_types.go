@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"time"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 const (

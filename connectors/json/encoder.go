@@ -18,7 +18,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 
 	"github.com/shopspring/decimal"
 )

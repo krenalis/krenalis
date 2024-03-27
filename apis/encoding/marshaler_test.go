@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 
 	"github.com/shopspring/decimal"
 )

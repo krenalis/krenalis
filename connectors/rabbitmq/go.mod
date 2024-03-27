@@ -1,7 +1,17 @@
-module rabbitmq
+module github.com/open2b/chichi/connectors/rabbitmq
 
 go 1.22
 
-require github.com/rabbitmq/amqp091-go v1.9.0
+replace github.com/open2b/chichi => ../../
 
-require go.uber.org/goleak v1.3.0 // indirect
+require (
+	github.com/open2b/chichi v0.0.0-00010101000000-000000000000
+	github.com/rabbitmq/amqp091-go v1.9.0
+)
+
+require (
+	github.com/shopspring/decimal v1.3.1 // indirect
+	go.uber.org/goleak v1.3.0 // indirect
+	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 // indirect
+	golang.org/x/text v0.14.0 // indirect
+)

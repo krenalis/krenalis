@@ -14,11 +14,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/datastore/warehouses/clickhouse"
-	"chichi/apis/datastore/warehouses/postgresql"
-	"chichi/apis/datastore/warehouses/snowflake"
-	"chichi/apis/state"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/datastore/warehouses/clickhouse"
+	"github.com/open2b/chichi/apis/datastore/warehouses/postgresql"
+	"github.com/open2b/chichi/apis/datastore/warehouses/snowflake"
+	"github.com/open2b/chichi/apis/state"
 )
 
 type (

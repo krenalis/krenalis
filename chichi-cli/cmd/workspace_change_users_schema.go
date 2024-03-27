@@ -15,9 +15,8 @@ import (
 	"os"
 	"strings"
 
-	"chichi/types"
-
-	"chichi-cli/chichiapis"
+	"github.com/open2b/chichi/chichi-cli/chichiapis"
+	"github.com/open2b/chichi/types"
 
 	"github.com/spf13/cobra"
 )

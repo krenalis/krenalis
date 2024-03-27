@@ -12,7 +12,7 @@ package filesystem
 import (
 	"testing"
 
-	"chichi"
+	"github.com/open2b/chichi"
 )
 
 func TestPathConvert(t *testing.T) {

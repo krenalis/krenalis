@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"testing"
 
-	"chichi/test/chichitester"
-	"chichi/types"
+	"github.com/open2b/chichi/test/chichitester"
+	"github.com/open2b/chichi/types"
 
 	"github.com/segmentio/analytics-go/v3"
 )

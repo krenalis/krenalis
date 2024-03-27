@@ -11,10 +11,10 @@ import (
 	"context"
 	"sync"
 
-	"chichi"
-	"chichi/apis/state"
-	"chichi/apis/transformers"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers"
+	"github.com/open2b/chichi/types"
 )
 
 const pipeSize = 100

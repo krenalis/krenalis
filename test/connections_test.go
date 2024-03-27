@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"testing"
 
-	"chichi/apis"
-	"chichi/test/chichitester"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/test/chichitester"
 )
 
 func TestConnections(t *testing.T) {

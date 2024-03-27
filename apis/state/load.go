@@ -12,8 +12,8 @@ import (
 	"reflect"
 	"sync"
 
-	"chichi"
-	"chichi/apis/postgres"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/postgres"
 )
 
 var (

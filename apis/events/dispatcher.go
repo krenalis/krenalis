@@ -12,7 +12,7 @@ import (
 	"log/slog"
 	"time"
 
-	"chichi/backoff"
+	"github.com/open2b/chichi/backoff"
 )
 
 const debug = false

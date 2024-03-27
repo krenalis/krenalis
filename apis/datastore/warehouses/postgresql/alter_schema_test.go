@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/types"
 )
 
 func Test_alterSchemaQueries(t *testing.T) {

@@ -20,8 +20,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/ui"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"

@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 type ProcessedEvent struct {

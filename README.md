@@ -10,7 +10,7 @@
 - [How to execute Chichi](#how-to-execute-chichi)
   - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
   - [2. Configure and add certificates](#2-configure-and-add-certificates)
-  - [3. Compile the server](#3-compile-the-server)
+  - [3. Compile the server command](#3-compile-the-server-command)
   - [4. Populate the database](#4-populate-the-database)
   - [5. Connect the data warehouse](#5-connect-the-data-warehouse)
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
@@ -81,21 +81,12 @@ It is recommended to add the `/admin/node_modules/` directory your local `.gitig
 Add a configuration file `config.yaml` (see `config.example.yaml`) in the same directory of
 the `chichi` executable, as well as a `cert.pem` and `key.pem` certificate files.
 
-### 3. Compile the server
+### 3. Compile the server command
 
 Within the root of this repository execute:
 
-On **Linux** / **Unix**-like systems:
-
-
 ```bash
-go build -tags osusergo,netgo -trimpath -o chichi ./server/cmd
-```
-
-On **Windows**:
-
-```bash
-go build -tags osusergo,netgo -trimpath -o chichi.exe ./server/cmd
+go build -tags osusergo,netgo -trimpath ./cmd/chichi
 ```
 
 ### 4. Populate the database
@@ -153,7 +144,7 @@ chichi-cli init-warehouse
 
 ### 7. Run and open the browser
 
-Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
+Launch the server command executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
 ### 8. Add properties to the `users` / `users_identities` schemas
 

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 // ColumnsToProperties returns the type properties of columns.

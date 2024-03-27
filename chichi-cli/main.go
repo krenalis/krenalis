@@ -11,8 +11,8 @@ import (
 	"log"
 	"strings"
 
-	"chichi-cli/chichiapis"
-	"chichi-cli/cmd"
+	"github.com/open2b/chichi/chichi-cli/chichiapis"
+	"github.com/open2b/chichi/chichi-cli/cmd"
 
 	"github.com/spf13/viper"
 )

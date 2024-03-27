@@ -14,9 +14,9 @@ import (
 	"math"
 	"slices"
 
-	"chichi"
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 // An InvalidPathError is returned when a path name is not valid.

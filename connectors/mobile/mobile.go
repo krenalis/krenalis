@@ -11,7 +11,7 @@ package mobile
 import (
 	_ "embed"
 
-	"chichi"
+	"github.com/open2b/chichi"
 )
 
 // Connector icon.

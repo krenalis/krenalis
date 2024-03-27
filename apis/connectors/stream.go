@@ -10,8 +10,8 @@ package connectors
 import (
 	"context"
 
-	"chichi"
-	"chichi/apis/state"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/state"
 )
 
 // SendOptions are the stream's Send options.

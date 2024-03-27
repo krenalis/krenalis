@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/shopspring/decimal"

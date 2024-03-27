@@ -16,8 +16,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"chichi/apis"
-	"chichi/telemetry"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/telemetry"
 
 	"github.com/evanw/esbuild/pkg/api"
 )

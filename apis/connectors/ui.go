@@ -16,9 +16,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/apis/state"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/ui"
 )
 
 // ServeActionUI serves the user interface of the provided file action and returns the

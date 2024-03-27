@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/types"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
+	"github.com/open2b/chichi/ui"
 
 	"github.com/snowflakedb/gosnowflake"
 )

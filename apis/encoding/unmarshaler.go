@@ -21,7 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/google/uuid"

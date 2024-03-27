@@ -14,9 +14,9 @@ import (
 	"net/http"
 	"time"
 
-	"chichi/apis/capture"
-	"chichi/apis/errors"
-	"chichi/apis/state"
+	"github.com/open2b/chichi/apis/capture"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/state"
 )
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")

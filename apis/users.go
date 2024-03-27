@@ -12,14 +12,14 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"chichi/apis/datastore"
-	"chichi/apis/datastore/expr"
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/encoding"
-	"chichi/apis/errors"
-	"chichi/apis/events/eventschema"
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore"
+	"github.com/open2b/chichi/apis/datastore/expr"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/encoding"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 // User represents a user.

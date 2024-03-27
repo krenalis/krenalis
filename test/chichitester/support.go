@@ -18,9 +18,9 @@ import (
 	"strconv"
 	"time"
 
-	"chichi/apis"
-	"chichi/backoff"
-	"chichi/types"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/backoff"
+	"github.com/open2b/chichi/types"
 
 	"github.com/segmentio/analytics-go/v3"
 )

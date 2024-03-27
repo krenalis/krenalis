@@ -25,8 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/ui"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"

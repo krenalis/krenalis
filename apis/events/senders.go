@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/connectors"
 )
 
 // startSenders starts some senders that read from the events channel and write

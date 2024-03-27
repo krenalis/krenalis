@@ -16,8 +16,8 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 // validationError implements the ValidationError interface of apis.

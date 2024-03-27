@@ -1,63 +1,10 @@
-module chichi
+module github.com/open2b/chichi
 
 go 1.22
 
 replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.12.0-fix
 
-replace (
-	chichi/connectors/clickhouse => ./connectors/clickhouse
-	chichi/connectors/csv => ./connectors/csv
-	chichi/connectors/dummy => ./connectors/dummy
-	chichi/connectors/excel => ./connectors/excel
-	chichi/connectors/filesystem => ./connectors/filesystem
-	chichi/connectors/googleanalytics4 => ./connectors/googleanalytics4
-	chichi/connectors/http => ./connectors/http
-	chichi/connectors/hubspot => ./connectors/hubspot
-	chichi/connectors/json => ./connectors/json
-	chichi/connectors/kafka => ./connectors/kafka
-	chichi/connectors/klaviyo => ./connectors/klaviyo
-	chichi/connectors/mailchimp => ./connectors/mailchimp
-	chichi/connectors/mixpanel => ./connectors/mixpanel
-	chichi/connectors/mobile => ./connectors/mobile
-	chichi/connectors/mysql => ./connectors/mysql
-	chichi/connectors/parquet => ./connectors/parquet
-	chichi/connectors/postgresql => ./connectors/postgresql
-	chichi/connectors/rabbitmq => ./connectors/rabbitmq
-	chichi/connectors/s3 => ./connectors/s3
-	chichi/connectors/server => ./connectors/server
-	chichi/connectors/sftp => ./connectors/sftp
-	chichi/connectors/snowflake => ./connectors/snowflake
-	chichi/connectors/stripe => ./connectors/stripe
-	chichi/connectors/uisample => ./connectors/uisample
-	chichi/connectors/website => ./connectors/website
-)
-
 require (
-	chichi/connectors/clickhouse v0.0.0-00010101000000-000000000000
-	chichi/connectors/csv v0.0.0-00010101000000-000000000000
-	chichi/connectors/dummy v0.0.0-00010101000000-000000000000
-	chichi/connectors/excel v0.0.0-00010101000000-000000000000
-	chichi/connectors/filesystem v0.0.0-00010101000000-000000000000
-	chichi/connectors/googleanalytics4 v0.0.0-00010101000000-000000000000
-	chichi/connectors/http v0.0.0-00010101000000-000000000000
-	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
-	chichi/connectors/json v0.0.0-00010101000000-000000000000
-	chichi/connectors/kafka v0.0.0-00010101000000-000000000000
-	chichi/connectors/klaviyo v0.0.0-00010101000000-000000000000
-	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
-	chichi/connectors/mixpanel v0.0.0-00010101000000-000000000000
-	chichi/connectors/mobile v0.0.0-00010101000000-000000000000
-	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
-	chichi/connectors/parquet v0.0.0-00010101000000-000000000000
-	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000
-	chichi/connectors/rabbitmq v0.0.0-00010101000000-000000000000
-	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
-	chichi/connectors/server v0.0.0-00010101000000-000000000000
-	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
-	chichi/connectors/snowflake v0.0.0-00010101000000-000000000000
-	chichi/connectors/stripe v0.0.0-00010101000000-000000000000
-	chichi/connectors/uisample v0.0.0-00010101000000-000000000000
-	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.3
 	github.com/aws/aws-sdk-go-v2 v1.21.2
 	github.com/aws/aws-sdk-go-v2/config v1.19.0
@@ -99,11 +46,10 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.4.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.2 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 // indirect
-	github.com/ClickHouse/ch-go v0.52.1 // indirect
+	github.com/ClickHouse/ch-go v0.58.2 // indirect
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
-	github.com/apache/thrift v0.17.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.14 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.13 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.59 // indirect
@@ -122,15 +68,14 @@ require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/fraugster/parquet-go v0.12.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -143,26 +88,16 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
-	github.com/kr/fs v0.1.0 // indirect
-	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/oschwald/maxminddb-golang v1.11.0 // indirect
-	github.com/paulmach/orb v0.9.0 // indirect
+	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.19 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.13.6 // indirect
-	github.com/rabbitmq/amqp091-go v1.9.0 // indirect
-	github.com/richardlehane/mscfb v1.0.4 // indirect
-	github.com/richardlehane/msoleps v1.0.3 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
-	github.com/twmb/franz-go v1.16.1 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
-	github.com/xuri/efp v0.0.0-20231025114914-d1ff6096ae53 // indirect
-	github.com/xuri/excelize/v2 v2.8.1 // indirect
-	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect

@@ -14,8 +14,8 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/types"
-	"chichi/ui"
+	"github.com/open2b/chichi/types"
+	"github.com/open2b/chichi/ui"
 )
 
 // ConnectorInfo is the interface implemented by connector infos.

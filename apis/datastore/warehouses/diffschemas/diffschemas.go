@@ -12,8 +12,8 @@ import (
 	"slices"
 	"strings"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/types"
 )
 
 // Diff returns the differences between oldSchema and newSchema.

@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/postgres"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/types"
 )
 
 // AlterSchema alters the "users" (and the "users_identities") schema applying

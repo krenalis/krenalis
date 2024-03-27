@@ -10,7 +10,7 @@ package test
 import (
 	"testing"
 
-	"chichi/test/chichitester"
+	"github.com/open2b/chichi/test/chichitester"
 )
 
 func TestIdentifiersSchema(t *testing.T) {

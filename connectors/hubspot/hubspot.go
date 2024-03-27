@@ -25,8 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
 )
 
 // Connector icon.

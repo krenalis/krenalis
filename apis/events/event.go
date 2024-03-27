@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"chichi"
+	"github.com/open2b/chichi"
 
 	"github.com/segmentio/ksuid"
 	"github.com/shopspring/decimal"

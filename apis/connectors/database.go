@@ -15,9 +15,9 @@ import (
 	"slices"
 	"time"
 
-	"chichi"
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 // Database represents the database of a database connection.

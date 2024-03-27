@@ -8,8 +8,8 @@
 package events
 
 import (
-	"chichi/apis/connectors"
-	"chichi/apis/state"
+	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/state"
 )
 
 // eventsState holds the state for the events.

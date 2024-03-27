@@ -13,8 +13,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"chichi"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/ui"
 )
 
 // Make sure it implements the UI interface.

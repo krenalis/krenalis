@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"chichi"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.

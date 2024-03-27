@@ -13,9 +13,9 @@ import (
 	"math/rand"
 	"time"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/events/eventschema"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/types"
 )
 
 const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse

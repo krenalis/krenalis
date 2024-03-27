@@ -10,8 +10,8 @@ package datastore_test
 import (
 	"testing"
 
-	"chichi/apis/datastore"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore"
+	"github.com/open2b/chichi/types"
 )
 
 func Test_CanBeIdentifier(t *testing.T) {

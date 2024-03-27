@@ -7,7 +7,7 @@
 
 package mappings
 
-import "chichi/types"
+import "github.com/open2b/chichi/types"
 
 // convertMatrix is a matrix which holds information about valid conversions.
 //

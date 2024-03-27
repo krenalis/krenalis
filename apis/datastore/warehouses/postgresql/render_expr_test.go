@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/datastore/expr"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/expr"
+	"github.com/open2b/chichi/types"
 )
 
 func Test_renderExpr(t *testing.T) {

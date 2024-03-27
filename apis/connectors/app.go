@@ -18,10 +18,10 @@ import (
 	"slices"
 	"strings"
 
-	"chichi"
-	"chichi/apis/connectors/httpclient"
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/connectors/httpclient"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 type (

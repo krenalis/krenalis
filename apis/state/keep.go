@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
 )

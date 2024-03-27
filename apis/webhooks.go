@@ -17,8 +17,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"chichi/apis/connectors"
-	"chichi/apis/state"
+	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/state"
 )
 
 // WebhooksPer values indicates if webhooks are per connector, resource or

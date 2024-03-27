@@ -10,7 +10,7 @@ package eventschema
 import (
 	"testing"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 func Test_SchemaWithoutGID(t *testing.T) {

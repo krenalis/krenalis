@@ -13,7 +13,7 @@ import (
 	"io"
 	"reflect"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 // ErrSheetNotExist indicates that a file does not contain a sheet.

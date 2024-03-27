@@ -19,11 +19,11 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/state"
-	"chichi/apis/transformers"
-	"chichi/apis/transformers/embed"
-	"chichi/backoff"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/transformers/embed"
+	"github.com/open2b/chichi/backoff"
+	"github.com/open2b/chichi/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"

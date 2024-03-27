@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/ui"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

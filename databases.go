@@ -11,7 +11,7 @@ import (
 	"context"
 	"reflect"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 // DatabaseInfo represents a database connector info.

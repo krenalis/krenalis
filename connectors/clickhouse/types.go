@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 // columnType returns the types.Type corresponding to the ClickHouse type typ

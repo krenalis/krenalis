@@ -30,11 +30,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/culture"
-	"chichi/apis/datastore"
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/state"
-	"chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/culture"
+	"github.com/open2b/chichi/apis/datastore"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers"
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"

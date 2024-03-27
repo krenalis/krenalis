@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 // typeCheck type checks the expression expr. schema is the schema of the

@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 // filterApplies reports whether the filter applies to props, which can be an

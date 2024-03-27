@@ -16,12 +16,12 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi/apis/connectors"
-	"chichi/apis/errors"
-	"chichi/apis/events/eventschema"
-	"chichi/apis/state"
-	"chichi/apis/transformers/mappings"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers/mappings"
+	"github.com/open2b/chichi/types"
 
 	"golang.org/x/exp/maps"
 )

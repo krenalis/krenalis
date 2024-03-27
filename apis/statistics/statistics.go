@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/postgres"
-	"chichi/backoff"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/backoff"
 )
 
 const numSteps = 7

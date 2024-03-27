@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/errors"
-	"chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/postgres"
 
 	"github.com/google/uuid"
 )

@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/postgres"
-	"chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/transformers"
 
 	"github.com/segmentio/ksuid"
 )

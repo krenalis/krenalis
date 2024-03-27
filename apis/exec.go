@@ -18,12 +18,12 @@ import (
 	"strings"
 	"time"
 
-	"chichi"
-	"chichi/apis/datastore/expr"
-	"chichi/apis/errors"
-	"chichi/apis/postgres"
-	"chichi/apis/state"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/apis/datastore/expr"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"

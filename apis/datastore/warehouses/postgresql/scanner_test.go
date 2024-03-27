@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/postgres"
 
 	"github.com/google/uuid"
 )

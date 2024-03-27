@@ -19,9 +19,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi"
-	"chichi/types"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
+	"github.com/open2b/chichi/ui"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"

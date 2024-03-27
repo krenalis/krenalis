@@ -5,16 +5,16 @@
 // Copyright (c) 2024 Open2b
 //
 
-package server
+package cmd
 
 import (
 	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"chichi/apis"
-	"chichi/apis/errors"
-	"chichi/types"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/types"
 )
 
 type connection struct {

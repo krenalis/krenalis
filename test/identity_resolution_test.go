@@ -17,8 +17,8 @@ import (
 	"strings"
 	"testing"
 
-	"chichi/test/chichitester"
-	"chichi/types"
+	"github.com/open2b/chichi/test/chichitester"
+	"github.com/open2b/chichi/types"
 )
 
 // TestIdentityResolution tests the identity resolution by importing users and

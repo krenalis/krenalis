@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/datastore/warehouses"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/types"
 )
 
 // scanValue implements the sql.Scanner interface to read the database values.

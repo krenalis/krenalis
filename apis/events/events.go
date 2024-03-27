@@ -17,11 +17,11 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	"chichi/apis/connectors"
-	"chichi/apis/datastore"
-	"chichi/apis/postgres"
-	"chichi/apis/state"
-	"chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/datastore"
+	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers"
 
 	"github.com/segmentio/ksuid"
 	"golang.org/x/text/unicode/norm"

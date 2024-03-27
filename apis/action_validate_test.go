@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 func Test_unusedProperties(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"chichi-cli/chichiapis"
+	"github.com/open2b/chichi/chichi-cli/chichiapis"
 
 	"github.com/spf13/cobra"
 )

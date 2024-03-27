@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/connectors"
 )
 
 func Test_newPathPlaceholderReplacer(t *testing.T) {

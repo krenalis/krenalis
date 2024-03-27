@@ -18,9 +18,9 @@ import (
 	"strconv"
 	"testing"
 
-	"chichi/apis"
-	"chichi/test/chichitester"
-	"chichi/types"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/test/chichitester"
+	"github.com/open2b/chichi/types"
 
 	"github.com/golang/snappy"
 )

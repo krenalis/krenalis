@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package server
+package cmd
 
 import (
 	"compress/gzip"
@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"chichi/admin"
-	"chichi/apis"
-	"chichi/telemetry"
+	"github.com/open2b/chichi/admin"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/telemetry"
 )
 
 type Settings struct {

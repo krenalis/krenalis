@@ -5,14 +5,14 @@
 // Copyright (c) 2024 Open2b
 //
 
-package server
+package cmd
 
 import (
 	"net/http"
 	"strconv"
 
-	"chichi/apis"
-	"chichi/apis/errors"
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/apis/errors"
 )
 
 type connector struct {

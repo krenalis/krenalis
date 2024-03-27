@@ -16,15 +16,15 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/connectors"
-	"chichi/apis/datastore"
-	"chichi/apis/datastore/expr"
-	"chichi/apis/datastore/warehouses"
-	"chichi/apis/errors"
-	"chichi/apis/state"
-	"chichi/apis/statistics"
-	"chichi/apis/transformers"
-	"chichi/types"
+	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/datastore"
+	"github.com/open2b/chichi/apis/datastore/expr"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/statistics"
+	"github.com/open2b/chichi/apis/transformers"
+	"github.com/open2b/chichi/types"
 )
 
 // exportUsers exports the users for the action.

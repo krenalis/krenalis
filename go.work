@@ -1,4 +1,4 @@
-go 1.22
+go 1.22.1
 
 use (
 	.
@@ -28,4 +28,5 @@ use (
 	./connectors/stripe
 	./connectors/uisample
 	./connectors/website
+	cmd/chichi
 )

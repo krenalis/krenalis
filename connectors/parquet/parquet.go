@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi"
-	"chichi/types"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"

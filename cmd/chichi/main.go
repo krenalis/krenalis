@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"chichi/server"
+	"github.com/open2b/chichi/cmd"
 
 	"gopkg.in/yaml.v3"
 )
@@ -48,7 +48,7 @@ func main() {
 		slog.Error("cannot read configuration file", "path", settingsFile, "err", err)
 		os.Exit(1)
 	}
-	var settings server.Settings
+	var settings cmd.Settings
 	dec := yaml.NewDecoder(bytes.NewReader(settingsFileContent))
 	dec.KnownFields(true)
 	err = dec.Decode(&settings)
@@ -65,7 +65,7 @@ func main() {
 		cancel()
 	}()
 
-	err = server.Run(ctx, &settings)
+	err = cmd.Run(ctx, &settings)
 	if err != nil {
 		slog.Error("error occurred running server", "err", err)
 		os.Exit(1)

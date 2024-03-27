@@ -18,11 +18,11 @@ import (
 	"io"
 	"strconv"
 
-	"chichi"
-	"chichi/types"
-	"chichi/ui"
-
 	"github.com/xuri/excelize/v2"
+
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
+	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.

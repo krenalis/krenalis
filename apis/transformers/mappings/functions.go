@@ -10,7 +10,7 @@ package mappings
 import (
 	"errors"
 
-	"chichi/types"
+	"github.com/open2b/chichi/types"
 )
 
 var jsonArrayType = types.Array(types.JSON())

@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/errors"
-	"chichi/apis/state"
+	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/state"
 )
 
 const numPeriods = 10

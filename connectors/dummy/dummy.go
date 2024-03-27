@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"chichi"
-	"chichi/types"
-	"chichi/ui"
+	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
+	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.

@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"chichi/apis/postgres"
+	"github.com/open2b/chichi/apis/postgres"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
