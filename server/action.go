@@ -1,0 +1,137 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2024 Open2b
+//
+
+package server
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"chichi/apis"
+	"chichi/apis/errors"
+)
+
+type action struct {
+	*apisServer
+}
+
+// Delete deletes an action.
+func (action action) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	err = a.Delete(r.Context())
+	return nil, err
+}
+
+// ServeUI serves the UI of an action.
+func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Event  string
+		Values json.RawMessage
+	}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	form, err := a.ServeUI(r.Context(), body.Event, body.Values)
+	if err != nil {
+		return nil, err
+	}
+	w.Header().Add("Content-Type", "application/json")
+	_, _ = w.Write(form)
+	return nil, nil
+
+}
+
+// Set sets an action.
+func (action action) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	var body apis.ActionToSet
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	err = a.Set(r.Context(), body)
+	return nil, err
+}
+
+// SetStatus sets the status of an action.
+func (action action) SetStatus(_ http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Enabled bool
+	}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	err = a.SetStatus(r.Context(), body.Enabled)
+	return nil, err
+}
+
+// SetSchedulePeriod sets the schedule period of an action.
+func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		SchedulePeriod apis.SchedulePeriod
+	}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	err = a.SetSchedulePeriod(r.Context(), body.SchedulePeriod)
+	return nil, err
+}
+
+// Execute executes an action.
+func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Reimport bool
+	}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	err = a.Execute(r.Context(), body.Reimport)
+	return nil, err
+}
+
+func (action action) action(r *http.Request) (*apis.Action, error) {
+	connection, err := connection{action.apisServer}.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("action")
+	if v[0] == '+' {
+		return nil, errors.NotFound("")
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.NotFound("")
+	}
+	return connection.Action(r.Context(), id)
+}
