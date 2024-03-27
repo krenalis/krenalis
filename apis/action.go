@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"chichi/apis/connectors"
 	"chichi/apis/datastore"
@@ -899,6 +900,44 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// canBeUsedAsAsMatchingProp reports whether a type with kind k can be used as a
+// matching property for the export.
+func canBeUsedAsAsMatchingProp(k types.Kind) bool {
+	// Only integers, UUIDs and texts are allowed.
+	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
+}
+
+// importsUsersIdentitiesFromEvents reports whether a connector with the given
+// type, on a connection with the given role, with an action with the given
+// target, imports users identities from events.
+func importsUsersIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	if role == state.Source && target == state.Users {
+		switch connectorType {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			return true
+		}
+	}
+	return false
+}
+
+// onlyForMatching returns a schema which contains only the properties of schema
+// which can be used for the apps export matching.
+//
+// Returns an invalid schema in case none of the properties of schema can be
+// used.
+func onlyForMatching(schema types.Type) types.Type {
+	props := []types.Property{}
+	for _, p := range schema.Properties() {
+		if canBeUsedAsAsMatchingProp(p.Type.Kind()) {
+			props = append(props, p)
+		}
+	}
+	if len(props) == 0 {
+		return types.Type{}
+	}
+	return types.Object(props)
+}
+
 // transformationFunctionName returns the name the transformation function for
 // an action in the specified language.
 //
@@ -914,4 +953,35 @@ func transformationFunctionName(action int, language state.Language) string {
 		panic("unexpected language")
 	}
 	return "action-" + strconv.Itoa(action) + ext
+}
+
+// validateTimestampFormat validates the given timestamp format for importing
+// files, returning an error in case the format is not valid.
+//
+// NOTE: keep in sync with the function 'apis/connectors.parseTimestamp'.
+func validateTimestampFormat(format string) error {
+	if !utf8.ValidString(format) {
+		return errors.New("timestamp format must be UTF-8 valid")
+	}
+	if utf8.RuneCountInString(format) > 64 {
+		return errors.New("timestamp format is longer than 64 runes")
+	}
+	switch format {
+	case
+		"DateTime",
+		"DateOnly",
+		"ISO8601",
+		"Excel":
+		return nil
+	default:
+		f, ok := strings.CutPrefix(format, "'")
+		if !ok {
+			return fmt.Errorf("invalid timestamp format %q", format)
+		}
+		_, ok = strings.CutSuffix(f, "'")
+		if !ok {
+			return fmt.Errorf("invalid timestamp format %q", format)
+		}
+		return nil
+	}
 }
