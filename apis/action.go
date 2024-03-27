@@ -346,16 +346,16 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
+	c := this.action.Connection()
+
 	// Validate the action.
-	err := this.connection.validateActionToSet(action, this.action.Target, fileConnector)
+	err := validateActionToSet(action, this.action.Target, c, fileConnector, this.apis.functionTransformer)
 	if err != nil {
 		return err
 	}
 
-	c := this.action.Connection()
-
 	inSchema := action.InSchema
-	if importsUsersIdentitiesFromEvents(this.action.Connection().Connector().Type, c.Role, this.action.Target) {
+	if importsUsersIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
 		// Use the schema without GID because incoming events do not have a GID.
 		inSchema = eventschema.SchemaWithoutGID
 	}

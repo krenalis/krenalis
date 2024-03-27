@@ -20,6 +20,7 @@ import (
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events/eventschema"
 	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/apis/transformers/mappings"
 	"github.com/open2b/chichi/types"
 
@@ -27,21 +28,23 @@ import (
 )
 
 // validateActionToSet validates the action to set (when adding or setting an
-// action) for the given target.
+// action) for the given target, on the connection c.
 //
-// fileConnector must be passed exclusively and necessarily when the connector of the
-// storage has type Storage, otherwise it must be nil.
+// fileConnector must be passed exclusively and necessarily when the connector
+// of the storage has type FileStorage, otherwise it must be nil.
+//
+// tr is the transformers.Function instantiated on the APIs.
 //
 // Refer to the specifications in the file "apis/Actions.md" for more details.
 //
 // It returns an errors.UnprocessableError error with code LanguageNotSupported,
 // if the transformation language is not supported.
-func (this *Connection) validateActionToSet(action ActionToSet, target state.Target, fileConnector *state.Connector) error {
+func validateActionToSet(action ActionToSet, target state.Target, c *state.Connection, fileConnector *state.Connector, tr transformers.Function) error {
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 
-	importUsersIdentitiesFromEvents := importsUsersIdentitiesFromEvents(this.connection.Connector().Type, this.connection.Role, target)
+	importUsersIdentitiesFromEvents := importsUsersIdentitiesFromEvents(c.Connector().Type, c.Role, target)
 	if importUsersIdentitiesFromEvents {
 		if inSchema.Valid() {
 			return errors.BadRequest("input schema must be invalid for actions that import users identities from events")
@@ -128,7 +131,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if function.Source == "" {
 			return errors.BadRequest("function transformation source is empty")
 		}
-		tr := this.apis.functionTransformer
 		switch function.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
@@ -152,7 +154,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 		if n := utf8.RuneCountInString(action.Path); n > 1024 {
 			return errors.BadRequest("path is longer than 1024 runes")
 		}
-		switch this.connection.Role {
+		switch c.Role {
 		case state.Source:
 			_, err := connectors.ReplacePlaceholders(action.Path, func(_ string) (string, bool) {
 				return "", false
@@ -237,7 +239,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Tar
 
 	// Second, do validations based on the workspace and the connection.
 
-	c := this.connection
 	connector := c.Connector()
 	eventBasedConn := connector.Type == state.MobileType ||
 		connector.Type == state.ServerType ||

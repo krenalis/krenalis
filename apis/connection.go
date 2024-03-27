@@ -360,7 +360,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Validate the action.
-	err := this.validateActionToSet(action, state.Target(target), fileConnector)
+	err := validateActionToSet(action, state.Target(target), this.connection, fileConnector, this.apis.functionTransformer)
 	if err != nil {
 		return 0, err
 	}
