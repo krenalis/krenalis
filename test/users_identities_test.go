@@ -163,7 +163,7 @@ func Test_UsersIdentities(t *testing.T) {
 			"First": 0,
 			"Limit": 100,
 		}
-		_, err := c.Call("POST", url, req)
+		err := c.Call("POST", url, req, nil)
 		if err == nil {
 			t.Fatalf("expecting error, got nothing")
 		}

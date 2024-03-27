@@ -338,19 +338,11 @@ func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 		"Type":     whType,
 		"Settings": whSettings,
 	}
-	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connect-warehouse", body)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connect-warehouse", body, nil)
 }
 
 func (c *Chichi) initWarehouse() error {
-	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/init-warehouse", nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/init-warehouse", nil, nil)
 }
 
 func (c *Chichi) changeUsersSchema() error {
@@ -367,11 +359,7 @@ func (c *Chichi) changeUsersSchema() error {
 	if err != nil {
 		return err
 	}
-	_, err = c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/change-users-schema", req)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/change-users-schema", req, nil)
 }
 
 func (c *Chichi) login() error {
@@ -379,8 +367,7 @@ func (c *Chichi) login() error {
 		"Email":    "acme@open2b.com",
 		"Password": "foopass2",
 	}
-	_, err := c.call("POST", "/api/members/login", body)
-	return err
+	return c.call("POST", "/api/members/login", body, nil)
 }
 
 func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {

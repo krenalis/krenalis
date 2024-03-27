@@ -139,7 +139,7 @@ func TestExportUsersToFile(t *testing.T) {
 				"Comma": ",",
 			}),
 			Compression: chichitester.Compression(compression),
-		})
+		}, nil)
 
 		// Execute the action that export users.
 		c.ExecuteAction(fsID, exportUsersActionID, true)

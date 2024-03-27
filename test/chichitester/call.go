@@ -31,29 +31,31 @@ func (e *StatusCodeError) Error() string {
 	return fmt.Sprintf("unexpected HTTP status code %d", e.Code)
 }
 
-// Call calls the API method serializing the given body.
+// Call calls the API method serializing the given body and deserializing the
+// response into response.
 //
 // Returns an error if the calls returns an error, which may be a
 // StatusCodeError error in case of a HTTP request which returned a status code
-// which is not 200.
-func (c *Chichi) Call(httpMethod, method string, body any) (any, error) {
-	return c.call(httpMethod, method, body)
+// which is not 200, or if the HTTP response cannot be decoded into response.
+func (c *Chichi) Call(httpMethod, method string, body, response any) error {
+	return c.call(httpMethod, method, body, response)
 }
 
-// MustCall calls the API method serializing the given body.
+// MustCall calls the API method serializing the given body and deserializing
+// the response into response.
 //
-// Calls (*testing.T).Fatal if the call returns an error, or if the HTTP
-// response's status code is not 200.
-func (c *Chichi) MustCall(httpMethod, method string, body any) any {
-	out, err := c.call(httpMethod, method, body)
+// Calls (*testing.T).Fatal if the call returns an error, if the HTTP response
+// cannot be decoded into response, or if the HTTP response's status code is not
+// 200.
+func (c *Chichi) MustCall(httpMethod, method string, body, response any) {
+	err := c.call(httpMethod, method, body, response)
 	if err != nil {
 		c.t.Logf("an error occurred: %s. The stack trace is:\n%s", err, string(debug.Stack()))
 		c.t.Fatal("the test failed. See the error message and the stack trace above")
 	}
-	return out
 }
 
-func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
+func (c *Chichi) call(httpMethod, method string, body any, response any) error {
 
 	method = strings.TrimLeft(method, "/")
 	url := "https://" + testsSettings.ChichiHost + "/" + method
@@ -61,46 +63,46 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 	data := &bytes.Buffer{}
 	err := json.NewEncoder(data).Encode(body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req, err := http.NewRequest(httpMethod, url, data)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.Header.Add("X-Workspace", "1")
 
 	c.t.Logf("[info] %s %s", httpMethod, url)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		text, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return nil, &StatusCodeError{Code: resp.StatusCode, ResponseText: string(text)}
+		return &StatusCodeError{Code: resp.StatusCode, ResponseText: string(text)}
 	}
 
-	dec := json.NewDecoder(resp.Body)
-	dec.UseNumber()
-	var out any
-	err = dec.Decode(&out)
-	if err != nil {
-		if err == io.EOF {
-			return nil, nil
+	if response != nil {
+		dec := json.NewDecoder(resp.Body)
+		dec.UseNumber()
+		err = dec.Decode(&response)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
 		}
-		return nil, err
+		extraneous, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		if len(bytes.TrimSpace(extraneous)) > 0 {
+			return fmt.Errorf("server returned extraneous data in response body: %q", string(extraneous))
+		}
 	}
 
-	extraneous, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if len(bytes.TrimSpace(extraneous)) > 0 {
-		return nil, fmt.Errorf("server returned extraneous data in response body: %q", string(extraneous))
-	}
-
-	return out, nil
+	return nil
 }

@@ -113,7 +113,7 @@ func TestExportZeroUsers(t *testing.T) {
 				"Enabled":     true,
 				"Compression": apis.NoCompression,
 			},
-		})
+		}, nil)
 
 		// Execute the action that export users.
 		c.ExecuteAction(fsID, exportUsersActionID, true)
