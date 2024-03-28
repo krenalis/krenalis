@@ -99,6 +99,12 @@ func New(db *postgres.DB) (*State, error) {
 
 	state.close.ctx, state.close.CancelCtx = context.WithCancel(context.Background())
 
+	err = state.load()
+	if err != nil {
+		state.notifications.stop()
+		return nil, err
+	}
+
 	return state, nil
 }
 

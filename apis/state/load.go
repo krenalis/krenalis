@@ -24,11 +24,8 @@ var (
 	sheetsType              = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
 )
 
-// Load loads the state.
-func (state *State) Load() error {
-
-	// Keep the state updated.
-	go state.keepState()
+// load loads the state.
+func (state *State) load() error {
 
 	n := LoadState{ID: state.id}
 

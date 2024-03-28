@@ -50,8 +50,9 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
+	name := t.Name()
 	var b bytes.Buffer
-	b.WriteString(t.Name())
+	b.WriteString(name)
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
 	err := enc.Encode(n)
@@ -88,7 +89,7 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 	} else {
 		s = escape(s)
 	}
-	if _, ok := n.(SeeLeader); !ok {
+	if name != "SeeLeader" && name != "LoadState" {
 		var id int
 		id, tx.ack = tx.acks.create()
 		s += "@" + strconv.Itoa(id)
@@ -162,6 +163,7 @@ func parsePayload(s string) (id int, name, payload string, err error) {
 func (state *State) listenToNotifications() (notifications <-chan notification, stop func()) {
 	ch := make(chan notification)
 	ctx, cancel := context.WithCancel(context.Background())
+	started := make(chan struct{})
 	stopped := make(chan struct{})
 	stop = func() {
 		cancel()
@@ -196,6 +198,9 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 			_, err = conn.Exec(ctx, "LISTEN chichi")
 			if err != nil {
 				continue
+			}
+			if started != nil {
+				started <- struct{}{}
 			}
 			err = func() error {
 				for {
@@ -253,6 +258,8 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 			conn.Release()
 		}
 	}()
+	<-started
+	started = nil
 	return ch, stop
 }
 

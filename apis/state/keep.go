@@ -60,6 +60,11 @@ func (state *State) AddListener(listener any) {
 	}
 }
 
+// Keep keeps the state updated.
+func (state *State) Keep() {
+	go state.keepState()
+}
+
 // keepState keeps the state in sync with the database. It is called in its own
 // goroutine.
 func (state *State) keepState() {

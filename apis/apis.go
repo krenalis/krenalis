@@ -171,12 +171,6 @@ func New(conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
 
-	// Load the state.
-	err = apis.state.Load()
-	if err != nil {
-		return nil, err
-	}
-
 	// Init the datastore.
 	apis.datastore = datastore.New(apis.state)
 
@@ -193,6 +187,9 @@ func New(conf *Config) (*APIs, error) {
 		apis.state.Close()
 		return nil, err
 	}
+
+	// Keep the state updated.
+	apis.state.Keep()
 
 	apis.close.ctx, apis.close.cancelCtx = context.WithCancel(context.Background())
 
