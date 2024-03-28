@@ -148,7 +148,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		}
 	}
 	if identityColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.TimestampColumn)}
+		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
 	}
 	if action.TimestampColumn != "" && timestampColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no timestamp column %q", action.TimestampColumn)}
