@@ -388,10 +388,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 											isCustomTimestampSelected
 												? 'custom'
 												: action.TimestampColumn
-													? Object.keys(timestampFormats).find(
+												? Object.keys(timestampFormats).find(
 														(key) => timestampFormats[key] === action.TimestampFormat,
-													)
-													: ''
+												  )
+												: ''
 										}
 										name='timestampFormat'
 										disabled={!needFormat}
@@ -663,8 +663,9 @@ const TransformationBox = ({
 						value={k}
 						type='text'
 						name={k}
-						className={`outputProperty${action.Transformation.Mapping![k].indentation! > 0 ? ' indented' : ''
-							}`}
+						className={`outputProperty${
+							action.Transformation.Mapping![k].indentation! > 0 ? ' indented' : ''
+						}`}
 					/>
 				</div>,
 			);
@@ -704,8 +705,9 @@ const TransformationBox = ({
 
 	return (
 		<div
-			className={`transformation-box${' transformation-box--' + mode}${isFullscreenAnimating ? ' is-fullscreen-animating' : ''
-				}`}
+			className={`transformation-box${' transformation-box--' + mode}${
+				isFullscreenAnimating ? ' is-fullscreen-animating' : ''
+			}`}
 		>
 			<div className='transformation-box__header'>
 				<div className='transformation-box__header-title'>
@@ -1215,8 +1217,8 @@ const FullscreenTransformation = ({
 													<div className='sampleFullName'>
 														{firstNameIdentifier.current && lastNameIdentifier.current
 															? s[firstNameIdentifier.current].value +
-															' ' +
-															s[lastNameIdentifier.current].value
+															  ' ' +
+															  s[lastNameIdentifier.current].value
 															: `Sample ${i}`}
 													</div>
 													{emailIdentifier.current && (
@@ -1289,8 +1291,9 @@ const FullscreenTransformation = ({
 									isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
 									summary={
 										<div
-											className={`event${isOpen ? ' open' : ''}${isLastExecuted ? ' lastExecuted' : ''
-												}`}
+											className={`event${isOpen ? ' open' : ''}${
+												isLastExecuted ? ' lastExecuted' : ''
+											}`}
 											onClick={(evt) => onEventClick(evt, e)}
 										>
 											<div className='name'>{e.type}</div>
@@ -1418,8 +1421,8 @@ const FullscreenTransformation = ({
 										) : (
 											<div className='outputSuccess'>
 												{connection.isApp &&
-													connection.isDestination &&
-													actionType.Target === 'Events' ? (
+												connection.isDestination &&
+												actionType.Target === 'Events' ? (
 													output
 												) : (
 													<SyntaxHighlight>{output}</SyntaxHighlight>
@@ -1467,8 +1470,9 @@ const TransformationNestedProperties = ({
 	const typ = property.type as ObjectType;
 	return (
 		<div
-			className={`property${isExpanded ? ' expand' : ''}${property.label != null && property.label !== '' ? ' hasLabel' : ''
-				}`}
+			className={`property${isExpanded ? ' expand' : ''}${
+				property.label != null && property.label !== '' ? ' hasLabel' : ''
+			}`}
 		>
 			<div className='parentProperty'>
 				<SlIcon
@@ -1553,8 +1557,8 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 				{language === ''
 					? property.type.name
 					: language === 'Python'
-						? fromKindToPythonType(property.type)
-						: fromKindToJavascriptType(property.type)}
+					? fromKindToPythonType(property.type)
+					: fromKindToJavascriptType(property.type)}
 			</div>
 		</div>
 	);

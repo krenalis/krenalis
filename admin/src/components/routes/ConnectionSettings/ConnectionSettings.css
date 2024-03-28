@@ -10,7 +10,7 @@
 	overflow: visible;
 }
 
-.connectionSettings sl-tab-group>sl-tab-panel::part(base) {
+.connectionSettings sl-tab-group > sl-tab-panel::part(base) {
 	padding-left: 90px;
 }
 
@@ -93,11 +93,11 @@
 	gap: 5px;
 }
 
-.connectionSettings .keyCopy>sl-input {
+.connectionSettings .keyCopy > sl-input {
 	width: 400px;
 }
 
-.connectionSettings .keyCopy>sl-input::part(base) {
+.connectionSettings .keyCopy > sl-input::part(base) {
 	font-size: 14px;
 }
 
