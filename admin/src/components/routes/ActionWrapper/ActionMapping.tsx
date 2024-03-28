@@ -124,9 +124,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	useEffect(() => {
 		if (connection.isSource && connection.isApp) {
 			const a = { ...action };
-			console.debug(action.BusinessID);
-			if (action.BusinessID === undefined) {
-				a.BusinessID = '';
+			console.debug(action.DisplayedID);
+			if (action.DisplayedID === undefined) {
+				a.DisplayedID = '';
 			}
 			setAction(a);
 		}
@@ -291,9 +291,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const onBusinessIDChange = (e) => {
+	const onDisplayedIDChange = (e) => {
 		const a = { ...action };
-		a.BusinessID = e.target.value;
+		a.DisplayedID = e.target.value;
 		setAction(a);
 	};
 
@@ -315,7 +315,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		return null;
 	}
 
-	const businessIDKind = ['FileStorage', 'Database'].includes(connection.type) ? 'column' : 'property';
+	const displayedIDKind = ['FileStorage', 'Database'].includes(connection.type) ? 'column' : 'property';
 
 	const box = (
 		<TransformationBox
@@ -388,10 +388,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 											isCustomTimestampSelected
 												? 'custom'
 												: action.TimestampColumn
-												? Object.keys(timestampFormats).find(
+													? Object.keys(timestampFormats).find(
 														(key) => timestampFormats[key] === action.TimestampFormat,
-												  )
-												: ''
+													)
+													: ''
 										}
 										name='timestampFormat'
 										disabled={!needFormat}
@@ -426,14 +426,14 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 						connection.isFileStorage ||
 						connection.isDatabase ||
 						connection.isEventBased) && (
-						<Section ref={ref} title='Business ID'>
+						<Section ref={ref} title='Displayed ID'>
 							<SlInput
-								label={`Business ID ${businessIDKind}`}
+								label={`Displayed ID ${displayedIDKind}`}
 								className='nameField'
-								helpText={`The name of the ${connection.type} ${businessIDKind} from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
+								helpText={`The name of the ${connection.type} ${displayedIDKind} from which the displayed ID is read when importing. Can be left empty to indicate to not import it.`}
 								placeholder='Something like "email", "customer_id", etc...'
-								value={action.BusinessID}
-								onSlInput={onBusinessIDChange}
+								value={action.DisplayedID}
+								onSlInput={onDisplayedIDChange}
 								maxlength={1024}
 							/>
 						</Section>
@@ -663,9 +663,8 @@ const TransformationBox = ({
 						value={k}
 						type='text'
 						name={k}
-						className={`outputProperty${
-							action.Transformation.Mapping![k].indentation! > 0 ? ' indented' : ''
-						}`}
+						className={`outputProperty${action.Transformation.Mapping![k].indentation! > 0 ? ' indented' : ''
+							}`}
 					/>
 				</div>,
 			);
@@ -705,9 +704,8 @@ const TransformationBox = ({
 
 	return (
 		<div
-			className={`transformation-box${' transformation-box--' + mode}${
-				isFullscreenAnimating ? ' is-fullscreen-animating' : ''
-			}`}
+			className={`transformation-box${' transformation-box--' + mode}${isFullscreenAnimating ? ' is-fullscreen-animating' : ''
+				}`}
 		>
 			<div className='transformation-box__header'>
 				<div className='transformation-box__header-title'>
@@ -1217,8 +1215,8 @@ const FullscreenTransformation = ({
 													<div className='sampleFullName'>
 														{firstNameIdentifier.current && lastNameIdentifier.current
 															? s[firstNameIdentifier.current].value +
-															  ' ' +
-															  s[lastNameIdentifier.current].value
+															' ' +
+															s[lastNameIdentifier.current].value
 															: `Sample ${i}`}
 													</div>
 													{emailIdentifier.current && (
@@ -1291,9 +1289,8 @@ const FullscreenTransformation = ({
 									isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
 									summary={
 										<div
-											className={`event${isOpen ? ' open' : ''}${
-												isLastExecuted ? ' lastExecuted' : ''
-											}`}
+											className={`event${isOpen ? ' open' : ''}${isLastExecuted ? ' lastExecuted' : ''
+												}`}
 											onClick={(evt) => onEventClick(evt, e)}
 										>
 											<div className='name'>{e.type}</div>
@@ -1421,8 +1418,8 @@ const FullscreenTransformation = ({
 										) : (
 											<div className='outputSuccess'>
 												{connection.isApp &&
-												connection.isDestination &&
-												actionType.Target === 'Events' ? (
+													connection.isDestination &&
+													actionType.Target === 'Events' ? (
 													output
 												) : (
 													<SyntaxHighlight>{output}</SyntaxHighlight>
@@ -1470,9 +1467,8 @@ const TransformationNestedProperties = ({
 	const typ = property.type as ObjectType;
 	return (
 		<div
-			className={`property${isExpanded ? ' expand' : ''}${
-				property.label != null && property.label !== '' ? ' hasLabel' : ''
-			}`}
+			className={`property${isExpanded ? ' expand' : ''}${property.label != null && property.label !== '' ? ' hasLabel' : ''
+				}`}
 		>
 			<div className='parentProperty'>
 				<SlIcon
@@ -1557,8 +1553,8 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 				{language === ''
 					? property.type.name
 					: language === 'Python'
-					? fromKindToPythonType(property.type)
-					: fromKindToJavascriptType(property.type)}
+						? fromKindToPythonType(property.type)
+						: fromKindToJavascriptType(property.type)}
 			</div>
 		</div>
 	);

@@ -397,7 +397,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		IdentityColumn:          action.IdentityColumn,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
-		BusinessID:              action.BusinessID,
+		DisplayedID:             action.DisplayedID,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}

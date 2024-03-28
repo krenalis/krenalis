@@ -98,7 +98,7 @@ type ActionToSet struct {
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
-	BusinessID              string
+	DisplayedID             string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -165,7 +165,7 @@ type FilterCondition struct {
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
 	Connection   int
 	ExternalId   LabelValue
-	BusinessId   string
+	DisplayedId  string
 	AnonymousIds []string
 	UpdatedAt    time.Time
 }

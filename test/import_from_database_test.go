@@ -43,7 +43,7 @@ func TestImportFromDatabase(t *testing.T) {
 		IdentityColumn:  "id",
 		TimestampColumn: "",
 		TimestampFormat: "",
-		BusinessID:      "customer_id",
+		DisplayedID:     "customer_id",
 	})
 
 	c.ExecuteAction(pgSQL, importUsers, false)
@@ -58,9 +58,9 @@ func TestImportFromDatabase(t *testing.T) {
 	}
 
 	for _, identity := range identities {
-		const expectedBusinessID = "ABC123"
-		if identity.BusinessId != expectedBusinessID {
-			t.Fatalf("expected Business ID %q, got %q", expectedBusinessID, identity.BusinessId)
+		const expectedDisplayedID = "ABC123"
+		if identity.DisplayedId != expectedDisplayedID {
+			t.Fatalf("expected displayed ID %q, got %q", expectedDisplayedID, identity.DisplayedId)
 		}
 	}
 }

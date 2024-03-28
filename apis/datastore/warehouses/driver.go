@@ -276,7 +276,7 @@ type Identity struct {
 	ID          string // external ID.
 	Properties  map[string]any
 	AnonymousID string    // empty string if not present.
-	BusinessID  string    // cannot be longer than 40 runes.
+	DisplayedID string    // cannot be longer than 40 runes.
 	Timestamp   time.Time // in UTC.
 }
 

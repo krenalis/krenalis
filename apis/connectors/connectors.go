@@ -76,9 +76,9 @@ type Record struct {
 	Properties map[string]any // Properties.
 	Timestamp  time.Time      // Last modification time, in UTC.
 
-	// BusinessID, if any, otherwise the empty string. Cannot be longer than 40
+	// DisplayedID, if any, otherwise the empty string. Cannot be longer than 40
 	// runes.
-	BusinessID string
+	DisplayedID string
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
@@ -476,23 +476,24 @@ type webhookReceiver interface {
 	ReceiveWebhook(*http.Request) ([]WebhookPayload, error)
 }
 
-// businessIDFromSchema returns the Business ID from the given schema, if found
-// and its type is compatible, otherwise returns the zero Property and an error.
-func businessIDFromSchema(schema types.Type, businessIDName string) (types.Property, error) {
-	p, ok := schema.Property(businessIDName)
+// displayedIDFromSchema returns the displayed ID from the given schema, if
+// found and its type is compatible, otherwise returns the zero Property and an
+// error.
+func displayedIDFromSchema(schema types.Type, displayedIDName string) (types.Property, error) {
+	p, ok := schema.Property(displayedIDName)
 	if !ok {
-		return types.Property{}, fmt.Errorf("the Business ID property %q not found in schema", businessIDName)
+		return types.Property{}, fmt.Errorf("the displayed ID property %q not found in schema", displayedIDName)
 	}
-	if !supportedTypeForBusinessID(p.Type) {
-		return types.Property{}, fmt.Errorf("the Business ID property %q has an unsupported type %s", businessIDName, p.Type)
+	if !supportedTypeForDisplayedID(p.Type) {
+		return types.Property{}, fmt.Errorf("the displayed ID property %q has an unsupported type %s", displayedIDName, p.Type)
 	}
 	return p, nil
 }
 
-// businessIDToString returns a string representation of the Business ID value.
-// If value cannot be represented as a valid Business ID value, an error is
-// returned.
-func businessIDToString(value any) (string, error) {
+// displayedIDToString returns a string representation of the displayed ID
+// value. If value cannot be represented as a valid displayed ID value, an error
+// is returned.
+func displayedIDToString(value any) (string, error) {
 	var s string
 	switch src := value.(type) {
 	case int: // Int(n).
@@ -508,10 +509,10 @@ func businessIDToString(value any) (string, error) {
 	case float64:
 		s = fmt.Sprint(src)
 	default:
-		return "", fmt.Errorf("unexpected Business ID value with type %T", src)
+		return "", fmt.Errorf("unexpected displayed ID value with type %T", src)
 	}
 	if utf8.RuneCountInString(s) > 40 {
-		return "", fmt.Errorf("the Business ID value is longer than 40 runes")
+		return "", fmt.Errorf("the displayed ID value is longer than 40 runes")
 	}
 	return s, nil
 }
@@ -576,9 +577,9 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 	return err
 }
 
-// supportedTypeForBusinessID reports whether the type t is supported as a
-// Business ID type.
-func supportedTypeForBusinessID(t types.Type) bool {
+// supportedTypeForDisplayedID reports whether the type t is supported as a
+// displayed ID type.
+func supportedTypeForDisplayedID(t types.Type) bool {
 	switch t.Kind() {
 	case types.IntKind,
 		types.UintKind,

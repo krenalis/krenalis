@@ -163,18 +163,18 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		return nil, err
 	}
 
-	// Determine the Business ID, if necessary.
-	var businessIDColumn types.Property
-	if action.BusinessID != "" {
-		businessIDColumn, err = businessIDFromSchema(querySchema, action.BusinessID)
+	// Determine the displayed ID, if necessary.
+	var displayedIDColumn types.Property
+	if action.DisplayedID != "" {
+		displayedIDColumn, err = displayedIDFromSchema(querySchema, action.DisplayedID)
 		if err != nil {
-			slog.Warn("cannot determine the Business ID column", "err", err)
+			slog.Warn("cannot determine the displayed ID column", "err", err)
 		}
 	}
 
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityColumn,
-		timestampColumn, action.TimestampFormat, businessIDColumn)
+		timestampColumn, action.TimestampFormat, displayedIDColumn)
 	return records, nil
 }
 
@@ -323,30 +323,30 @@ func (sv queryScanValue) Scan(src any) error {
 
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
-	columns          []types.Property
-	rows             chichi.Rows
-	propertyOf       map[string]types.Property
-	dst              []any
-	identityColumn   types.Property
-	timestampColumn  types.Property
-	timestampFormat  string
-	businessIDColumn types.Property
-	err              error
-	closed           bool
+	columns           []types.Property
+	rows              chichi.Rows
+	propertyOf        map[string]types.Property
+	dst               []any
+	identityColumn    types.Property
+	timestampColumn   types.Property
+	timestampFormat   string
+	displayedIDColumn types.Property
+	err               error
+	closed            bool
 }
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 	identityColumn, timestampColumn types.Property, timestampFormat string,
-	businessIDColumn types.Property) *databaseRecords {
+	displayedIDColumn types.Property) *databaseRecords {
 	records := databaseRecords{
-		columns:          columns,
-		rows:             rows,
-		dst:              make([]any, len(columns)),
-		propertyOf:       make(map[string]types.Property, len(properties)),
-		identityColumn:   identityColumn,
-		timestampColumn:  timestampColumn,
-		timestampFormat:  timestampFormat,
-		businessIDColumn: businessIDColumn,
+		columns:           columns,
+		rows:              rows,
+		dst:               make([]any, len(columns)),
+		propertyOf:        make(map[string]types.Property, len(properties)),
+		identityColumn:    identityColumn,
+		timestampColumn:   timestampColumn,
+		timestampFormat:   timestampFormat,
+		displayedIDColumn: displayedIDColumn,
 	}
 	for _, p := range properties {
 		records.propertyOf[p.Name] = p
@@ -382,19 +382,19 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 		}
 		for i, c := range r.columns {
 			p := r.propertyOf[c.Name]
-			if c.Name == r.businessIDColumn.Name {
-				// This is necessary as the Business ID property is not
+			if c.Name == r.displayedIDColumn.Name {
+				// This is necessary as the displayed ID property is not
 				// necessarily included in "propertyOf"; even if it is, the type
 				// of its property must be taken from the query.
-				p = r.businessIDColumn
+				p = r.displayedIDColumn
 			}
 			r.dst[i] = recordsScanValue{
-				property:         p,
-				record:           &record,
-				identityColumn:   r.identityColumn,
-				timestampColumn:  r.timestampColumn,
-				timestampFormat:  r.timestampFormat,
-				businessIDColumn: r.businessIDColumn,
+				property:          p,
+				record:            &record,
+				identityColumn:    r.identityColumn,
+				timestampColumn:   r.timestampColumn,
+				timestampFormat:   r.timestampFormat,
+				displayedIDColumn: r.displayedIDColumn,
 			}
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
@@ -417,12 +417,12 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 // recordsScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
 type recordsScanValue struct {
-	property         types.Property
-	record           *Record
-	identityColumn   types.Property
-	timestampColumn  types.Property
-	timestampFormat  string
-	businessIDColumn types.Property
+	property          types.Property
+	record            *Record
+	identityColumn    types.Property
+	timestampColumn   types.Property
+	timestampFormat   string
+	displayedIDColumn types.Property
 }
 
 func (sv recordsScanValue) Scan(src any) error {
@@ -432,17 +432,17 @@ func (sv recordsScanValue) Scan(src any) error {
 		return nil
 	}
 
-	if p.Name == sv.businessIDColumn.Name {
-		col := sv.businessIDColumn
+	if p.Name == sv.displayedIDColumn.Name {
+		col := sv.displayedIDColumn
 		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
 		if err != nil {
-			slog.Warn("Business ID value cannot be normalized", "err", err)
+			slog.Warn("displayed ID value cannot be normalized", "err", err)
 		} else {
-			businessID, err := businessIDToString(normalizedValue)
+			displayedID, err := displayedIDToString(normalizedValue)
 			if err != nil {
-				slog.Warn("invalid Business ID value", "err", err)
+				slog.Warn("invalid displayed ID value", "err", err)
 			} else {
-				sv.record.BusinessID = businessID
+				sv.record.DisplayedID = displayedID
 			}
 		}
 	}

@@ -57,7 +57,7 @@ type Action struct {
 	IdentityColumn          *string
 	TimestampColumn         *string
 	TimestampFormat         *string
-	BusinessID              string
+	DisplayedID             string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -167,7 +167,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		format := action.TimestampFormat
 		this.TimestampFormat = &format
 	}
-	this.BusinessID = action.BusinessID
+	this.DisplayedID = action.DisplayedID
 	this.ExportMode = (*ExportMode)(action.ExportMode)
 	if props := action.MatchingProperties; props != nil {
 		this.MatchingProperties = &MatchingProperties{
@@ -380,7 +380,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		IdentityColumn:          action.IdentityColumn,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
-		BusinessID:              action.BusinessID,
+		DisplayedID:             action.DisplayedID,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -542,13 +542,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_column = $17, "+
-			"timestamp_column = $18, timestamp_format = $19, business_id = $20, export_mode = $21, "+
+			"timestamp_column = $18, timestamp_format = $19, displayed_id = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.BusinessID,
+			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.DisplayedID,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -791,13 +791,13 @@ type ActionToSet struct {
 	// It cannot be longer than 64 runes.
 	TimestampFormat string
 
-	// BusinessID, if not empty, is the property or the column that holds the
+	// DisplayedID, if not empty, is the property or the column that holds the
 	// identifier displayed in the UI for the imported user or group.
 	//
 	// In particular, for apps actions it is an app property, for file and
 	// database actions it is a column name, while for event-based actions it is
 	// a "traits" property.
-	BusinessID string
+	DisplayedID string
 
 	// ExportMode is the export mode, if it has one.
 	ExportMode *ExportMode

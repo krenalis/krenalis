@@ -227,13 +227,13 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	default:
 		return errors.BadRequest("compression %q is not valid", action.Compression)
 	}
-	// Validate the Business ID.
-	if action.BusinessID != "" {
-		if !utf8.ValidString(action.BusinessID) {
-			return errors.BadRequest("Business ID is not UTF-8 encoded")
+	// Validate the displayed ID.
+	if action.DisplayedID != "" {
+		if !utf8.ValidString(action.DisplayedID) {
+			return errors.BadRequest("displayed ID is not UTF-8 encoded")
 		}
-		if n := utf8.RuneCountInString(action.BusinessID); n > 1024 {
-			return errors.BadRequest("Business ID is longer than 1024 runes")
+		if n := utf8.RuneCountInString(action.DisplayedID); n > 1024 {
+			return errors.BadRequest("displayed ID is longer than 1024 runes")
 		}
 	}
 
@@ -386,23 +386,23 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
-	// Validate the Business ID.
-	if action.BusinessID != "" {
+	// Validate the displayed ID.
+	if action.DisplayedID != "" {
 		if c.Role != state.Source {
-			return errors.BadRequest("destination actions cannot have a Business ID")
+			return errors.BadRequest("destination actions cannot have a displayed ID")
 		}
 		if t := connector.Type; t == state.StreamType {
-			return errors.BadRequest("%s actions cannot have a Business ID", strings.ToLower(t.String()))
+			return errors.BadRequest("%s actions cannot have a displayed ID", strings.ToLower(t.String()))
 		} else if t == state.AppType {
-			if !types.IsValidPropertyName(action.BusinessID) {
-				return errors.BadRequest("Business ID %q is not a valid property name", action.BusinessID)
+			if !types.IsValidPropertyName(action.DisplayedID) {
+				return errors.BadRequest("displayed ID %q is not a valid property name", action.DisplayedID)
 			}
 		} else if eventBasedConn {
 			if target == state.Events {
-				return errors.BadRequest("%s actions importing events cannot have a Business ID", strings.ToLower(target.String()))
+				return errors.BadRequest("%s actions importing events cannot have a displayed ID", strings.ToLower(target.String()))
 			}
-			if !types.IsValidPropertyName(action.BusinessID) {
-				return errors.BadRequest("Business ID %q is not a valid property name", action.BusinessID)
+			if !types.IsValidPropertyName(action.DisplayedID) {
+				return errors.BadRequest("displayed ID %q is not a valid property name", action.DisplayedID)
 			}
 		}
 	}

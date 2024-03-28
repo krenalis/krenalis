@@ -6,7 +6,7 @@
 - [Connections](connections.md)
     - [Import](importing.md)
     - [Export](exporting.md)
-    - [Business ID](business-id.md)
+    - [Displayed ID](displayed-id.md)
 - [Events](./events.md)
     - [page call](events/page.md)
     - [screen call](events/screen.md)

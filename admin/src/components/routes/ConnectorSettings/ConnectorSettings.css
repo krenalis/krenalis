@@ -38,14 +38,12 @@
 	max-width: 280px;
 }
 
-.connectorSettings sl-input.businessIDName,
-.connectorSettings sl-input.businessIDLabel {
+.connectorSettings sl-input.displayedIDName {
 	max-width: 500px;
 }
 
 .connectorSettings sl-input.name,
-.connectorSettings sl-input.businessIDName,
-.connectorSettings sl-input.businessIDLabel {
+.connectorSettings sl-input.displayedIDName {
 	padding-top: 2em;
 }
 

@@ -177,14 +177,14 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 // cursor. Each returned record will contain, in the Properties field, the
 // properties in schema, with the same types.
 //
-// businessID, when not empty, is the app property name from which the Business
-// ID should be read. If such property does not exist in the app's schema, or
-// exists but its type is not compatible, no errors are returned and the
-// Business ID is simply not imported.
+// displayedID, when not empty, is the app property name from which the
+// displayed ID should be imported. If such property does not exist in the app's
+// schema, or exists but its type is not compatible, no errors are returned and
+// the displayed ID is simply not imported.
 //
 // If the provided schema, that must be valid, does not conform with the app's
 // source users schema, it returns a *SchemaError error.
-func (app *App) Users(ctx context.Context, schema types.Type, businessID string, cursor state.Cursor) (Records, error) {
+func (app *App) Users(ctx context.Context, schema types.Type, displayedID string, cursor state.Cursor) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -200,22 +200,22 @@ func (app *App) Users(ctx context.Context, schema types.Type, businessID string,
 	if err != nil {
 		return nil, err
 	}
-	// Determine and validate the property for the Business ID.
-	var businessIDProperty types.Property
-	if businessID != "" {
-		businessIDProperty, err = businessIDFromSchema(usersSchema, businessID)
+	// Determine and validate the property for the displayed ID.
+	var displayedIDProperty types.Property
+	if displayedID != "" {
+		displayedIDProperty, err = displayedIDFromSchema(usersSchema, displayedID)
 		if err != nil {
-			slog.Warn("cannot determine the Business ID property", "err", err)
+			slog.Warn("cannot determine the displayed ID property", "err", err)
 		}
 	}
 	records := &appRecords{
-		ctx:                ctx,
-		schema:             schema,
-		layouts:            app.layouts,
-		cursor:             cursor,
-		appName:            app.name,
-		inner:              app.inner,
-		businessIDProperty: businessIDProperty,
+		ctx:                 ctx,
+		schema:              schema,
+		layouts:             app.layouts,
+		cursor:              cursor,
+		appName:             app.name,
+		inner:               app.inner,
+		displayedIDProperty: displayedIDProperty,
 	}
 	return records, nil
 }
@@ -285,15 +285,15 @@ func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
 
 // appRecords implements the Records interface for apps.
 type appRecords struct {
-	ctx                context.Context
-	schema             types.Type
-	layouts            *state.Layouts
-	cursor             state.Cursor
-	appName            string
-	inner              chichi.App
-	err                error
-	closed             bool
-	businessIDProperty types.Property
+	ctx                 context.Context
+	schema              types.Type
+	layouts             *state.Layouts
+	cursor              state.Cursor
+	appName             string
+	inner               chichi.App
+	err                 error
+	closed              bool
+	displayedIDProperty types.Property
 }
 
 func (r *appRecords) Close() error {
@@ -325,8 +325,8 @@ func (r *appRecords) For(yield func(Record) error) error {
 		propertyByName[p.Name] = &p
 	}
 
-	if r.businessIDProperty.Name != "" && !slices.Contains(names, r.businessIDProperty.Name) {
-		names = append(names, r.businessIDProperty.Name)
+	if r.displayedIDProperty.Name != "" && !slices.Contains(names, r.displayedIDProperty.Name) {
+		names = append(names, r.displayedIDProperty.Name)
 	}
 
 	for {
@@ -357,18 +357,18 @@ func (r *appRecords) For(yield func(Record) error) error {
 				Associations: appUser.Associations,
 			}
 
-			// Read the Business ID.
-			if r.businessIDProperty.Name != "" {
+			// Read the displayed ID.
+			if r.displayedIDProperty.Name != "" {
 				for p, v := range appUser.Properties {
-					if p == r.businessIDProperty.Name {
-						normalizedValue, err := normalizeAppProperty(r.businessIDProperty.Name, r.businessIDProperty.Type, v, r.businessIDProperty.Nullable, r.layouts)
+					if p == r.displayedIDProperty.Name {
+						normalizedValue, err := normalizeAppProperty(r.displayedIDProperty.Name, r.displayedIDProperty.Type, v, r.displayedIDProperty.Nullable, r.layouts)
 						if err != nil {
-							slog.Warn("Business ID value cannot be normalized", "err", err)
+							slog.Warn("displayed ID value cannot be normalized", "err", err)
 							break
 						}
-						user.BusinessID, err = businessIDToString(normalizedValue)
+						user.DisplayedID, err = displayedIDToString(normalizedValue)
 						if err != nil {
-							slog.Warn("invalid Business ID value", "err", err)
+							slog.Warn("invalid displayed ID value", "err", err)
 							break
 						}
 						break

@@ -926,7 +926,7 @@ type Action struct {
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
-	BusinessID              string
+	DisplayedID             string
 	UserCursor              Cursor
 	Health                  Health
 	ExportMode              *ExportMode

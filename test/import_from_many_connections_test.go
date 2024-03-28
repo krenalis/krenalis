@@ -58,7 +58,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"lastName":  "lastName",
 				},
 			},
-			BusinessID: "email",
+			DisplayedID: "email",
 		})
 		c.ExecuteAction(dummy, dummyAction, true)
 		c.WaitActionsToFinish(dummy)
@@ -109,7 +109,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			IdentityColumn:  "csv_id",
 			TimestampColumn: "timestamp",
 			TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
-			BusinessID:      "email",
+			DisplayedID:     "email",
 			Connector:       chichitester.CSVConnector,
 			Settings: chichitester.JSONEncodeSettings(map[string]any{
 				"Comma":          ",",
@@ -156,7 +156,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 						"email": "traits.email",
 					},
 				},
-				BusinessID: "email",
+				DisplayedID: "email",
 			})
 		}
 
@@ -226,7 +226,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
 			Connection:   dummy,
 			ExternalId:   chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
-			BusinessId:   "kbuessen0@example.com",
+			DisplayedId:  "kbuessen0@example.com",
 			AnonymousIds: nil,
 			UpdatedAt:    time.Time{},
 		})
@@ -240,7 +240,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				Label: "ID",
 				Value: "1",
 			},
-			BusinessId:   "kbuessen0@example.com",
+			DisplayedId:  "kbuessen0@example.com",
 			AnonymousIds: nil,
 			UpdatedAt:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
 		})
@@ -252,7 +252,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
 			Connection:   javaScript,
 			ExternalId:   chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
-			BusinessId:   "kbuessen0@example.com",
+			DisplayedId:  "kbuessen0@example.com",
 			AnonymousIds: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			UpdatedAt:    time.Time{},
 		})

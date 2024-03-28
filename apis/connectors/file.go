@@ -107,7 +107,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Format: file.action.TimestampFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.IdentityColumn, timestampColumn, file.action.BusinessID,
+		file.action.IdentityColumn, timestampColumn, file.action.DisplayedID,
 		storageTimestamp, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
@@ -361,7 +361,7 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // each record, otherwise it stores the records in the records field.
 // storageTimestamp is the timestamp provided by the storage connector, and it
 // is used in the case when the file columns do not specify a timestamp.
-func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, businessIDColumn string, storageTimestamp time.Time, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, displayedID string, storageTimestamp time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -369,7 +369,7 @@ func newRecordWriter(connector int, schema types.Type, identityColumn string, ti
 		textColumnsOnly: true,
 		records:         []map[string]any{},
 	}
-	rw.businessID.name = businessIDColumn
+	rw.displayedID.name = displayedID
 	if identityColumn != "" {
 		rw.identityColumn.name = identityColumn
 		typ, _ := schema.Property(identityColumn)
@@ -396,7 +396,7 @@ type recordWriter struct {
 	columnIndexOf   map[int]int      // map a property index in the schema to the corresponding file's column
 	columns         int              // number of file's columns
 	textColumnsOnly bool
-	businessID      struct {
+	displayedID     struct {
 		name   string
 		column types.Property
 		index  int
@@ -462,15 +462,15 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		rw.timestampColumn.typ = c.Type
 		rw.timestampColumn.index = columnIndex[c.Name]
 	}
-	// Validate the Business ID column.
-	if rw.businessID.name != "" {
-		col, err := businessIDFromSchema(fileSchema, rw.businessID.name)
+	// Validate the displayed ID column.
+	if rw.displayedID.name != "" {
+		col, err := displayedIDFromSchema(fileSchema, rw.displayedID.name)
 		if err != nil {
-			slog.Warn("cannot determine the Business ID column", "err", err)
-			rw.businessID.name = ""
+			slog.Warn("cannot determine the displayed ID column", "err", err)
+			rw.displayedID.name = ""
 		} else {
-			rw.businessID.column = col
-			rw.businessID.index = columnIndex[col.Name]
+			rw.displayedID.column = col
+			rw.displayedID.index = columnIndex[col.Name]
 		}
 	}
 	// Check that the schema, if valid, is compatible with the file's schema.
@@ -544,19 +544,19 @@ func (rw *recordWriter) Record(record []any) error {
 				rd.Timestamp = rw.storageTimestamp
 			}
 		}
-		// Parse the Business ID column.
-		if rd.Err == nil && rw.businessID.name != "" {
-			v := record[rw.businessID.index]
-			c := rw.businessID.column
+		// Parse the displayed ID column.
+		if rd.Err == nil && rw.displayedID.name != "" {
+			v := record[rw.displayedID.index]
+			c := rw.displayedID.column
 			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
 			if err != nil {
-				slog.Warn("the Business ID value cannot be normalized", "err", err)
+				slog.Warn("the displayed ID value cannot be normalized", "err", err)
 			} else {
-				s, err := businessIDToString(vv)
+				s, err := displayedIDToString(vv)
 				if err != nil {
-					slog.Warn("invalid Business ID value", "err", err)
+					slog.Warn("invalid displayed ID value", "err", err)
 				} else {
-					rd.BusinessID = s
+					rd.DisplayedID = s
 				}
 			}
 		}
@@ -620,19 +620,19 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		if err := rw.yield(rd); err != nil {
 			return yieldError{err: err}
 		}
-		// Parse the Business ID column.
-		if rd.Err == nil && rw.businessID.name != "" {
-			v := record[rw.businessID.name]
-			c := rw.businessID.column
+		// Parse the displayed ID column.
+		if rd.Err == nil && rw.displayedID.name != "" {
+			v := record[rw.displayedID.name]
+			c := rw.displayedID.column
 			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
 			if err != nil {
-				slog.Warn("Business ID value cannot be normalized", "err", err)
+				slog.Warn("displayed ID value cannot be normalized", "err", err)
 			} else {
-				s, err := businessIDToString(vv)
+				s, err := displayedIDToString(vv)
 				if err != nil {
-					slog.Warn("invalid Business ID value", "err", err)
+					slog.Warn("invalid displayed ID value", "err", err)
 				} else {
-					rd.BusinessID = s
+					rd.DisplayedID = s
 				}
 			}
 		}
@@ -699,19 +699,19 @@ func (rw *recordWriter) RecordString(record []string) error {
 				rd.Timestamp = rw.storageTimestamp
 			}
 		}
-		// Parse the Business ID column.
-		if rd.Err == nil && rw.businessID.name != "" {
-			v := record[rw.businessID.index]
-			c := rw.businessID.column
+		// Parse the displayed ID column.
+		if rd.Err == nil && rw.displayedID.name != "" {
+			v := record[rw.displayedID.index]
+			c := rw.displayedID.column
 			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
 			if err != nil {
-				slog.Warn("Business ID value cannot be normalized", "err", err)
+				slog.Warn("displayed ID value cannot be normalized", "err", err)
 			} else {
-				s, err := businessIDToString(vv)
+				s, err := displayedIDToString(vv)
 				if err != nil {
-					slog.Warn("invalid Business ID value", "err", err)
+					slog.Warn("invalid displayed ID value", "err", err)
 				} else {
-					rd.BusinessID = s
+					rd.DisplayedID = s
 				}
 			}
 		}

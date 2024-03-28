@@ -201,28 +201,28 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 					"anonymous ID", event.AnonymousId)
 				continue
 			}
-			// Determine the Business ID.
-			var businessID string
-			if action.BusinessID != "" {
-				v, ok := mapEvent["traits"].(map[string]any)[action.BusinessID]
+			// Determine the displayed ID.
+			var displayedID string
+			if action.DisplayedID != "" {
+				v, ok := mapEvent["traits"].(map[string]any)[action.DisplayedID]
 				if ok {
 					switch v := v.(type) {
 					case string:
-						businessID = v
+						displayedID = v
 					case json.Number:
 						if f, err := v.Float64(); err == nil && math.Floor(f) == f {
-							businessID = v.String()
+							displayedID = v.String()
 						}
 					case float64:
 						if math.Floor(v) == v {
-							businessID = fmt.Sprint(v)
+							displayedID = fmt.Sprint(v)
 						}
 					}
 				}
 			}
-			if utf8.RuneCountInString(businessID) > 40 {
-				slog.Error("the Business ID value is longer than 40 runes")
-				businessID = ""
+			if utf8.RuneCountInString(displayedID) > 40 {
+				slog.Error("the displayed ID value is longer than 40 runes")
+				displayedID = ""
 			}
 			// Write the user identity on the data warehouse.
 			ok := iw.Write(ctx, warehouses.Identity{
@@ -230,7 +230,7 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 				Properties:  properties,
 				AnonymousID: event.AnonymousId,
 				Timestamp:   event.timestamp,
-				BusinessID:  businessID,
+				DisplayedID: displayedID,
 			})
 			if !ok {
 				return iw.Close(ctx)

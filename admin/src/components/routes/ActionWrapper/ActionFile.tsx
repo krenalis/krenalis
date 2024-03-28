@@ -151,7 +151,7 @@ const ActionFile = () => {
 		a.IdentityColumn = '';
 		a.TimestampColumn = '';
 		a.TimestampFormat = '';
-		a.BusinessID = '';
+		a.DisplayedID = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
 		a.Transformation.Function = null;
 		setIsFileConnectorLoading(true);

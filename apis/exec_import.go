@@ -44,7 +44,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			cursor.ID = action.UserCursor.ID
 			cursor.Timestamp = action.UserCursor.Timestamp
 		}
-		records, err = this.app().Users(ctx, action.InSchema, action.BusinessID, cursor)
+		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedID, cursor)
 	case state.DatabaseType:
 		replacer := func(name string) (string, bool) {
 			if name == "limit" {
@@ -117,10 +117,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.TransformedStep)
 			stats.Passed(statistics.OutputValidatedStep)
 			ok := iw.Write(ctx, warehouses.Identity{
-				ID:         user.ID,
-				Properties: user.Properties,
-				Timestamp:  user.Timestamp,
-				BusinessID: user.BusinessID,
+				ID:          user.ID,
+				Properties:  user.Properties,
+				Timestamp:   user.Timestamp,
+				DisplayedID: user.DisplayedID,
 			})
 			if !ok {
 				err := iw.Close(ctx)

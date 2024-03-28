@@ -51,7 +51,7 @@ func Test_UsersIdentities(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
-		BusinessID:     "email",
+		DisplayedID:    "email",
 		Connector:      chichitester.CSVConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
 			"Comma":          ",",
@@ -75,7 +75,7 @@ func Test_UsersIdentities(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
-		BusinessID:     "email",
+		DisplayedID:    "email",
 		Connector:      chichitester.CSVConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
 			"Comma":          ",",
@@ -140,9 +140,9 @@ func Test_UsersIdentities(t *testing.T) {
 				t.Fatalf("unexpected external ID %q, it should have prefix %q", extID, externalIDPrefix)
 			}
 
-			// Check the Business ID.
-			if !strings.Contains(identity.BusinessId, "@") {
-				t.Fatalf("expecting Business ID value with a '@', got %q", identity.BusinessId)
+			// Check the displayed ID.
+			if !strings.Contains(identity.DisplayedId, "@") {
+				t.Fatalf("expecting displayed ID value with a '@', got %q", identity.DisplayedId)
 			}
 
 			totalIdentities++
