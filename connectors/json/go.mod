@@ -10,6 +10,6 @@ require (
 )
 
 require (
-	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 // indirect
+	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )
