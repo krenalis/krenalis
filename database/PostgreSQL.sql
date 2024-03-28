@@ -100,7 +100,6 @@ CREATE TABLE connections (
     sending_mode sending_mode DEFAULT NULL,
     website_host varchar(261) NOT NULL DEFAULT '',
     event_connections integer[] DEFAULT NULL,
-    business_id varchar(1024) NOT NULL DEFAULT '',
     settings varchar(65535),
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)

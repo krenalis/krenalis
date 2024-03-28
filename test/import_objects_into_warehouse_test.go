@@ -24,7 +24,7 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	dummy := c.AddDummy("Dummy (source)", chichitester.Source, "")
+	dummy := c.AddDummy("Dummy (source)", chichitester.Source)
 	importUsersID := c.AddAction(dummy, "Users", chichitester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{

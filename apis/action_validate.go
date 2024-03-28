@@ -391,8 +391,12 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if c.Role != state.Source {
 			return errors.BadRequest("destination actions cannot have a Business ID")
 		}
-		if t := connector.Type; t == state.AppType || t == state.StreamType {
+		if t := connector.Type; t == state.StreamType {
 			return errors.BadRequest("%s actions cannot have a Business ID", strings.ToLower(t.String()))
+		} else if t == state.AppType {
+			if !types.IsValidPropertyName(action.BusinessID) {
+				return errors.BadRequest("Business ID %q is not a valid property name", action.BusinessID)
+			}
 		} else if eventBasedConn {
 			if target == state.Events {
 				return errors.BadRequest("%s actions importing events cannot have a Business ID", strings.ToLower(target.String()))

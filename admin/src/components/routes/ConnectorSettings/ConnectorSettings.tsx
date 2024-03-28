@@ -39,7 +39,6 @@ const ConnectorSettings = () => {
 	const [name, setName] = useState<string>('');
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
-	const [businessID, setBusinessID] = useState<string>('');
 	const [SendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [eventConnections, setEventConnections] = useState<Number[]>();
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
@@ -186,7 +185,6 @@ const ConnectorSettings = () => {
 					connector: connectorID,
 					strategy: strategy,
 					websiteHost: websiteHost,
-					businessID: businessID,
 					SendingMode: SendingMode,
 					settings: values,
 					eventConnections: eventConnections,
@@ -278,7 +276,6 @@ const ConnectorSettings = () => {
 				connector: connectorID,
 				strategy: strategy,
 				websiteHost: websiteHost,
-				businessID: businessID,
 				SendingMode: SendingMode,
 				settings: values,
 				eventConnections: eventConnections,
@@ -387,22 +384,6 @@ const ConnectorSettings = () => {
 									setName(target!.value);
 								}}
 							/>
-							{connectionRole === 'Source' && c.type === 'App' && (
-								<SlInput
-									className='businessIDName'
-									name='businessIDName'
-									helpText={`The name of the app property from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
-									placeholder='Something like "email", "customer_id", etc...'
-									value={businessID}
-									label={`Business ID property`}
-									type='text'
-									maxlength={1024}
-									onSlChange={(e) => {
-										const target = e.currentTarget as ShoelaceEventTarget;
-										setBusinessID(target!.value);
-									}}
-								/>
-							)}
 						</div>
 						{showStrategy && (
 							<div className='inputWrapper'>

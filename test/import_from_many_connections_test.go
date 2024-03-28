@@ -38,7 +38,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy int
 	{
 
-		dummy = c.AddDummy("Dummy", chichitester.Source, "email")
+		dummy = c.AddDummy("Dummy", chichitester.Source)
 		dummyAction := c.AddAction(dummy, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
@@ -58,6 +58,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"lastName":  "lastName",
 				},
 			},
+			BusinessID: "email",
 		})
 		c.ExecuteAction(dummy, dummyAction, true)
 		c.WaitActionsToFinish(dummy)

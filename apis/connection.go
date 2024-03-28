@@ -99,7 +99,6 @@ type Connection struct {
 	SendingMode      *SendingMode
 	WebsiteHost      string
 	EventConnections []int
-	BusinessID       string
 	HasSettings      bool
 	ActionsCount     int
 	Health           Health
@@ -649,7 +648,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, cur)
+	records, err := this.app().Users(ctx, schema, "", cur)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1497,14 +1496,6 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
 		return errors.BadRequest("sending mode %q is not valid", *sm)
 	}
-	if connection.BusinessID != "" {
-		if n := utf8.RuneCountInString(connection.BusinessID); n > 1024 {
-			return errors.BadRequest("Business ID is longer than 1024 runes")
-		}
-		if !types.IsValidPropertyName(connection.BusinessID) {
-			return errors.BadRequest("Business ID %q is not a valid property name", connection.BusinessID)
-		}
-	}
 
 	n := state.SetConnection{
 		Connection:  this.connection.ID,
@@ -1513,7 +1504,6 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		SendingMode: (*state.SendingMode)(connection.SendingMode),
 		WebsiteHost: connection.WebsiteHost,
-		BusinessID:  connection.BusinessID,
 	}
 
 	c := this.connection.Connector()
@@ -1565,20 +1555,10 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		}
 	}
 
-	// Validate the BusinessID.
-	if n.BusinessID != "" {
-		if this.connection.Role == state.Destination {
-			return errors.BadRequest("destination connections cannot have a Business ID")
-		}
-		if c.Type != state.AppType {
-			return errors.BadRequest("%s connections cannot have a Business ID", c.Type)
-		}
-	}
-
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" strategy = $3, sending_mode = $4, website_host = $5, business_id = $6 WHERE id = $7",
-			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.BusinessID, n.Connection)
+			" strategy = $3, sending_mode = $4, website_host = $5 WHERE id = $6",
+			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
 		if err != nil {
 			return err
 		}
@@ -2126,11 +2106,6 @@ type ConnectionToSet struct {
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
 	WebsiteHost string
-
-	// Business ID, for source app connections, if not empty, is the property
-	// that holds the identifier displayed in the UI for the imported user or
-	// group.
-	BusinessID string
 }
 
 // isMetaProperty reports whether the given property name refers to a property

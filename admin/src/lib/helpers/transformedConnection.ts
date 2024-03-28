@@ -30,7 +30,6 @@ class TransformedConnection {
 	compression: Compression;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	businessID: string;
 	SendingMode: SendingMode | null;
 	status: ConnectionStatus;
 	description: string;
@@ -53,7 +52,6 @@ class TransformedConnection {
 		compression: Compression,
 		strategy: Strategy | null,
 		websiteHost: string,
-		businessID: string,
 		SendingMode: SendingMode | null,
 		status: ConnectionStatus,
 		description: string,
@@ -75,7 +73,6 @@ class TransformedConnection {
 		this.compression = compression;
 		this.strategy = strategy;
 		this.websiteHost = websiteHost;
-		this.businessID = businessID;
 		this.SendingMode = SendingMode;
 		this.status = status;
 		this.description = description;

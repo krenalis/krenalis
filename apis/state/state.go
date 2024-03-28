@@ -608,7 +608,6 @@ type Connection struct {
 	UsersQuery       string
 	actions          map[int]*Action
 	Health           Health
-	BusinessID       string // only for apps.
 }
 
 // Organization returns the organization of the connection.
@@ -927,7 +926,7 @@ type Action struct {
 	IdentityColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
-	BusinessID              string // for files, databases and event-based connections importing users or groups.
+	BusinessID              string
 	UserCursor              Cursor
 	Health                  Health
 	ExportMode              *ExportMode

@@ -25,7 +25,7 @@ func TestImportWithTransformation(t *testing.T) {
 	defer c.Stop()
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", chichitester.Source, "")
+	dummyID := c.AddDummy("Dummy (source)", chichitester.Source)
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
 

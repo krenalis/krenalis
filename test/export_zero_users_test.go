@@ -34,7 +34,7 @@ func TestExportZeroUsers(t *testing.T) {
 
 	// Test the export of zero users to an app (Dummy).
 	func() {
-		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination, "")
+		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination)
 		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{

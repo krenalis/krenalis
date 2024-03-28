@@ -362,7 +362,6 @@ type AddConnection struct {
 	SendingMode      *SendingMode // sending mode
 	WebsiteHost      string       // website host in form host:port
 	EventConnections []int        // event connections
-	BusinessID       string       // Business ID property name or column name, depending on connection type.
 	Key              string       // server key to add
 	Settings         []byte
 }
@@ -424,7 +423,6 @@ func (state *State) addConnection(n notification) {
 		SendingMode:      e.SendingMode,
 		WebsiteHost:      e.WebsiteHost,
 		EventConnections: e.EventConnections,
-		BusinessID:       e.BusinessID,
 		Settings:         e.Settings,
 		actions:          map[int]*Action{},
 	}
@@ -980,7 +978,6 @@ type SetConnection struct {
 	Strategy    *Strategy
 	SendingMode *SendingMode
 	WebsiteHost string
-	BusinessID  string // property name or column name, depending on connection type.
 }
 
 // setConnection sets a connection.
@@ -995,7 +992,6 @@ func (state *State) setConnection(n notification) {
 		c.Strategy = e.Strategy
 		c.SendingMode = e.SendingMode
 		c.WebsiteHost = e.WebsiteHost
-		c.BusinessID = e.BusinessID
 	})
 	for _, listener := range state.listeners.SetConnection {
 		listener(e)

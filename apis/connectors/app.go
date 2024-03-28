@@ -33,7 +33,6 @@ type (
 type App struct {
 	name       string
 	role       state.Role
-	businessID string
 	layouts    *state.Layouts
 	httpClient *httpclient.Client
 	users      schema
@@ -47,7 +46,6 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 	connector := connection.Connector()
 	app := &App{
 		name:       connector.Name,
-		businessID: connection.BusinessID,
 		role:       connection.Role,
 		layouts:    &connector.Layouts,
 		httpClient: connectors.http.ConnectionClient(connection.ID),
@@ -175,13 +173,18 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 	return app.httpClient.Do(r)
 }
 
-// Users returns an iterator to iterate over the app's users, starting from a cursor.
-// Each returned record will contain, in the Properties field, the properties in schema,
-// with the same types.
+// Users returns an iterator to iterate over the app's users, starting from a
+// cursor. Each returned record will contain, in the Properties field, the
+// properties in schema, with the same types.
 //
-// If the provided schema, that must be valid, does not conform with the app's source
-// users schema, it returns a *SchemaError error.
-func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Cursor) (Records, error) {
+// businessID, when not empty, is the app property name from which the Business
+// ID should be read. If such property does not exist in the app's schema, or
+// exists but its type is not compatible, no errors are returned and the
+// Business ID is simply not imported.
+//
+// If the provided schema, that must be valid, does not conform with the app's
+// source users schema, it returns a *SchemaError error.
+func (app *App) Users(ctx context.Context, schema types.Type, businessID string, cursor state.Cursor) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -199,8 +202,8 @@ func (app *App) Users(ctx context.Context, schema types.Type, cursor state.Curso
 	}
 	// Determine and validate the property for the Business ID.
 	var businessIDProperty types.Property
-	if app.businessID != "" {
-		businessIDProperty, err = businessIDFromSchema(usersSchema, app.businessID)
+	if businessID != "" {
+		businessIDProperty, err = businessIDFromSchema(usersSchema, businessID)
 		if err != nil {
 			slog.Warn("cannot determine the Business ID property", "err", err)
 		}

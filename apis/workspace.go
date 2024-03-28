@@ -81,14 +81,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if utf8.RuneCountInString(connection.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", connection.Name)
 	}
-	if connection.BusinessID != "" {
-		if n := utf8.RuneCountInString(connection.BusinessID); n > 1024 {
-			return 0, errors.BadRequest("Business ID is longer than 1024 runes")
-		}
-		if !types.IsValidPropertyName(connection.BusinessID) {
-			return 0, errors.BadRequest("Business ID %q is not a valid property name", connection.BusinessID)
-		}
-	}
 
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
@@ -127,7 +119,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		SendingMode:      (*state.SendingMode)(connection.SendingMode),
 		WebsiteHost:      connection.WebsiteHost,
 		EventConnections: connection.EventConnections,
-		BusinessID:       connection.BusinessID,
 	}
 	if n.Name == "" {
 		n.Name = c.Name
@@ -176,16 +167,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			if port, _ := strconv.Atoi(p); port < 1 || port > 65535 {
 				return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
 			}
-		}
-	}
-
-	// Validate the Business ID.
-	if n.BusinessID != "" {
-		if n.Role == state.Destination {
-			return 0, errors.BadRequest("destination connections cannot have a Business ID")
-		}
-		if c.Type != state.AppType {
-			return 0, errors.BadRequest("%s connections cannot have a Business ID", c.Type)
 		}
 	}
 
@@ -320,10 +301,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, type, role, enabled, connector, resource,"+
-			" strategy, sending_mode, website_host, event_connections, business_id, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+			" strategy, sending_mode, website_host, event_connections, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Resource.ID,
-			n.Strategy, n.SendingMode, n.WebsiteHost, n.EventConnections, n.BusinessID, string(n.Settings))
+			n.Strategy, n.SendingMode, n.WebsiteHost, n.EventConnections, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				switch postgres.ErrConstraintName(err) {
@@ -654,7 +635,6 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		SendingMode:      (*SendingMode)(c.SendingMode),
 		WebsiteHost:      c.WebsiteHost,
 		EventConnections: slices.Clone(c.EventConnections),
-		BusinessID:       c.BusinessID,
 		HasSettings:      conn.HasSettings,
 		ActionsCount:     len(c.Actions()),
 		Health:           Health(c.Health),
@@ -697,7 +677,6 @@ func (this *Workspace) Connections() []*Connection {
 			SendingMode:      (*SendingMode)(c.SendingMode),
 			WebsiteHost:      c.WebsiteHost,
 			EventConnections: slices.Clone(c.EventConnections),
-			BusinessID:       c.BusinessID,
 			HasSettings:      conn.HasSettings,
 			ActionsCount:     len(c.Actions()),
 			Health:           Health(c.Health),
@@ -1499,11 +1478,6 @@ type ConnectionToAdd struct {
 	// connections to which events can be sent or received. It is nil if
 	// there are no connections or if the connection do not support events.
 	EventConnections []int
-
-	// Business ID, for source app connections, if not empty, is the property
-	// that holds the identifier displayed in the UI for the imported user or
-	// group.
-	BusinessID string
 
 	// Settings represents the settings. It must be nil if the connection does
 	// not have settings.

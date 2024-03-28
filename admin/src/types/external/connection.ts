@@ -17,7 +17,6 @@ interface Connection {
 	Compression: Compression;
 	Strategy?: Strategy | null;
 	WebsiteHost: string;
-	BusinessID: string;
 	SendingMode: SendingMode | null;
 	HasSettings: boolean;
 	Enabled: boolean;
@@ -41,7 +40,6 @@ interface ConnectionToAdd {
 	connector: number;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	businessID: string;
 	SendingMode?: SendingMode | null;
 	settings: UIValues;
 	eventConnections: Number[] | null;
@@ -52,7 +50,6 @@ interface ConnectionToSet {
 	enabled: boolean;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	businessID: string;
 	SendingMode?: SendingMode | null;
 }
 

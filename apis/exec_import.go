@@ -44,7 +44,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			cursor.ID = action.UserCursor.ID
 			cursor.Timestamp = action.UserCursor.Timestamp
 		}
-		records, err = this.app().Users(ctx, action.InSchema, cursor)
+		records, err = this.app().Users(ctx, action.InSchema, action.BusinessID, cursor)
 	case state.DatabaseType:
 		replacer := func(name string) (string, bool) {
 			if name == "limit" {

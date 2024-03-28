@@ -122,6 +122,17 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
+		if (connection.isSource && connection.isApp) {
+			const a = { ...action };
+			console.debug(action.BusinessID);
+			if (action.BusinessID === undefined) {
+				a.BusinessID = '';
+			}
+			setAction(a);
+		}
+	}, []);
+
+	useEffect(() => {
 		if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
 			// precompile the 'IdentityColumn' and 'TimestampColumn' fields,
 			// if possible.
@@ -411,7 +422,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					</div>
 				)}
 				{connection.isSource &&
-					(connection.isFileStorage || connection.isDatabase || connection.isEventBased) && (
+					(connection.isApp ||
+						connection.isFileStorage ||
+						connection.isDatabase ||
+						connection.isEventBased) && (
 						<Section ref={ref} title='Business ID'>
 							<SlInput
 								label={`Business ID ${businessIDKind}`}

@@ -23,7 +23,7 @@ func TestActionSettings(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	dummy := c.AddDummy("Dummy (source)", chichitester.Source, "")
+	dummy := c.AddDummy("Dummy (source)", chichitester.Source)
 	action := c.AddAction(dummy, "Users", chichitester.ActionToSet{
 		Name:           "Action #1",
 		Enabled:        true,

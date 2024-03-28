@@ -57,7 +57,7 @@ type Action struct {
 	IdentityColumn          *string
 	TimestampColumn         *string
 	TimestampFormat         *string
-	BusinessID              string // for files, databases and event-based connections importing users or groups.
+	BusinessID              string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -794,8 +794,9 @@ type ActionToSet struct {
 	// BusinessID, if not empty, is the property or the column that holds the
 	// identifier displayed in the UI for the imported user or group.
 	//
-	// In particular, for file and database actions it is a column name, while
-	// for event-based actions it is a "traits" property.
+	// In particular, for apps actions it is an app property, for file and
+	// database actions it is a column name, while for event-based actions it is
+	// a "traits" property.
 	BusinessID string
 
 	// ExportMode is the export mode, if it has one.

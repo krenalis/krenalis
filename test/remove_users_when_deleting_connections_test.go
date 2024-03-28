@@ -24,8 +24,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	defer c.Stop()
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.AddDummy("Dummy 1", chichitester.Source, "")
-	dummy2 := c.AddDummy("Dummy 2", chichitester.Source, "")
+	dummy1 := c.AddDummy("Dummy 1", chichitester.Source)
+	dummy2 := c.AddDummy("Dummy 2", chichitester.Source)
 
 	// Add two identical actions on two different connections.
 	actionParams := chichitester.ActionToSet{

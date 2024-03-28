@@ -26,7 +26,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		enabled: connection.enabled,
 		strategy: connection.strategy,
 		websiteHost: connection.websiteHost,
-		businessID: connection.businessID,
 		SendingMode: connection.SendingMode,
 	});
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
@@ -52,13 +51,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.websiteHost = value;
-		setConnectionToSet(c);
-	};
-
-	const onBusinessIDChange = (e) => {
-		const value = e.target.value;
-		const c = { ...connectionToSet };
-		c.businessID = value;
 		setConnectionToSet(c);
 	};
 
@@ -174,18 +166,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					className='websiteHostField'
 					value={connectionToSet.websiteHost}
 					onSlChange={onWebsitehostChange}
-				/>
-			)}
-
-			{connection.role === 'Source' && connection.type === 'App' && (
-				<SlInput
-					label={`Business ID property`}
-					className='nameField'
-					helpText={`The name of the app property from which the Business ID is read when importing. Can be left empty to indicate to not import it.`}
-					placeholder='Something like "email", "customer_id", etc...'
-					value={connectionToSet.businessID}
-					onSlChange={onBusinessIDChange}
-					maxlength={1024}
 				/>
 			)}
 

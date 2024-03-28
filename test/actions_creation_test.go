@@ -41,7 +41,7 @@ func TestActionsCreation(t *testing.T) {
 	dstFsID := c.AddDestinationFilesystem(storageDir)
 	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 	postgreSQLConnection := c.AddSourcePostgreSQL()
-	dummyExportConnection := c.AddDummy("Dummy (destination)", chichitester.Destination, "")
+	dummyExportConnection := c.AddDummy("Dummy (destination)", chichitester.Destination)
 
 	tests := []struct {
 		conn   int

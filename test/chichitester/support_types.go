@@ -123,7 +123,6 @@ type ConnectionToAdd struct {
 	Strategy         *Strategy
 	WebsiteHost      string
 	EventConnections []int
-	BusinessID       string
 	SendingMode      *SendingMode
 	Settings         json.RawMessage
 }

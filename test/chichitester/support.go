@@ -127,14 +127,13 @@ func (c *Chichi) AddDestinationPostgreSQL() int {
 	})
 }
 
-func (c *Chichi) AddDummy(name string, role Role, businessID string) int {
+func (c *Chichi) AddDummy(name string, role Role) int {
 	conn := ConnectionToAdd{
-		Name:       name,
-		Role:       role,
-		Enabled:    true,
-		Connector:  DummyConnector,
-		BusinessID: businessID,
-		Settings:   []byte("{}"),
+		Name:      name,
+		Role:      role,
+		Enabled:   true,
+		Connector: DummyConnector,
+		Settings:  []byte("{}"),
 	}
 	if role == Destination {
 		mode := Cloud

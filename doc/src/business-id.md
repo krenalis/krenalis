@@ -4,13 +4,13 @@ The Business ID helps you visually recognize the identities imported from the co
 
 It does not impact in any way the behavior of the software or the [Identity Resolution](./identity-resolution.md); it is purely a visual piece of information used to identify more clearly the identities associated with a user.
 
-For source app connections and for source storage, database and events actions that import users, a **Business ID name** can be specified.
+For source app, storage, database and events actions that import users, a **Business ID name** can be specified.
 
 ## Business ID name
 
 The **Business ID name** is a property name or a column name from which the value of the Business ID is read when importing.
 
-* For **app connections**, it must refer to a property of the app with a supported type.
+* For **app actions**, it must refer to a property of the app with a supported type.
 * For **file storage actions**, it must be a column of the file with a supported type.
 * For **database actions**, it must be a column returned by the database query with a supported type.
 * For **events actions** (mobile, website and server) importing users, it must be the name of a field of the event's `traits` with a supported type.

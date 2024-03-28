@@ -32,7 +32,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", chichitester.Source, "")
+	dummyID := c.AddDummy("Dummy (source)", chichitester.Source)
 
 	// Check if the Dummy connection has been created successfully.
 	connections = nil
