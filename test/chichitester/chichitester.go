@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -51,7 +50,7 @@ type Chichi struct {
 	done                   chan struct{}
 	transformationsTempDir string
 	httpClient             *http.Client
-	workspace              int
+	ws                     int
 }
 
 var chichiAlreadyLaunched bool
@@ -109,9 +108,9 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 	}
 
 	c := Chichi{
-		t:         t,
-		done:      make(chan struct{}),
-		workspace: 1,
+		t:    t,
+		done: make(chan struct{}),
+		ws:   1,
 	}
 
 	// Create the HTTP client.
@@ -326,11 +325,11 @@ func (c *Chichi) Stop() {
 	}
 }
 
-// UseWorkspace uses the given workspace in the next calls perfomed using the
+// UseWorkspace uses the given workspace in the next calls performed using the
 // support methods exposed by Chichi.
 // The default workspace, used when UseWorkspace is never called, is 1.
 func (c *Chichi) UseWorkspace(workspace int) {
-	c.workspace = workspace
+	c.ws = workspace
 }
 
 func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
@@ -338,11 +337,13 @@ func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 		"Type":     whType,
 		"Settings": whSettings,
 	}
-	return c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connect-warehouse", body, nil)
+	method := fmt.Sprintf("/api/workspaces/%d/connect-warehouse", c.ws)
+	return c.call("POST", method, body, nil)
 }
 
 func (c *Chichi) initWarehouse() error {
-	return c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/init-warehouse", nil, nil)
+	method := fmt.Sprintf("/api/workspaces/%d/init-warehouse", c.ws)
+	return c.call("POST", method, nil, nil)
 }
 
 func (c *Chichi) changeUsersSchema() error {
@@ -359,7 +360,8 @@ func (c *Chichi) changeUsersSchema() error {
 	if err != nil {
 		return err
 	}
-	return c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/change-users-schema", req, nil)
+	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema", c.ws)
+	return c.call("POST", method, req, nil)
 }
 
 func (c *Chichi) login() error {

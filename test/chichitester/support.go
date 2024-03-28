@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/open2b/chichi/apis"
@@ -29,9 +28,9 @@ var defaultStrategy Strategy = "AB-C"
 // This file contains support methods which reduce verbosity of tests.
 
 func (c *Chichi) Action(connection, action int) Action {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/actions/" + strconv.Itoa(action)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d", c.ws, connection, action)
 	var response map[string]any
-	c.MustCall("GET", url, nil, &response)
+	c.MustCall("GET", method, nil, &response)
 	data, err := json.Marshal(response)
 	if err != nil {
 		c.t.Fatal(err)
@@ -45,16 +44,16 @@ func (c *Chichi) Action(connection, action int) Action {
 }
 
 func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/action-schemas/%s", c.ws, conn, target)
 	if eventType != "" {
-		url += "/" + eventType
+		method += "/" + eventType
 	}
 	var schemas map[string]any
-	c.MustCall("GET", url, nil, &schemas)
+	c.MustCall("GET", method, nil, &schemas)
 	return schemas
 }
 
-func (c *Chichi) AddAction(connection int, target string, action ActionToSet) int {
+func (c *Chichi) AddAction(conn int, target string, action ActionToSet) int {
 	switch target {
 	case "Events", "Users", "Groups":
 	default:
@@ -65,12 +64,13 @@ func (c *Chichi) AddAction(connection int, target string, action ActionToSet) in
 		"Action": action,
 	}
 	var id int
-	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data, &id)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
+	c.MustCall("POST", method, data, &id)
 	return id
 }
 
 // AddActionErr is like AddAction but returns an error instead of panicking.
-func (c *Chichi) AddActionErr(connection int, target string, action ActionToSet) (int, error) {
+func (c *Chichi) AddActionErr(conn int, target string, action ActionToSet) (int, error) {
 	switch target {
 	case "Events", "Users", "Groups":
 	default:
@@ -81,7 +81,8 @@ func (c *Chichi) AddActionErr(connection int, target string, action ActionToSet)
 		"Action": action,
 	}
 	var id int
-	err := c.Call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+strconv.Itoa(connection)+"/actions", data, &id)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
+	err := c.Call("POST", method, data, &id)
 	if err != nil {
 		return 0, err
 	}
@@ -93,7 +94,8 @@ func (c *Chichi) AddConnection(connection ConnectionToAdd) int {
 		"Connection": connection,
 	}
 	var id int
-	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/add-connection", data, &id)
+	method := fmt.Sprintf("/api/workspaces/%d/add-connection", c.ws)
+	c.MustCall("POST", method, data, &id)
 	return id
 }
 
@@ -182,16 +184,15 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 }
 
 func (c *Chichi) ChangeUsersSchema(schema types.Type, rePaths map[string]any) {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/change-users-schema"
+	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema", c.ws)
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
 	}
-	c.MustCall("POST", url, req, nil)
+	c.MustCall("POST", method, req, nil)
 }
 
 func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]any) []string {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/change-users-schema-queries"
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
@@ -199,21 +200,21 @@ func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]
 	var response struct {
 		Queries []string
 	}
-	c.MustCall("POST", url, req, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema-queries", c.ws)
+	c.MustCall("POST", method, req, &response)
 	return response.Queries
 }
 
 func (c *Chichi) CompletePath(storage int, path string) string {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(storage) + "/complete-path/" + url.PathEscape(path)
 	var response struct {
 		Path string `json:"path"`
 	}
-	c.MustCall("GET", url, nil, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/complete-path/%s", c.ws, storage, url.PathEscape(path))
+	c.MustCall("GET", method, nil, &response)
 	return response.Path
 }
 
-func (c *Chichi) ConnectionIdentities(connection int, first, limit int) ([]UserIdentity, int) {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/identities"
+func (c *Chichi) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {
 	req := map[string]any{
 		"First": first,
 		"Limit": limit,
@@ -222,42 +223,43 @@ func (c *Chichi) ConnectionIdentities(connection int, first, limit int) ([]UserI
 		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
 	}
-	c.MustCall("POST", url, req, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/identities", c.ws, conn)
+	c.MustCall("POST", method, req, &response)
 	return response.Identities, response.Count
 }
 
 func (c *Chichi) ConnectionKeys(conn int) []string {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(conn) + "/keys"
 	var keys []string
-	c.MustCall("GET", url, nil, &keys)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/keys", c.ws, conn)
+	c.MustCall("GET", method, nil, &keys)
 	return keys
 }
 
-func (c *Chichi) DeleteConnection(connection int) {
-	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection)
+func (c *Chichi) DeleteConnection(conn int) {
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d", c.ws, conn)
 	c.MustCall("DELETE", method, nil, nil)
 }
 
-func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
-	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/actions/" + strconv.Itoa(action) + "/execute"
+func (c *Chichi) ExecuteAction(conn, action int, reimport bool) {
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d/execute", c.ws, conn, action)
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport}, nil)
 }
 
-func (c *Chichi) Executions(connection int) []any {
-	method := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(connection) + "/executions"
+func (c *Chichi) Executions(conn int) []any {
 	var executions []any
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/executions", c.ws, conn)
 	c.MustCall("GET", method, nil, &executions)
 	return executions
 }
 
 func (c *Chichi) IdentifiersSchema() types.Type {
 	var schema types.Type
-	c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers-schema", nil, &schema)
+	method := fmt.Sprintf("/api/workspaces/%d/identifiers-schema", c.ws)
+	c.MustCall("GET", method, nil, &schema)
 	return schema
 }
 
 func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(storage) + "/records"
 	req := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,
@@ -270,12 +272,14 @@ func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, com
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	c.MustCall("POST", url, req, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/records", c.ws, storage)
+	c.MustCall("POST", method, req, &response)
 	return response.Records, response.Schema
 }
 
 func (c *Chichi) RunWorkspaceIdentityResolution() {
-	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/run-identity-resolution", nil, nil)
+	method := fmt.Sprintf("/api/workspaces/%d/run-identity-resolution", c.ws)
+	c.MustCall("POST", method, nil, nil)
 }
 
 func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
@@ -307,11 +311,11 @@ func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 	body := map[string]any{
 		"Identifiers": identifiers,
 	}
-	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/identifiers", body, nil)
+	method := fmt.Sprintf("/api/workspaces/%d/identifiers", c.ws)
+	c.MustCall("POST", method, body, nil)
 }
 
 func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression Compression, settings json.RawMessage) []string {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/connections/" + strconv.Itoa(storage) + "/sheets"
 	req := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,
@@ -321,28 +325,28 @@ func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression
 	var request struct {
 		Sheets []string `json:"sheets"`
 	}
-	c.MustCall("POST", url, req, &request)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/sheets", c.ws, storage)
+	c.MustCall("POST", method, req, &request)
 	return request.Sheets
 }
 
-func (c *Chichi) TableSchema(connection int, table string) types.Type {
+func (c *Chichi) TableSchema(conn int, table string) types.Type {
 	var schema types.Type
-	c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connections/"+
-		strconv.Itoa(connection)+"/tables/"+url.PathEscape(table)+"/schema", nil, &schema)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/tables/%s/schema", c.ws, conn, url.PathEscape(table))
+	c.MustCall("GET", method, nil, &schema)
 	return schema
 }
 
 func (c *Chichi) UserEvents(user int) []map[string]any {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/users/" + strconv.Itoa(user) + "/events"
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	c.MustCall("GET", url, nil, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/users/%d/events", c.ws, user)
+	c.MustCall("GET", method, nil, &response)
 	return response.Events
 }
 
 func (c *Chichi) UserIdentities(user int, first, limit int) ([]UserIdentity, int) {
-	url := "/api/workspaces/" + strconv.Itoa(c.workspace) + "/users/" + strconv.Itoa(user) + "/identities"
 	req := map[string]any{
 		"First": first,
 		"Limit": limit,
@@ -351,7 +355,8 @@ func (c *Chichi) UserIdentities(user int, first, limit int) ([]UserIdentity, int
 		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
 	}
-	c.MustCall("POST", url, req, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/users/%d/identities", c.ws, user)
+	c.MustCall("POST", method, req, &response)
 	return response.Identities, response.Count
 }
 
@@ -367,7 +372,8 @@ func (c *Chichi) Users(properties []string, order string, first, limit int) (use
 		Count  int              `json:"count"`
 		Schema types.Type       `json:"schema"`
 	}
-	c.MustCall("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/users", req, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/users", c.ws)
+	c.MustCall("POST", method, req, &response)
 	return response.Users, response.Schema, response.Count
 }
 
@@ -416,7 +422,8 @@ func (c *Chichi) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int
 
 func (c *Chichi) Workspace() Workspace {
 	var ws Workspace
-	c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(c.workspace), nil, &ws)
+	method := fmt.Sprintf("/api/workspaces/%d", c.ws)
+	c.MustCall("GET", method, nil, &ws)
 	return ws
 }
 
