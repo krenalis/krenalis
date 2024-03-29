@@ -114,9 +114,6 @@ type EventRequest struct {
 type AppEvents interface {
 	App
 
-	// EventTypes returns the event types of the connector's instance.
-	EventTypes(ctx context.Context) ([]*EventType, error)
-
 	// EventRequest returns an event request associated with the provided event
 	// type, event, and transformation data. If redacted is true, sensitive
 	// authentication data will be redacted in the returned request.
@@ -124,6 +121,9 @@ type AppEvents interface {
 	// If the specified event type does not exist, it returns the
 	// ErrEventTypeNotExist error.
 	EventRequest(ctx context.Context, eventType *EventType, event *Event, data map[string]any, redacted bool) (*EventRequest, error)
+
+	// EventTypes returns the event types of the connector's instance.
+	EventTypes(ctx context.Context) ([]*EventType, error)
 }
 
 // Cursor represents a cursor used to implement pagination.
