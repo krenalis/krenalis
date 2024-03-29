@@ -154,7 +154,6 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		table := action.TableName
 		this.Table = &table
 	}
-
 	if action.UniqueIDColumn != "" {
 		column := action.UniqueIDColumn
 		this.UniqueIDColumn = &column
