@@ -292,9 +292,9 @@ type AddAction struct {
 	Settings                []byte
 	TableName               string
 	UniqueIDColumn          string
+	DisplayedID             string
 	TimestampColumn         string
 	TimestampFormat         string
-	DisplayedID             string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -330,9 +330,9 @@ func (state *State) addAction(n notification) {
 		Settings:                e.Settings,
 		TableName:               e.TableName,
 		UniqueIDColumn:          e.UniqueIDColumn,
+		DisplayedID:             e.DisplayedID,
 		TimestampColumn:         e.TimestampColumn,
 		TimestampFormat:         e.TimestampFormat,
-		DisplayedID:             e.DisplayedID,
 		ExportMode:              e.ExportMode,
 		MatchingProperties:      e.MatchingProperties,
 		ExportOnDuplicatedUsers: e.ExportOnDuplicatedUsers,
@@ -877,9 +877,9 @@ type SetAction struct {
 	Settings                []byte
 	TableName               string
 	UniqueIDColumn          string
+	DisplayedID             string
 	TimestampColumn         string
 	TimestampFormat         string
-	DisplayedID             string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -907,9 +907,9 @@ func (state *State) setAction(n notification) {
 		a.Settings = e.Settings
 		a.TableName = e.TableName
 		a.UniqueIDColumn = e.UniqueIDColumn
+		a.DisplayedID = e.DisplayedID
 		a.TimestampColumn = e.TimestampColumn
 		a.TimestampFormat = e.TimestampFormat
-		a.DisplayedID = e.DisplayedID
 		a.ExportMode = e.ExportMode
 		a.MatchingProperties = e.MatchingProperties
 		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers

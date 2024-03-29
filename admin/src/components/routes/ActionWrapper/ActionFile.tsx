@@ -149,9 +149,9 @@ const ActionFile = () => {
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
 		a.UniqueIDColumn = '';
+		a.DisplayedID = '';
 		a.TimestampColumn = '';
 		a.TimestampFormat = '';
-		a.DisplayedID = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
 		a.Transformation.Function = null;
 		setIsFileConnectorLoading(true);

@@ -55,9 +55,9 @@ type Action struct {
 	Settings                json.RawMessage `json:",omitempty"`
 	Table                   *string
 	UniqueIDColumn          *string
+	DisplayedID             string
 	TimestampColumn         *string
 	TimestampFormat         *string
-	DisplayedID             string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -158,6 +158,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		column := action.UniqueIDColumn
 		this.UniqueIDColumn = &column
 	}
+	this.DisplayedID = action.DisplayedID
 	if action.TimestampColumn != "" {
 		column := action.TimestampColumn
 		this.TimestampColumn = &column
@@ -166,7 +167,6 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		format := action.TimestampFormat
 		this.TimestampFormat = &format
 	}
-	this.DisplayedID = action.DisplayedID
 	this.ExportMode = (*ExportMode)(action.ExportMode)
 	if props := action.MatchingProperties; props != nil {
 		this.MatchingProperties = &MatchingProperties{
@@ -377,9 +377,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Compression:             state.Compression(action.Compression),
 		TableName:               action.TableName,
 		UniqueIDColumn:          action.UniqueIDColumn,
+		DisplayedID:             action.DisplayedID,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
-		DisplayedID:             action.DisplayedID,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -541,13 +541,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  unique_id_column = $17, "+
-			"timestamp_column = $18, timestamp_format = $19, displayed_id = $20, export_mode = $21, "+
+			"displayed_id = $18, timestamp_column = $19, timestamp_format = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.UniqueIDColumn, n.TimestampColumn, n.TimestampFormat, n.DisplayedID,
+			n.UniqueIDColumn, n.DisplayedID, n.TimestampColumn, n.TimestampFormat,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -764,6 +764,14 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	UniqueIDColumn string
 
+	// DisplayedID, if not empty, is the property or the column that holds the
+	// identifier displayed in the UI for the imported user or group.
+	//
+	// In particular, for apps actions it is an app property, for file and
+	// database actions it is a column name, while for event-based actions it is
+	// a "traits" property.
+	DisplayedID string
+
 	// TimestampColumn is the column name used as timestamp when importing from a file or
 	// from a database. May be empty to indicate that no properties should be used as
 	// timestamp. Also refer to the documentation of TimestampFormat, which is strictly
@@ -789,14 +797,6 @@ type ActionToSet struct {
 	//
 	// It cannot be longer than 64 runes.
 	TimestampFormat string
-
-	// DisplayedID, if not empty, is the property or the column that holds the
-	// identifier displayed in the UI for the imported user or group.
-	//
-	// In particular, for apps actions it is an app property, for file and
-	// database actions it is a column name, while for event-based actions it is
-	// a "traits" property.
-	DisplayedID string
 
 	// ExportMode is the export mode, if it has one.
 	ExportMode *ExportMode

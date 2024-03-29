@@ -96,9 +96,9 @@ type ActionToSet struct {
 	Settings                json.RawMessage `json:",omitempty"`
 	TableName               string
 	UniqueIDColumn          string
+	DisplayedID             string
 	TimestampColumn         string
 	TimestampFormat         string
-	DisplayedID             string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
