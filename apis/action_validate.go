@@ -238,8 +238,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 	// Validate the displayed ID.
 	if action.DisplayedID != "" {
-		if !utf8.ValidString(action.DisplayedID) {
-			return errors.BadRequest("displayed ID is not UTF-8 encoded")
+		if !types.IsValidPropertyName(action.DisplayedID) {
+			return errors.BadRequest("displayed ID is not a valid property name")
 		}
 		if n := utf8.RuneCountInString(action.DisplayedID); n > 1024 {
 			return errors.BadRequest("displayed ID is longer than 1024 runes")
@@ -400,17 +400,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 		if t := connector.Type; t == state.StreamType {
 			return errors.BadRequest("%s actions cannot have a displayed ID", strings.ToLower(t.String()))
-		} else if t == state.AppType {
-			if !types.IsValidPropertyName(action.DisplayedID) {
-				return errors.BadRequest("displayed ID %q is not a valid property name", action.DisplayedID)
-			}
-		} else if eventBasedConn {
-			if target == state.Events {
-				return errors.BadRequest("%s actions importing events cannot have a displayed ID", strings.ToLower(target.String()))
-			}
-			if !types.IsValidPropertyName(action.DisplayedID) {
-				return errors.BadRequest("displayed ID %q is not a valid property name", action.DisplayedID)
-			}
+		} else if eventBasedConn && target == state.Events {
+			return errors.BadRequest("%s actions importing events cannot have a displayed ID", strings.ToLower(target.String()))
 		}
 	}
 
