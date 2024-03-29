@@ -39,10 +39,9 @@ var _ interface {
 
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{
-		Name:              "CSV",
-		SourceDescription: "import users from a CSV file",
-		Icon:              icon,
-		Extension:         "csv",
+		Name:      "CSV",
+		Icon:      icon,
+		Extension: "csv",
 	}, New)
 }
 

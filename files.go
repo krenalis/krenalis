@@ -21,11 +21,9 @@ var ErrSheetNotExist = errors.New("sheet does not exist")
 
 // FileInfo represents a file connector info.
 type FileInfo struct {
-	Name                   string
-	SourceDescription      string // It should complete the sentence "Add an action to ..."
-	DestinationDescription string // It should complete the sentence "Add an action to ..."
-	Icon                   string // icon in SVG format
-	Extension              string // default extension of the file
+	Name      string
+	Icon      string // icon in SVG format
+	Extension string // default extension of the file
 
 	newFunc reflect.Value
 	ct      reflect.Type

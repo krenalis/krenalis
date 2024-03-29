@@ -33,10 +33,9 @@ var _ interface {
 
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{
-		Name:                   "JSON",
-		DestinationDescription: "export users to a JSON file",
-		Icon:                   icon,
-		Extension:              "json",
+		Name:      "JSON",
+		Icon:      icon,
+		Extension: "json",
 	}, New)
 }
 

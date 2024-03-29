@@ -40,11 +40,9 @@ var _ interface {
 
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
-		Name:                   "PostgreSQL",
-		SourceDescription:      "import users and groups from a PostgreSQL database",
-		DestinationDescription: "export users and groups to a PostgreSQL database",
-		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
-		Icon:                   icon,
+		Name:        "PostgreSQL",
+		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
+		Icon:        icon,
 	}, New)
 }
 

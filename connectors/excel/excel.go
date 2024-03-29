@@ -37,10 +37,9 @@ var _ interface {
 
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{
-		Name:              "Excel",
-		SourceDescription: "import users from an Excel file",
-		Icon:              icon,
-		Extension:         "xlsx",
+		Name:      "Excel",
+		Icon:      icon,
+		Extension: "xlsx",
 	}, New)
 }
 

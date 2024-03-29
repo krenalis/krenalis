@@ -33,10 +33,8 @@ func (err InvalidPathError) Error() string {
 
 // FileStorageInfo represents a file storage connector info.
 type FileStorageInfo struct {
-	Name                   string
-	SourceDescription      string // It should complete the sentence "Add an action to ..."
-	DestinationDescription string // It should complete the sentence "Add an action to ..."
-	Icon                   string // icon in SVG format
+	Name string
+	Icon string // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type

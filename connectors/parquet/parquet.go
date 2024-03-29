@@ -39,10 +39,9 @@ var _ interface {
 
 func init() {
 	chichi.RegisterFile(chichi.FileInfo{
-		Name:              "Parquet",
-		SourceDescription: "import users and groups from a parquet file",
-		Icon:              icon,
-		Extension:         "parquet",
+		Name:      "Parquet",
+		Icon:      icon,
+		Extension: "parquet",
 	}, New)
 }
 

@@ -16,11 +16,9 @@ import (
 
 // DatabaseInfo represents a database connector info.
 type DatabaseInfo struct {
-	Name                   string
-	SourceDescription      string // It should complete the sentence "Add an action to ..."
-	DestinationDescription string // It should complete the sentence "Add an action to ..."
-	SampleQuery            string // sample query
-	Icon                   string // icon in SVG format
+	Name        string
+	SampleQuery string // sample query
+	Icon        string // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type

@@ -93,28 +93,18 @@ func (state *State) load() error {
 					c.Layouts.Time = app.TimeLayout
 				case DatabaseType:
 					database := chichi.RegisteredDatabase(c.Name)
-					c.SourceDescription = database.SourceDescription
-					c.DestinationDescription = database.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = database.Icon
 					c.SampleQuery = database.SampleQuery
 					ct = database.ReflectType()
 				case FileType:
 					file := chichi.RegisteredFile(c.Name)
-					c.SourceDescription = file.SourceDescription
-					c.DestinationDescription = file.DestinationDescription
 					c.Icon = file.Icon
 					c.FileExtension = file.Extension
 					ct = file.ReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
 				case FileStorageType:
 					storage := chichi.RegisteredFileStorage(c.Name)
-					c.SourceDescription = storage.SourceDescription
-					c.DestinationDescription = storage.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = storage.Icon
 					ct = storage.ReflectType()

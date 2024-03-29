@@ -38,11 +38,9 @@ var _ interface {
 
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
-		Name:                   "MySQL",
-		SourceDescription:      "import users and groups from a MySQL database",
-		DestinationDescription: "export users and groups to a MySQL database",
-		SampleQuery:            "SELECT * FROM users LIMIT ${limit}",
-		Icon:                   icon,
+		Name:        "MySQL",
+		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
+		Icon:        icon,
 	}, New)
 }
 
