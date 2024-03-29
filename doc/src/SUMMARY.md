@@ -39,3 +39,5 @@
     - [ClickHouse](./clickhouse.md)
     - [PostgreSQL](./postgresql.md)
     - [Snowflake](./snowflake.md)
+- [Developers](./developers/connectors.md)
+    - [File Connectors](./developers/file.md)
