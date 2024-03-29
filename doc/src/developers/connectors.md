@@ -20,6 +20,8 @@ That's all you need to get started with Chichi!
 
 # Connector Types
 
+   - [App Connectors](./app.md)
+
    - [Database Connectors](./database.md)
 
    - [File Connectors](./file.md)

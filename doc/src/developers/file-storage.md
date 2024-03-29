@@ -111,11 +111,11 @@ type FileStorageConfig struct {
 }
 ```
 
-- `Role`: This field specifies the anticipated role of the resulting instance, which can either be `Source` or `Destination`.
+- `Role`: Specifies the intended role of the resulting instance, which can be either `Source` or `Destination`.
 
-- `Settings`: It contains the instance settings in JSON format. Later, we'll delve into how the connector defines its settings.
+- `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 
-- `SetSetting`: Is a function that allows the connector to update its settings as needed.
+- `SetSetting`: A function that enables the connector to update its settings as necessary.
 
 ### CompletePath method
 
