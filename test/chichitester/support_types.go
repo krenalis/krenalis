@@ -74,6 +74,7 @@ type Action struct {
 	Settings                json.RawMessage `json:",omitempty"`
 	Table                   *string
 	UniqueIDColumn          *string
+	DisplayedID             string
 	TimestampColumn         *string
 	TimestampFormat         *string
 	ExportMode              *ExportMode
