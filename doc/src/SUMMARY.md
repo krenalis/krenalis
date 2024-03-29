@@ -40,5 +40,6 @@
     - [PostgreSQL](./postgresql.md)
     - [Snowflake](./snowflake.md)
 - [Developers](./developers/connectors.md)
+    - [Database Connectors](./developers/database.md)
     - [File Connectors](./developers/file.md)
     - [File Storage Connectors](./developers/file-storage.md)

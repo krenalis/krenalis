@@ -8,7 +8,6 @@ File connectors, like other types of connectors, are written in Go. A connector 
 
 In the creation of a new Go module, for your file connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
 
-
 ```go
 // Package csv implements the CSV file connector.
 package csv

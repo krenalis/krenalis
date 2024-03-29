@@ -8,7 +8,6 @@ File storage connectors, like other types of connectors, are written in Go. A co
 
 In the creation of a new Go module, for your file storage connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
 
-
 ```go
 // Package s3 implements the S3 file storage connector.
 package s3
@@ -77,7 +76,7 @@ The `FileStorageInfo` type describes information about the file storage connecto
 
 - `Name`: short name, typically the name of the storage. For example, "S3", "HTTP", "SFTP", etc.
 
-- `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
+- `Icon`: icon in SVG format representing the file storage. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFileStorage` function that, executed during package initialization, registers the file storage connector:
 
