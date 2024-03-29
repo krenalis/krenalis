@@ -128,9 +128,9 @@ func (hs *HubSpot) Groups(ctx context.Context, properties []string, cursor chich
 	return objects, after, err
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads.
-// It returns the ErrWebhookUnauthorized error is the request was not
-// authorized. The context is the request's context.
+// ReceiveWebhook receives a webhook request and returns its payloads. It
+// returns the ErrWebhookUnauthorized error is the request was not authorized.
+// The context is the request's context.
 func (hs *HubSpot) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	// See https://developers.hubspot.com/docs/api/webhooks.
 

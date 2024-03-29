@@ -140,13 +140,12 @@ type AppUsers interface {
 	// CreateUser creates a user with the given properties.
 	CreateUser(ctx context.Context, user map[string]any) error
 
-	// ReceiveWebhook receives a webhook request and returns its payloads.
-	// It returns the ErrWebhookUnauthorized error is the request was not
-	// authorized. The context is the request's context.
+	// ReceiveWebhook receives a webhook request and returns its payloads. It
+	// returns the ErrWebhookUnauthorized error is the request was not authorized.
+	// The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
 
-	// UpdateUser updates the user with identifier id setting the given
-	// properties.
+	// UpdateUser updates the user with identifier id setting the given properties.
 	UpdateUser(ctx context.Context, id string, user map[string]any) error
 
 	// UserSchema returns the user schema.
@@ -169,9 +168,9 @@ type AppGroups interface {
 	// Groups returns the groups starting from the given cursor.
 	Groups(ctx context.Context, properties []string, cursor Cursor) (groups []Record, next string, err error)
 
-	// ReceiveWebhook receives a webhook request and returns its payloads.
-	// It returns the ErrWebhookUnauthorized error is the request was not
-	// authorized. The context is the request's context.
+	// ReceiveWebhook receives a webhook request and returns its payloads. It
+	// returns the ErrWebhookUnauthorized error is the request was not authorized.
+	// The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
 
 	// UpdateGroup updates the group with identifier id setting the given

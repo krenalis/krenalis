@@ -83,9 +83,9 @@ func (mc *MailChimp) CreateUser(ctx context.Context, user map[string]any) error 
 	panic("TODO: not implemented")
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads.
-// It returns the ErrWebhookUnauthorized error is the request was not
-// authorized. The context is the request's context.
+// ReceiveWebhook receives a webhook request and returns its payloads. It
+// returns the ErrWebhookUnauthorized error is the request was not authorized.
+// The context is the request's context.
 func (mc *MailChimp) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
 	if mc.settings.WebhookSecret == "" {
