@@ -98,7 +98,7 @@ interface TransformedAction {
 	Path?: string | null;
 	Table?: string | null;
 	Sheet?: string | null;
-	IdentityColumn?: string | null;
+	UniqueIDColumn?: string | null;
 	TimestampColumn?: string | null;
 	TimestampFormat?: string | null;
 	DisplayedID?: string | null;
@@ -321,7 +321,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		Path: action.Path,
 		Table: action.Table,
 		Sheet: action.Sheet,
-		IdentityColumn: action.IdentityColumn,
+		UniqueIDColumn: action.UniqueIDColumn,
 		TimestampColumn: action.TimestampColumn,
 		TimestampFormat: action.TimestampFormat,
 		DisplayedID: action.DisplayedID,
@@ -441,15 +441,15 @@ const transformInActionToSet = async (
 		}
 	}
 
-	if (action.IdentityColumn != null && action.IdentityColumn !== '') {
+	if (action.UniqueIDColumn != null && action.UniqueIDColumn !== '') {
 		const isPropertyAlreadyInSchema =
-			inSchema.properties!.findIndex((p) => p.name === action.IdentityColumn) !== -1;
+			inSchema.properties!.findIndex((p) => p.name === action.UniqueIDColumn) !== -1;
 		if (!isPropertyAlreadyInSchema) {
-			const identityColumnProperty = flattenedInputSchema[action.IdentityColumn];
-			if (identityColumnProperty == null) {
-				throw 'Identity must be a valid property';
+			const uniqueIDColumnProperty = flattenedInputSchema[action.UniqueIDColumn];
+			if (uniqueIDColumnProperty == null) {
+				throw 'Unique ID must be a valid property';
 			}
-			inSchema.properties.push(identityColumnProperty.full);
+			inSchema.properties.push(uniqueIDColumnProperty.full);
 		}
 	}
 
@@ -535,7 +535,7 @@ const transformInActionToSet = async (
 		tableName: action.Table,
 		sheet: action.Sheet,
 		exportMode: action.ExportMode,
-		IdentityColumn: action.IdentityColumn,
+		UniqueIDColumn: action.UniqueIDColumn,
 		TimestampColumn: action.TimestampColumn,
 		TimestampFormat: timestampFormat,
 		DisplayedID: action.DisplayedID,
@@ -580,7 +580,7 @@ const computeDefaultAction = (
 	}
 	if (fields.includes('File')) {
 		action.Path = '';
-		action.IdentityColumn = '';
+		action.UniqueIDColumn = '';
 		action.TimestampColumn = '';
 		action.TimestampFormat = '';
 		action.Sheet = null;

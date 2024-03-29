@@ -47,11 +47,11 @@ const useConnectionIdentities = () => {
 		fetchIdentities();
 	}, []);
 
-	const { identityColumns, identitiesRows } = useMemo(() => {
+	const { uniqueIDColumns, identitiesRows } = useMemo(() => {
 		if (identities == null || identities.length === 0) {
 			const columns = [];
 			const rows = [];
-			return { identityColumns: columns, identitiesRows: rows };
+			return { uniqueIDColumns: columns, identitiesRows: rows };
 		}
 
 		const isDisplayedIdDefined = identities[0].DisplayedId !== '';
@@ -98,10 +98,10 @@ const useConnectionIdentities = () => {
 			rows.push(row);
 		}
 
-		return { identityColumns: columns, identitiesRows: rows };
+		return { uniqueIDColumns: columns, identitiesRows: rows };
 	}, [identities]);
 
-	return { isLoading, identityColumns, identitiesRows };
+	return { isLoading, uniqueIDColumns, identitiesRows };
 };
 
 export { useConnectionIdentities };

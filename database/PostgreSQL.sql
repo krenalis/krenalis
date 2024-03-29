@@ -136,7 +136,7 @@ CREATE TABLE actions (
     compression compression NOT NULL DEFAULT '',
     settings varchar(65535),
     table_name varchar(1024) NOT NULL DEFAULT '',
-    identity_column varchar(1024) NOT NULL DEFAULT '',
+    unique_id_column varchar(1024) NOT NULL DEFAULT '',
     timestamp_column varchar(1024) NOT NULL DEFAULT '',
     timestamp_format varchar(64) NOT NULL DEFAULT '',
     displayed_id varchar(1024) NOT NULL DEFAULT '',

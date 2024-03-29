@@ -291,7 +291,7 @@ type AddAction struct {
 	Compression             Compression
 	Settings                []byte
 	TableName               string
-	IdentityColumn          string
+	UniqueIDColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
 	DisplayedID             string
@@ -329,7 +329,7 @@ func (state *State) addAction(n notification) {
 		Compression:             e.Compression,
 		Settings:                e.Settings,
 		TableName:               e.TableName,
-		IdentityColumn:          e.IdentityColumn,
+		UniqueIDColumn:          e.UniqueIDColumn,
 		TimestampColumn:         e.TimestampColumn,
 		TimestampFormat:         e.TimestampFormat,
 		DisplayedID:             e.DisplayedID,
@@ -876,7 +876,7 @@ type SetAction struct {
 	Compression             Compression
 	Settings                []byte
 	TableName               string
-	IdentityColumn          string
+	UniqueIDColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
 	DisplayedID             string
@@ -906,7 +906,7 @@ func (state *State) setAction(n notification) {
 		a.Compression = e.Compression
 		a.Settings = e.Settings
 		a.TableName = e.TableName
-		a.IdentityColumn = e.IdentityColumn
+		a.UniqueIDColumn = e.UniqueIDColumn
 		a.TimestampColumn = e.TimestampColumn
 		a.TimestampFormat = e.TimestampFormat
 		a.DisplayedID = e.DisplayedID

@@ -134,13 +134,13 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-			// precompile the 'IdentityColumn' and 'TimestampColumn' fields,
+			// precompile the 'UniqueIDColumn' and 'TimestampColumn' fields,
 			// if possible.
 			const a = { ...action };
-			if (action.IdentityColumn === '') {
+			if (action.UniqueIDColumn === '') {
 				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 				if (hasIdColumn) {
-					a.IdentityColumn = 'id';
+					a.UniqueIDColumn = 'id';
 				}
 			}
 			if (action.TimestampColumn === '') {
@@ -241,9 +241,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	};
 
 	const onSelectProperty = async (input, value) => {
-		if (input.name === 'identityColumn') {
+		if (input.name === 'uniqueIDColumn') {
 			const a = { ...action };
-			a.IdentityColumn = value;
+			a.UniqueIDColumn = value;
 			setAction(a);
 			return;
 		} else if (input.name === 'timestampColumn') {
@@ -258,11 +258,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		await updateProperty(input.name, value);
 	};
 
-	const onUpdateIdentityColumn = async (e) => {
+	const onUpdateUniqueIDColumn = async (e) => {
 		const target = e.target;
 		let { value } = target;
 		const a = { ...action };
-		a.IdentityColumn = value;
+		a.UniqueIDColumn = value;
 		setAction(a);
 	};
 
@@ -352,15 +352,15 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			>
 				{connection.isSource && (connection.isDatabase || connection.isFileStorage) && (
 					<div className='specialProperties'>
-						<div className='identityColumn'>
+						<div className='uniqueIDColumn'>
 							<div className='label'>
-								Identity<span className='asterisk'>*</span>:
+								Unique ID<span className='asterisk'>*</span>:
 							</div>
 							<ComboBoxInput
 								comboBoxListRef={propertiesListRef}
-								onInput={onUpdateIdentityColumn}
-								value={action.IdentityColumn!}
-								name='identityColumn'
+								onInput={onUpdateUniqueIDColumn}
+								value={action.UniqueIDColumn!}
+								name='uniqueIDColumn'
 								disabled={isMappingDisabled}
 								className='inputProperty'
 								size='small'

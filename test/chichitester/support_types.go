@@ -73,7 +73,7 @@ type Action struct {
 	Compression             Compression
 	Settings                json.RawMessage `json:",omitempty"`
 	Table                   *string
-	IdentityColumn          *string
+	UniqueIDColumn          *string
 	TimestampColumn         *string
 	TimestampFormat         *string
 	ExportMode              *ExportMode
@@ -95,7 +95,7 @@ type ActionToSet struct {
 	Compression             Compression
 	Settings                json.RawMessage `json:",omitempty"`
 	TableName               string
-	IdentityColumn          string
+	UniqueIDColumn          string
 	TimestampColumn         string
 	TimestampFormat         string
 	DisplayedID             string

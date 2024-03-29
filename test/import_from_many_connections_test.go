@@ -106,7 +106,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"gender": "gender",
 				},
 			},
-			IdentityColumn:  "csv_id",
+			UniqueIDColumn:  "csv_id",
 			TimestampColumn: "timestamp",
 			TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 			DisplayedID:     "email",

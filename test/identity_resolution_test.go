@@ -90,7 +90,7 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: chichitester.Transformation{
 			Mapping: mapping,
 		},
-		IdentityColumn: "dummyId",
+		UniqueIDColumn: "dummyId",
 		Connector:      chichitester.JSONConnector,
 		Settings:       []byte("{}"),
 	})
@@ -104,7 +104,7 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: chichitester.Transformation{
 			Mapping: mapping,
 		},
-		IdentityColumn: "dummyId",
+		UniqueIDColumn: "dummyId",
 		Connector:      chichitester.JSONConnector,
 		Settings:       []byte("{}"),
 	})

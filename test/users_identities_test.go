@@ -50,7 +50,7 @@ func Test_UsersIdentities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityColumn: "identity",
+		UniqueIDColumn: "identity",
 		DisplayedID:    "email",
 		Connector:      chichitester.CSVConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{
@@ -74,7 +74,7 @@ func Test_UsersIdentities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityColumn: "identity",
+		UniqueIDColumn: "identity",
 		DisplayedID:    "email",
 		Connector:      chichitester.CSVConnector,
 		Settings: chichitester.JSONEncodeSettings(map[string]any{

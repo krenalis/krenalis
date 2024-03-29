@@ -54,7 +54,7 @@ type Action struct {
 	Compression             Compression
 	Settings                json.RawMessage `json:",omitempty"`
 	Table                   *string
-	IdentityColumn          *string
+	UniqueIDColumn          *string
 	TimestampColumn         *string
 	TimestampFormat         *string
 	DisplayedID             string
@@ -155,9 +155,9 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.Table = &table
 	}
 
-	if action.IdentityColumn != "" {
-		column := action.IdentityColumn
-		this.IdentityColumn = &column
+	if action.UniqueIDColumn != "" {
+		column := action.UniqueIDColumn
+		this.UniqueIDColumn = &column
 	}
 	if action.TimestampColumn != "" {
 		column := action.TimestampColumn
@@ -377,7 +377,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Sheet:                   action.Sheet,
 		Compression:             state.Compression(action.Compression),
 		TableName:               action.TableName,
-		IdentityColumn:          action.IdentityColumn,
+		UniqueIDColumn:          action.UniqueIDColumn,
 		TimestampColumn:         action.TimestampColumn,
 		TimestampFormat:         action.TimestampFormat,
 		DisplayedID:             action.DisplayedID,
@@ -541,14 +541,14 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
-			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_column = $17, "+
+			"sheet = $13, compression = $14, settings = $15, table_name = $16,  unique_id_column = $17, "+
 			"timestamp_column = $18, timestamp_format = $19, displayed_id = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityColumn, n.TimestampColumn, n.TimestampFormat, n.DisplayedID,
+			n.UniqueIDColumn, n.TimestampColumn, n.TimestampFormat, n.DisplayedID,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -760,10 +760,10 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	TableName string
 
-	// IdentityColumn is the column name used as identity when importing from a file or
+	// UniqueIDColumn is the column name used as identity when importing from a file or
 	// from a database.
 	// It cannot be longer than 1024 runes.
-	IdentityColumn string
+	UniqueIDColumn string
 
 	// TimestampColumn is the column name used as timestamp when importing from a file or
 	// from a database. May be empty to indicate that no properties should be used as

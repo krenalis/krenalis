@@ -148,7 +148,7 @@ const ActionFile = () => {
 		a.Settings = null;
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
-		a.IdentityColumn = '';
+		a.UniqueIDColumn = '';
 		a.TimestampColumn = '';
 		a.TimestampFormat = '';
 		a.DisplayedID = '';

@@ -84,7 +84,7 @@ const ActionQuery = () => {
 			const a = { ...action };
 			const actionTyp = { ...actionType };
 			actionTyp.InputSchema = res.Schema;
-			a.IdentityColumn = '';
+			a.UniqueIDColumn = '';
 			a.TimestampColumn = '';
 			a.DisplayedID = '';
 			setAction(a);

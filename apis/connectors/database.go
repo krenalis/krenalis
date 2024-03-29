@@ -127,16 +127,16 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	// Validate the identity and timestamp columns.
-	var identityColumn, timestampColumn types.Property
+	// Validate the unique ID and timestamp columns.
+	var uniqueIDColumn, timestampColumn types.Property
 	for _, c := range columns {
-		if c.Name == action.IdentityColumn {
-			property, _ := action.InSchema.Property(action.IdentityColumn)
+		if c.Name == action.UniqueIDColumn {
+			property, _ := action.InSchema.Property(action.UniqueIDColumn)
 			if c.Type.Kind() != property.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`identity column %q has type %s instead of %s`,
-					action.IdentityColumn, c.Type.Kind(), property.Type.Kind())}
+				return nil, &SchemaError{fmt.Sprintf(`unique ID column %q has type %s instead of %s`,
+					action.UniqueIDColumn, c.Type.Kind(), property.Type.Kind())}
 			}
-			identityColumn = property
+			uniqueIDColumn = property
 		}
 		if action.TimestampColumn != "" && c.Name == action.TimestampColumn {
 			property, _ := action.InSchema.Property(action.TimestampColumn)
@@ -147,8 +147,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			timestampColumn = property
 		}
 	}
-	if identityColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
+	if uniqueIDColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no unique ID column %q", action.UniqueIDColumn)}
 	}
 	if action.TimestampColumn != "" && timestampColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no timestamp column %q", action.TimestampColumn)}
@@ -173,7 +173,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	}
 
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityColumn,
+	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), uniqueIDColumn,
 		timestampColumn, action.TimestampFormat, displayedIDColumn)
 	return records, nil
 }
@@ -327,7 +327,7 @@ type databaseRecords struct {
 	rows              chichi.Rows
 	propertyOf        map[string]types.Property
 	dst               []any
-	identityColumn    types.Property
+	uniqueIDColumn    types.Property
 	timestampColumn   types.Property
 	timestampFormat   string
 	displayedIDColumn types.Property
@@ -336,14 +336,14 @@ type databaseRecords struct {
 }
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
-	identityColumn, timestampColumn types.Property, timestampFormat string,
+	uniqueIDColumn, timestampColumn types.Property, timestampFormat string,
 	displayedIDColumn types.Property) *databaseRecords {
 	records := databaseRecords{
 		columns:           columns,
 		rows:              rows,
 		dst:               make([]any, len(columns)),
 		propertyOf:        make(map[string]types.Property, len(properties)),
-		identityColumn:    identityColumn,
+		uniqueIDColumn:    uniqueIDColumn,
 		timestampColumn:   timestampColumn,
 		timestampFormat:   timestampFormat,
 		displayedIDColumn: displayedIDColumn,
@@ -391,7 +391,7 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 			r.dst[i] = recordsScanValue{
 				property:          p,
 				record:            &record,
-				identityColumn:    r.identityColumn,
+				uniqueIDColumn:    r.uniqueIDColumn,
 				timestampColumn:   r.timestampColumn,
 				timestampFormat:   r.timestampFormat,
 				displayedIDColumn: r.displayedIDColumn,
@@ -419,7 +419,7 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 type recordsScanValue struct {
 	property          types.Property
 	record            *Record
-	identityColumn    types.Property
+	uniqueIDColumn    types.Property
 	timestampColumn   types.Property
 	timestampFormat   string
 	displayedIDColumn types.Property
@@ -448,11 +448,11 @@ func (sv recordsScanValue) Scan(src any) error {
 	}
 
 	switch p.Name {
-	case sv.identityColumn.Name:
+	case sv.uniqueIDColumn.Name:
 		if src == nil {
 			return errors.New("identity value is NULL")
 		}
-		id, err := parseIdentityColumn(p.Name, p.Type, src)
+		id, err := parseUniqueIDColumn(p.Name, p.Type, src)
 		if err != nil {
 			return err
 		}

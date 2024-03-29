@@ -40,7 +40,7 @@ func TestImportFromDatabase(t *testing.T) {
 			},
 		},
 		Query:           `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
-		IdentityColumn:  "id",
+		UniqueIDColumn:  "id",
 		TimestampColumn: "",
 		TimestampFormat: "",
 		DisplayedID:     "customer_id",

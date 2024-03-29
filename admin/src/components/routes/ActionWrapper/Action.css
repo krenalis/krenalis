@@ -191,7 +191,7 @@
 	padding-bottom: 30px;
 }
 
-.action .specialProperties .identityColumn {
+.action .specialProperties .uniqueIDColumn {
 	margin-bottom: 20px;
 }
 
@@ -201,7 +201,7 @@
 	gap: 15px;
 }
 
-.action .specialProperties .identityColumn,
+.action .specialProperties .uniqueIDColumn,
 .action .specialProperties .timestampColumn .timestamp {
 	display: grid;
 	justify-content: start;
@@ -230,12 +230,12 @@
 	width: 100%;
 }
 
-.action .specialProperties .identityColumn .label,
+.action .specialProperties .uniqueIDColumn .label,
 .action .specialProperties .timestampColumn .label {
 	font-size: 13px;
 }
 
-.action .specialProperties .identityColumn .label .asterisk {
+.action .specialProperties .uniqueIDColumn .label .asterisk {
 	color: var(--sl-color-danger-500);
 }
 

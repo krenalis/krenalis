@@ -315,33 +315,33 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
-	// Check the column for the identity and for the timestamp.
+	// Check the column for the unique ID and for the timestamp.
 	importFromColumns := c.Role == state.Source &&
 		(connector.Type == state.DatabaseType || connector.Type == state.FileStorageType)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		// Validate the identity column.
-		if action.IdentityColumn == "" {
-			return errors.BadRequest("column name for the identity is mandatory")
+		// Validate the unique ID column.
+		if action.UniqueIDColumn == "" {
+			return errors.BadRequest("column name for the unique ID is mandatory")
 		}
-		if !types.IsValidPropertyName(action.IdentityColumn) {
-			return errors.BadRequest("column name for the identity has not a valid property name")
+		if !types.IsValidPropertyName(action.UniqueIDColumn) {
+			return errors.BadRequest("column name for the unique ID has not a valid property name")
 		}
-		if utf8.RuneCountInString(action.IdentityColumn) > 1024 {
-			return errors.BadRequest("column name for the identity is longer than 1024 runes")
+		if utf8.RuneCountInString(action.UniqueIDColumn) > 1024 {
+			return errors.BadRequest("column name for the unique ID is longer than 1024 runes")
 		}
-		identityColumn, ok := inSchema.Property(action.IdentityColumn)
+		uniqueIDColumn, ok := inSchema.Property(action.UniqueIDColumn)
 		if !ok {
-			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
+			return errors.BadRequest("unique ID column %q not found within input schema", action.UniqueIDColumn)
 		}
-		switch k := identityColumn.Type.Kind(); k {
+		switch k := uniqueIDColumn.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return fmt.Errorf("identity column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityColumn, k)
+			return fmt.Errorf("unique ID column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.UniqueIDColumn, k)
 		}
-		usedInPaths = append(usedInPaths, types.Path{action.IdentityColumn})
+		usedInPaths = append(usedInPaths, types.Path{action.UniqueIDColumn})
 		// Validate the timestamp column and format.
 		var requiresTimestampFormat bool
 		if action.TimestampColumn != "" {
@@ -375,8 +375,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			}
 		}
 	} else {
-		if action.IdentityColumn != "" {
-			return errors.BadRequest("action cannot specify a column name for the identity")
+		if action.UniqueIDColumn != "" {
+			return errors.BadRequest("action cannot specify a column name for the unique ID")
 		}
 		if action.TimestampColumn != "" {
 			return errors.BadRequest("action cannot specify a column name for the timestamp")

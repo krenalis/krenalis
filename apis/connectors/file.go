@@ -66,18 +66,17 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 	return file.inner.ContentType(ctx), nil
 }
 
-// Records returns an iterator to iterate over the file's records. Each
-// returned record will contain, in the Properties field, the properties of the
-// input schema of the action passed to the constructor of File, with the same
-// types.
+// Records returns an iterator to iterate over the file's records. Each returned
+// record will contain, in the Properties field, the properties of the input
+// schema of the action passed to the constructor of File, with the same types.
 //
-// If the schema of the action of the File (that must be valid) does not
-// conform with the schema read from the file, the iterator will return a
-// *SchemaError error.
+// If the schema of the action of the File (that must be valid) does not conform
+// with the schema read from the file, the iterator will return a *SchemaError
+// error.
 //
-// If the identity column specified in the action of the file is found within
-// the file schema but its type is different, the iterator will return an
-// error. The same applies for the timestamp, if specified.
+// If the unique ID column specified in the action of the file is found within
+// the file schema but its type is different, the iterator will return an error.
+// The same applies for the timestamp, if specified.
 //
 // If the action's sheet is not found in the file, the For method of the
 // iterator returns immediately, and a subsequent call to the Err method will
@@ -107,7 +106,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Format: file.action.TimestampFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.IdentityColumn, timestampColumn, file.action.DisplayedID,
+		file.action.UniqueIDColumn, timestampColumn, file.action.DisplayedID,
 		storageTimestamp, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
@@ -361,7 +360,7 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // each record, otherwise it stores the records in the records field.
 // storageTimestamp is the timestamp provided by the storage connector, and it
 // is used in the case when the file columns do not specify a timestamp.
-func newRecordWriter(connector int, schema types.Type, identityColumn string, timestamp TimestampColumn, displayedID string, storageTimestamp time.Time, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, uniqueIDColumn string, timestamp TimestampColumn, displayedID string, storageTimestamp time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -370,10 +369,10 @@ func newRecordWriter(connector int, schema types.Type, identityColumn string, ti
 		records:         []map[string]any{},
 	}
 	rw.displayedID.name = displayedID
-	if identityColumn != "" {
-		rw.identityColumn.name = identityColumn
-		typ, _ := schema.Property(identityColumn)
-		rw.identityColumn.typ = typ.Type
+	if uniqueIDColumn != "" {
+		rw.uniqueIDColumn.name = uniqueIDColumn
+		typ, _ := schema.Property(uniqueIDColumn)
+		rw.uniqueIDColumn.typ = typ.Type
 	}
 	if timestamp.Name != "" {
 		rw.timestampColumn.name = timestamp.Name
@@ -401,7 +400,7 @@ type recordWriter struct {
 		column types.Property
 		index  int
 	}
-	identityColumn struct {
+	uniqueIDColumn struct {
 		name  string
 		typ   types.Type
 		index int
@@ -438,17 +437,17 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			rw.textColumnsOnly = c.Type.Kind() == types.TextKind
 		}
 	}
-	// Validate the identity column.
-	if name := rw.identityColumn.name; name != "" {
+	// Validate the unique ID column.
+	if name := rw.uniqueIDColumn.name; name != "" {
 		c, ok := columnByName[name]
 		if !ok {
-			return fmt.Errorf("there is no identity column %q", name)
+			return fmt.Errorf("there is no unique ID column %q", name)
 		}
-		if typ := rw.identityColumn.typ; c.Type.Kind() != typ.Kind() {
-			return fmt.Errorf("identity column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
+		if typ := rw.uniqueIDColumn.typ; c.Type.Kind() != typ.Kind() {
+			return fmt.Errorf("unique ID column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
 		}
-		rw.identityColumn.typ = c.Type
-		rw.identityColumn.index = columnIndex[c.Name]
+		rw.uniqueIDColumn.typ = c.Type
+		rw.uniqueIDColumn.index = columnIndex[c.Name]
 	}
 	// Validate the timestamp column.
 	if name := rw.timestampColumn.name; name != "" {
@@ -525,8 +524,8 @@ func (rw *recordWriter) Record(record []any) error {
 			}
 			rd.Properties[c.Name] = value
 		}
-		// Parse the identity column.
-		rd.ID, err = parseIdentityColumn(rw.identityColumn.name, rw.identityColumn.typ, record[rw.identityColumn.index])
+		// Parse the unique ID column.
+		rd.ID, err = parseUniqueIDColumn(rw.uniqueIDColumn.name, rw.uniqueIDColumn.typ, record[rw.uniqueIDColumn.index])
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -598,8 +597,8 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			}
 			rd.Properties[c.Name] = value
 		}
-		// Parse the identity column.
-		rd.ID, err = parseIdentityColumn(rw.identityColumn.name, rw.identityColumn.typ, record[rw.identityColumn.name])
+		// Parse the unique ID column.
+		rd.ID, err = parseUniqueIDColumn(rw.uniqueIDColumn.name, rw.uniqueIDColumn.typ, record[rw.uniqueIDColumn.name])
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -680,8 +679,8 @@ func (rw *recordWriter) RecordString(record []string) error {
 			}
 			rd.Properties[c.Name] = value
 		}
-		// Parse the identity column.
-		rd.ID, err = parseIdentityColumn(rw.identityColumn.name, rw.identityColumn.typ, record[rw.identityColumn.index])
+		// Parse the unique ID column.
+		rd.ID, err = parseUniqueIDColumn(rw.uniqueIDColumn.name, rw.uniqueIDColumn.typ, record[rw.uniqueIDColumn.index])
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -744,8 +743,8 @@ func IsValidSheetName(name string) bool {
 	return true
 }
 
-// parseIdentityColumn parses an identity column value.
-func parseIdentityColumn(name string, typ types.Type, value any) (string, error) {
+// parseUniqueIDColumn parses a unique ID column value.
+func parseUniqueIDColumn(name string, typ types.Type, value any) (string, error) {
 	id, err := normalizeDatabaseFileProperty(name, typ, value, false)
 	if err != nil {
 		return "", err
