@@ -21,3 +21,5 @@ That's all you need to get started with Chichi!
 # Connector Types
 
    - [File Connectors](./file.md)
+
+   - [File Storage Connectors](./file-storage.md)

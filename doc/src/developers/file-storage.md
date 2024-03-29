@@ -73,14 +73,9 @@ As you can see, the template file embeds a SVG file, this is the icon that repre
 
 ### About the Connector
 
-The `FileInfo` type describes information about the file storage connector:
-
+The `FileStorageInfo` type describes information about the file storage connector:
 
 - `Name`: short name, typically the name of the storage. For example, "S3", "HTTP", "SFTP", etc.
-
-- `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
-
-- `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
 
 - `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 
@@ -131,7 +126,9 @@ CompletePath(ctx context.Context, name string) (string, error)
 
 The `CompletePath` method is invoked by Chichi to present the user with the full path of a file in the given storage, based on the path specified by the user.
 
-The `name` parameter is always a UTF-8 encoded string with a length in runes ranging from 1 to 1024. The `CompletePath` method is responsible for validating the path. If the path is invalid, it should return an `InvalidPathError` error; otherwise, it should return a UTF-8 encoded string representing the complete path. The returned path is intended solely for display to the user.
+The `name` parameter is always a UTF-8 encoded string with a length in runes ranging from 1 to 1024. It is the responsibility of the `CompletePath` method to validate the path based on its specific rules. If the path is invalid, it should return an `InvalidPathError` error; otherwise, it should return a UTF-8 encoded string representing the complete path. The returned path is intended solely for display to the user.
+
+If the connector accepts paths with a slash (“/”) separator, the method should accommodate both paths with and without a leading slash.
 
 ### Reader method
 

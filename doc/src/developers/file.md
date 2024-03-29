@@ -78,10 +78,6 @@ The `FileInfo` type describes information about the file connector:
 
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
 
-- `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
-
-- `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
-
 - `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 
 - `Extension`: main extension of the file type that the connector reads and writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
