@@ -10,7 +10,7 @@ import {
 } from '../lib/helpers/transformedAction';
 import AppContext from '../context/AppContext';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
-import { UnprocessableError, NotFoundError } from '../lib/api/errors';
+import { UnprocessableError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../types/external/action';
 import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
 import { ObjectType } from '../types/external/types';
@@ -35,7 +35,7 @@ const useAction = (
 	const [isFileConnectorChanged, setIsFileConnectorChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 
-	const { api, handleError, setIsLoadingState } = useContext(AppContext);
+	const { api, handleError, redirect } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
 
 	const isEditing = providedAction != null;
@@ -130,18 +130,13 @@ const useAction = (
 					}
 					handleError(message);
 					// continue execution so that user can fix the action.
-				} else if (err instanceof NotFoundError) {
-					setIsLoading(false);
-					closeFullscreen();
-					setIsLoadingState(true);
-					// exit action route and reload the state.
-					return;
 				} else {
-					setIsLoading(false);
-					closeFullscreen();
-					handleError(err);
-					// something unexpected happened, user cannot fix the
-					// action.
+					setTimeout(() => {
+						setIsLoading(false);
+						closeFullscreen();
+						redirect('connections');
+						handleError(err);
+					}, 300);
 					return;
 				}
 			}
