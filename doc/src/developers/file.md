@@ -73,7 +73,7 @@ As you can see, the template file embeds a SVG file, this is the icon that repre
 
 ### About the Connector
 
-The `chichi.FileInfo` type describes information about the file connector:
+The `FileInfo` type describes information about the file connector:
 
 
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
@@ -100,7 +100,7 @@ func init() {
 
 ### Constructor
 
-The second argument supplied to the `chichi.RegisterFile` function is the function utilized for creating a connector instance:
+The second argument supplied to the `RegisterFile` function is the function utilized for creating a connector instance:
 
 ```go
 func New(conf *chichi.FileConfig) (*CSV, error)
@@ -110,7 +110,7 @@ This function accepts a file configuration and yields a value representing your 
 
 ### File Configuration
 
-The structure of `chichi.FileConfig` is outlined as follows:
+The structure of `FileConfig` is outlined as follows:
 
 ```go
 type FileConfig struct {
@@ -120,7 +120,7 @@ type FileConfig struct {
 }
 ```
 
-- `Role`: This field specifies the anticipated role of the resulting instance, which can either be `chichi.Source` or `chichi.Destination`.
+- `Role`: This field specifies the anticipated role of the resulting instance, which can either be `Source` or `Destination`.
 
 - `Settings`: It contains the instance settings in JSON format. Later, we'll delve into how the connector defines its settings.
 
@@ -137,7 +137,7 @@ The `ContentType` method is used by Chichi to find out what type of content shou
 ### Read method
 
 ```go
-Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
+Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error
 ```
 
 The `Read` method is called by Chichi to read records from a file. This happens both when previewing the file and when performing an import.
@@ -173,7 +173,7 @@ The `sheet` parameter is only used if the connector supports multiple sheets, me
 ### Write method
 
 ```go
-Write(ctx context.Context, w io.Writer, sheet string, records RecordReader) error
+Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error
 ```
 
 The `Write` method is invoked by Chichi to write records to a new file. This occurs during an export process.
@@ -184,17 +184,12 @@ The `Write` method takes an `io.Writer` as an argument to write the contents of 
 type RecordReader interface {
 
 	// Ack acknowledges the processing of the record with the given GID.
-	// err is the error occurred processing the record, if any.
 	Ack(gid int, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
 	// Record returns the next record as a slice of any with its GID.
-	// It returns 0, nil, and io.EOF if there are no more records.
-	//
-	// After a record has been read and processed, the caller should call Ack
-	// to acknowledge the processing of the record.
 	Record(ctx context.Context) (gid int, record []any, err error)
 }
 ```

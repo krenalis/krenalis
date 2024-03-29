@@ -41,3 +41,4 @@
     - [Snowflake](./snowflake.md)
 - [Developers](./developers/connectors.md)
     - [File Connectors](./developers/file.md)
+    - [File Storage Connectors](./developers/file-storage.md)
