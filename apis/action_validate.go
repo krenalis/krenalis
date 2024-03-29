@@ -227,6 +227,15 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	default:
 		return errors.BadRequest("compression %q is not valid", action.Compression)
 	}
+	// Validate the unique ID column.
+	if action.UniqueIDColumn != "" {
+		if !types.IsValidPropertyName(action.UniqueIDColumn) {
+			return errors.BadRequest("column name for the unique ID has not a valid property name")
+		}
+		if utf8.RuneCountInString(action.UniqueIDColumn) > 1024 {
+			return errors.BadRequest("column name for the unique ID is longer than 1024 runes")
+		}
+	}
 	// Validate the displayed ID.
 	if action.DisplayedID != "" {
 		if !utf8.ValidString(action.DisplayedID) {
@@ -234,6 +243,21 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 		if n := utf8.RuneCountInString(action.DisplayedID); n > 1024 {
 			return errors.BadRequest("displayed ID is longer than 1024 runes")
+		}
+	}
+	// Validate the timestamp column.
+	if action.TimestampColumn != "" {
+		if !types.IsValidPropertyName(action.TimestampColumn) {
+			return errors.BadRequest("column name for the timestamp has a not valid property name")
+		}
+		if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
+			return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
+		}
+	}
+	// Validate the timestamp format.
+	if action.TimestampFormat != "" {
+		if err := validateTimestampFormat(action.TimestampFormat); err != nil {
+			return errors.BadRequest(err.Error())
 		}
 	}
 
@@ -326,12 +350,6 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if action.UniqueIDColumn == "" {
 			return errors.BadRequest("column name for the unique ID is mandatory")
 		}
-		if !types.IsValidPropertyName(action.UniqueIDColumn) {
-			return errors.BadRequest("column name for the unique ID has not a valid property name")
-		}
-		if utf8.RuneCountInString(action.UniqueIDColumn) > 1024 {
-			return errors.BadRequest("column name for the unique ID is longer than 1024 runes")
-		}
 		uniqueIDColumn, ok := inSchema.Property(action.UniqueIDColumn)
 		if !ok {
 			return errors.BadRequest("unique ID column %q not found within input schema", action.UniqueIDColumn)
@@ -345,12 +363,6 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		// Validate the timestamp column and format.
 		var requiresTimestampFormat bool
 		if action.TimestampColumn != "" {
-			if !types.IsValidPropertyName(action.TimestampColumn) {
-				return errors.BadRequest("column name for the timestamp has a not valid property name")
-			}
-			if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
-				return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
-			}
 			timestampColumn, ok := inSchema.Property(action.TimestampColumn)
 			if !ok {
 				return errors.BadRequest("timestamp column %q not found within input schema", action.TimestampColumn)
@@ -368,11 +380,6 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("action cannot specify a timestamp format")
 		} else if requiresTimestampFormat && action.TimestampFormat == "" {
 			return errors.BadRequest("timestamp format is required")
-		}
-		if requiresTimestampFormat {
-			if err := validateTimestampFormat(action.TimestampFormat); err != nil {
-				return errors.BadRequest(err.Error())
-			}
 		}
 	} else {
 		if action.UniqueIDColumn != "" {

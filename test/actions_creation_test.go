@@ -246,7 +246,7 @@ func TestActionsCreation(t *testing.T) {
 				Path:            "users.csv",
 				UniqueIDColumn:  "email",
 				TimestampColumn: "timestamp",
-				TimestampFormat: "2006-01-02 15:04:05",
+				TimestampFormat: "'%Y-%m-%d %H:%M:%S'",
 				Connector:       chichitester.CSVConnector,
 				Settings: chichitester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
