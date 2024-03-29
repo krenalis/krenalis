@@ -64,7 +64,7 @@ First create a Go module:
 ```sh
 $ mkdir s3
 $ cd s3
-$ go init s3
+$ go mod init s3
 ```
 
 Then add a Go file to the new directory. For example copy the previous template file.

@@ -64,7 +64,7 @@ First create a Go module:
 ```sh
 $ mkdir csv
 $ cd csv
-$ go init csv
+$ go mod init csv
 ```
 
 Then add a Go file to the new directory. For example copy the previous template file.
