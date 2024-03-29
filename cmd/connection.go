@@ -401,7 +401,7 @@ func (connection connection) target(r *http.Request) (apis.Target, string, error
 		return apis.Users, "", nil
 	case "Groups":
 		return apis.Groups, "", nil
-	case "Events":
+	case "":
 		return apis.Events, r.PathValue("eventType"), nil
 	}
 	return 0, "", errors.NotFound("")
