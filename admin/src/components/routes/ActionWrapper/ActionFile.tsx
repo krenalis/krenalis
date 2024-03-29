@@ -338,7 +338,9 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		if (!hasSheets || action.Path === '') {
 			return;
 		}
-		fetchSheets();
+		if (connection.isSource) {
+			fetchSheets();
+		}
 	}, []);
 
 	const onUpdatePath = async (e) => {
@@ -382,7 +384,12 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 
 	const onUpdateSheet = (e) => {
 		const a = { ...action };
-		const sheet = sheets[e.currentTarget.value];
+		let sheet: string;
+		if (e.type === 'sl-change') {
+			sheet = sheets[e.currentTarget.value];
+		} else {
+			sheet = e.currentTarget.value;
+		}
 		sheetRef.current.lastUpdate = sheet;
 		if (
 			sheetRef.current.lastUpdate !== sheetRef.current.lastConfirmation &&
