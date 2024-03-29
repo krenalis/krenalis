@@ -211,7 +211,7 @@ func TestActionsCreation(t *testing.T) {
 					"HasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the unique ID has not a valid property name"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"column name for the unique ID is not a valid property name"}}`,
 		},
 		{
 			conn: srcFsID,

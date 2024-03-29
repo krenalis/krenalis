@@ -230,7 +230,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	// Validate the unique ID column.
 	if action.UniqueIDColumn != "" {
 		if !types.IsValidPropertyName(action.UniqueIDColumn) {
-			return errors.BadRequest("column name for the unique ID has not a valid property name")
+			return errors.BadRequest("column name for the unique ID is not a valid property name")
 		}
 		if utf8.RuneCountInString(action.UniqueIDColumn) > 1024 {
 			return errors.BadRequest("column name for the unique ID is longer than 1024 runes")
@@ -248,7 +248,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	// Validate the timestamp column.
 	if action.TimestampColumn != "" {
 		if !types.IsValidPropertyName(action.TimestampColumn) {
-			return errors.BadRequest("column name for the timestamp has a not valid property name")
+			return errors.BadRequest("column name for the timestamp is a not valid property name")
 		}
 		if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
 			return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
