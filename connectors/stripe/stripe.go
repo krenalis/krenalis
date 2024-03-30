@@ -35,10 +35,11 @@ const maxEventPayload = 1024 * 1024
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppUsers and UI interfaces.
+// Make sure it implements the AppUsers, UI, and Webhooks interfaces.
 var _ interface {
 	chichi.AppUsers
 	chichi.UI
+	chichi.Webhooks
 } = (*Stripe)(nil)
 
 var baseURL = "https://api.stripe.com"

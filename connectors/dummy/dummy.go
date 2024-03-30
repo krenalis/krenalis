@@ -192,13 +192,6 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 	return eventTypes, nil
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads. It
-// returns the ErrWebhookUnauthorized error is the request was not authorized.
-// The context is the request's context.
-func (dummy *Dummy) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
-	panic("not implemented")
-}
-
 func (dummy *Dummy) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }

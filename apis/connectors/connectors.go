@@ -290,7 +290,7 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(webhookReceiver); ok {
+	if inner, ok := inner.(chichi.Webhooks); ok {
 		payload, err := inner.ReceiveWebhook(req)
 		if err != nil {
 			if err == chichi.ErrWebhookUnauthorized {
@@ -319,7 +319,7 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(webhookReceiver); ok {
+	if inner, ok := inner.(chichi.Webhooks); ok {
 		payload, err := inner.ReceiveWebhook(req)
 		if err != nil {
 			if err == chichi.ErrWebhookUnauthorized {
@@ -355,7 +355,7 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(webhookReceiver); ok {
+	if inner, ok := inner.(chichi.Webhooks); ok {
 		payload, err := inner.ReceiveWebhook(req)
 		if err != nil {
 			if err == chichi.ErrWebhookUnauthorized {
@@ -471,10 +471,6 @@ func checkConformity(name string, t1, t2 types.Type) error {
 // maxSettingsLen is the maximum length of settings in runes.
 // Keep in sync with the events.maxSettingsLen constant.
 const maxSettingsLen = 10_000
-
-type webhookReceiver interface {
-	ReceiveWebhook(*http.Request) ([]WebhookPayload, error)
-}
 
 // displayedIDFromSchema returns the displayed ID from the given schema, if
 // found and its type is compatible, otherwise returns the zero Property and an

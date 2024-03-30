@@ -32,12 +32,13 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppUsers and the AppGroups
+// Make sure it implements the AppUsers, AppGroups, and Webhooks interfaces.
 // interfaces.
 var _ interface {
 	chichi.AppUsers
 	chichi.AppGroups
 	chichi.AppEvents
+	chichi.Webhooks
 } = (*HubSpot)(nil)
 
 func init() {

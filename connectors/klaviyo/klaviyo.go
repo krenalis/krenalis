@@ -140,13 +140,6 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) 
 	return eventTypes, nil
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads. It
-// returns the ErrWebhookUnauthorized error is the request was not authorized.
-// The context is the request's context.
-func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
-	return nil, chichi.ErrWebhookUnauthorized
-}
-
 // Resource returns the resource from a client token.
 func (ky *Klavyio) Resource(ctx context.Context) (string, error) {
 	return "", nil
