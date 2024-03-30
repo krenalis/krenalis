@@ -37,7 +37,6 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.AppUsers
 	chichi.AppGroups
-	chichi.AppEvents
 	chichi.Webhooks
 } = (*HubSpot)(nil)
 
@@ -56,7 +55,6 @@ func init() {
 			TokenURL: "https://api.hubapi.com/oauth/v1/token",
 			Scopes:   []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-		SendingMode: chichi.Cloud,
 	}, New)
 }
 
@@ -93,21 +91,6 @@ func (hs *HubSpot) CreateUser(ctx context.Context, user map[string]any) error {
 	body.WriteString("}")
 
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
-}
-
-// EventTypes returns the event types of the connector's instance.
-func (hs *HubSpot) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	return nil, nil
-}
-
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data. If redacted is true, sensitive
-// authentication data will be redacted in the returned request.
-// This method is safe for concurrent use by multiple goroutines.
-// If the specified event type does not exist, it returns the
-// ErrEventTypeNotExist error.
-func (hs *HubSpot) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
-	panic("Not implemented")
 }
 
 // GroupSchema returns the group schema.
