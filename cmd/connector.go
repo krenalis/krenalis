@@ -30,7 +30,11 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	redirectURI := r.URL.Query().Get("redirecturi")
-	return c.AuthCodeURL(redirectURI)
+	authCodeURL, err := c.AuthCodeURL(redirectURI)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"url": authCodeURL}, nil
 }
 
 func (connector connector) connector(r *http.Request) (*apis.Connector, error) {
