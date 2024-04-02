@@ -30,7 +30,7 @@ func init() {
 		Targets:                chichi.Events | chichi.Users,
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
-		TermForUsers:           "users",
+		TermForUsers:           "clients",
 		SendingMode:            chichi.Cloud,
 		Icon:                   icon,
 	}, New)
@@ -131,7 +131,7 @@ func init() {
         Targets:                chichi.Events | chichi.Users,
         SourceDescription:      "import clients as users from Klaviyo",
         DestinationDescription: "export users as clients and send events to Klaviyo",
-        TermForUsers:           "users",
+        TermForUsers:           "clients",
         SendingMode:            chichi.Cloud,
         Icon:                   icon,
     }, New)
