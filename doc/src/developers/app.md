@@ -13,9 +13,12 @@ In the creation of a new Go module, for your app connector, you can utilize the 
 package klaviyo
 
 import (
+	"context"
 	_ "embed"
+	"net/http"
 
 	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
 )
 
 // Connector icon.
@@ -24,6 +27,7 @@ var icon = "<svg></svg>"
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Klaviyo",
+		Targets:                chichi.Events | chichi.Users,
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "users",
@@ -41,8 +45,8 @@ func New(conf *chichi.AppConfig) (*klaviyo, error) {
 	// ...
 }
 
-// CreateUser creates a user with the given properties.
-func (ky *Klavyio) CreateUser(ctx context.Context, user map[string]any) error {
+// Create creates a record for the specified target with the given properties.
+func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, record map[string]any) error {
 	// ...
 }
 
@@ -62,18 +66,20 @@ func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, err
 	// ...
 }
 
-// UpdateUser updates the user with identifier id setting the given properties.
-func (ky *Klavyio) UpdateUser(ctx context.Context, id string, user map[string]any) error {
+// Records returns the records of the specified target, starting from the given
+// cursor.
+func (ky *Klavyio) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	// ...
 }
 
-// UserSchema returns the user schema.
-func (ky *Klavyio) UserSchema(ctx context.Context) (types.Type, error) {
+// Schema returns the schema of the records of the specified target.
+func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets) (types.Type, error) {
 	// ...
 }
 
-// Users returns the users starting from the given cursor.
-func (ky *Klavyio) Users(ctx context.Context, properties []string, cursor Cursor) (users []chichi.Record, next string, err error) {
+// Update updates the record of the specified target with the identifier id,
+// setting the given properties.
+func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, record map[string]any) error {
 	// ...
 }
 ```
@@ -100,6 +106,8 @@ The `AppInfo` type describes information about the app connector:
 
 - `Name`: short name, typically the name of the cloud app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
 
+- `Targets`: targets supported by the app connector. Can contain Events, Users, and Groups.
+
 - `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
 
 - `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
@@ -120,6 +128,7 @@ This information is passed to the `RegisterApp` function that, executed during p
 func init() {
     chichi.RegisterApp(chichi.AppInfo{
         Name:                   "Klaviyo",
+        Targets:                chichi.Events | chichi.Users,
         SourceDescription:      "import clients as users from Klaviyo",
         DestinationDescription: "export users as clients and send events to Klaviyo",
         TermForUsers:           "users",

@@ -28,16 +28,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEvents, AppUsers, and UI interfaces.
+// Make sure it implements the AppEvents, AppRecords, and UI interfaces.
 var _ interface {
 	chichi.AppEvents
-	chichi.AppUsers
+	chichi.AppRecords
 	chichi.UI
 } = (*Klavyio)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Klaviyo",
+		Targets:                chichi.Events | chichi.Users,
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "users",
@@ -67,8 +68,8 @@ type settings struct {
 	PrivateAPIKey string
 }
 
-// CreateUser creates a user with the given properties.
-func (ky *Klavyio) CreateUser(ctx context.Context, user map[string]any) error {
+// Create creates a record for the specified target with the given properties.
+func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, record map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -140,53 +141,86 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) 
 	return eventTypes, nil
 }
 
+// Records returns the records of the specified target, starting from the given
+// cursor.
+func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+
+	var hasUpdatedProperty bool
+
+	url := cursor.Next
+	if url == "" {
+		var b strings.Builder
+		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
+		for i, p := range properties {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(p)
+			if p == "updated" {
+				hasUpdatedProperty = true
+			}
+		}
+		if !hasUpdatedProperty {
+			b.WriteString(",updated")
+		}
+		b.WriteString("&page%5Bsize%5D=100&sort=created")
+		url = b.String()
+	}
+
+	var response struct {
+		Data []struct {
+			ID         string
+			Attributes map[string]any
+		}
+		Links struct {
+			Next string
+		}
+	}
+
+	err := ky.call(ctx, "GET", url, nil, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
+		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
+	}
+	if len(response.Data) == 0 {
+		return nil, "", io.EOF
+	}
+
+	users := make([]chichi.Record, len(response.Data))
+	for i, data := range response.Data {
+		users[i] = chichi.Record{
+			ID: data.ID,
+		}
+		updated, _ := data.Attributes["updated"].(string)
+		timestamp, err := time.Parse(time.RFC3339, updated)
+		if err != nil {
+			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
+			continue
+		}
+		if !hasUpdatedProperty {
+			delete(data.Attributes, "updated")
+		}
+		users[i].Properties = data.Attributes
+		users[i].Timestamp = timestamp.UTC()
+	}
+
+	if response.Links.Next == "" {
+		return users, "", io.EOF
+	}
+
+	return users, response.Links.Next, nil
+}
+
 // Resource returns the resource from a client token.
 func (ky *Klavyio) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// UpdateUser updates the user with identifier id setting the given properties.
-func (ky *Klavyio) UpdateUser(ctx context.Context, id string, user map[string]any) error {
-	panic("TODO: not implemented")
-}
+// Schema returns the schema of the records of the specified target.
+func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets) (types.Type, error) {
 
-// ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	switch event {
-	case "load":
-		// Load the Form.
-		var s settings
-		if ky.settings != nil {
-			s = *ky.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		// Save the settings.
-		s, err := ky.ValidateSettings(ctx, values)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, nil, ky.conf.SetSettings(ctx, s)
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
-		},
-		Values: values,
-		Actions: []ui.Action{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
-	}
-
-	return form, nil, nil
-}
-
-// UserSchema returns the user schema.
-func (ky *Klavyio) UserSchema(ctx context.Context) (types.Type, error) {
 	// The fields which are not marked as "required" in the documentation
 	// (available here:
 	// https://developers.klaviyo.com/en/reference/get_profiles) are declared as
@@ -332,75 +366,45 @@ func (ky *Klavyio) UserSchema(ctx context.Context) (types.Type, error) {
 	return schema, nil
 }
 
-// Users returns the users starting from the given cursor.
-func (ky *Klavyio) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// ServeUI serves the connector's user interface.
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var hasUpdatedProperty bool
-
-	url := cursor.Next
-	if url == "" {
-		var b strings.Builder
-		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
-		for i, p := range properties {
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(p)
-			if p == "updated" {
-				hasUpdatedProperty = true
-			}
+	switch event {
+	case "load":
+		// Load the Form.
+		var s settings
+		if ky.settings != nil {
+			s = *ky.settings
 		}
-		if !hasUpdatedProperty {
-			b.WriteString(",updated")
-		}
-		b.WriteString("&page%5Bsize%5D=100&sort=created")
-		url = b.String()
-	}
-
-	var response struct {
-		Data []struct {
-			ID         string
-			Attributes map[string]any
-		}
-		Links struct {
-			Next string
-		}
-	}
-
-	err := ky.call(ctx, "GET", url, nil, 200, &response)
-	if err != nil {
-		return nil, "", err
-	}
-	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
-		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
-	}
-	if len(response.Data) == 0 {
-		return nil, "", io.EOF
-	}
-
-	users := make([]chichi.Record, len(response.Data))
-	for i, data := range response.Data {
-		users[i] = chichi.Record{
-			ID: data.ID,
-		}
-		updated, _ := data.Attributes["updated"].(string)
-		timestamp, err := time.Parse(time.RFC3339, updated)
+		values, _ = json.Marshal(s)
+	case "save":
+		// Save the settings.
+		s, err := ky.ValidateSettings(ctx, values)
 		if err != nil {
-			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
-			continue
+			return nil, nil, err
 		}
-		if !hasUpdatedProperty {
-			delete(data.Attributes, "updated")
-		}
-		users[i].Properties = data.Attributes
-		users[i].Timestamp = timestamp.UTC()
+		return nil, nil, ky.conf.SetSettings(ctx, s)
+	default:
+		return nil, nil, ui.ErrEventNotExist
 	}
 
-	if response.Links.Next == "" {
-		return users, "", io.EOF
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
+		},
+		Values: values,
+		Actions: []ui.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
 	}
 
-	return users, response.Links.Next, nil
+	return form, nil, nil
+}
+
+// Update updates the record of the specified target with the identifier id,
+// setting the given properties.
+func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, record map[string]any) error {
+	panic("TODO: not implemented")
 }
 
 // ValidateSettings validates the settings received from the UI and returns them

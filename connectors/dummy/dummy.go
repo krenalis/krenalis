@@ -29,16 +29,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEvents, AppUsers, and UI interfaces.
+// Make sure it implements the AppEvents, AppRecords, and UI interfaces.
 var _ interface {
 	chichi.AppEvents
-	chichi.AppUsers
+	chichi.AppRecords
 	chichi.UI
 } = (*Dummy)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Dummy",
+		Targets:                chichi.Events | chichi.Users,
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
@@ -84,8 +85,8 @@ func newUserID() string {
 	return "dummy_" + string(b)
 }
 
-// CreateUser creates a user with the given properties.
-func (dummy *Dummy) CreateUser(ctx context.Context, user map[string]any) error {
+// Create creates a record for the specified target with the given properties.
+func (dummy *Dummy) Create(ctx context.Context, _ chichi.Targets, user map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -192,111 +193,9 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 	return eventTypes, nil
 }
 
-func (dummy *Dummy) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
-type settings struct {
-	LargeDataset bool
-}
-
-// ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	switch event {
-	case "load":
-		// Load the Form.
-		var s settings
-		if dummy.settings != nil {
-			s = *dummy.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		// Save the settings.
-		s, err := dummy.ValidateSettings(ctx, values)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = dummy.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, ui.SuccessAlert("Settings for Dummy saved"), nil
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: ui.Source},
-		},
-		Values:  values,
-		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
-	}
-
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (dummy *Dummy) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var settings settings
-	err := json.Unmarshal(values, &settings)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&settings)
-}
-
-// UpdateUser updates the user with identifier id setting the given properties.
-func (dummy *Dummy) UpdateUser(ctx context.Context, id string, user map[string]any) error {
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-
-	// Write the user on the log.
-	propsDump, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-	log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
-
-	// Update the in-memory users.
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	u, ok := allUsers[id]
-	if !ok {
-		u = map[string]any{}
-	}
-	u["dummyId"] = id
-	for name, value := range user {
-		u[name] = value
-	}
-	allUsers[id] = u
-	usersTimestamps[id] = time.Now().UTC()
-
-	return nil
-}
-
-var userSchema = types.Object([]types.Property{
-	{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
-	{Name: "email", Type: types.Text()},
-	{Name: "firstName", Type: types.Text()},
-	{Name: "fullName", Type: types.Text()},
-	{Name: "lastName", Type: types.Text()},
-	{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
-})
-
-// UserSchema returns the user schema.
-func (dummy *Dummy) UserSchema(ctx context.Context) (types.Type, error) {
-	return userSchema, nil
-}
-
-// Users returns the users starting from the given cursor.
-func (dummy *Dummy) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// Records returns the records of the specified target, starting from the given
+// cursor.
+func (dummy *Dummy) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -338,3 +237,107 @@ func init() {
 	}
 	usersLock.Unlock()
 }
+
+func (dummy *Dummy) Resource(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+type settings struct {
+	LargeDataset bool
+}
+
+// Schema returns the schema of the records of the specified target.
+func (dummy *Dummy) Schema(_ context.Context, _ chichi.Targets) (types.Type, error) {
+	return userSchema, nil
+}
+
+// ServeUI serves the connector's user interface.
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+
+	switch event {
+	case "load":
+		// Load the Form.
+		var s settings
+		if dummy.settings != nil {
+			s = *dummy.settings
+		}
+		values, _ = json.Marshal(s)
+	case "save":
+		// Save the settings.
+		s, err := dummy.ValidateSettings(ctx, values)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = dummy.conf.SetSettings(ctx, s)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, ui.SuccessAlert("Settings for Dummy saved"), nil
+	default:
+		return nil, nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: ui.Source},
+		},
+		Values:  values,
+		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+	}
+
+	return form, nil, nil
+}
+
+// Update updates the record of the specified target with the identifier id,
+// setting the given properties.
+func (dummy *Dummy) Update(ctx context.Context, _ chichi.Targets, id string, user map[string]any) error {
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Write the user on the log.
+	propsDump, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+	log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
+
+	// Update the in-memory users.
+	usersLock.Lock()
+	defer usersLock.Unlock()
+	u, ok := allUsers[id]
+	if !ok {
+		u = map[string]any{}
+	}
+	u["dummyId"] = id
+	for name, value := range user {
+		u[name] = value
+	}
+	allUsers[id] = u
+	usersTimestamps[id] = time.Now().UTC()
+
+	return nil
+}
+
+// ValidateSettings validates the settings received from the UI and returns them
+// in a format suitable for storage.
+func (dummy *Dummy) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+	var settings settings
+	err := json.Unmarshal(values, &settings)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&settings)
+}
+
+var userSchema = types.Object([]types.Property{
+	{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
+	{Name: "email", Type: types.Text()},
+	{Name: "firstName", Type: types.Text()},
+	{Name: "fullName", Type: types.Text()},
+	{Name: "lastName", Type: types.Text()},
+	{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
+})

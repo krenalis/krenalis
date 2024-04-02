@@ -147,12 +147,12 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	case state.Users:
 		return app.usersSchema(ctx, types.Role(role))
 	case state.Groups:
-		schema, err := app.inner.(chichi.AppGroups).GroupSchema(ctx)
+		schema, err := app.inner.(chichi.AppRecords).Schema(ctx, chichi.Groups)
 		if err != nil {
 			return types.Type{}, err
 		}
 		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connector %s returned an invalid user schema", app.name)
+			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.name)
 		}
 		schema = schema.AsRole(types.Role(role))
 		if !schema.Valid() {
@@ -236,7 +236,7 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 	}
 	w := appWriter{
 		ack:   ack,
-		users: app.inner.(chichi.AppUsers),
+		users: app.inner.(chichi.AppRecords),
 	}
 	return &w, nil
 }
@@ -261,7 +261,7 @@ func (app *App) eventType(ctx context.Context, id string) (*chichi.EventType, er
 type appWriter struct {
 	ack    AckFunc
 	closed bool
-	users  chichi.AppUsers
+	users  chichi.AppRecords
 }
 
 func (w *appWriter) Close(ctx context.Context) error {
@@ -275,9 +275,9 @@ func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
 	}
 	var err error
 	if record.ID == "" {
-		err = w.users.CreateUser(ctx, record.Properties)
+		err = w.users.Create(ctx, chichi.Users, record.Properties)
 	} else {
-		err = w.users.UpdateUser(ctx, record.ID, record.Properties)
+		err = w.users.Update(ctx, chichi.Users, record.ID, record.Properties)
 	}
 	w.ack(err, []int{gid})
 	return true
@@ -332,7 +332,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 	for {
 
 		// Retrieve the users.
-		users, next, err := r.inner.(chichi.AppUsers).Users(r.ctx, names, cursor)
+		users, next, err := r.inner.(chichi.AppRecords).Records(r.ctx, chichi.Users, names, cursor)
 		eof := err == io.EOF
 		if err != nil && !eof {
 			r.err = err
@@ -444,7 +444,7 @@ func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, e
 	if schema := app.users.schemas[role]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(chichi.AppUsers).UserSchema(ctx)
+	schema, err := app.inner.(chichi.AppRecords).Schema(ctx, chichi.Users)
 	if err != nil {
 		return types.Type{}, err
 	}

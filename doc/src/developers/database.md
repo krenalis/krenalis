@@ -13,9 +13,11 @@ In the creation of a new Go module, for your database connector, you can utilize
 package postgresql
 
 import (
+	"context"
 	_ "embed"
 
 	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
 )
 
 // Connector icon.

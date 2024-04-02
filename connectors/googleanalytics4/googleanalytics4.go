@@ -42,6 +42,7 @@ const sendToDebugServer = false
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Google Analytics 4",
+		Targets:                chichi.Events,
 		DestinationDescription: "send events to Google Analytics 4",
 		Icon:                   icon,
 		SendingMode:            chichi.Cloud,

@@ -13,7 +13,10 @@ In the creation of a new Go module, for your file storage connector, you can uti
 package s3
 
 import (
+	"context"
 	_ "embed"
+	"io"
+	"time"
 
 	"github.com/open2b/chichi"
 )

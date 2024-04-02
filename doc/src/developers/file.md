@@ -13,7 +13,9 @@ In the creation of a new Go module, for your file connector, you can utilize the
 package csv
 
 import (
+	"context"
 	_ "embed"
+	"io"
 
 	"github.com/open2b/chichi"
 )

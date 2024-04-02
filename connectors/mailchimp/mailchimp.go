@@ -34,9 +34,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppUsers, UI, and Webhooks interfaces.
+// Make sure it implements the AppRecords, UI, and Webhooks interfaces.
 var _ interface {
-	chichi.AppUsers
+	chichi.AppRecords
 	chichi.UI
 	chichi.Webhooks
 } = (*MailChimp)(nil)
@@ -44,6 +44,7 @@ var _ interface {
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Mailchimp",
+		Targets:                chichi.Users,
 		SourceDescription:      "import contacts as users from Mailchimp",
 		DestinationDescription: "export users as contacts to Mailchimp",
 		TermForUsers:           "contacts",
@@ -79,8 +80,8 @@ type MailChimp struct {
 	settings *settings
 }
 
-// CreateUser creates a user with the given properties.
-func (mc *MailChimp) CreateUser(ctx context.Context, user map[string]any) error {
+// Create creates a record for the specified target with the given properties.
+func (mc *MailChimp) Create(_ context.Context, _ chichi.Targets, record map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -140,110 +141,68 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 	return events, nil
 }
 
+// Records returns the records of the specified target, starting from the given
+// cursor.
+func (mc *MailChimp) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+
+	path := "/lists/" + mc.settings.List + "/members"
+	values := url.Values{
+		"fields":     {serializeProperties(properties)},
+		"sort_field": {"last_changed"},
+		"sort_dir":   {"ASC"},
+		"count":      {"1000"},
+	}
+	if !cursor.Timestamp.IsZero() {
+		values.Set("since_last_changed", cursor.Timestamp.Format(time.RFC3339))
+	}
+	if cursor.Next != "" {
+		values.Set("offset", cursor.Next)
+	}
+
+	var response struct {
+		Members    []Member
+		TotalItems int `json:"total_items"`
+	}
+
+	err := mc.call(ctx, "GET", path, values, nil, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(response.Members) == 0 {
+		return nil, "", io.EOF
+	}
+
+	users := make([]chichi.Record, len(response.Members))
+	for i, member := range response.Members {
+		users[i] = chichi.Record{
+			ID:         member.ID,
+			Properties: member.Properties(),
+			Timestamp:  member.LastChanged.UTC(),
+		}
+	}
+
+	offset, _ := strconv.Atoi(cursor.Next)
+	eof := offset+len(response.Members) >= response.TotalItems
+	if last := users[len(users)-1]; last.Timestamp.Equal(cursor.Timestamp) {
+		offset += len(response.Members)
+	} else {
+		offset = 0
+	}
+	if eof {
+		return users, strconv.Itoa(offset), io.EOF
+	}
+
+	return users, strconv.Itoa(offset), nil
+}
+
 // Resource returns the resource.
 func (mc *MailChimp) Resource(ctx context.Context) (string, error) {
 	_, resource, err := mc.metadata()
 	return resource, err
 }
 
-// ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	switch event {
-	case "load":
-		// Load the Form.
-		var s settings
-		if mc.settings != nil {
-			s = *mc.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		// Save the settings.
-		s, err := mc.ValidateSettings(ctx, values)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, nil, mc.conf.SetSettings(ctx, s)
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-	// Get the lists.
-	lists, err := mc.lists(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	options := make([]ui.Option, len(lists))
-	for i, list := range lists {
-		options[i] = ui.Option{
-			Text:  list.Name,
-			Value: list.ID,
-		}
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Select{Name: "list", Label: "List", Options: options},
-		},
-		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
-	}
-
-	return form, nil, nil
-}
-
-// UpdateUser updates the user with identifier id setting the given properties.
-func (mc *MailChimp) UpdateUser(ctx context.Context, id string, user map[string]any) error {
-
-	var r struct {
-		Operations []batchOperation `json:"operations"`
-	}
-	var basePath = "/lists/" + mc.settings.List + "/members/"
-	body, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-	r.Operations = append(r.Operations, batchOperation{
-		Method: "PUT",
-		Path:   basePath + id,
-		Params: map[string]string{"skip_merge_validation": "true"},
-		Body:   string(body),
-	})
-	rq, err := json.Marshal(r)
-	if err != nil {
-		return err
-	}
-
-	var response batchResponse
-	err = mc.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
-	if err != nil {
-		return err
-	}
-
-	if response.Status != "finished" {
-		// Retrieve the batch at one minute intervals until it's status is finished.
-		path := "/batches/" + response.ID
-		response := batchResponse{}
-		for i := 0; i < 5; i++ {
-			time.Sleep(time.Minute)
-			err = mc.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
-			if err != nil {
-				return err
-			}
-			if response.Status != "finished" {
-				continue
-			}
-			if response.ErroredOperations != 0 {
-				return errors.New("could not update all users")
-			}
-		}
-		return errors.New("could not complete batch operation")
-	}
-
-	return nil
-}
-
-// UserSchema returns the user schema.
-func (mc *MailChimp) UserSchema(ctx context.Context) (types.Type, error) {
+// Schema returns the schema of the records of the specified target.
+func (mc *MailChimp) Schema(ctx context.Context, _ chichi.Targets) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -470,57 +429,101 @@ func (mc *MailChimp) UserSchema(ctx context.Context) (types.Type, error) {
 	return schema, nil
 }
 
-// Users returns the users starting from the given cursor.
-func (mc *MailChimp) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// ServeUI serves the connector's user interface.
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	path := "/lists/" + mc.settings.List + "/members"
-	values := url.Values{
-		"fields":     {serializeProperties(properties)},
-		"sort_field": {"last_changed"},
-		"sort_dir":   {"ASC"},
-		"count":      {"1000"},
-	}
-	if !cursor.Timestamp.IsZero() {
-		values.Set("since_last_changed", cursor.Timestamp.Format(time.RFC3339))
-	}
-	if cursor.Next != "" {
-		values.Set("offset", cursor.Next)
+	switch event {
+	case "load":
+		// Load the Form.
+		var s settings
+		if mc.settings != nil {
+			s = *mc.settings
+		}
+		values, _ = json.Marshal(s)
+	case "save":
+		// Save the settings.
+		s, err := mc.ValidateSettings(ctx, values)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, mc.conf.SetSettings(ctx, s)
+	default:
+		return nil, nil, ui.ErrEventNotExist
 	}
 
-	var response struct {
-		Members    []Member
-		TotalItems int `json:"total_items"`
-	}
-
-	err := mc.call(ctx, "GET", path, values, nil, 200, &response)
+	// Get the lists.
+	lists, err := mc.lists(ctx)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
-	if len(response.Members) == 0 {
-		return nil, "", io.EOF
-	}
-
-	users := make([]chichi.Record, len(response.Members))
-	for i, member := range response.Members {
-		users[i] = chichi.Record{
-			ID:         member.ID,
-			Properties: member.Properties(),
-			Timestamp:  member.LastChanged.UTC(),
+	options := make([]ui.Option, len(lists))
+	for i, list := range lists {
+		options[i] = ui.Option{
+			Text:  list.Name,
+			Value: list.ID,
 		}
 	}
 
-	offset, _ := strconv.Atoi(cursor.Next)
-	eof := offset+len(response.Members) >= response.TotalItems
-	if last := users[len(users)-1]; last.Timestamp.Equal(cursor.Timestamp) {
-		offset += len(response.Members)
-	} else {
-		offset = 0
-	}
-	if eof {
-		return users, strconv.Itoa(offset), io.EOF
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Select{Name: "list", Label: "List", Options: options},
+		},
+		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 	}
 
-	return users, strconv.Itoa(offset), nil
+	return form, nil, nil
+}
+
+// Update updates the record of the specified target with the identifier id,
+// setting the given properties.
+func (mc *MailChimp) Update(ctx context.Context, _ chichi.Targets, id string, record map[string]any) error {
+
+	var r struct {
+		Operations []batchOperation `json:"operations"`
+	}
+	var basePath = "/lists/" + mc.settings.List + "/members/"
+	body, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	r.Operations = append(r.Operations, batchOperation{
+		Method: "PUT",
+		Path:   basePath + id,
+		Params: map[string]string{"skip_merge_validation": "true"},
+		Body:   string(body),
+	})
+	rq, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+	var response batchResponse
+	err = mc.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
+	if err != nil {
+		return err
+	}
+
+	if response.Status != "finished" {
+		// Retrieve the batch at one minute intervals until it's status is finished.
+		path := "/batches/" + response.ID
+		response := batchResponse{}
+		for i := 0; i < 5; i++ {
+			time.Sleep(time.Minute)
+			err = mc.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
+			if err != nil {
+				return err
+			}
+			if response.Status != "finished" {
+				continue
+			}
+			if response.ErroredOperations != 0 {
+				return errors.New("could not update all users")
+			}
+		}
+		return errors.New("could not complete batch operation")
+	}
+
+	return nil
 }
 
 // ValidateSettings validates the settings received from the UI and returns them

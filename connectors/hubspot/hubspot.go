@@ -32,17 +32,16 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppUsers, AppGroups, and Webhooks interfaces.
-// interfaces.
+// Make sure it implements the AppRecords and Webhooks interfaces.
 var _ interface {
-	chichi.AppUsers
-	chichi.AppGroups
+	chichi.AppRecords
 	chichi.Webhooks
 } = (*HubSpot)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "HubSpot",
+		Targets:                chichi.Users,
 		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
 		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
 		TermForUsers:           "contacts",
@@ -73,18 +72,16 @@ type HubSpot struct {
 	buf         bytes.Buffer
 }
 
-// CreateGroup creates a group with the given properties.
-func (hs *HubSpot) CreateGroup(ctx context.Context, group map[string]any) error {
-	// TODO(marco): implement
-	return nil
-}
+// Create creates a record for the specified target with the given properties.
+func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, record map[string]any) error {
 
-// CreateUser creates a user with the given properties.
-func (hs *HubSpot) CreateUser(ctx context.Context, user map[string]any) error {
+	if target == chichi.Groups {
+		return nil
+	}
 
 	var body bytes.Buffer
 	body.WriteString(`{"properties":`)
-	err := json.NewEncoder(&body).Encode(user)
+	err := json.NewEncoder(&body).Encode(record)
 	if err != nil {
 		return err
 	}
@@ -93,23 +90,89 @@ func (hs *HubSpot) CreateUser(ctx context.Context, user map[string]any) error {
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
 }
 
-// GroupSchema returns the group schema.
-func (hs *HubSpot) GroupSchema(ctx context.Context) (types.Type, error) {
-	// TODO(marco): implement
-	return types.Type{}, nil
-}
+// Records returns the records of the specified target, starting from the given
+// cursor.
+func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
-// Groups returns the groups starting from the given cursor.
-func (hs *HubSpot) Groups(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
-	objects, after, err := hs.objects(ctx, "Company", properties, cursor)
-	for _, object := range objects {
-		contacts, err := hs.companyContacts(ctx, object.ID)
-		if err != nil {
-			return nil, "", err
-		}
-		object.Associations = contacts
+	path := "/crm/v3/objects/"
+	var propertyName string
+	if target == chichi.Users {
+		path += "contacts/search"
+		propertyName = "lastmodifieddate"
+	} else {
+		path += "companies/search"
+		propertyName = "hs_lastmodifieddate"
 	}
-	return objects, after, err
+
+	hs.buf.Reset()
+	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
+	if cursor.Timestamp.IsZero() {
+		hs.buf.WriteByte('0')
+	} else {
+		hs.buf.WriteString(strconv.FormatInt(cursor.Timestamp.UnixMilli(), 10))
+	}
+	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
+		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
+	for i, p := range properties {
+		if i > 0 {
+			hs.buf.WriteByte(',')
+		}
+		hs.buf.WriteByte('"')
+		hs.buf.WriteString(p)
+		hs.buf.WriteByte('"')
+	}
+	hs.buf.WriteString(`]}`)
+
+	var response struct {
+		Results []struct {
+			ID         string
+			Properties map[string]any
+			UpdatedAt  string
+		}
+		Paging struct {
+			Next struct {
+				After string
+			}
+		}
+	}
+
+	err := hs.call(ctx, "POST", path, &hs.buf, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(response.Results) == 0 {
+		return nil, "", io.EOF
+	}
+
+	records := make([]chichi.Record, len(response.Results))
+	for i, result := range response.Results {
+		records[i] = chichi.Record{
+			ID: result.ID,
+		}
+		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
+		if err != nil {
+			records[i].Err = fmt.Errorf("HubSpot has returned an invalid value for updatedAt: %q", updatedAt)
+			continue
+		}
+		records[i].Properties = result.Properties
+		records[i].Timestamp = updatedAt.UTC()
+	}
+
+	if target == chichi.Groups {
+		for _, object := range records {
+			contacts, err := hs.companyContacts(ctx, object.ID)
+			if err != nil {
+				return nil, "", err
+			}
+			object.Associations = contacts
+		}
+	}
+
+	if response.Paging.Next.After == "" {
+		return records, "", io.EOF
+	}
+
+	return records, "", nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads. It
@@ -212,34 +275,12 @@ func (hs *HubSpot) Resource(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// UpdateGroup updates the group with identifier id setting the given
-// properties.
-func (hs *HubSpot) UpdateGroup(ctx context.Context, id string, group map[string]any) error {
-	// TODO(marco): implement
-	return nil
-}
+// Schema returns the schema of the records of the specified target.
+func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets) (types.Type, error) {
 
-// UpdateUser updates the user with identifier id setting the given properties.
-// It requires the "crm.objects.contacts.write" scope.
-func (hs *HubSpot) UpdateUser(ctx context.Context, id string, user map[string]any) error {
-
-	var body bytes.Buffer
-	body.WriteString(`{"inputs":[`)
-	idJSON, _ := json.Marshal(id)
-	body.WriteString(`{"id":`)
-	body.Write(idJSON)
-	body.WriteString(`,"properties":`)
-	err := json.NewEncoder(&body).Encode(user)
-	if err != nil {
-		return err
+	if target == chichi.Groups {
+		return types.Type{}, nil
 	}
-	body.WriteString(`}]}`)
-
-	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
-}
-
-// UserSchema returns the user schema.
-func (hs *HubSpot) UserSchema(ctx context.Context) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -313,84 +354,27 @@ func (hs *HubSpot) UserSchema(ctx context.Context) (types.Type, error) {
 	return schema, nil
 }
 
-// Users returns the users starting from the given cursor.
-func (hs *HubSpot) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
-	return hs.objects(ctx, "Contact", properties, cursor)
-}
+// Update updates the record of the specified target with the identifier id,
+// setting the given properties.
+func (hs *HubSpot) Update(ctx context.Context, target chichi.Targets, id string, record map[string]any) error {
 
-// objects returns the contacts, if typ is "Contact", or the companies, if typ
-// is "Company", starting from the given cursor.
-func (hs *HubSpot) objects(ctx context.Context, typ string, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
-
-	path := "/crm/v3/objects/"
-	var propertyName string
-	if typ == "Contact" {
-		path += "contacts/search"
-		propertyName = "lastmodifieddate"
-	} else {
-		path += "companies/search"
-		propertyName = "hs_lastmodifieddate"
+	if target == chichi.Groups {
+		return nil
 	}
 
-	hs.buf.Reset()
-	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
-	if cursor.Timestamp.IsZero() {
-		hs.buf.WriteByte('0')
-	} else {
-		hs.buf.WriteString(strconv.FormatInt(cursor.Timestamp.UnixMilli(), 10))
-	}
-	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
-		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
-	for i, p := range properties {
-		if i > 0 {
-			hs.buf.WriteByte(',')
-		}
-		hs.buf.WriteByte('"')
-		hs.buf.WriteString(p)
-		hs.buf.WriteByte('"')
-	}
-	hs.buf.WriteString(`]}`)
-
-	var response struct {
-		Results []struct {
-			ID         string
-			Properties map[string]any
-			UpdatedAt  string
-		}
-		Paging struct {
-			Next struct {
-				After string
-			}
-		}
-	}
-
-	err := hs.call(ctx, "POST", path, &hs.buf, 200, &response)
+	var body bytes.Buffer
+	body.WriteString(`{"inputs":[`)
+	idJSON, _ := json.Marshal(id)
+	body.WriteString(`{"id":`)
+	body.Write(idJSON)
+	body.WriteString(`,"properties":`)
+	err := json.NewEncoder(&body).Encode(record)
 	if err != nil {
-		return nil, "", err
+		return err
 	}
-	if len(response.Results) == 0 {
-		return nil, "", io.EOF
-	}
+	body.WriteString(`}]}`)
 
-	objects := make([]chichi.Record, len(response.Results))
-	for i, result := range response.Results {
-		objects[i] = chichi.Record{
-			ID: result.ID,
-		}
-		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
-		if err != nil {
-			objects[i].Err = fmt.Errorf("HubSpot has returned an invalid value for updatedAt: %q", updatedAt)
-			continue
-		}
-		objects[i].Properties = result.Properties
-		objects[i].Timestamp = updatedAt.UTC()
-	}
-
-	if response.Paging.Next.After == "" {
-		return objects, "", io.EOF
-	}
-
-	return objects, "", nil
+	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // companyContacts returns the contacts of the given company.

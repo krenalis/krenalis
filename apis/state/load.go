@@ -17,11 +17,8 @@ import (
 )
 
 var (
-	uiType                  = reflect.TypeOf((*chichi.UI)(nil)).Elem()
-	appEventsConnectionType = reflect.TypeOf((*chichi.AppEvents)(nil)).Elem()
-	appUsersConnectionType  = reflect.TypeOf((*chichi.AppUsers)(nil)).Elem()
-	appGroupsConnectionType = reflect.TypeOf((*chichi.AppGroups)(nil)).Elem()
-	sheetsType              = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
+	uiType     = reflect.TypeOf((*chichi.UI)(nil)).Elem()
+	sheetsType = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
 )
 
 // load loads the state.
@@ -53,21 +50,12 @@ func (state *State) load() error {
 				switch c.Type {
 				case AppType:
 					app := chichi.RegisteredApp(c.Name)
+					c.Targets = ConnectorTargets(app.Targets)
 					c.SourceDescription = app.SourceDescription
 					c.DestinationDescription = app.DestinationDescription
 					c.TermForUsers = app.TermForUsers
 					c.TermForGroups = app.TermForGroups
 					c.ExternalIDLabel = app.ExternalIDLabel
-					ct = app.ReflectType()
-					if ct.Implements(appEventsConnectionType) {
-						c.Targets |= EventsFlag
-					}
-					if ct.Implements(appUsersConnectionType) {
-						c.Targets |= UsersFlag
-					}
-					if ct.Implements(appGroupsConnectionType) {
-						c.Targets |= GroupsFlag
-					}
 					switch app.SendingMode {
 					case chichi.Cloud:
 						mode := Cloud
@@ -91,6 +79,7 @@ func (state *State) load() error {
 					c.Layouts.DateTime = app.DateTimeLayout
 					c.Layouts.Date = app.DateLayout
 					c.Layouts.Time = app.TimeLayout
+					ct = app.ReflectType()
 				case DatabaseType:
 					database := chichi.RegisteredDatabase(c.Name)
 					c.Targets = UsersFlag | GroupsFlag

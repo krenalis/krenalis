@@ -33,9 +33,19 @@ const (
 	Combined
 )
 
+// Targets represents the targets.
+type Targets int
+
+const (
+	Events = 1 << iota
+	Users
+	Groups
+)
+
 // AppInfo represents an app connector info.
 type AppInfo struct {
 	Name                   string
+	Targets                Targets
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	TermForUsers           string
@@ -133,39 +143,25 @@ type Cursor struct {
 	Next      string    // Returned string value of the last call to Users or Groups.
 }
 
-// AppUsers is the interface implemented by app connectors that manage users.
-type AppUsers interface {
+// AppRecords is the interface implemented by app connectors that manage users,
+// groups, or both. The target parameter is Users or Groups depending on the
+// connector supported targets.
+type AppRecords interface {
 	App
 
-	// CreateUser creates a user with the given properties.
-	CreateUser(ctx context.Context, user map[string]any) error
+	// Create creates a record for the specified target with the given properties.
+	Create(ctx context.Context, target Targets, record map[string]any) error
 
-	// UpdateUser updates the user with identifier id setting the given properties.
-	UpdateUser(ctx context.Context, id string, user map[string]any) error
+	// Records returns the records of the specified target, starting from the given
+	// cursor.
+	Records(ctx context.Context, target Targets, properties []string, cursor Cursor) (records []Record, next string, err error)
 
-	// UserSchema returns the user schema.
-	UserSchema(ctx context.Context) (types.Type, error)
+	// Schema returns the schema of the records of the specified target.
+	Schema(ctx context.Context, target Targets) (types.Type, error)
 
-	// Users returns the users starting from the given cursor.
-	Users(ctx context.Context, properties []string, cursor Cursor) (users []Record, next string, err error)
-}
-
-// AppGroups is the interface implemented by app connectors that manage groups.
-type AppGroups interface {
-	App
-
-	// CreateGroup creates a group with the given properties.
-	CreateGroup(ctx context.Context, group map[string]any) error
-
-	// GroupSchema returns the group schema.
-	GroupSchema(ctx context.Context) (types.Type, error)
-
-	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, properties []string, cursor Cursor) (groups []Record, next string, err error)
-
-	// UpdateGroup updates the group with identifier id setting the given
-	// properties.
-	UpdateGroup(ctx context.Context, id string, group map[string]any) error
+	// Update updates the record of the specified target with the identifier id,
+	// setting the given properties.
+	Update(ctx context.Context, target Targets, id string, record map[string]any) error
 }
 
 // Webhooks is the interface implemented by app connectors that can receive

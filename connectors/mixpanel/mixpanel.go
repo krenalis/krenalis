@@ -40,6 +40,7 @@ var _ interface {
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Mixpanel",
+		Targets:                chichi.Events,
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
 		SendingMode:            chichi.Cloud,

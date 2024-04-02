@@ -35,9 +35,9 @@ const maxEventPayload = 1024 * 1024
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppUsers, UI, and Webhooks interfaces.
+// Make sure it implements the AppRecords, UI, and Webhooks interfaces.
 var _ interface {
-	chichi.AppUsers
+	chichi.AppRecords
 	chichi.UI
 	chichi.Webhooks
 } = (*Stripe)(nil)
@@ -62,6 +62,7 @@ type Stripe struct {
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
 		Name:                   "Stripe",
+		Targets:                chichi.Users,
 		SourceDescription:      "import customers as users",
 		DestinationDescription: "export users as customers",
 		TermForUsers:           "customers",
@@ -86,16 +87,11 @@ func New(conf *chichi.AppConfig) (*Stripe, error) {
 	return &c, nil
 }
 
-// Resource returns the resource.
-func (stripe *Stripe) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
-// CreateUser creates a user with the given properties.
-func (stripe *Stripe) CreateUser(ctx context.Context, user map[string]any) error {
+// Create creates a record for the specified target with the given properties.
+func (stripe *Stripe) Create(ctx context.Context, _ chichi.Targets, record map[string]any) error {
 
 	var body bytes.Buffer
-	err := encodeRequest(&body, user, nil)
+	err := encodeRequest(&body, record, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
@@ -207,34 +203,9 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, 
 
 }
 
-// UserSchema returns the user schema.
-func (stripe *Stripe) UserSchema(ctx context.Context) (types.Type, error) {
-	// docs: https://stripe.com/docs/api/customers/object
-	//
-	// currently the user schema is the standard schema of the user returned
-	// when the api is called without specifying the "expand" field.
-	//
-	// Stripe gives the ability to use this additional "expand" field when
-	// calling its APIs to retrieve additional information:
-	// https://stripe.com/docs/api/expanding_objects
-
-	return schema, nil
-}
-
-// UpdateUser updates the user with identifier id setting the given properties.
-func (stripe *Stripe) UpdateUser(ctx context.Context, id string, user map[string]any) error {
-
-	var body bytes.Buffer
-	err := encodeRequest(&body, user, nil)
-	if err != nil {
-		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
-	}
-
-	return stripe.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
-}
-
-// Users returns the users starting from the given cursor.
-func (stripe *Stripe) Users(ctx context.Context, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// Records returns the records of the specified target, starting from the given
+// cursor.
+func (stripe *Stripe) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var body io.Reader
 	if cursor.ID != "" {
@@ -269,6 +240,25 @@ func (stripe *Stripe) Users(ctx context.Context, properties []string, cursor chi
 	return users, "", nil
 }
 
+// Resource returns the resource.
+func (stripe *Stripe) Resource(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+// Schema returns the schema of the records of the specified target.
+func (stripe *Stripe) Schema(_ context.Context, _ chichi.Targets) (types.Type, error) {
+	// docs: https://stripe.com/docs/api/customers/object
+	//
+	// currently the user schema is the standard schema of the user returned
+	// when the api is called without specifying the "expand" field.
+	//
+	// Stripe gives the ability to use this additional "expand" field when
+	// calling its APIs to retrieve additional information:
+	// https://stripe.com/docs/api/expanding_objects
+
+	return schema, nil
+}
+
 // ServeUI serves the connector's user interface.
 func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
@@ -300,6 +290,19 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) 
 	}
 
 	return form, nil, nil
+}
+
+// Update updates the record of the specified target with the identifier id,
+// setting the given properties.
+func (stripe *Stripe) Update(ctx context.Context, _ chichi.Targets, id string, record map[string]any) error {
+
+	var body bytes.Buffer
+	err := encodeRequest(&body, record, nil)
+	if err != nil {
+		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
+	}
+
+	return stripe.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
