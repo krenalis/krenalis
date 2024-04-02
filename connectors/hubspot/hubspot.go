@@ -306,9 +306,12 @@ func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets) (types.Typ
 
 	properties := make([]types.Property, 0, len(response.Results))
 	for _, r := range response.Results {
-		typ, err := propertyType(r.Name, r.Type)
+		typ, skip, err := propertyType(r.Name, r.Type)
 		if err != nil {
 			return types.Type{}, err
+		}
+		if skip {
+			continue
 		}
 		property := types.Property{
 			Name:        r.Name,
@@ -498,20 +501,23 @@ func (err *hubspotError) Error() string {
 
 // propertyType returns the property type of the HubSpot property type t with name c.
 // (https://developers.hubspot.com/docs/api/crm/properties#property-type-and-fieldtype-values).
-func propertyType(c, t string) (types.Type, error) {
+func propertyType(c, t string) (types.Type, bool, error) {
 	switch t {
 	case "bool":
-		return types.Boolean(), nil
+		return types.Boolean(), false, nil
 	case "date":
-		return types.Date(), nil
+		return types.Date(), false, nil
 	case "datetime":
-		return types.DateTime(), nil
+		return types.DateTime(), false, nil
 	case "enumeration":
-		return types.Text(), nil
+		return types.Text(), false, nil
 	case "number":
-		return types.Decimal(types.MaxDecimalPrecision-1, 1), nil
+		return types.Decimal(types.MaxDecimalPrecision-1, 1), false, nil
+	case "object_coordinates", "json":
+		// These types are for internal use and are not visible in HubSpot.
+		return types.Type{}, true, nil
 	case "string", "phone_number":
-		return types.Text(), nil
+		return types.Text(), false, nil
 	}
-	return types.Type{}, chichi.NewNotSupportedTypeError(c, t)
+	return types.Type{}, false, chichi.NewNotSupportedTypeError(c, t)
 }
