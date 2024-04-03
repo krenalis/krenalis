@@ -77,7 +77,7 @@ type EventType = chichi.EventType
 type Record struct {
 	ID         string         // Identifier.
 	Properties map[string]any // Properties.
-	Timestamp  time.Time      // Last modification time, in UTC.
+	UpdatedAt  time.Time      // Last modification time, in UTC.
 
 	// DisplayedID, if any, otherwise the empty string. Cannot be longer than 40
 	// runes.

@@ -119,7 +119,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			ok := iw.Write(ctx, warehouses.Identity{
 				ID:          user.ID,
 				Properties:  user.Properties,
-				Timestamp:   user.Timestamp,
+				Timestamp:   user.UpdatedAt,
 				DisplayedID: user.DisplayedID,
 			})
 			if !ok {
@@ -141,7 +141,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		// Set the user cursor.
 		if connector.Type == state.AppType {
 			last := users[len(users)-1]
-			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, Timestamp: last.Timestamp})
+			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, Timestamp: last.UpdatedAt})
 			if err != nil {
 				return actionExecutionError{err}
 			}

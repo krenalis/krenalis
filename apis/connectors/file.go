@@ -532,12 +532,12 @@ func (rw *recordWriter) Record(record []any) error {
 		if rd.Err == nil {
 			if rw.updatedAtColumn.name != "" {
 				ts := record[rw.updatedAtColumn.index]
-				rd.Timestamp, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
+				rd.UpdatedAt, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.Timestamp = rw.storageUpdatedAt
+				rd.UpdatedAt = rw.storageUpdatedAt
 			}
 		}
 		// Parse the displayed ID column.
@@ -605,12 +605,12 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		if rd.Err == nil {
 			if rw.updatedAtColumn.name != "" {
 				ts := record[rw.updatedAtColumn.name]
-				rd.Timestamp, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
+				rd.UpdatedAt, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.Timestamp = rw.storageUpdatedAt
+				rd.UpdatedAt = rw.storageUpdatedAt
 			}
 		}
 		if err := rw.yield(rd); err != nil {
@@ -687,12 +687,12 @@ func (rw *recordWriter) RecordString(record []string) error {
 		if rd.Err == nil {
 			if rw.updatedAtColumn.name != "" {
 				ts := record[rw.updatedAtColumn.index]
-				rd.Timestamp, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
+				rd.UpdatedAt, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.Timestamp = rw.storageUpdatedAt
+				rd.UpdatedAt = rw.storageUpdatedAt
 			}
 		}
 		// Parse the displayed ID column.

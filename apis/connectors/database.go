@@ -401,8 +401,8 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 			r.err = err
 			return nil
 		}
-		if record.Timestamp.IsZero() {
-			record.Timestamp = time.Now().UTC()
+		if record.UpdatedAt.IsZero() {
+			record.UpdatedAt = time.Now().UTC()
 		}
 		if err := yield(record); err != nil {
 			return err
@@ -462,11 +462,11 @@ func (sv recordsScanValue) Scan(src any) error {
 		if src == nil {
 			return errors.New("'updated at' value is NULL")
 		}
-		ts, err := parseTimestampColumn(p.Name, p.Type, sv.updatedAtFormat, src)
+		updatedAt, err := parseTimestampColumn(p.Name, p.Type, sv.updatedAtFormat, src)
 		if err != nil {
 			return err
 		}
-		sv.record.Timestamp = ts
+		sv.record.UpdatedAt = updatedAt
 		return nil
 	}
 	value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)

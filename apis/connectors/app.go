@@ -377,9 +377,9 @@ func (r *appRecords) For(yield func(Record) error) error {
 				}
 			}
 
-			// Read the timestamp.
-			user.Timestamp = appUser.Timestamp.UTC()
-			if err = validateTimestamp(user.Timestamp); err != nil {
+			// Read the 'updated at' timestamp.
+			user.UpdatedAt = appUser.Timestamp.UTC()
+			if err = validateTimestamp(user.UpdatedAt); err != nil {
 				return err
 			}
 
