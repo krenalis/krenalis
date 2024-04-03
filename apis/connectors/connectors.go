@@ -154,9 +154,9 @@ type CommittableWriter interface {
 	Commit(ctx context.Context) error
 }
 
-// TimestampColumn represents the timestamp column passed to the
+// UpdatedAtColumn represents the 'updated at' column passed to the
 // (*File).ReadFunc method.
-type TimestampColumn struct {
+type UpdatedAtColumn struct {
 	Name   string
 	Format string
 }

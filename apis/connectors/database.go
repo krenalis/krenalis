@@ -127,8 +127,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	// Validate the unique ID and timestamp columns.
-	var uniqueIDColumn, timestampColumn types.Property
+	// Validate the unique ID and 'updated at' columns.
+	var uniqueIDColumn, updatedAtColumn types.Property
 	for _, c := range columns {
 		if c.Name == action.UniqueIDColumn {
 			property, _ := action.InSchema.Property(action.UniqueIDColumn)
@@ -141,16 +141,16 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		if action.UpdatedAtColumn != "" && c.Name == action.UpdatedAtColumn {
 			property, _ := action.InSchema.Property(action.UpdatedAtColumn)
 			if c.Type.Kind() != property.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`timestamp column %q has type %s instead of %s`,
+				return nil, &SchemaError{fmt.Sprintf(`'updated at' column %q has type %s instead of %s`,
 					action.UpdatedAtColumn, c.Type.Kind(), property.Type.Kind())}
 			}
-			timestampColumn = property
+			updatedAtColumn = property
 		}
 	}
 	if uniqueIDColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no unique ID column %q", action.UniqueIDColumn)}
 	}
-	if action.UpdatedAtColumn != "" && timestampColumn.Name == "" {
+	if action.UpdatedAtColumn != "" && updatedAtColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no 'updated at' column %q", action.UpdatedAtColumn)}
 	}
 	// Check that schema is compatible with the query's schema.
@@ -174,7 +174,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), uniqueIDColumn,
-		timestampColumn, action.UpdatedAtFormat, displayedIDColumn)
+		updatedAtColumn, action.UpdatedAtFormat, displayedIDColumn)
 	return records, nil
 }
 
@@ -328,15 +328,15 @@ type databaseRecords struct {
 	propertyOf        map[string]types.Property
 	dst               []any
 	uniqueIDColumn    types.Property
-	timestampColumn   types.Property
-	timestampFormat   string
+	updatedAtColumn   types.Property
+	updatedAtFormat   string
 	displayedIDColumn types.Property
 	err               error
 	closed            bool
 }
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
-	uniqueIDColumn, timestampColumn types.Property, timestampFormat string,
+	uniqueIDColumn, updatedAtColumn types.Property, updatedAtFormat string,
 	displayedIDColumn types.Property) *databaseRecords {
 	records := databaseRecords{
 		columns:           columns,
@@ -344,8 +344,8 @@ func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 		dst:               make([]any, len(columns)),
 		propertyOf:        make(map[string]types.Property, len(properties)),
 		uniqueIDColumn:    uniqueIDColumn,
-		timestampColumn:   timestampColumn,
-		timestampFormat:   timestampFormat,
+		updatedAtColumn:   updatedAtColumn,
+		updatedAtFormat:   updatedAtFormat,
 		displayedIDColumn: displayedIDColumn,
 	}
 	for _, p := range properties {
@@ -392,8 +392,8 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 				property:          p,
 				record:            &record,
 				uniqueIDColumn:    r.uniqueIDColumn,
-				timestampColumn:   r.timestampColumn,
-				timestampFormat:   r.timestampFormat,
+				updatedAtColumn:   r.updatedAtColumn,
+				updatedAtFormat:   r.updatedAtFormat,
 				displayedIDColumn: r.displayedIDColumn,
 			}
 		}
@@ -420,8 +420,8 @@ type recordsScanValue struct {
 	property          types.Property
 	record            *Record
 	uniqueIDColumn    types.Property
-	timestampColumn   types.Property
-	timestampFormat   string
+	updatedAtColumn   types.Property
+	updatedAtFormat   string
 	displayedIDColumn types.Property
 }
 
@@ -458,11 +458,11 @@ func (sv recordsScanValue) Scan(src any) error {
 		}
 		sv.record.ID = id
 		return nil
-	case sv.timestampColumn.Name:
+	case sv.updatedAtColumn.Name:
 		if src == nil {
-			return errors.New("timestamp value is NULL")
+			return errors.New("'updated at' value is NULL")
 		}
-		ts, err := parseTimestampColumn(p.Name, p.Type, sv.timestampFormat, src)
+		ts, err := parseTimestampColumn(p.Name, p.Type, sv.updatedAtFormat, src)
 		if err != nil {
 			return err
 		}

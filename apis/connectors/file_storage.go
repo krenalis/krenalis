@@ -102,7 +102,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		Settings: settings,
 	})
 
-	rw := newRecordWriter(file.ID, types.Type{}, "", TimestampColumn{}, "", storageTimestamp, limit)
+	rw := newRecordWriter(file.ID, types.Type{}, "", UpdatedAtColumn{}, "", storageTimestamp, limit)
 	err = _file.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		if err == chichi.ErrSheetNotExist {

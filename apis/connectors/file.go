@@ -76,7 +76,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 //
 // If the unique ID column specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
-// The same applies for the timestamp, if specified.
+// The same applies for the 'updated at' column, if specified.
 //
 // If the action's sheet is not found in the file, the For method of the
 // iterator returns immediately, and a subsequent call to the Err method will
@@ -94,20 +94,20 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.action.Compression)
-	rc, storageTimestamp, err := s.Reader(ctx, file.action.Path)
+	rc, storageUpdatedAt, err := s.Reader(ctx, file.action.Path)
 	if err != nil {
 		return nil, err
 	}
-	if err = validateTimestamp(storageTimestamp); err != nil {
-		return nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
+	if err = validateTimestamp(storageUpdatedAt); err != nil {
+		return nil, fmt.Errorf("invalid 'updated at' value returned by the storage: %s", err)
 	}
-	timestampColumn := TimestampColumn{
+	updatedAtColumn := UpdatedAtColumn{
 		Name:   file.action.UpdatedAtColumn,
 		Format: file.action.UpdatedAtFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.UniqueIDColumn, timestampColumn, file.action.DisplayedID,
-		storageTimestamp, math.MaxInt)
+		file.action.UniqueIDColumn, updatedAtColumn, file.action.DisplayedID,
+		storageUpdatedAt, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -358,9 +358,10 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If the yield function is not nil, it calls the yield function for
 // each record, otherwise it stores the records in the records field.
-// storageTimestamp is the timestamp provided by the storage connector, and it
-// is used in the case when the file columns do not specify a timestamp.
-func newRecordWriter(connector int, schema types.Type, uniqueIDColumn string, timestamp TimestampColumn, displayedID string, storageTimestamp time.Time, limit int) *recordWriter {
+// storageUpdatedAt is the 'updated at' value provided by the storage connector,
+// and it is used in the case when the file columns do not specify an 'update
+// at' column.
+func newRecordWriter(connector int, schema types.Type, uniqueIDColumn string, updatedAt UpdatedAtColumn, displayedID string, storageUpdatedAt time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -374,13 +375,13 @@ func newRecordWriter(connector int, schema types.Type, uniqueIDColumn string, ti
 		typ, _ := schema.Property(uniqueIDColumn)
 		rw.uniqueIDColumn.typ = typ.Type
 	}
-	if timestamp.Name != "" {
-		rw.timestampColumn.name = timestamp.Name
-		typ, _ := schema.Property(timestamp.Name)
-		rw.timestampColumn.typ = typ.Type
-		rw.timestampColumn.format = timestamp.Format
+	if updatedAt.Name != "" {
+		rw.updatedAtColumn.name = updatedAt.Name
+		typ, _ := schema.Property(updatedAt.Name)
+		rw.updatedAtColumn.typ = typ.Type
+		rw.updatedAtColumn.format = updatedAt.Format
 	} else {
-		rw.storageTimestamp = storageTimestamp
+		rw.storageUpdatedAt = storageUpdatedAt
 	}
 	return &rw
 }
@@ -405,13 +406,13 @@ type recordWriter struct {
 		typ   types.Type
 		index int
 	}
-	timestampColumn struct {
+	updatedAtColumn struct {
 		name   string
 		typ    types.Type
 		index  int
 		format string
 	}
-	storageTimestamp time.Time
+	storageUpdatedAt time.Time
 	records          []map[string]any
 }
 
@@ -449,17 +450,17 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		rw.uniqueIDColumn.typ = c.Type
 		rw.uniqueIDColumn.index = columnIndex[c.Name]
 	}
-	// Validate the timestamp column.
-	if name := rw.timestampColumn.name; name != "" {
+	// Validate the 'updated at' column.
+	if name := rw.updatedAtColumn.name; name != "" {
 		c, ok := columnByName[name]
 		if !ok {
-			return fmt.Errorf("there is no timestamp column %q", name)
+			return fmt.Errorf("there is no 'updated at' column %q", name)
 		}
-		if typ := rw.timestampColumn.typ; c.Type.Kind() != typ.Kind() {
-			return fmt.Errorf("timestamp column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
+		if typ := rw.updatedAtColumn.typ; c.Type.Kind() != typ.Kind() {
+			return fmt.Errorf("'updated at' column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
 		}
-		rw.timestampColumn.typ = c.Type
-		rw.timestampColumn.index = columnIndex[c.Name]
+		rw.updatedAtColumn.typ = c.Type
+		rw.updatedAtColumn.index = columnIndex[c.Name]
 	}
 	// Validate the displayed ID column.
 	if rw.displayedID.name != "" {
@@ -531,16 +532,16 @@ func (rw *recordWriter) Record(record []any) error {
 				rd.Err = err
 			}
 		}
-		// Parse the timestamp column.
+		// Parse the 'updated at' column.
 		if rd.Err == nil {
-			if rw.timestampColumn.name != "" {
-				ts := record[rw.timestampColumn.index]
-				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+			if rw.updatedAtColumn.name != "" {
+				ts := record[rw.updatedAtColumn.index]
+				rd.Timestamp, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.Timestamp = rw.storageTimestamp
+				rd.Timestamp = rw.storageUpdatedAt
 			}
 		}
 		// Parse the displayed ID column.
@@ -604,16 +605,16 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				rd.Err = err
 			}
 		}
-		// Parse the timestamp column.
+		// Parse the 'updated at' column.
 		if rd.Err == nil {
-			if rw.timestampColumn.name != "" {
-				ts := record[rw.timestampColumn.name]
-				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+			if rw.updatedAtColumn.name != "" {
+				ts := record[rw.updatedAtColumn.name]
+				rd.Timestamp, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.Timestamp = rw.storageTimestamp
+				rd.Timestamp = rw.storageUpdatedAt
 			}
 		}
 		if err := rw.yield(rd); err != nil {
@@ -686,16 +687,16 @@ func (rw *recordWriter) RecordString(record []string) error {
 				rd.Err = err
 			}
 		}
-		// Parse the timestamp column.
+		// Parse the 'updated at' column.
 		if rd.Err == nil {
-			if rw.timestampColumn.name != "" {
-				ts := record[rw.timestampColumn.index]
-				rd.Timestamp, err = parseTimestampColumn(rw.timestampColumn.name, rw.timestampColumn.typ, rw.timestampColumn.format, ts)
+			if rw.updatedAtColumn.name != "" {
+				ts := record[rw.updatedAtColumn.index]
+				rd.Timestamp, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.Timestamp = rw.storageTimestamp
+				rd.Timestamp = rw.storageUpdatedAt
 			}
 		}
 		// Parse the displayed ID column.
@@ -950,7 +951,7 @@ func newCompressedStorage(s chichi.FileStorage, c state.Compression) *compressor
 }
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
-// from which to read the file and its timestamp.
+// from which to read the file and its 'updated at' value.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	r, t, err := cs.storage.Reader(ctx, name)
