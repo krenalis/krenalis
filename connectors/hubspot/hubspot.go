@@ -48,6 +48,7 @@ func init() {
 		TermForUsers:           "contacts",
 		TermForGroups:          "companies",
 		ExternalIDLabel:        "HubSpot ID",
+		SuggestedDisplayedID:   "email",
 		Icon:                   icon,
 		WebhooksPer:            chichi.WebhooksPerConnector,
 		OAuth: chichi.OAuth{

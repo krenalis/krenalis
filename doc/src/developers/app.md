@@ -120,6 +120,8 @@ The `AppInfo` type describes information about the app connector:
 
 - `SendingMode`: mode used to send the events to the cloud app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 
+- `SuggestedDisplayedID`: suggestion for the property name to use as the displayed identifier. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
+
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterApp` function that, executed during package initialization, registers the app connector:

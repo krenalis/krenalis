@@ -55,6 +55,7 @@ type AppInfo struct {
 	TermForUsers           string
 	TermForGroups          string
 	ExternalIDLabel        string
+	SuggestedDisplayedID   string      // suggested property name to use as the displayed identifier
 	Icon                   string      // icon in SVG format
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0

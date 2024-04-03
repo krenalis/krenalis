@@ -48,6 +48,7 @@ func init() {
 		SourceDescription:      "import contacts as users from Mailchimp",
 		DestinationDescription: "export users as contacts to Mailchimp",
 		TermForUsers:           "contacts",
+		SuggestedDisplayedID:   "EmailAddress",
 		Icon:                   icon,
 		WebhooksPer:            chichi.WebhooksPerSource,
 		OAuth: chichi.OAuth{

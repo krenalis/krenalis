@@ -66,6 +66,7 @@ func init() {
 		SourceDescription:      "import customers as users",
 		DestinationDescription: "export users as customers",
 		TermForUsers:           "customers",
+		SuggestedDisplayedID:   "email",
 		Icon:                   icon,
 		WebhooksPer:            chichi.WebhooksPerSource,
 	}, New)

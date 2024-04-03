@@ -44,6 +44,7 @@ func init() {
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
 		ExternalIDLabel:        "Dummy Unique ID",
+		SuggestedDisplayedID:   "email",
 		Icon:                   icon,
 		SendingMode:            chichi.Combined,
 	}, New)

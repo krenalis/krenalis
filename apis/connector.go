@@ -31,6 +31,7 @@ type Connector struct {
 	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSettings            bool
+	SuggestedDisplayedID   string
 	Icon                   string
 	ExternalIDLabel        string
 	FileExtension          string

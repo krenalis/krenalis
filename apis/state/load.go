@@ -67,6 +67,7 @@ func (state *State) load() error {
 						mode := Combined
 						c.SendingMode = &mode
 					}
+					c.SuggestedDisplayedID = app.SuggestedDisplayedID
 					c.Icon = app.Icon
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
 					if app.OAuth.AuthURL != "" {
