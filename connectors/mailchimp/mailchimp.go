@@ -34,8 +34,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppRecords, UI, and Webhooks interfaces.
+// Make sure it implements the App, AppRecords, UI, and Webhooks interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppRecords
 	chichi.UI
 	chichi.Webhooks
@@ -201,8 +202,10 @@ func (mc *MailChimp) Resource(ctx context.Context) (string, error) {
 	return resource, err
 }
 
-// Schema returns the schema of the records of the specified target.
-func (mc *MailChimp) Schema(ctx context.Context, _ chichi.Targets) (types.Type, error) {
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}

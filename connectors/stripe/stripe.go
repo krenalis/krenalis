@@ -35,8 +35,9 @@ const maxEventPayload = 1024 * 1024
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppRecords, UI, and Webhooks interfaces.
+// Make sure it implements the App, AppRecords, UI, and Webhooks interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppRecords
 	chichi.UI
 	chichi.Webhooks
@@ -245,8 +246,10 @@ func (stripe *Stripe) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// Schema returns the schema of the records of the specified target.
-func (stripe *Stripe) Schema(_ context.Context, _ chichi.Targets) (types.Type, error) {
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object
 	//
 	// currently the user schema is the standard schema of the user returned

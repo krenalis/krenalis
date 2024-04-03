@@ -14,11 +14,15 @@ import (
 	"errors"
 
 	"github.com/open2b/chichi"
+	"github.com/open2b/chichi/types"
 	"github.com/open2b/chichi/ui"
 )
 
-// Make sure it implements the UI interface.
-var _ chichi.UI = (*UISample)(nil)
+// Make sure it implements the App and UI interfaces.
+var _ interface {
+	chichi.App
+	chichi.UI
+} = (*UISample)(nil)
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
@@ -48,6 +52,13 @@ type UISample struct {
 // Resource returns the resource from a client token.
 func (uiSample *UISample) Resource(ctx context.Context) (string, error) {
 	return "", nil
+}
+
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.

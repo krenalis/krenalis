@@ -69,32 +69,38 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 	return app
 }
 
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data. If redacted is true, sensitive
-// authentication data will be redacted in the returned request. valuesSchema is
-// the schema of the values, and can be the invalid schema if there are no
-// values.
+// EventRequest returns a request to dispatch an event to the app. typ specifies
+// the type of event to send, event is the received event, extra contains the
+// extra information conforming to the schema of the event type, extraSchema is
+// the schema of the event type, and redacted indicates whether authentication
+// data must be redacted in the returned request.
+//
+// If extra is nil, extraSchema should the invalid schema and vice versa.
 //
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
 // If the schema of values is incompatible with the event type's schema, it
 // returns a *SchemaError error.
 //
-// It panics if the app does not support the Events target, or if valuesSchema
-// is valid but not an Object.
-func (app *App) EventRequest(ctx context.Context, eventType string, event *Event, data map[string]any, redacted bool, valuesSchema types.Type) (*EventRequest, error) {
+// It panics if the app does not support the Events target, or if extraSchema is
+// valid but not an Object.
+func (app *App) EventRequest(ctx context.Context, typ string, event *Event, extra map[string]any, extraSchema types.Type, redacted bool) (*EventRequest, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	et, err := app.eventType(ctx, eventType)
+	appEvents, ok := app.inner.(chichi.AppEvents)
+	if !ok {
+		panic("app does not support the Events target")
+	}
+	schema, err := app.inner.Schema(ctx, chichi.Events, typ)
 	if err != nil {
 		return nil, err
 	}
-	// Check compatibility between the schema of the values and the schema of the event type.
-	if err = verifySchemaCompatibilityForSendEvents(valuesSchema, et.Schema); err != nil {
+	// Check compatibility between the schema of the extra information and the schema of the event type.
+	if err = verifySchemaCompatibilityForSendEvents(extraSchema, schema); err != nil {
 		return nil, err
 	}
 	// Return the event request.
-	return app.inner.(chichi.AppEvents).EventRequest(ctx, et, event, data, redacted)
+	return appEvents.EventRequest(ctx, typ, event, extra, extraSchema, redacted)
 }
 
 // EventTypes returns the app's event types.
@@ -121,33 +127,18 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 
 // SchemaAsRole is like Schema but returns the schema as the provided role,
 // instead of the role of the app's connection.
+// If the event type does not exist, it returns the ErrEventTypeNotExist error.
 func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {
 		return types.Type{}, app.err
 	}
 	switch target {
 	case state.Events:
-		eventTypes, err := app.inner.(chichi.AppEvents).EventTypes(ctx)
-		if err != nil {
-			return types.Type{}, err
-		}
-		var found bool
-		var schema types.Type
-		for _, t := range eventTypes {
-			if t.ID == eventType {
-				schema = t.Schema
-				found = true
-				break
-			}
-		}
-		if !found {
-			return types.Type{}, ErrEventTypeNotExist
-		}
-		return schema, nil
+		return app.inner.Schema(ctx, chichi.Events, eventType)
 	case state.Users:
 		return app.usersSchema(ctx, types.Role(role))
 	case state.Groups:
-		schema, err := app.inner.(chichi.AppRecords).Schema(ctx, chichi.Groups)
+		schema, err := app.inner.Schema(ctx, chichi.Groups, "")
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -239,22 +230,6 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 		users: app.inner.(chichi.AppRecords),
 	}
 	return &w, nil
-}
-
-// eventType returns the app's event type with identifier id. It the event type
-// does not exist, it returns the ErrEventTypeNotExist error.
-// It panics if the app does not support the Events target.
-func (app *App) eventType(ctx context.Context, id string) (*chichi.EventType, error) {
-	eventTypes, err := app.inner.(chichi.AppEvents).EventTypes(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range eventTypes {
-		if t.ID == id {
-			return t, nil
-		}
-	}
-	return nil, ErrEventTypeNotExist
 }
 
 // appWriter implements the Writer interface for apps.
@@ -444,7 +419,7 @@ func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, e
 	if schema := app.users.schemas[role]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(chichi.AppRecords).Schema(ctx, chichi.Users)
+	schema, err := app.inner.Schema(ctx, chichi.Users, "")
 	if err != nil {
 		return types.Type{}, err
 	}

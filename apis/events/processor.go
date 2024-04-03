@@ -28,14 +28,14 @@ const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 type processedEvent struct {
 	*collectedEvent
-	action       *state.Action
-	destination  int
-	eventType    string
-	endpoint     int
-	values       map[string]any
-	valuesSchema types.Type
-	inEvent      *chichi.Event
-	err          error
+	action      *state.Action
+	destination int
+	eventType   string
+	endpoint    int
+	extra       map[string]any
+	extraSchema types.Type
+	inEvent     *chichi.Event
+	err         error
 }
 
 // Processor processes events received from source streams and sent them to
@@ -89,14 +89,14 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 						if !ok {
 							continue
 						}
-						var values map[string]any
+						var extra map[string]any
 						if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
 							transformer, err := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, transformer, nil)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
 							}
-							values, err = transformer.Transform(ctx, eventAsMap)
+							extra, err = transformer.Transform(ctx, eventAsMap)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue
@@ -107,8 +107,8 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 							action:         action,
 							destination:    action.Connection().ID,
 							eventType:      action.EventType,
-							values:         values,
-							valuesSchema:   action.OutSchema,
+							extra:          extra,
+							extraSchema:    action.OutSchema,
 							// TODO(Gianluca): since the endpoints have been
 							// removed from the action, we do not have
 							// information about the endpoint. We should

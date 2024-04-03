@@ -32,8 +32,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppRecords and Webhooks interfaces.
+// Make sure it implements the App, AppRecords, and Webhooks interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppRecords
 	chichi.Webhooks
 } = (*HubSpot)(nil)
@@ -275,12 +276,10 @@ func (hs *HubSpot) Resource(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// Schema returns the schema of the records of the specified target.
-func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets) (types.Type, error) {
-
-	if target == chichi.Groups {
-		return types.Type{}, nil
-	}
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 
 	var response struct {
 		Results []struct {

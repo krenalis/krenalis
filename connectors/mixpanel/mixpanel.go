@@ -31,8 +31,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEvents and UI interfaces.
+// Make sure it implements the App, AppEvents and UI interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppEvents
 	chichi.UI
 } = (*Mixpanel)(nil)
@@ -70,15 +71,20 @@ func New(conf *chichi.AppConfig) (*Mixpanel, error) {
 	return &c, nil
 }
 
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data. If redacted is true, sensitive
-// authentication data will be redacted in the returned request.
-// This method is safe for concurrent use by multiple goroutines.
-// If the specified event type does not exist, it returns the
-// ErrEventTypeNotExist error.
-func (mp *Mixpanel) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+// EventRequest returns a request to dispatch an event to the app. typ specifies
+// the type of event to send, event is the received event, extra contains the
+// extra information, schema is the schema of the extra information (that is the
+// schema for the event type), and redacted indicates whether authentication
+// data must be redacted in the returned request.
+//
+// schema is the invalid schema if extra is nil and vice versa.
+//
+// This method is safe for concurrent use by multiple goroutines. If the
+// specified event type does not exist, it returns the ErrEventTypeNotExist
+// error.
+func (mp *Mixpanel) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 
-	if data["event"].(string) == "" {
+	if extra["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
 	}
 
@@ -98,7 +104,7 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, eventType *chichi.EventTyp
 	}
 	req.Header.Set("Authorization", authorization)
 
-	body := data["properties"].(map[string]any)
+	body := extra["properties"].(map[string]any)
 	body["$insert_id"] = event.MessageId
 	body["time"] = formatTimestamp(event.Timestamp)
 	distinctID := event.AnonymousId
@@ -178,41 +184,49 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, eventType *chichi.EventTyp
 
 // EventTypes returns the event types of the connector's instance.
 func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if mp.conf.Role != chichi.Destination {
-		return nil, nil
-	}
+	return []*chichi.EventType{
+		{
+			ID:          "track",
+			Name:        "Send track events",
+			Description: "Send track events to Mixpanel",
+		},
+		{
+			ID:          "page",
+			Name:        "Send page events",
+			Description: "Send page events to Mixpanel",
+		},
+		{
+			ID:          "screen",
+			Name:        "Send screen events",
+			Description: "Send screen events to Mixpanel",
+		},
+	}, nil
+}
+
+// Resource returns the resource.
+func (mp *Mixpanel) Resource(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {
 		return types.Object([]types.Property{
 			{Name: "event", Label: "Event Name", Placeholder: placeholder, Type: types.Text().WithCharLen(255), Required: true},
 			{Name: "properties", Label: "Your Properties", Type: types.Map(types.JSON()), Required: true},
 		})
 	}
-	eventTypes := []*chichi.EventType{
-		{
-			ID:          "track",
-			Name:        "Send track events",
-			Description: "Send track events to Mixpanel",
-			Schema:      schema("event"),
-		},
-		{
-			ID:          "page",
-			Name:        "Send page events",
-			Description: "Send page events to Mixpanel",
-			Schema:      schema(`"Page View"`),
-		},
-		{
-			ID:          "screen",
-			Name:        "Send screen events",
-			Description: "Send screen events to Mixpanel",
-			Schema:      schema(`"Screen View"`),
-		},
+	switch eventType {
+	case "track":
+		return schema("event"), nil
+	case "page":
+		return schema(`"Page View"`), nil
+	case "screen":
+		return schema(`"Screen View"`), nil
 	}
-	return eventTypes, nil
-}
-
-// Resource returns the resource.
-func (mp *Mixpanel) Resource(ctx context.Context) (string, error) {
-	return "", nil
+	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.

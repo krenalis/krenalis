@@ -28,8 +28,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEvents, AppRecords, and UI interfaces.
+// Make sure it implements the App, AppEvents, AppRecords, and UI interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppEvents
 	chichi.AppRecords
 	chichi.UI
@@ -73,13 +74,18 @@ func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, record map
 	panic("TODO: not implemented")
 }
 
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data. If redacted is true, sensitive
-// authentication data will be redacted in the returned request.
-// This method is safe for concurrent use by multiple goroutines.
-// If the specified event type does not exist, it returns the
-// ErrEventTypeNotExist error.
-func (ky *Klavyio) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+// EventRequest returns a request to dispatch an event to the app. typ specifies
+// the type of event to send, event is the received event, extra contains the
+// extra information, schema is the schema of the extra information (that is the
+// schema for the event type), and redacted indicates whether authentication
+// data must be redacted in the returned request.
+//
+// schema is the invalid schema if extra is nil and vice versa.
+//
+// This method is safe for concurrent use by multiple goroutines. If the
+// specified event type does not exist, it returns the ErrEventTypeNotExist
+// error.
+func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://a.klaviyo.com/api/events/",
@@ -110,9 +116,9 @@ func (ky *Klavyio) EventRequest(ctx context.Context, eventType *chichi.EventType
 		} `json:"data"`
 	}
 	body.Data.Type = "event"
-	body.Data.Attributes.Profile.Email = data["email"].(string)
-	body.Data.Attributes.Metric.Name = data["metric_name"].(string)
-	body.Data.Attributes.Properties = data
+	body.Data.Attributes.Profile.Email = extra["email"].(string)
+	body.Data.Attributes.Metric.Name = extra["metric_name"].(string)
+	body.Data.Attributes.Properties = extra
 	body.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
 	var err error
 	req.Body, err = json.Marshal(body)
@@ -124,21 +130,13 @@ func (ky *Klavyio) EventRequest(ctx context.Context, eventType *chichi.EventType
 
 // EventTypes returns the event types of the connector's instance.
 func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if ky.conf.Role == chichi.Source {
-		return nil, nil
-	}
-	eventTypes := []*chichi.EventType{
+	return []*chichi.EventType{
 		{
 			ID:          "create_event",
 			Name:        "Create Event",
 			Description: "Create an Event on Klaviyo",
-			Schema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Required: true},
-				{Name: "metric_name", Type: types.Text(), Required: true},
-			}),
 		},
-	}
-	return eventTypes, nil
+	}, nil
 }
 
 // Records returns the records of the specified target, starting from the given
@@ -218,8 +216,20 @@ func (ky *Klavyio) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// Schema returns the schema of the records of the specified target.
-func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets) (types.Type, error) {
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+
+	if target == chichi.Events {
+		if eventType != "create_event" {
+			return types.Type{}, ui.ErrEventNotExist
+		}
+		return types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "metric_name", Type: types.Text(), Required: true},
+		}), nil
+	}
 
 	// The fields which are not marked as "required" in the documentation
 	// (available here:

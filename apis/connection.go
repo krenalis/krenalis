@@ -1280,8 +1280,8 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 
 // PreviewSendEvent returns a preview of an event as it would be sent to an app.
 // The connection must be a destination app connection, and it is expected to
-// have an event type named eventType. If there is a transformation, outSchema
-// is the out schema of the transformation, and it must be a valid.
+// have an event type named typ. If there is a transformation, outSchema is the
+// out schema of the transformation, and it must be a valid.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
@@ -1290,7 +1290,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 //     type's schema.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation Transformation, outSchema types.Type) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event *ObservedEvent, transformation Transformation, outSchema types.Type) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1305,7 +1305,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if !c.Connector().Targets.Contains(state.Events) {
 		return nil, errors.BadRequest("connection %d does not support events", c.ID)
 	}
-	if eventType == "" {
+	if typ == "" {
 		return nil, errors.BadRequest("eventType is empty")
 	}
 	if event == nil {
@@ -1334,7 +1334,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	var values map[string]any
+	var extra map[string]any
 
 	if transformation.Mapping != nil || transformation.Function != nil {
 
@@ -1422,7 +1422,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		if err != nil {
 			return nil, err
 		}
-		values, err = m.Transform(ctx, ev.ToMap())
+		extra, err = m.Transform(ctx, ev.ToMap())
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
@@ -1441,10 +1441,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	req, err := this.app().EventRequest(ctx, eventType, ev.ToConnectorEvent(), values, true, outSchema)
+	req, err := this.app().EventRequest(ctx, typ, ev.ToConnectorEvent(), extra, outSchema, true)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
-			return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+			return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
 		}
 		if err, ok := err.(*connectors.SchemaError); ok {
 			return nil, errors.Unprocessable(NotCompatibleSchema, "out schema is not compatible with the event type's schema: %w", err)

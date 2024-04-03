@@ -173,7 +173,7 @@ func (err InvalidSettingsError) Error() string {
 
 var (
 	ErrEventNotExist       = errors.New("user interface event does not exist")
-	ErrEventTypeNotExist   = errors.New("event type does not exist")
+	ErrEventTypeNotExist   = chichi.ErrEventTypeNotExist
 	ErrNoColumns           = errors.New("file has no columns")
 	ErrNoUserInterface     = errors.New("connector has no user interface")
 	ErrNoWebhooks          = errors.New("app has no webhooks")
@@ -217,7 +217,11 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	resource, err := cc.Resource(ctx)
+	ar, ok := cc.(chichi.AppResource)
+	if !ok {
+		return nil, errors.New("connector does not implement the AppResource interface")
+	}
+	resource, err := ar.Resource(ctx)
 	if err != nil {
 		return nil, err
 	}

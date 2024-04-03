@@ -29,8 +29,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEvents, AppRecords, and UI interfaces.
+// Make sure it implements the App, AppEvents, AppRecords, and UI interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppEvents
 	chichi.AppRecords
 	chichi.UI
@@ -116,13 +117,18 @@ func (dummy *Dummy) Create(ctx context.Context, _ chichi.Targets, user map[strin
 	return nil
 }
 
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data. If redacted is true, sensitive
-// authentication data will be redacted in the returned request.
-// This method is safe for concurrent use by multiple goroutines.
-// If the specified event type does not exist, it returns the
-// ErrEventTypeNotExist error.
-func (dummy *Dummy) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+// EventRequest returns a request to dispatch an event to the app. typ specifies
+// the type of event to send, event is the received event, extra contains the
+// extra information, schema is the schema of the extra information (that is the
+// schema for the event type), and redacted indicates whether authentication
+// data must be redacted in the returned request.
+//
+// schema is the invalid schema if extra is nil and vice versa.
+//
+// This method is safe for concurrent use by multiple goroutines. If the
+// specified event type does not exist, it returns the ErrEventTypeNotExist
+// error.
+func (dummy *Dummy) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://example.com/",
@@ -131,7 +137,7 @@ func (dummy *Dummy) EventRequest(ctx context.Context, eventType *chichi.EventTyp
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	var err error
-	req.Body, err = json.Marshal(data)
+	req.Body, err = json.Marshal(extra)
 	if err != nil {
 		return nil, err
 	}
@@ -140,57 +146,33 @@ func (dummy *Dummy) EventRequest(ctx context.Context, eventType *chichi.EventTyp
 
 // EventTypes returns the event types of the connector's instance.
 func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if dummy.conf.Role == chichi.Source {
-		return nil, nil
-	}
-	eventTypes := []*chichi.EventType{
+	return []*chichi.EventType{
 		{
 			ID:          "send_add_to_cart",
 			Name:        "Send Add to Cart",
 			Description: "Send an Add to Cart event to Dummy",
-			Schema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "itemName", Type: types.Text()},
-				{Name: "itemId", Type: types.Int(32)},
-			}),
 		},
 		{
 			ID:          "send_custom_event",
 			Name:        "Send custom event",
 			Description: "Send a custom event to Dummy",
-			Schema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-			}),
 		},
 		{
 			ID:          "send_identity",
 			Name:        "Send Identity",
 			Description: "Send an Identity to Dummy",
-			Schema: types.Object([]types.Property{
-				{Name: "email", Required: true, Type: types.Text()},
-				{Name: "traits", Type: types.Object([]types.Property{
-					{Name: "address", Type: types.Object([]types.Property{
-						{Name: "street1", Type: types.Text()},
-						{Name: "street2", Type: types.Text()},
-					})},
-				})},
-			}),
 		},
 		{
 			ID:          "send_generic_event",
 			Name:        "Send generic event",
 			Description: "Send a generic event, useful for testing",
-			Schema: types.Object([]types.Property{
-				{Name: "properties", Type: types.JSON()},
-			}),
 		},
 		{
 			ID:          "send_event_with_no_schema",
 			Name:        "Send event with no schema",
 			Description: "Send an event which does not require mapping",
 		},
-	}
-	return eventTypes, nil
+	}, nil
 }
 
 // Records returns the records of the specified target, starting from the given
@@ -246,9 +228,49 @@ type settings struct {
 	LargeDataset bool
 }
 
-// Schema returns the schema of the records of the specified target.
-func (dummy *Dummy) Schema(_ context.Context, _ chichi.Targets) (types.Type, error) {
-	return userSchema, nil
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+	if target == chichi.Users {
+		return types.Object([]types.Property{
+			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
+			{Name: "email", Type: types.Text()},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "fullName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text()},
+			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
+		}), nil
+	}
+	switch eventType {
+	case "send_add_to_cart":
+		return types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "itemName", Type: types.Text()},
+			{Name: "itemId", Type: types.Int(32)},
+		}), nil
+	case "send_custom_event":
+		return types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+		}), nil
+	case "send_identity":
+		return types.Object([]types.Property{
+			{Name: "email", Required: true, Type: types.Text()},
+			{Name: "traits", Type: types.Object([]types.Property{
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+				})},
+			})},
+		}), nil
+	case "send_generic_event":
+		return types.Object([]types.Property{
+			{Name: "properties", Type: types.JSON()},
+		}), nil
+	case "send_event_with_no_schema":
+		return types.Type{}, nil
+	}
+	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
@@ -332,12 +354,3 @@ func (dummy *Dummy) ValidateSettings(ctx context.Context, values []byte) ([]byte
 	}
 	return json.Marshal(&settings)
 }
-
-var userSchema = types.Object([]types.Property{
-	{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
-	{Name: "email", Type: types.Text()},
-	{Name: "firstName", Type: types.Text()},
-	{Name: "fullName", Type: types.Text()},
-	{Name: "lastName", Type: types.Text()},
-	{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
-})

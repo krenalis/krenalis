@@ -50,9 +50,9 @@ func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, record map
 	// ...
 }
 
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data.
-func (ky *Klavyio) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+// EventRequest returns a request that can be used to dispatch an event to the
+// app.
+func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 	// ...
 }
 
@@ -72,8 +72,8 @@ func (ky *Klavyio) Records(ctx context.Context, target chichi.Targets, propertie
 	// ...
 }
 
-// Schema returns the schema of the records of the specified target.
-func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets) (types.Type, error) {
+// Schema returns the schema of the specified target.
+func (ky *Klavyio) Schema(ctx context.Context, target Targets, eventType string) (types.Type, error) {
 	// ...
 }
 

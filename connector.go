@@ -221,10 +221,3 @@ type GroupPropertyChangeEvent struct {
 }
 
 func (ev GroupPropertyChangeEvent) webhookPayload() {}
-
-type EventType struct {
-	ID          string
-	Name        string
-	Description string
-	Schema      types.Type
-}

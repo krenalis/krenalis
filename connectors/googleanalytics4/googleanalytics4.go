@@ -26,8 +26,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEvents and UI interfaces.
+// Make sure it implements the App, AppEvents, and UI interfaces.
 var _ interface {
+	chichi.App
 	chichi.AppEvents
 	chichi.UI
 } = (*GoogleAnalytics)(nil)
@@ -71,13 +72,18 @@ type settings struct {
 	APISecret     string
 }
 
-// EventRequest returns an event request associated with the provided event
-// type, event, and transformation data. If redacted is true, sensitive
-// authentication data will be redacted in the returned request.
-// This method is safe for concurrent use by multiple goroutines.
-// If the specified event type does not exist, it returns the
-// ErrEventTypeNotExist error.
-func (ga *GoogleAnalytics) EventRequest(ctx context.Context, eventType *chichi.EventType, event *chichi.Event, data map[string]any, redacted bool) (*chichi.EventRequest, error) {
+// EventRequest returns a request to dispatch an event to the app. typ specifies
+// the type of event to send, event is the received event, extra contains the
+// extra information, schema is the schema of the extra information (that is the
+// schema for the event type), and redacted indicates whether authentication
+// data must be redacted in the returned request.
+//
+// schema is the invalid schema if extra is nil and vice versa.
+//
+// This method is safe for concurrent use by multiple goroutines. If the
+// specified event type does not exist, it returns the ErrEventTypeNotExist
+// error.
+func (ga *GoogleAnalytics) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
@@ -93,7 +99,7 @@ func (ga *GoogleAnalytics) EventRequest(ctx context.Context, eventType *chichi.E
 	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(ga.settings.MeasurementID)
 	req.Header.Set("Content-Type", "application/json")
 	var ev map[string]any
-	switch eventType.ID {
+	switch typ {
 	case "page_view":
 		ev = map[string]any{
 			"page_location": event.Context.Page.URL,
@@ -102,13 +108,13 @@ func (ga *GoogleAnalytics) EventRequest(ctx context.Context, eventType *chichi.E
 		}
 	case "share":
 		ev = map[string]any{}
-		if method, ok := data["method"].(string); ok {
+		if method, ok := extra["method"].(string); ok {
 			ev["method"] = method
 		}
-		if contentType, ok := data["content_type"].(string); ok {
+		if contentType, ok := extra["content_type"].(string); ok {
 			ev["content_type"] = contentType
 		}
-		if itemID, ok := data["item_id"].(string); ok {
+		if itemID, ok := extra["item_id"].(string); ok {
 			ev["item_id"] = itemID
 		}
 	}
@@ -129,10 +135,7 @@ func (ga *GoogleAnalytics) EventRequest(ctx context.Context, eventType *chichi.E
 
 // EventTypes returns the event types of the connector's instance.
 func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	if ga.conf.Role == chichi.Source {
-		return nil, nil
-	}
-	eventTypes := []*chichi.EventType{
+	return []*chichi.EventType{
 		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
 		{
 			ID:          "page_view",
@@ -144,19 +147,30 @@ func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType,
 			ID:          "share",
 			Name:        "Share",
 			Description: "Send a Share event to Google Analytics 4",
-			Schema: types.Object([]types.Property{
-				{Name: "method", Type: types.Text()},
-				{Name: "content_type", Type: types.Text()},
-				{Name: "item_id", Type: types.Text()},
-			}),
 		},
-	}
-	return eventTypes, nil
+	}, nil
 }
 
 // Resource returns the resource from a client token.
 func (ga *GoogleAnalytics) Resource(ctx context.Context) (string, error) {
 	return "", nil
+}
+
+// Schema returns the schema of the specified target. For Users or Groups, it
+// returns their respective schemas. For Events, it returns the schema of the
+// specified event type.
+func (ga *GoogleAnalytics) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+	switch eventType {
+	case "page_view":
+		return types.Type{}, nil
+	case "share":
+		return types.Object([]types.Property{
+			{Name: "method", Type: types.Text()},
+			{Name: "content_type", Type: types.Text()},
+			{Name: "item_id", Type: types.Text()},
+		}), nil
+	}
+	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.

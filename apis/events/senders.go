@@ -41,7 +41,7 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 					}
 					// TODO(Gianluca): use correct error handling here.
 					app := st.connectors.App(c)
-					req, err := app.EventRequest(ctx, event.eventType, event.inEvent, event.values, false, event.valuesSchema)
+					req, err := app.EventRequest(ctx, event.eventType, event.inEvent, event.extra, event.extraSchema, false)
 					if err != nil && err != connectors.ErrEventTypeNotExist {
 						if err != context.Canceled {
 							slog.Error("cannot send event", "err", err)

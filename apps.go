@@ -19,6 +19,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// ErrEventTypeNotExist is returned by the Schema method if the event type does
+// not exist.
+var ErrEventTypeNotExist = errors.New("event type does not exist")
+
 // ErrWebhookUnauthorized is returned by the ReceiveWebhook method if the
 // request was not authorized.
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
@@ -103,12 +107,24 @@ type AppNewFunc[T App] func(*AppConfig) (T, error)
 
 // App is the interface implemented by app connectors.
 //
-// An app connector also implements at least one of the interfaces AppEvents,
-// AppUsers, and AppUsersGroups.
+// An app connector can also implement the AppEvents, AppRecords, AppResource,
+// and Webhooks interfaces.
 type App interface {
 
-	// Resource returns the resource.
-	Resource(ctx context.Context) (string, error)
+	// Schema returns the schema of the specified target. For Users or Groups, it
+	// returns their respective schemas. For Events, it returns the schema of the
+	// specified event type.
+	//
+	// For events, the returned schema describes extra information required by the
+	// connector to send an event of this type. Actions based on the specified event
+	// type will have a transformation that, given the received event, provides the
+	// extra information required by the connector. This information, along with the
+	// received event, is passed to the connector's EventRequest method.
+	//
+	// If no extra information is needed for the event type, the returned schema is
+	// the invalid type. If the event types does not exist, it returns the
+	// ErrEventTypeNotExist error.
+	Schema(ctx context.Context, target Targets, eventType string) (types.Type, error)
 }
 
 // EventRequest represents an event request.
@@ -119,18 +135,30 @@ type EventRequest struct {
 	Body   []byte
 }
 
+// EventType represents a type of event that the app can receive.
+type EventType struct {
+	ID          string // identifier; must be unique for each event type
+	Name        string // name to be displayed
+	Description string // description to be displayed
+}
+
 // AppEvents is the interface implemented by app connectors to which events can
 // be sent.
 type AppEvents interface {
 	App
 
-	// EventRequest returns an event request associated with the provided event
-	// type, event, and transformation data. If redacted is true, sensitive
-	// authentication data will be redacted in the returned request.
-	// This method is safe for concurrent use by multiple goroutines.
-	// If the specified event type does not exist, it returns the
-	// ErrEventTypeNotExist error.
-	EventRequest(ctx context.Context, eventType *EventType, event *Event, data map[string]any, redacted bool) (*EventRequest, error)
+	// EventRequest returns a request to dispatch an event to the app. typ specifies
+	// the type of event to send, event is the received event, extra contains the
+	// extra information, schema is the schema of the extra information (that is the
+	// schema for the event type), and redacted indicates whether authentication
+	// data must be redacted in the returned request.
+	//
+	// schema is the invalid schema if extra is nil and vice versa.
+	//
+	// This method is safe for concurrent use by multiple goroutines. If the
+	// specified event type does not exist, it returns the ErrEventTypeNotExist
+	// error.
+	EventRequest(ctx context.Context, typ string, event *Event, extra map[string]any, schema types.Type, redacted bool) (*EventRequest, error)
 
 	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)
@@ -156,12 +184,17 @@ type AppRecords interface {
 	// cursor.
 	Records(ctx context.Context, target Targets, properties []string, cursor Cursor) (records []Record, next string, err error)
 
-	// Schema returns the schema of the records of the specified target.
-	Schema(ctx context.Context, target Targets) (types.Type, error)
-
 	// Update updates the record of the specified target with the identifier id,
 	// setting the given properties.
 	Update(ctx context.Context, target Targets, id string, record map[string]any) error
+}
+
+// AppResource is the interface implemented by apps that support resources.
+type AppResource interface {
+	App
+
+	// Resource returns the resource.
+	Resource(ctx context.Context) (string, error)
 }
 
 // Webhooks is the interface implemented by app connectors that can receive
