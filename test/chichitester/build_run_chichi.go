@@ -26,6 +26,8 @@ func buildChichi(repo, chichiDir string, ctx context.Context) error {
 
 	// Build Chichi.
 	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(chichiDir, chichiExecFilename()), "./cmd/chichi")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	cmd.Dir = repo
 	err := cmd.Run()
 	if err != nil {
