@@ -58,7 +58,7 @@ They are accessible in Chichi within a property of the event called `properties`
 
 Chichi doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
-However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following traits when applicable:
+However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following properties when applicable:
 
 | Property   | JSON&nbsp;Type      | Description                                                                                                                                                                                                                                |
 |------------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
