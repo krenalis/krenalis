@@ -56,8 +56,8 @@ type Action struct {
 	Table                   *string
 	UniqueIDColumn          *string
 	DisplayedID             string
-	TimestampColumn         *string
-	TimestampFormat         *string
+	UpdatedAtColumn         *string
+	UpdatedAtFormat         *string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -159,13 +159,13 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.UniqueIDColumn = &column
 	}
 	this.DisplayedID = action.DisplayedID
-	if action.TimestampColumn != "" {
-		column := action.TimestampColumn
-		this.TimestampColumn = &column
+	if action.UpdatedAtColumn != "" {
+		column := action.UpdatedAtColumn
+		this.UpdatedAtColumn = &column
 	}
-	if action.TimestampFormat != "" {
-		format := action.TimestampFormat
-		this.TimestampFormat = &format
+	if action.UpdatedAtFormat != "" {
+		format := action.UpdatedAtFormat
+		this.UpdatedAtFormat = &format
 	}
 	this.ExportMode = (*ExportMode)(action.ExportMode)
 	if props := action.MatchingProperties; props != nil {
@@ -378,8 +378,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		TableName:               action.TableName,
 		UniqueIDColumn:          action.UniqueIDColumn,
 		DisplayedID:             action.DisplayedID,
-		TimestampColumn:         action.TimestampColumn,
-		TimestampFormat:         action.TimestampFormat,
+		UpdatedAtColumn:         action.UpdatedAtColumn,
+		UpdatedAtFormat:         action.UpdatedAtFormat,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -541,13 +541,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  unique_id_column = $17, "+
-			"displayed_id = $18, timestamp_column = $19, timestamp_format = $20, export_mode = $21, "+
+			"displayed_id = $18, updated_at_column = $19, updated_at_format = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.UniqueIDColumn, n.DisplayedID, n.TimestampColumn, n.TimestampFormat,
+			n.UniqueIDColumn, n.DisplayedID, n.UpdatedAtColumn, n.UpdatedAtFormat,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -772,16 +772,17 @@ type ActionToSet struct {
 	// a "traits" property.
 	DisplayedID string
 
-	// TimestampColumn is the column name used as timestamp when importing from a file or
-	// from a database. May be empty to indicate that no properties should be used as
-	// timestamp. Also refer to the documentation of TimestampFormat, which is strictly
-	// related to this.
+	// UpdatedAtColumn is the column name used as 'updated at' when importing
+	// from a file or from a database. May be empty to indicate that no
+	// properties should be used as 'updated at'. Also refer to the documentation
+	// of UpdatedAtFormat, which is strictly related to this.
 	// It cannot be longer than 1024 runes.
-	TimestampColumn string
+	UpdatedAtColumn string
 
-	// TimestampFormat indicates the timestamp format for parsing the timestamp.
+	// UpdatedAtFormat indicates the 'updated at' timestamp format for parsing
+	// the value read from the 'updated at' column.
 	//
-	// Represents a format when a TimestampColumn is provided and its
+	// Represents a format when a UpdatedAtColumn is provided and its
 	// corresponding property kind is JSON or Text, otherwise it is the empty
 	// string.
 	//
@@ -796,7 +797,7 @@ type ActionToSet struct {
 	//     with the standard C89 functions strptime/strftime.
 	//
 	// It cannot be longer than 64 runes.
-	TimestampFormat string
+	UpdatedAtFormat string
 
 	// ExportMode is the export mode, if it has one.
 	ExportMode *ExportMode

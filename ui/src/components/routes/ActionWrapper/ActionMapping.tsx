@@ -111,12 +111,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (action.TimestampColumn === '') {
+		if (action.UpdatedAtColumn === '') {
 			return;
 		}
 		// check if the timestamp format is custom.
 		const formats = Object.values(timestampFormats);
-		if (!formats.includes(action.TimestampFormat)) {
+		if (!formats.includes(action.UpdatedAtFormat)) {
 			setIsCustomTimestampSelected(true);
 		}
 	}, []);
@@ -134,7 +134,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-			// precompile the 'UniqueIDColumn' and 'TimestampColumn' fields,
+			// precompile the 'UniqueIDColumn' and 'UpdatedAtColumn' fields,
 			// if possible.
 			const a = { ...action };
 			if (action.UniqueIDColumn === '') {
@@ -143,11 +143,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					a.UniqueIDColumn = 'id';
 				}
 			}
-			if (action.TimestampColumn === '') {
+			if (action.UpdatedAtColumn === '') {
 				const hasTimestampColumn =
 					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
 				if (hasTimestampColumn) {
-					a.TimestampColumn = 'timestamp';
+					a.UpdatedAtColumn = 'timestamp';
 				}
 			}
 			setAction(a);
@@ -186,8 +186,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, [selectedLanguage]);
 
 	const needFormat: boolean = useMemo(() => {
-		if (action.TimestampColumn && !isMappingDisabled) {
-			return doesTimestampNeedFormat(action.TimestampColumn, actionType.InputSchema);
+		if (action.UpdatedAtColumn && !isMappingDisabled) {
+			return doesTimestampNeedFormat(action.UpdatedAtColumn, actionType.InputSchema);
 		}
 		return false;
 	}, [action, actionType, isMappingDisabled]);
@@ -248,9 +248,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			return;
 		} else if (input.name === 'timestampColumn') {
 			const a = { ...action };
-			a.TimestampColumn = value;
+			a.UpdatedAtColumn = value;
 			if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
-				a.TimestampFormat = '';
+				a.UpdatedAtFormat = '';
 			}
 			setAction(a);
 			return;
@@ -270,10 +270,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		const target = e.target;
 		let { value } = target;
 		const a = { ...action };
-		a.TimestampColumn = value;
+		a.UpdatedAtColumn = value;
 		if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
 			setIsCustomTimestampSelected(false);
-			a.TimestampFormat = '';
+			a.UpdatedAtFormat = '';
 		}
 		setAction(a);
 	};
@@ -283,10 +283,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		const v = e.target.value;
 		if (v === 'custom') {
 			setIsCustomTimestampSelected(true);
-			a.TimestampFormat = '';
+			a.UpdatedAtFormat = '';
 		} else {
 			setIsCustomTimestampSelected(false);
-			a.TimestampFormat = timestampFormats[e.target.value];
+			a.UpdatedAtFormat = timestampFormats[e.target.value];
 		}
 		setAction(a);
 	};
@@ -299,7 +299,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	const onInputTimestampCustomFormat = (e) => {
 		const a = { ...action };
-		a.TimestampFormat = e.target.value;
+		a.UpdatedAtFormat = e.target.value;
 		setAction(a);
 	};
 
@@ -372,7 +372,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								<ComboBoxInput
 									comboBoxListRef={propertiesListRef}
 									onInput={onUpdateTimestampColumn}
-									value={action.TimestampColumn!}
+									value={action.UpdatedAtColumn!}
 									name='timestampColumn'
 									disabled={isMappingDisabled}
 									className='inputProperty'
@@ -387,9 +387,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										value={
 											isCustomTimestampSelected
 												? 'custom'
-												: action.TimestampColumn
+												: action.UpdatedAtColumn
 												? Object.keys(timestampFormats).find(
-														(key) => timestampFormats[key] === action.TimestampFormat,
+														(key) => timestampFormats[key] === action.UpdatedAtFormat,
 												  )
 												: ''
 										}
@@ -409,7 +409,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										<div className='label'>custom format:</div>
 										<SlInput
 											onSlInput={onInputTimestampCustomFormat}
-											value={action.TimestampFormat}
+											value={action.UpdatedAtFormat}
 											name='timestampCustomFormat'
 											placeholder='%Y-%m-%d'
 											helpText='A C89 "strftime" format string'

@@ -150,8 +150,8 @@ const ActionFile = () => {
 		a.Path = '';
 		a.UniqueIDColumn = '';
 		a.DisplayedID = '';
-		a.TimestampColumn = '';
-		a.TimestampFormat = '';
+		a.UpdatedAtColumn = '';
+		a.UpdatedAtFormat = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
 		a.Transformation.Function = null;
 		setIsFileConnectorLoading(true);

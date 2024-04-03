@@ -75,8 +75,8 @@ type Action struct {
 	Table                   *string
 	UniqueIDColumn          *string
 	DisplayedID             string
-	TimestampColumn         *string
-	TimestampFormat         *string
+	UpdatedAtColumn         *string
+	UpdatedAtFormat         *string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -98,8 +98,8 @@ type ActionToSet struct {
 	TableName               string
 	UniqueIDColumn          string
 	DisplayedID             string
-	TimestampColumn         string
-	TimestampFormat         string
+	UpdatedAtColumn         string
+	UpdatedAtFormat         string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool

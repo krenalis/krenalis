@@ -138,11 +138,11 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			}
 			uniqueIDColumn = property
 		}
-		if action.TimestampColumn != "" && c.Name == action.TimestampColumn {
-			property, _ := action.InSchema.Property(action.TimestampColumn)
+		if action.UpdatedAtColumn != "" && c.Name == action.UpdatedAtColumn {
+			property, _ := action.InSchema.Property(action.UpdatedAtColumn)
 			if c.Type.Kind() != property.Type.Kind() {
 				return nil, &SchemaError{fmt.Sprintf(`timestamp column %q has type %s instead of %s`,
-					action.TimestampColumn, c.Type.Kind(), property.Type.Kind())}
+					action.UpdatedAtColumn, c.Type.Kind(), property.Type.Kind())}
 			}
 			timestampColumn = property
 		}
@@ -150,8 +150,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if uniqueIDColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no unique ID column %q", action.UniqueIDColumn)}
 	}
-	if action.TimestampColumn != "" && timestampColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no timestamp column %q", action.TimestampColumn)}
+	if action.UpdatedAtColumn != "" && timestampColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no 'updated at' column %q", action.UpdatedAtColumn)}
 	}
 	// Check that schema is compatible with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
@@ -174,7 +174,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), uniqueIDColumn,
-		timestampColumn, action.TimestampFormat, displayedIDColumn)
+		timestampColumn, action.UpdatedAtFormat, displayedIDColumn)
 	return records, nil
 }
 

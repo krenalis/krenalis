@@ -49,8 +49,8 @@ interface Action {
 	Table: string | null;
 	Sheet: string | null;
 	UniqueIDColumn: string | null;
-	TimestampColumn: string | null;
-	TimestampFormat: string | null;
+	UpdatedAtColumn: string | null;
+	UpdatedAtFormat: string | null;
 	DisplayedID: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
@@ -79,8 +79,8 @@ interface ActionToSet {
 	tableName?: string | null;
 	sheet?: string | null;
 	UniqueIDColumn?: string | null;
-	TimestampColumn?: string | null;
-	TimestampFormat?: string | null;
+	UpdatedAtColumn?: string | null;
+	UpdatedAtFormat?: string | null;
 	DisplayedID?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;

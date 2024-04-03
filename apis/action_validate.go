@@ -245,18 +245,18 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("displayed ID is longer than 1024 runes")
 		}
 	}
-	// Validate the timestamp column.
-	if action.TimestampColumn != "" {
-		if !types.IsValidPropertyName(action.TimestampColumn) {
-			return errors.BadRequest("column name for the timestamp is a not valid property name")
+	// Validate the 'updated at' column.
+	if action.UpdatedAtColumn != "" {
+		if !types.IsValidPropertyName(action.UpdatedAtColumn) {
+			return errors.BadRequest("'updated at' column is a not valid property name")
 		}
-		if utf8.RuneCountInString(action.TimestampColumn) > 1024 {
-			return errors.BadRequest("column name for the timestamp is longer than 1024 runes")
+		if utf8.RuneCountInString(action.UpdatedAtColumn) > 1024 {
+			return errors.BadRequest("'updated at' column is longer than 1024 runes")
 		}
 	}
-	// Validate the timestamp format.
-	if action.TimestampFormat != "" {
-		if err := validateTimestampFormat(action.TimestampFormat); err != nil {
+	// Validate the 'updated at' format.
+	if action.UpdatedAtFormat != "" {
+		if err := validateTimestampFormat(action.UpdatedAtFormat); err != nil {
 			return errors.BadRequest(err.Error())
 		}
 	}
@@ -360,36 +360,36 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return fmt.Errorf("unique ID column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.UniqueIDColumn, k)
 		}
 		usedInPaths = append(usedInPaths, types.Path{action.UniqueIDColumn})
-		// Validate the timestamp column and format.
-		var requiresTimestampFormat bool
-		if action.TimestampColumn != "" {
-			timestampColumn, ok := inSchema.Property(action.TimestampColumn)
+		// Validate the 'updated at' column and format.
+		var requiresUpdatedAtFormat bool
+		if action.UpdatedAtColumn != "" {
+			timestampColumn, ok := inSchema.Property(action.UpdatedAtColumn)
 			if !ok {
-				return errors.BadRequest("timestamp column %q not found within input schema", action.TimestampColumn)
+				return errors.BadRequest("'updated at' column %q not found within input schema", action.UpdatedAtColumn)
 			}
 			switch k := timestampColumn.Type.Kind(); k {
 			case types.DateTimeKind, types.DateKind:
 			case types.JSONKind, types.TextKind:
-				requiresTimestampFormat = true
+				requiresUpdatedAtFormat = true
 			default:
-				return fmt.Errorf("timestamp column %q has kind %s instead of DateTime, Date, JSON, or Text", action.TimestampColumn, k)
+				return fmt.Errorf("'updated at' column %q has kind %s instead of DateTime, Date, JSON, or Text", action.UpdatedAtColumn, k)
 			}
-			usedInPaths = append(usedInPaths, types.Path{action.TimestampColumn})
+			usedInPaths = append(usedInPaths, types.Path{action.UpdatedAtColumn})
 		}
-		if !requiresTimestampFormat && action.TimestampFormat != "" {
-			return errors.BadRequest("action cannot specify a timestamp format")
-		} else if requiresTimestampFormat && action.TimestampFormat == "" {
-			return errors.BadRequest("timestamp format is required")
+		if !requiresUpdatedAtFormat && action.UpdatedAtFormat != "" {
+			return errors.BadRequest("action cannot specify an 'updated at' format")
+		} else if requiresUpdatedAtFormat && action.UpdatedAtFormat == "" {
+			return errors.BadRequest("'updated at' format is required")
 		}
 	} else {
 		if action.UniqueIDColumn != "" {
 			return errors.BadRequest("action cannot specify a column name for the unique ID")
 		}
-		if action.TimestampColumn != "" {
-			return errors.BadRequest("action cannot specify a column name for the timestamp")
+		if action.UpdatedAtColumn != "" {
+			return errors.BadRequest("action cannot specify an 'updated at' column")
 		}
-		if action.TimestampFormat != "" {
-			return errors.BadRequest("action cannot specify a timestamp format")
+		if action.UpdatedAtFormat != "" {
+			return errors.BadRequest("action cannot specify an 'updated at' format")
 		}
 	}
 

@@ -86,7 +86,7 @@ const ActionQuery = () => {
 			actionTyp.InputSchema = res.Schema;
 			a.UniqueIDColumn = '';
 			a.DisplayedID = '';
-			a.TimestampColumn = '';
+			a.UpdatedAtColumn = '';
 			setAction(a);
 			setActionType(actionTyp);
 			setTimeout(() => {

@@ -931,8 +931,8 @@ type Action struct {
 	Settings                []byte
 	TableName               string
 	UniqueIDColumn          string
-	TimestampColumn         string
-	TimestampFormat         string
+	UpdatedAtColumn         string
+	UpdatedAtFormat         string
 	DisplayedID             string
 	UserCursor              Cursor
 	Health                  Health

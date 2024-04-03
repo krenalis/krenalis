@@ -396,8 +396,8 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		TableName:               action.TableName,
 		UniqueIDColumn:          action.UniqueIDColumn,
 		DisplayedID:             action.DisplayedID,
-		TimestampColumn:         action.TimestampColumn,
-		TimestampFormat:         action.TimestampFormat,
+		UpdatedAtColumn:         action.UpdatedAtColumn,
+		UpdatedAtFormat:         action.UpdatedAtFormat,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -550,7 +550,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, query,\n" +
 			"connector, path, sheet, compression, settings, table_name, unique_id_column,\n" +
-			"timestamp_column, timestamp_format, export_mode, matching_properties_internal,\n" +
+			"updated_at_column, updated_at_format, export_mode, matching_properties_internal,\n" +
 			"matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
 			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)"
@@ -558,7 +558,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(filter), mapping, function.Source, function.Language, function.Version,
 			n.Query, connectorID, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.UniqueIDColumn, n.TimestampColumn, n.TimestampFormat, n.ExportMode,
+			n.UniqueIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {

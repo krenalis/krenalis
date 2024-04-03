@@ -102,8 +102,8 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		return nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 	timestampColumn := TimestampColumn{
-		Name:   file.action.TimestampColumn,
-		Format: file.action.TimestampFormat,
+		Name:   file.action.UpdatedAtColumn,
+		Format: file.action.UpdatedAtFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
 		file.action.UniqueIDColumn, timestampColumn, file.action.DisplayedID,

@@ -99,8 +99,8 @@ interface TransformedAction {
 	Table?: string | null;
 	Sheet?: string | null;
 	UniqueIDColumn?: string | null;
-	TimestampColumn?: string | null;
-	TimestampFormat?: string | null;
+	UpdatedAtColumn?: string | null;
+	UpdatedAtFormat?: string | null;
 	DisplayedID?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: MatchingProperties | null;
@@ -292,12 +292,12 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 	}
 
 	if (
-		action.TimestampFormat != null &&
-		action.TimestampFormat != '' &&
-		action.TimestampFormat.startsWith("'") &&
-		action.TimestampFormat.endsWith("'")
+		action.UpdatedAtFormat != null &&
+		action.UpdatedAtFormat != '' &&
+		action.UpdatedAtFormat.startsWith("'") &&
+		action.UpdatedAtFormat.endsWith("'")
 	) {
-		action.TimestampFormat = action.TimestampFormat.substring(1, action.TimestampFormat.length - 1);
+		action.UpdatedAtFormat = action.UpdatedAtFormat.substring(1, action.UpdatedAtFormat.length - 1);
 	}
 
 	return {
@@ -322,8 +322,8 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		Table: action.Table,
 		Sheet: action.Sheet,
 		UniqueIDColumn: action.UniqueIDColumn,
-		TimestampColumn: action.TimestampColumn,
-		TimestampFormat: action.TimestampFormat,
+		UpdatedAtColumn: action.UpdatedAtColumn,
+		UpdatedAtFormat: action.UpdatedAtFormat,
 		DisplayedID: action.DisplayedID,
 		ExportMode: action.ExportMode,
 		MatchingProperties: action.MatchingProperties,
@@ -454,26 +454,26 @@ const transformInActionToSet = async (
 	}
 
 	let timestampFormat: string;
-	if (action.TimestampColumn != null && action.TimestampColumn !== '') {
+	if (action.UpdatedAtColumn != null && action.UpdatedAtColumn !== '') {
 		const isPropertyAlreadyInSchema =
-			inSchema.properties!.findIndex((p) => p.name === action.TimestampColumn) !== -1;
+			inSchema.properties!.findIndex((p) => p.name === action.UpdatedAtColumn) !== -1;
 		if (!isPropertyAlreadyInSchema) {
-			const timestampColumnProperty = flattenedInputSchema[action.TimestampColumn];
+			const timestampColumnProperty = flattenedInputSchema[action.UpdatedAtColumn];
 			if (timestampColumnProperty == null) {
 				throw 'Timestamp must be a valid property';
 			}
 			inSchema.properties.push(timestampColumnProperty.full);
 		}
 		if (
-			action.TimestampFormat !== 'ISO8601' &&
-			action.TimestampFormat !== 'Excel' &&
-			action.TimestampFormat !== 'DateTime' &&
-			action.TimestampFormat !== 'DateOnly'
+			action.UpdatedAtFormat !== 'ISO8601' &&
+			action.UpdatedAtFormat !== 'Excel' &&
+			action.UpdatedAtFormat !== 'DateTime' &&
+			action.UpdatedAtFormat !== 'DateOnly'
 		) {
 			// wrap the format in single quotes.
-			timestampFormat = `'${action.TimestampFormat}'`;
+			timestampFormat = `'${action.UpdatedAtFormat}'`;
 		} else {
-			timestampFormat = action.TimestampFormat;
+			timestampFormat = action.UpdatedAtFormat;
 		}
 	}
 
@@ -536,8 +536,8 @@ const transformInActionToSet = async (
 		sheet: action.Sheet,
 		exportMode: action.ExportMode,
 		UniqueIDColumn: action.UniqueIDColumn,
-		TimestampColumn: action.TimestampColumn,
-		TimestampFormat: timestampFormat,
+		UpdatedAtColumn: action.UpdatedAtColumn,
+		UpdatedAtFormat: timestampFormat,
 		DisplayedID: action.DisplayedID,
 		matchingProperties: action.MatchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
@@ -581,8 +581,8 @@ const computeDefaultAction = (
 	if (fields.includes('File')) {
 		action.Path = '';
 		action.UniqueIDColumn = '';
-		action.TimestampColumn = '';
-		action.TimestampFormat = '';
+		action.UpdatedAtColumn = '';
+		action.UpdatedAtFormat = '';
 		action.Sheet = null;
 		action.Compression = '';
 		action.Connector = 0;
