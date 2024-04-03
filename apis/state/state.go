@@ -383,12 +383,12 @@ type Connector struct {
 	DestinationDescription string
 	TermForUsers           string
 	TermForGroups          string
-	ExternalIDLabel        string
 	Type                   ConnectorType
 	Targets                ConnectorTargets
 	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSettings            bool
+	ExternalIDLabel        string
 	SuggestedDisplayedID   string
 	Icon                   string
 	Layouts                Layouts

@@ -116,9 +116,9 @@ The `AppInfo` type describes information about the app connector:
 
 - `TermForGroups`: term used by the cloud app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 
-- `ExternalIDLabel`: descriptive name of the identifier used by the cloud app to identify a user. For example "ID", "User ID", or "HubSpot ID".
-
 - `SendingMode`: mode used to send the events to the cloud app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
+
+- `ExternalIDLabel`: descriptive name of the identifier used by the cloud app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 
 - `SuggestedDisplayedID`: suggestion for the property name to use as the displayed identifier. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
 

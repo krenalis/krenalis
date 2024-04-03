@@ -55,7 +55,6 @@ func (state *State) load() error {
 					c.DestinationDescription = app.DestinationDescription
 					c.TermForUsers = app.TermForUsers
 					c.TermForGroups = app.TermForGroups
-					c.ExternalIDLabel = app.ExternalIDLabel
 					switch app.SendingMode {
 					case chichi.Cloud:
 						mode := Cloud
@@ -67,6 +66,7 @@ func (state *State) load() error {
 						mode := Combined
 						c.SendingMode = &mode
 					}
+					c.ExternalIDLabel = app.ExternalIDLabel
 					c.SuggestedDisplayedID = app.SuggestedDisplayedID
 					c.Icon = app.Icon
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)

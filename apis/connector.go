@@ -31,9 +31,9 @@ type Connector struct {
 	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSettings            bool
+	ExternalIDLabel        string
 	SuggestedDisplayedID   string
 	Icon                   string
-	ExternalIDLabel        string
 	FileExtension          string
 	SampleQuery            string
 	WebhooksPer            WebhooksPer
