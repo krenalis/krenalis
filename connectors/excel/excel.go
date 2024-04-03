@@ -22,7 +22,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -155,7 +154,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -175,17 +174,17 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*u
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.Source},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}

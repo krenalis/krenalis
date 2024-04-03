@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // ConnectorInfo is the interface implemented by connector infos.
@@ -106,8 +105,9 @@ const (
 type Role int
 
 const (
-	Source      Role = iota + 1 // source
-	Destination                 // destination
+	Both        Role = iota // both
+	Source                  // source
+	Destination             // destination
 )
 
 // String returns the string representation of role.
@@ -126,7 +126,7 @@ func (role Role) String() string {
 type UI interface {
 
 	// ServeUI serves the connector's user interface.
-	ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error)
+	ServeUI(ctx context.Context, event string, values []byte) (*Form, *Alert, error)
 
 	// ValidateSettings validates the settings received from the UI and returns them
 	// in a format suitable for storage.

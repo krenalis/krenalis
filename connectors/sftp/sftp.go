@@ -26,7 +26,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/ui"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -118,7 +117,7 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -135,32 +134,32 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*ui.F
 		s, err := sf.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
-				return nil, ui.WarningAlert(err.Error()), nil
+				return nil, chichi.WarningAlert(err.Error()), nil
 			}
-			return nil, ui.DangerAlert(err.Error()), nil
+			return nil, chichi.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil
+			return nil, chichi.SuccessAlert("Connection established"), nil
 		}
 		err = sf.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "host", Label: "Host", Placeholder: "ftp.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Label: "Port", Placeholder: "22", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
-			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&ui.Input{Name: "tempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: ui.Destination},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "host", Label: "Host", Placeholder: "ftp.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "port", Label: "Port", Placeholder: "22", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
+			&chichi.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&chichi.Input{Name: "tempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: chichi.Destination},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
@@ -179,27 +178,27 @@ func (sf *SFTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, er
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, ui.Errorf("port must be in range [1,65536]")
+		return nil, chichi.Errorf("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-		return nil, ui.Errorf("username length must be in range [1,200]")
+		return nil, chichi.Errorf("username length must be in range [1,200]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return nil, ui.Errorf("password length must be in range [1,200]")
+		return nil, chichi.Errorf("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
 	if sf.conf.Role == chichi.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
-			return nil, ui.Errorf("length of temporary directory path must be in range [1,1000]")
+			return nil, chichi.Errorf("length of temporary directory path must be in range [1,1000]")
 		}
 	} else if s.TempPath != "" {
-		return nil, ui.Errorf("temporary directory path must be empty for source destinations")
+		return nil, chichi.Errorf("temporary directory path must be empty for source destinations")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil {
@@ -381,7 +380,7 @@ func testConnection(ctx context.Context, settings *settings) error {
 	defer client.close()
 	if settings.TempPath != "" {
 		if _, ok := client.sftp.HasExtension("posix-rename@openssh.com"); !ok {
-			return ui.Errorf("temporary directory path must be empty because the server does not support posix-rename")
+			return chichi.Errorf("temporary directory path must be empty because the server does not support posix-rename")
 		}
 	}
 	return nil

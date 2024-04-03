@@ -22,7 +22,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -223,7 +222,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType 
 
 	if target == chichi.Events {
 		if eventType != "create_event" {
-			return types.Type{}, ui.ErrEventNotExist
+			return types.Type{}, chichi.ErrEventNotExist
 		}
 		return types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Required: true},
@@ -377,7 +376,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType 
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -395,15 +394,15 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*u
 		}
 		return nil, nil, ky.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -426,15 +425,15 @@ func (ky *Klavyio) ValidateSettings(ctx context.Context, values []byte) ([]byte,
 		return nil, err
 	}
 	if n := len(s.PrivateAPIKey); n < 37 {
-		return nil, ui.Errorf("private API key must be at least 37 characters long")
+		return nil, chichi.Errorf("private API key must be at least 37 characters long")
 	}
 	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return nil, ui.Errorf("private API key must begin with 'pk_'")
+		return nil, chichi.Errorf("private API key must begin with 'pk_'")
 	}
 	for i := 3; i < len(s.PrivateAPIKey); i++ {
 		c := s.PrivateAPIKey[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, ui.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
+			return nil, chichi.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
 		}
 	}
 	return json.Marshal(&s)

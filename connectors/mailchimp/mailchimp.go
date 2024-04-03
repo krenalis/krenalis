@@ -28,7 +28,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -433,7 +432,7 @@ func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, eventTyp
 }
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -451,7 +450,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (
 		}
 		return nil, nil, mc.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
 	// Get the lists.
@@ -459,19 +458,19 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (
 	if err != nil {
 		return nil, nil, err
 	}
-	options := make([]ui.Option, len(lists))
+	options := make([]chichi.Option, len(lists))
 	for i, list := range lists {
-		options[i] = ui.Option{
+		options[i] = chichi.Option{
 			Text:  list.Name,
 			Value: list.ID,
 		}
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Select{Name: "list", Label: "List", Options: options},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Select{Name: "list", Label: "List", Options: options},
 		},
-		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		Actions: []chichi.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 	}
 
 	return form, nil, nil
@@ -540,7 +539,7 @@ func (mc *MailChimp) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		return nil, err
 	}
 	if s.List == "" || len(s.List) > 100 {
-		return nil, ui.Errorf("list length must be in range [1, 100]")
+		return nil, chichi.Errorf("list length must be in range [1, 100]")
 	}
 	// Check if the list exists.
 	lists, err := mc.lists(ctx)
@@ -555,7 +554,7 @@ func (mc *MailChimp) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		}
 	}
 	if !found {
-		return nil, ui.Errorf("list does not exist")
+		return nil, chichi.Errorf("list does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {

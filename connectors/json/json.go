@@ -19,7 +19,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -178,7 +177,7 @@ Records:
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -198,19 +197,19 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*ui.Fo
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Switch{Name: "indent", Label: "Indent the generated output", Role: ui.Destination},
-			&ui.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: ui.Destination},
-			&ui.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: ui.Destination},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Switch{Name: "indent", Label: "Indent the generated output", Role: chichi.Destination},
+			&chichi.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: chichi.Destination},
+			&chichi.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: chichi.Destination},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}

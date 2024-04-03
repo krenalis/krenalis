@@ -20,7 +20,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -88,7 +87,7 @@ func (sf *Snowflake) Query(ctx context.Context, query string) (chichi.Rows, []ty
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -103,34 +102,34 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (
 		s, err := sf.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
-				return nil, ui.WarningAlert(err.Error()), nil
+				return nil, chichi.WarningAlert(err.Error()), nil
 			}
-			return nil, ui.DangerAlert(err.Error()), nil
+			return nil, chichi.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil
+			return nil, chichi.SuccessAlert("Connection established"), nil
 		}
 		err = sf.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
-			&ui.Input{Name: "username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&ui.Input{Name: "password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
-			&ui.Input{Name: "database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&ui.Input{Name: "schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&ui.Input{Name: "warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&ui.Input{Name: "role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
@@ -157,31 +156,31 @@ func (sf *Snowflake) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return nil, ui.Errorf("account length must be in range [1,255]")
+		return nil, chichi.Errorf("account length must be in range [1,255]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, ui.Errorf("username length must be in range [1,255]")
+		return nil, chichi.Errorf("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, ui.Errorf("password length must be in range [1,255]")
+		return nil, chichi.Errorf("password length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, ui.Errorf("warehouse length must be in range [1,255]")
+		return nil, chichi.Errorf("warehouse length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, ui.Errorf("database length must be in range [1,255]")
+		return nil, chichi.Errorf("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, ui.Errorf("schema length must be in range [1,255]")
+		return nil, chichi.Errorf("schema length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, ui.Errorf("role length must be in range [1,255]")
+		return nil, chichi.Errorf("role length must be in range [1,255]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil {

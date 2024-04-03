@@ -1,7 +1,7 @@
 main:
     host: 127.0.0.1:9090
 
-admin:
+ui:
     sessionKey:
 
 esbuild:

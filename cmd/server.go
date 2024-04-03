@@ -21,16 +21,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/admin"
 	"github.com/open2b/chichi/apis"
 	"github.com/open2b/chichi/telemetry"
+	"github.com/open2b/chichi/ui"
 )
 
 type Settings struct {
 	Main struct {
 		Host string
 	}
-	Admin struct {
+	UI struct {
 		SessionKey string `yaml:"sessionKey"`
 	}
 	ESBuild struct {
@@ -101,19 +101,19 @@ func Run(ctx context.Context, settings *Settings) error {
 		config.Transformer = apis.LocalConfig(settings.Transformer.Local)
 	}
 
-	// Decode the admin session key.
-	if settings.Admin.SessionKey == "" {
-		return errors.New("admin session key is missing from the configuration file")
+	// Decode the UI session key.
+	if settings.UI.SessionKey == "" {
+		return errors.New("ui session key is missing from the configuration file")
 	}
-	if padding := len(settings.Admin.SessionKey) % 4; padding > 0 {
-		settings.Admin.SessionKey += strings.Repeat("=", 4-padding)
+	if padding := len(settings.UI.SessionKey) % 4; padding > 0 {
+		settings.UI.SessionKey += strings.Repeat("=", 4-padding)
 	}
-	sessionKey, err := base64.StdEncoding.DecodeString(settings.Admin.SessionKey)
+	sessionKey, err := base64.StdEncoding.DecodeString(settings.UI.SessionKey)
 	if err != nil {
-		return errors.New("admin session key in the configuration file is not in Base64 format")
+		return errors.New("UI session key in the configuration file is not in Base64 format")
 	}
 	if len(sessionKey) != 64 {
-		return fmt.Errorf("admin session key in the configuration file is not 64 bytes long, but %d", len(sessionKey))
+		return fmt.Errorf("UI session key in the configuration file is not 64 bytes long, but %d", len(sessionKey))
 	}
 
 	apis, err := apis.New(&config)
@@ -122,7 +122,7 @@ func Run(ctx context.Context, settings *Settings) error {
 	}
 	defer apis.Close()
 
-	admin := admin.New(apis)
+	ui := ui.New(apis)
 
 	apisServer := newAPIsServer(apis, sessionKey)
 
@@ -158,8 +158,8 @@ func Run(ctx context.Context, settings *Settings) error {
 		}()
 
 		switch {
-		case strings.HasPrefix(r.URL.Path, "/admin/"):
-			admin.ServeHTTP(w, r)
+		case strings.HasPrefix(r.URL.Path, "/ui/"):
+			ui.ServeHTTP(w, r)
 			return
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
 			apis.ServeEvents(w, r)

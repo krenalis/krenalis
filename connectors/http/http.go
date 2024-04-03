@@ -24,7 +24,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -128,7 +127,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -150,22 +149,22 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*ui.Fo
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&ui.KeyValue{Name: "headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
-				KeyComponent:   &ui.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
-				ValueComponent: &ui.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.KeyValue{Name: "headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+				KeyComponent:   &chichi.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
+				ValueComponent: &chichi.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -183,19 +182,19 @@ func (h *HTTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, ui.Errorf("port must be in range [1,65536]")
+		return nil, chichi.Errorf("port must be in range [1,65536]")
 	}
 	// Validate Headers.
 	for k, v := range s.Headers {
 		if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
-			return nil, ui.Errorf("header key length must be in range [1,100]")
+			return nil, chichi.Errorf("header key length must be in range [1,100]")
 		}
 		if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
-			return nil, ui.Errorf("header value length must be in range [1,10000]")
+			return nil, chichi.Errorf("header value length must be in range [1,10000]")
 		}
 	}
 	return json.Marshal(&s)

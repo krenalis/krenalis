@@ -23,7 +23,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -274,7 +273,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, eventType
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -294,17 +293,17 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings for Dummy saved"), nil
+		return nil, chichi.SuccessAlert("Settings for Dummy saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: ui.Source},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: chichi.Source},
 		},
 		Values:  values,
-		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		Actions: []chichi.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 	}
 
 	return form, nil, nil

@@ -18,7 +18,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/ui"
 )
 
 // ServeActionUI serves the user interface of the provided file action and returns the
@@ -47,15 +46,15 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 	}
 	form, alert, err := connectorUI.ServeUI(ctx, event, settings)
 	if err != nil {
-		if err == ui.ErrEventNotExist {
+		if err == chichi.ErrEventNotExist {
 			return nil, ErrEventNotExist
 		}
-		if err, ok := err.(ui.Error); ok {
+		if err, ok := err.(chichi.Error); ok {
 			return nil, &InvalidSettingsError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	return marshalUIFormAlert(form, alert, ui.Role(role))
+	return marshalUIFormAlert(form, alert, chichi.Role(role))
 }
 
 // ServeConnectionUI serves the user interface of the provided connection and
@@ -136,15 +135,15 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	}
 	form, alert, err := connectorUI.ServeUI(ctx, event, settings)
 	if err != nil {
-		if err == ui.ErrEventNotExist {
+		if err == chichi.ErrEventNotExist {
 			return nil, ErrEventNotExist
 		}
-		if err, ok := err.(ui.Error); ok {
+		if err, ok := err.(chichi.Error); ok {
 			return nil, &InvalidSettingsError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	return marshalUIFormAlert(form, alert, ui.Role(role))
+	return marshalUIFormAlert(form, alert, chichi.Role(role))
 }
 
 type ConnectorConfig struct {
@@ -203,15 +202,15 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	}
 	form, alert, err := connectorUI.ServeUI(ctx, event, settings)
 	if err != nil {
-		if err == ui.ErrEventNotExist {
+		if err == chichi.ErrEventNotExist {
 			return nil, ErrEventNotExist
 		}
-		if err, ok := err.(ui.Error); ok {
+		if err, ok := err.(chichi.Error); ok {
 			return nil, &InvalidSettingsError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	return marshalUIFormAlert(form, alert, ui.Role(r))
+	return marshalUIFormAlert(form, alert, chichi.Role(r))
 }
 
 // ValidateSettings validates the user-entered settings for the provided
@@ -259,7 +258,7 @@ func (connectors *Connectors) ValidateSettings(ctx context.Context, connector *s
 	}
 	settings, err = connectorUI.ValidateSettings(ctx, settings)
 	if err != nil {
-		if err, ok := err.(ui.Error); ok {
+		if err, ok := err.(chichi.Error); ok {
 			return nil, &InvalidSettingsError{Msg: err.Error()}
 		}
 		return nil, err
@@ -272,7 +271,7 @@ func (connectors *Connectors) ValidateSettings(ctx context.Context, connector *s
 
 // marshalUIFormAlert marshals form, with the provided alert and role, in JSON
 // format. form and alert can be nil or not, independently of each other.
-func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ui.Role) ([]byte, error) {
+func marshalUIFormAlert(form *chichi.Form, alert *chichi.Alert, role chichi.Role) ([]byte, error) {
 
 	if form == nil && alert == nil {
 		return []byte("null"), nil
@@ -345,11 +344,11 @@ func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ui.Role) ([]byte, e
 
 // marshalUIComponent marshals component with the provided role in JSON format.
 // If comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, values map[string]any, comma bool) (bool, error) {
+func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi.Role, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
-	if role != ui.Both {
-		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.Both && r != role {
+	if role != chichi.Both {
+		if r := chichi.Role(rv.FieldByName("Role").Int()); r != chichi.Both && r != role {
 			return false, nil
 		}
 	}
@@ -373,9 +372,9 @@ func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, v
 		b.WriteString(`":`)
 		var err error
 		switch field := field.Interface().(type) {
-		case ui.Component:
+		case chichi.Component:
 			_, err = marshalUIComponent(b, field, role, values, false)
-		case []ui.FieldSet:
+		case []chichi.FieldSet:
 			b.WriteByte('[')
 			comma = false
 			for _, set := range field {
@@ -399,9 +398,9 @@ func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, v
 
 // marshalUIFieldSet marshals fieldSet with the provided role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIFieldSet(b *bytes.Buffer, fieldSet ui.FieldSet, role ui.Role, values map[string]any, comma bool) (bool, error) {
-	if role != ui.Both {
-		if fieldSet.Role != ui.Both && fieldSet.Role != role {
+func marshalUIFieldSet(b *bytes.Buffer, fieldSet chichi.FieldSet, role chichi.Role, values map[string]any, comma bool) (bool, error) {
+	if role != chichi.Both {
+		if fieldSet.Role != chichi.Both && fieldSet.Role != role {
 			return false, nil
 		}
 	}

@@ -27,7 +27,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 const maxEventPayload = 1024 * 1024
@@ -263,7 +262,7 @@ func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventTy
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -281,14 +280,14 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) 
 		}
 		return nil, nil, stripe.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "api_key", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "api_key", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
-		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		Actions: []chichi.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 		Values:  values,
 	}
 
@@ -317,7 +316,7 @@ func (stripe *Stripe) ValidateSettings(ctx context.Context, values []byte) ([]by
 		return nil, err
 	}
 	if s.APIKey == "" {
-		return nil, ui.Errorf("API key cannot be empty")
+		return nil, chichi.Errorf("API key cannot be empty")
 	}
 	return json.Marshal(&s)
 }

@@ -25,7 +25,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -230,7 +229,7 @@ func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -248,17 +247,17 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*
 		}
 		return nil, nil, mp.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&ui.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
-			&ui.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
+			&chichi.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
+			&chichi.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -275,13 +274,13 @@ func (mp *Mixpanel) ValidateSettings(ctx context.Context, values []byte) ([]byte
 		return nil, err
 	}
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return nil, ui.Errorf("project ID must be a positive number")
+		return nil, chichi.Errorf("project ID must be a positive number")
 	}
 	if n := len(s.Username); n < 20 || n > 100 {
-		return nil, ui.Errorf("username length must be in range [20, 100]")
+		return nil, chichi.Errorf("username length must be in range [20, 100]")
 	}
 	if n := len(s.Secret); n < 32 || n > 100 {
-		return nil, ui.Errorf("secret length must be in range [32, 100]")
+		return nil, chichi.Errorf("secret length must be in range [32, 100]")
 	}
 	return json.Marshal(&s)
 }

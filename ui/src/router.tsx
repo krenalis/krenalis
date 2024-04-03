@@ -1,5 +1,5 @@
 import React from 'react';
-import { adminBasePath } from './constants/path';
+import { uiBasePath } from './constants/path';
 import App from './App';
 import AppLayout from './components/routes/AppLayout/AppLayout';
 import Login from './components/routes/Login/Login';
@@ -34,7 +34,7 @@ import { FileConnector } from './components/routes/FileConnector/FileConnector';
 
 const router = createBrowserRouter([
 	{
-		path: adminBasePath,
+		path: uiBasePath,
 		element: <App />,
 		errorElement: <RootError />,
 		children: [

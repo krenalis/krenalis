@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/ui"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -131,7 +130,7 @@ func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options chichi.Send
 }
 
 // ServeUI serves the connector's user interface.
-func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -146,29 +145,29 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte) (
 		s, err := rmq.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
-				return nil, ui.WarningAlert(err.Error()), nil
+				return nil, chichi.WarningAlert(err.Error()), nil
 			}
-			return nil, ui.DangerAlert(err.Error()), nil
+			return nil, chichi.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil
+			return nil, chichi.SuccessAlert("Connection established"), nil
 		}
 		err = rmq.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "url", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
-			&ui.Input{Name: "queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "url", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
+			&chichi.Input{Name: "queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
@@ -187,17 +186,17 @@ func (rmq *RabbitMQ) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	}
 	// Validate URL.
 	if n := len(s.URL); n < 7 || n > 2048 {
-		return nil, ui.Errorf("URL length in bytes must be in range [7,2048]")
+		return nil, chichi.Errorf("URL length in bytes must be in range [7,2048]")
 	}
 	if _, err := amqp.ParseURI(s.URL); err != nil {
-		return nil, ui.Errorf("URL is not a valid RabbitMQ URI")
+		return nil, chichi.Errorf("URL is not a valid RabbitMQ URI")
 	}
 	// Validate Queue.
 	if n := len(s.Queue); n == 0 || n > 255 {
-		return nil, ui.Errorf("queue length in bytes must be in range [1,255]")
+		return nil, chichi.Errorf("queue length in bytes must be in range [1,255]")
 	}
 	if strings.HasPrefix(s.Queue, "amq.") {
-		return nil, ui.Errorf("queue names starting with 'amq.' are reserved for internal use by the broker")
+		return nil, chichi.Errorf("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
 	err = rmq.testConnection(ctx)
 	if err != nil {

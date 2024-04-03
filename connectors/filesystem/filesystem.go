@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -100,7 +99,7 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -120,18 +119,18 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Chichi for read and write operations. Use this with caution."},
-			&ui.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Chichi for read and write operations. Use this with caution."},
+			&chichi.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -150,17 +149,17 @@ func (filesystem *Filesystem) ValidateSettings(ctx context.Context, values []byt
 	// Validate Root.
 	root := s.Root
 	if n := len(root); n == 0 || n > 253 {
-		return nil, ui.Errorf("root path length in bytes must be in range [1,253]")
+		return nil, chichi.Errorf("root path length in bytes must be in range [1,253]")
 	}
 	if !filepath.IsAbs(root) {
-		return nil, ui.Errorf(`root path must be absolute`)
+		return nil, chichi.Errorf(`root path must be absolute`)
 	}
 	st, err := os.Stat(root)
 	if os.IsNotExist(err) {
-		return nil, ui.Errorf("root path does not exist")
+		return nil, chichi.Errorf("root path does not exist")
 	}
 	if !st.IsDir() {
-		return nil, ui.Errorf("root path is not a directory")
+		return nil, chichi.Errorf("root path is not a directory")
 	}
 	return json.Marshal(&s)
 }

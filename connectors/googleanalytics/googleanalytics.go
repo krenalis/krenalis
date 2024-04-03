@@ -20,7 +20,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Connector icon.
@@ -174,7 +173,7 @@ func (ga *GoogleAnalytics) Schema(ctx context.Context, target chichi.Targets, ev
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *GoogleAnalytics) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ga *GoogleAnalytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -192,16 +191,16 @@ func (ga *GoogleAnalytics) ServeUI(ctx context.Context, event string, values []b
 		}
 		return nil, nil, ga.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&ui.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+			&chichi.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -219,18 +218,18 @@ func (ga *GoogleAnalytics) ValidateSettings(ctx context.Context, values []byte) 
 		return nil, err
 	}
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return nil, ui.Errorf("Measurement ID length must be in [2,20]")
+		return nil, chichi.Errorf("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return nil, ui.Errorf("Measurement ID must begin with 'G-' or 'AW-'")
+		return nil, chichi.Errorf("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	if n := len(s.APISecret); n < 1 || n > 40 {
-		return nil, ui.Errorf("API Secret length must be in [1,40]")
+		return nil, chichi.Errorf("API Secret length must be in [1,40]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, ui.Errorf("API secret must contain only alphanumeric characters")
+			return nil, chichi.Errorf("API secret must contain only alphanumeric characters")
 		}
 	}
 	return json.Marshal(&s)

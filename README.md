@@ -70,11 +70,11 @@ updated to use a given module.
 ### 1. Install React and other dependencies
 
 ```
-cd admin
+cd ui
 npm install
 ```
 
-It is recommended to add the `/admin/node_modules/` directory your local `.gitignore` file.
+It is recommended to add the `/ui/node_modules/` directory your local `.gitignore` file.
 
 ### 2. Configure and add certificates
 
@@ -144,7 +144,7 @@ chichi-cli init-warehouse
 
 ### 7. Run and open the browser
 
-Launch the server command executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
+Launch the server command executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/ui/.
 
 ### 8. Add properties to the `users` / `users_identities` schemas
 

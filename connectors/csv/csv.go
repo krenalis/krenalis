@@ -23,7 +23,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 
 	"github.com/shopspring/decimal"
 )
@@ -154,7 +153,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, _ string, records chichi.Re
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -176,22 +175,22 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*ui.For
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&ui.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: ui.Source},
-			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: ui.Source},
-			&ui.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: ui.Source},
-			&ui.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
-			&ui.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: ui.Source},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&chichi.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: chichi.Source},
+			&chichi.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: chichi.Source},
+			&chichi.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: chichi.Source},
+			&chichi.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
+			&chichi.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -209,27 +208,27 @@ func (c *CSV) ValidateSettings(ctx context.Context, values []byte) ([]byte, erro
 	}
 	// Validate Comma.
 	if utf8.RuneCountInString(s.Comma) != 1 {
-		return nil, ui.Errorf("comma must be a single character")
+		return nil, chichi.Errorf("comma must be a single character")
 	}
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
+		return nil, chichi.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
 	if c.conf.Role == chichi.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {
-				return nil, ui.Errorf("comment, if provided, must be a single character")
+				return nil, chichi.Errorf("comment, if provided, must be a single character")
 			}
 			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return nil, ui.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
+				return nil, chichi.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
 			}
 			if c == s.Comma {
-				return nil, ui.Errorf("comment cannot be equal to the comma")
+				return nil, chichi.Errorf("comment cannot be equal to the comma")
 			}
 		}
 		// Validate FieldsPerRecord.
 		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return nil, ui.Errorf("fields per record, if provided, must be in range [0,1000]")
+			return nil, chichi.Errorf("fields per record, if provided, must be in range [0,1000]")
 		}
 	} else {
 		s.Comment = ""

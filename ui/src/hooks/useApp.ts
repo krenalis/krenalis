@@ -9,7 +9,7 @@ import TransformedConnection, {
 	getFileStorageConnections,
 } from '../lib/helpers/transformedConnection';
 import { Location } from 'react-router-dom';
-import { adminBasePath } from '../constants/path';
+import { uiBasePath } from '../constants/path';
 import { Connection } from '../types/external/connection';
 import Workspace from '../types/external/workspace';
 import { Warehouse } from '../types/internal/app';
@@ -118,7 +118,7 @@ const useApp = (
 			// if the user is logged in and has a selected workspace, but they
 			// are currently on the login route, redirect to the connections map
 			// path.
-			let isOnLogin = location.pathname === adminBasePath;
+			let isOnLogin = location.pathname === uiBasePath;
 			if (isOnLogin) {
 				redirect('connections');
 			}

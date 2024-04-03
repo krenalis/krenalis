@@ -15,7 +15,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 )
 
 // Make sure it implements the App and UI interfaces.
@@ -62,7 +61,7 @@ func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, eve
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -81,66 +80,66 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "myInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
-			&ui.Input{Name: "myTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
-			&ui.Select{Name: "mySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []ui.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
-			&ui.Checkbox{Name: "myCheckbox", Label: "Checkbox"},
-			&ui.ColorPicker{Name: "myColorPicker", Label: "ColorPicker"},
-			&ui.Radios{Name: "myRadios", Label: "Radios", Options: []ui.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
-			&ui.Range{Name: "myRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
-			&ui.Switch{Name: "mySwitch", Label: "Switch"},
-			&ui.KeyValue{
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "myInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
+			&chichi.Input{Name: "myTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
+			&chichi.Select{Name: "mySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []chichi.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
+			&chichi.Checkbox{Name: "myCheckbox", Label: "Checkbox"},
+			&chichi.ColorPicker{Name: "myColorPicker", Label: "ColorPicker"},
+			&chichi.Radios{Name: "myRadios", Label: "Radios", Options: []chichi.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
+			&chichi.Range{Name: "myRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
+			&chichi.Switch{Name: "mySwitch", Label: "Switch"},
+			&chichi.KeyValue{
 				Name:       "myKeyValue",
 				Label:      "KeyValue",
 				KeyLabel:   "Key label",
 				ValueLabel: "Value label",
-				KeyComponent: &ui.Input{
+				KeyComponent: &chichi.Input{
 					Name:        "myKeyValueKey",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
-				ValueComponent: &ui.Input{
+				ValueComponent: &chichi.Input{
 					Name:        "myKeyValueValue",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
 			},
-			&ui.Text{Text: "lorem ipsum dolor sit amet consecuctur", Label: "Text"},
-			&ui.AlternativeFieldSets{
+			&chichi.Text{Text: "lorem ipsum dolor sit amet consecuctur", Label: "Text"},
+			&chichi.AlternativeFieldSets{
 				Label:    "AlternativeFieldSets",
 				HelpText: "Help text of the alternativeFieldSets component",
-				Sets: []ui.FieldSet{
+				Sets: []chichi.FieldSet{
 					{
 						Name:  "firstSet",
 						Label: "First Set",
-						Fields: []ui.Component{
-							&ui.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&ui.Input{Name: "myFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&ui.Input{Name: "myFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
+						Fields: []chichi.Component{
+							&chichi.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "myFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "myFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
 						},
 					},
 					{
 						Name:  "secondSet",
 						Label: "Second Set",
-						Fields: []ui.Component{
-							&ui.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&ui.Input{Name: "mySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&ui.Input{Name: "mySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
-							&ui.Checkbox{Name: "mySecondSetCheckbox", Label: "Set Checkbox"},
+						Fields: []chichi.Component{
+							&chichi.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "mySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "mySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
+							&chichi.Checkbox{Name: "mySecondSetCheckbox", Label: "Set Checkbox"},
 						},
 					},
 				},
 			},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}

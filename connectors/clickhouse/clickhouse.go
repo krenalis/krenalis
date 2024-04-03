@@ -21,7 +21,6 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
-	"github.com/open2b/chichi/ui"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -95,7 +94,7 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (chichi.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -112,32 +111,32 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) 
 		s, err := ch.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
-				return nil, ui.WarningAlert(err.Error()), nil
+				return nil, chichi.WarningAlert(err.Error()), nil
 			}
-			return nil, ui.DangerAlert(err.Error()), nil
+			return nil, chichi.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil
+			return nil, chichi.SuccessAlert("Connection established"), nil
 		}
 		err = ch.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
-			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&ui.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
+			&chichi.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&chichi.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
@@ -207,23 +206,23 @@ func (ch *ClickHouse) ValidateSettings(ctx context.Context, values []byte) ([]by
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, ui.Errorf("port must be in range [1,65536]")
+		return nil, chichi.Errorf("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 64 {
-		return nil, ui.Errorf("username length in bytes must be in range [1,64]")
+		return nil, chichi.Errorf("username length in bytes must be in range [1,64]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, ui.Errorf("password length must be in range [1,100]")
+		return nil, chichi.Errorf("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 64 {
-		return nil, ui.Errorf("database length in bytes must be in range [1,64]")
+		return nil, chichi.Errorf("database length in bytes must be in range [1,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil {

@@ -148,20 +148,20 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 	}
 	c.transformationsTempDir = transformationsTempDir
 
-	// Create an admin session key.
+	// Create a UI session key.
 	var sessionKey string
 	{
 		key := make([]byte, 64)
 		_, err = rand.Read(key)
 		if err != nil {
-			t.Fatalf("cannot generate an admin session key: %s", err)
+			t.Fatalf("cannot generate a UI session key: %s", err)
 		}
 		sessionKey = base64.StdEncoding.EncodeToString(key)
 	}
 
 	setts := cmd.Settings{}
 	setts.Main.Host = testsSettings.ChichiHost
-	setts.Admin.SessionKey = sessionKey
+	setts.UI.SessionKey = sessionKey
 	setts.PostgreSQL.Host = testsSettings.Database.Host
 	setts.PostgreSQL.Port = testsSettings.Database.Port
 	setts.PostgreSQL.Username = testsSettings.Database.Username

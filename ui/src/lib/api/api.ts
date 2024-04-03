@@ -16,7 +16,7 @@ import {
 	ExpressionToBeExtracted,
 	Transformation,
 } from '../../types/external/action';
-import { adminBasePath } from '../../constants/path';
+import { uiBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
 import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
 import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from '../../types/external/workspace';
@@ -544,7 +544,7 @@ class Workspaces {
 	};
 
 	oauthToken = async (connector: number, oauthCode: string): Promise<string> => {
-		const redirectURI = `${this.origin}${adminBasePath}oauth/authorize`;
+		const redirectURI = `${this.origin}${uiBasePath}oauth/authorize`;
 		return await call(`${this.apiURL}/oauth-token`, http.POST, {
 			connector: connector,
 			oauthCode: oauthCode,
@@ -602,7 +602,7 @@ class Connectors {
 	}
 
 	authCodeURL = async (connector: number): Promise<authCodeURLResponse> => {
-		const redirectURI = `${this.origin}${adminBasePath}oauth/authorize`;
+		const redirectURI = `${this.origin}${uiBasePath}oauth/authorize`;
 		return await call(
 			`${this.apiURL}/connectors/${connector}/auth-code-url?redirecturi=${encodeURIComponent(redirectURI)}`,
 			http.GET,

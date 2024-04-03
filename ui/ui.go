@@ -8,225 +8,105 @@
 package ui
 
 import (
-	"errors"
+	"context"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"path"
+	"path/filepath"
+	"strings"
+
+	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/telemetry"
+
+	"github.com/evanw/esbuild/pkg/api"
 )
 
-// ErrEventNotExist values are returned by the ServeUI methods when the event
-// does not exist.
-var ErrEventNotExist = errors.New("event does not exist")
-
-// Role represents a role.
-type Role int
-
-const (
-	Both        Role = iota // both
-	Source                  // source
-	Destination             // destination
-)
-
-type Form struct {
-	Fields  []Component
-	Values  []byte
-	Actions []Action
+type ui struct {
+	apis *apis.APIs
 }
 
-type Component interface {
-	component()
-}
-
-type Option struct {
-	Text  string
-	Value any
-}
-
-type Input struct {
-	Name            string
-	Type            string // date|datetime-local|email|number|password|search|tel|text|time|url - default is 'text'
-	Label           string
-	Placeholder     string
-	HelpText        string
-	Rows            int // if bigger than 1, the corresponding component is a textarea.
-	OnlyIntegerPart bool
-	MinLength       int
-	MaxLength       int
-	Error           string
-	Role            Role
-}
-
-func (i *Input) component() {}
-
-type Select struct {
-	Name        string
-	Label       string
-	Placeholder string
-	HelpText    string
-	Options     []Option
-	Error       string
-	Role        Role
-}
-
-func (s *Select) component() {}
-
-type Checkbox struct {
-	Name  string
-	Label string
-	Error string
-	Role  Role
-}
-
-func (ck *Checkbox) component() {}
-
-type ColorPicker struct {
-	Name  string
-	Label string
-	Error string
-	Role  Role
-}
-
-func (cp *ColorPicker) component() {}
-
-type Radios struct {
-	Name    string
-	Label   string
-	Options []Option
-	Error   string
-	Role    Role
-}
-
-func (rd *Radios) component() {}
-
-type Range struct {
-	Name     string
-	Label    string
-	HelpText string
-	Min      int
-	Max      int
-	Step     int
-	Error    string
-	Role     Role
-}
-
-func (r *Range) component() {}
-
-type Switch struct {
-	Name  string
-	Label string
-	Error string
-	Role  Role
-}
-
-func (s *Switch) component() {}
-
-type KeyValue struct {
-	Name           string
-	Label          string
-	KeyLabel       string
-	KeyComponent   Component
-	ValueLabel     string
-	ValueComponent Component
-	Error          string
-	Role           Role
-}
-
-func (kv *KeyValue) component() {}
-
-type FieldSet struct {
-	Name   string
-	Label  string
-	Fields []Component
-	Role   Role
-}
-
-type AlternativeFieldSets struct {
-	Label    string
-	HelpText string
-	Sets     []FieldSet
-	Role     Role
-}
-
-func (afs *AlternativeFieldSets) component() {}
-
-type Text struct {
-	Label string
-	Text  string
-	Role  Role
-}
-
-func (txt *Text) component() {}
-
-type Action struct {
-	Event   string
-	Text    string
-	Variant string // primary|neutral|danger|warning|success
-	Confirm bool   // if the event does not return an alert, the UI shows a confirmation
-	Role    Role
-}
-
-// Alert represents an alert message to be shown in the UI.
-type Alert struct {
-
-	// Message is the message of the alert.
-	Message string
-
-	// Variant is the variant of the alert message.
-	Variant AlertVariant
-}
-
-// PrimaryAlert returns a primary alert.
-func PrimaryAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Primary} }
-
-// SuccessAlert returns a success alert.
-func SuccessAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Success} }
-
-// NeutralAlert returns a neutral alert.
-func NeutralAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Neutral} }
-
-// WarningAlert returns a warning alert.
-func WarningAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Warning} }
-
-// DangerAlert returns a danger alert.
-func DangerAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Danger} }
-
-// AlertVariant represents the alert variants. The variants are taken from
-// Shoelace (see https://shoelace.style/components/alert).
-type AlertVariant int
-
-const (
-	Primary AlertVariant = iota
-	Success
-	Neutral
-	Warning
-	Danger
-)
-
-func (v AlertVariant) String() string {
-	switch v {
-	case Primary:
-		return "primary"
-	case Success:
-		return "success"
-	case Neutral:
-		return "neutral"
-	case Warning:
-		return "warning"
-	case Danger:
-		return "danger"
-	default:
-		panic(fmt.Sprintf("invalid alert variant %d", v))
+func New(apis *apis.APIs) *ui {
+	a := &ui{
+		apis: apis,
 	}
+	return a
 }
 
-// Error represents an error to be displayed in the UI.
-type Error struct {
-	err error
+func (ui *ui) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	ctx, s := telemetry.TraceSpan(r.Context(), "ui.ServeHTTP", "urlPath", r.URL.Path)
+	defer s.End()
+
+	telemetry.IncrementCounter(ctx, "ui.ServeHTTP", 1)
+
+	if strings.HasPrefix(r.URL.Path[len("/ui"):], "/src/") {
+		ui.serveWithESBuild(ctx, w, r)
+		return
+	}
+
+	http.ServeFile(w, r, "./ui/public/index.html")
+
 }
 
-func (err Error) Error() string {
-	return err.err.Error()
-}
+func (ui *ui) serveWithESBuild(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	_, span := telemetry.TraceSpan(ctx, "ui.serveWithESBuild", "path", r.URL.Path)
+	defer span.End()
+	file, err := filepath.Abs("ui/src/index.jsx")
+	if err != nil {
+		panic(err)
+	}
+	result := api.Build(api.BuildOptions{
+		Bundle:            true,
+		EntryPoints:       []string{file},
+		Format:            api.FormatESModule,
+		JSX:               api.JSXAutomatic,
+		LegalComments:     api.LegalCommentsEndOfFile,
+		MinifyIdentifiers: false,               // TODO: review in production.
+		MinifySyntax:      false,               // TODO: review in production.
+		MinifyWhitespace:  false,               // TODO: review in production.
+		JSXDev:            true,                // TODO: review in production.
+		Sourcemap:         api.SourceMapLinked, // TODO: review in production.
+		Outdir:            "out",
+		Target:            api.ES2018,
+		TreeShaking:       api.TreeShakingTrue,
+		Write:             false,
+	})
 
-// Errorf formats according to a format specifier and returns an Error value.
-func Errorf(format string, a ...any) Error {
-	return Error{err: fmt.Errorf(format, a...)}
+	// Handle errors and warnings.
+	if result.Errors != nil {
+		errorMessages := &strings.Builder{}
+		for _, msg := range result.Errors {
+			slog.Error("ESBuild error", "msg", msg)
+			errorMessages.WriteString(fmt.Sprint(msg))
+		}
+		slog.Error("errors while executing ESbuild, cannot serve URL", "url", r.URL.Path)
+		http.Error(w, errorMessages.String(), http.StatusInternalServerError)
+		return
+	}
+	if result.Warnings != nil {
+		for _, msg := range result.Warnings {
+			slog.Warn("ESBuild warning", "msg", msg)
+		}
+	}
+
+	base := path.Base(r.URL.Path)
+	for _, out := range result.OutputFiles {
+		if strings.HasSuffix(out.Path, base) {
+			switch filepath.Ext(base) {
+			case ".js":
+				w.Header().Add("Content-Type", "text/javascript")
+			case ".css":
+				w.Header().Add("Content-Type", "text/css")
+			case ".map":
+				w.Header().Add("Content-Type", "application/json")
+			default:
+				http.Error(w, "Bad Request: cannot determine Content-Type for this file type", http.StatusBadRequest)
+				return
+			}
+			w.Write(out.Contents)
+			return
+		}
+	}
+	http.NotFound(w, r)
 }

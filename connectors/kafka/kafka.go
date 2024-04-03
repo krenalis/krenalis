@@ -21,7 +21,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/ui"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
@@ -134,7 +133,7 @@ func (kafka *Kafka) Send(ctx context.Context, event []byte, options chichi.SendO
 }
 
 // ServeUI serves the connector's user interface.
-func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -151,51 +150,51 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*
 		s, err := kafka.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
-				return nil, ui.WarningAlert(err.Error()), nil
+				return nil, chichi.WarningAlert(err.Error()), nil
 			}
-			return nil, ui.DangerAlert(err.Error()), nil
+			return nil, chichi.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil
+			return nil, chichi.SuccessAlert("Connection established"), nil
 		}
 		err = kafka.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, chichi.SuccessAlert("Settings saved"), nil
 	default:
-		return nil, nil, ui.ErrEventNotExist
+		return nil, nil, chichi.ErrEventNotExist
 	}
 
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.AlternativeFieldSets{
-				Sets: []ui.FieldSet{
+	form := &chichi.Form{
+		Fields: []chichi.Component{
+			&chichi.AlternativeFieldSets{
+				Sets: []chichi.FieldSet{
 					{
 						Name:  "Kafka",
 						Label: "Kafka",
-						Fields: []ui.Component{
-							&ui.Input{Name: "host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&ui.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-							&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
-							&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+						Fields: []chichi.Component{
+							&chichi.Input{Name: "host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+							&chichi.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
+							&chichi.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
 						},
 					},
 					{
 						Name:  "Confluent",
 						Label: "Confluent",
-						Fields: []ui.Component{
-							&ui.Input{Name: "server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
-							&ui.Input{Name: "key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
-							&ui.Input{Name: "secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
+						Fields: []chichi.Component{
+							&chichi.Input{Name: "server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
+							&chichi.Input{Name: "key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
+							&chichi.Input{Name: "secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
 						},
 					},
 				},
 			},
-			&ui.Input{Name: "topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Actions: []ui.Action{
+		Actions: []chichi.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
@@ -216,35 +215,35 @@ func (kafka *Kafka) ValidateSettings(ctx context.Context, values []byte) ([]byte
 	case s.Kafka != nil:
 		// Validate Host.
 		if n := len(s.Kafka.Host); n == 0 || n > 253 {
-			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+			return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
-			return nil, ui.Errorf("port must be in range [1,65536]")
+			return nil, chichi.Errorf("port must be in range [1,65536]")
 		}
 	case s.Confluent != nil:
 		// Validate Server.
 		host, port, err := net.SplitHostPort(s.Confluent.Server)
 		if err != nil {
-			return nil, ui.Errorf("server is not a valid host:port")
+			return nil, chichi.Errorf("server is not a valid host:port")
 		}
 		if n := len(host); n == 0 || n > 253 {
-			return nil, ui.Errorf("server host length in bytes must be in range [1,253]")
+			return nil, chichi.Errorf("server host length in bytes must be in range [1,253]")
 		}
 		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
-			return nil, ui.Errorf("server port must be in range [1,65536]")
+			return nil, chichi.Errorf("server port must be in range [1,65536]")
 		}
 		// Validate Key.
 		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
-			return nil, ui.Errorf("key must be long 16 characters")
+			return nil, chichi.Errorf("key must be long 16 characters")
 		}
 	}
 	// Validate Topic.
 	if n := len(s.Topic); n == 0 || n > 255 {
-		return nil, ui.Errorf("topic length must be in range [1,255]")
+		return nil, chichi.Errorf("topic length must be in range [1,255]")
 	}
 	if !validTopicName(s.Topic) {
-		return nil, ui.Errorf("topic name can contain only [A-Za-z0-9_.-]")
+		return nil, chichi.Errorf("topic name can contain only [A-Za-z0-9_.-]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil {

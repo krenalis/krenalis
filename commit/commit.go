@@ -124,17 +124,17 @@ func main() {
 	// Call command(s) on the workspace.
 	cmd("go", []string{"work", "sync"}, repo, ".", true)
 
-	// Run 'npm install' in the admin.
-	cmd("npm", []string{"install"}, repo, "admin", true)
+	// Run 'npm install' in the UI.
+	cmd("npm", []string{"install"}, repo, "ui", true)
 
-	// Minify the JavaScript snippet in the admin.
-	cmd("deno", []string{"task", "minify-javascript-snippet"}, repo, "admin", true)
+	// Minify the JavaScript snippet in the UI.
+	cmd("deno", []string{"task", "minify-javascript-snippet"}, repo, "ui", true)
 
-	// Format the files in the admin.
-	cmd("npm", []string{"run", "prettier"}, repo, "admin", true)
+	// Format the files in the UI.
+	cmd("npm", []string{"run", "prettier"}, repo, "ui", true)
 
-	// Typecheck the Typescript code in the admin.
-	cmd("npm", []string{"run", "typecheck"}, repo, "admin", true)
+	// Typecheck the Typescript code in the UI.
+	cmd("npm", []string{"run", "typecheck"}, repo, "ui", true)
 
 	// Format and test the files in the 'javascript-sdk' directory.
 	cmd("deno", []string{"fmt"}, repo, "javascript-sdk", true)
