@@ -960,12 +960,6 @@ func transformationFunctionName(action int, language state.Language) string {
 //
 // NOTE: keep in sync with the function 'apis/connectors.parseTimestamp'.
 func validateTimestampFormat(format string) error {
-	if !utf8.ValidString(format) {
-		return errors.New("timestamp format must be UTF-8 valid")
-	}
-	if utf8.RuneCountInString(format) > 64 {
-		return errors.New("timestamp format is longer than 64 runes")
-	}
 	switch format {
 	case
 		"DateTime",
@@ -973,15 +967,21 @@ func validateTimestampFormat(format string) error {
 		"ISO8601",
 		"Excel":
 		return nil
-	default:
-		f, ok := strings.CutPrefix(format, "'")
-		if !ok {
-			return fmt.Errorf("invalid timestamp format %q", format)
-		}
-		_, ok = strings.CutSuffix(f, "'")
-		if !ok {
-			return fmt.Errorf("invalid timestamp format %q", format)
-		}
-		return nil
 	}
+	if format == "" {
+		return errors.New("timestamp format cannot be empty")
+	}
+	if !utf8.ValidString(format) {
+		return errors.New("timestamp format must be UTF-8 valid")
+	}
+	if utf8.RuneCountInString(format) > 64 {
+		return errors.New("timestamp format is longer than 64 runes")
+	}
+	if !strings.Contains(format, "%") {
+		return fmt.Errorf("timestamp format %q is not a valid timestamp format", format)
+	}
+	if format[0] != '\'' || format[len(format)-1] != '\'' {
+		return fmt.Errorf("timestamp strptime format must be enclosed between \"'\" characters")
+	}
+	return nil
 }

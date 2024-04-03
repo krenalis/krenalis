@@ -20,15 +20,21 @@ func Test_validateTimestampFormat(t *testing.T) {
 		{format: "'%Y'"},
 		{format: "Excel"},
 		{format: "ISO8601"},
+		{format: "'%'"},
 
 		// Invalid.
-		{format: "%Y", err: `invalid timestamp format "%Y"`},
-		{format: "'%Y", err: `invalid timestamp format "'%Y"`},
-		{format: "%Y'", err: `invalid timestamp format "%Y'"`},
-		{format: "Date", err: `invalid timestamp format "Date"`},
-		{format: "excel", err: `invalid timestamp format "excel"`},
-		{format: "iso8601", err: `invalid timestamp format "iso8601"`},
+		{format: "'", err: `timestamp format "'" is not a valid timestamp format`},
+		{format: "'''", err: `timestamp format "'''" is not a valid timestamp format`},
+		{format: "", err: "timestamp format cannot be empty"},
+		{format: "Date", err: `timestamp format "Date" is not a valid timestamp format`},
+		{format: "excel", err: `timestamp format "excel" is not a valid timestamp format`},
+		{format: "iso8601", err: `timestamp format "iso8601" is not a valid timestamp format`},
+		{format: "%Y", err: `timestamp strptime format must be enclosed between "'" characters`},
+		{format: "'%Y", err: `timestamp strptime format must be enclosed between "'" characters`},
+		{format: "%Y'", err: `timestamp strptime format must be enclosed between "'" characters`},
 		{format: "\xc3\x28", err: "timestamp format must be UTF-8 valid"},
+		{format: "''", err: `timestamp format "''" is not a valid timestamp format`},
+		{format: "'YYYY-MM-DD'", err: `timestamp format "'YYYY-MM-DD'" is not a valid timestamp format`},
 		{format: "'%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y'", err: "timestamp format is longer than 64 runes"},
 	}
 	for _, test := range tests {
