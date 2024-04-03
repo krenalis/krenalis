@@ -46,8 +46,8 @@ const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
 				isShown={isShown}
 				description={
 					connection.isSource
-						? 'The destinations to which to send the received events.'
-						: 'The sources from which to receive events to send.'
+						? 'The destinations to which the events are dispatched.'
+						: 'The sources whose events are dispatched to the destination.'
 				}
 			/>
 		</div>
