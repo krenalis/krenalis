@@ -5,9 +5,9 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package googleanalytics4 implements the Google Analytics 4 connector.
+// Package googleanalytics implements the Google Analytics connector.
 // (https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference)
-package googleanalytics4
+package googleanalytics
 
 import (
 	"context"
@@ -42,21 +42,21 @@ const sendToDebugServer = false
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
-		Name:                   "Google Analytics 4",
+		Name:                   "Google Analytics",
 		Targets:                chichi.Events,
-		DestinationDescription: "send events to Google Analytics 4",
+		DestinationDescription: "send events to Google Analytics",
 		Icon:                   icon,
 		SendingMode:            chichi.Cloud,
 	}, New)
 }
 
-// New returns a new Google Analytics 4 connector instance.
+// New returns a new Google Analytics connector instance.
 func New(conf *chichi.AppConfig) (*GoogleAnalytics, error) {
 	c := GoogleAnalytics{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Google Analytics 4 connector")
+			return nil, errors.New("cannot unmarshal settings of Google Analytics connector")
 		}
 	}
 	return &c, nil
@@ -140,13 +140,13 @@ func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType,
 		{
 			ID:          "page_view",
 			Name:        "Page view",
-			Description: "Send a Page view event to Google Analytics 4",
+			Description: "Send a Page view event to Google Analytics",
 		},
 		// https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#share
 		{
 			ID:          "share",
 			Name:        "Share",
-			Description: "Send a Share event to Google Analytics 4",
+			Description: "Send a Share event to Google Analytics",
 		},
 	}, nil
 }

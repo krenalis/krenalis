@@ -13,7 +13,7 @@ import (
 	_ "github.com/open2b/chichi/connectors/dummy"
 	_ "github.com/open2b/chichi/connectors/excel"
 	_ "github.com/open2b/chichi/connectors/filesystem"
-	_ "github.com/open2b/chichi/connectors/googleanalytics4"
+	_ "github.com/open2b/chichi/connectors/googleanalytics"
 	_ "github.com/open2b/chichi/connectors/http"
 	_ "github.com/open2b/chichi/connectors/hubspot"
 	_ "github.com/open2b/chichi/connectors/json"

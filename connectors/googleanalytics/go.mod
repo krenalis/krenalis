@@ -1,4 +1,4 @@
-module github.com/open2b/chichi/connectors/googleanalytics4
+module github.com/open2b/chichi/connectors/googleanalytics
 
 go 1.22
 

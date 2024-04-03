@@ -8,7 +8,7 @@ use (
 	./connectors/dummy
 	./connectors/excel
 	./connectors/filesystem
-	./connectors/googleanalytics4
+	./connectors/googleanalytics
 	./connectors/http
 	./connectors/hubspot
 	./connectors/json

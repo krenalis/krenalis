@@ -10,7 +10,7 @@ replace (
 	github.com/open2b/chichi/connectors/dummy => ../../connectors/dummy
 	github.com/open2b/chichi/connectors/excel => ../../connectors/excel
 	github.com/open2b/chichi/connectors/filesystem => ../../connectors/filesystem
-	github.com/open2b/chichi/connectors/googleanalytics4 => ../../connectors/googleanalytics4
+	github.com/open2b/chichi/connectors/googleanalytics => ../../connectors/googleanalytics
 	github.com/open2b/chichi/connectors/http => ../../connectors/http
 	github.com/open2b/chichi/connectors/hubspot => ../../connectors/hubspot
 	github.com/open2b/chichi/connectors/json => ../../connectors/json
@@ -39,7 +39,7 @@ require (
 	github.com/open2b/chichi/connectors/dummy v0.0.0-00010101000000-000000000000
 	github.com/open2b/chichi/connectors/excel v0.0.0-00010101000000-000000000000
 	github.com/open2b/chichi/connectors/filesystem v0.0.0-00010101000000-000000000000
-	github.com/open2b/chichi/connectors/googleanalytics4 v0.0.0-00010101000000-000000000000
+	github.com/open2b/chichi/connectors/googleanalytics v0.0.0-00010101000000-000000000000
 	github.com/open2b/chichi/connectors/http v0.0.0-00010101000000-000000000000
 	github.com/open2b/chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
 	github.com/open2b/chichi/connectors/json v0.0.0-00010101000000-000000000000

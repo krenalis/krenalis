@@ -32,7 +32,7 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('UISample', 'App', '', ''),
     ('.NET', 'Server', '', ''),
     ('Klaviyo', 'App', '', ''),
-    ('Google Analytics 4', 'App', '', ''),
+    ('Google Analytics', 'App', '', ''),
     ('Filesystem', 'FileStorage', '', ''),
     ('ClickHouse', 'Database', '', ''),
     ('JSON', 'File', '', ''),
