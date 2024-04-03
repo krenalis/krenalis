@@ -318,6 +318,12 @@ func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
 		WebhooksPer:            WebhooksPer(c.WebhooksPer),
 		OAuth:                  c.OAuth != nil,
 	}
+	if connector.TermForUsers == "" {
+		connector.TermForUsers = "users"
+	}
+	if connector.TermForGroups == "" {
+		connector.TermForGroups = "groups"
+	}
 	connector.Targets.Users = c.Targets.Contains(state.Users)
 	connector.Targets.Groups = c.Targets.Contains(state.Groups)
 	connector.Targets.Events = c.Targets.Contains(state.Events)
@@ -351,6 +357,12 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 			SampleQuery:            c.SampleQuery,
 			WebhooksPer:            WebhooksPer(c.WebhooksPer),
 			OAuth:                  c.OAuth != nil,
+		}
+		if connector.TermForUsers == "" {
+			connector.TermForUsers = "users"
+		}
+		if connector.TermForGroups == "" {
+			connector.TermForGroups = "groups"
 		}
 		connector.Targets.Users = c.Targets.Contains(state.Users)
 		connector.Targets.Groups = c.Targets.Contains(state.Groups)
