@@ -23,21 +23,6 @@ type ConnectorInfo interface {
 	ReflectType() reflect.Type
 }
 
-// Record represents an app record.
-type Record struct {
-	ID         string         // Identifier.
-	Properties map[string]any // Properties.
-	Timestamp  time.Time      // Last modification time, in UTC.
-
-	// Associations contains the identifiers of the user's groups or the group's users.
-	// It is not significant if it is nil.
-	Associations []string
-
-	// Err reports an error that occurred while reading the record.
-	// If Err is not nil, only the ID field is significant.
-	Err error
-}
-
 // An AccessDeniedError error is returned by a connector method when it is
 // unable to access a requested resource due to insufficient permissions.
 type AccessDeniedError struct {

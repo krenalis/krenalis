@@ -171,6 +171,21 @@ type Cursor struct {
 	Next      string    // Returned string value of the last call to Users or Groups.
 }
 
+// Record represents an app record.
+type Record struct {
+	ID         string         // Identifier.
+	Properties map[string]any // Properties.
+	Timestamp  time.Time      // Last modification time, in UTC.
+
+	// Associations contains the identifiers of the user's groups or the group's users.
+	// It is not significant if it is nil.
+	Associations []string
+
+	// Err reports an error that occurred while reading the record.
+	// If Err is not nil, only the ID field is significant.
+	Err error
+}
+
 // AppRecords is the interface implemented by app connectors that manage users,
 // groups, or both. The target parameter is Users or Groups depending on the
 // connector supported targets.
