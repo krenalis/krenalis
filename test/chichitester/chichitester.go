@@ -45,9 +45,15 @@ const launchChichiExternally = true
 // Chichi represents an instance of Chichi which responds to HTTP requests and
 // exposes methods to make calls to the APIs.
 type Chichi struct {
-	cancel                 func()
-	t                      *testing.T
-	done                   chan struct{}
+	cancel func()
+	t      *testing.T
+	// chichiRunning is used as a synchronization mechanism to wait for Chichi
+	// to end its execution.
+	// When Chichi is started -- both as an external process or as a goroutine
+	// --, an empty channel should be assigned to it; when Chichi exits, the
+	// channel must be closed; this allows the testing framework to wait for
+	// Chichi to correctly exit before finishing the tests.
+	chichiRunning          chan struct{}
 	transformationsTempDir string
 	httpClient             *http.Client
 	ws                     int
@@ -108,9 +114,8 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 	}
 
 	c := Chichi{
-		t:    t,
-		done: make(chan struct{}),
-		ws:   1,
+		t:  t,
+		ws: 1,
 	}
 
 	// Create the HTTP client.
@@ -203,6 +208,10 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 			chichiAlreadyBuilt = true
 		}
 		go func() {
+			c.chichiRunning = make(chan struct{})
+			defer func() {
+				close(c.chichiRunning)
+			}()
 			err := launchChichi(ctxWithCancel)
 			if err != nil {
 				select {
@@ -211,7 +220,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 					log.Printf("[error] %s", err)
 				}
 			}
-			close(c.done)
 		}()
 	} else {
 		err = validDatabaseNameForTests(setts.PostgreSQL.Database)
@@ -219,12 +227,15 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 			t.Fatal(err)
 		}
 		go func() {
+			c.chichiRunning = make(chan struct{})
+			defer func() {
+				close(c.chichiRunning)
+			}()
 			err := cmd.Run(ctxWithCancel, &setts)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return
 			}
-			close(c.done)
 		}()
 	}
 
@@ -235,7 +246,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 	attempts := 0
 	for {
 		select {
-		case <-c.done:
+		case <-c.chichiRunning:
 			t.Fatalf("ChiChi has exited")
 		default:
 		}
@@ -314,7 +325,9 @@ func (c *Chichi) CountEventsInWarehouse(ctx context.Context) int {
 // Stop stops the execution of Chichi.
 func (c *Chichi) Stop() {
 	c.cancel()
-	<-c.done
+	if c.chichiRunning != nil {
+		<-c.chichiRunning
+	}
 	if c.transformationsTempDir == "" {
 		panic("BUG: transformationsTempDir not set")
 	}
