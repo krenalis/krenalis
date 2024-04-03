@@ -14,15 +14,11 @@ package klaviyo
 
 import (
 	"context"
-	_ "embed"
 	"net/http"
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
 )
-
-// Connector icon.
-var icon = "<svg></svg>"
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
@@ -32,7 +28,6 @@ func init() {
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "clients",
 		SendingMode:            chichi.Cloud,
-		Icon:                   icon,
 	}, New)
 }
 
@@ -50,8 +45,7 @@ func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, record map
 	// ...
 }
 
-// EventRequest returns a request that can be used to dispatch an event to the
-// app.
+// EventRequest returns a request to dispatch an event to the app.
 func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 	// ...
 }
@@ -97,8 +91,6 @@ $ go mod init klaviyo
 ```
 
 Then add a Go file to the new directory. For example copy the previous template file.
-
-As you can see, the template file embeds a SVG file, this is the icon that represent the connector. Choose an appropriate SVG icon and put it into the module directory.
 
 ### About the Connector
 
@@ -179,3 +171,7 @@ type AppConfig struct {
 - `Region`: Indicates the privacy region of the workspace. The connector must adhere to the specified privacy region if supported. It defaults to `PrivacyRegionNotSpecified` if no region is specified, or `PrivacyRegionEurope` if the Europe region is specified.
 
 - `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks.
+
+### Continue Reading
+
+- [Dispatch Events](app/dispatch-events.md)

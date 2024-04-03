@@ -41,6 +41,7 @@
     - [Snowflake](./snowflake.md)
 - [Developers](./developers/connectors.md)
     - [App Connectors](./developers/app.md)
+        - [Dispatch Events](developers/app/dispatch-events.md)
     - [Database Connectors](./developers/database.md)
     - [File Connectors](./developers/file.md)
     - [File Storage Connectors](./developers/file-storage.md)

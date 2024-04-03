@@ -14,20 +14,15 @@ package postgresql
 
 import (
 	"context"
-	_ "embed"
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:        "PostgreSQL",
 		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
-		Icon:        icon,
 	}, New)
 }
 
@@ -74,8 +69,6 @@ $ go mod init postgresql
 ```
 
 Then add a Go file to the new directory. For example copy the previous template file.
-
-As you can see, the template file embeds a SVG file, this is the icon that represent the connector. Choose an appropriate SVG icon and put it into the module directory.
 
 ### About the Connector
 

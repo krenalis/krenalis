@@ -14,20 +14,15 @@ package s3
 
 import (
 	"context"
-	_ "embed"
 	"io"
 	"time"
 
 	"github.com/open2b/chichi"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 func init() {
 	chichi.RegisterFileStorage(chichi.FileStorageInfo{
 		Name: "S3",
-		Icon: icon,
 	}, New)
 }
 
@@ -70,8 +65,6 @@ $ go mod init s3
 ```
 
 Then add a Go file to the new directory. For example copy the previous template file.
-
-As you can see, the template file embeds a SVG file, this is the icon that represent the connector. Choose an appropriate SVG icon and put it into the module directory.
 
 ### About the Connector
 
