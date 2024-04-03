@@ -196,70 +196,71 @@ func New(conf *Config) (*APIs, error) {
 	return apis, nil
 }
 
-// Organization returns the organization with identifier id.
+// AcceptInvitation accepts the invitation with the given invitation token. It
+// sets the member's name and password and removes its token. name's length must
+// be in range [1, 60]. password's length must be at least 8 character long.
 //
-// It returns an errors.NotFound error if the organization does not exist.
-func (apis *APIs) Organization(ctx context.Context, id int) (*Organization, error) {
+// If an invitation with the given token does not exist, it returns a
+// NotFoundError error. If the token is expired it returns an
+// error.UnprocessableError error with code InvitationTokenExpired.
+func (apis *APIs) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
 	apis.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "apis.Organization", "organization_id", id)
-	defer t.End()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid organization identifier", id)
+	if !isValidInvitationToken(token) {
+		return errors.NotFound("invitation token %q does not exist", token)
 	}
-	org, ok := apis.state.Organization(id)
-	if !ok {
-		return nil, errors.NotFound("organization %d does not exist", id)
+	m := MemberToSet{
+		Name:     name,
+		Password: password,
 	}
-	organization := Organization{
-		apis:         apis,
-		organization: org,
-		ID:           org.ID,
-		Name:         org.Name,
+	err := validateMemberToSet(m, false, true)
+	if err != nil {
+		return errors.BadRequest(err.Error())
 	}
-	return &organization, nil
+	pass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	err = apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		var id int
+		var createdAt time.Time
+		err := apis.db.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.NotFound("invitation token %q does not exist", token)
+			}
+			return err
+		}
+		if isInvitationTokenExpired(createdAt) {
+			return errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+		}
+		_, err = apis.db.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
+			name, string(pass), id)
+		return err
+	})
+	return err
 }
 
-// Organizations returns the organizations, in the given order, describing all
-// organizations but starting from first and up to limit. first must be >= 0 and
-// limit must be > 0.
-func (apis *APIs) Organizations(ctx context.Context, order OrganizationSort, first, limit int) ([]*Organization, error) {
+// AddOrganization adds a new organization and returns its identifier.
+// name cannot be empty and cannot be longer than 45 runes.
+func (apis *APIs) AddOrganization(ctx context.Context, name string) (int, error) {
 	apis.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
-	defer s.End()
-	if order != SortByName {
-		return nil, errors.BadRequest("order %d is not valid", int(order))
+	_, t := telemetry.TraceSpan(ctx, "apis.AddOrganization")
+	if name == "" {
+		return 0, errors.BadRequest("name is empty")
 	}
-	if limit <= 0 {
-		return nil, errors.BadRequest("limit %d is not valid", limit)
+	if !utf8.ValidString(name) {
+		return 0, errors.BadRequest("name is not UTF-8 encoded")
 	}
-	if first < 0 {
-		return nil, errors.BadRequest("first %d is not valid", first)
+	if n := utf8.RuneCountInString(name); n > 45 {
+		return 0, errors.BadRequest("name is longer than 45 runes")
 	}
-	organizations := apis.state.Organizations()
-	count := len(organizations)
-	if first >= count {
-		return []*Organization{}, nil
+	defer t.End()
+	var id int
+	err := apis.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
+	if err != nil {
+		return 0, err
 	}
-	if first+limit > count {
-		limit = count - first
-	}
-	sort.Slice(organizations, func(i, j int) bool {
-		a, b := organizations[i], organizations[j]
-		switch order {
-		case SortByName:
-			return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
-		}
-		return false
-	})
-	organizations = organizations[first : first+limit]
-	orgs := make([]*Organization, len(organizations))
-	for i, organization := range organizations {
-		orgs[i] = &Organization{
-			ID:   organization.ID,
-			Name: organization.Name,
-		}
-	}
-	return orgs, nil
+	return id, nil
 }
 
 // Close closes the APIs.
@@ -371,73 +372,6 @@ func (apis *APIs) CountOrganizations(ctx context.Context) int {
 	return len(apis.state.Organizations())
 }
 
-// AcceptInvitation accepts the invitation with the given invitation token. It
-// sets the member's name and password and removes its token. name's length must
-// be in range [1, 60]. password's length must be at least 8 character long.
-//
-// If an invitation with the given token does not exist, it returns a
-// NotFoundError error. If the token is expired it returns an
-// error.UnprocessableError error with code InvitationTokenExpired.
-func (apis *APIs) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
-	apis.mustBeOpen()
-	if !isValidInvitationToken(token) {
-		return errors.NotFound("invitation token %q does not exist", token)
-	}
-	m := MemberToSet{
-		Name:     name,
-		Password: password,
-	}
-	err := validateMemberToSet(m, false, true)
-	if err != nil {
-		return errors.BadRequest(err.Error())
-	}
-	pass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	err = apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		var id int
-		var createdAt time.Time
-		err := apis.db.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return errors.NotFound("invitation token %q does not exist", token)
-			}
-			return err
-		}
-		if isInvitationTokenExpired(createdAt) {
-			return errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
-		}
-		_, err = apis.db.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
-			name, string(pass), id)
-		return err
-	})
-	return err
-}
-
-// AddOrganization adds a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
-func (apis *APIs) AddOrganization(ctx context.Context, name string) (int, error) {
-	apis.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "apis.AddOrganization")
-	if name == "" {
-		return 0, errors.BadRequest("name is empty")
-	}
-	if !utf8.ValidString(name) {
-		return 0, errors.BadRequest("name is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(name); n > 45 {
-		return 0, errors.BadRequest("name is longer than 45 runes")
-	}
-	defer t.End()
-	var id int
-	err := apis.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
-
 // ExpressionsProperties returns all the unique properties contained inside a
 // list of expressions.
 func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
@@ -493,26 +427,76 @@ func (apis *APIs) MemberInvitation(ctx context.Context, token string) (string, s
 	return organization.Name, email, nil
 }
 
+// Organization returns the organization with identifier id.
+//
+// It returns an errors.NotFound error if the organization does not exist.
+func (apis *APIs) Organization(ctx context.Context, id int) (*Organization, error) {
+	apis.mustBeOpen()
+	_, t := telemetry.TraceSpan(ctx, "apis.Organization", "organization_id", id)
+	defer t.End()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid organization identifier", id)
+	}
+	org, ok := apis.state.Organization(id)
+	if !ok {
+		return nil, errors.NotFound("organization %d does not exist", id)
+	}
+	organization := Organization{
+		apis:         apis,
+		organization: org,
+		ID:           org.ID,
+		Name:         org.Name,
+	}
+	return &organization, nil
+}
+
+// Organizations returns the organizations, in the given order, describing all
+// organizations but starting from first and up to limit. first must be >= 0 and
+// limit must be > 0.
+func (apis *APIs) Organizations(ctx context.Context, order OrganizationSort, first, limit int) ([]*Organization, error) {
+	apis.mustBeOpen()
+	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
+	defer s.End()
+	if order != SortByName {
+		return nil, errors.BadRequest("order %d is not valid", int(order))
+	}
+	if limit <= 0 {
+		return nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+	if first < 0 {
+		return nil, errors.BadRequest("first %d is not valid", first)
+	}
+	organizations := apis.state.Organizations()
+	count := len(organizations)
+	if first >= count {
+		return []*Organization{}, nil
+	}
+	if first+limit > count {
+		limit = count - first
+	}
+	sort.Slice(organizations, func(i, j int) bool {
+		a, b := organizations[i], organizations[j]
+		switch order {
+		case SortByName:
+			return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
+		}
+		return false
+	})
+	organizations = organizations[first : first+limit]
+	orgs := make([]*Organization, len(organizations))
+	for i, organization := range organizations {
+		orgs[i] = &Organization{
+			ID:   organization.ID,
+			Name: organization.Name,
+		}
+	}
+	return orgs, nil
+}
+
 // ServeEvents serves the events sent via HTTP.
 func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	apis.mustBeOpen()
 	apis.events.ServeHTTP(w, r)
-}
-
-// TransformationLanguages returns the supported transformation languages.
-// Possible returned languages are "JavaScript" and "Python".
-func (apis *APIs) TransformationLanguages() []string {
-	if apis.functionTransformer == nil {
-		return []string{}
-	}
-	languages := make([]string, 0, 2)
-	if apis.functionTransformer.SupportLanguage(state.JavaScript) {
-		languages = append(languages, "JavaScript")
-	}
-	if apis.functionTransformer.SupportLanguage(state.Python) {
-		languages = append(languages, "Python")
-	}
-	return languages
 }
 
 // TransformData transforms data using a mapping or a function transformation
@@ -624,6 +608,22 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	return encoding.Marshal(outSchema, value)
+}
+
+// TransformationLanguages returns the supported transformation languages.
+// Possible returned languages are "JavaScript" and "Python".
+func (apis *APIs) TransformationLanguages() []string {
+	if apis.functionTransformer == nil {
+		return []string{}
+	}
+	languages := make([]string, 0, 2)
+	if apis.functionTransformer.SupportLanguage(state.JavaScript) {
+		languages = append(languages, "JavaScript")
+	}
+	if apis.functionTransformer.SupportLanguage(state.Python) {
+		languages = append(languages, "Python")
+	}
+	return languages
 }
 
 // ValidateExpression validates an expression. properties represents the allowed
