@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,11 +23,13 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/itchyny/timefmt-go"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/connectors/httpclient"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
+	"github.com/relvacode/iso8601"
 
 	"github.com/shopspring/decimal"
 )
@@ -515,6 +518,198 @@ func displayedIDToString(value any) (string, error) {
 		return "", fmt.Errorf("the displayed ID value is longer than 40 runes")
 	}
 	return s, nil
+}
+
+// isExcelSimpleFloat reports whether s is a string representing a float value
+// encoding an Excel date / datetime value.
+func isExcelSimpleFloat(s string) bool {
+	// NOTE: keep in sync with the function within 'apis/transformers/mappings'.
+	if len(s) < 3 {
+		return false
+	}
+	var dot bool
+	for i, c := range []byte(s) {
+		if c == '.' {
+			if dot || i == 0 || i == len(s)-1 {
+				return false
+			}
+			dot = true
+			continue
+		}
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
+
+// parseTimestamp parses a timestamp with the given format.
+//
+// Accepted values for format are:
+//
+//   - "DateTime", to parse timestamps in the format "2006-01-02 15:04:05"
+//   - "DateOnly", to parse date-only timestamps in the format "2006-01-02"
+//   - "ISO8601", to parse the timestamp as a ISO 8601 timestamp.
+//   - "Excel", to parse the timestamp as a string representing a float value
+//     stored in a Excel cell representing a date / datetime.
+//   - a strptime format, enclosed by single quote characters, compatible with
+//     the standard C89 functions strptime/strftime.
+//
+// NOTE: keep in sync with the function 'apis.validateTimestampFormat'.
+func parseTimestamp(format, timestamp string) (time.Time, error) {
+	switch format {
+	case "DateTime":
+		dt, err := time.Parse("2006-01-02 15:04:05", timestamp)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp has not the format '2006-01-02 15:04:05'")
+		}
+		return dt.UTC(), nil
+	case "DateOnly":
+		date, err := time.Parse("2006-01-02", timestamp)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp has not the format '2006-01-02'")
+		}
+		return date.UTC(), nil
+	case "ISO8601":
+		dt, err := iso8601.ParseString(timestamp)
+		if err != nil {
+			return time.Time{}, errors.New("timestamp format is not compatible with ISO 8601")
+		}
+		return dt.UTC(), err
+	case "Excel":
+		if !isExcelSimpleFloat(timestamp) {
+			return time.Time{}, errors.New("invalid timestamp for Excel")
+		}
+		// Parse as Excel serial date-time.
+		// https://support.microsoft.com/en-us/office/datetime-function-812ad674-f7dd-4f31-9245-e79cfa358a4e
+		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
+		days, err := strconv.ParseFloat(timestamp, 64)
+		if err != nil {
+			return time.Time{}, errors.New("invalid timestamp for Excel")
+		}
+		if days == 60 {
+			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
+			return time.Time{}, errors.New("invalid timestamp for Excel")
+		}
+		if days > 60 {
+			days--
+		}
+		d := time.Duration(days * 24 * 3600 * 1e9)
+		t := excelEpoch.Add(d)
+		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
+	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
+		f, ok := strings.CutPrefix(format, "'")
+		if !ok {
+			return time.Time{}, fmt.Errorf("invalid format %q", format)
+		}
+		f, ok = strings.CutSuffix(f, "'")
+		if !ok {
+			return time.Time{}, fmt.Errorf("invalid format %q", format)
+		}
+		t, err := timefmt.Parse(timestamp, f)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return t.UTC(), nil
+	}
+}
+
+// parseTimestampColumn parses a timestamp column value. If the timestamp cannot
+// be parsed or it is not valid, returns an error.
+//
+// To see a list of accepted format values, see the documentation of
+// 'parseTimestamp'.
+func parseTimestampColumn(name string, typ types.Type, format string, value any) (time.Time, error) {
+	timestamp, err := normalizeDatabaseFileProperty(name, typ, value, false)
+	if err != nil {
+		return time.Time{}, err
+	}
+	switch timestamp := timestamp.(type) {
+	case nil:
+		return time.Time{}, errors.New("timestamp value is null")
+	case time.Time:
+		err = validateTimestamp(timestamp)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return timestamp, nil
+	case string:
+		ts, err := parseTimestamp(format, value.(string))
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+		}
+		err = validateTimestamp(ts)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return ts, nil
+	case json.RawMessage:
+		var s string
+		err := json.Unmarshal(timestamp, &s)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+		}
+		ts, err := parseTimestamp(format, value.(string))
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+		}
+		err = validateTimestamp(ts)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return ts, nil
+	}
+	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+}
+
+// parseUniqueIDColumn parses a unique ID column value.
+func parseUniqueIDColumn(name string, typ types.Type, value any) (string, error) {
+	id, err := normalizeDatabaseFileProperty(name, typ, value, false)
+	if err != nil {
+		return "", err
+	}
+	switch id := id.(type) {
+	case nil:
+		return "", fmt.Errorf("identify value is null")
+	case int:
+
+		return strconv.FormatInt(int64(id), 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(id), 10), nil
+	case string:
+		if id == "" {
+			return "", fmt.Errorf("identify value is empty")
+		}
+		return id, nil
+	case float64:
+		if int(math.Round(id)) == int(id) {
+			return strconv.FormatInt(int64(id), 10), nil
+		}
+	case json.Number:
+		var n int64
+		err := json.Unmarshal([]byte(id), &n)
+		if err == nil {
+			return strconv.FormatInt(n, 10), nil
+		}
+	case json.RawMessage:
+		if id[0] == '"' {
+			var s string
+			_ = json.Unmarshal(id, &s)
+			if s == "" {
+				return "", fmt.Errorf("identify value is empty")
+			}
+			return s, nil
+		} else {
+			var n int64
+			err := json.Unmarshal(id, &n)
+			if err == nil {
+				return strconv.FormatInt(n, 10), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
 }
 
 // setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
