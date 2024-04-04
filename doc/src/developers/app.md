@@ -172,4 +172,6 @@ type AppConfig struct {
 
 ### Continue Reading
 
+- [Users and Groups](app/users-and-groups.md)
+
 - [Dispatch Events](app/dispatch-events.md)

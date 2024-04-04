@@ -1,8 +1,8 @@
-# Dispatch Events to Apps
+# Dispatching Events to Apps
 
-Chichi facilitates dispatching events to apps capable of receiving them. This involves implementing the `AppEvents` interface within the connector and adapting the `Schema` method to also return schema information for event types.
+Chichi makes it easy to send events to apps that can receive them. This involves implementing the `AppEvents` interface within the connector and adjusting the `Schema` method to also provide schema information for event types.
 
-To enable event dispatching, you must include the `Events` flag as a target during connector registration:
+Here’s how to get started with setting up your connector to send events:
 
 ```go
 chichi.RegisterApp(chichi.AppInfo{
@@ -12,44 +12,42 @@ chichi.RegisterApp(chichi.AppInfo{
 })
 ```
 
-Subsequently, implement the two methods of the `AppEvents` interface within the connector type:
+This piece of code registers your connector, telling Chichi that it's ready to manage events (as well as users). Next, you'll need to implement two key methods within your connector:
 
-- `EventTypes`: This method returns the types of events supported by the app.
-- `EventRequest`: It takes an event as input and returns an HTTP request for dispatching the event to the app.
+- `EventTypes`: Lists the types of events your app can work with.
+- `EventRequest`: Takes an event and turns it into an HTTP request for dispatching the event to the app.
 
-Let's delve into these methods in detail.
+Let's look more closely at what each part does.
 
-## Event Types
+## Understanding Event Types
 
-A connector for an app capable of receiving events may support one or more types of events. These event types are exposed through the `EventTypes` method:
+Your connector can be set up to handle different types of events. You'll use the `EventTypes` method to tell Chichi what these types are:
 
 ```go
 EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 ```
 
-The `EventTypes` method returns a non-empty slice of `EventType` values, defined as follows:
+For every event type you support, you'll define a unique ID, a user-friendly name, and a description. Here's how you define an event type:
 
 ```go
 type EventType struct {
-    ID          string // identifier; must be unique for each event type
-    Name        string // name for display
-    Description string // description for display
+    ID          string // unique identifier for the event type
+    Name        string // display name for the event type
+    Description string // description of the event type
 }
 ```
 
-You have the liberty to choose an identifier for an event type, provided it is unique among all event types of the connector and not an empty string. The name and description are used for display purposes only.
+You have the freedom to decide on the identifiers, names, and descriptions, as long as each event type has a unique ID.
 
-Additionally, event types may have a schema, which we'll explore further below.
+### Adding Schema
 
-### Schema
+Sometimes, the received event might lack necessary information required for dispatching to the app. In such cases, the schema of the event type specifies the extra information needed.
 
-Sometimes, the received event might lack essential information required for dispatching to the app. In such cases, the schema of the event type defines the extra information needed.
+Actions based on an event type involve a transformation that, given an event, provides the extra information required by the connector. This information, along with the event, is passed to the connector's `EventRequest` method.
 
-Actions based on an event type will involve a transformation that, given an event, provides the extra information required by the connector. This information, along with the event, is passed to the connector's `EventRequest` method.
+The schema of an event type is provided by the `Schema` method when the target is `Events`. If no extra information is needed for an event type, it must return the invalid schema.
 
-The schema of an event type is returned by the `Schema` method when the target is `Events`. If no extra information is needed for an event type, it must return the invalid schema.
-
-For instance, if you need to dispatch a ["share"](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events?hl=en#share) event to Google Analytics, you might require parameters like "method," "content_type," and "item_id," which could vary for each event. However, at the connector implementation stage, you might not have values for these parameters or know where to obtain them. In such cases, you can specify how to determine these parameters using a transformation in the action for the "share" event.
+For instance, if you need to dispatch a ["share"](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events?hl=en#share) event to Google Analytics, you might require parameters like "method," "content_type," and "item_id," which could vary for each event. However, during the connector implementation stage, you might not have values for these parameters or know where to obtain them. In such cases, you can specify how to determine these parameters using a transformation in the action for the "share" event.
 
 For example, the "share" event type might have the following schema:
 
@@ -77,7 +75,7 @@ In the action of the "share" event type, if a mapping is chosen as a transformat
 
 When dispatching the event, the `EventRequest` method receives, as an argument, the result of the transformation, i.e., the values of the three parameters "method," "content_type," and "item_id" conforming to their schema.
 
-If a field in the schema is mandatory, simply set the `Required` field in the `types.Property` struct to `true`. Additionally, for easier mapping compilation, you can specify a placeholder using the `Placeholder` field.
+If a field in the schema is mandatory, set the `Required` field in the `types.Property` struct to `true`. Additionally, you can specify a placeholder using the `Placeholder` field for easier mapping compilation.
 
 > When selecting a placeholder, consider that certain property names and traits hold specific meanings and can thus serve as suitable placeholders. Refer to the prefilled properties and traits sections within the events for further details:
 >
@@ -89,25 +87,25 @@ If a field in the schema is mandatory, simply set the `Required` field in the `t
 
 Now, let's move on to dispatching events to the app using the `EventRequest` method.
 
-## Event Request
+## Sending an Event
 
-To dispatch an event to an app, and to preview an event to dispatch, Chichi invokes the `EventRequest` method of the connector:
+Finally, to actually dispatch an event to the app, the `EventRequest` method prepares an HTTP request with all the needed details:
 
 ```go
 EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error)
 ```
 
-Given the event, `EventRequest` returns an HTTP request used to dispatch the event to the destination. The following are the parameters:
+Given the event, `EventRequest` returns an HTTP request used to dispatch the event to the destination. The parameters are:
 
-- `typ`: The type of the event; one of the types returned by the `EventTypes` method.
+- `typ`: The type of the event, one of the types returned by the `EventTypes` method.
 
 - `event`: The event to be dispatched.
 
-- `extra`: Extra information required to prepare the request, conforming to the schema of the event type. It is `nil` if the event type does not have a schema.
+- `extra`: Extra information required to prepare the request, conforming to the schema of the event type. It's `nil` if the event type doesn't have a schema.
 
-- `schema`: The schema of the extra information. It is the invalid schema if the event type does not have a schema.
+- `schema`: The schema of the extra information. It's the invalid schema if the event type doesn't have a schema.
 
-- `redacted`: Reports whether authentication data in the returned request must be redacted. It is `true` when the returned request is previewed.
+- `redacted`: Reports whether authentication data in the returned request must be redacted. It's `true` when the returned request is previewed.
 
 `EventRequest` returns the HTTP request to be sent to the app:
 
