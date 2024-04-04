@@ -7,15 +7,10 @@ This streamlined approach simplifies the development process, enabling teams to 
 ### Key Features
 
 * Track User Actions: Keep tabs on user actions like clicks, page views, and more on your website.
-
 * Connect to Analytics Tools: Send tracked data to various analytics tools like Google Analytics, Mixpanel, and others.
-
 * Manage Data Easily: Decide which data goes to which analytics tools, making it simple to organize and change tools later.
-
 * Respect User Privacy: Follow privacy rules like GDPR by giving users control over tracking and anonymizing data.
-
 * User Data Extraction: Extract user data from events for importing and identity resolution, enabling a deeper understanding of individual users.
-
 * Compatible with the Segment and RudderStack SDKs.
 
 ## Guides

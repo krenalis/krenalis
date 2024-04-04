@@ -7,33 +7,19 @@ With these capabilities, you can seamlessly track and analyze user interactions 
 Below the JavaScript SDK methods:
 
 - [page](#page)
-
 - [screen](#screen)
- 
 - [track](#track)
-
 - [identify](#identify)
-
 - [anonymize](#anonymize)
-
 - [group](#group)
-
 - [user](#user)
-
 - [setAnonymousId](#setanonymousid)
-
 - [getSessionId](#getsessionid)
-
 - [startSession](#startsession)
-
 - [endSession](#endsession)
-
 - [ready](#ready)
-
 - [reset](#reset)
-
 - [debug](#debug)
-
 - [close](#close)
 
 > The JavaScript SDK also supports the `getAnonymousId` method of the RudderStack SDK that can be used as an alternative to the [`user().anonymousId`](user-class.html#anonymousid).

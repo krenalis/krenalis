@@ -7,11 +7,8 @@ Session tracking is vital for understanding user behavior and optimizing product
 Chichi SDKs provide a comprehensive set of functions for session management:
 
 * Automatic and manual session creation.
-
 * Inclusion of a session identifier with each event.
-
 * Automatic and manual session expiration.
-
 * Configurable session duration.
 
 Additionally, you can start a session with a specific identifier.

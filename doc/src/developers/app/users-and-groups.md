@@ -29,11 +29,8 @@ Records(ctx context.Context, target chichi.Targets, properties []string, cursor 
 The parameters for this method are:
 
 - `ctx`: The context, which is always non-nil.
-
 - `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
-
 - `properties`: Contains the names of the properties that must be returned for each record. The names correspond to the properties of the schema as returned by the `Schema` method.
-
 - `cursor`: Indicates from which record to start returning records.
 
 > Normally, the `Records` method would return at least one record if there are no errors. However, it is permissible to return no records even in the absence of errors, enhancing flexibility in handling different situations.
@@ -53,13 +50,9 @@ type Record struct {
 ```
 
 - `ID`: The record's identifier in the app. It must be a valid, non-empty UTF-8 string.
-
 - `Properties`: The record's properties and their values. All requested properties must be present; additional properties are not considered. The values of the requested properties should conform to their respective schema, as returned by the connector's `Schema` method.
-
 - `UpdatedAt`:  The date and time the record was last updated. It can have any time zone. If the date is unknown, return `time.Zero`.
-
 - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice.
-
 - `Err`: Any error that occurred while reading the record. It must be `io.EOF` if there are no more records to read beyond those returned. If `Err` is different from `nil` and is not `io.EOF`, then only the `ID` field, along with `Err`, is significant.
 
 If a record encounters an error, meaning `Record.Err` is not `nil`, the import process is not halted but continues with subsequent records.

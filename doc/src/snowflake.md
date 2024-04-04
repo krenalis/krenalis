@@ -21,11 +21,8 @@ The table below provides a list of supported types in a Snowflake data warehouse
 Alias types are also supported:
 
 * `DECIMAL`, `DEC`, `NUMERIC`, `INT`, `INTEGER`, `BIGINT`, `SMALLINT`, `TINYINT`, `BYTEINT`, as aliases of `NUMBER`.
-
 * `FLOAT4`, `FLOAT8`, `DOUBLE`, `DOUBLE PRECISION`, `REAL`, as aliases of `FLOAT`.
-
 * `CHAR`, `CHARACTER`, `STRING`, `TEXT`, as aliases of `VARCHAR`.
-
 * `DATETIME`, `TIMESTAMP`, as aliases of `TIMESTAMP_NTZ`.
 
 ## NULL columns

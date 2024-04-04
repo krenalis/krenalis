@@ -71,7 +71,6 @@ Then add a Go file to the new directory. For example copy the previous template 
 The `FileStorageInfo` type describes information about the file storage connector:
 
 - `Name`: short name, typically the name of the storage. For example, "S3", "HTTP", "SFTP", etc.
-
 - `Icon`: icon in SVG format representing the file storage. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFileStorage` function that, executed during package initialization, registers the file storage connector:
@@ -108,9 +107,7 @@ type FileStorageConfig struct {
 ```
 
 - `Role`: Specifies the intended role of the resulting instance, which can be either `Source` or `Destination`.
-
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
-
 - `SetSetting`: A function that enables the connector to update its settings as necessary.
 
 ### CompletePath method

@@ -98,13 +98,9 @@ EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[str
 Given the event, `EventRequest` returns an HTTP request used to dispatch the event to the destination. The parameters are:
 
 - `typ`: The type of the event, one of the types returned by the `EventTypes` method.
-
 - `event`: The event to be dispatched.
-
 - `extra`: Extra information required to prepare the request, conforming to the schema of the event type. It's `nil` if the event type doesn't have a schema.
-
 - `schema`: The schema of the extra information. It's the invalid schema if the event type doesn't have a schema.
-
 - `redacted`: Reports whether authentication data in the returned request must be redacted. It's `true` when the returned request is previewed.
 
 `EventRequest` returns the HTTP request to be sent to the app:

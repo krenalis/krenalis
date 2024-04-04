@@ -50,13 +50,8 @@ The table below provides a list of supported types in a ClickHouse data warehous
 Alias types are also supported:
 
 * `TINYINT`, `BOOL`, `BOOLEAN`, `INT1`,  as aliases of `Int8`.
-
 * `SMALLINT`, `INT2`,  as aliases of `Int16`.
-
 * `INT`, `INT4`, `INTEGER`, as aliases of `Int32`.
-
 * `FLOAT` as alias of `Float32`.
-
 * `DOUBLE` as alias of `Float64`.
-
 * `LONGTEXT`, `MEDIUMTEXT`, `TINYTEXT`, `TEXT`, `LONGBLOB`, `MEDIUMBLOB`, `TINYBLOB`, `BLOB`, `VARCHAR`, `CHAR`, as aliases of `String`.

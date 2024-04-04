@@ -69,11 +69,8 @@ Then add a Go file to the new directory. For example copy the previous template 
 
 The `FileInfo` type describes information about the file connector:
 
-
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
-
 - `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
-
 - `Extension`: main extension of the file type that the connector reads and writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
 
 This information is passed to the `RegisterFile` function that, executed during package initialization, registers the file connector:
@@ -111,9 +108,7 @@ type FileConfig struct {
 ```
 
 - `Role`: Specifies the intended role of the resulting instance, which can be either `Source` or `Destination`.
-
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
-
 - `SetSetting`: A function that enables the connector to update its settings as necessary.
 
 ### ContentType method
