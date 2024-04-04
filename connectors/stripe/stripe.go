@@ -238,11 +238,6 @@ func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, proper
 	return users, "", nil
 }
 
-// Resource returns the resource.
-func (stripe *Stripe) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
 // Schema returns the schema of the specified target.
 func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object

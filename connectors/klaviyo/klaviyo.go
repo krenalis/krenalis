@@ -200,11 +200,6 @@ func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []s
 	return users, response.Links.Next, nil
 }
 
-// Resource returns the resource from a client token.
-func (ky *Klavyio) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
 // Schema returns the schema of the specified target.
 func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 

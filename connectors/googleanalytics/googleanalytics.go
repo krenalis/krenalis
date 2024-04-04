@@ -140,11 +140,6 @@ func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType,
 	}, nil
 }
 
-// Resource returns the resource from a client token.
-func (ga *GoogleAnalytics) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
 // Schema returns the schema of the specified target.
 func (ga *GoogleAnalytics) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	switch eventType {

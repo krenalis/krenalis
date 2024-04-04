@@ -32,10 +32,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppRecords, and Webhooks interfaces.
+// Make sure it implements the App, AppRecords, AppResource, and Webhooks
+// interfaces.
 var _ interface {
 	chichi.App
 	chichi.AppRecords
+	chichi.AppResource
 	chichi.Webhooks
 } = (*HubSpot)(nil)
 

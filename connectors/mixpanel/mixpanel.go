@@ -192,11 +192,6 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 	}, nil
 }
 
-// Resource returns the resource.
-func (mp *Mixpanel) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
 // Schema returns the schema of the specified target.
 func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {

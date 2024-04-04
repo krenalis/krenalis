@@ -48,11 +48,6 @@ type UISample struct {
 	settings *settings
 }
 
-// Resource returns the resource from a client token.
-func (uiSample *UISample) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
 // Schema returns the schema of the specified target.
 func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	return types.Type{}, chichi.ErrEventTypeNotExist

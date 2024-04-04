@@ -33,10 +33,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppRecords, UI, and Webhooks interfaces.
+// Make sure it implements the App, AppRecords, AppResource, UI, and Webhooks
+// interfaces.
 var _ interface {
 	chichi.App
 	chichi.AppRecords
+	chichi.AppResource
 	chichi.UI
 	chichi.Webhooks
 } = (*MailChimp)(nil)

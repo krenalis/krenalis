@@ -209,10 +209,6 @@ func init() {
 	usersLock.Unlock()
 }
 
-func (dummy *Dummy) Resource(ctx context.Context) (string, error) {
-	return "", nil
-}
-
 type settings struct {
 	LargeDataset bool
 }
