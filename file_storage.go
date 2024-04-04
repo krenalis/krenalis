@@ -68,17 +68,20 @@ type FileStorageNewFunc[T FileStorage] func(*FileStorageConfig) (T, error)
 // FileStorage is the interface implemented by file storage connectors.
 type FileStorage interface {
 
-	// CompletePath returns the complete representation of the given path name or an
-	// InvalidPathError if name is not valid for use in calls to Reader and Write.
+	// CompletePath returns the complete representation of the given path name. It
+	// returns InvalidPathError if name is not valid for use in calls to Reader and
+	// Write.
 	//
 	// name's length in runes will be in range [1, 1024].
 	CompletePath(ctx context.Context, name string) (string, error)
 
-	// Reader opens the file at the given path name and returns a ReadCloser from
-	// which to read the file and its last update time. The use of the provided
-	// context is extended to the Read method calls. After the context is canceled,
-	// any subsequent Read invocations will result in an error.
-	// It is the caller's responsibility to close the returned reader.
+	// Reader opens a file and returns a ReadCloser from which to read its content.
+	// name is the path name of the file to read and the returned time.Time is the
+	// last update time of the file.
+	//
+	// The use of the provided context is extended to the Read method calls.
+	// After the context is canceled, any subsequent Read invocations will result in
+	// an error. It is the caller's responsibility to close the returned reader.
 	Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 
 	// Write writes the data read from r into the file with the given path name.

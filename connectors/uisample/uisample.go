@@ -53,9 +53,7 @@ func (uiSample *UISample) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// Schema returns the schema of the specified target. For Users or Groups, it
-// returns their respective schemas. For Events, it returns the schema of the
-// specified event type.
+// Schema returns the schema of the specified target.
 func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	return types.Type{}, chichi.ErrEventTypeNotExist
 }

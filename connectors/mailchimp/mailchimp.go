@@ -86,9 +86,7 @@ func (mc *MailChimp) Create(_ context.Context, _ chichi.Targets, record map[stri
 	panic("TODO: not implemented")
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads. It
-// returns the ErrWebhookUnauthorized error is the request was not authorized.
-// The context is the request's context.
+// ReceiveWebhook receives a webhook request and returns its payloads.
 func (mc *MailChimp) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
 	if mc.settings.WebhookSecret == "" {
@@ -202,9 +200,7 @@ func (mc *MailChimp) Resource(ctx context.Context) (string, error) {
 	return resource, err
 }
 
-// Schema returns the schema of the specified target. For Users or Groups, it
-// returns their respective schemas. For Events, it returns the schema of the
-// specified event type.
+// Schema returns the schema of the specified target.
 func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
@@ -613,7 +609,7 @@ type settings struct {
 }
 
 // serializeProperties serializes the properties in the Mailchimp "fields"
-// parameter format
+// parameter format.
 func serializeProperties(properties []string) string {
 	var hasID, hasLastChange bool
 	for i, p := range properties {

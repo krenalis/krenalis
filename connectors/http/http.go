@@ -65,8 +65,7 @@ type settings struct {
 	Headers map[string]string
 }
 
-// CompletePath returns the complete representation of the given path name or an
-// InvalidPathError if name is not valid for use in calls to Reader and Write.
+// CompletePath returns the complete representation of the given path name.
 func (h *HTTP) CompletePath(ctx context.Context, name string) (string, error) {
 	if name[0] != '/' {
 		name = "/" + name
@@ -99,11 +98,7 @@ func (h *HTTP) CompletePath(ctx context.Context, name string) (string, error) {
 	return u.String(), nil
 }
 
-// Reader opens the file at the given path name and returns a ReadCloser from
-// which to read the file and its last update time. The use of the provided
-// context is extended to the Read method calls. After the context is canceled,
-// any subsequent Read invocations will result in an error.
-// It is the caller's responsibility to close the returned reader.
+// Reader opens a file and returns a ReadCloser from which to read its content.
 func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	u, err := h.CompletePath(ctx, name)
 	if err != nil {
@@ -201,7 +196,6 @@ func (h *HTTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, err
 }
 
 // Write writes the data read from r into the file with the given path name.
-// contentType is the file's content type.
 func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string) error {
 	u, err := h.CompletePath(ctx, name)
 	if err != nil {

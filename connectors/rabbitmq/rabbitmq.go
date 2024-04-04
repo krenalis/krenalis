@@ -59,8 +59,7 @@ type RabbitMQ struct {
 	deliveries <-chan amqp.Delivery
 }
 
-// Close closes the stream. When Close is called, no other calls to connector's
-// methods are in progress and no more will be made.
+// Close closes the stream.
 func (rmq *RabbitMQ) Close() error {
 	if rmq.conn == nil {
 		return nil
@@ -75,14 +74,7 @@ func (rmq *RabbitMQ) Close() error {
 	return err
 }
 
-// Receive receives an event from the stream. Callers call the ack function to
-// notify that the event has been received. The connector resends the event if
-// not acknowledged.
-//
-// Caller do not modify the event data, even temporarily, and event is not
-// retained after the ack function has been called.
-//
-// Receive can be used by multiple goroutines at the same time.
+// Receive receives an event from the stream.
 func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 	err := rmq.connect(ctx, true)
 	if err != nil {
@@ -100,13 +92,7 @@ func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 	}
 }
 
-// Send sends an event to the stream. If ack is not nil, connector calls ack
-// when the event has been stored or when an error occurred.
-//
-// Send can modify the event data, but event is not retained after the ack
-// function has been called.
-//
-// Send can be used by multiple goroutines at the same time.
+// Send sends an event to the stream.
 func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
 	err := rmq.connect(ctx, true)
 	if err != nil {

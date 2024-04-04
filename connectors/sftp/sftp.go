@@ -72,8 +72,7 @@ type settings struct {
 	TempPath string
 }
 
-// CompletePath returns the complete representation of the given path name or an
-// InvalidPathError if name is not valid for use in calls to Reader and Write.
+// CompletePath returns the complete representation of the given path name.
 func (sf *SFTP) CompletePath(ctx context.Context, name string) (string, error) {
 	u := url.URL{
 		Scheme: "sftp",
@@ -83,11 +82,7 @@ func (sf *SFTP) CompletePath(ctx context.Context, name string) (string, error) {
 	return u.String(), nil
 }
 
-// Reader opens the file at the given path name and returns a ReadCloser from
-// which to read the file and its last update time. The use of the provided
-// context is extended to the Read method calls. After the context is canceled,
-// any subsequent Read invocations will result in an error.
-// It is the caller's responsibility to close the returned reader.
+// Reader opens a file and returns a ReadCloser from which to read its content.
 func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	client, err := openClient(ctx, sf.settings)
 	if err != nil {
@@ -208,7 +203,6 @@ func (sf *SFTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, er
 }
 
 // Write writes the data read from r into the file with the given path name.
-// contentType is the file's content type.
 func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	client, err := openClient(ctx, sf.settings)
 	if err != nil {

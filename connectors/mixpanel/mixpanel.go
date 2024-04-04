@@ -70,17 +70,7 @@ func New(conf *chichi.AppConfig) (*Mixpanel, error) {
 	return &c, nil
 }
 
-// EventRequest returns a request to dispatch an event to the app. typ specifies
-// the type of event to send, event is the received event, extra contains the
-// extra information, schema is the schema of the extra information (that is the
-// schema for the event type), and redacted indicates whether authentication
-// data must be redacted in the returned request.
-//
-// schema is the invalid schema if extra is nil and vice versa.
-//
-// This method is safe for concurrent use by multiple goroutines. If the
-// specified event type does not exist, it returns the ErrEventTypeNotExist
-// error.
+// EventRequest returns a request to dispatch an event to the app.
 func (mp *Mixpanel) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 
 	if extra["event"].(string) == "" {
@@ -207,9 +197,7 @@ func (mp *Mixpanel) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// Schema returns the schema of the specified target. For Users or Groups, it
-// returns their respective schemas. For Events, it returns the schema of the
-// specified event type.
+// Schema returns the schema of the specified target.
 func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {
 		return types.Object([]types.Property{

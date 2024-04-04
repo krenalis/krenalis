@@ -100,9 +100,7 @@ func (stripe *Stripe) Create(ctx context.Context, _ chichi.Targets, record map[s
 	return stripe.call(ctx, "POST", "/v1/customers", &body, 200, nil)
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads. It
-// returns the ErrWebhookUnauthorized error is the request was not authorized.
-// The context is the request's context.
+// ReceiveWebhook receives a webhook request and returns its payloads.
 func (stripe *Stripe) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 
 	// Extract signature from Stripe-Signature header.
@@ -246,9 +244,7 @@ func (stripe *Stripe) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// Schema returns the schema of the specified target. For Users or Groups, it
-// returns their respective schemas. For Events, it returns the schema of the
-// specified event type.
+// Schema returns the schema of the specified target.
 func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object
 	//

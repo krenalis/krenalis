@@ -67,8 +67,7 @@ type settings struct {
 	Bucket          string
 }
 
-// CompletePath returns the complete representation of the given path name or an
-// InvalidPathError if name is not valid for use in calls to Reader and Write.
+// CompletePath returns the complete representation of the given path name.
 func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
 		return "", chichi.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
@@ -79,11 +78,7 @@ func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 	return "s3://" + ss3.settings.Bucket + "/" + name, nil
 }
 
-// Reader opens the file at the given path name and returns a ReadCloser from
-// which to read the file and its last update time. The use of the provided
-// context is extended to the Read method calls. After the context is canceled,
-// any subsequent Read invocations will result in an error.
-// It is the caller's responsibility to close the returned reader.
+// Reader opens a file and returns a ReadCloser from which to read its content.
 func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
 		return nil, time.Time{}, chichi.Errorf("object key cannot be longer than 1024 bytes")
@@ -204,7 +199,6 @@ func (ss3 *S3) ValidateSettings(ctx context.Context, values []byte) ([]byte, err
 }
 
 // Write writes the data read from r into the file with the given path name.
-// contentType is the file's content type.
 func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
 		return chichi.Errorf("object key cannot be longer than 1024 bytes")

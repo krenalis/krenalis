@@ -60,8 +60,7 @@ type settings struct {
 	Root string
 }
 
-// CompletePath returns the complete representation of the given path name or an
-// InvalidPathError if name is not valid for use in calls to Reader and Write.
+// CompletePath returns the complete representation of the given path name.
 func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (string, error) {
 	originalName := name
 	name = filepath.ToSlash(name)
@@ -80,11 +79,7 @@ func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (st
 	return filepath.Join(filesystem.settings.Root, name), nil
 }
 
-// Reader opens the file at the given path name and returns a ReadCloser from
-// which to read the file and its last update time. The use of the provided
-// context is extended to the Read method calls. After the context is canceled,
-// any subsequent Read invocations will result in an error.
-// It is the caller's responsibility to close the returned reader.
+// Reader opens a file and returns a ReadCloser from which to read its content.
 func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	path, _ := filesystem.CompletePath(ctx, name)
 	f, err := os.Open(path)
@@ -165,7 +160,6 @@ func (filesystem *Filesystem) ValidateSettings(ctx context.Context, values []byt
 }
 
 // Write writes the data read from r into the file with the given path name.
-// contentType is the file's content type.
 func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
 	path, _ := filesystem.CompletePath(ctx, name)
 	tmpPath := path + ".tmp"

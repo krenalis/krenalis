@@ -61,8 +61,7 @@ type ClickHouse struct {
 	db       driver.Conn
 }
 
-// Close closes the database. When Close is called, no other calls to
-// connector's methods are in progress and no more will be made.
+// Close closes the database.
 func (ch *ClickHouse) Close() error {
 	if ch.db == nil {
 		return nil
@@ -146,9 +145,6 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) 
 }
 
 // Upsert creates or updates the provided rows in the specified table.
-// The columns parameter specifies the columns of the rows, including a column
-// named "id" that serves as the table's key. If a column's value is not
-// specified in a row, the default column value is used.
 func (ch *ClickHouse) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
 
 	var err error

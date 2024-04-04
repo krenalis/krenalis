@@ -61,8 +61,7 @@ type Kafka struct {
 	iter     *fetchesRecordIter
 }
 
-// Close closes the stream. When Close is called, no other calls to connector's
-// methods are in progress and no more will be made.
+// Close closes the stream.
 func (kafka *Kafka) Close() error {
 	if kafka.client == nil {
 		return nil
@@ -72,14 +71,7 @@ func (kafka *Kafka) Close() error {
 	return nil
 }
 
-// Receive receives an event from the stream. Callers call the ack function to
-// notify that the event has been received. The connector resends the event if
-// not acknowledged.
-//
-// Caller do not modify the event data, even temporarily, and event is not
-// retained after the ack function has been called.
-//
-// Receive can be used by multiple goroutines at the same time.
+// Receive receives an event from the stream.
 func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 	err := kafka.connect()
 	if err != nil {
@@ -102,13 +94,7 @@ func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 	return record.Value, ack, nil
 }
 
-// Send sends an event to the stream. If ack is not nil, connector calls ack
-// when the event has been stored or when an error occurred.
-//
-// Send can modify the event data, but event is not retained after the ack
-// function has been called.
-//
-// Send can be used by multiple goroutines at the same time.
+// Send sends an event to the stream.
 func (kafka *Kafka) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
 	err := kafka.connect()
 	if err != nil {

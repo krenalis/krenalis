@@ -68,9 +68,7 @@ func (exel *Excel) ContentType(ctx context.Context) string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
-// Read reads the records from r and writes them to records. sheet is the name
-// of the sheet to be read. If the provided sheet does not exist, it returns the
-// chichi.ErrSheetNotExist error.
+// Read reads the records from r and writes them to records.
 func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
@@ -221,7 +219,6 @@ func (exel *Excel) ValidateSettings(ctx context.Context, values []byte) ([]byte,
 }
 
 // Write writes to w the records read from records.
-// sheet is the name of the sheet to be written to.
 func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
 
 	f := excelize.NewFile()

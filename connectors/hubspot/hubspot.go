@@ -177,9 +177,7 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 	return records, "", nil
 }
 
-// ReceiveWebhook receives a webhook request and returns its payloads. It
-// returns the ErrWebhookUnauthorized error is the request was not authorized.
-// The context is the request's context.
+// ReceiveWebhook receives a webhook request and returns its payloads.
 func (hs *HubSpot) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
 	// See https://developers.hubspot.com/docs/api/webhooks.
 
@@ -277,9 +275,7 @@ func (hs *HubSpot) Resource(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// Schema returns the schema of the specified target. For Users or Groups, it
-// returns their respective schemas. For Events, it returns the schema of the
-// specified event type.
+// Schema returns the schema of the specified target.
 func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 
 	var response struct {
