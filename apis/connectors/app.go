@@ -378,7 +378,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 			}
 
 			// Read the 'updated at' timestamp.
-			user.UpdatedAt = appUser.Timestamp.UTC()
+			user.UpdatedAt = appUser.UpdatedAt.UTC()
 			if err = validateTimestamp(user.UpdatedAt); err != nil {
 				return err
 			}
@@ -394,7 +394,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 
 		last := users[len(users)-1]
 		cursor.ID = last.ID
-		cursor.Timestamp = last.Timestamp
+		cursor.Timestamp = last.UpdatedAt
 		cursor.Next = next
 
 	}

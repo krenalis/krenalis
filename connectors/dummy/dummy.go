@@ -68,9 +68,9 @@ type Dummy struct {
 }
 
 var (
-	allUsers        map[string]map[string]any
-	usersTimestamps map[string]time.Time
-	usersLock       sync.Mutex
+	allUsers                 map[string]map[string]any
+	usersUpdatedAtTimestamps map[string]time.Time
+	usersLock                sync.Mutex
 )
 
 //go:embed users.json
@@ -112,7 +112,7 @@ func (dummy *Dummy) Create(ctx context.Context, _ chichi.Targets, user map[strin
 		u[name] = value
 	}
 	allUsers[id] = u
-	usersTimestamps[id] = time.Now().UTC()
+	usersUpdatedAtTimestamps[id] = time.Now().UTC()
 
 	return nil
 }
@@ -190,7 +190,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ chichi.Targets, properties []
 		users = append(users, chichi.Record{
 			ID:         id,
 			Properties: props,
-			Timestamp:  usersTimestamps[id],
+			UpdatedAt:  usersUpdatedAtTimestamps[id],
 		})
 	}
 	sort.Slice(users, func(i, j int) bool { return users[i].ID < users[j].ID })
@@ -211,11 +211,11 @@ func init() {
 	}
 	usersLock.Lock()
 	allUsers = make(map[string]map[string]any, len(rawUsers))
-	usersTimestamps = make(map[string]time.Time, len(rawUsers))
+	usersUpdatedAtTimestamps = make(map[string]time.Time, len(rawUsers))
 	for _, u := range rawUsers {
 		u.Properties["dummyId"] = u.ID
 		allUsers[u.ID] = u.Properties
-		usersTimestamps[u.ID] = time.Now().UTC()
+		usersUpdatedAtTimestamps[u.ID] = time.Now().UTC()
 	}
 	usersLock.Unlock()
 }
@@ -339,7 +339,7 @@ func (dummy *Dummy) Update(ctx context.Context, _ chichi.Targets, id string, use
 		u[name] = value
 	}
 	allUsers[id] = u
-	usersTimestamps[id] = time.Now().UTC()
+	usersUpdatedAtTimestamps[id] = time.Now().UTC()
 
 	return nil
 }

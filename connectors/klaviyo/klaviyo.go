@@ -192,7 +192,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []s
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)
-		timestamp, err := time.Parse(time.RFC3339, updated)
+		updatedAt, err := time.Parse(time.RFC3339, updated)
 		if err != nil {
 			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
 			continue
@@ -201,7 +201,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []s
 			delete(data.Attributes, "updated")
 		}
 		users[i].Properties = data.Attributes
-		users[i].Timestamp = timestamp.UTC()
+		users[i].UpdatedAt = updatedAt.UTC()
 	}
 
 	if response.Links.Next == "" {

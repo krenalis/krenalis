@@ -178,13 +178,13 @@ func (mc *MailChimp) Records(ctx context.Context, _ chichi.Targets, properties [
 		users[i] = chichi.Record{
 			ID:         member.ID,
 			Properties: member.Properties(),
-			Timestamp:  member.LastChanged.UTC(),
+			UpdatedAt:  member.LastChanged.UTC(),
 		}
 	}
 
 	offset, _ := strconv.Atoi(cursor.Next)
 	eof := offset+len(response.Members) >= response.TotalItems
-	if last := users[len(users)-1]; last.Timestamp.Equal(cursor.Timestamp) {
+	if last := users[len(users)-1]; last.UpdatedAt.Equal(cursor.Timestamp) {
 		offset += len(response.Members)
 	} else {
 		offset = 0

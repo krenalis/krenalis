@@ -157,7 +157,7 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 			continue
 		}
 		records[i].Properties = result.Properties
-		records[i].Timestamp = updatedAt.UTC()
+		records[i].UpdatedAt = updatedAt.UTC()
 	}
 
 	if target == chichi.Groups {

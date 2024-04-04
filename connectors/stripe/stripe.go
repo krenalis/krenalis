@@ -234,7 +234,7 @@ func (stripe *Stripe) Records(ctx context.Context, _ chichi.Targets, properties 
 		users[i] = chichi.Record{
 			ID:         customer["id"].(string),
 			Properties: customer,
-			Timestamp:  time.Now().UTC(),
+			UpdatedAt:  time.Now().UTC(),
 		}
 	}
 
