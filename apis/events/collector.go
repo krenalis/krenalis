@@ -229,7 +229,7 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 				ID:          event.UserId,
 				Properties:  properties,
 				AnonymousID: event.AnonymousId,
-				Timestamp:   event.timestamp,
+				UpdatedAt:   event.timestamp,
 				DisplayedID: displayedID,
 			})
 			if !ok {

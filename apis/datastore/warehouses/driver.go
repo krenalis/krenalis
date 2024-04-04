@@ -277,7 +277,7 @@ type Identity struct {
 	Properties  map[string]any
 	AnonymousID string    // empty string if not present.
 	DisplayedID string    // cannot be longer than 40 runes.
-	Timestamp   time.Time // in UTC.
+	UpdatedAt   time.Time // in UTC.
 }
 
 // Records is the iterator interface used to iterate over the records read from

@@ -119,7 +119,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			ok := iw.Write(ctx, warehouses.Identity{
 				ID:          user.ID,
 				Properties:  user.Properties,
-				Timestamp:   user.UpdatedAt,
+				UpdatedAt:   user.UpdatedAt,
 				DisplayedID: user.DisplayedID,
 			})
 			if !ok {
