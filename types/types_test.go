@@ -274,12 +274,12 @@ func Test_ObjectOf_Errors(t *testing.T) {
 	if err == nil {
 		t.Error("expected InvalidPropertyNameError error, got no error")
 	}
-	if err, ok := err.(InvalidPropertyNameError); ok {
-		if err.Index != 1 {
-			t.Errorf("expected index 1, got %d", err.Index)
+	if err2, ok := err.(InvalidPropertyNameError); ok {
+		if err2.Index != 1 {
+			t.Errorf("expected index 1, got %d", err2.Index)
 		}
-		if err.Name != "last name" {
-			t.Errorf("expected name \"last name\" , got %q", err.Name)
+		if err2.Name != "last name" {
+			t.Errorf("expected name \"last name\" , got %q", err2.Name)
 		}
 	} else {
 		t.Errorf("expected InvalidPropertyNameError error, got a %T error", err)
@@ -294,15 +294,15 @@ func Test_ObjectOf_Errors(t *testing.T) {
 	if err == nil {
 		t.Error("expected RepeatedPropertyNameError error, got no error")
 	}
-	if err, ok := err.(RepeatedPropertyNameError); ok {
-		if err.Index1 != 0 {
-			t.Errorf("expected index1 0, got %d", err.Index1)
+	if err2, ok := err.(RepeatedPropertyNameError); ok {
+		if err2.Index1 != 0 {
+			t.Errorf("expected index1 0, got %d", err2.Index1)
 		}
-		if err.Index2 != 2 {
-			t.Errorf("expected index2 2, got %d", err.Index2)
+		if err2.Index2 != 2 {
+			t.Errorf("expected index2 2, got %d", err2.Index2)
 		}
-		if err.Name != "firstName" {
-			t.Errorf("expected name \"firstName\" , got %q", err.Name)
+		if err2.Name != "firstName" {
+			t.Errorf("expected name \"firstName\" , got %q", err2.Name)
 		}
 	} else {
 		t.Errorf("expected RepeatedPropertyNameError error, got a %T error", err)
