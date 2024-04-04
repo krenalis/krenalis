@@ -19,17 +19,7 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// AlterSchema alters the "users" (and the "users_identities") schema applying
-// the given operations.
-//
-// operations must contain at least one operation.
-//
-// If one of the specified operations is not supported by the data warehouse,
-// for example if a type is not supported, this method returns a
-// warehouses.UnsupportedSchemaChangeErr error.
-//
-// If an error occurs with the data warehouse, it returns a
-// *warehouses.DataWarehouseError error.
+// AlterSchema alters the users schemas by applying the given operations.
 func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
 	queries, err := alterSchemaQueries(operations)
 	if err != nil {
@@ -51,17 +41,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, operations []wareh
 	return err
 }
 
-// AlterSchemaQueries returns the queries that would be executed altering the
-// "users" (and the "users_identities") schema with the given operations.
-//
-// operations must contain at least one operation.
-//
-// If one of the specified operations is not supported by the data warehouse,
-// for example if a type is not supported, this method returns a
-// warehouses.UnsupportedSchemaChangeErr error.
-//
-// If an error occurs with the data warehouse, it returns a
-// *warehouses.DataWarehouseError error.
+// AlterSchemaQueries returns the queries relative to the given operations.
 func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	queries, err := alterSchemaQueries(operations)
 	if err != nil {

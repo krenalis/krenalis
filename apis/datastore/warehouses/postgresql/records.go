@@ -22,16 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Records returns an iterator over the results of the query and an estimated
-// count of the records that would be returned if First and Limit were not
-// provided in the query.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error. If the schema specified in the query is not conform to the schema of
-// the table in the data warehouse, it returns a *SchemaError error.
-//
-// As a simplification, it is currently assumed that the table schema does not
-// change in the data warehouse during the execution of this method.
+// Records returns an iterator over the results of the query.
 func (warehouse *PostgreSQL) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, int, error) {
 	if !query.ID.Type.Valid() {
 		return nil, 0, errors.New("invalid ID type")

@@ -112,8 +112,7 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	return &PostgreSQL{settings: &s}, nil
 }
 
-// Close closes the warehouse. It will not allow any new queries to run, and it
-// waits for the current ones to finish.
+// Close closes the warehouse.
 func (warehouse *PostgreSQL) Close() error {
 	warehouse.mu.Lock()
 	if warehouse.db != nil {
@@ -125,9 +124,7 @@ func (warehouse *PostgreSQL) Close() error {
 	return nil
 }
 
-// DestinationUsers returns the external IDs of the destination users of the
-// action whose external matching property value matches with the given property
-// value. If it cannot be found, then an empty slice and false are returned.
+// DestinationUsers returns the destination users of the action.
 func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -154,12 +151,7 @@ func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, p
 	return externalIDs, nil
 }
 
-// DuplicatedDestinationUsers returns the external IDs of two users on the
-// action which have the same value for the matching property, along with true.
-//
-// If there are no users on the action matching this condition, no external IDs
-// are returned and the returned boolean is false. If an error occurs with the
-// data warehouse, it returns a *DataWarehouseError error.
+// DuplicatedDestinationUsers retrieves duplicated destination users.
 func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -197,12 +189,7 @@ func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, act
 	return user1, user2, found, nil
 }
 
-// DuplicatedUsers returns the GIDs of two users which have the same value for
-// the given property, along with true.
-// If there are no users matching this condition, no GIDs are returned and the
-// returned boolean is false.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// DuplicatedUsers returns the GIDs of two duplicated users.
 func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -263,14 +250,7 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	return nil
 }
 
-// Merge performs a table merge operation, handling row updates, inserts, and
-// deletions. table specifies the target table for the merge operation, rows
-// contains the rows to insert or update in the table, and deleted contains the
-// key values of rows to delete, if they exist.
-// rows or deleted can be empty but not both, and both may be changed by this
-// method.
-// If the table schema is not conform to the schema of the table on the data
-// warehouse, this method returns a *SchemaError error.
+// Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
 
 	db, err := warehouse.connection()
@@ -417,8 +397,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	return nil
 }
 
-// Ping checks whether the connection to the data warehouse is active and, if
-// necessary, establishes a new connection.
+// Ping checks the connection to the data warehouse.
 func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -432,15 +411,6 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-//
-// connections holds the identifiers of the connections of the workspace and may
-// be empty to indicate that no connections are present in the workspace.
-//
-// Identifiers are the Workspace Identity Resolution identifiers, ordered by
-// priority.
-//
-// usersSchema is the "users" schema, as the "users" table on the data
-// warehouse is rebuilt by this procedure.
 func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 
 	db, err := warehouse.connection()
@@ -584,8 +554,7 @@ func (warehouse *PostgreSQL) tableInfo(ctx context.Context, table string, fresh 
 	return ti, nil
 }
 
-// SetDestinationUser sets the destination user relative to the action, with the
-// given external user ID and external property.
+// SetDestinationUser sets the destination user for an action.
 func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	db, err := warehouse.connection()
 	if err != nil {

@@ -20,14 +20,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-// the given schema, relative to the connection, on the data warehouse.
-// fromEvent indicates if the user identities are imported from an event or not.
-// ack is the ack function (see the documentation of IdentitiesWriter for more
-// details about it).
-// If the schema specified is not conform to the schema of the table
-// 'users_identities' in the data warehouse, calls to the method 'Write' of the
-// returned 'IdentitiesWriter' return a *SchemaError error.
+// IdentitiesWriter returns an IdentitiesWriter.
 func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	if ack == nil {
 		panic("ack function is missing")

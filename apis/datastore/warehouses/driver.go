@@ -85,8 +85,7 @@ func (e UnsupportedAlterSchemaErr) Error() string {
 // warehouse.
 type Warehouse interface {
 
-	// AlterSchema alters the "users" (and the "users_identities") schema applying
-	// the given operations.
+	// AlterSchema alters the users schemas by applying the given operations.
 	//
 	// operations must contain at least one operation.
 	//
@@ -98,8 +97,11 @@ type Warehouse interface {
 	// *warehouses.DataWarehouseError error.
 	AlterSchema(ctx context.Context, operations []AlterSchemaOperation) error
 
-	// AlterSchemaQueries returns the queries that would be executed altering the
-	// "users" (and the "users_identities") schema with the given operations.
+	// AlterSchemaQueries returns the queries relative to the given operations.
+	//
+	// In particular, this method returns the queries that would be executed
+	// altering the "users" (and the "users_identities") schema with the given
+	// operations.
 	//
 	// operations must contain at least one operation.
 	//
@@ -111,16 +113,19 @@ type Warehouse interface {
 	// *warehouses.DataWarehouseError error.
 	AlterSchemaQueries(ctx context.Context, operations []AlterSchemaOperation) ([]string, error)
 
-	// Close closes the warehouse. It will not allow any new queries to run, and it
-	// waits for the current ones to finish.
+	// Close closes the warehouse.
+	// It will not allow any new queries to run, and it waits for the current ones
+	// to finish.
 	Close() error
 
-	// DestinationUsers returns the external IDs of the destination users of the
+	// DestinationUsers returns the destination users of the action.
+	// In particular, returns the external IDs of the destination users of the
 	// action whose external matching property value matches with the given property
 	// value. If it cannot be found, then the empty string and false are returned.
 	DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error)
 
-	// DuplicatedDestinationUsers returns the external IDs of two users on the
+	// DuplicatedDestinationUsers retrieves duplicated destination users.
+	// In particular, it returns the external IDs of two users on the
 	// action which have the same value for the matching property, along with true.
 	//
 	// If there are no users on the action matching this condition, no external IDs
@@ -128,19 +133,21 @@ type Warehouse interface {
 	// data warehouse, it returns a *DataWarehouseError error.
 	DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error)
 
-	// DuplicatedUsers returns the GIDs of two users which have the same value for
-	// the given property, along with true.
+	// DuplicatedUsers returns the GIDs of two duplicated users.
+	// Two users are duplicated if they have the same value for the given property;
+	// in that case, their GID is returned and 'true'.
 	// If there are no users matching this condition, no GIDs are returned and the
 	// returned boolean is false.
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error)
 
-	// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-	// the given schema, relative to the connection, on the data warehouse.
-	// fromEvent indicates if the user identities are imported from an event or not.
-	// ack is the ack function (see the documentation of IdentitiesWriter for more
-	// details about it).
+	// IdentitiesWriter returns an IdentitiesWriter.
+	// An IdentitiesWriter can be used for writing user identities with the given
+	// schema, relative to the connection, on the data warehouse. fromEvent
+	// indicates if the user identities are imported from an event or not. ack is
+	// the ack function (see the documentation of IdentitiesWriter for more details
+	// about it).
 	// If the schema specified is not conform to the schema of the table
 	// 'users_identities' in the data warehouse, calls to the method 'Write' of the
 	// returned 'IdentitiesWriter' return a *SchemaError error.
@@ -149,18 +156,20 @@ type Warehouse interface {
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
 
-	// Merge performs a table merge operation, handling row updates, inserts, and
-	// deletions. table specifies the target table for the merge operation, rows
-	// contains the rows to insert or update in the table, and deleted contains the
-	// key values of rows to delete, if they exist.
+	// Merge performs a table merge operation.
+	// If handles row updates, inserts, and deletions. table specifies the target
+	// table for the merge operation, rows contains the rows to insert or update in
+	// the table, and deleted contains the key values of rows to delete, if they
+	// exist.
 	// rows or deleted can be empty but not both, and both may be changed by this
 	// method.
 	// If the table schema is not conform to the schema of the table on the data
 	// warehouse, this method returns a *SchemaError error.
 	Merge(ctx context.Context, table MergeTable, rows []map[string]any, deleted map[string]any) error
 
-	// Ping checks whether the connection to the data warehouse is active and, if
-	// necessary, establishes a new connection.
+	// Ping checks the connection to the data warehouse.
+	// In particular, it checks whether the connection to the data warehouse is
+	// active and, if necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
 	// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
@@ -175,16 +184,18 @@ type Warehouse interface {
 	// warehouse is rebuilt by this procedure.
 	RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error
 
-	// SetDestinationUser sets the destination user relative to the action, with
-	// the given external user ID and external property.
+	// SetDestinationUser sets the destination user for an action.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
 	SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte
 
-	// Records returns an iterator over the results of the query and an estimated
-	// count of the records that would be returned if First and Limit were not
-	// provided in the query.
+	// Records returns an iterator over the results of the query.
+	// It also returns an estimated count of the records that would be returned if
+	// First and Limit were not provided in the query.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error. If the schema specified in the query is not conform to the schema of

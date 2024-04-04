@@ -59,8 +59,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	return store, nil
 }
 
-// AlterSchema alters the "users" (and the "users_identities") schema applying
-// the given operations.
+// AlterSchema alters the users schemas by applying the given operations.
 //
 // operations must contain at least one operation.
 //
@@ -249,8 +248,7 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, ws.UsersSchema)
 }
 
-// SetDestinationUser sets the destination user relative to the action, with
-// the given external user ID and external property.
+// SetDestinationUser sets the destination user for an action.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.

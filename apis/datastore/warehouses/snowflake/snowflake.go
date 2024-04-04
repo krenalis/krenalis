@@ -87,38 +87,17 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	return &Snowflake{settings: &s}, nil
 }
 
-// AlterSchema alters the "users" (and the "users_identities") schema applying
-// the given operations.
-//
-// operations must contain at least one operation.
-//
-// If one of the specified operations is not supported by the data warehouse,
-// for example if a type is not supported, this method returns a
-// warehouses.UnsupportedSchemaChangeErr error.
-//
-// If an error occurs with the data warehouse, it returns a
-// *warehouses.DataWarehouseError error.
+// AlterSchema alters the users schemas by applying the given operations.
 func (warehouse *Snowflake) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
 	panic("TODO: not implemented")
 }
 
-// AlterSchemaQueries returns the queries that would be executed altering the
-// "users" (and the "users_identities") schema with the given operations.
-//
-// operations must contain at least one operation.
-//
-// If one of the specified operations is not supported by the data warehouse,
-// for example if a type is not supported, this method returns a
-// warehouses.UnsupportedSchemaChangeErr error.
-//
-// If an error occurs with the data warehouse, it returns a
-// *warehouses.DataWarehouseError error.
+// AlterSchemaQueries returns the queries relative to the given operations.
 func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	panic("TODO: not implemented")
 }
 
-// Close closes the warehouse. It will not allow any new queries to run, and it
-// waits for the current ones to finish.
+// Close closes the warehouse.
 func (warehouse *Snowflake) Close() error {
 	var err error
 	warehouse.mu.Lock()
@@ -134,41 +113,22 @@ func (warehouse *Snowflake) Close() error {
 	return nil
 }
 
-// DestinationUsers returns the external IDs of the destination users of the
-// action whose external matching property value matches with the given property
-// value. If it cannot be found, then an empty slice and false are returned.
+// DestinationUsers returns the destination users of the action.
 func (warehouse *Snowflake) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	panic("not implemented")
 }
 
-// DuplicatedDestinationUsers returns the external IDs of two users on the
-// action which have the same value for the matching property, along with true.
-//
-// If there are no users on the action matching this condition, no external IDs
-// are returned and the returned boolean is false. If an error occurs with the
-// data warehouse, it returns a *DataWarehouseError error.
+// DuplicatedDestinationUsers retrieves duplicated destination users.
 func (warehouse *Snowflake) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
 	panic("TODO: not implemented")
 }
 
-// DuplicatedUsers returns the GIDs of two users which have the same value for
-// the given property, along with true.
-// If there are no users matching this condition, no GIDs are returned and the
-// returned boolean is false.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// DuplicatedUsers returns the GIDs of two duplicated users.
 func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
 	panic("TODO: not implemented")
 }
 
-// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-// the given schema, relative to the connection, on the data warehouse.
-// fromEvent indicates if the user identities are imported from an event or not.
-// ack is the ack function (see the documentation of IdentitiesWriter for more
-// details about it).
-// If the schema specified is not conform to the schema of the table
-// 'users_identities' in the data warehouse, calls to the method 'Write' of the
-// returned 'IdentitiesWriter' return a *SchemaError error.
+// IdentitiesWriter returns an IdentitiesWriter.
 func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	panic("not implemented")
 }
@@ -178,14 +138,7 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 	return nil
 }
 
-// Merge performs a table merge operation, handling row updates, inserts, and
-// deletions. table specifies the target table for the merge operation, rows
-// contains the rows to insert or update in the table, and deleted contains the
-// key values of rows to delete, if they exist.
-// rows or deleted can be empty but not both, and both may be changed by this
-// method.
-// If the table schema is not conform to the schema of the table on the data
-// warehouse, this method returns a *SchemaError error.
+// Merge performs a table merge operation.
 func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
 
 	db, err := warehouse.connection()
@@ -414,8 +367,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	return nil
 }
 
-// Ping checks whether the connection to the data warehouse is active and, if
-// necessary, establishes a new connection.
+// Ping checks the connection to the data warehouse.
 func (warehouse *Snowflake) Ping(ctx context.Context) error {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -428,36 +380,17 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Records returns an iterator over the results of the query and an estimated
-// count of the records that would be returned if First and Limit were not
-// provided in the query.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error. If the schema specified in the query is not conform to the schema of
-// the table in the data warehouse, it returns a *SchemaError error.
-//
-// As a simplification, it is currently assumed that the table schema does not
-// change in the data warehouse during the execution of this method.
+// Records returns an iterator over the results of the query.
 func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, int, error) {
 	panic("not implemented")
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-//
-// connections holds the identifiers of the connections of the workspace and may
-// be empty to indicate that no connections are present in the workspace.
-//
-// Identifiers are the Workspace Identity Resolution identifiers, ordered by
-// priority.
-//
-// usersSchema is the "users" schema, as the "users" table on the data
-// warehouse is rebuilt by this procedure.
 func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
 	panic("not implemented")
 }
 
-// SetDestinationUser sets the destination user relative to the action, with the
-// given external user ID and external property.
+// SetDestinationUser sets the destination user for an action.
 func (warehouse *Snowflake) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	return errors.New("not implemented")
 }
