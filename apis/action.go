@@ -703,8 +703,8 @@ type ActionToSet struct {
 	// - the internal matching property, if this action has matching
 	//   properties.
 	// - the properties referred in the filters, if this action has filters.
-	// - the id and timestamp properties, if this action specifies an id and a
-	//   timestamp property.
+	// - the id and 'updated at' properties, if this action specifies an id and
+	//   an 'updated at' property.
 	InSchema types.Type
 
 	// OutSchema is the output schema of the action.
