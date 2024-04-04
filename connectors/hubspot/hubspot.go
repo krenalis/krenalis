@@ -108,10 +108,10 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 
 	hs.buf.Reset()
 	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
-	if cursor.Timestamp.IsZero() {
+	if cursor.UpdatedAt.IsZero() {
 		hs.buf.WriteByte('0')
 	} else {
-		hs.buf.WriteString(strconv.FormatInt(cursor.Timestamp.UnixMilli(), 10))
+		hs.buf.WriteString(strconv.FormatInt(cursor.UpdatedAt.UnixMilli(), 10))
 	}
 	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
 		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)

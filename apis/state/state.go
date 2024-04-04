@@ -905,7 +905,7 @@ func (target Target) Value() (driver.Value, error) {
 // Cursor represents a cursor.
 type Cursor struct {
 	ID        string
-	Timestamp time.Time
+	UpdatedAt time.Time
 }
 
 type Action struct {

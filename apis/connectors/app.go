@@ -289,7 +289,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 
 	cursor := chichi.Cursor{
 		ID:        r.cursor.ID,
-		Timestamp: r.cursor.Timestamp,
+		UpdatedAt: r.cursor.UpdatedAt,
 	}
 
 	properties := r.schema.Properties()
@@ -394,7 +394,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 
 		last := users[len(users)-1]
 		cursor.ID = last.ID
-		cursor.Timestamp = last.UpdatedAt
+		cursor.UpdatedAt = last.UpdatedAt
 		cursor.Next = next
 
 	}

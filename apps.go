@@ -168,7 +168,7 @@ type AppEvents interface {
 // Cursor represents a cursor used to implement pagination.
 type Cursor struct {
 	ID        string    // Identifier of the last returned user or group.
-	Timestamp time.Time // Timestamp of the last returned user or group, with preserved Location.
+	UpdatedAt time.Time // 'Updated at' timestamp of the last returned user or group, with preserved Location.
 	Next      string    // Returned string value of the last call to Users or Groups.
 }
 

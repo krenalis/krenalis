@@ -679,7 +679,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	// Build the cursor.
 	cursor, err = serializeCursor(state.Cursor{
 		ID:        last.ID,
-		Timestamp: last.UpdatedAt,
+		UpdatedAt: last.UpdatedAt,
 	})
 	if err != nil {
 		return nil, "", err

@@ -42,7 +42,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		var cursor state.Cursor
 		if exe, _ := action.Execution(); !exe.Reimport {
 			cursor.ID = action.UserCursor.ID
-			cursor.Timestamp = action.UserCursor.Timestamp
+			cursor.UpdatedAt = action.UserCursor.UpdatedAt
 		}
 		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedID, cursor)
 	case state.DatabaseType:
@@ -141,7 +141,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		// Set the user cursor.
 		if connector.Type == state.AppType {
 			last := users[len(users)-1]
-			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, Timestamp: last.UpdatedAt})
+			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, UpdatedAt: last.UpdatedAt})
 			if err != nil {
 				return actionExecutionError{err}
 			}

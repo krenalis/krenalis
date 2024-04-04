@@ -107,7 +107,7 @@ CREATE TABLE connections (
 
 CREATE TYPE cursor AS (
     id text,
-    timestamp timestamp(6)
+    updated_at timestamp(6)
 );
 
 CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');

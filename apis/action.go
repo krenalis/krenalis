@@ -578,8 +578,8 @@ func (this *Action) setUserCursor(ctx context.Context, cursor state.Cursor) erro
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions\n"+
-			"SET user_cursor.id = $1, user_cursor.timestamp = $2 WHERE id = $3",
-			n.UserCursor.ID, n.UserCursor.Timestamp, n.ID)
+			"SET user_cursor.id = $1, user_cursor.updated_at = $2 WHERE id = $3",
+			n.UserCursor.ID, n.UserCursor.UpdatedAt, n.ID)
 		if err != nil {
 			return err
 		}
