@@ -363,11 +363,11 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		// Validate the 'updated at' column and format.
 		var requiresUpdatedAtFormat bool
 		if action.UpdatedAtColumn != "" {
-			timestampColumn, ok := inSchema.Property(action.UpdatedAtColumn)
+			updatedAtColumn, ok := inSchema.Property(action.UpdatedAtColumn)
 			if !ok {
 				return errors.BadRequest("'updated at' column %q not found within input schema", action.UpdatedAtColumn)
 			}
-			switch k := timestampColumn.Type.Kind(); k {
+			switch k := updatedAtColumn.Type.Kind(); k {
 			case types.DateTimeKind, types.DateKind:
 			case types.JSONKind, types.TextKind:
 				requiresUpdatedAtFormat = true
