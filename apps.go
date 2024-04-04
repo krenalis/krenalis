@@ -176,7 +176,7 @@ type Cursor struct {
 type Record struct {
 	ID         string         // Identifier.
 	Properties map[string]any // Properties.
-	UpdatedAt  time.Time      // Last modification time, in UTC.
+	UpdatedAt  time.Time      // 'Updated at' timestamp, whose location can be anything, not necessarily UTC.
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
