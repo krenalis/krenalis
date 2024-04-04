@@ -70,7 +70,7 @@ type settings struct {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, record map[string]any) error {
+func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -129,8 +129,7 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) 
 	}, nil
 }
 
-// Records returns the records of the specified target, starting from the given
-// cursor.
+// Records returns the records of the specified target.
 func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var hasUpdatedProperty bool
@@ -399,9 +398,8 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*c
 	return form, nil, nil
 }
 
-// Update updates the record of the specified target with the identifier id,
-// setting the given properties.
-func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, record map[string]any) error {
+// Update updates a record of the specified target.
+func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 

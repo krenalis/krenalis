@@ -194,15 +194,29 @@ type AppRecords interface {
 	App
 
 	// Create creates a record for the specified target with the given properties.
-	Create(ctx context.Context, target Targets, record map[string]any) error
+	// The target can only be either Users or Groups, and it must be a target
+	// supported by the connector. properties must contain at least one property,
+	// and the properties must conform to the schema as returned by the Schema
+	// method.
+	Create(ctx context.Context, target Targets, properties map[string]any) error
 
-	// Records returns the records of the specified target, starting from the given
-	// cursor.
+	// Records returns the records of the specified target. The target can only be
+	// either Users or Groups, and it must be a target supported by the connector.
+	// properties are the names of the properties to read, and cursor represents the
+	// position from which to start reading the records.
+	//
+	// The properties returned in records may include more than those requested and
+	// must conform to the schema as returned by the Schema method. next is passed
+	// as 'cursor.Next' in the subsequent call. It can be any UTF-8 encoded string,
+	// even an empty one. If there are no more records to return, it returns the
+	// last records read (if any) along with the io.EOF error.
 	Records(ctx context.Context, target Targets, properties []string, cursor Cursor) (records []Record, next string, err error)
 
-	// Update updates the record of the specified target with the identifier id,
-	// setting the given properties.
-	Update(ctx context.Context, target Targets, id string, record map[string]any) error
+	// Update updates a record of the specified target. id is the identifier of the
+	// record to update. properties are the properties to update and must contain at
+	// least one property. The properties must conform to the schema as returned by
+	// the Schema method.
+	Update(ctx context.Context, target Targets, id string, properties map[string]any) error
 }
 
 // AppResource is the interface implemented by apps that support resources.

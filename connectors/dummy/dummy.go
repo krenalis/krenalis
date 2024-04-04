@@ -87,7 +87,7 @@ func newUserID() string {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (dummy *Dummy) Create(ctx context.Context, _ chichi.Targets, user map[string]any) error {
+func (dummy *Dummy) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -96,7 +96,7 @@ func (dummy *Dummy) Create(ctx context.Context, _ chichi.Targets, user map[strin
 	}
 
 	// Write the user on the log.
-	propsDump, err := json.Marshal(user)
+	propsDump, err := json.Marshal(properties)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (dummy *Dummy) Create(ctx context.Context, _ chichi.Targets, user map[strin
 	u := map[string]any{}
 	id := newUserID()
 	u["dummyId"] = id
-	for name, value := range user {
+	for name, value := range properties {
 		u[name] = value
 	}
 	allUsers[id] = u
@@ -165,9 +165,8 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 	}, nil
 }
 
-// Records returns the records of the specified target, starting from the given
-// cursor.
-func (dummy *Dummy) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// Records returns the records of the specified target.
+func (dummy *Dummy) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -298,9 +297,8 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*
 	return form, nil, nil
 }
 
-// Update updates the record of the specified target with the identifier id,
-// setting the given properties.
-func (dummy *Dummy) Update(ctx context.Context, _ chichi.Targets, id string, user map[string]any) error {
+// Update updates a record of the specified target.
+func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -309,7 +307,7 @@ func (dummy *Dummy) Update(ctx context.Context, _ chichi.Targets, id string, use
 	}
 
 	// Write the user on the log.
-	propsDump, err := json.Marshal(user)
+	propsDump, err := json.Marshal(properties)
 	if err != nil {
 		return err
 	}
@@ -323,7 +321,7 @@ func (dummy *Dummy) Update(ctx context.Context, _ chichi.Targets, id string, use
 		u = map[string]any{}
 	}
 	u["dummyId"] = id
-	for name, value := range user {
+	for name, value := range properties {
 		u[name] = value
 	}
 	allUsers[id] = u

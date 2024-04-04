@@ -75,7 +75,7 @@ type HubSpot struct {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, record map[string]any) error {
+func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
 
 	if target == chichi.Groups {
 		return nil
@@ -83,7 +83,7 @@ func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, record map
 
 	var body bytes.Buffer
 	body.WriteString(`{"properties":`)
-	err := json.NewEncoder(&body).Encode(record)
+	err := json.NewEncoder(&body).Encode(properties)
 	if err != nil {
 		return err
 	}
@@ -92,8 +92,7 @@ func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, record map
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
 }
 
-// Records returns the records of the specified target, starting from the given
-// cursor.
+// Records returns the records of the specified target.
 func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	path := "/crm/v3/objects/"
@@ -353,9 +352,8 @@ func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, eventType 
 	return schema, nil
 }
 
-// Update updates the record of the specified target with the identifier id,
-// setting the given properties.
-func (hs *HubSpot) Update(ctx context.Context, target chichi.Targets, id string, record map[string]any) error {
+// Update updates a record of the specified target.
+func (hs *HubSpot) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 
 	if target == chichi.Groups {
 		return nil
@@ -367,7 +365,7 @@ func (hs *HubSpot) Update(ctx context.Context, target chichi.Targets, id string,
 	body.WriteString(`{"id":`)
 	body.Write(idJSON)
 	body.WriteString(`,"properties":`)
-	err := json.NewEncoder(&body).Encode(record)
+	err := json.NewEncoder(&body).Encode(properties)
 	if err != nil {
 		return err
 	}

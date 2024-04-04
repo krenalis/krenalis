@@ -89,10 +89,10 @@ func New(conf *chichi.AppConfig) (*Stripe, error) {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (stripe *Stripe) Create(ctx context.Context, _ chichi.Targets, record map[string]any) error {
+func (stripe *Stripe) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
 
 	var body bytes.Buffer
-	err := encodeRequest(&body, record, nil)
+	err := encodeRequest(&body, properties, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
@@ -202,9 +202,8 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, 
 
 }
 
-// Records returns the records of the specified target, starting from the given
-// cursor.
-func (stripe *Stripe) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// Records returns the records of the specified target.
+func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var body io.Reader
 	if cursor.ID != "" {
@@ -291,12 +290,11 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) 
 	return form, nil, nil
 }
 
-// Update updates the record of the specified target with the identifier id,
-// setting the given properties.
-func (stripe *Stripe) Update(ctx context.Context, _ chichi.Targets, id string, record map[string]any) error {
+// Update updates a record of the specified target.
+func (stripe *Stripe) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 
 	var body bytes.Buffer
-	err := encodeRequest(&body, record, nil)
+	err := encodeRequest(&body, properties, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}

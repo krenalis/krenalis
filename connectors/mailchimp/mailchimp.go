@@ -82,7 +82,7 @@ type MailChimp struct {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (mc *MailChimp) Create(_ context.Context, _ chichi.Targets, record map[string]any) error {
+func (mc *MailChimp) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -140,9 +140,8 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, e
 	return events, nil
 }
 
-// Records returns the records of the specified target, starting from the given
-// cursor.
-func (mc *MailChimp) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+// Records returns the records of the specified target.
+func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	path := "/lists/" + mc.settings.List + "/members"
 	values := url.Values{
@@ -473,15 +472,14 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (
 	return form, nil, nil
 }
 
-// Update updates the record of the specified target with the identifier id,
-// setting the given properties.
-func (mc *MailChimp) Update(ctx context.Context, _ chichi.Targets, id string, record map[string]any) error {
+// Update updates a record of the specified target.
+func (mc *MailChimp) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
 	}
 	var basePath = "/lists/" + mc.settings.List + "/members/"
-	body, err := json.Marshal(record)
+	body, err := json.Marshal(properties)
 	if err != nil {
 		return err
 	}
