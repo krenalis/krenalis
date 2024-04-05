@@ -8,8 +8,6 @@ For tracking app screen views, it's recommended to utilize the specific [screen]
 
 The page call is used when loading a new page. In Single Page Applications (SPAs), it's also used for logical changes in the page content or transitions, like moving to a different view or route.
 
-> Note that the JavaScript SDK snippet automatically makes a page call when the page loads.
-
 ## How to Make a Page Call
 
 To make a page call, you can use a Chichi SDK. Refer to its documentation for more details.

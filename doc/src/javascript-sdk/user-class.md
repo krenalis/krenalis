@@ -13,7 +13,6 @@ The `id` method is used to get and set the identifier of the user. It always ret
 To set the user's identifier, call the `id` method with an argument:
 
 - to remove the identifier, pass a `null` argument.
-
 - to change the identifier and resets the Anonymous ID, pass a non-empty `String` or a `Number` (the number will be converted to a `String`). If the passed identifier is the same of the current identifier, it does nothing.
 
 #### Syntax
@@ -59,7 +58,6 @@ The `anonymousId` method is used to retrieve and modify the Anonymous ID. It con
 To modify the Anonymous ID, call the `anonymous` method with an argument:
 
 - to reset the Anonymous ID with a newly generated value, pass `null`.
-
 - to set the Anonymous ID with a specified value, pass a non-empty `String` or a `Number` (the number will be converted to a `String`).
 
 #### Syntax
@@ -105,7 +103,6 @@ The `traits` method is utilized for accessing and modifying the user's traits. I
 To modify the user's traits, call the `traits` method with an argument:
 
 - To remove all traits, pass a `null` argument.
-
 - To update the traits, provide a non-null `Object`. Since traits are serialized with `JSON.stringify`, they must consist only of serializable values and should not contain cyclic references. In case of serialization errors, a warning will be logged in the console.
 
 #### Syntax

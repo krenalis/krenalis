@@ -11,8 +11,8 @@ The table below provides a list of supported property types when using a Postgre
 | `Int(32)` [^1]           | `integer`                     |
 | `Int(64)` [^1]           | `bigint`                      |
 | `Decimal(p,s)` [^1] [^2] | `decimal(p,s)`                |
-| `Float(32)` [^1][^3]     | `real`                        |
-| `Float(64)` [^1][^3]     | `double precision`            |
+| `Float(32)` [^1] [^3]    | `real`                        |
+| `Float(64)` [^1] [^3]    | `double precision`            |
 | `Text` [^4]              | `varchar`                     |
 | `DateTime`               | `timestamp without time zone` |
 | `Date`                   | `date`                        |

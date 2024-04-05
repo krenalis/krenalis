@@ -35,7 +35,7 @@ The JavaScript SDK can be imported with `import` into TypeScript and JavaScript 
 3. Copy the Write Key and the Endpoint.
 4. In your project, install the `chichi-javascript-sdk` npm package:
     ```sh
-    npm install chichi-javascript-sdk --save
+    $ npm install chichi-javascript-sdk --save
     ```
 5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```javascript
@@ -54,7 +54,7 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
 3. Copy the Write Key and the Endpoint.
 4. In your project, install the `chichi-javascript-sdk` npm package:
     ```sh
-    npm install chichi-javascript-sdk --save
+    $ npm install chichi-javascript-sdk --save
     ```
 5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```javascript

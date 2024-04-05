@@ -13,7 +13,6 @@ The `id` method is used to get and set the identifier of the group. It always re
 To set the group's identifier, call the `id` method with an argument:
 
 - to remove the identifier, pass a `null` argument.
-
 - to change the identifier, pass a non-empty `String` or a `Number` (the number will be converted to a `String`). If the passed identifier is the same of the current identifier, it does nothing.
 
 #### Syntax
@@ -59,7 +58,6 @@ The `traits` method is utilized for accessing and modifying the group's traits. 
 To modify the group's traits, utilize the `traits` method with an argument:
 
 - To remove all traits, pass a `null` argument.
-
 - To update the traits, provide a non-null `Object`. Since traits are serialized with `JSON.stringify`, they must consist only of serializable values and should not contain cyclic references. In case of serialization errors, a warning will be logged in the console.
 
 #### Syntax

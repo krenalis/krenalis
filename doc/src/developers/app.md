@@ -1,6 +1,6 @@
 # App Connectors
 
-App connectors allow to connect to cloud apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to send events.
+App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to dispatch events.
 
 App connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and interfaces.
 
@@ -25,7 +25,7 @@ func init() {
 		Name:                   "Klaviyo",
 		Targets:                chichi.Events | chichi.Users,
 		SourceDescription:      "import clients as users from Klaviyo",
-		DestinationDescription: "export users as clients and send events to Klaviyo",
+		DestinationDescription: "export users as clients and dispatch events to Klaviyo",
 		TermForUsers:           "clients",
 		SendingMode:            chichi.Cloud,
 	}, New)
@@ -95,12 +95,12 @@ Then add a Go file to the new directory. For example copy the previous template 
 The `AppInfo` type describes information about the app connector:
 
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
-- `Targets`: targets supported by the app connector. Can contain Events, Users, and Groups.
+- `Targets`: targets supported by the app connector. Can contain `Events`, `Users`, and `Groups.
 - `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
 - `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
-- `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
+- `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `ExternalIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 - `SuggestedDisplayedID`: suggestion for the property name to use as the displayed identifier. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
@@ -113,7 +113,7 @@ func init() {
         Name:                   "Klaviyo",
         Targets:                chichi.Events | chichi.Users,
         SourceDescription:      "import clients as users from Klaviyo",
-        DestinationDescription: "export users as clients and send events to Klaviyo",
+        DestinationDescription: "export users as clients and dispatch events to Klaviyo",
         TermForUsers:           "clients",
         SendingMode:            chichi.Cloud,
         Icon:                   icon,
@@ -130,8 +130,6 @@ func New(conf *chichi.AppConfig) (*Klaviyo, error)
 ```
 
 This function accepts an app configuration and yields a value representing your custom type. A connector can be instantiated either as a source or a destination, but not both simultaneously. Consequently, an instance of a connector will be responsible for either receiving or sending to a app, depending on its role.
-
-The documentation is mostly correct but can be improved for clarity and consistency. Here's a revised version:
 
 ### App Configuration
 

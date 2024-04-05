@@ -35,11 +35,11 @@ All cookie names are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` rep
 | `anonymousId` | Anonymous ID.                       |
 | `groupId`     | Group ID.                           |
 | `groupTraits` | Group traits.                       |
-| `session`     | Session Id and its expiration time. |
+| `session`     | Session ID and its expiration time. |
 | `userId`      | User ID.                            |
 | `userTraits`  | User traits.                        |
 
-Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is `z43tavAOsBB8RY50nAtItXMMIipGKEOC`, the cookie names would be `chichi.z43tavA.anonymousId`, `chichi.z43tavA.groupId`, and so on.
+Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is "`z43tavAOsBB8RY50nAtItXMMIipGKEOC`", the cookie names would be "`chichi.z43tavA.anonymousId`", "`chichi.z43tavA.groupId`", and so on.
 
 When the SDK persists user data in cookies, you can use the [`cookie`](options.md#cookie-option) option to control some specific settings.
 
@@ -56,7 +56,7 @@ All keys are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents 
 | `groupTraits`     | Group traits.                                                                                                    |
 | `leader.beat`     | Browser tab designated as the leader, along with its expiration time, is updated by the tab leader every second. |
 | `leader.election` | A browser tab that participated in a leader election.                                                            |
-| `session`         | Session Id and its expiration time.                                                                              |
+| `session`         | Session ID and its expiration time.                                                                              |
 | `userId`          | User ID.                                                                                                         |
 | `userTraits`      | User traits.                                                                                                     |
 | `<tabId>.queue`   | Tracks the events in the queue of the tab with identifier `<tabId>`. `<tabId>` is a UUID v4.                     |
@@ -74,7 +74,7 @@ All keys are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents 
 | `anonymousId` | Anonymous ID.                       |
 | `groupId`     | Group ID.                           |
 | `groupTraits` | Group traits.                       |
-| `session`     | Session Id and its expiration time. |
+| `session`     | Session ID and its expiration time. |
 | `userId`      | User ID.                            |
 | `userTraits`  | User traits.                        |
 

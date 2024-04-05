@@ -193,4 +193,4 @@ Sheets(ctx context.Context, r io.Reader) ([]string, error)
 
 The `Read` and `Write` methods receive the sheet from which to read or write records as an argument. If the connector implements the `Sheets` method, the argument passed will always be a valid sheet name, otherwise it will always be an empty string.
 
-> A valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does not start or end with “ ' ”, and does not contain any of *, /, :, ?,[, \, and ]. Sheet names are case-insensitive.
+> A valid sheet name is UTF-8 encoded, has a length in the range [1,31], does not start or end with “ ' ”, and does not contain any of *, /, :, ?,[, \\, and ]. Sheet names are case-insensitive.

@@ -2,7 +2,7 @@
 
 The Querystring API of the SDK enables the activation of tracking and identification events using the URL query string. This practical feature is particularly valuable for monitoring email click-throughs, social media clicks, and digital advertising engagements.
 
-The Querystring API is enabled by default but can be turned off using the [`useQueryString`](options.md#options-1) option.
+The Querystring API is enabled by default but can be turned off using the [`useQueryString`](options.md#usequerystring-option) option.
 
 Below is a list of the query string parameters:
 
