@@ -10,6 +10,7 @@ and start the mdbook CLI:
 
 To ignore generated files from Git, add the following lines to ".gitignore":
 
+> /doc/book/*.css
 > /doc/book/*.html
 > /doc/book/images/
 > /doc/book/searchindex.js
