@@ -5,8 +5,8 @@ AS $$
         i INT;
     BEGIN
         FOR i IN 1..array_length(identifiers, 1) BY 2 LOOP
-            IF identifiers[i] IS NOT NULL AND identifiers[i+1] IS NOT NULL THEN
-                RETURN identifiers[i] = identifiers[i+1];
+            IF identifiers[i] IS NOT NULL AND identifiers[i+1] IS NOT NULL THEN -- TODO(Gianluca) is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
+                RETURN identifiers[i] = identifiers[i+1]; -- TODO(Gianluca): is the "=" comparison correct? See the issue https://github.com/open2b/chichi/issues/657.
             END IF;
         END loop;
         RETURN false;
