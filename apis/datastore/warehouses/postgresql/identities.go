@@ -244,18 +244,26 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		return warehouses.Error(err)
 	}
 
+	// Retrieve the column names of the 'users_identities' table.
+	//
+	// TODO(Gianluca): this will be reviewed when optimizing the implementation,
+	// see the issue https://github.com/open2b/chichi/issues/627.
+	rows, err = db.Query(ctx, `SELECT * FROM "users_identities"`)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	tableColumns := []string{}
+	for _, fd := range rows.FieldDescriptions() {
+		tableColumns = append(tableColumns, fd.Name)
+	}
+
 	// Merge the other fields.
-	b.Reset()
-	b.WriteString("UPDATE users_identities SET ")
-	comma := false
-	for _, p := range properties {
+	for _, p := range tableColumns {
 		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_updated_at" {
 			continue
 		}
-		if comma {
-			b.WriteByte(',')
-		}
-		b.WriteByte('"')
+		b.Reset()
+		b.WriteString(`UPDATE "users_identities" SET "`)
 		b.WriteString(p)
 		b.WriteString(`" = (SELECT "`)
 		b.WriteString(p)
@@ -264,12 +272,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(`" IS NOT NULL AND _identity_id IN (`)
 		b.WriteString(idsStr.String())
 		b.WriteString(") ORDER BY _updated_at DESC, _identity_id DESC LIMIT 1)\n")
-		comma = true
-	}
-	b.WriteString(` WHERE _identity_id = $1`)
-	_, err = db.Exec(ctx, b.String(), newIdentityID)
-	if err != nil {
-		return warehouses.Error(err)
+		b.WriteString(` WHERE _identity_id = $1`)
+		_, err = db.Exec(ctx, b.String(), newIdentityID)
+		if err != nil {
+			return warehouses.Error(err)
+		}
 	}
 
 	// Delete the merged identities.
