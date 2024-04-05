@@ -269,7 +269,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" FROM users_identities WHERE "`)
 		b.WriteString(p)
-		b.WriteString(`" IS NOT NULL AND _identity_id IN (`)
+		b.WriteString(`" IS NOT NULL AND _identity_id IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
 		b.WriteString(idsStr.String())
 		b.WriteString(") ORDER BY _updated_at DESC, _identity_id DESC LIMIT 1)\n")
 		b.WriteString(` WHERE _identity_id = $1`)
