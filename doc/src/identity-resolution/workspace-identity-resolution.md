@@ -14,7 +14,7 @@ The Workspace Identity Resolution is executed:
 
 ## Same user criterion
 
-> NOTE: this paragraph should be reviewed and eventually clarified.
+> NOTE: this paragraph should be reviewed and eventually clarified. See the issue [#657](https://github.com/open2b/chichi/issues/657).
 
 Given two users, they are the *same user* if they have at least one equal value for an **identifier**, and if at least one of the users have no value for identifiers with higher priority.
 

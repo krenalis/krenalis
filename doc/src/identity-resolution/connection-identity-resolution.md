@@ -24,4 +24,4 @@ When merging two or more users during the Connection Identity Resolution into a 
 * the Anonymous IDs are taken from all these users, without duplicated values
 * for any other property, the value of the resulting user for that property is taken from the most recently updated user who *has a value* for that property
 
-> NOTE: the meaning of *has a value* is unclear, so the content of this section about which values are merged may be wrong. This must be reviewed.
+> NOTE: the meaning of *has a value* is unclear, so the content of this section about which values are merged may be wrong. This must be reviewed. See the issue [#657](https://github.com/open2b/chichi/issues/657).
