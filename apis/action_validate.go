@@ -11,7 +11,6 @@ package apis
 // function/method used exclusively by it.
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -357,7 +356,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		switch k := uniqueIDColumn.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return fmt.Errorf("unique ID column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.UniqueIDColumn, k)
+			return errors.BadRequest("unique ID column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.UniqueIDColumn, k)
 		}
 		usedInPaths = append(usedInPaths, types.Path{action.UniqueIDColumn})
 		// Validate the 'updated at' column and format.
@@ -372,7 +371,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			case types.JSONKind, types.TextKind:
 				requiresUpdatedAtFormat = true
 			default:
-				return fmt.Errorf("'updated at' column %q has kind %s instead of DateTime, Date, JSON, or Text", action.UpdatedAtColumn, k)
+				return errors.BadRequest("'updated at' column %q has kind %s instead of DateTime, Date, JSON, or Text", action.UpdatedAtColumn, k)
 			}
 			usedInPaths = append(usedInPaths, types.Path{action.UpdatedAtColumn})
 		}
