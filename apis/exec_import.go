@@ -44,6 +44,15 @@ func (this *Action) importUsers(ctx context.Context) error {
 			cursor.ID = action.UserCursor.ID
 			cursor.UpdatedAt = action.UserCursor.UpdatedAt
 		}
+		if exe, _ := action.Execution(); exe.Reimport {
+			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
+			if err != nil {
+				if err, ok := err.(*warehouses.DataWarehouseError); ok {
+					return actionExecutionError{fmt.Errorf("cannot delete the already-existing identities before starting the import: %s", err)}
+				}
+				return err
+			}
+		}
 		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedID, cursor)
 	case state.DatabaseType:
 		replacer := func(name string) (string, bool) {

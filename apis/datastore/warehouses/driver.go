@@ -118,6 +118,11 @@ type Warehouse interface {
 	// to finish.
 	Close() error
 
+	// DeleteConnectionIdentities deletes the identities of a connection.
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	DeleteConnectionIdentities(ctx context.Context, connection int) error
+
 	// DestinationUsers returns the destination users of the action.
 	// In particular, returns the external IDs of the destination users of the
 	// action whose external matching property value matches with the given property

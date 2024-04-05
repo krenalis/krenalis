@@ -106,6 +106,11 @@ func (warehouse *ClickHouse) Close() error {
 	return err
 }
 
+// DeleteConnectionIdentities deletes the identities of a connection.
+func (warehouse *ClickHouse) DeleteConnectionIdentities(ctx context.Context, connection int) error {
+	panic("not implemented")
+}
+
 // DestinationUsers returns the destination users of the action.
 func (warehouse *ClickHouse) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	panic("TODO: not implemented")

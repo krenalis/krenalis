@@ -20,6 +20,19 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// DeleteConnectionIdentities deletes the identities of a connection.
+func (warehouse *PostgreSQL) DeleteConnectionIdentities(ctx context.Context, connection int) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(ctx, `DELETE FROM "users_identities" WHERE "_connection" = $1`, connection)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
+}
+
 // IdentitiesWriter returns an IdentitiesWriter.
 func (warehouse *PostgreSQL) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
 	if ack == nil {

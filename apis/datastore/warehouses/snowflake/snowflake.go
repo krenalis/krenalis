@@ -113,6 +113,11 @@ func (warehouse *Snowflake) Close() error {
 	return nil
 }
 
+// DeleteConnectionIdentities deletes the identities of a connection.
+func (warehouse *Snowflake) DeleteConnectionIdentities(ctx context.Context, connection int) error {
+	panic("not implemented")
+}
+
 // DestinationUsers returns the destination users of the action.
 func (warehouse *Snowflake) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	panic("not implemented")

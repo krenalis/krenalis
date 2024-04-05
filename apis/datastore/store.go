@@ -104,6 +104,14 @@ func (store *Store) AddEvents(events []map[string]any) {
 	store.mu.Unlock()
 }
 
+// DeleteConnectionIdentities deletes the identities of a connection.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection int) error {
+	store.mustBeOpen()
+	return store.warehouse.DeleteConnectionIdentities(ctx, connection)
+}
+
 // DestinationUsers returns the external IDs of the destination users of the
 // action whose external matching property value matches with the given property
 // value. If it cannot be found, then an empty slice and false are returned.

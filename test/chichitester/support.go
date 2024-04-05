@@ -306,6 +306,11 @@ func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	}
 }
 
+func (c *Chichi) SetAction(conn int, actionID int, action ActionToSet) {
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d", c.ws, conn, actionID)
+	c.MustCall("PUT", method, action, nil)
+}
+
 func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 	body := map[string]any{
 		"Identifiers": identifiers,
