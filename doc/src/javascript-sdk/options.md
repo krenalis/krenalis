@@ -59,7 +59,7 @@ The `cookie` option has the following sub-options:
 
 #### domain
 
-By default, the JavaScript SDK uses top-level domains (`domain` option defaults to `null`). This facilitates User identification across different subdomains. For instance, if you embed the JavaScript SDK into both the blog section (blog.example.com) and the store section (store.example.com) of a website, the SDK will store the cookie at example.com.
+By default, the JavaScript SDK uses top-level domains (`domain` option defaults to `null`). This facilitates user identification across different subdomains. For instance, if you embed the JavaScript SDK into both the blog section (blog.example.com) and the store section (store.example.com) of a website, the SDK will store the cookie at example.com.
 
 If you prefer a different approach, you have options. You can set the domain to an empty string to utilize the current page's domain, or you can specify the precise domain you wish to use.
 

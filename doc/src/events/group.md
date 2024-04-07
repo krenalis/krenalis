@@ -16,7 +16,8 @@ For best results, it is recommended to make a group call in the following scenar
 
 ## How to Make a Group Call
 
-To make a group call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the JavaScript SDK in the browser, you can make a group call in the following way:
+To make a group call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a group call in the following way:
+
 ```javascript
 chichianalytics.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",

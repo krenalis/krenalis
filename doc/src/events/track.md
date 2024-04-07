@@ -18,7 +18,8 @@ Here are some common scenarios when you might want to use a track call:
 
 ## How to Make a Track Call
 
-To make a track call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the JavaScript SDK in the browser, you can make a track call in the following way:
+To make a track call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a track call in the following way:
+
 ```javascript
 chichianalytics.track('Product Viewed', {
 	productId: 'ABC123',
@@ -29,6 +30,7 @@ chichianalytics.track('Product Viewed', {
 The first argument, `'Product Viewed'`, represents the event, which is essentially the user's action. The second argument contains the properties of the event, offering additional context to track events. This extra information enhances the comprehension of your users' actions and is stored along with the event.
 
 The following is an example of how the previous track call would appear in Chichi once received and processed:
+
 ```json
 {
   "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",

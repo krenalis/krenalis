@@ -31,12 +31,12 @@ func init() {
 	}, New)
 }
 
-type klaviyo struct {
+type Klaviyo struct {
 	// Your connector fields.
 }
 
-// New returns a new klaviyo connector instance.
-func New(conf *chichi.AppConfig) (*klaviyo, error) {
+// New returns a new Klaviyo connector instance.
+func New(conf *chichi.AppConfig) (*Klaviyo, error) {
 	// ...
 }
 

@@ -13,6 +13,7 @@ Use the screen call when there is a change in the displayed content or when a us
 To make a screen call, you can use a Chichi SDK. Refer to its documentation for more details.
 
 The following is an example of how a screen call would appear in Chichi once received and processed:
+
 ```json
 {
   "anonymousId": "4z7a3b8c1f5e207d6e9b0c4f58",

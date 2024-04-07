@@ -14,7 +14,8 @@ For optimal use, Chichi suggests making an identify call in the following situat
 
 ## How to Make an Identify Call
 
-To make an identify call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the JavaScript SDK in the browser, you can make an identify call in the following way:
+To make an identify call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make an identify call in the following way:
+
 ```javascript
 chichianalytics.identify('59a20n37ec82', {
 	firstName: 'Emily',
@@ -33,6 +34,7 @@ chichianalytics.identify('59a20n37ec82', {
 The first argument, `'59a20n37ec82'`, is the **User ID**, which uniquely identifies the user in your website's database. The second argument consists of the **user's traits**, which are pieces of information you want to store with the event and potentially unify with customer data taken from other sources.
 
 The following is an example of how the previous identify call would appear in Chichi once received and processed:
+
 ```json
 {
   "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",

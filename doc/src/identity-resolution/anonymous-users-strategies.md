@@ -24,7 +24,7 @@ The AC-B strategy unifies the anonymous user data before login and after logout,
 
 ## Implement a Strategy
 
-To implement a specific strategy, you need to set the strategy option when loading a Chichi SDK. For example, with the JavaScript SDK in the browser:
+To implement a specific strategy, you need to set the strategy option when loading a Chichi SDK. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser:
 
 ```javascript
 chichianalytics.load(writeKey, endpoint, { strategy: 'AB-C' });
