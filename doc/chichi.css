@@ -30,15 +30,22 @@ h4 { font-size: 1.3em; font-weight: normal; margin-block-start: 1.3em; }
     padding: 10px 20px;
 }
 .content blockquote li { margin-block-start: .2em }
+.content blockquote code { background: #e3f1f6; }
 
 pre {
-    border-radius: 10px;
-    box-shadow: 0 1px 2px 0 #0000001a;
     margin-bottom: 20px;
 }
-.hljs { background: #fafafa; }
-pre > code { border: 1px solid #0000001a; padding: 2rem; }
+.hljs {
+    border-radius: 5px;
+    box-shadow: 0 1px 2px 0 #0000001a;
+    font-size: 1em;
+}
+.hljs.language-sh, .hljs.language-sh .hljs-built_in {
+    background: #333;
+    color: #eaeaea;
+}
 
+pre > code { border: 1px solid #0000001a; padding: 2rem 2rem 2.2rem 2rem; }
 
 table thead th {
     border: 1px var(--table-border-color) solid;
@@ -50,7 +57,7 @@ table td {
     line-height: 1.6em;
     padding: 10px;
 }
-table td .hljs { background: none; }
+table td .hljs { background: none; box-shadow: none; }
 
 :root {
     --content-max-width: 75%;
