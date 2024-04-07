@@ -25,7 +25,7 @@ At present, you can install Chichi by compiling its source code in Go.
     ```sh
     cd ui
     npm install 
-    cd ../chichi
+    cd ../cmd/chichi
     go build -tags osusergo,netgo -trimpath
     ```
 
@@ -44,5 +44,5 @@ At present, you can install Chichi by compiling its source code in Go.
 ## Start
 
 ```sh
-./chichi
+./cmd/chichi/chichi
 ```
