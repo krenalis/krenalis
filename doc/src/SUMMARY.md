@@ -46,3 +46,4 @@
     - [Database Connectors](./developers/database.md)
     - [File Connectors](./developers/file.md)
     - [File Storage Connectors](./developers/file-storage.md)
+    - [Settings and UI](./developers/settings-and-ui.md)
