@@ -24,6 +24,7 @@ interface ActionContext {
 	setIsFileConnectorLoading: React.Dispatch<React.SetStateAction<boolean>>;
 	isFileConnectorLoading: boolean;
 	setIsFileConnectorChanged: React.Dispatch<React.SetStateAction<boolean>>;
+	isFileConnectorChanged: boolean;
 	setIsTableChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	isSaveHidden: boolean;
 	setIsSaveHidden: React.Dispatch<React.SetStateAction<boolean>>;

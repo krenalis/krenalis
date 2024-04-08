@@ -268,6 +268,7 @@ const useAction = (
 		setIsFileChanged,
 		isFileConnectorLoading,
 		setIsFileConnectorLoading,
+		isFileConnectorChanged,
 		setIsFileConnectorChanged,
 		setIsTableChanged,
 		setIsQueryChanged,

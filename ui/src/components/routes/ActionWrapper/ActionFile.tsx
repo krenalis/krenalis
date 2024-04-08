@@ -40,6 +40,7 @@ const ActionFile = () => {
 		isFileConnectorLoading,
 		setIsFileConnectorLoading,
 		setIsFileConnectorChanged,
+		isFileConnectorChanged,
 		actionType,
 		isEditing,
 	} = useContext(actionContext);
@@ -73,7 +74,7 @@ const ActionFile = () => {
 			}
 
 			let ui: UIResponse;
-			if (isEditing) {
+			if (isEditing && !isFileConnectorChanged) {
 				try {
 					ui = await api.workspaces.connections.actionUiEvent(connection.id, a.ID, 'load', null);
 				} catch (err) {
