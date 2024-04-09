@@ -697,7 +697,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields }: FileSettingsProp
 					</FeedbackButton>
 					<Popover
 						isOpen={isTransformationDisabled}
-						content='Confirm when you have finished editing the file.'
+						content='Confirm when you have finished editing the file settings.'
 					/>
 				</div>
 			)}

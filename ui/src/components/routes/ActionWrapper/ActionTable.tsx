@@ -97,7 +97,7 @@ const ActionTable = () => {
 				</FeedbackButton>
 				<Popover
 					isOpen={isTransformationDisabled}
-					content='Confirm when you have finished editing the table.'
+					content='Confirm when you have finished editing the table name.'
 				/>
 			</div>
 		</Section>
