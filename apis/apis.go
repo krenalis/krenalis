@@ -390,11 +390,20 @@ func (apis *APIs) CountOrganizations(ctx context.Context) int {
 // list of expressions.
 func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
 	apis.mustBeOpen()
+	if schema.Valid() && schema.Kind() != types.ObjectKind {
+		return nil, errors.BadRequest("schema is non an object")
+	}
 	var properties []types.Path
 	for _, expression := range expressions {
+		if expression.Value == "" {
+			return nil, errors.BadRequest("expression value is empty")
+		}
+		if !expression.Type.Valid() {
+			return nil, errors.BadRequest("expression type is not valid")
+		}
 		exp, err := mappings.Compile(expression.Value, schema, expression.Type, false, true, nil)
 		if err != nil {
-			return nil, err
+			return nil, errors.BadRequest("expression is not valid: %w", err)
 		}
 		expressionProperties := exp.Properties()
 		properties = append(properties, expressionProperties...)
