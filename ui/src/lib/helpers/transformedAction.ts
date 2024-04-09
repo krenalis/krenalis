@@ -478,17 +478,24 @@ const transformInActionToSet = async (
 				}
 				inSchema.properties.push(timestampColumnProperty.full);
 			}
-			if (
-				action.UpdatedAtFormat &&
-				action.UpdatedAtFormat !== 'ISO8601' &&
-				action.UpdatedAtFormat !== 'Excel' &&
-				action.UpdatedAtFormat !== 'DateTime' &&
-				action.UpdatedAtFormat !== 'DateOnly'
-			) {
-				// wrap the format in single quotes.
-				timestampFormat = `'${action.UpdatedAtFormat}'`;
-			} else {
-				timestampFormat = action.UpdatedAtFormat;
+			if (doesTimestampNeedFormat(action.UpdatedAtColumn, actionType.InputSchema)) {
+				if (
+					action.UpdatedAtFormat !== 'ISO8601' &&
+					action.UpdatedAtFormat !== 'Excel' &&
+					action.UpdatedAtFormat !== 'DateTime' &&
+					action.UpdatedAtFormat !== 'DateOnly'
+				) {
+					// the format is custom.
+					try {
+						validateCustomUpdatedAtFormat(action.UpdatedAtFormat);
+					} catch (err) {
+						throw err;
+					}
+					// custom format must be wrapped in single quotes.
+					timestampFormat = `'${action.UpdatedAtFormat}'`;
+				} else {
+					timestampFormat = action.UpdatedAtFormat;
+				}
 			}
 		}
 	}
@@ -671,22 +678,28 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 };
 
 const doesTimestampNeedFormat = (timestampColumn: string, schema: ObjectType): boolean => {
-	let needFormat = true;
 	if (timestampColumn == null || timestampColumn === '') {
-		needFormat = false;
-	} else {
-		const flatInputSchema = flattenSchema(schema);
-		const timestampProperty = flatInputSchema[timestampColumn];
-		if (timestampProperty == null) {
-			needFormat = false;
-		} else {
-			const timestampType = timestampProperty.type;
-			if (timestampType !== 'JSON' && timestampType !== 'Text') {
-				needFormat = false;
-			}
-		}
+		return false;
 	}
-	return needFormat;
+	const flatInputSchema = flattenSchema(schema);
+	const timestampProperty = flatInputSchema[timestampColumn];
+	if (timestampProperty == null) {
+		return false;
+	}
+	const type = timestampProperty.type;
+	return type === 'JSON' || type === 'Text';
+};
+
+const validateCustomUpdatedAtFormat = (format: string) => {
+	if (format === '') {
+		throw '"Updated at" format cannot be empty';
+	}
+	if (Array.from(format).length > 64) {
+		throw new Error('"Updated at" format is longer than 64 characters');
+	}
+	if (!format.includes('%')) {
+		throw new Error(`"Updated at" format "${format}" is not a valid format`);
+	}
 };
 
 export {
