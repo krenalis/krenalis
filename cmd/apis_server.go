@@ -8,6 +8,7 @@
 package cmd
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -324,4 +325,36 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
 	return nil, nil
+}
+
+var _ json.Marshaler = (*rawJSON)(nil)
+var _ json.Unmarshaler = (*rawJSON)(nil)
+
+// rawJSON is a raw encoded JSON value.
+// It implements the json.Marshaler and json.Unmarshaler interfaces.
+type rawJSON []byte
+
+// MarshalJSON returns the JSON encoding form of raw.
+func (raw rawJSON) MarshalJSON() ([]byte, error) {
+	if raw == nil {
+		return []byte("null"), nil
+	}
+	return raw, nil
+}
+
+var null = []byte("null")
+
+// UnmarshalJSON sets *raw to a copy of data.
+// Unlike the UnmarshalJSON method of json.RawMessage, it unmarshal a "null"
+// JSON value to []byte(nil) instead of []byte("null").
+func (raw *rawJSON) UnmarshalJSON(data []byte) error {
+	if raw == nil {
+		return errors.New("rawJSON.UnmarshalJSON: raw cannot be a nil pointer")
+	}
+	if bytes.Equal(data, null) {
+		*raw = nil
+		return nil
+	}
+	*raw = append((*raw)[:0], data...)
+	return nil
 }

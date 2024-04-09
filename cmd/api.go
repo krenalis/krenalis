@@ -111,7 +111,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		return nil, err
 	}
 	body := struct {
-		Data           json.RawMessage
+		Data           rawJSON
 		InSchema       types.Type
 		OutSchema      types.Type
 		Transformation apis.Transformation
@@ -124,7 +124,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"data": json.RawMessage(data)}, nil
+	return map[string]any{"data": rawJSON(data)}, nil
 }
 
 // TransformationLanguages returns the supported transformation languages.

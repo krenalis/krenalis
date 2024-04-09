@@ -97,7 +97,7 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"users": json.RawMessage(users), "cursor": cursor}, nil
+	return map[string]any{"users": rawJSON(users), "cursor": cursor}, nil
 }
 
 // CompletePath returns the complete path of a storage path.
@@ -141,7 +141,7 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"Rows": json.RawMessage(rows), "Schema": schema}, nil
+	return map[string]any{"Rows": rawJSON(rows), "Schema": schema}, nil
 }
 
 // Executions returns the executions of the actions of a connection.
@@ -172,7 +172,7 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 	return map[string]any{
-		"identities": json.RawMessage(identities),
+		"identities": rawJSON(identities),
 		"count":      count,
 	}, nil
 }
@@ -230,7 +230,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		Path          string
 		Sheet         string
 		Compression   apis.Compression
-		Settings      json.RawMessage
+		Settings      rawJSON
 		Limit         int
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -241,7 +241,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"records": json.RawMessage(records), "schema": schema}, nil
+	return map[string]any{"records": rawJSON(records), "schema": schema}, nil
 }
 
 // RemoveEventConnection removes an event connection from a connection and vice
@@ -277,7 +277,7 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 	}
 	var body struct {
 		Event  string
-		Values json.RawMessage
+		Values rawJSON
 	}
 	if r.Method == "GET" {
 		body.Event = "load"
@@ -323,7 +323,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		FileConnector int
 		Path          string
 		Compression   apis.Compression
-		Settings      json.RawMessage
+		Settings      rawJSON
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {

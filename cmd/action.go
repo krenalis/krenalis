@@ -38,7 +38,7 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 	}
 	var body struct {
 		Event  string
-		Values json.RawMessage
+		Values rawJSON
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {

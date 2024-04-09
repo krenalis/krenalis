@@ -44,7 +44,7 @@ func TestStorage(t *testing.T) {
 
 	// Test the "/sheets" method.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}
-	gotSheets := c.Sheets(storage, chichitester.ExcelConnector, "file_with_3_sheets.xlsx", chichitester.NoCompression, nil)
+	gotSheets := c.Sheets(storage, chichitester.ExcelConnector, "file_with_3_sheets.xlsx", chichitester.NoCompression, []byte("{}"))
 	if !reflect.DeepEqual(expectedSheets, gotSheets) {
 		t.Fatalf("expected sheets %#v, got %#v", expectedSheets, gotSheets)
 	}

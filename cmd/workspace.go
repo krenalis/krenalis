@@ -115,7 +115,7 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	}
 	body := struct {
 		Type     apis.WarehouseType
-		Settings json.RawMessage
+		Settings rawJSON
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -159,7 +159,7 @@ func (workspace workspace) ConnectWarehouse(_ http.ResponseWriter, r *http.Reque
 	}
 	body := struct {
 		Type     apis.WarehouseType
-		Settings json.RawMessage
+		Settings rawJSON
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -256,7 +256,7 @@ func (workspace workspace) PingWarehouse(_ http.ResponseWriter, r *http.Request)
 	}
 	body := struct {
 		Type     apis.WarehouseType
-		Settings json.RawMessage
+		Settings rawJSON
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -304,7 +304,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	var body struct {
 		Connector  int
 		Event      string
-		Values     json.RawMessage
+		Values     rawJSON
 		Role       string
 		OAuthToken string
 	}
@@ -396,7 +396,7 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 		return nil, err
 	}
 	return map[string]any{
-		"users":  json.RawMessage(users),
+		"users":  rawJSON(users),
 		"schema": schema,
 		"count":  count,
 	}, nil
@@ -422,7 +422,7 @@ func (workspace workspace) WarehouseSettings(_ http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"type": typ, "settings": json.RawMessage(settings)}, nil
+	return map[string]any{"type": typ, "settings": rawJSON(settings)}, nil
 }
 
 func (workspace workspace) workspace(r *http.Request) (*apis.Workspace, error) {

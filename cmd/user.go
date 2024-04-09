@@ -31,7 +31,7 @@ func (user user) Events(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"events": json.RawMessage(events)}, nil
+	return map[string]any{"events": rawJSON(events)}, nil
 }
 
 // Identities returns the users identities of a user, and an estimate of their
@@ -54,7 +54,7 @@ func (user user) Identities(_ http.ResponseWriter, r *http.Request) (any, error)
 		return nil, err
 	}
 	return map[string]any{
-		"identities": json.RawMessage(identities),
+		"identities": rawJSON(identities),
 		"count":      count,
 	}, nil
 }
@@ -69,7 +69,7 @@ func (user user) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"traits": json.RawMessage(traits)}, nil
+	return map[string]any{"traits": rawJSON(traits)}, nil
 }
 
 func (user user) user(r *http.Request) (*apis.User, error) {
