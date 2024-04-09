@@ -3,30 +3,4 @@ go 1.22.1
 use (
 	.
 	./chichi-cli
-	./connectors/clickhouse
-	./connectors/csv
-	./connectors/dummy
-	./connectors/excel
-	./connectors/filesystem
-	./connectors/googleanalytics
-	./connectors/http
-	./connectors/hubspot
-	./connectors/json
-	./connectors/kafka
-	./connectors/klaviyo
-	./connectors/mailchimp
-	./connectors/mixpanel
-	./connectors/mobile
-	./connectors/mysql
-	./connectors/parquet
-	./connectors/postgresql
-	./connectors/rabbitmq
-	./connectors/s3
-	./connectors/server
-	./connectors/sftp
-	./connectors/snowflake
-	./connectors/stripe
-	./connectors/uisample
-	./connectors/website
-	cmd/chichi
 )
