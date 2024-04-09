@@ -30,7 +30,7 @@ var _ interface {
 	chichi.App
 	chichi.AppEvents
 	chichi.UI
-} = (*GoogleAnalytics)(nil)
+} = (*Analytics)(nil)
 
 // sendToDebugServer controls whether the events should be sent to the debug
 // server instead of the production server.
@@ -50,8 +50,8 @@ func init() {
 }
 
 // New returns a new Google Analytics connector instance.
-func New(conf *chichi.AppConfig) (*GoogleAnalytics, error) {
-	c := GoogleAnalytics{conf: conf}
+func New(conf *chichi.AppConfig) (*Analytics, error) {
+	c := Analytics{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -61,7 +61,7 @@ func New(conf *chichi.AppConfig) (*GoogleAnalytics, error) {
 	return &c, nil
 }
 
-type GoogleAnalytics struct {
+type Analytics struct {
 	conf     *chichi.AppConfig
 	settings *settings
 }
@@ -72,7 +72,7 @@ type settings struct {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ga *GoogleAnalytics) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
+func (ga *Analytics) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
@@ -123,7 +123,7 @@ func (ga *GoogleAnalytics) EventRequest(ctx context.Context, typ string, event *
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+func (ga *Analytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
 	return []*chichi.EventType{
 		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
 		{
@@ -141,7 +141,7 @@ func (ga *GoogleAnalytics) EventTypes(ctx context.Context) ([]*chichi.EventType,
 }
 
 // Schema returns the schema of the specified target.
-func (ga *GoogleAnalytics) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
 	switch eventType {
 	case "page_view":
 		return types.Type{}, nil
@@ -156,7 +156,7 @@ func (ga *GoogleAnalytics) Schema(ctx context.Context, target chichi.Targets, ev
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *GoogleAnalytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
 
 	switch event {
 	case "load":
@@ -194,7 +194,7 @@ func (ga *GoogleAnalytics) ServeUI(ctx context.Context, event string, values []b
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (ga *GoogleAnalytics) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+func (ga *Analytics) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
