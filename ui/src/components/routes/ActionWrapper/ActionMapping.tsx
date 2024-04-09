@@ -10,7 +10,7 @@ import {
 	TransformedAction,
 	TransformedActionType,
 	TransformedMapping,
-	doesTimestampNeedFormat,
+	doesUpdatedAtColumnNeedFormat,
 	flattenSchema,
 	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
@@ -172,6 +172,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
 				if (hasUpdatedAtColumn) {
 					a.UpdatedAtColumn = 'timestamp';
+					if (doesUpdatedAtColumnNeedFormat(a.UpdatedAtColumn, actionType.InputSchema)) {
+						a.UpdatedAtFormat = timestampFormats['dateTime'];
+					}
 				}
 			}
 			setAction(a);
@@ -215,7 +218,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			action.UpdatedAtColumn &&
 			!isTransformationDisabled
 		) {
-			return doesTimestampNeedFormat(action.UpdatedAtColumn, actionType.InputSchema);
+			return doesUpdatedAtColumnNeedFormat(action.UpdatedAtColumn, actionType.InputSchema);
 		}
 		return false;
 	}, [action, actionType, isTransformationDisabled]);
@@ -323,7 +326,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		} else if (input.name === 'timestampColumn') {
 			const a = { ...action };
 			a.UpdatedAtColumn = value;
-			if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
+			if (value === '' || !doesUpdatedAtColumnNeedFormat(value, actionType.InputSchema)) {
 				a.UpdatedAtFormat = '';
 			}
 			setAction(a);
@@ -356,7 +359,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		let { value } = target;
 		const a = { ...action };
 		a.UpdatedAtColumn = value;
-		if (value === '' || !doesTimestampNeedFormat(value, actionType.InputSchema)) {
+		if (value === '' || !doesUpdatedAtColumnNeedFormat(value, actionType.InputSchema)) {
 			setIsCustomTimestampSelected(false);
 			a.UpdatedAtFormat = '';
 		}

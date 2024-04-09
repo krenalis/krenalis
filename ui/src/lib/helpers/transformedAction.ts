@@ -478,7 +478,7 @@ const transformInActionToSet = async (
 				}
 				inSchema.properties.push(timestampColumnProperty.full);
 			}
-			if (doesTimestampNeedFormat(action.UpdatedAtColumn, actionType.InputSchema)) {
+			if (doesUpdatedAtColumnNeedFormat(action.UpdatedAtColumn, actionType.InputSchema)) {
 				if (
 					action.UpdatedAtFormat !== 'ISO8601' &&
 					action.UpdatedAtFormat !== 'Excel' &&
@@ -677,7 +677,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	return fields;
 };
 
-const doesTimestampNeedFormat = (timestampColumn: string, schema: ObjectType): boolean => {
+const doesUpdatedAtColumnNeedFormat = (timestampColumn: string, schema: ObjectType): boolean => {
 	if (timestampColumn == null || timestampColumn === '') {
 		return false;
 	}
@@ -711,7 +711,7 @@ export {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
-	doesTimestampNeedFormat,
+	doesUpdatedAtColumnNeedFormat,
 };
 
 export type { TransformedMapping, TransformedActionType, TransformedAction, ActionTypeField };
