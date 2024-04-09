@@ -194,14 +194,19 @@
 
 .action .specialProperties .timestampColumn .format {
 	display: flex;
+	align-items: baseline;
 	gap: 15px;
 }
 
 .action .specialProperties .timestampColumn .timestampFormat,
 .action .specialProperties .timestampColumn .timestampCustomFormat {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: 15px;
+}
+
+.action .specialProperties .timestampColumn .timestampCustomFormat sl-input::part(form-control-help-text) {
+	position: absolute;
 }
 
 .action .specialProperties .timestampColumn .format .label {
