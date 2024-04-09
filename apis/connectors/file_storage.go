@@ -65,18 +65,20 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 	return storage.inner.CompletePath(ctx, name)
 }
 
-// Read reads the records from file in the storage at the provided path name and returns
-// the columns and the records. name must be UTF-8 encoded with a length in range [1,
-// 1024].
+// Read reads the records from file in the storage at the provided path name
+// and returns the columns and the records. name must be UTF-8 encoded with a
+// length in range [1, 1024].
 //
-// If the file connector supports multiple sheets, sheet is a valid sheet name;
-// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
-// has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
-// case-insensitive.
+// file refers to the file connector to use. If it supports multiple sheets,
+// sheet is a valid sheet name; otherwise, it must be an empty string. A valid
+// sheet name is UTF-8 encoded, has a length in the range [1, 31], does not
+// start or end with "'", and does not contain any of "*", "/", ":", "?", "[",
+// "\", and "]". Sheet names are case-insensitive.
 //
-// limit restricts the number of records to return and should not exceed 100. If limit is
-// negative, there is no upper limit on the number of records returned.
+// compression indicates if the file is compressed and how. settings are
+// user-provided settings, and limit restricts the number of records to return.
+// If limit is negative, there is no upper limit on the number of records
+// returned.
 //
 // If the file has no columns, it returns the ErrNoColumns error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
