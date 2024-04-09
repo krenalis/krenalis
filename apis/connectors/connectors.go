@@ -23,14 +23,14 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/itchyny/timefmt-go"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/connectors/httpclient"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
-	"github.com/relvacode/iso8601"
 
+	"github.com/itchyny/timefmt-go"
+	"github.com/relvacode/iso8601"
 	"github.com/shopspring/decimal"
 )
 
