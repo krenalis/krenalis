@@ -526,7 +526,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 												value={action.UpdatedAtFormat}
 												name='timestampCustomFormat'
 												placeholder='%Y-%m-%d'
-												helpText='A C89 "strftime" format string'
+												helpText='C89 "strftime" format string'
 												size='small'
 											></SlInput>
 										</div>
