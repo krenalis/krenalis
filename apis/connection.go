@@ -1031,14 +1031,18 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 }
 
 // Records returns the records and the schema of the file with the given path
-// for the connection, that must be a file connection. path must be UTF-8
-// encoded with a length in range [1, 1024]. If the connection supports sheets,
-// sheet must be a valid sheet name; otherwise, it must be an empty string.
-// limit limits the number of records to return and must be in range [0, 100].
+// stored in the connection, that must be a file storage connection. path must
+// be UTF-8 encoded with a length in range [1, 1024].
 //
-// A valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
+// fileConnector refers to the file connector to use. If it supports sheets,
+// sheet must be a valid sheet name; otherwise, it must be an empty string. A
+// valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
 // not start or end with "'", and does not contain any of "*", "/", ":", "?",
 // "[", "\", and "]". Sheet names are case-insensitive.
+//
+// compression indicates if the file is compressed and how. settings are
+// user-provided settings, and limit restricts the number of records to return,
+// between 0 and 100.
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -1052,10 +1056,9 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 	this.apis.mustBeOpen()
 
 	c := this.connection
-	connector := c.Connector()
 
 	// Validate the connection type.
-	if connector.Type != state.FileStorageType {
+	if c.Connector().Type != state.FileStorageType {
 		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 	// Validate the path.
@@ -1078,22 +1081,22 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
 	}
 	if file.Type != state.FileType {
-		return nil, types.Type{}, errors.BadRequest("type of the file connector must be File, got %v", file.Type)
+		return nil, types.Type{}, errors.BadRequest("connector %d is not a file connector", fileConnector)
 	}
 
 	// Validate the settings.
 	if settings != nil && !file.HasSettings {
-		return nil, types.Type{}, errors.BadRequest("settings cannot be provided because the File connector has no settings")
+		return nil, types.Type{}, errors.BadRequest("Settings cannot be provided because connector %d does not support settings", fileConnector)
 	}
 	var validatedSettings []byte
-	if file != nil && file.HasSettings {
+	if file.HasSettings {
 		normalizedSettings := settings
 		if settings == nil {
 			normalizedSettings = json.RawMessage("{}")
 		}
 		conf := &connectors.ConnectorConfig{
 			Role:   this.connection.Role,
-			Region: state.PrivacyRegion(this.connection.Workspace().PrivacyRegion),
+			Region: this.connection.Workspace().PrivacyRegion,
 		}
 		var err error
 		validatedSettings, err = this.apis.connectors.ValidateSettings(ctx, file, conf, normalizedSettings)
@@ -1137,7 +1140,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		case connectors.ErrNoColumns:
 			return nil, types.Type{}, errors.Unprocessable(NoColumns, "file does not have columns")
 		}
-		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", connector.Name, err)
+		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", c.Connector().Name, err)
 	}
 
 	schema := types.Object(columns)
