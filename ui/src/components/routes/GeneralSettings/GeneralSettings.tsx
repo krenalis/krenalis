@@ -200,6 +200,7 @@ const GeneralSettings = () => {
 						value={firstName}
 						name='firstName'
 						error={firstNameError && firstNameError}
+						caret={true}
 					/>
 					<ComboBoxInput
 						className='general-settings__displayed-last-name'
@@ -209,6 +210,7 @@ const GeneralSettings = () => {
 						value={lastName}
 						name='lastName'
 						error={lastNameError && lastNameError}
+						caret={true}
 					/>
 					<ComboBoxInput
 						className='general-settings__displayed-information'
@@ -218,6 +220,7 @@ const GeneralSettings = () => {
 						value={information}
 						name='information'
 						error={informationError && informationError}
+						caret={true}
 					/>
 					<ComboBoxInput
 						className='general-settings__displayed-image'
@@ -227,6 +230,7 @@ const GeneralSettings = () => {
 						value={image}
 						name='image'
 						error={imageError && imageError}
+						caret={true}
 					/>
 				</div>
 				<ComboBoxList

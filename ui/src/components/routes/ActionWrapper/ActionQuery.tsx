@@ -13,6 +13,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import { ExecQueryResponse } from '../../../types/external/api';
+import { Popover } from '../../shared/Popover/Popover';
 
 const queryMaxSize = 16777215;
 
@@ -22,14 +23,25 @@ const ActionQuery = () => {
 	const [showPreview, setShowPreview] = useState<boolean>(false);
 
 	const { redirect, handleError, showStatus, api } = useContext(AppContext);
-	const { connection, action, setAction, actionType, setActionType, mappingSectionRef, setIsQueryChanged } =
-		useContext(ActionContext);
+	const {
+		connection,
+		action,
+		setAction,
+		actionType,
+		setActionType,
+		mappingSectionRef,
+		setIsQueryChanged,
+		isTransformationDisabled,
+		isEditing,
+	} = useContext(ActionContext);
 
 	const queryConfirmButtonRef = useRef<any>();
 	const lastQueryConfirmation = useRef('');
 
 	useEffect(() => {
-		lastQueryConfirmation.current = action.Query!;
+		if (isEditing) {
+			lastQueryConfirmation.current = action.Query;
+		}
 	}, []);
 
 	const onQueryPreview = async () => {
@@ -81,13 +93,8 @@ const ActionQuery = () => {
 		}
 		queryConfirmButtonRef.current.confirm();
 		setTimeout(() => {
-			const a = { ...action };
 			const actionTyp = { ...actionType };
 			actionTyp.InputSchema = res.Schema;
-			a.UniqueIDColumn = '';
-			a.DisplayedID = '';
-			a.UpdatedAtColumn = '';
-			setAction(a);
 			setActionType(actionTyp);
 			setTimeout(() => {
 				const top = mappingSectionRef.current.getBoundingClientRect().top;
@@ -165,6 +172,10 @@ const ActionQuery = () => {
 					>
 						Confirm
 					</FeedbackButton>
+					<Popover
+						isOpen={isTransformationDisabled}
+						content='Confirm when you have finished editing the query.'
+					/>
 				</div>
 			</Section>
 			<SlDrawer

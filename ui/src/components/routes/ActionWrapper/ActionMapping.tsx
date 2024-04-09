@@ -1,6 +1,11 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
-import { updateMappingProperty } from './Action.helpers';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { checkIfPropertyExists, updateMappingProperty } from './Action.helpers';
+import {
+	getDisplayedIDComboboxItems,
+	getSchemaComboboxItems,
+	getUniqueIDComboboxItems,
+	getUpdatedAtComboboxItems,
+} from '../../helpers/getSchemaComboBoxItems';
 import {
 	TransformedAction,
 	TransformedActionType,
@@ -73,18 +78,38 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 	const {
-		isMappingDisabled,
-		mappingDisabledReason,
-		isTransformationAllowed,
+		isTransformationDisabled,
+		isTransformationFunctionSupported,
 		action,
 		setAction,
 		actionType,
 		mode,
 		setMode,
 		setIsSaveHidden,
+		isFileConnectorChanged,
 	} = useContext(ActionContext);
 
-	const propertiesListRef = useRef(null);
+	const mappingListRef = useRef(null);
+	const uniqueIDListRef = useRef(null);
+	const displayedIDListRef = useRef(null);
+	const updatedAtListRef = useRef(null);
+	const isFirstCompilation = useRef(true);
+
+	const hasSpecialProperties = useMemo(() => {
+		return (
+			connection.isSource &&
+			(connection.isApp || connection.isDatabase || connection.isFileStorage || connection.isEventBased) &&
+			(actionType.Target === 'Users' || actionType.Target === 'Events')
+		);
+	}, [connection, actionType]);
+
+	useEffect(() => {
+		// when a new file is confirmed the UI should behave as if it is
+		// the first the user is compiling the action's transformation.
+		if (!isFileConnectorChanged) {
+			isFirstCompilation.current = true;
+		}
+	}, [isFileConnectorChanged]);
 
 	useEffect(() => {
 		const fetchTransformationLanguages = async () => {
@@ -111,7 +136,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (action.UpdatedAtColumn === '') {
+		if (!hasSpecialProperties || !action.UpdatedAtColumn) {
 			return;
 		}
 		// check if the timestamp format is custom.
@@ -122,37 +147,36 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (connection.isSource && connection.isApp) {
+		if (hasSpecialProperties && isFirstCompilation.current) {
+			// precompile the 'UniqueIDColumn', 'displayedID' and
+			// 'TimestampColumn' fields, if possible.
 			const a = { ...action };
-			console.debug(action.DisplayedID);
-			if (action.DisplayedID === undefined) {
-				a.DisplayedID = '';
-			}
-			setAction(a);
-		}
-	}, []);
-
-	useEffect(() => {
-		if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-			// precompile the 'UniqueIDColumn' and 'UpdatedAtColumn' fields,
-			// if possible.
-			const a = { ...action };
-			if (action.UniqueIDColumn === '') {
+			if (connection.isApp) {
+				const suggestedDisplayedID = connection.connector.suggestedDisplayedID;
+				if (suggestedDisplayedID !== '') {
+					// check if the sugested displayed ID exists in
+					// the input schema.
+					const flatSchema = flattenSchema(actionType.InputSchema);
+					if (flatSchema[suggestedDisplayedID]) {
+						a.DisplayedID = suggestedDisplayedID;
+					}
+				}
+			} else if (connection.isDatabase || connection.isFileStorage) {
 				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 				if (hasIdColumn) {
 					a.UniqueIDColumn = 'id';
+					a.DisplayedID = 'id';
+					isFirstCompilation.current = false;
 				}
-			}
-			if (action.UpdatedAtColumn === '') {
-				const hasTimestampColumn =
+				const hasUpdatedAtColumn =
 					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
-				if (hasTimestampColumn) {
+				if (hasUpdatedAtColumn) {
 					a.UpdatedAtColumn = 'timestamp';
 				}
 			}
 			setAction(a);
 		}
-	}, []);
+	}, [isFirstCompilation.current]);
 
 	useEffect(() => {
 		const body = document.querySelector('.fullscreen') as HTMLDivElement;
@@ -186,11 +210,15 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, [selectedLanguage]);
 
 	const needFormat: boolean = useMemo(() => {
-		if (action.UpdatedAtColumn && !isMappingDisabled) {
+		if (
+			(connection.isFileStorage || connection.isDatabase) &&
+			action.UpdatedAtColumn &&
+			!isTransformationDisabled
+		) {
 			return doesTimestampNeedFormat(action.UpdatedAtColumn, actionType.InputSchema);
 		}
 		return false;
-	}, [action, actionType, isMappingDisabled]);
+	}, [action, actionType, isTransformationDisabled]);
 
 	const fileConnector: TransformedConnector | null = useMemo(() => {
 		if (action.Connector) {
@@ -198,6 +226,41 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 		return null;
 	}, [action]);
+
+	const flatSchema = useMemo<TransformedMapping>(() => {
+		return flattenSchema(actionType.InputSchema);
+	}, [actionType]);
+
+	const uniqueIDColumnError = useMemo<string>(() => {
+		if (connection.isFileStorage || connection.isDatabase) {
+			if (action.UniqueIDColumn === '' && !isFirstCompilation.current) {
+				return 'The user identifier cannot be empty';
+			}
+			return checkIfPropertyExists(action.UniqueIDColumn, flatSchema);
+		}
+	}, [action, flatSchema]);
+
+	const displayedIDError = useMemo<string>(() => {
+		if (!hasSpecialProperties || connection.isEventBased) {
+			return;
+		}
+		return checkIfPropertyExists(action.DisplayedID, flatSchema);
+	}, [action, flatSchema]);
+
+	const timestampColumnError = useMemo<string>(() => {
+		if (connection.isFileStorage || connection.isDatabase) {
+			return checkIfPropertyExists(action.UpdatedAtColumn, flatSchema);
+		}
+	}, [action, flatSchema]);
+
+	const { uniqueIDList, displayedIDList, updatedAtList, mappingList } = useMemo(() => {
+		return {
+			uniqueIDList: getUniqueIDComboboxItems(actionType.InputSchema),
+			displayedIDList: getDisplayedIDComboboxItems(actionType.InputSchema),
+			updatedAtList: getUpdatedAtComboboxItems(actionType.InputSchema),
+			mappingList: getSchemaComboboxItems(actionType.InputSchema),
+		};
+	}, [actionType]);
 
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
@@ -208,7 +271,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const updateProperty = async (name: string, value: string, signal?: AbortSignal) => {
+	const updateMapping = async (name: string, value: string, signal?: AbortSignal) => {
 		let errorMessage = '';
 		if (value !== '') {
 			try {
@@ -232,18 +295,29 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(updatedAction);
 	};
 
-	const debouncedUpdateProperty = useMemo(() => debounceWithAbort(updateProperty, 500), [actionType, action]);
+	const debouncedUpdateMapping = useMemo(() => debounceWithAbort(updateMapping, 500), [actionType, action]);
 
-	const onUpdateProperty = async (e: any) => {
+	const onUpdateMapping = async (e: any) => {
 		const target = e.target;
 		let { name, value } = target;
-		debouncedUpdateProperty(name, value);
+		debouncedUpdateMapping(name, value);
 	};
 
 	const onSelectProperty = async (input, value) => {
 		if (input.name === 'uniqueIDColumn') {
 			const a = { ...action };
 			a.UniqueIDColumn = value;
+			if (isFirstCompilation.current && a.DisplayedID === '') {
+				a.DisplayedID = value;
+			}
+			setAction(a);
+			if (isFirstCompilation.current) {
+				isFirstCompilation.current = false;
+			}
+			return;
+		} else if (input.name === 'displayedID') {
+			const a = { ...action };
+			a.DisplayedID = value;
 			setAction(a);
 			return;
 		} else if (input.name === 'timestampColumn') {
@@ -255,14 +329,25 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			setAction(a);
 			return;
 		}
-		await updateProperty(input.name, value);
+		await updateMapping(input.name, value);
 	};
 
 	const onUpdateUniqueIDColumn = async (e) => {
-		const target = e.target;
-		let { value } = target;
 		const a = { ...action };
+		const value = e.target.value;
 		a.UniqueIDColumn = value;
+		if (isFirstCompilation.current && a.DisplayedID === '') {
+			a.DisplayedID = value;
+		}
+		setAction(a);
+		if (isFirstCompilation.current) {
+			isFirstCompilation.current = false;
+		}
+	};
+
+	const onUpdateDisplayedID = (e) => {
+		const a = { ...action };
+		a.DisplayedID = e.target.value;
 		setAction(a);
 	};
 
@@ -291,12 +376,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const onDisplayedIDChange = (e) => {
-		const a = { ...action };
-		a.DisplayedID = e.target.value;
-		setAction(a);
-	};
-
 	const onInputTimestampCustomFormat = (e) => {
 		const a = { ...action };
 		a.UpdatedAtFormat = e.target.value;
@@ -315,8 +394,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		return null;
 	}
 
-	const displayedIDKind = ['FileStorage', 'Database'].includes(connection.type) ? 'column' : 'property';
-
 	const box = (
 		<TransformationBox
 			mode={mode}
@@ -325,10 +402,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			selectedWorkspace={selectedWorkspace}
 			action={action}
 			setAction={setAction}
-			propertiesListRef={propertiesListRef}
-			onUpdateProperty={onUpdateProperty}
-			isMappingSectionDisabled={isMappingDisabled}
-			disabledReason={mappingDisabledReason}
+			mappingListRef={mappingListRef}
+			onUpdateMapping={onUpdateMapping}
+			isTransformationDisabled={isTransformationDisabled}
 			transformationLanguages={transformationLanguages}
 			selectedLanguage={selectedLanguage}
 			setSelectedLanguage={setSelectedLanguage}
@@ -337,107 +413,133 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			isFullscreenTransformationOpen={isFullscreenTransformationOpen}
 			onCloseFullscreenTransformation={onCloseFullscreenTransformation}
 			actionType={actionType}
-			isTransformationAllowed={isTransformationAllowed}
+			isTransformationFunctionSupported={isTransformationFunctionSupported}
 		/>
 	);
 
 	return (
-		<>
+		<div className={`action-mapping${isTransformationDisabled ? ' disabled' : ''}`} ref={ref}>
+			{hasSpecialProperties && (
+				<Section
+					title={connection.isApp || connection.isEventBased ? 'Special properties' : 'Special columns'}
+					padded={true}
+				>
+					<div className='specialProperties'>
+						{(connection.isFileStorage || connection.isDatabase) && (
+							<div className='uniqueIDColumn'>
+								<div className='label'>
+									User identifier<span className='asterisk'>*</span>:
+								</div>
+								<ComboBoxInput
+									comboBoxListRef={uniqueIDListRef}
+									onInput={onUpdateUniqueIDColumn}
+									value={uniqueIDList.length === 0 ? '' : action.UniqueIDColumn!}
+									name='uniqueIDColumn'
+									disabled={isTransformationDisabled || uniqueIDList.length === 0}
+									className='inputProperty'
+									caret={true}
+									error={
+										uniqueIDList.length === 0
+											? `No column ${
+													connection.isFileStorage ? 'in the file' : 'returned by the query'
+											  } can be used as user identifier`
+											: uniqueIDColumnError
+									}
+									size='small'
+								/>
+							</div>
+						)}
+						<div className='displayedID'>
+							<div className='label'>Displayed identifier:</div>
+							{connection.isEventBased ? (
+								<SlInput
+									onSlInput={onUpdateDisplayedID}
+									value={action.DisplayedID}
+									disabled={isTransformationDisabled}
+									size='small'
+								/>
+							) : (
+								<ComboBoxInput
+									comboBoxListRef={displayedIDListRef}
+									onInput={onUpdateDisplayedID}
+									value={action.DisplayedID}
+									name='displayedID'
+									disabled={isTransformationDisabled}
+									className='inputProperty'
+									caret={true}
+									error={displayedIDError}
+									size='small'
+								/>
+							)}
+						</div>
+						{(connection.isFileStorage || connection.isDatabase) && (
+							<div className='timestampColumn'>
+								<div className='timestamp'>
+									<div className='label'>Updated at:</div>
+									<ComboBoxInput
+										comboBoxListRef={updatedAtListRef}
+										onInput={onUpdateTimestampColumn}
+										value={action.UpdatedAtColumn!}
+										name='timestampColumn'
+										disabled={isTransformationDisabled}
+										className='inputProperty'
+										caret={true}
+										error={timestampColumnError}
+										size='small'
+									/>
+								</div>
+								<div className='format'>
+									<div className='timestampFormat'>
+										<div className='label'>with format:</div>
+										<SlSelect
+											onSlChange={onChangeTimestampFormat}
+											value={
+												isCustomTimestampSelected
+													? 'custom'
+													: action.UpdatedAtColumn
+													? Object.keys(timestampFormats).find(
+															(key) => timestampFormats[key] === action.UpdatedAtFormat,
+													  )
+													: ''
+											}
+											name='timestampFormat'
+											disabled={!needFormat}
+											size='small'
+										>
+											<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
+											<SlOption value='dateOnly'>2006-01-02</SlOption>
+											<SlOption value='iso8601'>ISO 8601</SlOption>
+											{fileConnector?.name === 'Excel' && (
+												<SlOption value='excel'>Excel</SlOption>
+											)}
+											<SlOption value='custom'>Custom...</SlOption>
+										</SlSelect>
+									</div>
+									{needFormat && isCustomTimestampSelected && (
+										<div className='timestampCustomFormat'>
+											<div className='label'>custom format:</div>
+											<SlInput
+												onSlInput={onInputTimestampCustomFormat}
+												value={action.UpdatedAtFormat}
+												name='timestampCustomFormat'
+												placeholder='%Y-%m-%d'
+												helpText='A C89 "strftime" format string'
+												size='small'
+											></SlInput>
+										</div>
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+				</Section>
+			)}
 			<Section
-				ref={ref}
 				title='Transformation'
 				description='The relation between the event properties and the action type properties'
 				padded={false}
 				className={mode}
 			>
-				{connection.isSource && (connection.isDatabase || connection.isFileStorage) && (
-					<div className='specialProperties'>
-						<div className='uniqueIDColumn'>
-							<div className='label'>
-								Unique ID<span className='asterisk'>*</span>:
-							</div>
-							<ComboBoxInput
-								comboBoxListRef={propertiesListRef}
-								onInput={onUpdateUniqueIDColumn}
-								value={action.UniqueIDColumn!}
-								name='uniqueIDColumn'
-								disabled={isMappingDisabled}
-								className='inputProperty'
-								size='small'
-							/>
-						</div>
-						<div className='timestampColumn'>
-							<div className='timestamp'>
-								<div className='label'>Timestamp:</div>
-								<ComboBoxInput
-									comboBoxListRef={propertiesListRef}
-									onInput={onUpdateTimestampColumn}
-									value={action.UpdatedAtColumn!}
-									name='timestampColumn'
-									disabled={isMappingDisabled}
-									className='inputProperty'
-									size='small'
-								/>
-							</div>
-							<div className='format'>
-								<div className='timestampFormat'>
-									<div className='label'>with format:</div>
-									<SlSelect
-										onSlChange={onChangeTimestampFormat}
-										value={
-											isCustomTimestampSelected
-												? 'custom'
-												: action.UpdatedAtColumn
-												? Object.keys(timestampFormats).find(
-														(key) => timestampFormats[key] === action.UpdatedAtFormat,
-												  )
-												: ''
-										}
-										name='timestampFormat'
-										disabled={!needFormat}
-										size='small'
-									>
-										<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
-										<SlOption value='dateOnly'>2006-01-02</SlOption>
-										<SlOption value='iso8601'>ISO 8601</SlOption>
-										{fileConnector?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
-										<SlOption value='custom'>Custom...</SlOption>
-									</SlSelect>
-								</div>
-								{needFormat && isCustomTimestampSelected && (
-									<div className='timestampCustomFormat'>
-										<div className='label'>custom format:</div>
-										<SlInput
-											onSlInput={onInputTimestampCustomFormat}
-											value={action.UpdatedAtFormat}
-											name='timestampCustomFormat'
-											placeholder='%Y-%m-%d'
-											helpText='A C89 "strftime" format string'
-											size='small'
-										></SlInput>
-									</div>
-								)}
-							</div>
-						</div>
-					</div>
-				)}
-				{connection.isSource &&
-					(connection.isApp ||
-						connection.isFileStorage ||
-						connection.isDatabase ||
-						connection.isEventBased) && (
-						<Section ref={ref} title='Displayed ID'>
-							<SlInput
-								label={`Displayed ID ${displayedIDKind}`}
-								className='nameField'
-								helpText={`The name of the ${connection.type} ${displayedIDKind} from which the displayed ID is read when importing. Can be left empty to indicate to not import it.`}
-								placeholder='Something like "email", "customer_id", etc...'
-								value={action.DisplayedID}
-								onSlInput={onDisplayedIDChange}
-								maxlength={1024}
-							/>
-						</Section>
-					)}
 				{box}
 				<FullscreenTransformation
 					isFullscreenTransformationOpen={isFullscreenTransformationOpen}
@@ -446,13 +548,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					inputSchema={actionType.InputSchema}
 					outputSchema={actionType.OutputSchema}
 				/>
-				<ComboBoxList
-					ref={propertiesListRef}
-					items={getSchemaComboboxItems(actionType.InputSchema)}
-					onSelect={onSelectProperty}
-				/>
+				<ComboBoxList ref={uniqueIDListRef} items={uniqueIDList} onSelect={onSelectProperty} />
+				<ComboBoxList ref={displayedIDListRef} items={displayedIDList} onSelect={onSelectProperty} />
+				<ComboBoxList ref={updatedAtListRef} items={updatedAtList} onSelect={onSelectProperty} />
+				<ComboBoxList ref={mappingListRef} items={mappingList} onSelect={onSelectProperty} />
 			</Section>
-		</>
+		</div>
 	);
 });
 
@@ -463,10 +564,9 @@ interface TransformationBoxProps {
 	selectedWorkspace: number;
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction>>;
-	propertiesListRef: React.MutableRefObject<any>;
-	onUpdateProperty: (...args: any) => void;
-	isMappingSectionDisabled: boolean;
-	disabledReason: string;
+	mappingListRef: React.MutableRefObject<any>;
+	onUpdateMapping: (...args: any) => void;
+	isTransformationDisabled: boolean;
 	transformationLanguages: string[];
 	selectedLanguage: string;
 	setSelectedLanguage: React.Dispatch<React.SetStateAction<string>>;
@@ -475,7 +575,7 @@ interface TransformationBoxProps {
 	isFullscreenTransformationOpen: boolean;
 	onCloseFullscreenTransformation: () => void;
 	actionType: TransformedActionType;
-	isTransformationAllowed: boolean;
+	isTransformationFunctionSupported: boolean;
 }
 
 const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
@@ -522,10 +622,9 @@ const TransformationBox = ({
 	selectedWorkspace,
 	action,
 	setAction,
-	propertiesListRef,
-	onUpdateProperty,
-	isMappingSectionDisabled,
-	disabledReason,
+	mappingListRef,
+	onUpdateMapping,
+	isTransformationDisabled,
 	transformationLanguages,
 	selectedLanguage,
 	setSelectedLanguage,
@@ -534,7 +633,7 @@ const TransformationBox = ({
 	isFullscreenTransformationOpen,
 	onCloseFullscreenTransformation,
 	actionType,
-	isTransformationAllowed,
+	isTransformationFunctionSupported,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [hasFullscreenText, setHasFullscreenText] = useState<boolean>();
@@ -628,11 +727,11 @@ const TransformationBox = ({
 					}
 				>
 					<ComboBoxInput
-						comboBoxListRef={propertiesListRef}
-						onInput={onUpdateProperty}
+						comboBoxListRef={mappingListRef}
+						onInput={onUpdateMapping}
 						value={action.Transformation.Mapping[k].value}
 						name={k}
-						disabled={isMappingSectionDisabled || action.Transformation.Mapping[k].disabled === true}
+						disabled={isTransformationDisabled || action.Transformation.Mapping[k].disabled === true}
 						className='inputProperty'
 						size='small'
 						error={action.Transformation.Mapping[k].error}
@@ -672,12 +771,6 @@ const TransformationBox = ({
 		}
 		body = (
 			<div className='mappings'>
-				{isMappingSectionDisabled && (
-					<SlAlert variant='danger' className='mappingsDisabledAlert' open>
-						<SlIcon slot='icon' name='exclamation-circle' />
-						{disabledReason}
-					</SlAlert>
-				)}
 				<div>{mappings}</div>
 			</div>
 		);
@@ -711,7 +804,7 @@ const TransformationBox = ({
 		>
 			<div className='transformation-box__header'>
 				<div className='transformation-box__header-title'>
-					{hasFullscreenText || !isTransformationAllowed || transformationLanguages.length == 0 ? (
+					{hasFullscreenText || !isTransformationFunctionSupported || transformationLanguages.length == 0 ? (
 						<>
 							<span className='transformation-box__header-icon'>
 								{mode === 'mappings' ? <SlIcon name='shuffle' /> : getLanguageLogo(selectedLanguage)}
@@ -726,6 +819,7 @@ const TransformationBox = ({
 								className='transformation-box__mappings-button'
 								variant={mode === 'mappings' ? 'primary' : 'default'}
 								onClick={() => onModeClick('mappings')}
+								disabled={isTransformationDisabled}
 							>
 								Mappings
 							</SlButton>
@@ -739,6 +833,7 @@ const TransformationBox = ({
 												: 'default'
 										}
 										onClick={() => onModeClick(language)}
+										disabled={isTransformationDisabled}
 									>
 										{language}
 									</SlButton>
@@ -755,6 +850,7 @@ const TransformationBox = ({
 							? onCloseFullscreenTransformation
 							: onOpenFullscreenTransformation
 					}
+					disabled={isTransformationDisabled}
 				>
 					{hasFullscreenText ? (
 						<SlIcon name='arrows-angle-contract' />
@@ -813,7 +909,7 @@ const FullscreenTransformation = ({
 	const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
 	const { handleError, api } = useContext(AppContext);
-	const { action, actionType, connection } = useContext(ActionContext);
+	const { action, values, actionType, connection } = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
 	const lastNameIdentifier = useRef<string>('');
@@ -1021,7 +1117,7 @@ const FullscreenTransformation = ({
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, actionType, api, connection);
+			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
@@ -1072,7 +1168,7 @@ const FullscreenTransformation = ({
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, actionType, api, connection);
+			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);

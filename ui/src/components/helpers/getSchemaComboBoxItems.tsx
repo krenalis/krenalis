@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react';
-import { flattenSchema } from '../../lib/helpers/transformedAction';
+import { TransformedMapping, flattenSchema } from '../../lib/helpers/transformedAction';
 import { ObjectType } from '../../types/external/types';
 import { ComboboxItem } from '../../types/internal/app';
 
@@ -8,6 +8,62 @@ const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
+	return computeItems(flatSchema);
+};
+
+const getUniqueIDComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+	if (schema == null) {
+		return [];
+	}
+	const flatSchema = flattenSchema(schema);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(flatSchema)) {
+		const typ = flatSchema[k].type;
+		if (typ === 'Int' || typ === 'Uint' || typ === 'UUID' || typ === 'JSON' || typ === 'Text') {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
+const getDisplayedIDComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+	if (schema == null) {
+		return [];
+	}
+	const flatSchema = flattenSchema(schema);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(flatSchema)) {
+		const typ = flatSchema[k].type;
+		if (
+			typ === 'Int' ||
+			typ === 'Uint' ||
+			typ === 'Float' ||
+			typ === 'Decimal' ||
+			typ === 'JSON' ||
+			typ === 'Text'
+		) {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
+const getUpdatedAtComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+	if (schema == null) {
+		return [];
+	}
+	const flatSchema = flattenSchema(schema);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(flatSchema)) {
+		const typ = flatSchema[k].type;
+		if (typ === 'DateTime' || typ === 'Date' || typ == 'JSON' || typ === 'Text') {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
+const computeItems = (flatSchema: TransformedMapping) => {
 	const items: ComboboxItem[] = [];
 	for (const propertyName in flatSchema) {
 		let typ = flatSchema[propertyName].type;
@@ -36,4 +92,4 @@ const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return items;
 };
 
-export { getSchemaComboboxItems };
+export { getSchemaComboboxItems, getUniqueIDComboboxItems, getDisplayedIDComboboxItems, getUpdatedAtComboboxItems };

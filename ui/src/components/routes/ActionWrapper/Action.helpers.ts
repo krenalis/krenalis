@@ -59,4 +59,14 @@ const updateMappingProperty = (action: TransformedAction, name: string, value: s
 	return a;
 };
 
-export { updateMappingProperty };
+const checkIfPropertyExists = (property: string, schema: TransformedMapping): string => {
+	if (schema == null || property === '' || property == null) {
+		return '';
+	}
+	if (schema[property] == null) {
+		return `Property "${property}" does not exist`;
+	}
+	return '';
+};
+
+export { updateMappingProperty, checkIfPropertyExists };

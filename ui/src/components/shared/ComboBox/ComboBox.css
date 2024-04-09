@@ -28,8 +28,20 @@
 .comboBoxInput .error {
 	position: absolute;
 	font-size: 11px;
+	color: var(--sl-color-danger-500);
+	margin-top: 2px;
 }
 
-.comboBoxInput .error {
+.comboBoxInput .errorIcon {
 	color: var(--sl-color-danger-500);
+	font-size: 12px;
+}
+
+.comboBoxInput sl-input .caretIcon {
+	will-change: transform;
+	transition: transform 0.2s;
+}
+
+.comboBoxInput sl-menu ~ sl-input .caretIcon {
+	transform: rotate(-180deg);
 }

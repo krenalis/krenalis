@@ -25,8 +25,7 @@
 	margin: 50px auto 0 auto;
 }
 
-.identifiers .comboBoxInput sl-input sl-icon {
-	color: var(--sl-color-danger-500);
+.identifiers .comboBoxInput sl-input .errorIcon {
 	font-size: 9px;
 }
 

@@ -27,6 +27,7 @@ import SettingsForm from '../../shared/SettingsForm/SettingsForm';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import actionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { Popover } from '../../shared/Popover/Popover';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -36,10 +37,11 @@ const ActionFile = () => {
 	const {
 		action,
 		setAction,
-		setIsFileChanged,
+		setValues,
 		isFileConnectorLoading,
 		setIsFileConnectorLoading,
 		setIsFileConnectorChanged,
+		setIsFileChanged,
 		isFileConnectorChanged,
 		actionType,
 		isEditing,
@@ -65,7 +67,6 @@ const ActionFile = () => {
 
 	useEffect(() => {
 		const fetchFields = async () => {
-			const a = { ...action };
 			const connector = connectors.find((c) => c.id === action.Connector);
 			if (connector.hasSettings === false) {
 				setFileFields([]);
@@ -76,7 +77,7 @@ const ActionFile = () => {
 			let ui: UIResponse;
 			if (isEditing && !isFileConnectorChanged) {
 				try {
-					ui = await api.workspaces.connections.actionUiEvent(connection.id, a.ID, 'load', null);
+					ui = await api.workspaces.connections.actionUiEvent(connection.id, action.ID, 'load', null);
 				} catch (err) {
 					setTimeout(() => setIsFileConnectorLoading(false), 300);
 					if (err instanceof NotFoundError) {
@@ -120,10 +121,8 @@ const ActionFile = () => {
 					return;
 				}
 			}
-
 			setFileFields(ui.Form.Fields);
-			a.Settings = ui.Form.Values;
-			setAction(a);
+			setValues(ui.Form.Values);
 			setTimeout(() => setIsFileConnectorLoading(false), 300);
 		};
 
@@ -146,7 +145,6 @@ const ActionFile = () => {
 		// reset the action.
 		a.Connector = id;
 		a.Compression = '';
-		a.Settings = null;
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
 		a.UniqueIDColumn = '';
@@ -155,22 +153,10 @@ const ActionFile = () => {
 		a.UpdatedAtFormat = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
 		a.Transformation.Function = null;
+		setValues(null);
 		setIsFileConnectorLoading(true);
 		setIsFileConnectorChanged(true);
-		setAction(a);
-	};
-
-	const onCompressionChange = (e) => {
-		const a = { ...action };
-		a.Compression = e.target.value;
-		setIsFileChanged(true);
-		setAction(a);
-	};
-
-	const onFieldChange = (name: string, value: any) => {
-		const a = { ...action };
-		setIsFileChanged(true);
-		a.Settings = { ...a.Settings, [name]: value };
+		setIsFileChanged(false);
 		setAction(a);
 	};
 
@@ -179,11 +165,6 @@ const ActionFile = () => {
 		if (c.isFile) {
 			fileConnectors.push(c);
 		}
-	}
-
-	const fieldsToRender: ReactNode[] = [];
-	for (const f of fileFields) {
-		fieldsToRender.push(<ConnectorField key={f.Label} field={f} />);
 	}
 
 	return (
@@ -224,27 +205,7 @@ const ActionFile = () => {
 			) : (
 				action.Connector !== 0 && (
 					<div className='action-file__file-settings'>
-						<FileSettings hasSheets={hasSheets} fileExtension={fileExtension}>
-							<SlSelect
-								className='action-file__compression'
-								name='compression'
-								value={action.Compression}
-								label='Compression'
-								onSlChange={onCompressionChange}
-							>
-								<SlOption value=''>None</SlOption>
-								<SlOption value='Zip'>Zip</SlOption>
-								<SlOption value='Gzip'>Gzip</SlOption>
-								<SlOption value='Snappy'>Snappy</SlOption>
-							</SlSelect>
-							{fieldsToRender.length > 0 && (
-								<SettingsForm
-									fields={fieldsToRender}
-									values={action.Settings}
-									onChange={onFieldChange}
-								/>
-							)}
-						</FileSettings>
+						<FileSettings hasSheets={hasSheets} fileExtension={fileExtension} fileFields={fileFields} />
 					</div>
 				)
 			)}
@@ -255,10 +216,10 @@ const ActionFile = () => {
 interface FileSettingsProps {
 	hasSheets: boolean;
 	fileExtension: string;
-	children: ReactNode;
+	fileFields: ConnectorFieldInterface[];
 }
 
-const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps) => {
+const FileSettings = ({ hasSheets, fileExtension, fileFields }: FileSettingsProps) => {
 	const [sheets, setSheets] = useState<Record<string, string>>({});
 	const [areSheetsLoading, setAreSheetsLoading] = useState<boolean>(false);
 	const [hasSheetsError, setHasSheetsError] = useState<boolean>(false);
@@ -273,12 +234,16 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		connection,
 		action,
 		setAction,
+		values,
+		setValues,
 		actionType,
 		setActionType,
 		isImport,
 		mappingSectionRef,
 		setIsFileChanged,
 		setIsFileConnectorChanged,
+		isFileConnectorChanged,
+		isTransformationDisabled,
 	} = useContext(ActionContext);
 
 	const getCompletePathTimeoutID = useRef<number>();
@@ -290,20 +255,47 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		lastUpdate: '',
 		lastSheetFetch: '',
 	});
+
 	const sheetRef = useRef({
 		lastConfirmation: '',
 		lastUpdate: '',
 	});
 
+	const compressionRef = useRef({
+		lastConfirmation: '',
+		lastUpdate: '',
+	});
+
+	const settingsRef = useRef({
+		lastConfirmation: {},
+		lastUpdate: {},
+	});
+
+	const fieldsToRender = useMemo(() => {
+		const fields: ReactNode[] = [];
+		for (const f of fileFields) {
+			fields.push(<ConnectorField key={f.Label} field={f} />);
+		}
+		return fields;
+	}, [fileFields]);
+
 	useEffect(() => {
 		pathRef.current = {
 			...pathRef.current,
-			lastConfirmation: action.Path!,
-			lastUpdate: action.Path!,
+			lastConfirmation: action.Path,
+			lastUpdate: action.Path,
 		};
 		sheetRef.current = {
-			lastConfirmation: action.Sheet!,
-			lastUpdate: action.Sheet!,
+			lastConfirmation: action.Sheet,
+			lastUpdate: action.Sheet,
+		};
+		compressionRef.current = {
+			lastConfirmation: action.Compression,
+			lastUpdate: action.Compression,
+		};
+		settingsRef.current = {
+			lastConfirmation: { ...values },
+			lastUpdate: { ...values },
 		};
 	}, []);
 
@@ -317,7 +309,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 					action.Connector,
 					action.Path!,
 					action.Compression,
-					action.Settings,
+					values,
 				);
 			} catch (err) {
 				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
@@ -344,19 +336,35 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		}
 	}, []);
 
+	const checkIsFileChanged = () => {
+		if (isFileConnectorChanged) {
+			return;
+		}
+		const isPathChanged = pathRef.current.lastUpdate !== pathRef.current.lastConfirmation;
+		const isSheetChanged = sheetRef.current.lastUpdate !== sheetRef.current.lastConfirmation;
+		const isCompressionChanged = compressionRef.current.lastUpdate !== compressionRef.current.lastConfirmation;
+		let areSettingsChanged = false;
+		for (const key in settingsRef.current.lastUpdate) {
+			if (settingsRef.current.lastUpdate.hasOwnProperty(key)) {
+				if (settingsRef.current.lastUpdate[key] != settingsRef.current.lastConfirmation[key]) {
+					areSettingsChanged = true;
+					break;
+				}
+			}
+		}
+		if (isPathChanged || isSheetChanged || isCompressionChanged || areSettingsChanged) {
+			setIsFileChanged(true);
+		} else {
+			setIsFileChanged(false);
+		}
+	};
+
 	const onUpdatePath = async (e) => {
 		clearTimeout(getCompletePathTimeoutID.current);
 		const a = { ...action };
 		const path = e.currentTarget.value;
 		pathRef.current.lastUpdate = path;
-		if (
-			pathRef.current.lastUpdate !== pathRef.current.lastConfirmation &&
-			pathRef.current.lastConfirmation !== ''
-		) {
-			setIsFileChanged(true);
-		} else {
-			setIsFileChanged(false);
-		}
+		checkIsFileChanged();
 		a.Path = path;
 		if (a.Sheet != null) {
 			a.Sheet = '';
@@ -392,14 +400,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 			sheet = e.currentTarget.value;
 		}
 		sheetRef.current.lastUpdate = sheet;
-		if (
-			sheetRef.current.lastUpdate !== sheetRef.current.lastConfirmation &&
-			sheetRef.current.lastConfirmation !== ''
-		) {
-			setIsFileChanged(true);
-		} else {
-			setIsFileChanged(false);
-		}
+		checkIsFileChanged();
 		a.Sheet = sheet;
 		setAction(a);
 	};
@@ -419,7 +420,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 				action.Connector,
 				action.Path!,
 				action.Compression,
-				action.Settings,
+				values,
 			);
 		} catch (err) {
 			setTimeout(() => {
@@ -462,6 +463,21 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		await loadSheets();
 	};
 
+	const onCompressionChange = (e) => {
+		const a = { ...action };
+		const compression = e.target.value;
+		compressionRef.current.lastUpdate = compression;
+		checkIsFileChanged();
+		a.Compression = compression;
+		setAction(a);
+	};
+
+	const onFieldChange = (name: string, value: any) => {
+		settingsRef.current.lastUpdate[name] = value;
+		checkIsFileChanged();
+		setValues({ ...values, [name]: value });
+	};
+
 	const onFilePreview = async () => {
 		if (action.Path === '') {
 			handleError('Please enter a path');
@@ -471,7 +487,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 			handleError('Please enter a sheet');
 			return;
 		}
-		const res = await records(action.Path!, action.Sheet, 20);
+		const res = await records(20);
 		if (res == null) {
 			return;
 		}
@@ -514,7 +530,7 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 			return;
 		}
 		fileConfirmButtonRef.current!.load();
-		const res = await records(action.Path!, action.Sheet, 0, true);
+		const res = await records(0, true);
 		if (res == null) {
 			fileConfirmButtonRef.current!.stop();
 			return;
@@ -536,16 +552,16 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 		}, CONFIRM_ANIMATION_DURATION);
 	};
 
-	const records = async (path: string, sheet: string | null | undefined, limit: number, isConfirmation?: boolean) => {
+	const records = async (limit: number, isConfirmation?: boolean) => {
 		let res: RecordsResponse;
 		try {
 			res = await api.workspaces.connections.records(
 				connection.id,
 				action.Connector,
-				path,
-				sheet === undefined ? null : sheet,
+				action.Path,
+				action.Sheet === undefined ? null : action.Sheet,
 				action.Compression,
-				action.Settings,
+				values,
 				limit,
 			);
 		} catch (err) {
@@ -563,9 +579,11 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 			return;
 		}
 		if (isConfirmation) {
-			pathRef.current.lastConfirmation = path;
-			if (sheet != null) {
-				sheetRef.current.lastConfirmation = sheet;
+			pathRef.current.lastConfirmation = action.Path;
+			compressionRef.current.lastConfirmation = action.Compression;
+			settingsRef.current.lastConfirmation = { ...values };
+			if (action.Sheet != null) {
+				sheetRef.current.lastConfirmation = action.Sheet;
 			}
 			setIsFileChanged(false);
 		}
@@ -648,7 +666,21 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 						onSlInput={onUpdateSheet}
 					/>
 				))}
-			{children}
+			<SlSelect
+				className='action-file__compression'
+				name='compression'
+				value={action.Compression}
+				label='Compression'
+				onSlChange={onCompressionChange}
+			>
+				<SlOption value=''>None</SlOption>
+				<SlOption value='Zip'>Zip</SlOption>
+				<SlOption value='Gzip'>Gzip</SlOption>
+				<SlOption value='Snappy'>Snappy</SlOption>
+			</SlSelect>
+			{fieldsToRender.length > 0 && (
+				<SettingsForm fields={fieldsToRender} values={values} onChange={onFieldChange} />
+			)}
 			{isImport && (
 				<div className='fileButtons'>
 					<SlButton variant='neutral' size='small' onClick={onFilePreview}>
@@ -663,6 +695,10 @@ const FileSettings = ({ hasSheets, fileExtension, children }: FileSettingsProps)
 					>
 						Confirm
 					</FeedbackButton>
+					<Popover
+						isOpen={isTransformationDisabled}
+						content='Confirm when you have finished editing the file.'
+					/>
 				</div>
 			)}
 			<SlDrawer

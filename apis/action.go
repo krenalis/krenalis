@@ -52,7 +52,6 @@ type Action struct {
 	Path                    *string
 	Sheet                   *string
 	Compression             Compression
-	Settings                json.RawMessage `json:",omitempty"`
 	Table                   *string
 	UniqueIDColumn          *string
 	DisplayedID             string
@@ -149,7 +148,6 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.Sheet = &sheet
 	}
 	this.Compression = Compression(action.Compression)
-	this.Settings = action.Settings
 	if action.TableName != "" {
 		table := action.TableName
 		this.Table = &table

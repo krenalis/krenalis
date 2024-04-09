@@ -10,6 +10,10 @@
 	margin-bottom: 15px;
 }
 
+.general-settings sl-input::part(form-control-label) {
+	font-weight: 400;
+}
+
 .general-settings .general-settings__use-europe-region {
 	margin-top: 25px;
 	margin-bottom: 15px;
@@ -48,19 +52,7 @@
 }
 
 .general-settings .general-settings__displayed-properties-fields .comboBoxInput {
-	margin-bottom: 25px;
-}
-
-.general-settings .general-settings__displayed-properties-fields .comboBoxInput sl-icon {
-	color: var(--sl-color-danger-500);
-	font-size: 12px;
-}
-
-.general-settings .general-settings__displayed-properties-fields .error {
-	position: absolute;
-	font-size: 11px;
-	margin-top: 2px;
-	color: var(--sl-color-danger-500);
+	margin-bottom: 35px;
 }
 
 .general-settings .general-settings__displayed-image {

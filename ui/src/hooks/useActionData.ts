@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useMemo } from 'react';
 import {
 	computeDefaultAction,
 	computeActionTypeFields,
@@ -9,10 +9,11 @@ import {
 	transformInActionToSet,
 } from '../lib/helpers/transformedAction';
 import AppContext from '../context/AppContext';
+import statuses from '../constants/statuses';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
-import { UnprocessableError } from '../lib/api/errors';
+import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../types/external/action';
-import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
+import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse, UIResponse, UIValues } from '../types/external/api';
 import { ObjectType } from '../types/external/types';
 import { sleep } from '../lib/utils/sleep';
 import { FullscreenContext } from '../context/FullscreenContext';
@@ -25,6 +26,7 @@ const useAction = (
 ) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
+	const [values, setValues] = useState<UIValues>();
 	const [actionType, setActionType] = useState<TransformedActionType>();
 	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
@@ -35,7 +37,7 @@ const useAction = (
 	const [isFileConnectorChanged, setIsFileConnectorChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 
-	const { api, handleError, redirect } = useContext(AppContext);
+	const { api, handleError, redirect, connectors, showStatus } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
 
 	const isEditing = providedAction != null;
@@ -93,6 +95,38 @@ const useAction = (
 				// If the action type is an import from a file source,
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
+					let values: UIValues = null;
+					const connector = connectors.find((c) => c.id === providedAction.Connector);
+					if (connector.hasSettings) {
+						// get the values of the file settings.
+						let ui: UIResponse;
+						try {
+							ui = await api.workspaces.connections.actionUiEvent(
+								connection.id,
+								providedAction.ID,
+								'load',
+								null,
+							);
+						} catch (err) {
+							if (err instanceof NotFoundError) {
+								redirect('connectors');
+								showStatus(statuses.connectorDoesNotExistAnymore);
+								return;
+							}
+							if (err instanceof UnprocessableError) {
+								if (err.code === 'EventNotExist') {
+									handleError(
+										'An unexpected error has occurred. Please contact the administrator for more information.',
+									);
+								}
+								return;
+							}
+							handleError(err);
+							return;
+						}
+						values = ui.Form.Values;
+						setValues(ui.Form.Values);
+					}
 					let res: RecordsResponse;
 					res = await api.workspaces.connections.records(
 						connection.id,
@@ -100,7 +134,7 @@ const useAction = (
 						providedAction.Path!,
 						providedAction.Sheet,
 						providedAction.Compression,
-						providedAction.Settings,
+						values,
 						0,
 					);
 					inputSchema = res.schema;
@@ -170,7 +204,7 @@ const useAction = (
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, actionType, api, connection);
+			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
 		} catch (err) {
 			return err;
 		}
@@ -198,66 +232,94 @@ const useAction = (
 		return null;
 	};
 
-	const isTransformationAllowed =
-		connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server';
-
-	let isMappingHidden = false;
-	let isMappingDisabled = false;
-	let mappingDisabledReason = '';
-
-	if (!isLoading) {
-		isMappingHidden =
-			isFileConnectorLoading ||
-			isFileConnectorChanged ||
-			((connection.type === 'Database' || connection.type === 'FileStorage') &&
-				actionType!.InputSchema == null &&
-				!isEditing) ||
-			(connection.type === 'Database' &&
-				connection.role === 'Destination' &&
-				actionType!.OutputSchema == null &&
-				!isEditing);
-
-		const hasQueryError =
-			connection.type === 'Database' &&
-			connection.role === 'Source' &&
-			actionType!.InputSchema == null &&
-			isEditing;
-		const hasRecordsError = connection.type === 'FileStorage' && actionType!.InputSchema == null && isEditing;
-		const hasTableError = connection.type === 'Database' && actionType!.OutputSchema == null && isEditing;
-
-		isMappingDisabled =
-			hasQueryError ||
-			isQueryChanged ||
-			hasRecordsError ||
-			(isFileChanged && connection.role === 'Source') ||
-			hasTableError ||
-			isTableChanged;
-
-		if (hasQueryError) {
-			mappingDisabledReason =
-				'Mapping is disabled since the query execution returned an error. Please fix the query before proceeding to mapping.';
-		} else if (hasRecordsError) {
-			mappingDisabledReason =
-				'Mapping is disabled due to an error in the file information. Please fix the file information before proceeding to mapping.';
-		} else if (hasTableError) {
-			mappingDisabledReason = `Mapping is disabled because the provided table could not be retrieved. Please fix the table name before proceeding to mapping.`;
-		} else if (connection.type === 'Database' && connection.role === 'Source') {
-			mappingDisabledReason =
-				'Mapping is disabled since the query has been modified. Please confirm the query or revert the changes before proceeding to mapping.';
-		} else if (connection.type === 'Database' && connection.role === 'Destination') {
-			mappingDisabledReason =
-				'Mapping is disabled since the table name has been modified. Please confirm the table name or revert the changes before proceeding to mapping.';
-		} else if (connection.type === 'FileStorage') {
-			mappingDisabledReason =
-				'Mapping is disabled since the file information has been modified. Please confirm the new file information or revert the changes before proceeding to mapping.';
+	const isTransformationFunctionSupported = useMemo(() => {
+		if (isLoading) return false;
+		if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (connection.isSource) {
+				return connection.isApp || connection.isDatabase || connection.isFileStorage;
+			} else {
+				return connection.isApp || connection.isDatabase;
+			}
 		}
-	}
+		return false;
+	}, [isLoading, actionType, connection]);
+
+	const { isTransformationHidden, isTransformationDisabled } = useMemo(() => {
+		if (isLoading) return { isTransformationHidden: false, isTransformationDisabled: false };
+		let isTransformationHidden: boolean = false;
+		let isTransformationDisabled: boolean = false;
+
+		const inputSchemaIsNotDefined = actionType.InputSchema == null;
+		const outputSchemaIsNotDefined = actionType.OutputSchema == null;
+
+		if (connection.isDatabase) {
+			if (isQueryChanged || isTableChanged) {
+				isTransformationDisabled = true;
+			}
+			if (isEditing) {
+				if (connection.isSource && inputSchemaIsNotDefined) {
+					// the execution of the query returned an error.
+					isTransformationDisabled = true;
+				}
+				if (connection.isDestination && outputSchemaIsNotDefined) {
+					// reading the table returned an erro.
+					isTransformationDisabled = true;
+				}
+			} else {
+				if (connection.isSource && inputSchemaIsNotDefined) {
+					// a valid query has not been confirmed yet.
+					isTransformationHidden = true;
+				}
+				if (connection.isDestination && outputSchemaIsNotDefined) {
+					// a valid table has not been confirmed yet.
+					isTransformationHidden = true;
+				}
+			}
+		}
+
+		if (connection.isFileStorage) {
+			if (connection.isSource && isFileChanged) {
+				isTransformationDisabled = true;
+			}
+			if (connection.isSource && (isFileConnectorLoading || isFileConnectorChanged)) {
+				isTransformationHidden = true;
+			}
+			if (isEditing) {
+				if (connection.isSource && inputSchemaIsNotDefined) {
+					// reading the file returned an error.
+					isTransformationDisabled = true;
+				}
+			} else {
+				if (connection.isSource && inputSchemaIsNotDefined) {
+					// a valid file has not been confirmed yet.
+					isTransformationHidden = true;
+				}
+			}
+		}
+
+		return {
+			isTransformationHidden,
+			isTransformationDisabled,
+		};
+	}, [
+		isLoading,
+		connection,
+		actionType,
+		isQueryChanged,
+		isTableChanged,
+		isEditing,
+		isFileChanged,
+		isFileConnectorLoading,
+		isFileConnectorChanged,
+	]);
 
 	return {
 		isEditing,
 		isImport,
-		isTransformationAllowed,
+		isTransformationFunctionSupported,
 		action,
+		values,
+		setValues,
 		isLoading,
 		actionType,
 		setActionType,
@@ -272,9 +334,8 @@ const useAction = (
 		setIsFileConnectorChanged,
 		setIsTableChanged,
 		setIsQueryChanged,
-		isMappingHidden,
-		isMappingDisabled,
-		mappingDisabledReason,
+		isTransformationHidden,
+		isTransformationDisabled,
 	};
 };
 

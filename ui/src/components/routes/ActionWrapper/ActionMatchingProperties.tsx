@@ -4,26 +4,33 @@ import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import ActionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { checkIfPropertyExists } from './Action.helpers';
 
 const ActionMatchingProperties = () => {
+	const { connection, action, setAction, actionType } = useContext(ActionContext);
+
 	const internalMatchingPropertyListRef = useRef(null);
 	const externalMatchingPropertyListRef = useRef(null);
 
-	const { connection, action, setAction, actionType } = useContext(ActionContext);
-
 	const flatInputMatchingSchema = useMemo(() => flattenSchema(actionType.InputMatchingSchema), [actionType]);
 	const flatOutputMatchingSchema = useMemo(() => flattenSchema(actionType.OutputMatchingSchema), [actionType]);
+
+	const internalPropertyError = useMemo<string>(() => {
+		return checkIfPropertyExists(action.MatchingProperties.Internal, flatInputMatchingSchema);
+	}, [action]);
+
+	const externalPropertyError = useMemo<string>(() => {
+		return checkIfPropertyExists(action.MatchingProperties.External, flatOutputMatchingSchema);
+	}, [action]);
 
 	const onUpdateMatchingProperties = (e) => {
 		const a = { ...action };
 		const type = e.target.dataset.type;
 		const value = e.target.value;
 		if (type === 'Internal') {
-			const property = flatInputMatchingSchema[value];
-			a.MatchingProperties!.Internal = property ? value : '';
+			a.MatchingProperties!.Internal = value;
 		} else {
-			const property = flatOutputMatchingSchema[value];
-			a.MatchingProperties!.External = property ? property.full : null;
+			a.MatchingProperties!.External = value;
 		}
 		setAction(a);
 	};
@@ -32,11 +39,9 @@ const ActionMatchingProperties = () => {
 		const a = { ...action };
 		const type = input.dataset.type;
 		if (type === 'Internal') {
-			const property = flatInputMatchingSchema[value];
-			a.MatchingProperties!.Internal = property ? value : '';
+			a.MatchingProperties!.Internal = value;
 		} else {
-			const property = flatOutputMatchingSchema[value];
-			a.MatchingProperties!.External = property ? property.full : null;
+			a.MatchingProperties!.External = value;
 		}
 		setAction(a);
 	};
@@ -55,6 +60,8 @@ const ActionMatchingProperties = () => {
 					label='Golden record property'
 					data-type='Internal'
 					className='inputProperty'
+					caret={true}
+					error={internalPropertyError}
 				></ComboBoxInput>
 				<ComboBoxList
 					ref={internalMatchingPropertyListRef}
@@ -66,8 +73,10 @@ const ActionMatchingProperties = () => {
 					comboBoxListRef={externalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}
 					label={`${connection.name}'s property`}
-					value={action.MatchingProperties!.External ? action.MatchingProperties!.External.name : ''}
+					value={action.MatchingProperties!.External}
 					data-type='External'
+					caret={true}
+					error={externalPropertyError}
 				></ComboBoxInput>
 				<ComboBoxList
 					ref={externalMatchingPropertyListRef}

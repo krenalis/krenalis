@@ -7,11 +7,20 @@ import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { ObjectType } from '../../../types/external/types';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { Popover } from '../../shared/Popover/Popover';
 
 const ActionTable = () => {
 	const { handleError, api } = useContext(AppContext);
-	const { connection, action, setAction, actionType, setActionType, mappingSectionRef, setIsTableChanged } =
-		useContext(ActionContext);
+	const {
+		connection,
+		action,
+		setAction,
+		actionType,
+		setActionType,
+		mappingSectionRef,
+		setIsTableChanged,
+		isTransformationDisabled,
+	} = useContext(ActionContext);
 
 	const tableConfirmationButtonRef = useRef<any>();
 	const tableRef = useRef({
@@ -86,6 +95,10 @@ const ActionTable = () => {
 				>
 					Confirm
 				</FeedbackButton>
+				<Popover
+					isOpen={isTransformationDisabled}
+					content='Confirm when you have finished editing the table.'
+				/>
 			</div>
 		</Section>
 	);

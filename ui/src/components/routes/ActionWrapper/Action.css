@@ -96,8 +96,7 @@
 
 .action .body {
 	max-width: 1200px;
-	margin: auto;
-	margin-top: 50px;
+	margin: 50px auto;
 }
 
 .action .section {
@@ -159,31 +158,8 @@
 	gap: 30px;
 }
 
-.action .mappings .mappingsDisabledAlert {
-	margin-bottom: 20px;
-}
-
-.action .mappings .mappingsDisabledAlert::part(base) {
-	background-color: transparent;
-	border: 0;
-	color: var(--sl-color-danger-600);
-}
-
-.action .mappings .mappingsDisabledAlert::part(icon) {
-	padding: 0;
-	padding-right: 10px;
-}
-
-.action .mappings .mappingsDisabledAlert::part(message) {
-	padding: 0;
-}
-
-.action .mappings .mappingsDisabledAlert sl-icon {
-	color: var(--sl-color-danger-600);
-}
-
-.action .specialProperties {
-	margin-bottom: 30px;
+.action .actionTable .popover {
+	margin-left: -15px;
 }
 
 .action .section.mappings .specialProperties {
@@ -191,8 +167,13 @@
 	padding-bottom: 30px;
 }
 
+.action .specialProperties .displayedID,
 .action .specialProperties .uniqueIDColumn {
-	margin-bottom: 20px;
+	margin-bottom: 30px;
+}
+
+.action .specialProperties :last-child {
+	margin-bottom: 0;
 }
 
 .action .specialProperties .timestampColumn {
@@ -201,13 +182,14 @@
 	gap: 15px;
 }
 
+.action .specialProperties .displayedID,
 .action .specialProperties .uniqueIDColumn,
 .action .specialProperties .timestampColumn .timestamp {
 	display: grid;
 	justify-content: start;
 	gap: 10px;
 	align-items: center;
-	grid-template-columns: 150px 300px;
+	grid-template-columns: 150px 350px;
 }
 
 .action .specialProperties .timestampColumn .format {
@@ -230,13 +212,22 @@
 	width: 100%;
 }
 
+.action .specialProperties .displayedID .label,
 .action .specialProperties .uniqueIDColumn .label,
 .action .specialProperties .timestampColumn .label {
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .action .specialProperties .uniqueIDColumn .label .asterisk {
 	color: var(--sl-color-danger-500);
+}
+
+.action .action-mapping.disabled {
+	opacity: 0.7;
+}
+
+.action .action-mapping.disabled * {
+	opacity: 1;
 }
 
 .action .mappings .mapping {
@@ -283,8 +274,7 @@
 	align-items: center;
 }
 
-.action .mappings .mapping .inputProperty > sl-icon {
-	color: var(--sl-color-danger-500);
+.action .mappings .mapping .inputProperty .errorIcon {
 	font-size: 9px;
 }
 
@@ -983,10 +973,6 @@ inherit the disabled style */
 	margin-top: 44px;
 	display: flex;
 	gap: 15px;
-}
-
-.action .action-file {
-	padding-bottom: 30px;
 }
 
 .action .action-file__file-connector,

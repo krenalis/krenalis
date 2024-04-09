@@ -31,8 +31,10 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const {
 		isEditing,
 		isImport,
-		isTransformationAllowed,
+		isTransformationFunctionSupported,
 		action,
+		values,
+		setValues,
 		isLoading,
 		actionType,
 		setActionType,
@@ -47,9 +49,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		isFileConnectorChanged,
 		setIsTableChanged,
 		setIsQueryChanged,
-		isMappingHidden,
-		isMappingDisabled,
-		mappingDisabledReason,
+		isTransformationHidden,
+		isTransformationDisabled,
 	} = useAction(connection, providedActionType, providedAction, setIsSaveButtonLoading);
 
 	if (isLoading) {
@@ -78,15 +79,17 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				action,
 				setAction,
 				saveAction,
+				values,
+				setValues,
 				actionType,
 				setActionType,
 				isEditing,
 				isImport,
-				isTransformationAllowed,
+				isTransformationFunctionSupported,
 				onClose,
 				mappingSectionRef,
-				isMappingDisabled,
-				mappingDisabledReason,
+				isTransformationHidden,
+				isTransformationDisabled,
 				isSaveButtonLoading,
 				setIsQueryChanged,
 				setIsFileChanged,
@@ -109,7 +112,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
 					{actionType!.Fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
-					{actionType!.Fields.includes('Mapping') && !isMappingHidden && (
+					{actionType!.Fields.includes('Mapping') && !isTransformationHidden && (
 						<ActionMapping ref={mappingSectionRef} />
 					)}
 				</div>

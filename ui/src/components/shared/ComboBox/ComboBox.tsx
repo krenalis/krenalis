@@ -88,7 +88,7 @@ const ComboBoxList = forwardRef<ComboBoxListRef, ComboBoxListProps>(({ items, on
 			ref={comboBoxListMenuRef}
 			data-is-combobox-list
 			className='comboBoxList'
-			data-isOpen={isOpen && searchResults.length > 0}
+			data-isOpen={isOpen}
 			onMouseDown={onMouseDown}
 		>
 			{searchResults.map((item) => {
@@ -122,6 +122,7 @@ interface ComboBoxInputProps {
 	disabled?: boolean;
 	readonly?: boolean;
 	autocompleteExpressions?: boolean;
+	caret?: boolean;
 }
 
 const ComboBoxInput = ({
@@ -137,6 +138,7 @@ const ComboBoxInput = ({
 	disabled,
 	readonly,
 	autocompleteExpressions,
+	caret,
 	...delegated
 }: ComboBoxInputProps) => {
 	const onKeyUpRef = useRef<any>();
@@ -166,19 +168,24 @@ const ComboBoxInput = ({
 		comboBoxListRef.current!.updateCurrentComboboxInput(input);
 		comboBoxListRef.current!.updateSearchTerm('');
 		setTimeout(() => {
-			input.after(comboBoxListRef.current!.renderRoot.host);
+			input.before(comboBoxListRef.current!.renderRoot.host);
 			comboBoxListRef.current!.open();
 		});
 	};
 
 	const onInputBlur = () => {
 		window.removeEventListener('keyup', onKeyUpRef.current!);
-		setTimeout(() => {
-			const isComboBoxListFocused = document.activeElement!.closest('[data-is-combobox-list]');
-			if (!isComboBoxListFocused) {
+		function onBlur() {
+			const parentComboboxList = document.activeElement?.closest('[data-is-combobox-list]');
+			if (parentComboboxList) {
+				document.activeElement.addEventListener('focusout', () => setTimeout(() => onBlur()));
+			} else {
 				comboBoxListRef.current!.close();
 				previousListSiblingRef.current!.after(comboBoxListRef.current!.renderRoot.host);
 			}
+		}
+		setTimeout(() => {
+			onBlur();
 		});
 	};
 
@@ -236,7 +243,10 @@ const ComboBoxInput = ({
 				{...delegated}
 			>
 				{children}
-				{error && <SlIcon name='exclamation-circle' slot='prefix'></SlIcon>}
+				{error && value !== '' && (
+					<SlIcon className='errorIcon' name='exclamation-circle' slot='prefix'></SlIcon>
+				)}
+				{caret && <SlIcon className='caretIcon' name='chevron-down' slot='suffix'></SlIcon>}
 			</SlInput>
 			{error && <div className='error'>{error}</div>}
 		</div>

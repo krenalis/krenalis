@@ -57,6 +57,11 @@ interface TransformedTransformation {
 	Function: TransformationFunction | null;
 }
 
+interface TransformedMatchingProperties {
+	Internal: string;
+	External: string;
+}
+
 type ActionTypeField =
 	| 'DisplayedID'
 	| 'Filter'
@@ -103,11 +108,10 @@ interface TransformedAction {
 	UpdatedAtFormat?: string | null;
 	DisplayedID?: string | null;
 	ExportMode?: ExportMode | null;
-	MatchingProperties?: MatchingProperties | null;
+	MatchingProperties?: TransformedMatchingProperties | null;
 	ExportOnDuplicatedUsers?: boolean | null;
 	Compression?: Compression;
 	Connector?: number;
-	Settings?: UIValues | null;
 }
 
 const hasTransformationFunction = (action: ActionToSet) => {
@@ -300,6 +304,14 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		action.UpdatedAtFormat = action.UpdatedAtFormat.substring(1, action.UpdatedAtFormat.length - 1);
 	}
 
+	let transformedMatchingProperties: TransformedMatchingProperties;
+	if (action.MatchingProperties) {
+		transformedMatchingProperties = {
+			Internal: action.MatchingProperties.Internal,
+			External: action.MatchingProperties.External.name,
+		};
+	}
+
 	return {
 		ID: action.ID,
 		Connection: action.Connection,
@@ -326,16 +338,16 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		UpdatedAtFormat: action.UpdatedAtFormat,
 		DisplayedID: action.DisplayedID,
 		ExportMode: action.ExportMode,
-		MatchingProperties: action.MatchingProperties,
+		MatchingProperties: transformedMatchingProperties,
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Connector: action.Connector,
 		Compression: action.Compression,
-		Settings: action.Settings,
 	};
 };
 
 const transformInActionToSet = async (
 	action: TransformedAction,
+	values: UIValues,
 	actionType: TransformedActionType,
 	api: API,
 	connection: TransformedConnection,
@@ -405,75 +417,79 @@ const transformInActionToSet = async (
 		};
 	}
 
-	if (connection.isSource && connection.isDatabase && actionType.Target === 'Users') {
-		const idProperty = actionType.InputSchema.properties.find((property) => property.name === 'id');
-		if (idProperty == null) {
-			throw 'Schema must contain the "id" property';
-		} else {
-			const isIDPropertyAlreadyInSchema = inSchema.properties.findIndex((p) => p.name === 'id') !== -1;
-			if (!isIDPropertyAlreadyInSchema) {
-				inSchema.properties.push(idProperty);
-			}
-		}
-		const timestampProperty = actionType.InputSchema.properties.find((property) => property.name === 'timestamp');
-		if (timestampProperty != null) {
-			const isTimestampPropertyAlreadyInSchema =
-				inSchema.properties.findIndex((p) => p.name === 'timestamp') !== -1;
-			if (!isTimestampPropertyAlreadyInSchema) {
-				inSchema.properties.push(timestampProperty);
-			}
-		}
-	}
-
 	if (connection.isDestination && connection.isFileStorage && actionType.Target === 'Users') {
 		outSchema = actionType.InputSchema;
 	}
 
+	let matchingProperties: MatchingProperties;
 	if (action.MatchingProperties != null) {
 		const internal = action.MatchingProperties.Internal;
-		if (internal === '' || action.MatchingProperties.External == null) {
+		const external = action.MatchingProperties.External;
+		if (internal === '' || external === '') {
 			throw 'Matching properties cannot be empty';
 		}
-		const isInternalAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === internal) !== -1;
-		if (!isInternalAlreadyInSchema) {
+
+		const flattenedInputMatchingSchema = flattenSchema(actionType.InputMatchingSchema);
+		const flattenedOutputMatchingSchema = flattenSchema(actionType.OutputMatchingSchema);
+
+		const doesInternalExist = flattenedInputMatchingSchema[internal] != null;
+		if (!doesInternalExist) {
+			throw `Matching property "${internal}" does not exist`;
+		}
+		const doesExternalExist = flattenedOutputMatchingSchema[external] != null;
+		if (!doesExternalExist) {
+			throw `Matching property "${external}" does not exist`;
+		}
+
+		const fullExternalProperty = actionType.OutputMatchingSchema.properties.find((p) => p.name === external);
+		matchingProperties = {
+			Internal: internal,
+			External: fullExternalProperty,
+		};
+
+		// Add the internal matching property to the in schema of the action.
+		const isInternalAlreadyInActionSchema = inSchema.properties!.findIndex((p) => p.name === internal) !== -1;
+		if (!isInternalAlreadyInActionSchema) {
 			const flattenedInputMatchingSchema = flattenSchema(actionType.InputMatchingSchema);
 			inSchema.properties.push(flattenedInputMatchingSchema[internal].full);
 		}
 	}
 
-	if (action.UniqueIDColumn != null && action.UniqueIDColumn !== '') {
-		const isPropertyAlreadyInSchema =
-			inSchema.properties!.findIndex((p) => p.name === action.UniqueIDColumn) !== -1;
-		if (!isPropertyAlreadyInSchema) {
+	let timestampFormat: string | undefined;
+	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
+		if (action.UniqueIDColumn == null || action.UniqueIDColumn === '') {
+			throw 'User identifier cannot be empty';
+		}
+		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.UniqueIDColumn) !== -1;
+		if (!isAlreadyInSchema) {
 			const uniqueIDColumnProperty = flattenedInputSchema[action.UniqueIDColumn];
 			if (uniqueIDColumnProperty == null) {
-				throw 'Unique ID must be a valid property';
+				throw 'User identifier must be a valid property';
 			}
 			inSchema.properties.push(uniqueIDColumnProperty.full);
 		}
-	}
 
-	let timestampFormat: string;
-	if (action.UpdatedAtColumn != null && action.UpdatedAtColumn !== '') {
-		const isPropertyAlreadyInSchema =
-			inSchema.properties!.findIndex((p) => p.name === action.UpdatedAtColumn) !== -1;
-		if (!isPropertyAlreadyInSchema) {
-			const timestampColumnProperty = flattenedInputSchema[action.UpdatedAtColumn];
-			if (timestampColumnProperty == null) {
-				throw 'Timestamp must be a valid property';
+		if (action.UpdatedAtColumn) {
+			const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.UpdatedAtColumn) !== -1;
+			if (!isAlreadyInSchema) {
+				const timestampColumnProperty = flattenedInputSchema[action.UpdatedAtColumn];
+				if (timestampColumnProperty == null) {
+					throw 'Timestamp must be a valid property';
+				}
+				inSchema.properties.push(timestampColumnProperty.full);
 			}
-			inSchema.properties.push(timestampColumnProperty.full);
-		}
-		if (
-			action.UpdatedAtFormat !== 'ISO8601' &&
-			action.UpdatedAtFormat !== 'Excel' &&
-			action.UpdatedAtFormat !== 'DateTime' &&
-			action.UpdatedAtFormat !== 'DateOnly'
-		) {
-			// wrap the format in single quotes.
-			timestampFormat = `'${action.UpdatedAtFormat}'`;
-		} else {
-			timestampFormat = action.UpdatedAtFormat;
+			if (
+				action.UpdatedAtFormat &&
+				action.UpdatedAtFormat !== 'ISO8601' &&
+				action.UpdatedAtFormat !== 'Excel' &&
+				action.UpdatedAtFormat !== 'DateTime' &&
+				action.UpdatedAtFormat !== 'DateOnly'
+			) {
+				// wrap the format in single quotes.
+				timestampFormat = `'${action.UpdatedAtFormat}'`;
+			} else {
+				timestampFormat = action.UpdatedAtFormat;
+			}
 		}
 	}
 
@@ -539,11 +555,11 @@ const transformInActionToSet = async (
 		UpdatedAtColumn: action.UpdatedAtColumn,
 		UpdatedAtFormat: timestampFormat,
 		DisplayedID: action.DisplayedID,
-		matchingProperties: action.MatchingProperties,
+		matchingProperties: matchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Compression: action.Compression,
 		Connector: action.Connector,
-		Settings: action.Settings,
+		Settings: values,
 	};
 
 	try {
@@ -586,7 +602,6 @@ const computeDefaultAction = (
 		action.Sheet = null;
 		action.Compression = '';
 		action.Connector = 0;
-		action.Settings = null;
 	}
 	if (fields.includes('Table')) {
 		action.Table = '';
@@ -633,7 +648,10 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	}
 	if (
 		connection.role === 'Source' &&
-		(connection.type === 'FileStorage' || connection.type === 'Database' || connection.isEventBased)
+		(connection.type === 'App' ||
+			connection.type === 'FileStorage' ||
+			connection.type === 'Database' ||
+			connection.isEventBased)
 	) {
 		fields.push('DisplayedID');
 	}
