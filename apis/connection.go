@@ -1596,21 +1596,26 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	return b, nil
 }
 
-// Sheets returns the sheets of the file at the given path. The connection must
-// be a file connection with multi sheets support and path must be a not empty
-// UTF-8 encoded string.
+// Sheets returns the sheets of the file at the given path for the connection,
+// that must be a file connection. path must be UTF-8 encoded with a length in
+// range [1, 1024].
 //
-// If the connection does not exist anymore, it returns an errors.NotFoundError
-// error.
+// fileConnector refers to the file connector with multi sheets to use.
+// compression indicates if the file is compressed and how. settings are
+// user-provided settings.
 //
 // It returns an errors.UnprocessableError error with code
+//   - ConnectorNotExist, if the file connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) Sheets(ctx context.Context, fileConnector int, path string, settings []byte, compression Compression) ([]string, error) {
+
 	this.apis.mustBeOpen()
-	connector := this.connection.Connector()
-	if connector.Type != state.FileStorageType {
-		return nil, errors.BadRequest("connection %d is not a file storage", this.connection.ID)
+
+	c := this.connection
+
+	if c.Connector().Type != state.FileStorageType {
+		return nil, errors.BadRequest("connection %d is not a file storage", c.ID)
 	}
 	if path == "" {
 		return nil, errors.BadRequest("path is empty")
@@ -1619,7 +1624,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
 
-	// Validate the connector.
+	// Validate the file connector.
 	if fileConnector < 1 || fileConnector > maxInt32 {
 		return nil, errors.BadRequest("connector identifier %d is not valid", fileConnector)
 	}
@@ -1628,22 +1633,22 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
 	}
 	if file.Type != state.FileType {
-		return nil, errors.BadRequest("type of the file connector must be File, got %v", file.Type)
+		return nil, errors.BadRequest("connector %d is not a file connector", fileConnector)
 	}
 
 	// Validate the settings.
 	if settings != nil && !file.HasSettings {
-		return nil, errors.BadRequest("settings cannot be provided because the file connector has no settings")
+		return nil, errors.BadRequest("settings cannot be provided because connector %d does not support settings", fileConnector)
 	}
 	var validatedSettings []byte
-	if file != nil && file.HasSettings {
+	if file.HasSettings {
 		normalizedSettings := settings
 		if settings == nil {
 			normalizedSettings = json.RawMessage("{}")
 		}
 		conf := &connectors.ConnectorConfig{
-			Role:   this.connection.Role,
-			Region: state.PrivacyRegion(this.connection.Workspace().PrivacyRegion),
+			Role:   c.Role,
+			Region: c.Workspace().PrivacyRegion,
 		}
 		var err error
 		validatedSettings, err = this.apis.connectors.ValidateSettings(ctx, file, conf, normalizedSettings)
@@ -1653,11 +1658,11 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 			}
 			if settings != nil {
 				return nil, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
-					strings.ToLower(this.connection.Role.String()), file.Name)
+					strings.ToLower(c.Role.String()), file.Name)
 			}
 		} else if settings == nil {
 			return nil, errors.BadRequest("settings must be provided because %s connector %s has a UI",
-				strings.ToLower(this.connection.Role.String()), file.Name)
+				strings.ToLower(c.Role.String()), file.Name)
 		}
 	}
 
@@ -1665,6 +1670,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
+
 	return sheets, nil
 }
 
