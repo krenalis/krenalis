@@ -520,7 +520,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									</div>
 									{needFormat && isCustomTimestampSelected && (
 										<div className='timestampCustomFormat'>
-											<div className='label'>custom format:</div>
 											<SlInput
 												onSlInput={onInputTimestampCustomFormat}
 												value={action.UpdatedAtFormat}
