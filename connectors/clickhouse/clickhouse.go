@@ -250,10 +250,6 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (chichi.Rows, []t
 		return nil, nil, err
 	}
 	columnTypes := rows.ColumnTypes()
-	if err != nil {
-		_ = rows.Close()
-		return nil, nil, err
-	}
 	columns := make([]types.Property, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, nullable, err := propertyType(c)
