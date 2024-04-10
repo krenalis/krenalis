@@ -2,7 +2,7 @@
 
 [Introduction](README.md)
 
-- [Installation](./installation.md)
+- [Getting started](./getting-started.md)
 - [Connections](connections.md)
     - [Import](importing.md)
     - [Export](exporting.md)

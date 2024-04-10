@@ -5,70 +5,48 @@
 // Copyright (c) 2022 Open2b
 //
 
+// There is no need to modify Chichi's source code to compile a customized
+// version. Just follow these steps:
+//
+//  1. Copy this file (main.go) into a new empty folder
+//  2. Execute 'go mod init chichi'
+//  3. Execute 'go get github.com/open2b/chichi@latest'
+//  4. Edit the imports of the connectors below to include the connectors you want
+//  5. Execute 'go mod tidy'
+//  6. Execute 'go install' or 'go build' to install/build a custom binary
 package main
 
 import (
-	"bytes"
-	"context"
-	"io"
-	"log/slog"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
-
 	"github.com/open2b/chichi/cmd"
 
-	"gopkg.in/yaml.v3"
+	// Connectors that are going to be included in the build of Chichi.
+	_ "github.com/open2b/chichi/connectors/clickhouse"
+	_ "github.com/open2b/chichi/connectors/csv"
+	_ "github.com/open2b/chichi/connectors/dummy"
+	_ "github.com/open2b/chichi/connectors/excel"
+	_ "github.com/open2b/chichi/connectors/filesystem"
+	_ "github.com/open2b/chichi/connectors/googleanalytics"
+	_ "github.com/open2b/chichi/connectors/http"
+	_ "github.com/open2b/chichi/connectors/hubspot"
+	_ "github.com/open2b/chichi/connectors/json"
+	_ "github.com/open2b/chichi/connectors/kafka"
+	_ "github.com/open2b/chichi/connectors/klaviyo"
+	_ "github.com/open2b/chichi/connectors/mailchimp"
+	_ "github.com/open2b/chichi/connectors/mixpanel"
+	_ "github.com/open2b/chichi/connectors/mobile"
+	_ "github.com/open2b/chichi/connectors/mysql"
+	_ "github.com/open2b/chichi/connectors/parquet"
+	_ "github.com/open2b/chichi/connectors/postgresql"
+	_ "github.com/open2b/chichi/connectors/rabbitmq"
+	_ "github.com/open2b/chichi/connectors/s3"
+	_ "github.com/open2b/chichi/connectors/server"
+	_ "github.com/open2b/chichi/connectors/sftp"
+	_ "github.com/open2b/chichi/connectors/snowflake"
+	_ "github.com/open2b/chichi/connectors/stripe"
+	_ "github.com/open2b/chichi/connectors/uisample"
+	_ "github.com/open2b/chichi/connectors/website"
 )
 
 func main() {
-
-	// Configure the logger.
-	logFile, err := os.OpenFile("error.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {
-		p, err := filepath.Abs("error.log")
-		if err != nil {
-			p = "error.log"
-		}
-		slog.Error("cannot open log file", "path", p, "err", err)
-		os.Exit(1)
-	}
-	defer logFile.Close()
-	logger := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stderr), nil))
-	slog.SetDefault(logger)
-
-	// Read the configuration file.
-	settingsFile := "config.yaml"
-	if len(os.Args) > 1 {
-		settingsFile = os.Args[1]
-	}
-	settingsFileContent, err := os.ReadFile(settingsFile)
-	if err != nil {
-		slog.Error("cannot read configuration file", "path", settingsFile, "err", err)
-		os.Exit(1)
-	}
-	var settings cmd.Settings
-	dec := yaml.NewDecoder(bytes.NewReader(settingsFileContent))
-	dec.KnownFields(true)
-	err = dec.Decode(&settings)
-	if err != nil {
-		slog.Error("cannot parse configuration file", "path", settingsFile, "err", err)
-		os.Exit(1)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigs
-		cancel()
-	}()
-
-	err = cmd.Run(ctx, &settings)
-	if err != nil {
-		slog.Error("error occurred running server", "err", err)
-		os.Exit(1)
-	}
-
+	cmd.Main()
 }
