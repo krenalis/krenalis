@@ -142,6 +142,21 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 	return c.AddConnection(conn)
 }
 
+func (c *Chichi) AddDummyWithSettings(name string, role Role, settings map[string]any) int {
+	conn := ConnectionToAdd{
+		Name:      name,
+		Role:      role,
+		Enabled:   true,
+		Connector: DummyConnector,
+		Settings:  JSONEncodeSettings(settings),
+	}
+	if role == Destination {
+		mode := Cloud
+		conn.SendingMode = &mode
+	}
+	return c.AddConnection(conn)
+}
+
 func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:             name,
@@ -304,6 +319,13 @@ func (c *Chichi) SendEvent(writeKey string, message analytics.Message) {
 	if err != nil {
 		c.t.Fatalf("cannot close client when sending events: %s", err)
 	}
+}
+
+func (c *Chichi) GetConnectionUI(connection int) map[string]any {
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/ui", c.ws, connection)
+	var ui map[string]any
+	c.MustCall("GET", method, nil, &ui)
+	return ui
 }
 
 func (c *Chichi) SetAction(conn int, actionID int, action ActionToSet) {

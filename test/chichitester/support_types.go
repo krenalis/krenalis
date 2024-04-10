@@ -71,7 +71,6 @@ type Action struct {
 	Path                    *string
 	Sheet                   *string
 	Compression             Compression
-	Settings                json.RawMessage `json:",omitempty"`
 	Table                   *string
 	UniqueIDColumn          *string
 	DisplayedID             string
