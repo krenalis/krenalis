@@ -496,7 +496,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								</div>
 								<div className='format'>
 									<div className='timestampFormat'>
-										<div className='label'>with format:</div>
+										<div className='label'>Format:</div>
 										<SlSelect
 											onSlChange={onChangeTimestampFormat}
 											value={
