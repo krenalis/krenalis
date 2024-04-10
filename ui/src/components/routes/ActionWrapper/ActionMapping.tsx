@@ -94,6 +94,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const displayedIDListRef = useRef(null);
 	const updatedAtListRef = useRef(null);
 	const isFirstCompilation = useRef(true);
+	const updatedAtCustomFormatInputRef = useRef(null);
 
 	const hasSpecialProperties = useMemo(() => {
 		return (
@@ -372,6 +373,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		if (v === 'custom') {
 			setIsCustomTimestampSelected(true);
 			a.UpdatedAtFormat = '';
+			setTimeout(() => {
+				if (updatedAtCustomFormatInputRef.current) {
+					updatedAtCustomFormatInputRef.current.focus();
+				}
+			}, 50);
 		} else {
 			setIsCustomTimestampSelected(false);
 			a.UpdatedAtFormat = timestampFormats[e.target.value];
@@ -530,6 +536,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 												placeholder='%Y-%m-%d'
 												helpText='C89 "strftime" format string'
 												size='small'
+												ref={updatedAtCustomFormatInputRef}
 											></SlInput>
 										</div>
 									)}
