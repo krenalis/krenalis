@@ -387,7 +387,7 @@ type Connector struct {
 	Targets                ConnectorTargets
 	SendingMode            *SendingMode
 	HasSheets              bool
-	HasSettings            bool
+	HasUI                  bool
 	ExternalIDLabel        string
 	SuggestedDisplayedID   string
 	Icon                   string

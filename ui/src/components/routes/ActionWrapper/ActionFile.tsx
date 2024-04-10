@@ -16,14 +16,19 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
-import { CompletePathResponse, RecordsResponse, SheetsResponse, UIResponse } from '../../../types/external/api';
+import {
+	CompletePathResponse,
+	RecordsResponse,
+	SheetsResponse,
+	ConnectorUIResponse,
+} from '../../../types/external/api';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
 import ConnectorFieldInterface from '../../../types/external/ui';
 import { redirect } from 'react-router-dom';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
-import SettingsForm from '../../shared/SettingsForm/SettingsForm';
+import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import actionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
@@ -79,13 +84,13 @@ const ActionFile = () => {
 	useEffect(() => {
 		const fetchFields = async () => {
 			const connector = connectors.find((c) => c.id === action.Connector);
-			if (connector.hasSettings === false) {
+			if (connector.hasUI === false) {
 				setFileFields([]);
 				setTimeout(() => setIsFileConnectorLoading(false), 300);
 				return;
 			}
 
-			let ui: UIResponse;
+			let ui: ConnectorUIResponse;
 			if (isEditing && !isFileConnectorChanged) {
 				try {
 					ui = await api.workspaces.connections.actionUiEvent(connection.id, action.ID, 'load', null);
@@ -132,8 +137,8 @@ const ActionFile = () => {
 					return;
 				}
 			}
-			setFileFields(ui.Form.Fields);
-			setValues(ui.Form.Values);
+			setFileFields(ui.Fields);
+			setValues(ui.Values);
 			setTimeout(() => setIsFileConnectorLoading(false), 300);
 		};
 
@@ -697,7 +702,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<SlOption value='Snappy'>Snappy</SlOption>
 			</SlSelect>
 			{fieldsToRender.length > 0 && (
-				<SettingsForm fields={fieldsToRender} values={values} onChange={onFieldChange} />
+				<ConnectorUI fields={fieldsToRender} values={values} onChange={onFieldChange} />
 			)}
 			{isImport && (
 				<div className='fileButtons'>

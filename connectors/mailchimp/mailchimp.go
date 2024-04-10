@@ -39,7 +39,7 @@ var _ interface {
 	chichi.App
 	chichi.AppRecords
 	chichi.AppResource
-	chichi.UI
+	chichi.UIHandler
 	chichi.Webhooks
 } = (*MailChimp)(nil)
 
@@ -80,7 +80,13 @@ func New(conf *chichi.AppConfig) (*MailChimp, error) {
 
 type MailChimp struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
+}
+
+type Settings struct {
+	List          string
+	DataCenter    string
+	WebhookSecret string
 }
 
 // Create creates a record for the specified target with the given properties.
@@ -430,31 +436,29 @@ func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, eventTyp
 }
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if mc.settings != nil {
 			s = *mc.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := mc.ValidateSettings(ctx, values)
+		s, err := mc.validateValues(ctx, values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return nil, nil, mc.conf.SetSettings(ctx, s)
+		return nil, mc.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
 	// Get the lists.
 	lists, err := mc.lists(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	options := make([]chichi.Option, len(lists))
 	for i, list := range lists {
@@ -464,15 +468,15 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (
 		}
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Select{Name: "list", Label: "List", Options: options},
+			&chichi.Select{Name: "List", Label: "List", Options: options},
 		},
 		Values:  values,
-		Actions: []chichi.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		Buttons: []chichi.Button{{Event: "save", Text: "Save", Variant: "primary"}},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Update updates a record of the specified target.
@@ -526,18 +530,17 @@ func (mc *MailChimp) Update(ctx context.Context, target chichi.Targets, id strin
 	return nil
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (mc *MailChimp) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s struct {
+// validateValues validates the user-entered values and returns the settings.
+func (mc *MailChimp) validateValues(ctx context.Context, settings []byte) ([]byte, error) {
+	var list struct {
 		List string
 	}
-	err := json.Unmarshal(values, &s)
+	err := json.Unmarshal(settings, &list)
 	if err != nil {
 		return nil, err
 	}
-	if s.List == "" || len(s.List) > 100 {
-		return nil, chichi.Errorf("list length must be in range [1, 100]")
+	if list.List == "" || len(list.List) > 100 {
+		return nil, chichi.NewInvalidUIValuesError("list length must be in range [1, 100]")
 	}
 	// Check if the list exists.
 	lists, err := mc.lists(ctx)
@@ -545,24 +548,24 @@ func (mc *MailChimp) ValidateSettings(ctx context.Context, values []byte) ([]byt
 		return nil, err
 	}
 	var found bool
-	for _, list := range lists {
-		if list.ID == s.List {
+	for _, l := range lists {
+		if l.ID == list.List {
 			found = true
 			break
 		}
 	}
 	if !found {
-		return nil, chichi.Errorf("list does not exist")
+		return nil, chichi.NewInvalidUIValuesError("list does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {
 		return nil, err
 	}
-	settings := settings{
-		List:       s.List,
+	s := Settings{
+		List:       list.List,
 		DataCenter: dataCenter,
 	}
-	return json.Marshal(&settings)
+	return json.Marshal(&s)
 }
 
 type batchOperation struct {
@@ -601,12 +604,6 @@ func (err *mailchimpError) Error() string {
 		}
 	}
 	return s
-}
-
-type settings struct {
-	List          string
-	DataCenter    string
-	WebhookSecret string
 }
 
 // serializeProperties serializes the properties in the Mailchimp "fields"

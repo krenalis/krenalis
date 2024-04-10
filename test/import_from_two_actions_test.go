@@ -63,7 +63,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		},
 		UniqueIDColumn: "identity",
 		Connector:      chichitester.CSVConnector,
-		Settings: chichitester.JSONEncodeSettings(map[string]interface{}{
+		UIValues: chichitester.JSONEncodeUIValues(map[string]interface{}{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),
@@ -90,7 +90,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		},
 		UniqueIDColumn: "identity",
 		Connector:      chichitester.CSVConnector,
-		Settings: chichitester.JSONEncodeSettings(map[string]interface{}{
+		UIValues: chichitester.JSONEncodeUIValues(map[string]interface{}{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),

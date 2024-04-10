@@ -14,8 +14,8 @@ import (
 )
 
 func TestCompletePath(t *testing.T) {
-	http := &HTTP{settings: &settings{Host: "example.com", Port: 443}}
-	http2 := &HTTP{settings: &settings{Host: "example.com", Port: 8080}}
+	http := &HTTP{settings: &Settings{Host: "example.com", Port: 443}}
+	http2 := &HTTP{settings: &Settings{Host: "example.com", Port: 8080}}
 	tests := []chichi.CompletePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},

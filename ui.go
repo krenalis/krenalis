@@ -8,18 +8,51 @@
 package chichi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
 
-// ErrEventNotExist values are returned by the ServeUI methods when the event
+// ErrUIEventNotExist values are returned by the ServeUI method when the event
 // does not exist.
-var ErrEventNotExist = errors.New("event does not exist")
+var ErrUIEventNotExist = errors.New("event does not exist")
 
-type Form struct {
-	Fields  []Component
-	Values  []byte
-	Actions []Action
+// InvalidUIValuesError is returned by the ServeUI method when the values are
+// not valid.
+type InvalidUIValuesError struct {
+	Msg string
+}
+
+func (err InvalidUIValuesError) Error() string {
+	return err.Msg
+}
+
+func NewInvalidUIValuesError(msg string) InvalidUIValuesError {
+	return InvalidUIValuesError{msg}
+}
+
+// UIHandler is implemented by connectors that have a UI.
+type UIHandler interface {
+
+	// ServeUI serves the connector's user interface. event is the event to be
+	// served and values are the user-entered values in JSON format.
+	//
+	// The first time ServeUI is called to display the UI, event is "load" and
+	// values is nil. The connector save the values as settings only when serving
+	// the "save" event; for other events, it returns an updated interface without
+	// saving the values.
+	//
+	// If event does not exist, it returns an ErrUIEventNotExist.
+	// If the values are invalid, it returns an InvalidUIValuesError error.
+	ServeUI(ctx context.Context, event string, values []byte) (*UI, error)
+}
+
+// UI represents the user interface of a connector that is shown to users.
+type UI struct {
+	Alert   *Alert      // Alert, if not empty, appears as a notification.
+	Fields  []Component // Fields, if not empty, are the form inputs for settings.
+	Values  []byte      // Values hold the values of the fields.
+	Buttons []Button    // Buttons are the button elements that can trigger actions.
 }
 
 type Component interface {
@@ -146,7 +179,7 @@ type Text struct {
 
 func (txt *Text) component() {}
 
-type Action struct {
+type Button struct {
 	Event   string
 	Text    string
 	Variant string // primary|neutral|danger|warning|success
@@ -206,18 +239,4 @@ func (v AlertVariant) String() string {
 	default:
 		panic(fmt.Sprintf("invalid alert variant %d", v))
 	}
-}
-
-// Error represents an error to be displayed in the UI.
-type Error struct {
-	err error
-}
-
-func (err Error) Error() string {
-	return err.err.Error()
-}
-
-// Errorf formats according to a format specifier and returns an Error value.
-func Errorf(format string, a ...any) Error {
-	return Error{err: fmt.Errorf(format, a...)}
 }

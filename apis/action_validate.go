@@ -278,17 +278,17 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
-	// Check if the settings and the compression are allowed.
+	// Check if the UI values and the compression are allowed.
 	if connector.Type == state.FileStorageType {
-		if action.Settings == nil {
-			return errors.BadRequest("actions on file storage connections must have settings")
+		if !fileConnector.HasUI {
+			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
 		}
 	} else {
-		if action.Settings != nil {
-			return errors.BadRequest("actions on %v connections cannot have settings", connector.Type)
+		if action.UIValues != nil {
+			return errors.BadRequest("UI values cannot be provided because %s actions has no UI", strings.ToLower(connector.Type.String()))
 		}
 		if action.Compression != NoCompression {
-			return errors.BadRequest("actions on %v connections cannot have a compression", connector.Type)
+			return errors.BadRequest("actions on %s connections cannot have a compression", strings.ToLower(connector.Type.String()))
 		}
 	}
 

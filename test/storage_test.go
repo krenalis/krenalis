@@ -60,10 +60,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	// Test the "/records" method.
-	excelSettings := chichitester.JSONEncodeSettings(map[string]any{
+	excelUIValues := chichitester.JSONEncodeUIValues(map[string]any{
 		"HasColumnNames": true,
 	})
-	records, schema := c.Records(storage, chichitester.ExcelConnector, "storage_users.xlsx", "Sheet1", chichitester.NoCompression, excelSettings, 100)
+	records, schema := c.Records(storage, chichitester.ExcelConnector, "storage_users.xlsx", "Sheet1", chichitester.NoCompression, excelUIValues, 100)
 
 	expectedRecords := []map[string]any{
 		{"customer_id": "1234", "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith"},

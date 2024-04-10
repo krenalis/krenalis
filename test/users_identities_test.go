@@ -53,7 +53,7 @@ func Test_UsersIdentities(t *testing.T) {
 		UniqueIDColumn: "identity",
 		DisplayedID:    "email",
 		Connector:      chichitester.CSVConnector,
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
+		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),
@@ -77,7 +77,7 @@ func Test_UsersIdentities(t *testing.T) {
 		UniqueIDColumn: "identity",
 		DisplayedID:    "email",
 		Connector:      chichitester.CSVConnector,
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
+		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),

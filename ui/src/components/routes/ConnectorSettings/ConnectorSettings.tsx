@@ -4,7 +4,7 @@ import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
 import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import NotFound from '../NotFound/NotFound';
 import Flex from '../../shared/Flex/Flex';
-import SettingsForm from '../../shared/SettingsForm/SettingsForm';
+import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
 import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -20,8 +20,8 @@ import {
 	SendingMode as SendingModeType,
 	Strategy,
 } from '../../../types/external/connection';
-import { UIResponse, UIValues } from '../../../types/external/api';
-import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
+import { ConnectorUIResponse, ConnectorValues } from '../../../types/external/api';
+import ConnectorFieldInterface, { ConnectorButton } from '../../../types/external/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
@@ -42,8 +42,8 @@ const ConnectorSettings = () => {
 	const [SendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [eventConnections, setEventConnections] = useState<Number[]>();
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
-	const [actions, setActions] = useState<ConnectorAction[]>([]);
-	const [values, setValues] = useState<UIValues>({});
+	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
+	const [values, setValues] = useState<ConnectorValues>({});
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
@@ -114,8 +114,8 @@ const ConnectorSettings = () => {
 			if (connectionRole !== 'Source' && supportedModes.length > 0) {
 				setSendingMode(supportedModes[0]);
 			}
-			if (connector.hasSettings === false) return;
-			let ui: UIResponse;
+			if (connector.hasUI === false) return;
+			let ui: ConnectorUIResponse;
 			try {
 				ui = await api.connectors.ui(selectedWorkspace, connectorID, connectionRole, OAuthToken);
 			} catch (err) {
@@ -138,9 +138,9 @@ const ConnectorSettings = () => {
 				handleError(err);
 				return;
 			}
-			setFields(ui.Form.Fields);
-			setActions(ui.Form.Actions);
-			setValues(ui.Form.Values);
+			setFields(ui.Fields);
+			setButtons(ui.Buttons);
+			setValues(ui.Values);
 		};
 		fetchData();
 	}, []);
@@ -186,7 +186,7 @@ const ConnectorSettings = () => {
 					strategy: strategy,
 					websiteHost: websiteHost,
 					SendingMode: SendingMode,
-					settings: values,
+					uiValues: values,
 					eventConnections: eventConnections,
 				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
@@ -209,7 +209,7 @@ const ConnectorSettings = () => {
 			setIsLoadingConnections(true);
 			return;
 		}
-		let ui: UIResponse;
+		let ui: ConnectorUIResponse;
 		try {
 			ui = await api.connectors.uiEvent(
 				selectedWorkspace,
@@ -249,10 +249,10 @@ const ConnectorSettings = () => {
 		if (ui.Alert != null) {
 			showStatus({ variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message });
 		}
-		if (ui.Form != null) {
-			setFields(ui.Form.Fields);
-			setActions(ui.Form.Actions);
-			setValues(ui.Form.Values);
+		if (ui.Fields != null) {
+			setFields(ui.Fields);
+			setButtons(ui.Buttons);
+			setValues(ui.Values);
 		}
 	};
 
@@ -277,7 +277,7 @@ const ConnectorSettings = () => {
 				strategy: strategy,
 				websiteHost: websiteHost,
 				SendingMode: SendingMode,
-				settings: values,
+				uiValues: values,
 				eventConnections: eventConnections,
 			};
 			id = await api.workspaces.addConnection(connection, OAuthToken);
@@ -300,33 +300,33 @@ const ConnectorSettings = () => {
 		fieldsToRender.push(<ConnectorField key={f.Label} field={f} />);
 	}
 
-	const actionsToRender: ReactNode[] = [];
-	for (const [i, a] of actions.entries()) {
-		if (a.Confirm) {
-			actionsToRender.push(
+	const buttonsToRender: ReactNode[] = [];
+	for (const [i, b] of buttons.entries()) {
+		if (b.Confirm) {
+			buttonsToRender.push(
 				<FeedbackButton
-					key={a.Event}
-					variant={a.Variant}
+					key={b.Event}
+					variant={b.Variant}
 					onClick={async () => {
-						await onActionClick(a.Event, i);
+						await onActionClick(b.Event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
 					}}
 				>
-					{a.Text}
+					{b.Text}
 				</FeedbackButton>,
 			);
 		} else {
-			actionsToRender.push(
+			buttonsToRender.push(
 				<SlButton
-					key={a.Event}
-					variant={a.Variant}
+					key={b.Event}
+					variant={b.Variant}
 					onClick={async () => {
-						await onActionClick(a.Event);
+						await onActionClick(b.Event);
 					}}
 				>
-					{a.Text}
+					{b.Text}
 				</SlButton>,
 			);
 		}
@@ -461,17 +461,17 @@ const ConnectorSettings = () => {
 							</>
 						)}
 					</div>
-					{(fieldsToRender.length > 0 || actionsToRender.length > 0) && (
-						<SettingsForm
+					{(fieldsToRender.length > 0 || buttonsToRender.length > 0) && (
+						<ConnectorUI
 							fields={fieldsToRender}
-							actions={actionsToRender}
+							buttons={buttonsToRender}
 							values={values}
 							onChange={onFieldChange}
 						>
 							{eventConnectionsContainer}
-						</SettingsForm>
+						</ConnectorUI>
 					)}
-					{fieldsToRender.length === 0 && actionsToRender.length === 0 && (
+					{fieldsToRender.length === 0 && buttonsToRender.length === 0 && (
 						<>
 							{eventConnectionsContainer}
 							<div className='saveWrapper'>

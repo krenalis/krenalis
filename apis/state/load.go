@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	uiType     = reflect.TypeOf((*chichi.UI)(nil)).Elem()
-	sheetsType = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
+	sheetsType    = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
+	uiHandlerType = reflect.TypeOf((*chichi.UIHandler)(nil)).Elem()
 )
 
 // load loads the state.
@@ -133,7 +133,7 @@ func (state *State) load() error {
 					c.Icon = website.Icon
 					ct = website.ReflectType()
 				}
-				c.HasSettings = ct.Implements(uiType)
+				c.HasUI = ct.Implements(uiHandlerType)
 				state.connectors[c.ID] = &c
 			}
 			return nil

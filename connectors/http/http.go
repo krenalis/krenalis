@@ -29,10 +29,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileStorage and the UI interfaces.
+// Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
 	chichi.FileStorage
-	chichi.UI
+	chichi.UIHandler
 } = (*HTTP)(nil)
 
 func init() {
@@ -56,10 +56,10 @@ func New(conf *chichi.FileStorageConfig) (*HTTP, error) {
 
 type HTTP struct {
 	conf     *chichi.FileStorageConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	Host    string
 	Port    int
 	Headers map[string]string
@@ -122,12 +122,11 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if h.settings == nil {
 			s.Port = 443
 		} else {
@@ -135,64 +134,31 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chich
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := h.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = h.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, h.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.KeyValue{Name: "headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.KeyValue{Name: "Headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
 				KeyComponent:   &chichi.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
 				ValueComponent: &chichi.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (h *HTTP) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.Errorf("port must be in range [1,65536]")
-	}
-	// Validate Headers.
-	for k, v := range s.Headers {
-		if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
-			return nil, chichi.Errorf("header key length must be in range [1,100]")
-		}
-		if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
-			return nil, chichi.Errorf("header value length must be in range [1,10000]")
-		}
-	}
-	return json.Marshal(&s)
+	return ui, nil
 }
 
 // Write writes the data read from r into the file with the given path name.
@@ -223,4 +189,31 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 
 func ishex(c byte) bool {
 	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+	}
+	// Validate Headers.
+	for k, v := range s.Headers {
+		if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
+			return nil, chichi.NewInvalidUIValuesError("header key length must be in range [1,100]")
+		}
+		if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
+			return nil, chichi.NewInvalidUIValuesError("header value length must be in range [1,10000]")
+		}
+	}
+	return json.Marshal(&s)
 }

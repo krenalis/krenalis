@@ -99,7 +99,7 @@ type Connection struct {
 	SendingMode      *SendingMode
 	WebsiteHost      string
 	EventConnections []int
-	HasSettings      bool
+	HasUI            bool
 	ActionsCount     int
 	Health           Health
 
@@ -324,7 +324,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 // anymore, and returns an errors.UnprocessableError error with code
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorNotExist, if the file connector of the action does not exist.
-//   - InvalidSettings, if the settings are not valid.
+//   - InvalidUIValues, if the UI values are not valid.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TargetAlreadyExist, if an action already exists for a target for the
 //     connection.
@@ -477,37 +477,27 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		function = *n.Transformation.Function
 	}
 
-	// Validate the settings.
-	if action.Settings != nil {
-		if fileConnector == nil {
-			return 0, errors.BadRequest("settings cannot be provided because there is no connector")
-		}
-		if !fileConnector.HasSettings {
-			return 0, errors.BadRequest("settings cannot be provided because the File connector has no settings")
-		}
-	}
-	if fileConnector != nil && fileConnector.HasSettings {
-		settings := action.Settings
-		if settings == nil {
-			settings = json.RawMessage("{}")
+	// Validate the UI values.
+	if fileConnector != nil && fileConnector.HasUI {
+		values := action.UIValues
+		if values == nil {
+			values = json.RawMessage("{}")
 		}
 		conf := &connectors.ConnectorConfig{
 			Role:   this.connection.Role,
-			Region: state.PrivacyRegion(this.connection.Workspace().PrivacyRegion),
+			Region: this.connection.Workspace().PrivacyRegion,
 		}
 		var err error
-		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, fileConnector, conf, settings)
+		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, values)
 		if err != nil {
 			if err != connectors.ErrNoUserInterface {
-				return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+				return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 			}
-			if action.Settings != nil {
-				return 0, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
-					strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+			if action.UIValues != nil {
+				return 0, errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
 			}
-		} else if action.Settings == nil {
-			return 0, errors.BadRequest("settings must be provided because %s connector %s has a UI",
-				strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+		} else if action.UIValues == nil {
+			return 0, errors.BadRequest("UI values must be provided because connector %s has a UI", fileConnector.Name)
 		}
 	}
 
@@ -1040,18 +1030,18 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 // not start or end with "'", and does not contain any of "*", "/", ":", "?",
 // "[", "\", and "]". Sheet names are case-insensitive.
 //
-// compression indicates if the file is compressed and how. settings are
-// user-provided settings, and limit restricts the number of records to return,
-// between 0 and 100.
+// compression indicates if the file is compressed and how. uiValues are the
+// user-entered values in JSON format, and limit restricts the number of records
+// to return, between 0 and 100.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - ConnectorNotExist, if the connector does not exist.
-//   - InvalidSettings, if the settings are not valid.
+//   - InvalidUIValues, if the UI values are not valid.
 //   - NoColumns, if the file has no columns.
 //   - ReadFileFailed, if an error occurred reading the file.
 //   - SheetNotExist, if the file does not contain the provided sheet.
-func (this *Connection) Records(ctx context.Context, fileConnector int, path, sheet string, compression Compression, settings []byte, limit int) ([]byte, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, fileConnector int, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1081,36 +1071,34 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
 	}
 	if file.Type != state.FileType {
-		return nil, types.Type{}, errors.BadRequest("connector %d is not a file connector", fileConnector)
+		return nil, types.Type{}, errors.BadRequest("connector %s is not a file connector", file.Name)
 	}
 
-	// Validate the settings.
-	if settings != nil && !file.HasSettings {
-		return nil, types.Type{}, errors.BadRequest("Settings cannot be provided because connector %d does not support settings", fileConnector)
+	// Validate the UI values.
+	if uiValues != nil && !file.HasUI {
+		return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
 	}
-	var validatedSettings []byte
-	if file.HasSettings {
-		normalizedSettings := settings
-		if settings == nil {
-			normalizedSettings = json.RawMessage("{}")
+	var settings []byte
+	if file.HasUI {
+		values := uiValues
+		if uiValues == nil {
+			values = json.RawMessage("{}")
 		}
 		conf := &connectors.ConnectorConfig{
 			Role:   this.connection.Role,
 			Region: this.connection.Workspace().PrivacyRegion,
 		}
 		var err error
-		validatedSettings, err = this.apis.connectors.ValidateSettings(ctx, file, conf, normalizedSettings)
+		settings, err = this.apis.connectors.ValidateUIValues(ctx, file, conf, values)
 		if err != nil {
 			if err != connectors.ErrNoUserInterface {
-				return nil, types.Type{}, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+				return nil, types.Type{}, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 			}
-			if settings != nil {
-				return nil, types.Type{}, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
-					strings.ToLower(this.connection.Role.String()), file.Name)
+			if uiValues != nil {
+				return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
 			}
-		} else if settings == nil {
-			return nil, types.Type{}, errors.BadRequest("settings must be provided because %s connector %s has a UI",
-				strings.ToLower(this.connection.Role.String()), file.Name)
+		} else if uiValues == nil {
+			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
 		}
 	}
 
@@ -1132,7 +1120,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.storage().Read(ctx, file, path, sheet, validatedSettings, state.Compression(compression), limit)
+	columns, records, err := this.storage().Read(ctx, file, path, sheet, settings, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrSheetNotExist:
@@ -1575,7 +1563,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 }
 
 // ServeUI serves the user interface for the connection. event is the event and
-// values contains the form values in JSON format.
+// values are the user-entered values in JSON format.
 //
 // If the event does not exist, it returns an errors.UnprocessableError error
 // with code EventNotExist.
@@ -1583,17 +1571,18 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	this.apis.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	b, err := this.apis.connectors.ServeConnectionUI(ctx, this.connection, event, values)
+	ui, err := this.apis.connectors.ServeConnectionUI(ctx, this.connection, event, values)
 	if err != nil {
+		name := this.connection.Connector().Name
 		switch err {
 		case connectors.ErrNoUserInterface:
-			err = errors.BadRequest("connector %d does not have a UI", this.connection.ID)
+			err = errors.BadRequest("connector %s has no UI", name)
 		case connectors.ErrEventNotExist:
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, this.connection.Connector().Name)
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, name)
 		}
 		return nil, err
 	}
-	return b, nil
+	return ui, nil
 }
 
 // Sheets returns the sheets of the file at the given path for the connection,
@@ -1601,14 +1590,14 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 // range [1, 1024].
 //
 // fileConnector refers to the file connector with multi sheets to use.
-// compression indicates if the file is compressed and how. settings are
-// user-provided settings.
+// compression indicates if the file is compressed and how. uiValues are the
+// user-entered values.
 //
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the file connector does not exist.
-//   - InvalidSettings, if the settings are not valid.
+//   - InvalidUIValues, if the UI values are not valid.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Sheets(ctx context.Context, fileConnector int, path string, settings []byte, compression Compression) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, fileConnector int, path string, uiValues []byte, compression Compression) ([]string, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1633,40 +1622,38 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
 	}
 	if file.Type != state.FileType {
-		return nil, errors.BadRequest("connector %d is not a file connector", fileConnector)
+		return nil, errors.BadRequest("connector %s is not a file connector", file.Name)
 	}
 
-	// Validate the settings.
-	if settings != nil && !file.HasSettings {
-		return nil, errors.BadRequest("settings cannot be provided because connector %d does not support settings", fileConnector)
+	// Validate the UI values.
+	if uiValues != nil && !file.HasUI {
+		return nil, errors.BadRequest("UI values cannot be provided because connector %s has n UI", file.Name)
 	}
-	var validatedSettings []byte
-	if file.HasSettings {
-		normalizedSettings := settings
-		if settings == nil {
-			normalizedSettings = json.RawMessage("{}")
+	var settings []byte
+	if file.HasUI {
+		values := uiValues
+		if uiValues == nil {
+			values = json.RawMessage("{}")
 		}
 		conf := &connectors.ConnectorConfig{
 			Role:   c.Role,
 			Region: c.Workspace().PrivacyRegion,
 		}
 		var err error
-		validatedSettings, err = this.apis.connectors.ValidateSettings(ctx, file, conf, normalizedSettings)
+		settings, err = this.apis.connectors.ValidateUIValues(ctx, file, conf, values)
 		if err != nil {
 			if err != connectors.ErrNoUserInterface {
-				return nil, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+				return nil, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 			}
-			if settings != nil {
-				return nil, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
-					strings.ToLower(c.Role.String()), file.Name)
+			if uiValues != nil {
+				return nil, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
 			}
-		} else if settings == nil {
-			return nil, errors.BadRequest("settings must be provided because %s connector %s has a UI",
-				strings.ToLower(c.Role.String()), file.Name)
+		} else if uiValues == nil {
+			return nil, errors.BadRequest("UI values must be provided because connector %s has UI", file.Name)
 		}
 	}
 
-	sheets, err := this.storage().Sheets(ctx, file, path, validatedSettings, state.Compression(compression))
+	sheets, err := this.storage().Sheets(ctx, file, path, settings, state.Compression(compression))
 	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}

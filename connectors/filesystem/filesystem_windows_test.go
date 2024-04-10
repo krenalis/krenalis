@@ -14,8 +14,8 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	fs := &Filesystem{settings: &settings{Root: "C:\\"}}
-	fs2 := &Filesystem{settings: &settings{Root: "C:\\root"}}
+	fs := &Filesystem{settings: &Settings{Root: "C:\\"}}
+	fs2 := &Filesystem{settings: &Settings{Root: "C:\\root"}}
 	tests := []chichi.CompletePathTest{
 		{Name: "a", Expected: "C:\\a"},
 		{Name: "a.e", Expected: "C:\\a.e"},

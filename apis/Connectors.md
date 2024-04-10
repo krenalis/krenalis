@@ -12,7 +12,6 @@
 | Schema           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ServeUI          | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
 | Update           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| ValidateSettings | ✓    | -              | -              | ✓                       | ✓                       | ✓                       |
 
 
 ## Database connectors
@@ -24,7 +23,6 @@
 | Query            | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
 | Upsert           | ✓    | ✓        | ✓           |
-| ValidateSettings | ✓    | -        | -           |
 
 
 ## File connectors
@@ -35,7 +33,6 @@
 | Read             | ✓    | ✓        | -           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
 | Sheets           | ✓    | ✓        | -           |
-| ValidateSettings | ✓    | -        | -           |
 | Write            | ✓    | ✓        | ✓           |
 
 
@@ -46,7 +43,6 @@
 | CompletePath     | ✓    | ✓        | ✓           |
 | Reader           | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
-| ValidateSettings | ✓    | -        | -           |
 | Write            | ✓    | ✓        | ✓           |
 
 
@@ -58,5 +54,4 @@
 | Receive          | ✓    | ✓        | ✓           |
 | Send             | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
-| ValidateSettings | ✓    | -        | -           |
 

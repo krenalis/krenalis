@@ -1,4 +1,4 @@
-import { Filter, UIValues } from './api';
+import { Filter, ConnectorValues } from './api';
 import { Compression } from './connection';
 import Type, { ObjectType, Property } from './types';
 
@@ -57,7 +57,6 @@ interface Action {
 	ExportOnDuplicatedUsers: boolean | null;
 	Compression: Compression;
 	Connector: number;
-	Settings: UIValues;
 }
 
 interface ActionType {
@@ -87,7 +86,7 @@ interface ActionToSet {
 	exportOnDuplicatedUsers?: boolean | null;
 	Compression: Compression;
 	Connector: number;
-	Settings?: UIValues;
+	UIValues?: ConnectorValues;
 }
 
 export type {

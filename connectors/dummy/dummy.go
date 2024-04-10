@@ -28,12 +28,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents, AppRecords, and UI interfaces.
+// Make sure it implements the App, AppEvents, AppRecords, and UIHandler interfaces.
 var _ interface {
 	chichi.App
 	chichi.AppEvents
 	chichi.AppRecords
-	chichi.UI
+	chichi.UIHandler
 } = (*Dummy)(nil)
 
 func init() {
@@ -64,7 +64,7 @@ func New(conf *chichi.AppConfig) (*Dummy, error) {
 
 type Dummy struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
 }
 
 var (
@@ -209,7 +209,7 @@ func init() {
 	usersLock.Unlock()
 }
 
-type settings struct {
+type Settings struct {
 	LargeDataset bool
 }
 
@@ -257,40 +257,34 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, eventType
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if dummy.settings != nil {
 			s = *dummy.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := dummy.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = dummy.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings for Dummy saved"), nil
+		return nil, dummy.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
 			&chichi.Checkbox{Name: "LargeDataset", Label: "Make available the large users dataset (1000 users) instead of just 10", Role: chichi.Source},
 		},
 		Values:  values,
-		Actions: []chichi.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		Buttons: []chichi.Button{{Event: "save", Text: "Save", Variant: "primary"}},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Update updates a record of the specified target.
@@ -326,13 +320,12 @@ func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string
 	return nil
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (dummy *Dummy) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var settings settings
-	err := json.Unmarshal(values, &settings)
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&settings)
+	return json.Marshal(&s)
 }

@@ -27,11 +27,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File, Sheets, and UI interfaces.
+// Make sure it implements the File, Sheets, and UIHandler interfaces.
 var _ interface {
 	chichi.File
 	chichi.Sheets
-	chichi.UI
+	chichi.UIHandler
 } = (*Excel)(nil)
 
 func init() {
@@ -56,10 +56,10 @@ func New(conf *chichi.FileConfig) (*Excel, error) {
 
 type Excel struct {
 	conf     *chichi.FileConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	HasColumnNames bool
 }
 
@@ -152,42 +152,36 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if exel.settings != nil {
 			s = *exel.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := exel.ValidateSettings(ctx, values)
+		s, err := validateValues(exel.conf.Role, values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = exel.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, exel.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
+			&chichi.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Sheets returns the sheets of the file read from r.
@@ -202,20 +196,6 @@ func (exel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 	}
 	defer f.Close()
 	return f.GetSheetList(), nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (exel *Excel) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if exel.conf.Role != chichi.Source {
-		s.HasColumnNames = false
-	}
-	return json.Marshal(&s)
 }
 
 // Write writes to w the records read from records.
@@ -282,4 +262,17 @@ func columnNumberToName(n int) string {
 		n = (n - 1) / 26
 	}
 	return c
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(role chichi.Role, values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if role != chichi.Source {
+		s.HasColumnNames = false
+	}
+	return json.Marshal(&s)
 }

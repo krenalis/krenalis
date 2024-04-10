@@ -9,7 +9,7 @@ class TransformedConnector {
 	destinationDescription: string;
 	type: ConnectorType;
 	hasSheets: boolean;
-	hasSettings: boolean;
+	hasUI: boolean;
 	icon: string;
 	fileExtension: string;
 	sampleQuery: string;
@@ -26,7 +26,7 @@ class TransformedConnector {
 		name: string,
 		type: ConnectorType,
 		hasSheets: boolean,
-		hasSettings: boolean,
+		hasUI: boolean,
 		icon: string,
 		fileExtension: string,
 		sampleQuery: string,
@@ -44,7 +44,7 @@ class TransformedConnector {
 		this.name = name;
 		this.type = type;
 		this.hasSheets = hasSheets;
-		this.hasSettings = hasSettings;
+		this.hasUI = hasUI;
 		this.icon = icon ? icon : PLUG_ICON;
 		this.fileExtension = fileExtension;
 		this.sampleQuery = sampleQuery;

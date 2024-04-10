@@ -30,11 +30,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents and UI interfaces.
+// Make sure it implements the App, AppEvents and UIHandler interfaces.
 var _ interface {
 	chichi.App
 	chichi.AppEvents
-	chichi.UI
+	chichi.UIHandler
 } = (*Mixpanel)(nil)
 
 func init() {
@@ -49,10 +49,10 @@ func init() {
 
 type Mixpanel struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	ProjectID string
 	Username  string
 	Secret    string
@@ -212,60 +212,38 @@ func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if mp.settings != nil {
 			s = *mp.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := mp.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return nil, nil, mp.conf.SetSettings(ctx, s)
+		return nil, mp.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
 			&chichi.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
 			&chichi.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
 			&chichi.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (mp *Mixpanel) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return nil, chichi.Errorf("project ID must be a positive number")
-	}
-	if n := len(s.Username); n < 20 || n > 100 {
-		return nil, chichi.Errorf("username length must be in range [20, 100]")
-	}
-	if n := len(s.Secret); n < 32 || n > 100 {
-		return nil, chichi.Errorf("secret length must be in range [32, 100]")
-	}
-	return json.Marshal(&s)
+	return ui, nil
 }
 
 func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
@@ -312,6 +290,25 @@ func formatTimestamp(t time.Time) string {
 		return "0." + ms
 	}
 	return ms[:l-3] + "." + ms[l-3:]
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
+		return nil, chichi.NewInvalidUIValuesError("project ID must be a positive number")
+	}
+	if n := len(s.Username); n < 20 || n > 100 {
+		return nil, chichi.NewInvalidUIValuesError("username length must be in range [20, 100]")
+	}
+	if n := len(s.Secret); n < 32 || n > 100 {
+		return nil, chichi.NewInvalidUIValuesError("secret length must be in range [32, 100]")
+	}
+	return json.Marshal(&s)
 }
 
 type mixpanelError struct {

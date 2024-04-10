@@ -27,10 +27,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Database and UI interfaces.
+// Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
 	chichi.Database
-	chichi.UI
+	chichi.UIHandler
 } = (*Snowflake)(nil)
 
 func init() {
@@ -55,7 +55,7 @@ func New(conf *chichi.DatabaseConfig) (*Snowflake, error) {
 
 type Snowflake struct {
 	conf     *chichi.DatabaseConfig
-	settings *settings
+	settings *Settings
 	db       *sql.DB
 }
 
@@ -86,55 +86,46 @@ func (sf *Snowflake) Query(ctx context.Context, query string) (chichi.Rows, []ty
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the UI.
-		var s settings
+		var s Settings
 		if sf.settings != nil {
 			s = *sf.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
-		// Test the connection and save the settings if required.
-		s, err := sf.ValidateSettings(ctx, values)
+		s, err := validateValues(ctx, values)
 		if err != nil {
-			if event == "test" {
-				return nil, chichi.WarningAlert(err.Error()), nil
-			}
-			return nil, chichi.DangerAlert(err.Error()), nil
+			return nil, err
 		}
 		if event == "test" {
-			return nil, chichi.SuccessAlert("Connection established"), nil
+			return nil, nil
 		}
-		err = sf.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, sf.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&chichi.Input{Name: "Role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Upsert creates or updates the provided rows in the specified table.
@@ -142,50 +133,7 @@ func (sf *Snowflake) Upsert(ctx context.Context, table string, rows []map[string
 	return errors.New("not implemented")
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (sf *Snowflake) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Account.
-	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return nil, chichi.Errorf("account length must be in range [1,255]")
-	}
-	// Validate Username.
-	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, chichi.Errorf("username length must be in range [1,255]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, chichi.Errorf("password length must be in range [1,255]")
-	}
-	// Validate Warehouse.
-	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, chichi.Errorf("warehouse length must be in range [1,255]")
-	}
-	// Validate Database.
-	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, chichi.Errorf("database length must be in range [1,255]")
-	}
-	// Validate Schema.
-	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, chichi.Errorf("schema length must be in range [1,255]")
-	}
-	// Validate Role.
-	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, chichi.Errorf("role length must be in range [1,255]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
-}
-
-type settings struct {
+type Settings struct {
 	Account   string
 	Username  string
 	Password  string
@@ -196,7 +144,7 @@ type settings struct {
 }
 
 // connector returns a driver.Connector from the settings.
-func (s *settings) connector() gosnowflake.Connector {
+func (s *Settings) connector() gosnowflake.Connector {
 	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
 		Account:   s.Account,
 		User:      s.Username,
@@ -253,7 +201,7 @@ func (sf *Snowflake) query(ctx context.Context, query string) (chichi.Rows, []ty
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *settings) error {
+func testConnection(ctx context.Context, settings *Settings) error {
 	db := sql.OpenDB(settings.connector())
 	defer db.Close()
 	db.SetMaxIdleConns(0)
@@ -301,4 +249,46 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.JSON(), nil
 	}
 	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(ctx context.Context, values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Account.
+	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("account length must be in range [1,255]")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("username length must be in range [1,255]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,255]")
+	}
+	// Validate Warehouse.
+	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("warehouse length must be in range [1,255]")
+	}
+	// Validate Database.
+	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("database length must be in range [1,255]")
+	}
+	// Validate Schema.
+	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("schema length must be in range [1,255]")
+	}
+	// Validate Role.
+	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
+		return nil, chichi.NewInvalidUIValuesError("role length must be in range [1,255]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }

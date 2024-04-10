@@ -1,22 +1,18 @@
 import { ObjectType } from './types';
-import ConnectorField, { ConnectorAction, ConnectorAlert } from './ui';
+import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { UserEvent, UserIdentity, UserTraits } from './user';
 
 interface authCodeURLResponse {
 	url: string;
 }
 
-type UIValues = Record<string, any>;
+type ConnectorValues = Record<string, any>;
 
-interface UIForm {
-	Fields: ConnectorField[];
-	Actions: ConnectorAction[];
-	Values: UIValues;
-}
-
-interface UIResponse {
-	Form: UIForm;
+interface ConnectorUIResponse {
 	Alert: ConnectorAlert;
+	Fields: ConnectorField[];
+	Buttons: ConnectorButton[];
+	Values: ConnectorValues;
 }
 
 interface Execution {
@@ -163,8 +159,8 @@ interface MemberInvitationResponse {
 
 export type {
 	authCodeURLResponse,
-	UIResponse,
-	UIValues,
+	ConnectorUIResponse,
+	ConnectorValues,
 	Execution,
 	EventListenerEventsResponse,
 	AddEventListenerResponse,

@@ -111,7 +111,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			UpdatedAtFormat: "'%Y-%m-%d %H:%M:%S'",
 			DisplayedID:     "email",
 			Connector:       chichitester.CSVConnector,
-			Settings: chichitester.JSONEncodeSettings(map[string]any{
+			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma":          ",",
 				"HasColumnNames": true,
 			}),

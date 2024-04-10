@@ -26,10 +26,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileStorage and the UI interfaces.
+// Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
 	chichi.FileStorage
-	chichi.UI
+	chichi.UIHandler
 } = (*Filesystem)(nil)
 
 func init() {
@@ -53,10 +53,10 @@ func New(conf *chichi.FileStorageConfig) (*Filesystem, error) {
 
 type Filesystem struct {
 	conf     *chichi.FileStorageConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	Root string
 }
 
@@ -94,69 +94,37 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if filesystem.settings != nil {
 			s = *filesystem.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := filesystem.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = filesystem.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, filesystem.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
 			&chichi.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Chichi for read and write operations. Use this with caution."},
 			&chichi.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (filesystem *Filesystem) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Root.
-	root := s.Root
-	if n := len(root); n == 0 || n > 253 {
-		return nil, chichi.Errorf("root path length in bytes must be in range [1,253]")
-	}
-	if !filepath.IsAbs(root) {
-		return nil, chichi.Errorf(`root path must be absolute`)
-	}
-	st, err := os.Stat(root)
-	if os.IsNotExist(err) {
-		return nil, chichi.Errorf("root path does not exist")
-	}
-	if !st.IsDir() {
-		return nil, chichi.Errorf("root path is not a directory")
-	}
-	return json.Marshal(&s)
+	return ui, nil
 }
 
 // Write writes the data read from r into the file with the given path name.
@@ -184,4 +152,29 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 	}
 	err = os.Rename(tmpPath, path)
 	return err
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Root.
+	root := s.Root
+	if n := len(root); n == 0 || n > 253 {
+		return nil, chichi.NewInvalidUIValuesError("root path length in bytes must be in range [1,253]")
+	}
+	if !filepath.IsAbs(root) {
+		return nil, chichi.NewInvalidUIValuesError(`root path must be absolute`)
+	}
+	st, err := os.Stat(root)
+	if os.IsNotExist(err) {
+		return nil, chichi.NewInvalidUIValuesError("root path does not exist")
+	}
+	if !st.IsDir() {
+		return nil, chichi.NewInvalidUIValuesError("root path is not a directory")
+	}
+	return json.Marshal(&s)
 }

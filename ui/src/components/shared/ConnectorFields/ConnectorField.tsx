@@ -1,5 +1,5 @@
 import React, { ReactNode, useContext } from 'react';
-import { SettingsContext, SettingsContextType } from '../../../context/SettingsContext';
+import { ConnectorUIContext, ConnectorUIContextType } from '../../../context/ConnectorUIContext';
 import { KeyContext, KeyContextType } from '../../../context/KeyContext';
 import { ValueContext, ValueContextType } from '../../../context/ValueContext';
 import { FieldSetContext, FieldSetContextType } from '../../../context/FieldSetContext';
@@ -23,14 +23,20 @@ interface ConnectorFieldProps {
 // ConnectorField renders the right connector component, forwarding to it the
 // proper value and 'onChange' callback extracted from the context.
 const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
-	const settingsContext = useContext(SettingsContext);
+	const connectorUIContext = useContext(ConnectorUIContext);
 	const valueContext = useContext(ValueContext);
 	const keyContext = useContext(KeyContext);
 	const fieldSetContext = useContext(FieldSetContext);
 
 	let value: any, onChange: (...args: any) => void;
 	try {
-		[value, onChange] = getContextValueAndCallback(f, settingsContext, valueContext, keyContext, fieldSetContext);
+		[value, onChange] = getContextValueAndCallback(
+			f,
+			connectorUIContext,
+			valueContext,
+			keyContext,
+			fieldSetContext,
+		);
 	} catch (err) {
 		console.error(err.message);
 		return null;
@@ -170,7 +176,7 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 // when the component cannot be used inside the first parent context.
 const getContextValueAndCallback = (
 	f: ConnectorFieldInterface,
-	settingsContext: SettingsContextType | undefined,
+	connectorUIContext: ConnectorUIContextType | undefined,
 	keyContext: KeyContextType | undefined,
 	valueContext: ValueContextType | undefined,
 	fieldSetContext: FieldSetContextType | undefined,
@@ -208,8 +214,8 @@ const getContextValueAndCallback = (
 		return [value, onChange];
 	}
 
-	if (settingsContext != null) {
-		const ctx = settingsContext;
+	if (connectorUIContext != null) {
+		const ctx = connectorUIContext;
 		if (ctx.values == null) {
 			value = '';
 		} else if (f.ComponentType === 'AlternativeFieldSets') {

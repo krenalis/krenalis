@@ -1,7 +1,7 @@
-import { UIValues } from '../../types/external/api';
+import { ConnectorValues } from '../../types/external/api';
 import ConnectorField, { InputField } from '../../types/external/ui';
 
-const validateConnectorSettings = (values: UIValues, fields: ConnectorField[]) => {
+const validateConnectorSettings = (values: ConnectorValues, fields: ConnectorField[]) => {
 	for (const key in values) {
 		if (hasOnlyIntegerPart(key, fields)) {
 			const value = values[key];

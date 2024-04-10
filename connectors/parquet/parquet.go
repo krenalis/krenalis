@@ -58,7 +58,7 @@ func (pq *Parquet) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (pq *Parquet) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
+func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -142,7 +142,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, _ string, records chic
 }
 
 // Write writes to w the records read from records.
-func (pq *Parquet) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
+func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
 	// TODO(marco)
 	return nil
 }

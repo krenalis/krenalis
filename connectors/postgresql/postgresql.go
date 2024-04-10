@@ -31,10 +31,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Database and UI interfaces.
+// Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
 	chichi.Database
-	chichi.UI
+	chichi.UIHandler
 } = (*PostgreSQL)(nil)
 
 func init() {
@@ -59,7 +59,7 @@ func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error) {
 
 type PostgreSQL struct {
 	conf     *chichi.DatabaseConfig
-	settings *settings
+	settings *Settings
 	db       *sql.DB
 }
 
@@ -139,12 +139,11 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (chichi.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the UI.
-		var s settings
+		var s Settings
 		if ps.settings == nil {
 			s.Port = 5432
 		} else {
@@ -152,42 +151,34 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte) 
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
-		// Test the connection and save the settings if required.
-		s, err := ps.ValidateSettings(ctx, values)
+		s, err := validateValues(ctx, values)
 		if err != nil {
-			if event == "test" {
-				return nil, chichi.WarningAlert(err.Error()), nil
-			}
-			return nil, chichi.DangerAlert(err.Error()), nil
+			return nil, err
 		}
 		if event == "test" {
-			return nil, chichi.SuccessAlert("Connection established"), nil
+			return nil, nil
 		}
-		err = ps.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, ps.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
-			&chichi.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&chichi.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
+			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
+			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&chichi.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Upsert creates or updates the provided rows in the specified table.
@@ -249,42 +240,7 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table string, rows []map[strin
 	return err
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (ps *PostgreSQL) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.Errorf("port must be in range [1,65536]")
-	}
-	// Validate Username.
-	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, chichi.Errorf("username length in bytes must be in range [1,63]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, chichi.Errorf("password length must be in range [1,100]")
-	}
-	// Validate Database.
-	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, chichi.Errorf("database length in bytes must be in range [1,63]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
-}
-
-type settings struct {
+type Settings struct {
 	Host     string
 	Port     int
 	Username string
@@ -293,7 +249,7 @@ type settings struct {
 }
 
 // dsn returns the connection string, from s, in the URL format.
-func (s *settings) dsn() string {
+func (s *Settings) dsn() string {
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(s.Username, s.Password),
@@ -319,7 +275,7 @@ func (ps *PostgreSQL) openDB() error {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *settings) error {
+func testConnection(ctx context.Context, settings *Settings) error {
 	db, err := sql.Open("pgx", settings.dsn())
 	if err != nil {
 		return err
@@ -380,4 +336,38 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.UUID(), nil
 	}
 	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(ctx context.Context, values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := len(s.Username); n < 1 || n > 63 {
+		return nil, chichi.NewInvalidUIValuesError("username length in bytes must be in range [1,63]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
+		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,100]")
+	}
+	// Validate Database.
+	if n := len(s.Database); n < 1 || n > 63 {
+		return nil, chichi.NewInvalidUIValuesError("database length in bytes must be in range [1,63]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }

@@ -10,7 +10,7 @@ import {
 	SchedulePeriod,
 	TransformationFunction,
 } from '../../types/external/action';
-import { Filter, UIValues } from '../../types/external/api';
+import { Filter, ConnectorValues } from '../../types/external/api';
 import { Compression } from '../../types/external/connection';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
 import API from '../api/api';
@@ -347,7 +347,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 
 const transformInActionToSet = async (
 	action: TransformedAction,
-	values: UIValues,
+	uiValues: ConnectorValues,
 	actionType: TransformedActionType,
 	api: API,
 	connection: TransformedConnection,
@@ -566,7 +566,7 @@ const transformInActionToSet = async (
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Compression: action.Compression,
 		Connector: action.Connector,
-		Settings: values,
+		UIValues: uiValues,
 	};
 
 	try {

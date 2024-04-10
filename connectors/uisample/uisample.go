@@ -17,10 +17,10 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// Make sure it implements the App and UI interfaces.
+// Make sure it implements the App and UIHandler interfaces.
 var _ interface {
 	chichi.App
-	chichi.UI
+	chichi.UIHandler
 } = (*UISample)(nil)
 
 func init() {
@@ -45,7 +45,7 @@ func New(conf *chichi.AppConfig) (*UISample, error) {
 
 type UISample struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
 }
 
 // Schema returns the schema of the specified target.
@@ -54,52 +54,47 @@ func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, eve
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if uiSample.settings != nil {
 			s = *uiSample.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := uiSample.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = uiSample.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, uiSample.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "myInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
-			&chichi.Input{Name: "myTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
-			&chichi.Select{Name: "mySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []chichi.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
-			&chichi.Checkbox{Name: "myCheckbox", Label: "Checkbox"},
-			&chichi.ColorPicker{Name: "myColorPicker", Label: "ColorPicker"},
-			&chichi.Radios{Name: "myRadios", Label: "Radios", Options: []chichi.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
-			&chichi.Range{Name: "myRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
-			&chichi.Switch{Name: "mySwitch", Label: "Switch"},
+			&chichi.Input{Name: "MyInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
+			&chichi.Input{Name: "MyTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
+			&chichi.Select{Name: "MySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []chichi.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
+			&chichi.Checkbox{Name: "MyCheckbox", Label: "Checkbox"},
+			&chichi.ColorPicker{Name: "MyColorPicker", Label: "ColorPicker"},
+			&chichi.Radios{Name: "MyRadios", Label: "Radios", Options: []chichi.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
+			&chichi.Range{Name: "MyRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
+			&chichi.Switch{Name: "MySwitch", Label: "Switch"},
 			&chichi.KeyValue{
-				Name:       "myKeyValue",
+				Name:       "MyKeyValue",
 				Label:      "KeyValue",
 				KeyLabel:   "Key label",
 				ValueLabel: "Value label",
 				KeyComponent: &chichi.Input{
-					Name:        "myKeyValueKey",
+					Name:        "MyKeyValueKey",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
 				ValueComponent: &chichi.Input{
-					Name:        "myKeyValueValue",
+					Name:        "MyKeyValueValue",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
@@ -110,40 +105,39 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 				HelpText: "Help text of the alternativeFieldSets component",
 				Sets: []chichi.FieldSet{
 					{
-						Name:  "firstSet",
+						Name:  "FirstSet",
 						Label: "First Set",
 						Fields: []chichi.Component{
-							&chichi.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "myFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "myFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
+							&chichi.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "MyFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "MyFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
 						},
 					},
 					{
-						Name:  "secondSet",
+						Name:  "SecondSet",
 						Label: "Second Set",
 						Fields: []chichi.Component{
-							&chichi.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "mySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "mySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
-							&chichi.Checkbox{Name: "mySecondSetCheckbox", Label: "Set Checkbox"},
+							&chichi.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "MySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&chichi.Input{Name: "MySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
+							&chichi.Checkbox{Name: "MySecondSetCheckbox", Label: "Set Checkbox"},
 						},
 					},
 				},
 			},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (uiSample *UISample) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return nil, err
@@ -151,7 +145,7 @@ func (uiSample *UISample) ValidateSettings(ctx context.Context, values []byte) (
 	return json.Marshal(&s)
 }
 
-type settings struct {
+type Settings struct {
 	MyInput       string
 	MyTextarea    string
 	MySelect      string

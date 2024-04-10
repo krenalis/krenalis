@@ -73,7 +73,7 @@ func TestActionsCreation(t *testing.T) {
 				UpdatedAtFormat: "'%Y-%m-%d %H:%M:%S'",
 
 				Connector: chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -103,7 +103,7 @@ func TestActionsCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "'%Y-%m-%d %H:%M:%S'",
 				Connector:       chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -120,7 +120,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Connector: chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -149,7 +149,7 @@ func TestActionsCreation(t *testing.T) {
 				UniqueIDColumn:  "identity",
 				UpdatedAtColumn: "timestamp",
 				Connector:       chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -178,7 +178,7 @@ func TestActionsCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "'%Y-%m-%d %H:%M:%S'",
 				Connector:       chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -206,7 +206,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				UniqueIDColumn: "- - invalid - -",
 				Connector:      chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -233,7 +233,7 @@ func TestActionsCreation(t *testing.T) {
 				UniqueIDColumn:  "email",
 				UpdatedAtColumn: "timestamp",
 				Connector:       chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -248,7 +248,7 @@ func TestActionsCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "'%Y-%m-%d %H:%M:%S'",
 				Connector:       chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -276,7 +276,7 @@ func TestActionsCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "'%Y-%m-%d %H:%M:%S'",
 				Connector:       chichitester.CSVConnector,
-				Settings: chichitester.JSONEncodeSettings(map[string]any{
+				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),

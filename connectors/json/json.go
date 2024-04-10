@@ -24,10 +24,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File and UI interfaces.
+// Make sure it implements the File and UIHandler interfaces.
 var _ interface {
 	chichi.File
-	chichi.UI
+	chichi.UIHandler
 } = (*JSON)(nil)
 
 func init() {
@@ -52,11 +52,11 @@ func New(conf *chichi.FileConfig) (*JSON, error) {
 
 type JSON struct {
 	role        chichi.Role
-	settings    *settings
+	settings    *Settings
 	setSettings chichi.SetSettingsFunc
 }
 
-type settings struct {
+type Settings struct {
 	Indent             bool
 	GenerateASCII      bool
 	AllowSpecialFloats bool
@@ -177,55 +177,38 @@ Records:
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if j.settings != nil {
 			s = *j.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := j.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = j.setSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, j.setSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Switch{Name: "indent", Label: "Indent the generated output", Role: chichi.Destination},
-			&chichi.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: chichi.Destination},
-			&chichi.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: chichi.Destination},
+			&chichi.Switch{Name: "Indent", Label: "Indent the generated output", Role: chichi.Destination},
+			&chichi.Switch{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: chichi.Destination},
+			&chichi.Switch{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: chichi.Destination},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (j *JSON) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
+	return ui, nil
 }
 
 // Write writes to w the records read from records.
@@ -277,4 +260,14 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.
 	}
 	_, err = w.Write(b)
 	return err
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }

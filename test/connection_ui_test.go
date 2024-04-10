@@ -15,7 +15,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func TestConnectionSettings(t *testing.T) {
+func TestConnectionUI(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -24,16 +24,16 @@ func TestConnectionSettings(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	settings := map[string]any{
+	values := map[string]any{
 		"LargeDataset": true,
 	}
 
-	dummy := c.AddDummyWithSettings("Dummy (source)", chichitester.Source, settings)
+	dummy := c.AddDummyWithUIValues("Dummy (source)", chichitester.Source, values)
 	ui := c.GetConnectionUI(dummy)
-	values := ui["Form"].(map[string]any)["Values"].(map[string]any)
+	got := ui["Values"].(map[string]any)
 
-	if !maps.Equal(settings, values) {
-		t.Fatalf("expected settings %#v, got %#v", settings, values)
+	if !maps.Equal(values, got) {
+		t.Fatalf("expected values %#v, got %#v", values, got)
 	}
 
 }

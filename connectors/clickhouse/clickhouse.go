@@ -29,10 +29,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Database and UI interfaces.
+// Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
 	chichi.Database
-	chichi.UI
+	chichi.UIHandler
 } = (*ClickHouse)(nil)
 
 func init() {
@@ -57,7 +57,7 @@ func New(conf *chichi.DatabaseConfig) (*ClickHouse, error) {
 
 type ClickHouse struct {
 	conf     *chichi.DatabaseConfig
-	settings *settings
+	settings *Settings
 	db       driver.Conn
 }
 
@@ -93,12 +93,11 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (chichi.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the UI.
-		var s settings
+		var s Settings
 		if ch.settings == nil {
 			s.Port = 9000
 		} else {
@@ -106,42 +105,34 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) 
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
-		// Test the connection and save the settings if required.
-		s, err := ch.ValidateSettings(ctx, values)
+		s, err := validateValues(ctx, values)
 		if err != nil {
-			if event == "test" {
-				return nil, chichi.WarningAlert(err.Error()), nil
-			}
-			return nil, chichi.DangerAlert(err.Error()), nil
+			return nil, err
 		}
 		if event == "test" {
-			return nil, chichi.SuccessAlert("Connection established"), nil
+			return nil, nil
 		}
-		err = ch.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, ch.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
-			&chichi.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&chichi.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
+			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&chichi.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Upsert creates or updates the provided rows in the specified table.
@@ -192,41 +183,6 @@ func (ch *ClickHouse) Upsert(ctx context.Context, table string, rows []map[strin
 	return err
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (ch *ClickHouse) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.Errorf("port must be in range [1,65536]")
-	}
-	// Validate Username.
-	if n := len(s.Username); n < 1 || n > 64 {
-		return nil, chichi.Errorf("username length in bytes must be in range [1,64]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, chichi.Errorf("password length must be in range [1,100]")
-	}
-	// Validate Database.
-	if n := len(s.Database); n < 1 || n > 64 {
-		return nil, chichi.Errorf("database length in bytes must be in range [1,64]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
-}
-
 // openDB opens the database. If the database is already open it does nothing.
 func (ch *ClickHouse) openDB() error {
 	if ch.db != nil {
@@ -266,7 +222,7 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (chichi.Rows, []t
 	return rows, columns, nil
 }
 
-type settings struct {
+type Settings struct {
 	Host     string
 	Port     int
 	Username string
@@ -275,7 +231,7 @@ type settings struct {
 }
 
 // options returns the connection options, from s.
-func (s *settings) options() *clickhouse.Options {
+func (s *Settings) options() *clickhouse.Options {
 	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
@@ -286,17 +242,6 @@ func (s *settings) options() *clickhouse.Options {
 	}
 }
 
-// testConnection tests a connection with the given settings.
-// Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *settings) error {
-	conn, err := clickhouse.Open(settings.options())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	return conn.Ping(ctx)
-}
-
 // propertyType returns the property type of the column type and a boolean
 // indicating if it is nullable.
 func propertyType(t driver.ColumnType) (types.Type, bool, error) {
@@ -305,4 +250,49 @@ func propertyType(t driver.ColumnType) (types.Type, bool, error) {
 		return types.Type{}, false, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 	}
 	return typ, nullable, nil
+}
+
+// testConnection tests a connection with the given settings.
+// Returns an error if the connection cannot be established.
+func testConnection(ctx context.Context, settings *Settings) error {
+	conn, err := clickhouse.Open(settings.options())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	return conn.Ping(ctx)
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(ctx context.Context, values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := len(s.Username); n < 1 || n > 64 {
+		return nil, chichi.NewInvalidUIValuesError("username length in bytes must be in range [1,64]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
+		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,100]")
+	}
+	// Validate Database.
+	if n := len(s.Database); n < 1 || n > 64 {
+		return nil, chichi.NewInvalidUIValuesError("database length in bytes must be in range [1,64]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }

@@ -5,11 +5,11 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import AppContext from '../../../context/AppContext';
 import statuses from '../../../constants/statuses';
 import * as icons from '../../../constants/icons';
-import SettingsForm from '../../shared/SettingsForm/SettingsForm';
+import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import { UIResponse, UIValues } from '../../../types/external/api';
-import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';
+import { ConnectorUIResponse, ConnectorValues } from '../../../types/external/api';
+import ConnectorFieldInterface, { ConnectorButton } from '../../../types/external/ui';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 
 interface FormProps {
@@ -18,8 +18,8 @@ interface FormProps {
 
 const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
-	const [actions, setActions] = useState<ConnectorAction[]>([]);
-	const [values, setValues] = useState<UIValues>({});
+	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
+	const [values, setValues] = useState<ConnectorValues>({});
 
 	const { api, handleError, showStatus, redirect } = useContext(AppContext);
 
@@ -27,7 +27,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 
 	useEffect(() => {
 		const fetchUI = async () => {
-			let ui: UIResponse;
+			let ui: ConnectorUIResponse;
 			try {
 				ui = await api.workspaces.connections.ui(c.id);
 			} catch (err) {
@@ -50,9 +50,9 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 				handleError(err);
 				return;
 			}
-			setFields(ui.Form.Fields);
-			setActions(ui.Form.Actions);
-			setValues(ui.Form.Values);
+			setFields(ui.Fields);
+			setButtons(ui.Buttons);
+			setValues(ui.Values);
 		};
 		fetchUI();
 	}, []);
@@ -87,7 +87,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			}
 			return;
 		}
-		let ui: UIResponse;
+		let ui: ConnectorUIResponse;
 		try {
 			ui = await api.workspaces.connections.uiEvent(c.id, eventName, values);
 		} catch (err) {
@@ -129,10 +129,10 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		if (ui.Alert != null) {
 			showStatus({ variant: ui.Alert.Variant, icon: icons.EXCLAMATION, text: ui.Alert.Message });
 		}
-		if (ui.Form != null) {
-			setFields(ui.Form.Fields);
-			setActions(ui.Form.Actions);
-			setValues(ui.Form.Values);
+		if (ui.Fields != null) {
+			setFields(ui.Fields);
+			setButtons(ui.Buttons);
+			setValues(ui.Values);
 		}
 	};
 
@@ -145,39 +145,39 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		fieldsToRender.push(<ConnectorField key={i} field={f} />);
 	}
 
-	const actionsToRender: ReactNode[] = [];
-	for (const [i, a] of actions.entries()) {
-		if (a.Confirm) {
-			actionsToRender.push(
+	const buttonsToRender: ReactNode[] = [];
+	for (const [i, b] of buttons.entries()) {
+		if (b.Confirm) {
+			buttonsToRender.push(
 				<FeedbackButton
-					key={a.Event}
-					variant={a.Variant}
+					key={b.Event}
+					variant={b.Variant}
 					onClick={async () => {
-						await onActionClick(a.Event, i);
+						await onActionClick(b.Event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
 					}}
 				>
-					{a.Text}
+					{b.Text}
 				</FeedbackButton>,
 			);
 		} else {
-			actionsToRender.push(
+			buttonsToRender.push(
 				<SlButton
-					key={a.Event}
-					variant={a.Variant}
+					key={b.Event}
+					variant={b.Variant}
 					onClick={async () => {
-						await onActionClick(a.Event);
+						await onActionClick(b.Event);
 					}}
 				>
-					{a.Text}
+					{b.Text}
 				</SlButton>,
 			);
 		}
 	}
 
-	return <SettingsForm fields={fieldsToRender} actions={actionsToRender} values={values} onChange={onFieldChange} />;
+	return <ConnectorUI fields={fieldsToRender} buttons={buttonsToRender} values={values} onChange={onFieldChange} />;
 };
 
 export default ConnectionConnectorSettings;

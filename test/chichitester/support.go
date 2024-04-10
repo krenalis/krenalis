@@ -105,7 +105,7 @@ func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
 		Role:      Destination,
 		Enabled:   true,
 		Connector: FilesystemConnector,
-		Settings: JSONEncodeSettings(map[string]any{
+		UIValues: JSONEncodeUIValues(map[string]any{
 			"Root": storageDir,
 		}),
 	})
@@ -117,7 +117,7 @@ func (c *Chichi) AddDestinationPostgreSQL() int {
 		Role:      Destination,
 		Enabled:   true,
 		Connector: PostgreSQLConnector,
-		Settings: JSONEncodeSettings(map[string]any{
+		UIValues: JSONEncodeUIValues(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
 			"Username": testsSettings.Database.Username,
@@ -133,7 +133,7 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 		Role:      role,
 		Enabled:   true,
 		Connector: DummyConnector,
-		Settings:  []byte("{}"),
+		UIValues:  []byte("{}"),
 	}
 	if role == Destination {
 		mode := Cloud
@@ -142,13 +142,13 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 	return c.AddConnection(conn)
 }
 
-func (c *Chichi) AddDummyWithSettings(name string, role Role, settings map[string]any) int {
+func (c *Chichi) AddDummyWithUIValues(name string, role Role, values map[string]any) int {
 	conn := ConnectionToAdd{
 		Name:      name,
 		Role:      role,
 		Enabled:   true,
 		Connector: DummyConnector,
-		Settings:  JSONEncodeSettings(settings),
+		UIValues:  JSONEncodeUIValues(values),
 	}
 	if role == Destination {
 		mode := Cloud
@@ -175,7 +175,7 @@ func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 		Role:      Source,
 		Enabled:   true,
 		Connector: FilesystemConnector,
-		Settings: JSONEncodeSettings(map[string]any{
+		UIValues: JSONEncodeUIValues(map[string]any{
 			"Root": storageDir,
 		}),
 	})
@@ -187,7 +187,7 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 		Role:      Source,
 		Enabled:   true,
 		Connector: PostgreSQLConnector,
-		Settings: JSONEncodeSettings(map[string]any{
+		UIValues: JSONEncodeUIValues(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
 			"Username": testsSettings.Database.Username,
@@ -273,13 +273,13 @@ func (c *Chichi) IdentifiersSchema() types.Type {
 	return schema
 }
 
-func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
+func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	req := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,
 		"Sheet":         sheet,
 		"Compression":   compression,
-		"Settings":      settings,
+		"UIValues":      uiValues,
 		"Limit":         limit,
 	}
 	var response struct {
@@ -341,12 +341,12 @@ func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 	c.MustCall("POST", method, body, nil)
 }
 
-func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression Compression, settings json.RawMessage) []string {
+func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression Compression, uiValues json.RawMessage) []string {
 	req := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,
 		"Compression":   compression,
-		"Settings":      settings,
+		"UIValues":      uiValues,
 	}
 	var request struct {
 		Sheets []string `json:"sheets"`
@@ -453,10 +453,10 @@ func (c *Chichi) Workspace() Workspace {
 	return ws
 }
 
-func JSONEncodeSettings(settings map[string]any) []byte {
-	data, err := json.Marshal(settings)
+func JSONEncodeUIValues(values map[string]any) []byte {
+	data, err := json.Marshal(values)
 	if err != nil {
-		panic(fmt.Sprintf("cannot encode connection settings to JSON: %s", err))
+		panic(fmt.Sprintf("cannot encode connection UI values to JSON: %s", err))
 	}
 	return data
 }

@@ -38,7 +38,7 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.App
 	chichi.AppRecords
-	chichi.UI
+	chichi.UIHandler
 	chichi.Webhooks
 } = (*Stripe)(nil)
 
@@ -49,14 +49,14 @@ type webhookSettings struct {
 	secret string
 }
 
-type settings struct {
-	APIKey  string `json:"api_key"`
+type Settings struct {
+	APIKey  string
 	webhook webhookSettings
 }
 
 type Stripe struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
 }
 
 func init() {
@@ -253,36 +253,34 @@ func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventTy
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if stripe.settings != nil {
 			s = *stripe.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := stripe.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return nil, nil, stripe.conf.SetSettings(ctx, s)
+		return nil, stripe.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "api_key", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
+			&chichi.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
-		Actions: []chichi.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 		Values:  values,
+		Buttons: []chichi.Button{{Event: "save", Text: "Save", Variant: "primary"}},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Update updates a record of the specified target.
@@ -295,20 +293,6 @@ func (stripe *Stripe) Update(ctx context.Context, target chichi.Targets, id stri
 	}
 
 	return stripe.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (stripe *Stripe) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if s.APIKey == "" {
-		return nil, chichi.Errorf("API key cannot be empty")
-	}
-	return json.Marshal(&s)
 }
 
 func (stripe *Stripe) setupWebhooksEndpoint() error {
@@ -331,7 +315,7 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 		return err
 	}
 
-	settings := settings{
+	settings := Settings{
 		APIKey: stripe.settings.APIKey,
 		webhook: webhookSettings{
 			id:     response.ID,
@@ -344,8 +328,7 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 		return err
 	}
 
-	// Save the settings.
-	s, err := stripe.ValidateSettings(context.TODO(), values)
+	s, err := validateValues(values)
 	if err != nil {
 		return err
 	}
@@ -433,6 +416,19 @@ func encodeRequest(body *bytes.Buffer, request map[string]interface{}, parents [
 		}
 	}
 	return nil
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if s.APIKey == "" {
+		return nil, chichi.NewInvalidUIValuesError("API key cannot be empty")
+	}
+	return json.Marshal(&s)
 }
 
 func writePath(body *bytes.Buffer, path []string) {

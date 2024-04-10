@@ -44,12 +44,12 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, err
 	}
-	form, err := a.ServeUI(r.Context(), body.Event, body.Values)
+	ui, err := a.ServeUI(r.Context(), body.Event, body.Values)
 	if err != nil {
 		return nil, err
 	}
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(form)
+	_, _ = w.Write(ui)
 	return nil, nil
 
 }

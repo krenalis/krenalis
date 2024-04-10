@@ -21,8 +21,8 @@ import { Connector } from '../../types/external/connector';
 import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
 import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from '../../types/external/workspace';
 import {
-	UIResponse,
-	UIValues,
+	ConnectorUIResponse,
+	ConnectorValues,
 	authCodeURLResponse,
 	EventListenerEventsResponse,
 	AddEventListenerResponse,
@@ -210,7 +210,7 @@ class Connections {
 		path: string,
 		sheet: string | null,
 		compression: string,
-		settings: UIValues,
+		uiValues: ConnectorValues,
 		limit: number,
 	): Promise<RecordsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/records`, http.POST, {
@@ -218,7 +218,7 @@ class Connections {
 			Path: path,
 			Sheet: sheet,
 			Compression: compression,
-			Settings: settings,
+			UIValues: uiValues,
 			Limit: limit,
 		});
 	};
@@ -228,21 +228,21 @@ class Connections {
 		fileConnector: number,
 		path: string,
 		compression: string,
-		settings: UIValues,
+		uiValues: ConnectorValues,
 	): Promise<SheetsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets`, http.POST, {
 			FileConnector: fileConnector,
 			Path: path,
 			Compression: compression,
-			Settings: settings,
+			UIValues: uiValues,
 		});
 	};
 
-	ui = async (connection: number): Promise<UIResponse> => {
+	ui = async (connection: number): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui`, http.GET);
 	};
 
-	uiEvent = async (connection: number, event: string, values: UIValues): Promise<UIResponse> => {
+	uiEvent = async (connection: number, event: string, values: ConnectorValues): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui-event`, http.POST, {
 			event: event,
 			values: values,
@@ -350,8 +350,8 @@ class Connections {
 		connection: number,
 		action: number,
 		event: string,
-		values: UIValues,
-	): Promise<UIResponse> => {
+		values: ConnectorValues,
+	): Promise<ConnectorUIResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
 				action,
@@ -622,7 +622,7 @@ class Connectors {
 		connector: number,
 		role: ConnectionRole,
 		oauthToken: string,
-	): Promise<UIResponse> => {
+	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/workspaces/${workspace}/ui`, http.POST, {
 			connector: connector,
 			role: role,
@@ -634,10 +634,10 @@ class Connectors {
 		workspace: number,
 		connector: number,
 		event: string,
-		values: UIValues,
+		values: ConnectorValues,
 		role: ConnectionRole,
 		oauthToken: string,
-	): Promise<UIResponse> => {
+	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/workspaces/${workspace}/ui-event`, http.POST, {
 			connector: connector,
 			event: event,

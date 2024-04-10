@@ -46,18 +46,19 @@ const (
 )
 
 var (
-	AlreadyConnected     errors.Code = "AlreadyConnected"
-	CurrentlyConnected   errors.Code = "CurrentlyConnected"
-	DataWarehouseFailed  errors.Code = "DataWarehouseFailed"
-	InvalidSchemaChange  errors.Code = "InvalidSchemaChange"
-	InvalidSettings      errors.Code = "InvalidSettings"
-	InvalidWarehouseType errors.Code = "InvalidWarehouseType"
-	NoWarehouse          errors.Code = "NoWarehouse"
-	NotConnected         errors.Code = "NotConnected"
-	OrderNotExist        errors.Code = "OrderNotExist"
-	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
-	PropertyNotExist     errors.Code = "PropertyNotExist"
-	TooManyListeners     errors.Code = "TooManyListeners"
+	AlreadyConnected         errors.Code = "AlreadyConnected"
+	CurrentlyConnected       errors.Code = "CurrentlyConnected"
+	DataWarehouseFailed      errors.Code = "DataWarehouseFailed"
+	InvalidSchemaChange      errors.Code = "InvalidSchemaChange"
+	InvalidUIValues          errors.Code = "InvalidUIValues"
+	InvalidWarehouseSettings errors.Code = "InvalidWarehouseSettings"
+	InvalidWarehouseType     errors.Code = "InvalidWarehouseType"
+	NoWarehouse              errors.Code = "NoWarehouse"
+	NotConnected             errors.Code = "NotConnected"
+	OrderNotExist            errors.Code = "OrderNotExist"
+	OrderTypeNotSortable     errors.Code = "OrderTypeNotSortable"
+	PropertyNotExist         errors.Code = "PropertyNotExist"
+	TooManyListeners         errors.Code = "TooManyListeners"
 )
 
 // AddConnection adds a new connection. oAuthToken is an OAuth token returned by
@@ -67,7 +68,7 @@ var (
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventConnectionNotExist, if an event connection does not exist.
-//   - InvalidSettings, if the settings are not valid.
+//   - InvalidUIValues, if the UI values are not valid.
 func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -205,11 +206,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
-	// Validate the settings.
-	if c.HasSettings {
-		settings := connection.Settings
-		if settings == nil {
-			settings = json.RawMessage("{}")
+	// Validate the UI values.
+	if c.HasUI {
+		values := connection.UIValues
+		if values == nil {
+			values = json.RawMessage("{}")
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -223,18 +224,16 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			Region:       state.PrivacyRegion(this.PrivacyRegion),
 		}
 		var err error
-		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, c, conf, settings)
+		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, c, conf, values)
 		if err != nil {
 			if err != connectors.ErrNoUserInterface {
-				return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+				return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 			}
-			if connection.Settings != nil {
-				return 0, errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
-					strings.ToLower(connection.Role.String()), c.Name)
+			if connection.UIValues != nil {
+				return 0, errors.BadRequest("UI values cannot be provided because connector %s has no UI", c.Name)
 			}
-		} else if connection.Settings == nil {
-			return 0, errors.BadRequest("settings must be provided because %s connector %s has a UI",
-				strings.ToLower(connection.Role.String()), c.Name)
+		} else if connection.UIValues == nil {
+			return 0, errors.BadRequest("UI values must be provided because connector %s has a UI", c.Name)
 		}
 	}
 
@@ -536,11 +535,11 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 //
-//   - NotConnected, if the workspace is not connected to a data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
 //   - InvalidWarehouseType, if the workspace is connected to a data warehouse
 //     of a different type,
-//   - InvalidSettings, if the settings are not valid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 
@@ -555,7 +554,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 	settings, err := this.organization.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
-			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
 	}
@@ -635,7 +634,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		SendingMode:      (*SendingMode)(c.SendingMode),
 		WebsiteHost:      c.WebsiteHost,
 		EventConnections: slices.Clone(c.EventConnections),
-		HasSettings:      conn.HasSettings,
+		HasUI:            conn.HasUI,
 		ActionsCount:     len(c.Actions()),
 		Health:           Health(c.Health),
 	}
@@ -677,7 +676,7 @@ func (this *Workspace) Connections() []*Connection {
 			SendingMode:      (*SendingMode)(c.SendingMode),
 			WebsiteHost:      c.WebsiteHost,
 			EventConnections: slices.Clone(c.EventConnections),
-			HasSettings:      conn.HasSettings,
+			HasUI:            conn.HasUI,
 			ActionsCount:     len(c.Actions()),
 			Health:           Health(c.Health),
 		}
@@ -697,8 +696,8 @@ func (this *Workspace) Connections() []*Connection {
 // anymore, and it returns an errors.UnprocessableError error with code
 //   - AlreadyConnected, if the workspace is already connected to a data
 //     warehouse.
-//   - InvalidSettings, if the settings are not valid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
 func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 
@@ -710,7 +709,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 	settings, err := this.organization.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
-			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
 	}
@@ -1043,9 +1042,9 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 }
 
 // ServeUI serves the user interface for the given connector, with the given
-// role. event is the event and values contains the form values in JSON format.
-// oAuth is the OAuth token returned by the (*Workspace).OAuth method, it is
-// required if the connector requires OAuth.
+// role. event is the event and values are the user-entered values in JSON
+// format. oAuth is the OAuth token returned by the (*Workspace).OAuth method,
+// it is required if the connector requires OAuth.
 //
 // It returns an errors.UnprocessableError error with code:
 // - ConnectorNotExist, if the connector does not exist.
@@ -1095,7 +1094,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	}
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	b, err := this.apis.connectors.ServeConnectorUI(ctx, c, conf, event, values)
+	ui, err := this.apis.connectors.ServeConnectorUI(ctx, c, conf, event, values)
 	if err != nil {
 		switch err {
 		case connectors.ErrNoUserInterface:
@@ -1106,7 +1105,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 		return nil, err
 	}
 
-	return b, nil
+	return ui, nil
 }
 
 // SetIdentifiers sets the identifiers of the workspace.
@@ -1202,9 +1201,9 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
-//   - NotConnected, if the workspace is not connected to a data store.
-//   - InvalidSettings, if the settings are not valid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
+//   - NotConnected, if the workspace is not connected to a data store.
 func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
@@ -1212,13 +1211,13 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
 	}
 	if state.WarehouseType(typ) != ws.Warehouse.Type {
-		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", fmt.Errorf(
+		return errors.Unprocessable(InvalidWarehouseSettings, "settings are not valid: %w", fmt.Errorf(
 			"workspace %d is connected to a %s data store, but settings are for a %s data store",
 			ws.ID, ws.Warehouse.Type, typ))
 	}
 	warehouse, err := openWarehouse(typ, settings)
 	if err != nil {
-		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+		return errors.Unprocessable(InvalidWarehouseSettings, "settings are not valid: %w", err)
 	}
 	err = warehouse.Ping(ctx)
 	if err != nil {
@@ -1259,14 +1258,14 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 // that the settings are valid and a connection can be established.
 //
 // It returns an errors.UnprocessableError error with code
-//   - InvalidSettings, if the settings are not valid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
 func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 	err := this.organization.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	switch err := err.(type) {
 	case *datastore.SettingsError:
-		return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
+		return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 	case *datastore.DataWarehouseError:
 		return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
 	}
@@ -1479,9 +1478,10 @@ type ConnectionToAdd struct {
 	// there are no connections or if the connection do not support events.
 	EventConnections []int
 
-	// Settings represents the settings. It must be nil if the connection does
-	// not have settings.
-	Settings json.RawMessage
+	// UIValues represents the user-entered values of the connector user interface
+	// in JSON format.
+	// It must be nil if the connector does not have a user interface.
+	UIValues json.RawMessage
 }
 
 // openWarehouse opens a data store with the given type and settings.

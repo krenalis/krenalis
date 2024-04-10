@@ -13,23 +13,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
 )
 
-// ServeActionUI serves the user interface of the provided file action and returns the
-// new serialized interface to be sent back to the client. event is the event to be
-// served, and settings are the user-entered settings.
+// ServeActionUI serves the user interface of the provided file action and
+// returns the new serialized interface to be sent back to the client. event is
+// the event to be served, and values are the user-entered values.
 //
 // It returns the ErrNoUserInterface error if the connector does not have a user
 // interface.
 // It returns the ErrEventNotExist error if the event does not exist.
-// It returns an *InvalidSettingsError error value if the settings are not
-// valid.
-func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, settings []byte) ([]byte, error) {
+// It returns an *InvalidUIValuesError error value if the values are not valid.
+func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values []byte) ([]byte, error) {
 	role := chichi.Role(action.Connection().Role)
 	c := action.Connector()
 	inner, err := chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{
@@ -40,33 +38,32 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 	if err != nil {
 		return nil, err
 	}
-	connectorUI, ok := inner.(chichi.UI)
+	uih, ok := inner.(chichi.UIHandler)
 	if !ok {
 		return nil, ErrNoUserInterface
 	}
-	form, alert, err := connectorUI.ServeUI(ctx, event, settings)
+	ui, err := uih.ServeUI(ctx, event, values)
 	if err != nil {
-		if err == chichi.ErrEventNotExist {
+		if err == chichi.ErrUIEventNotExist {
 			return nil, ErrEventNotExist
 		}
-		if err, ok := err.(chichi.Error); ok {
-			return nil, &InvalidSettingsError{Msg: err.Error()}
+		if err, ok := err.(chichi.InvalidUIValuesError); ok {
+			return nil, &InvalidUIValuesError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	return marshalUIFormAlert(form, alert, chichi.Role(role))
+	return marshalUI(ui, role)
 }
 
 // ServeConnectionUI serves the user interface of the provided connection and
 // returns the new serialized interface to be sent back to the client. event
-// is the event to be served, and settings are the user-entered settings.
+// is the event to be served, and values are the user-entered values.
 //
 // It returns the ErrNoUserInterface error if the connector does not have a user
 // interface.
 // It returns the ErrEventNotExist error if the event does not exist.
-// It returns an *InvalidSettingsError error value if the settings are not
-// valid.
-func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings []byte) ([]byte, error) {
+// It returns an *InvalidUIValuesError error value if the values are not valid.
+func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values []byte) ([]byte, error) {
 	var resourceID int
 	var resourceCode string
 	if r, ok := connection.Resource(); ok {
@@ -129,21 +126,21 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	if err != nil {
 		return nil, err
 	}
-	connectorUI, ok := inner.(chichi.UI)
+	uih, ok := inner.(chichi.UIHandler)
 	if !ok {
 		return nil, ErrNoUserInterface
 	}
-	form, alert, err := connectorUI.ServeUI(ctx, event, settings)
+	ui, err := uih.ServeUI(ctx, event, values)
 	if err != nil {
-		if err == chichi.ErrEventNotExist {
+		if err == chichi.ErrUIEventNotExist {
 			return nil, ErrEventNotExist
 		}
-		if err, ok := err.(chichi.Error); ok {
-			return nil, &InvalidSettingsError{Msg: err.Error()}
+		if err, ok := err.(chichi.InvalidUIValuesError); ok {
+			return nil, &InvalidUIValuesError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	return marshalUIFormAlert(form, alert, chichi.Role(role))
+	return marshalUI(ui, role)
 }
 
 type ConnectorConfig struct {
@@ -156,124 +153,131 @@ type ConnectorConfig struct {
 
 // ServeConnectorUI serves the user interface of the provided connector and
 // returns the new serialized interface to be sent back to the client. event
-// is the event to be served, and settings are the user-entered settings.
+// is the event to be served, and values are the user-entered values.
 //
 // It returns the ErrNoUserInterface error if the connector does not have a user
 // interface.
 // It returns the ErrEventNotExist error if the event does not exist.
-// It returns an *InvalidSettingsError error value if the settings are not
-// valid.
-func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings []byte) ([]byte, error) {
+// It returns an *InvalidUIValuesError error value if the values are not valid.
+func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values []byte) ([]byte, error) {
 	var inner any
 	var err error
-	r := chichi.Role(conf.Role)
+	role := chichi.Role(conf.Role)
 	switch c := connector; c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Role:       r,
+			Role:       role,
 			Resource:   conf.Resource,
 			HTTPClient: connectors.http.Client(conf.ClientSecret, conf.AccessToken),
 			Region:     chichi.PrivacyRegion(conf.Region),
 		})
 	case state.DatabaseType:
 		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: r})
+		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: role})
 		defer database.Close()
 		inner = database
 	case state.FileType:
-		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: r})
+		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: role})
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: r})
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: role})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: r})
+		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: role})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: r})
+		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: role})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: r})
+		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: role})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{Role: r})
+		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{Role: role})
 	}
 	if err != nil {
 		return nil, err
 	}
-	connectorUI, ok := inner.(chichi.UI)
+	uih, ok := inner.(chichi.UIHandler)
 	if !ok {
 		return nil, ErrNoUserInterface
 	}
-	form, alert, err := connectorUI.ServeUI(ctx, event, settings)
+	ui, err := uih.ServeUI(ctx, event, values)
 	if err != nil {
-		if err == chichi.ErrEventNotExist {
+		if err == chichi.ErrUIEventNotExist {
 			return nil, ErrEventNotExist
 		}
-		if err, ok := err.(chichi.Error); ok {
-			return nil, &InvalidSettingsError{Msg: err.Error()}
+		if err, ok := err.(chichi.InvalidUIValuesError); ok {
+			return nil, &InvalidUIValuesError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	return marshalUIFormAlert(form, alert, chichi.Role(r))
+	return marshalUI(ui, role)
 }
 
-// ValidateSettings validates the user-entered settings for the provided
-// connector and returns them validated and normalized.
+// ValidateUIValues validates the user-entered values for the provided connector
+// and returns the new connector's settings.
 //
 // It returns the ErrNoUserInterface error if the connector does not have a user
 // interface.
-// It returns an *InvalidSettingsError error value if the settings are not
-// valid.
-func (connectors *Connectors) ValidateSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings []byte) ([]byte, error) {
+// It returns an *InvalidUIValuesError error value if the values are not valid.
+func (connectors *Connectors) ValidateUIValues(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, values []byte) ([]byte, error) {
 	var inner any
 	var err error
 	r := chichi.Role(conf.Role)
+	var savedSettings []byte
+	setSettings := func(_ context.Context, settings []byte) error {
+		savedSettings = settings
+		return nil
+	}
 	switch c := connector; c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Role:       r,
-			Resource:   conf.Resource,
-			HTTPClient: connectors.http.Client(conf.ClientSecret, conf.AccessToken),
+			Role:        r,
+			Resource:    conf.Resource,
+			HTTPClient:  connectors.http.Client(conf.ClientSecret, conf.AccessToken),
+			SetSettings: setSettings,
 		})
 	case state.DatabaseType:
 		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: r})
+		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: r, SetSettings: setSettings})
 		defer database.Close()
 		inner = database
 	case state.FileType:
-		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: r})
+		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: r, SetSettings: setSettings})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: r})
+		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: r, SetSettings: setSettings})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: r})
+		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: r, SetSettings: setSettings})
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: r})
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: r, SetSettings: setSettings})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: r})
+		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: r, SetSettings: setSettings})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{Role: r})
+		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{Role: r, SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, err
 	}
-	connectorUI, ok := inner.(chichi.UI)
+	uih, ok := inner.(chichi.UIHandler)
 	if !ok {
 		return nil, ErrNoUserInterface
 	}
-	settings, err = connectorUI.ValidateSettings(ctx, settings)
+	_, err = uih.ServeUI(ctx, "save", values)
 	if err != nil {
-		if err, ok := err.(chichi.Error); ok {
-			return nil, &InvalidSettingsError{Msg: err.Error()}
+		if err, ok := err.(chichi.InvalidUIValuesError); ok {
+			return nil, &InvalidUIValuesError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	if utf8.RuneCount(settings) > maxSettingsLen {
+	if savedSettings == nil {
+		return nil, fmt.Errorf("%s connector has not set the settings", connector.Name)
+	}
+	if utf8.RuneCount(savedSettings) > maxSettingsLen {
 		return nil, fmt.Errorf("settings returned by %s are longer than %d runes", connector.Name, maxSettingsLen)
 	}
-	return settings, nil
+	return savedSettings, nil
 }
 
-// marshalUIFormAlert marshals form, with the provided alert and role, in JSON
-// format. form and alert can be nil or not, independently of each other.
-func marshalUIFormAlert(form *chichi.Form, alert *chichi.Alert, role chichi.Role) ([]byte, error) {
+// marshalUI marshals the provided UI, in the given role, into JSON format.
+// If ui is nil, it is serialized as "null".
+func marshalUI(ui *chichi.UI, role chichi.Role) ([]byte, error) {
 
-	if form == nil && alert == nil {
+	if ui == nil {
 		return []byte("null"), nil
 	}
 
@@ -282,21 +286,37 @@ func marshalUIFormAlert(form *chichi.Form, alert *chichi.Alert, role chichi.Role
 
 	b.WriteString("{")
 
-	// Serialize the form, if present.
-	if form != nil {
+	// Serialize the alert, if present.
+	if ui.Alert != nil {
+		b.WriteString(`"Alert":{"Message":`)
+		err := enc.Encode(ui.Alert.Message)
+		if err != nil {
+			return nil, err
+		}
+		b.WriteString(`,"Variant":"`)
+		b.WriteString(ui.Alert.Variant.String())
+		b.WriteString(`"`)
+		b.WriteString("}")
+	}
 
-		// Makes the keys of form.Values to have the same case as the Name field of the components.
+	// Serialize the fields, if present.
+	if ui.Fields != nil {
+
+		if ui.Alert != nil {
+			b.WriteString(",")
+		}
+
 		values := map[string]any{}
-		if len(form.Values) > 0 {
-			err := json.Unmarshal(form.Values, &values)
+		if len(ui.Values) > 0 {
+			err := json.Unmarshal(ui.Values, &values)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		comma := false
-		b.WriteString(`"Form":{"Fields":[`)
-		for _, field := range form.Fields {
+		b.WriteString(`"Fields":[`)
+		for _, field := range ui.Fields {
 			ok, err := marshalUIComponent(&b, field, role, values, comma)
 			if err != nil {
 				return nil, err
@@ -305,36 +325,19 @@ func marshalUIFormAlert(form *chichi.Form, alert *chichi.Alert, role chichi.Role
 				comma = true
 			}
 		}
-		b.WriteString(`],"Actions":`)
-		err := enc.Encode(form.Actions)
+		b.WriteString(`],"Buttons":`)
+		err := enc.Encode(ui.Buttons)
 		if err != nil {
 			return nil, err
 		}
-		if len(form.Values) > 0 {
+		if len(ui.Values) > 0 {
 			b.WriteString(`,"Values":`)
 			err = json.NewEncoder(&b).Encode(values)
 			if err != nil {
 				return nil, err
 			}
 		}
-		b.WriteString("}")
 
-	}
-
-	// Serialize the alert, if present.
-	if alert != nil {
-		if form != nil {
-			b.WriteString(",")
-		}
-		b.WriteString(`"Alert":{"Message":`)
-		err := enc.Encode(alert.Message)
-		if err != nil {
-			return nil, err
-		}
-		b.WriteString(`,"Variant":"`)
-		b.WriteString(alert.Variant.String())
-		b.WriteString(`"`)
-		b.WriteString("}")
 	}
 
 	b.WriteString(`}`)
@@ -364,9 +367,6 @@ func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi
 			continue
 		}
 		field := rv.Field(j)
-		if name == "Name" && values != nil {
-			adjustValuesCase(field.String(), values)
-		}
 		b.WriteString(`,"`)
 		b.WriteString(name)
 		b.WriteString(`":`)
@@ -404,27 +404,23 @@ func marshalUIFieldSet(b *bytes.Buffer, fieldSet chichi.FieldSet, role chichi.Ro
 			return false, nil
 		}
 	}
-	name := fieldSet.Name
-	if values != nil {
-		adjustValuesCase(name, values)
-	}
 	if comma {
 		b.WriteByte(',')
 	}
 	b.WriteString(`{"Name":`)
-	_ = json.NewEncoder(b).Encode(name)
+	_ = json.NewEncoder(b).Encode(fieldSet.Name)
 	b.WriteString(`,"Label":`)
 	_ = json.NewEncoder(b).Encode(fieldSet.Label)
 	b.WriteString(`,"Fields":[`)
 	comma = false
 	for _, c := range fieldSet.Fields {
 		var valuesOfSet map[string]any
-		switch vs := values[name].(type) {
+		switch vs := values[fieldSet.Name].(type) {
 		case nil:
 		case map[string]any:
 			valuesOfSet = vs
 		default:
-			return false, fmt.Errorf("expected a map[string]any value for field set %s, got %T", name, values[name])
+			return false, fmt.Errorf("expected a map[string]any value for field set %s, got %T", fieldSet.Name, vs)
 		}
 		ok, err := marshalUIComponent(b, c, role, valuesOfSet, comma)
 		if err != nil {
@@ -436,24 +432,4 @@ func marshalUIFieldSet(b *bytes.Buffer, fieldSet chichi.FieldSet, role chichi.Ro
 	}
 	b.WriteString(`]}`)
 	return true, nil
-}
-
-// adjustValuesCase adjusts the case of keys of values.
-func adjustValuesCase(key string, values map[string]any) {
-	var found struct {
-		key   string
-		value any
-	}
-	for k, v := range values {
-		if strings.EqualFold(k, key) {
-			found.key = k
-			found.value = v
-			break
-		}
-	}
-	if found.key == "" {
-		return
-	}
-	delete(values, found.key)
-	values[key] = found.value
 }

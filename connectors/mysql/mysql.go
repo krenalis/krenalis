@@ -29,10 +29,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Database and UI interfaces.
+// Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
 	chichi.Database
-	chichi.UI
+	chichi.UIHandler
 } = (*MySQL)(nil)
 
 func init() {
@@ -57,7 +57,7 @@ func New(conf *chichi.DatabaseConfig) (*MySQL, error) {
 
 type MySQL struct {
 	conf     *chichi.DatabaseConfig
-	settings *settings
+	settings *Settings
 	db       *sql.DB
 }
 
@@ -93,12 +93,11 @@ func (my *MySQL) Query(ctx context.Context, query string) (chichi.Rows, []types.
 }
 
 // ServeUI serves the connector's user interface.
-func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the UI.
-		var s settings
+		var s Settings
 		if my.settings == nil {
 			s.Port = 3306
 		} else {
@@ -106,41 +105,34 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*chi
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
-		s, err := my.ValidateSettings(ctx, values)
+		s, err := validateValues(ctx, values)
 		if err != nil {
-			if event == "test" {
-				return nil, chichi.WarningAlert(err.Error()), nil
-			}
-			return nil, chichi.DangerAlert(err.Error()), nil
+			return nil, err
 		}
 		if event == "test" {
-			return nil, nil, nil
+			return nil, nil
 		}
-		err = my.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, my.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
-			&chichi.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&chichi.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
+			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&chichi.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral", Confirm: true},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Upsert creates or updates the provided rows in the specified table.
@@ -207,41 +199,6 @@ func (my *MySQL) Upsert(ctx context.Context, table string, rows []map[string]any
 	return err
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (my *MySQL) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.Errorf("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.Errorf("port must be in range [1,65536]")
-	}
-	// Validate Username.
-	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-		return nil, chichi.Errorf("username length must be in range [1,16]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return nil, chichi.Errorf("password length must be in range [1,200]")
-	}
-	// Validate Database.
-	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-		return nil, chichi.Errorf("database length must be in range [1,64]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
-}
-
 // openDB opens the database. If the database is already open it does nothing.
 func (my *MySQL) openDB() error {
 	if my.db != nil {
@@ -290,7 +247,7 @@ func (my *MySQL) query(ctx context.Context, query string) (chichi.Rows, []types.
 	return rows, columns, nil
 }
 
-type settings struct {
+type Settings struct {
 	Host     string
 	Port     int
 	Username string
@@ -298,7 +255,7 @@ type settings struct {
 	Database string
 }
 
-func (s *settings) config() *mysql.Config {
+func (s *Settings) config() *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
@@ -310,7 +267,7 @@ func (s *settings) config() *mysql.Config {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *settings) error {
+func testConnection(ctx context.Context, settings *Settings) error {
 	mysqlConnector, err := mysql.NewConnector(settings.config())
 	if err != nil {
 		return err
@@ -397,4 +354,38 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Year(), nil
 	}
 	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(ctx context.Context, values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
+		return nil, chichi.NewInvalidUIValuesError("username length must be in range [1,16]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
+		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
+	}
+	// Validate Database.
+	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
+		return nil, chichi.NewInvalidUIValuesError("database length must be in range [1,64]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }

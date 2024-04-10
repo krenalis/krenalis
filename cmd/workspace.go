@@ -325,14 +325,13 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
-	form, err := ws.ServeUI(r.Context(), body.Event, body.Values, body.Connector, role, body.OAuthToken)
+	ui, err := ws.ServeUI(r.Context(), body.Event, body.Values, body.Connector, role, body.OAuthToken)
 	if err != nil {
 		return nil, err
 	}
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(form)
+	_, _ = w.Write(ui)
 	return nil, nil
-
 }
 
 // Set sets the name, the privacy region and the displayed properties of a

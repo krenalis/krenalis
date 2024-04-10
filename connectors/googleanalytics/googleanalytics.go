@@ -25,11 +25,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents, and UI interfaces.
+// Make sure it implements the App, AppEvents, and UIHandler interfaces.
 var _ interface {
 	chichi.App
 	chichi.AppEvents
-	chichi.UI
+	chichi.UIHandler
 } = (*Analytics)(nil)
 
 // sendToDebugServer controls whether the events should be sent to the debug
@@ -63,10 +63,10 @@ func New(conf *chichi.AppConfig) (*Analytics, error) {
 
 type Analytics struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	MeasurementID string
 	APISecret     string
 }
@@ -156,63 +156,60 @@ func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, eventTyp
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if ga.settings != nil {
 			s = *ga.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := ga.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return nil, nil, ga.conf.SetSettings(ctx, s)
+		return nil, ga.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
 			&chichi.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
 			&chichi.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (ga *Analytics) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return nil, err
 	}
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return nil, chichi.Errorf("Measurement ID length must be in [2,20]")
+		return nil, chichi.NewInvalidUIValuesError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return nil, chichi.Errorf("Measurement ID must begin with 'G-' or 'AW-'")
+		return nil, chichi.NewInvalidUIValuesError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	if n := len(s.APISecret); n < 1 || n > 40 {
-		return nil, chichi.Errorf("API Secret length must be in [1,40]")
+		return nil, chichi.NewInvalidUIValuesError("API Secret length must be in [1,40]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, chichi.Errorf("API secret must contain only alphanumeric characters")
+			return nil, chichi.NewInvalidUIValuesError("API secret must contain only alphanumeric characters")
 		}
 	}
 	return json.Marshal(&s)

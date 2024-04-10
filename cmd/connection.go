@@ -230,14 +230,14 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		Path          string
 		Sheet         string
 		Compression   apis.Compression
-		Settings      rawJSON
+		UIValues      rawJSON
 		Limit         int
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, err
 	}
-	records, schema, err := c.Records(r.Context(), body.FileConnector, body.Path, body.Sheet, body.Compression, body.Settings, body.Limit)
+	records, schema, err := c.Records(r.Context(), body.FileConnector, body.Path, body.Sheet, body.Compression, body.UIValues, body.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -287,12 +287,12 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 			return nil, err
 		}
 	}
-	form, err := c.ServeUI(r.Context(), body.Event, body.Values)
+	ui, err := c.ServeUI(r.Context(), body.Event, body.Values)
 	if err != nil {
 		return nil, err
 	}
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(form)
+	_, _ = w.Write(ui)
 	return nil, nil
 }
 
@@ -323,13 +323,13 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		FileConnector int
 		Path          string
 		Compression   apis.Compression
-		Settings      rawJSON
+		UIValues      rawJSON
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, err
 	}
-	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, body.Settings, body.Compression)
+	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, body.UIValues, body.Compression)
 	if err != nil {
 		return nil, err
 	}

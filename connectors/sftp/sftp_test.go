@@ -14,7 +14,7 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	sf := &SFTP{settings: &settings{Host: "example.com", Port: 22}}
+	sf := &SFTP{settings: &Settings{Host: "example.com", Port: 22}}
 	tests := []chichi.CompletePathTest{
 		{Name: "/a", Expected: "sftp://example.com:22/a"},
 		{Name: "/a/b", Expected: "sftp://example.com:22/a/b"},

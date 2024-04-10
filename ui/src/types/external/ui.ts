@@ -128,7 +128,7 @@ type ConnectorField =
 	| AlternativeFieldSetsField
 	| TextField;
 
-interface ConnectorAction {
+interface ConnectorButton {
 	Event: string;
 	Text: string;
 	Variant: Variant;
@@ -156,6 +156,6 @@ export type {
 	FieldSetField,
 	AlternativeFieldSetsField,
 	TextField,
-	ConnectorAction,
+	ConnectorButton,
 	ConnectorAlert,
 };

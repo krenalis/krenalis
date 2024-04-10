@@ -68,7 +68,7 @@ const ConnectionSettings = () => {
 					</>
 				)}
 
-				{c.hasSettings && (
+				{c.hasUI && (
 					<>
 						<SlTab slot='nav' panel='connection'>
 							{c.type} Settings

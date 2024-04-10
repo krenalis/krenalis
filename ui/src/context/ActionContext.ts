@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 import TransformedConnection from '../lib/helpers/transformedConnection';
 import { TransformedAction, TransformedActionType } from '../lib/helpers/transformedAction';
-import { UIValues } from '../types/external/api';
+import { ConnectorValues } from '../types/external/api';
 
 interface ActionContext {
 	mode: 'mappings' | 'transformation' | '';
@@ -10,8 +10,8 @@ interface ActionContext {
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction | undefined>>;
 	saveAction: () => Promise<string | Error | null>;
-	values: UIValues;
-	setValues: React.Dispatch<React.SetStateAction<UIValues>>;
+	values: ConnectorValues;
+	setValues: React.Dispatch<React.SetStateAction<ConnectorValues>>;
 	actionType: TransformedActionType;
 	setActionType: React.Dispatch<React.SetStateAction<TransformedActionType | undefined>>;
 	isEditing: boolean;

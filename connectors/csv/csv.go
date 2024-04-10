@@ -30,10 +30,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File and UI interfaces.
+// Make sure it implements the File and UIHandler interfaces.
 var _ interface {
 	chichi.File
-	chichi.UI
+	chichi.UIHandler
 } = (*CSV)(nil)
 
 func init() {
@@ -58,10 +58,10 @@ func New(conf *chichi.FileConfig) (*CSV, error) {
 
 type CSV struct {
 	conf     *chichi.FileConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	Comma            string
 	Comment          string
 	FieldsPerRecord  int
@@ -77,7 +77,7 @@ func (c *CSV) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (c *CSV) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
+func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)
@@ -153,12 +153,11 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, _ string, records chichi.Re
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if c.settings == nil {
 			s.Comma = ","
 		} else {
@@ -166,77 +165,31 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := c.ValidateSettings(ctx, values)
+		s, err := validateValues(c.conf.Role, values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		err = c.conf.SetSettings(ctx, s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, chichi.SuccessAlert("Settings saved"), nil
+		return nil, c.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&chichi.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: chichi.Source},
-			&chichi.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: chichi.Source},
-			&chichi.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: chichi.Source},
-			&chichi.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
-			&chichi.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
+			&chichi.Input{Name: "Comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&chichi.Input{Name: "Comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: chichi.Source},
+			&chichi.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: chichi.Source},
+			&chichi.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: chichi.Source},
+			&chichi.Checkbox{Name: "UseCRLF", Label: "Use CRLF"},
+			&chichi.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (c *CSV) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Comma.
-	if utf8.RuneCountInString(s.Comma) != 1 {
-		return nil, chichi.Errorf("comma must be a single character")
-	}
-	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return nil, chichi.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
-	}
-	if c.conf.Role == chichi.Source {
-		// Validate Comment.
-		if c := s.Comment; c != "" {
-			if utf8.RuneCountInString(c) != 1 {
-				return nil, chichi.Errorf("comment, if provided, must be a single character")
-			}
-			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return nil, chichi.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
-			}
-			if c == s.Comma {
-				return nil, chichi.Errorf("comment cannot be equal to the comma")
-			}
-		}
-		// Validate FieldsPerRecord.
-		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return nil, chichi.Errorf("fields per record, if provided, must be in range [0,1000]")
-		}
-	} else {
-		s.Comment = ""
-		s.FieldsPerRecord = 0
-		s.TrimLeadingSpace = false
-		s.HasColumnNames = false
-	}
-	return json.Marshal(&s)
+	return ui, nil
 }
 
 // Write writes to w the records read from records.
@@ -286,6 +239,19 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records chichi.R
 	return err
 }
 
+// columnNumberToName returns a column name from a column number.
+// Column numbers starts from 1.
+func columnNumberToName(n int) string {
+	// The code of this function has the following license:
+	// https://github.com/qax-os/excelize/blob/master/LICENSE
+	var c string
+	for n > 0 {
+		c = string(rune((n-1)%26+'A')) + c
+		n = (n - 1) / 26
+	}
+	return c
+}
+
 // toString serializes v of type t as a string.
 func toString(v any, t types.Type) string {
 	if v == nil {
@@ -319,15 +285,42 @@ func toString(v any, t types.Type) string {
 	}
 }
 
-// columnNumberToName returns a column name from a column number.
-// Column numbers starts from 1.
-func columnNumberToName(n int) string {
-	// The code of this function has the following license:
-	// https://github.com/qax-os/excelize/blob/master/LICENSE
-	var c string
-	for n > 0 {
-		c = string(rune((n-1)%26+'A')) + c
-		n = (n - 1) / 26
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(role chichi.Role, values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
 	}
-	return c
+	// Validate Comma.
+	if utf8.RuneCountInString(s.Comma) != 1 {
+		return nil, chichi.NewInvalidUIValuesError("comma must be a single character")
+	}
+	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
+		return nil, chichi.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
+	}
+	if role == chichi.Source {
+		// Validate Comment.
+		if c := s.Comment; c != "" {
+			if utf8.RuneCountInString(c) != 1 {
+				return nil, chichi.NewInvalidUIValuesError("comment, if provided, must be a single character")
+			}
+			if c == "\n" || c == "\r" || c == "\uFFFD" {
+				return nil, chichi.NewInvalidUIValuesError("comment cannot be \\r, \\n, or the Unicode replacement character")
+			}
+			if c == s.Comma {
+				return nil, chichi.NewInvalidUIValuesError("comment cannot be equal to the comma")
+			}
+		}
+		// Validate FieldsPerRecord.
+		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
+			return nil, chichi.NewInvalidUIValuesError("fields per record, if provided, must be in range [0,1000]")
+		}
+	} else {
+		s.Comment = ""
+		s.FieldsPerRecord = 0
+		s.TrimLeadingSpace = false
+		s.HasColumnNames = false
+	}
+	return json.Marshal(&s)
 }

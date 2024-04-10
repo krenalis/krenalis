@@ -76,7 +76,7 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // "\", and "]". Sheet names are case-insensitive.
 //
 // compression indicates if the file is compressed and how. settings are
-// user-provided settings, and limit restricts the number of records to return.
+// file connector settings, and limit restricts the number of records to return.
 // If limit is negative, there is no upper limit on the number of records
 // returned.
 //

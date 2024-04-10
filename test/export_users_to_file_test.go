@@ -74,7 +74,7 @@ func TestExportUsersToFile(t *testing.T) {
 		Role:      chichitester.Destination,
 		Enabled:   true,
 		Connector: chichitester.FilesystemConnector,
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
+		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Root": storage.Root(),
 		}),
 	})
@@ -93,7 +93,7 @@ func TestExportUsersToFile(t *testing.T) {
 			{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 		}),
 		Connector: chichitester.CSVConnector,
-		Settings: chichitester.JSONEncodeSettings(map[string]any{
+		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma": ",",
 		}),
 	})
@@ -135,7 +135,7 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Connector: chichitester.CSVConnector,
-			Settings: chichitester.JSONEncodeSettings(map[string]any{
+			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma": ",",
 			}),
 			Compression: chichitester.Compression(compression),

@@ -248,8 +248,8 @@ func (this *Action) Delete(ctx context.Context) error {
 }
 
 // ServeUI serves the user interface for the file action (on a file storage
-// connection). event is the event and values contains the form values in JSON
-// format.
+// connection). event is the event to be served and values are the user-entered
+// values in JSON format.
 //
 // If the event does not exist, it returns an errors.UnprocessableError error
 // with code EventNotExist.
@@ -261,7 +261,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 	if connector.Type != state.FileStorageType {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
-	b, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
+	ui, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
 	if err != nil {
 		switch err {
 		case connectors.ErrNoUserInterface:
@@ -271,7 +271,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 		}
 		return nil, err
 	}
-	return b, nil
+	return ui, nil
 }
 
 // Execute executes the action, which must be an app, database, or file storage
@@ -311,7 +311,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //   - ConnectorNotExist, if the connector does not exist.
-//   - InvalidSettings, if the settings are not valid.
+//   - InvalidUIValues, if the UI values are not valid.
 //   - LanguageNotSupported, if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
@@ -454,37 +454,27 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	// Validate the settings.
-	if action.Settings != nil {
-		if fileConnector == nil {
-			return errors.BadRequest("settings cannot be provided because there is no connector")
-		}
-		if !fileConnector.HasSettings {
-			return errors.BadRequest("settings cannot be provided because the File connector has no settings")
-		}
-	}
-	if fileConnector != nil && fileConnector.HasSettings {
-		settings := action.Settings
-		if settings == nil {
-			settings = json.RawMessage("{}")
+	// Validate the UI values.
+	if fileConnector != nil && fileConnector.HasUI {
+		values := action.UIValues
+		if values == nil {
+			values = json.RawMessage("{}")
 		}
 		conf := &connectors.ConnectorConfig{
 			Role:   this.action.Connection().Role,
-			Region: state.PrivacyRegion(this.action.Connection().Workspace().PrivacyRegion),
+			Region: this.action.Connection().Workspace().PrivacyRegion,
 		}
 		var err error
-		n.Settings, err = this.apis.connectors.ValidateSettings(ctx, fileConnector, conf, settings)
+		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, values)
 		if err != nil {
 			if err != connectors.ErrNoUserInterface {
-				return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+				return errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 			}
-			if action.Settings != nil {
-				return errors.BadRequest("settings cannot be provided because %s connector %s does not have a UI",
-					strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+			if action.UIValues != nil {
+				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
 			}
-		} else if action.Settings == nil {
-			return errors.BadRequest("settings must be provided because %s connector %s has a UI",
-				strings.ToLower(this.connection.Role.String()), fileConnector.Name)
+		} else if action.UIValues == nil {
+			return errors.BadRequest("UI values must be provided because connector %s has a UI", fileConnector.Name)
 		}
 	}
 
@@ -748,9 +738,10 @@ type ActionToSet struct {
 	// In any other case, must be 0.
 	Compression Compression
 
-	// Settings are the settings of the action on file storage connections.
-	// In any other case, must be nil.
-	Settings json.RawMessage
+	// UIValues represents the user-entered values of the connector user interface
+	// in JSON format.
+	// It must be nil if the connector does not have a user interface.
+	UIValues json.RawMessage
 
 	// TableName is the name of the table for the export and it is defined for
 	// destination database-actions; in any other case, it is the empty string.

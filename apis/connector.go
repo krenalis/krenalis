@@ -30,7 +30,7 @@ type Connector struct {
 	Targets                Targets
 	SendingMode            *SendingMode
 	HasSheets              bool
-	HasSettings            bool
+	HasUI                  bool
 	ExternalIDLabel        string
 	SuggestedDisplayedID   string
 	Icon                   string

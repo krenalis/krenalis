@@ -63,7 +63,7 @@
 	margin-bottom: 30px;
 }
 
-.connectionSettings .settings-form {
+.connectionSettings .connector-ui {
 	grid-area: form;
 }
 

@@ -77,7 +77,7 @@ func TestExportZeroUsers(t *testing.T) {
 			Role:      chichitester.Destination,
 			Enabled:   true,
 			Connector: chichitester.FilesystemConnector, // Filesystem.
-			Settings: chichitester.JSONEncodeSettings(map[string]any{
+			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Root": storage.Root(),
 			}),
 		})
@@ -96,7 +96,7 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Connector: chichitester.CSVConnector,
-			Settings: chichitester.JSONEncodeSettings(map[string]any{
+			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma": ",",
 			}),
 		})

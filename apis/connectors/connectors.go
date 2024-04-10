@@ -164,13 +164,13 @@ type UpdatedAtColumn struct {
 	Format string
 }
 
-// An InvalidSettingsError is returned by UI-related functions when the settings
-// passed as an argument are not valid.
-type InvalidSettingsError struct {
+// An InvalidUIValuesError is returned by UI-related functions when the
+// user-entered values passed as an argument are not valid.
+type InvalidUIValuesError struct {
 	Msg string
 }
 
-func (err InvalidSettingsError) Error() string {
+func (err InvalidUIValuesError) Error() string {
 	return err.Msg
 }
 

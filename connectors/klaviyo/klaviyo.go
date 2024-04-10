@@ -27,12 +27,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents, AppRecords, and UI interfaces.
+// Make sure it implements the App, AppEvents, AppRecords, and UIHandler interfaces.
 var _ interface {
 	chichi.App
 	chichi.AppEvents
 	chichi.AppRecords
-	chichi.UI
+	chichi.UIHandler
 } = (*Klavyio)(nil)
 
 func init() {
@@ -62,10 +62,10 @@ func New(conf *chichi.AppConfig) (*Klavyio, error) {
 
 type Klavyio struct {
 	conf     *chichi.AppConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	PrivateAPIKey string
 }
 
@@ -205,7 +205,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType 
 
 	if target == chichi.Events {
 		if eventType != "create_event" {
-			return types.Type{}, chichi.ErrEventNotExist
+			return types.Type{}, chichi.ErrUIEventNotExist
 		}
 		return types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Required: true},
@@ -359,66 +359,41 @@ func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType 
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if ky.settings != nil {
 			s = *ky.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := ky.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return nil, nil, ky.conf.SetSettings(ctx, s)
+		return nil, ky.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
 			&chichi.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
+	return ui, nil
 }
 
 // Update updates a record of the specified target.
 func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 	panic("TODO: not implemented")
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (ky *Klavyio) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if n := len(s.PrivateAPIKey); n < 37 {
-		return nil, chichi.Errorf("private API key must be at least 37 characters long")
-	}
-	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return nil, chichi.Errorf("private API key must begin with 'pk_'")
-	}
-	for i := 3; i < len(s.PrivateAPIKey); i++ {
-		c := s.PrivateAPIKey[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, chichi.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
-		}
-	}
-	return json.Marshal(&s)
 }
 
 type klaviyoError struct {
@@ -476,4 +451,26 @@ func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader,
 	}
 
 	return nil
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if n := len(s.PrivateAPIKey); n < 37 {
+		return nil, chichi.NewInvalidUIValuesError("private API key must be at least 37 characters long")
+	}
+	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
+		return nil, chichi.NewInvalidUIValuesError("private API key must begin with 'pk_'")
+	}
+	for i := 3; i < len(s.PrivateAPIKey); i++ {
+		c := s.PrivateAPIKey[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return nil, chichi.NewInvalidUIValuesError("private API key after 'pk_' must contain only alphanumeric characters")
+		}
+	}
+	return json.Marshal(&s)
 }

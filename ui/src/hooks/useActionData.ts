@@ -13,7 +13,13 @@ import statuses from '../constants/statuses';
 import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../types/external/action';
-import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse, UIResponse, UIValues } from '../types/external/api';
+import {
+	ActionSchemasResponse,
+	ExecQueryResponse,
+	RecordsResponse,
+	ConnectorUIResponse,
+	ConnectorValues,
+} from '../types/external/api';
 import { ObjectType } from '../types/external/types';
 import { sleep } from '../lib/utils/sleep';
 import { FullscreenContext } from '../context/FullscreenContext';
@@ -26,7 +32,7 @@ const useAction = (
 ) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
-	const [values, setValues] = useState<UIValues>();
+	const [values, setValues] = useState<ConnectorValues>();
 	const [actionType, setActionType] = useState<TransformedActionType>();
 	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
@@ -95,11 +101,11 @@ const useAction = (
 				// If the action type is an import from a file source,
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
-					let values: UIValues = null;
+					let values: ConnectorValues = null;
 					const connector = connectors.find((c) => c.id === providedAction.Connector);
-					if (connector.hasSettings) {
+					if (connector.hasUI) {
 						// get the values of the file settings.
-						let ui: UIResponse;
+						let ui: ConnectorUIResponse;
 						try {
 							ui = await api.workspaces.connections.actionUiEvent(
 								connection.id,
@@ -124,8 +130,8 @@ const useAction = (
 							handleError(err);
 							return;
 						}
-						values = ui.Form.Values;
-						setValues(ui.Form.Values);
+						values = ui.Values;
+						setValues(ui.Values);
 					}
 					let res: RecordsResponse;
 					res = await api.workspaces.connections.records(

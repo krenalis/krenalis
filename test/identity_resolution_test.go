@@ -92,7 +92,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 		UniqueIDColumn: "dummyId",
 		Connector:      chichitester.JSONConnector,
-		Settings:       []byte("{}"),
+		UIValues:       []byte("{}"),
 	})
 
 	// Add the action B.
@@ -106,7 +106,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 		UniqueIDColumn: "dummyId",
 		Connector:      chichitester.JSONConnector,
-		Settings:       []byte("{}"),
+		UIValues:       []byte("{}"),
 	})
 
 	// Define a function "expectUsers" which checks if the expected users match

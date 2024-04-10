@@ -93,7 +93,7 @@ type ActionToSet struct {
 	Path                    string
 	Sheet                   string
 	Compression             Compression
-	Settings                json.RawMessage `json:",omitempty"`
+	UIValues                json.RawMessage `json:",omitempty"`
 	TableName               string
 	UniqueIDColumn          string
 	DisplayedID             string
@@ -124,7 +124,7 @@ type ConnectionToAdd struct {
 	WebsiteHost      string
 	EventConnections []int
 	SendingMode      *SendingMode
-	Settings         json.RawMessage
+	UIValues         json.RawMessage
 }
 
 type DisplayedProperties struct {

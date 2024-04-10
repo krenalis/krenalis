@@ -30,10 +30,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileStorage and the UI interfaces.
+// Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
 	chichi.FileStorage
-	chichi.UI
+	chichi.UIHandler
 } = (*S3)(nil)
 
 func init() {
@@ -57,10 +57,10 @@ func New(conf *chichi.FileStorageConfig) (*S3, error) {
 
 type S3 struct {
 	conf     *chichi.FileStorageConfig
-	settings *settings
+	settings *Settings
 }
 
-type settings struct {
+type Settings struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
@@ -81,7 +81,7 @@ func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
-		return nil, time.Time{}, chichi.Errorf("object key cannot be longer than 1024 bytes")
+		return nil, time.Time{}, chichi.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
 	}
 	client := ss3.client()
 	res, err := client.GetObject(ctx, &s3.GetObjectInput{
@@ -103,32 +103,30 @@ func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*chichi.Form, *chichi.Alert, error) {
+func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
-		// Load the Form.
-		var s settings
+		var s Settings
 		if ss3.settings != nil {
 			s = *ss3.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		// Save the settings.
-		s, err := ss3.ValidateSettings(ctx, values)
+		s, err := validateValues(values)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return nil, nil, ss3.conf.SetSettings(ctx, s)
+		return nil, ss3.conf.SetSettings(ctx, s)
 	default:
-		return nil, nil, chichi.ErrEventNotExist
+		return nil, chichi.ErrUIEventNotExist
 	}
 
-	form := &chichi.Form{
+	ui := &chichi.UI{
 		Fields: []chichi.Component{
-			&chichi.Input{Name: "accessKeyID", Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
-			&chichi.Input{Name: "secretAccessKey", Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
-			&chichi.Select{Name: "region", Label: "Region", Placeholder: "Region", Options: []chichi.Option{
+			&chichi.Input{Name: "AccessKeyID", Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
+			&chichi.Input{Name: "SecretAccessKey", Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
+			&chichi.Select{Name: "Region", Label: "Region", Placeholder: "Region", Options: []chichi.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
 				{Text: "US West (N. California) us-west-1", Value: "us-west-1"},
@@ -153,55 +151,21 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*chich
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) me-central-1", Value: "sa-east-1"},
 			}},
-			&chichi.Input{Name: "bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
+			&chichi.Input{Name: "Bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Values: values,
-		Actions: []chichi.Action{
+		Buttons: []chichi.Button{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return form, nil, nil
-}
-
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (ss3 *S3) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate AccessKeyID.
-	if n := len(s.AccessKeyID); n != 20 {
-		return nil, chichi.Errorf("access key id must be 20 bytes long")
-	}
-	// Validate SecretAccessKey.
-	if n := len(s.SecretAccessKey); n < 40 || n > 200 {
-		return nil, chichi.Errorf("secret access key length in bytes must be in range [40,200]")
-	}
-	// Validate Region.
-	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
-		"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
-		"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
-	if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
-		return nil, chichi.Errorf("region is not valid")
-	}
-	// Validate Bucket.
-	if n := len(s.Bucket); n < 3 || n > 63 {
-		return nil, chichi.Errorf("bucket length must be in range [3,63]")
-	}
-	if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
-		strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
-		return nil, chichi.Errorf("bucket value is not allowed")
-	}
-	return json.Marshal(&s)
+	return ui, nil
 }
 
 // Write writes the data read from r into the file with the given path name.
 func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
-		return chichi.Errorf("object key cannot be longer than 1024 bytes")
+		return chichi.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
@@ -227,4 +191,37 @@ func (ss3 *S3) client() *s3.Client {
 		return nil
 	}
 	return s3.NewFromConfig(cfg)
+}
+
+// validateValues validates the user-entered values and returns the settings.
+func validateValues(values []byte) ([]byte, error) {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate AccessKeyID.
+	if n := len(s.AccessKeyID); n != 20 {
+		return nil, chichi.NewInvalidUIValuesError("access key id must be 20 bytes long")
+	}
+	// Validate SecretAccessKey.
+	if n := len(s.SecretAccessKey); n < 40 || n > 200 {
+		return nil, chichi.NewInvalidUIValuesError("secret access key length in bytes must be in range [40,200]")
+	}
+	// Validate Region.
+	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
+		"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
+		"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
+	if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
+		return nil, chichi.NewInvalidUIValuesError("region is not valid")
+	}
+	// Validate Bucket.
+	if n := len(s.Bucket); n < 3 || n > 63 {
+		return nil, chichi.NewInvalidUIValuesError("bucket length must be in range [3,63]")
+	}
+	if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
+		strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
+		return nil, chichi.NewInvalidUIValuesError("bucket value is not allowed")
+	}
+	return json.Marshal(&s)
 }

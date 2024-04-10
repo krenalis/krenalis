@@ -122,17 +122,6 @@ func (role Role) String() string {
 	panic("invalid role")
 }
 
-// UI is the interface implemented by connectors that expose a UI.
-type UI interface {
-
-	// ServeUI serves the connector's user interface.
-	ServeUI(ctx context.Context, event string, values []byte) (*Form, *Alert, error)
-
-	// ValidateSettings validates the settings received from the UI and returns them
-	// in a format suitable for storage.
-	ValidateSettings(ctx context.Context, values []byte) ([]byte, error)
-}
-
 type WebhookPayload interface {
 	webhookPayload()
 }
