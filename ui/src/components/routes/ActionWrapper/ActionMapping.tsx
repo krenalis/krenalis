@@ -441,6 +441,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									disabled={isTransformationDisabled || uniqueIDList.length === 0}
 									className='inputProperty'
 									caret={true}
+									clearable={action.UniqueIDColumn?.length > 0}
 									error={
 										uniqueIDList.length === 0
 											? `No column ${
@@ -470,6 +471,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									disabled={isTransformationDisabled}
 									className='inputProperty'
 									caret={true}
+									clearable={action.DisplayedID?.length > 0}
 									error={displayedIDError}
 									size='small'
 								/>
@@ -487,6 +489,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										disabled={isTransformationDisabled}
 										className='inputProperty'
 										caret={true}
+										clearable={action.UpdatedAtColumn?.length > 0}
 										error={timestampColumnError}
 										size='small'
 									/>

@@ -123,6 +123,7 @@ interface ComboBoxInputProps {
 	readonly?: boolean;
 	autocompleteExpressions?: boolean;
 	caret?: boolean;
+	clearable?: boolean;
 }
 
 const ComboBoxInput = ({
@@ -139,6 +140,7 @@ const ComboBoxInput = ({
 	readonly,
 	autocompleteExpressions,
 	caret,
+	clearable,
 	...delegated
 }: ComboBoxInputProps) => {
 	const onKeyUpRef = useRef<any>();
@@ -240,6 +242,7 @@ const ComboBoxInput = ({
 				disabled={disabled}
 				size={size}
 				readonly={readonly}
+				clearable={clearable}
 				{...delegated}
 			>
 				{children}
