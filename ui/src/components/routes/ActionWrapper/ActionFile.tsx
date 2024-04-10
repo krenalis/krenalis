@@ -48,6 +48,17 @@ const ActionFile = () => {
 	} = useContext(actionContext);
 
 	const fileConnectorRef = useRef<number>(action.Connector);
+	const pathInputRef = useRef<any>();
+
+	useEffect(() => {
+		if (isFileConnectorChanged && !isFileConnectorLoading) {
+			if (pathInputRef.current) {
+				setTimeout(() => {
+					pathInputRef.current.focus();
+				}, 50);
+			}
+		}
+	}, [isFileConnectorChanged, isFileConnectorLoading]);
 
 	useEffect(() => {
 		// check if the file connector id has been passed in the query
@@ -205,7 +216,12 @@ const ActionFile = () => {
 			) : (
 				action.Connector !== 0 && (
 					<div className='action-file__file-settings'>
-						<FileSettings hasSheets={hasSheets} fileExtension={fileExtension} fileFields={fileFields} />
+						<FileSettings
+							hasSheets={hasSheets}
+							fileExtension={fileExtension}
+							fileFields={fileFields}
+							pathInputRef={pathInputRef}
+						/>
 					</div>
 				)
 			)}
@@ -217,9 +233,10 @@ interface FileSettingsProps {
 	hasSheets: boolean;
 	fileExtension: string;
 	fileFields: ConnectorFieldInterface[];
+	pathInputRef: any;
 }
 
-const FileSettings = ({ hasSheets, fileExtension, fileFields }: FileSettingsProps) => {
+const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: FileSettingsProps) => {
 	const [sheets, setSheets] = useState<Record<string, string>>({});
 	const [areSheetsLoading, setAreSheetsLoading] = useState<boolean>(false);
 	const [hasSheetsError, setHasSheetsError] = useState<boolean>(false);
@@ -600,6 +617,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields }: FileSettingsProp
 					type='text'
 					onSlInput={onUpdatePath}
 					placeholder={`${actionType.Target.toLowerCase()}.${fileExtension}`}
+					ref={pathInputRef}
 				>
 					<div className='pathInputLabel' slot='label'>
 						<div className='pathInputLabelText'>Path</div>
