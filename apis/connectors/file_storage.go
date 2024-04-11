@@ -103,6 +103,9 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		Role:     chichi.Role(storage.storage.Role),
 		Settings: settings,
 	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
+	}
 
 	rw := newRecordWriter(file.ID, types.Type{}, "", UpdatedAtColumn{}, "", storageTimestamp, limit)
 	err = _file.Read(ctx, r, sheet, rw)
