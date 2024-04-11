@@ -103,6 +103,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			})
 		} else {
 			// Property has been added.
+			if path != "" {
+				return nil, fmt.Errorf("cannot add properties to already existent Object properties")
+			}
 			p := newPropsByName[addedName]
 			if containsNullableObject(p) {
 				return nil, fmt.Errorf("nullable properties with type Object are not supported")

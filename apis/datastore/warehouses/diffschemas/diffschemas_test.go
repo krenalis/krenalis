@@ -100,9 +100,7 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text()},
 				})},
 			}),
-			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x.c", Type: types.Text()},
-			},
+			expectedErr: "cannot add properties to already existent Object properties",
 		},
 		{
 			name: "One property dropped at second level",
@@ -156,10 +154,7 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text()},
 				})},
 			}),
-			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x.c", Type: types.Text()},
-				{Operation: warehouses.OperationDropProperty, Path: "x.b"},
-			},
+			expectedErr: "cannot add properties to already existent Object properties",
 		},
 		{
 			name: "Two properties added at first level",
@@ -489,6 +484,25 @@ func TestDiff(t *testing.T) {
 				{Operation: warehouses.OperationDropProperty, Path: "x.b"},
 				{Operation: warehouses.OperationDropProperty, Path: "y.c"},
 				{Operation: warehouses.OperationDropProperty, Path: "y.d"},
+			},
+		},
+		{
+			name: "One non-nullable Object added at first level",
+			fromSchema: types.Object([]types.Property{
+				{Name: "c", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "c", Type: types.Text()},
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+			}),
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
 			},
 		},
 		{
