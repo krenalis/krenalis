@@ -477,27 +477,15 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		function = *n.Transformation.Function
 	}
 
-	// Validate the UI values.
+	// Settings.
 	if fileConnector != nil && fileConnector.HasUI {
-		values := action.UIValues
-		if values == nil {
-			values = json.RawMessage("{}")
-		}
 		conf := &connectors.ConnectorConfig{
 			Role:   this.connection.Role,
 			Region: this.connection.Workspace().PrivacyRegion,
 		}
-		var err error
-		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, values)
+		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
-			if err != connectors.ErrNoUserInterface {
-				return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
-			}
-			if action.UIValues != nil {
-				return 0, errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
-			}
-		} else if action.UIValues == nil {
-			return 0, errors.BadRequest("UI values must be provided because connector %s has a UI", fileConnector.Name)
+			return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 		}
 	}
 

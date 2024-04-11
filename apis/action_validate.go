@@ -278,6 +278,24 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
+	// Validate the UI values.
+	if fileConnector == nil {
+		if action.UIValues != nil {
+			return errors.BadRequest("UI values cannot be provided because %s actions have no UI", strings.ToLower(connector.Type.String()))
+		}
+	} else {
+		if fileConnector.HasUI {
+			if action.UIValues == nil {
+				return errors.BadRequest("UI values must be provided because connector %s has a UI", fileConnector.Name)
+			}
+			if !isJSONObject(action.UIValues) {
+				return errors.BadRequest("UI values are not a valid JSON Object")
+			}
+		} else if action.UIValues != nil {
+			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
+		}
+	}
+
 	// Check if the UI values and the compression are allowed.
 	if connector.Type == state.FileStorageType {
 		if !fileConnector.HasUI {

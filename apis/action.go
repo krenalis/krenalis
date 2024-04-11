@@ -454,27 +454,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	// Validate the UI values.
+	// Settings.
 	if fileConnector != nil && fileConnector.HasUI {
-		values := action.UIValues
-		if values == nil {
-			values = json.RawMessage("{}")
-		}
 		conf := &connectors.ConnectorConfig{
 			Role:   this.action.Connection().Role,
 			Region: this.action.Connection().Workspace().PrivacyRegion,
 		}
-		var err error
-		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, values)
+		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
-			if err != connectors.ErrNoUserInterface {
-				return errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
-			}
-			if action.UIValues != nil {
-				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
-			}
-		} else if action.UIValues == nil {
-			return errors.BadRequest("UI values must be provided because connector %s has a UI", fileConnector.Name)
+			return errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 		}
 	}
 
