@@ -43,7 +43,8 @@ type File struct {
 // File returns a file for the provided action, on a connection with the given
 // role. Errors are deferred until a file's method is called.
 func (connectors *Connectors) File(action *state.Action, role state.Role) *File {
-	file := &File{state: connectors.state,
+	file := &File{
+		state:  connectors.state,
 		action: action,
 	}
 	file.inner, file.err = chichi.RegisteredFile(action.Connector().Name).New(&chichi.FileConfig{
