@@ -8,6 +8,7 @@
 package diffschemas
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -38,11 +39,17 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 	oldPropsByName := map[string]types.Property{}
 	for _, p := range oldSchema.Properties() {
+		if err := validPropertyForDiff(p); err != nil {
+			return nil, fmt.Errorf("old schema is not valid for diff: %s", err)
+		}
 		oldPropsByName[p.Name] = p
 	}
 
 	newPropsByName := map[string]types.Property{}
 	for _, p := range newSchema.Properties() {
+		if err := validPropertyForDiff(p); err != nil {
+			return nil, fmt.Errorf("new schema is not valid for diff: %s", err)
+		}
 		newPropsByName[p.Name] = p
 	}
 
@@ -283,4 +290,19 @@ func propertyPaths(obj types.Type) []string {
 		}
 	}
 	return paths
+}
+
+// validPropertyForDiff validates the fields of the property p, determining if
+// their value is allowed in a schema on which the diff must be calculated.
+func validPropertyForDiff(p types.Property) error {
+	if p.Placeholder != nil {
+		return errors.New("property cannot have a placeholder")
+	}
+	if p.Role != types.BothRole {
+		return errors.New("property cannot specify a role")
+	}
+	if p.Required {
+		return errors.New("property cannot be 'required'")
+	}
+	return nil
 }

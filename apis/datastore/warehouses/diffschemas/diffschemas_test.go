@@ -535,6 +535,46 @@ func TestDiff(t *testing.T) {
 			}),
 			expectedErr: "nullable properties with type Object are not supported",
 		},
+		{
+			name: "A 'required' property in the old schema",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text(), Required: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			expectedErr: "old schema is not valid for diff: property cannot be 'required'",
+		},
+		{
+			name: "A 'required' property in the new schema",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text(), Required: true},
+			}),
+			expectedErr: "new schema is not valid for diff: property cannot be 'required'",
+		},
+		{
+			name: "A property with a placeholder in the old schema",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text(), Placeholder: "email"},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			expectedErr: "old schema is not valid for diff: property cannot have a placeholder",
+		},
+		{
+			name: "A property with a 'source' role in the old schema",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text(), Role: types.SourceRole},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			expectedErr: "old schema is not valid for diff: property cannot specify a role",
+		},
 	}
 
 	for _, test := range tests {
