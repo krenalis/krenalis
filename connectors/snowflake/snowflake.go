@@ -95,15 +95,10 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (
 			s = *sf.settings
 		}
 		values, _ = json.Marshal(s)
-	case "test", "save":
-		s, err := validateValues(ctx, values)
-		if err != nil {
-			return nil, err
-		}
-		if event == "test" {
-			return nil, nil
-		}
-		return nil, sf.conf.SetSettings(ctx, s)
+	case "save":
+		return nil, sf.saveValues(ctx, values, false)
+	case "test":
+		return nil, sf.saveValues(ctx, values, true)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -199,6 +194,58 @@ func (sf *Snowflake) query(ctx context.Context, query string) (chichi.Rows, []ty
 	return rows, columns, nil
 }
 
+// saveValues saves the user-entered values as settings. If test is true, it
+// validates only the values without saving it.
+func (sf *Snowflake) saveValues(ctx context.Context, values []byte, test bool) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	// Validate Account.
+	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("account length must be in range [1,255]")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("username length must be in range [1,255]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("password length must be in range [1,255]")
+	}
+	// Validate Warehouse.
+	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("warehouse length must be in range [1,255]")
+	}
+	// Validate Database.
+	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("database length must be in range [1,255]")
+	}
+	// Validate Schema.
+	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("schema length must be in range [1,255]")
+	}
+	// Validate Role.
+	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
+		return chichi.NewInvalidUIValuesError("role length must be in range [1,255]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil || test {
+		return err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = sf.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	sf.settings = &s
+	return nil
+}
+
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *Settings) error {
@@ -249,46 +296,4 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.JSON(), nil
 	}
 	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(ctx context.Context, values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Account.
-	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("account length must be in range [1,255]")
-	}
-	// Validate Username.
-	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("username length must be in range [1,255]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,255]")
-	}
-	// Validate Warehouse.
-	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("warehouse length must be in range [1,255]")
-	}
-	// Validate Database.
-	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("database length must be in range [1,255]")
-	}
-	// Validate Schema.
-	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("schema length must be in range [1,255]")
-	}
-	// Validate Role.
-	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("role length must be in range [1,255]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
 }

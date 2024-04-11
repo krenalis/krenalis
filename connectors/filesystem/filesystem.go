@@ -104,11 +104,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values 
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, filesystem.conf.SetSettings(ctx, s)
+		return nil, filesystem.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -154,27 +150,36 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 	return err
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (filesystem *Filesystem) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Validate Root.
 	root := s.Root
 	if n := len(root); n == 0 || n > 253 {
-		return nil, chichi.NewInvalidUIValuesError("root path length in bytes must be in range [1,253]")
+		return chichi.NewInvalidUIValuesError("root path length in bytes must be in range [1,253]")
 	}
 	if !filepath.IsAbs(root) {
-		return nil, chichi.NewInvalidUIValuesError(`root path must be absolute`)
+		return chichi.NewInvalidUIValuesError(`root path must be absolute`)
 	}
 	st, err := os.Stat(root)
 	if os.IsNotExist(err) {
-		return nil, chichi.NewInvalidUIValuesError("root path does not exist")
+		return chichi.NewInvalidUIValuesError("root path does not exist")
 	}
 	if !st.IsDir() {
-		return nil, chichi.NewInvalidUIValuesError("root path is not a directory")
+		return chichi.NewInvalidUIValuesError("root path is not a directory")
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = filesystem.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	filesystem.settings = &s
+	return nil
 }

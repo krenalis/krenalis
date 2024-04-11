@@ -113,11 +113,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*chich
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, ss3.conf.SetSettings(ctx, s)
+		return nil, ss3.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -193,35 +189,44 @@ func (ss3 *S3) client() *s3.Client {
 	return s3.NewFromConfig(cfg)
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (ss3 *S3) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Validate AccessKeyID.
 	if n := len(s.AccessKeyID); n != 20 {
-		return nil, chichi.NewInvalidUIValuesError("access key id must be 20 bytes long")
+		return chichi.NewInvalidUIValuesError("access key id must be 20 bytes long")
 	}
 	// Validate SecretAccessKey.
 	if n := len(s.SecretAccessKey); n < 40 || n > 200 {
-		return nil, chichi.NewInvalidUIValuesError("secret access key length in bytes must be in range [40,200]")
+		return chichi.NewInvalidUIValuesError("secret access key length in bytes must be in range [40,200]")
 	}
 	// Validate Region.
 	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
 		"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
 		"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
 	if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
-		return nil, chichi.NewInvalidUIValuesError("region is not valid")
+		return chichi.NewInvalidUIValuesError("region is not valid")
 	}
 	// Validate Bucket.
 	if n := len(s.Bucket); n < 3 || n > 63 {
-		return nil, chichi.NewInvalidUIValuesError("bucket length must be in range [3,63]")
+		return chichi.NewInvalidUIValuesError("bucket length must be in range [3,63]")
 	}
 	if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
 		strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
-		return nil, chichi.NewInvalidUIValuesError("bucket value is not allowed")
+		return chichi.NewInvalidUIValuesError("bucket value is not allowed")
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = ss3.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	ss3.settings = &s
+	return nil
 }

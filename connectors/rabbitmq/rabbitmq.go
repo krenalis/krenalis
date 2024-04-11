@@ -125,15 +125,10 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte) (
 			s = *rmq.settings
 		}
 		values, _ = json.Marshal(s)
-	case "test", "save":
-		s, err := rmq.validateValues(ctx, values)
-		if err != nil {
-			return nil, err
-		}
-		if event == "test" {
-			return nil, nil
-		}
-		return nil, rmq.conf.SetSettings(ctx, s)
+	case "save":
+		return nil, rmq.saveValues(ctx, values, false)
+	case "test":
+		return nil, rmq.saveValues(ctx, values, true)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -217,37 +212,47 @@ func (rmq *RabbitMQ) connect(ctx context.Context, deliveries bool) (err error) {
 	return nil
 }
 
+// saveValues saves the user-entered values as settings. If test is true, it
+// validates only the values without saving it.
+func (rmq *RabbitMQ) saveValues(ctx context.Context, values []byte, test bool) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	// Validate URL.
+	if n := len(s.URL); n < 7 || n > 2048 {
+		return chichi.NewInvalidUIValuesError("URL length in bytes must be in range [7,2048]")
+	}
+	if _, err := amqp.ParseURI(s.URL); err != nil {
+		return chichi.NewInvalidUIValuesError("URL is not a valid RabbitMQ URI")
+	}
+	// Validate Queue.
+	if n := len(s.Queue); n == 0 || n > 255 {
+		return chichi.NewInvalidUIValuesError("queue length in bytes must be in range [1,255]")
+	}
+	if strings.HasPrefix(s.Queue, "amq.") {
+		return chichi.NewInvalidUIValuesError("queue names starting with 'amq.' are reserved for internal use by the broker")
+	}
+	err = rmq.testConnection(ctx)
+	if err != nil || test {
+		return err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = rmq.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	rmq.settings = &s
+	return nil
+}
+
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func (rmq *RabbitMQ) testConnection(ctx context.Context) error {
 	return rmq.connect(ctx, false) // TO FIX
 
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func (rmq *RabbitMQ) validateValues(ctx context.Context, values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate URL.
-	if n := len(s.URL); n < 7 || n > 2048 {
-		return nil, chichi.NewInvalidUIValuesError("URL length in bytes must be in range [7,2048]")
-	}
-	if _, err := amqp.ParseURI(s.URL); err != nil {
-		return nil, chichi.NewInvalidUIValuesError("URL is not a valid RabbitMQ URI")
-	}
-	// Validate Queue.
-	if n := len(s.Queue); n == 0 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("queue length in bytes must be in range [1,255]")
-	}
-	if strings.HasPrefix(s.Queue, "amq.") {
-		return nil, chichi.NewInvalidUIValuesError("queue names starting with 'amq.' are reserved for internal use by the broker")
-	}
-	err = rmq.testConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
 }

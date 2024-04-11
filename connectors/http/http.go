@@ -134,11 +134,7 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chich
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, h.conf.SetSettings(ctx, s)
+		return nil, h.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -187,33 +183,42 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	return nil
 }
 
-func ishex(c byte) bool {
-	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (h *HTTP) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Headers.
 	for k, v := range s.Headers {
 		if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
-			return nil, chichi.NewInvalidUIValuesError("header key length must be in range [1,100]")
+			return chichi.NewInvalidUIValuesError("header key length must be in range [1,100]")
 		}
 		if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
-			return nil, chichi.NewInvalidUIValuesError("header value length must be in range [1,10000]")
+			return chichi.NewInvalidUIValuesError("header value length must be in range [1,10000]")
 		}
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = h.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	h.settings = &s
+	return nil
+}
+
+func ishex(c byte) bool {
+	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
 }

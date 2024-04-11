@@ -263,11 +263,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) 
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, stripe.conf.SetSettings(ctx, s)
+		return nil, stripe.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -293,6 +289,58 @@ func (stripe *Stripe) Update(ctx context.Context, target chichi.Targets, id stri
 	}
 
 	return stripe.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
+}
+
+func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
+	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
+	res, err := stripe.conf.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
+	if res.StatusCode != expectedStatus {
+		var errorResponse stripeErrorResponse
+		dec := json.NewDecoder(res.Body)
+		_ = dec.Decode(&errorResponse)
+		err := errorResponse.Error
+		err.statusCode = res.StatusCode
+		return &err
+	}
+	if response != nil {
+		dec := json.NewDecoder(res.Body)
+		return dec.Decode(response)
+	}
+	return nil
+}
+
+// saveValues saves the user-entered values as settings.
+func (stripe *Stripe) saveValues(ctx context.Context, values []byte) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	if s.APIKey == "" {
+		return chichi.NewInvalidUIValuesError("API key cannot be empty")
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = stripe.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	stripe.settings = &s
+	return nil
 }
 
 func (stripe *Stripe) setupWebhooksEndpoint() error {
@@ -328,42 +376,7 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 		return err
 	}
 
-	s, err := validateValues(values)
-	if err != nil {
-		return err
-	}
-
-	return stripe.conf.SetSettings(context.TODO(), s)
-}
-
-func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
-	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
-	res, err := stripe.conf.HTTPClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
-	if res.StatusCode != expectedStatus {
-		var errorResponse stripeErrorResponse
-		dec := json.NewDecoder(res.Body)
-		_ = dec.Decode(&errorResponse)
-		err := errorResponse.Error
-		err.statusCode = res.StatusCode
-		return &err
-	}
-	if response != nil {
-		dec := json.NewDecoder(res.Body)
-		return dec.Decode(response)
-	}
-	return nil
+	return stripe.saveValues(context.TODO(), values)
 }
 
 type stripeErrorResponse struct {
@@ -416,19 +429,6 @@ func encodeRequest(body *bytes.Buffer, request map[string]interface{}, parents [
 		}
 	}
 	return nil
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if s.APIKey == "" {
-		return nil, chichi.NewInvalidUIValuesError("API key cannot be empty")
-	}
-	return json.Marshal(&s)
 }
 
 func writePath(body *bytes.Buffer, path []string) {

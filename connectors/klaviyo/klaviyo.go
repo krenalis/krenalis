@@ -369,11 +369,7 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*c
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, ky.conf.SetSettings(ctx, s)
+		return nil, ky.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -394,6 +390,37 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*c
 // Update updates a record of the specified target.
 func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 	panic("TODO: not implemented")
+}
+
+// saveValues saves the user-entered values as settings.
+func (ky *Klavyio) saveValues(ctx context.Context, values []byte) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	if n := len(s.PrivateAPIKey); n < 37 {
+		return chichi.NewInvalidUIValuesError("private API key must be at least 37 characters long")
+	}
+	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
+		return chichi.NewInvalidUIValuesError("private API key must begin with 'pk_'")
+	}
+	for i := 3; i < len(s.PrivateAPIKey); i++ {
+		c := s.PrivateAPIKey[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return chichi.NewInvalidUIValuesError("private API key after 'pk_' must contain only alphanumeric characters")
+		}
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = ky.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	ky.settings = &s
+	return nil
 }
 
 type klaviyoError struct {
@@ -451,26 +478,4 @@ func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader,
 	}
 
 	return nil
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if n := len(s.PrivateAPIKey); n < 37 {
-		return nil, chichi.NewInvalidUIValuesError("private API key must be at least 37 characters long")
-	}
-	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return nil, chichi.NewInvalidUIValuesError("private API key must begin with 'pk_'")
-	}
-	for i := 3; i < len(s.PrivateAPIKey); i++ {
-		c := s.PrivateAPIKey[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, chichi.NewInvalidUIValuesError("private API key after 'pk_' must contain only alphanumeric characters")
-		}
-	}
-	return json.Marshal(&s)
 }

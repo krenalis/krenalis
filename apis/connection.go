@@ -1074,34 +1074,6 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 		return nil, types.Type{}, errors.BadRequest("connector %s is not a file connector", file.Name)
 	}
 
-	// Validate the UI values.
-	if uiValues != nil && !file.HasUI {
-		return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
-	}
-	var settings []byte
-	if file.HasUI {
-		values := uiValues
-		if uiValues == nil {
-			values = json.RawMessage("{}")
-		}
-		conf := &connectors.ConnectorConfig{
-			Role:   this.connection.Role,
-			Region: this.connection.Workspace().PrivacyRegion,
-		}
-		var err error
-		settings, err = this.apis.connectors.ValidateUIValues(ctx, file, conf, values)
-		if err != nil {
-			if err != connectors.ErrNoUserInterface {
-				return nil, types.Type{}, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
-			}
-			if uiValues != nil {
-				return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
-			}
-		} else if uiValues == nil {
-			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
-		}
-	}
-
 	// Validate the sheet.
 	if file.HasSheets {
 		if sheet == "" {
@@ -1115,13 +1087,29 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
 		}
 	}
+
+	// Validate the UI values.
+	if file.HasUI {
+		if uiValues == nil {
+			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
+		}
+		if !isJSONObject(uiValues) {
+			return nil, types.Type{}, errors.BadRequest("UI values are not a valid JSON Object")
+		}
+	} else if uiValues != nil {
+		return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
+	}
+
 	// Validate the limit.
 	if limit < 0 || limit > 100 {
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.storage().Read(ctx, file, path, sheet, settings, state.Compression(compression), limit)
+	columns, records, err := this.storage().Read(ctx, file, path, sheet, uiValues, state.Compression(compression), limit)
 	if err != nil {
+		if _, ok := err.(*connectors.InvalidUIValuesError); ok {
+			return nil, types.Type{}, errors.Unprocessable(InvalidUIValues, "%s", err)
+		}
 		switch err {
 		case connectors.ErrSheetNotExist:
 			return nil, types.Type{}, errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
@@ -1626,34 +1614,18 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 	}
 
 	// Validate the UI values.
-	if uiValues != nil && !file.HasUI {
-		return nil, errors.BadRequest("UI values cannot be provided because connector %s has n UI", file.Name)
-	}
-	var settings []byte
 	if file.HasUI {
-		values := uiValues
 		if uiValues == nil {
-			values = json.RawMessage("{}")
+			return nil, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
 		}
-		conf := &connectors.ConnectorConfig{
-			Role:   c.Role,
-			Region: c.Workspace().PrivacyRegion,
+		if !isJSONObject(uiValues) {
+			return nil, errors.BadRequest("UI values are not a valid JSON Object")
 		}
-		var err error
-		settings, err = this.apis.connectors.ValidateUIValues(ctx, file, conf, values)
-		if err != nil {
-			if err != connectors.ErrNoUserInterface {
-				return nil, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
-			}
-			if uiValues != nil {
-				return nil, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
-			}
-		} else if uiValues == nil {
-			return nil, errors.BadRequest("UI values must be provided because connector %s has UI", file.Name)
-		}
+	} else if uiValues != nil {
+		return nil, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
 	}
 
-	sheets, err := this.storage().Sheets(ctx, file, path, settings, state.Compression(compression))
+	sheets, err := this.storage().Sheets(ctx, file, path, uiValues, state.Compression(compression))
 	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
@@ -2320,4 +2292,20 @@ func (tp *temporaryTransformer) Delete(_ context.Context, _ string) error {
 func (tp *temporaryTransformer) SupportLanguage(_ state.Language) bool { panic("not supported") }
 func (tp *temporaryTransformer) Update(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
+}
+
+// isValidJSONObject reports whether data represents a JSON Object. data can
+// start and end with whitespaces.
+func isJSONObject(data []byte) bool {
+	if json.Valid(data) {
+		for _, c := range data {
+			if c == '{' {
+				return true
+			}
+			if c != ' ' && c != '\t' && c != '\r' && c != '\n' {
+				break
+			}
+		}
+	}
+	return false
 }

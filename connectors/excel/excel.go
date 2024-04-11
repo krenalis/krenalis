@@ -162,11 +162,7 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*c
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(exel.conf.Role, values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, exel.conf.SetSettings(ctx, s)
+		return nil, exel.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -251,6 +247,28 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 	return err
 }
 
+// saveValues saves the user-entered values as settings.
+func (exel *Excel) saveValues(ctx context.Context, values []byte) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	if exel.conf.Role != chichi.Source {
+		s.HasColumnNames = false
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = exel.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	exel.settings = &s
+	return nil
+}
+
 // columnNumberToName returns a column name from a column number.
 // Column numbers starts from 1.
 func columnNumberToName(n int) string {
@@ -262,17 +280,4 @@ func columnNumberToName(n int) string {
 		n = (n - 1) / 26
 	}
 	return c
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(role chichi.Role, values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if role != chichi.Source {
-		s.HasColumnNames = false
-	}
-	return json.Marshal(&s)
 }

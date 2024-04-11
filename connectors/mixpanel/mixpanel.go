@@ -222,11 +222,7 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, mp.conf.SetSettings(ctx, s)
+		return nil, mp.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -282,6 +278,34 @@ func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reade
 	return nil
 }
 
+// saveValues saves the user-entered values as settings.
+func (mp *Mixpanel) saveValues(ctx context.Context, values []byte) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
+		return chichi.NewInvalidUIValuesError("project ID must be a positive number")
+	}
+	if n := len(s.Username); n < 20 || n > 100 {
+		return chichi.NewInvalidUIValuesError("username length must be in range [20, 100]")
+	}
+	if n := len(s.Secret); n < 32 || n > 100 {
+		return chichi.NewInvalidUIValuesError("secret length must be in range [32, 100]")
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = mp.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	mp.settings = &s
+	return nil
+}
+
 // formatTimestamp formats the timestamp t of an event as expected by Mixpanel.
 func formatTimestamp(t time.Time) string {
 	ms := strconv.FormatInt(t.UnixMilli(), 10)
@@ -290,25 +314,6 @@ func formatTimestamp(t time.Time) string {
 		return "0." + ms
 	}
 	return ms[:l-3] + "." + ms[l-3:]
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return nil, chichi.NewInvalidUIValuesError("project ID must be a positive number")
-	}
-	if n := len(s.Username); n < 20 || n > 100 {
-		return nil, chichi.NewInvalidUIValuesError("username length must be in range [20, 100]")
-	}
-	if n := len(s.Secret); n < 32 || n > 100 {
-		return nil, chichi.NewInvalidUIValuesError("secret length must be in range [32, 100]")
-	}
-	return json.Marshal(&s)
 }
 
 type mixpanelError struct {

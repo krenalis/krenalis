@@ -267,11 +267,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, dummy.conf.SetSettings(ctx, s)
+		return nil, dummy.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -321,11 +317,20 @@ func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string
 }
 
 // validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+func (dummy *Dummy) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = dummy.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	dummy.settings = &s
+	return nil
 }

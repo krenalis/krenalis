@@ -40,7 +40,7 @@ func init() {
 
 // New returns a new JSON connector instance.
 func New(conf *chichi.FileConfig) (*JSON, error) {
-	c := JSON{role: conf.Role, setSettings: conf.SetSettings}
+	c := JSON{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -51,9 +51,8 @@ func New(conf *chichi.FileConfig) (*JSON, error) {
 }
 
 type JSON struct {
-	role        chichi.Role
-	settings    *Settings
-	setSettings chichi.SetSettingsFunc
+	conf     *chichi.FileConfig
+	settings *Settings
 }
 
 type Settings struct {
@@ -187,11 +186,7 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*chich
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, j.setSettings(ctx, s)
+		return nil, j.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -262,12 +257,21 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.
 	return err
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (j *JSON) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = j.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	j.settings = &s
+	return nil
 }

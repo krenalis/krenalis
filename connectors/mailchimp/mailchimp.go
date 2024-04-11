@@ -446,11 +446,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := mc.validateValues(ctx, values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, mc.conf.SetSettings(ctx, s)
+		return nil, mc.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -530,22 +526,22 @@ func (mc *MailChimp) Update(ctx context.Context, target chichi.Targets, id strin
 	return nil
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func (mc *MailChimp) validateValues(ctx context.Context, settings []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (mc *MailChimp) saveValues(ctx context.Context, values []byte) error {
 	var list struct {
 		List string
 	}
-	err := json.Unmarshal(settings, &list)
+	err := json.Unmarshal(values, &list)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if list.List == "" || len(list.List) > 100 {
-		return nil, chichi.NewInvalidUIValuesError("list length must be in range [1, 100]")
+		return chichi.NewInvalidUIValuesError("list length must be in range [1, 100]")
 	}
 	// Check if the list exists.
 	lists, err := mc.lists(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var found bool
 	for _, l := range lists {
@@ -555,17 +551,26 @@ func (mc *MailChimp) validateValues(ctx context.Context, settings []byte) ([]byt
 		}
 	}
 	if !found {
-		return nil, chichi.NewInvalidUIValuesError("list does not exist")
+		return chichi.NewInvalidUIValuesError("list does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	s := Settings{
 		List:       list.List,
 		DataCenter: dataCenter,
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = mc.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	mc.settings = &s
+	return nil
 }
 
 type batchOperation struct {

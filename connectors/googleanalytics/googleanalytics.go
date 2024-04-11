@@ -166,11 +166,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, ga.conf.SetSettings(ctx, s)
+		return nil, ga.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -190,27 +186,36 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (
 
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (ga *Analytics) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return nil, chichi.NewInvalidUIValuesError("Measurement ID length must be in [2,20]")
+		return chichi.NewInvalidUIValuesError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return nil, chichi.NewInvalidUIValuesError("Measurement ID must begin with 'G-' or 'AW-'")
+		return chichi.NewInvalidUIValuesError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	if n := len(s.APISecret); n < 1 || n > 40 {
-		return nil, chichi.NewInvalidUIValuesError("API Secret length must be in [1,40]")
+		return chichi.NewInvalidUIValuesError("API Secret length must be in [1,40]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, chichi.NewInvalidUIValuesError("API secret must contain only alphanumeric characters")
+			return chichi.NewInvalidUIValuesError("API secret must contain only alphanumeric characters")
 		}
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = ga.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	ga.settings = &s
+	return nil
 }

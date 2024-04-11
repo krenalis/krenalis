@@ -165,11 +165,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(c.conf.Role, values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, c.conf.SetSettings(ctx, s)
+		return nil, c.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -239,6 +235,55 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records chichi.R
 	return err
 }
 
+// saveValues saves the user-entered values as settings.
+func (c *CSV) saveValues(ctx context.Context, values []byte) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	// Validate Comma.
+	if utf8.RuneCountInString(s.Comma) != 1 {
+		return chichi.NewInvalidUIValuesError("comma must be a single character")
+	}
+	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
+		return chichi.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
+	}
+	if c.conf.Role == chichi.Source {
+		// Validate Comment.
+		if c := s.Comment; c != "" {
+			if utf8.RuneCountInString(c) != 1 {
+				return chichi.NewInvalidUIValuesError("comment, if provided, must be a single character")
+			}
+			if c == "\n" || c == "\r" || c == "\uFFFD" {
+				return chichi.NewInvalidUIValuesError("comment cannot be \\r, \\n, or the Unicode replacement character")
+			}
+			if c == s.Comma {
+				return chichi.NewInvalidUIValuesError("comment cannot be equal to the comma")
+			}
+		}
+		// Validate FieldsPerRecord.
+		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
+			return chichi.NewInvalidUIValuesError("fields per record, if provided, must be in range [0,1000]")
+		}
+	} else {
+		s.Comment = ""
+		s.FieldsPerRecord = 0
+		s.TrimLeadingSpace = false
+		s.HasColumnNames = false
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = c.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	c.settings = &s
+	return nil
+}
+
 // columnNumberToName returns a column name from a column number.
 // Column numbers starts from 1.
 func columnNumberToName(n int) string {
@@ -283,44 +328,4 @@ func toString(v any, t types.Type) string {
 	default:
 		panic(fmt.Sprintf("unexpected kind %s", k))
 	}
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(role chichi.Role, values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Comma.
-	if utf8.RuneCountInString(s.Comma) != 1 {
-		return nil, chichi.NewInvalidUIValuesError("comma must be a single character")
-	}
-	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return nil, chichi.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
-	}
-	if role == chichi.Source {
-		// Validate Comment.
-		if c := s.Comment; c != "" {
-			if utf8.RuneCountInString(c) != 1 {
-				return nil, chichi.NewInvalidUIValuesError("comment, if provided, must be a single character")
-			}
-			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return nil, chichi.NewInvalidUIValuesError("comment cannot be \\r, \\n, or the Unicode replacement character")
-			}
-			if c == s.Comma {
-				return nil, chichi.NewInvalidUIValuesError("comment cannot be equal to the comma")
-			}
-		}
-		// Validate FieldsPerRecord.
-		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return nil, chichi.NewInvalidUIValuesError("fields per record, if provided, must be in range [0,1000]")
-		}
-	} else {
-		s.Comment = ""
-		s.FieldsPerRecord = 0
-		s.TrimLeadingSpace = false
-		s.HasColumnNames = false
-	}
-	return json.Marshal(&s)
 }

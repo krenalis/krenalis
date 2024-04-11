@@ -75,14 +75,15 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // start or end with "'", and does not contain any of "*", "/", ":", "?", "[",
 // "\", and "]". Sheet names are case-insensitive.
 //
-// compression indicates if the file is compressed and how. settings are
-// file connector settings, and limit restricts the number of records to return.
-// If limit is negative, there is no upper limit on the number of records
-// returned.
+// uiValues, if the file connector has a UI, represents the user-entered values
+// as a JSON object. compression indicates if the file is compressed and how,
+// and limit restricts the number of records to return. If limit is negative,
+// there is no upper limit on the number of records returned.
 //
+// If the UI values are not valid, it returns an *InvalidUIValuesError error.
 // If the file has no columns, it returns the ErrNoColumns error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
-func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
+func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if storage.err != nil {
 		return nil, nil, storage.err
 	}
@@ -100,11 +101,20 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	}
 
 	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
-		Role:     chichi.Role(storage.storage.Role),
-		Settings: settings,
+		Role:        chichi.Role(storage.storage.Role),
+		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
+	}
+	if file.HasUI {
+		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
+		if err != nil {
+			if err, ok := err.(chichi.InvalidUIValuesError); ok {
+				return nil, nil, &InvalidUIValuesError{Msg: err.Error()}
+			}
+			return nil, nil, fmt.Errorf("connector %s has returned an unexpected error serving the UI with a 'save' event: %s", file.Name, err)
+		}
 	}
 
 	rw := newRecordWriter(file.ID, types.Type{}, "", UpdatedAtColumn{}, "", storageTimestamp, limit)
@@ -125,19 +135,33 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 }
 
 // Sheets returns the sheets of the file with the provided name. Sheet names
-// are case-insensitive. It panics if the file connector does not support
-// sheets.
-func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, settings []byte, compression state.Compression) ([]string, error) {
+// are case-insensitive.
+//
+// uiValues, if the file connector has a UI, represents the user-entered values
+// as a JSON object. compression indicates if the file is compressed and how.
+//
+// If the UI values are not valid, it returns an *InvalidUIValuesError error.
+// It panics if the file connector does not support sheets.
+func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, uiValues []byte, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
 		return nil, storage.err
 	}
 
 	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
-		Role:     chichi.Role(storage.storage.Role),
-		Settings: settings,
+		Role:        chichi.Role(storage.storage.Role),
+		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to register the file: %s", err)
+	}
+	if file.HasUI {
+		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
+		if err != nil {
+			if err, ok := err.(chichi.InvalidUIValuesError); ok {
+				return nil, &InvalidUIValuesError{Msg: err.Error()}
+			}
+			return nil, fmt.Errorf("connector %s has returned an unexpected error serving the UI with a 'save' event: %s", file.Name, err)
+		}
 	}
 
 	sheetsFile := _file.(chichi.Sheets)

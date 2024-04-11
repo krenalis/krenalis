@@ -64,11 +64,7 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := validateValues(values)
-		if err != nil {
-			return nil, err
-		}
-		return nil, uiSample.conf.SetSettings(ctx, s)
+		return nil, uiSample.saveValues(ctx, values)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -135,14 +131,23 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 	return ui, nil
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings.
+func (uiSample *UISample) saveValues(ctx context.Context, values []byte) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = uiSample.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	uiSample.settings = &s
+	return nil
 }
 
 type Settings struct {

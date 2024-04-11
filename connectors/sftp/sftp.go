@@ -123,15 +123,10 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*chic
 			s = *sf.settings
 		}
 		values, _ = json.Marshal(s)
-	case "test", "save":
-		s, err := validateValues(ctx, sf.conf.Role, values)
-		if err != nil {
-			return nil, err
-		}
-		if event == "test" {
-			return nil, nil
-		}
-		return nil, sf.conf.SetSettings(ctx, s)
+	case "save":
+		return nil, sf.saveValues(ctx, values, false)
+	case "test":
+		return nil, sf.saveValues(ctx, values, true)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -209,42 +204,52 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	return client.close()
 }
 
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(ctx context.Context, role chichi.Role, values []byte) ([]byte, error) {
+// saveValues saves the user-entered values as settings. If test is true, it
+// validates only the values without saving it.
+func (sf *SFTP) saveValues(ctx context.Context, values []byte, test bool) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-		return nil, chichi.NewInvalidUIValuesError("username length must be in range [1,200]")
+		return chichi.NewInvalidUIValuesError("username length must be in range [1,200]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
+		return chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
-	if role == chichi.Destination {
+	if sf.conf.Role == chichi.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
-			return nil, chichi.NewInvalidUIValuesError("length of temporary directory path must be in range [1,1000]")
+			return chichi.NewInvalidUIValuesError("length of temporary directory path must be in range [1,1000]")
 		}
 	} else if s.TempPath != "" {
-		return nil, chichi.NewInvalidUIValuesError("temporary directory path must be empty for source destinations")
+		return chichi.NewInvalidUIValuesError("temporary directory path must be empty for source destinations")
 	}
 	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
+	if err != nil || test {
+		return err
 	}
-	return json.Marshal(&s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = sf.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	sf.settings = &s
+	return nil
 }
 
 type reader struct {

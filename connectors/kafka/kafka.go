@@ -130,15 +130,10 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*
 			s = *kafka.settings
 		}
 		values, _ = json.Marshal(s)
-	case "test", "save":
-		s, err := validateValues(ctx, values)
-		if err != nil {
-			return nil, err
-		}
-		if event == "test" {
-			return nil, nil
-		}
-		return nil, kafka.conf.SetSettings(ctx, s)
+	case "save":
+		return nil, kafka.saveValues(ctx, values, false)
+	case "test":
+		return nil, kafka.saveValues(ctx, values, true)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -178,6 +173,64 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*
 	}
 
 	return ui, nil
+}
+
+// saveValues saves the user-entered values as settings. If test is true, it
+// validates only the values without saving it.
+func (kafka *Kafka) saveValues(ctx context.Context, values []byte, test bool) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	switch {
+	case s.Kafka != nil:
+		// Validate Host.
+		if n := len(s.Kafka.Host); n == 0 || n > 253 {
+			return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		}
+		// Validate Port.
+		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
+			return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		}
+	case s.Confluent != nil:
+		// Validate Server.
+		host, port, err := net.SplitHostPort(s.Confluent.Server)
+		if err != nil {
+			return chichi.NewInvalidUIValuesError("server is not a valid host:port")
+		}
+		if n := len(host); n == 0 || n > 253 {
+			return chichi.NewInvalidUIValuesError("server host length in bytes must be in range [1,253]")
+		}
+		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
+			return chichi.NewInvalidUIValuesError("server port must be in range [1,65536]")
+		}
+		// Validate Key.
+		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
+			return chichi.NewInvalidUIValuesError("key must be long 16 characters")
+		}
+	}
+	// Validate Topic.
+	if n := len(s.Topic); n == 0 || n > 255 {
+		return chichi.NewInvalidUIValuesError("topic length must be in range [1,255]")
+	}
+	if !validTopicName(s.Topic) {
+		return chichi.NewInvalidUIValuesError("topic name can contain only [A-Za-z0-9_.-]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil || test {
+		return err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = kafka.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	kafka.settings = &s
+	return nil
 }
 
 type kafkaSettings struct {
@@ -259,54 +312,6 @@ func validTopicName(name string) bool {
 		}
 	}
 	return true
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(ctx context.Context, values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	switch {
-	case s.Kafka != nil:
-		// Validate Host.
-		if n := len(s.Kafka.Host); n == 0 || n > 253 {
-			return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
-		}
-		// Validate Port.
-		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
-			return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
-		}
-	case s.Confluent != nil:
-		// Validate Server.
-		host, port, err := net.SplitHostPort(s.Confluent.Server)
-		if err != nil {
-			return nil, chichi.NewInvalidUIValuesError("server is not a valid host:port")
-		}
-		if n := len(host); n == 0 || n > 253 {
-			return nil, chichi.NewInvalidUIValuesError("server host length in bytes must be in range [1,253]")
-		}
-		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
-			return nil, chichi.NewInvalidUIValuesError("server port must be in range [1,65536]")
-		}
-		// Validate Key.
-		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
-			return nil, chichi.NewInvalidUIValuesError("key must be long 16 characters")
-		}
-	}
-	// Validate Topic.
-	if n := len(s.Topic); n == 0 || n > 255 {
-		return nil, chichi.NewInvalidUIValuesError("topic length must be in range [1,255]")
-	}
-	if !validTopicName(s.Topic) {
-		return nil, chichi.NewInvalidUIValuesError("topic name can contain only [A-Za-z0-9_.-]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
 }
 
 // fetchesRecordIter iterates over records in a fetch.

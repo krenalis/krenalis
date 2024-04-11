@@ -104,15 +104,10 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*chi
 			s = *my.settings
 		}
 		values, _ = json.Marshal(s)
-	case "test", "save":
-		s, err := validateValues(ctx, values)
-		if err != nil {
-			return nil, err
-		}
-		if event == "test" {
-			return nil, nil
-		}
-		return nil, my.conf.SetSettings(ctx, s)
+	case "save":
+		return nil, my.saveValues(ctx, values, false)
+	case "test":
+		return nil, my.saveValues(ctx, values, true)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -247,6 +242,50 @@ func (my *MySQL) query(ctx context.Context, query string) (chichi.Rows, []types.
 	return rows, columns, nil
 }
 
+// saveValues saves the user-entered values as settings. If test is true, it
+// validates only the values without saving it.
+func (my *MySQL) saveValues(ctx context.Context, values []byte, test bool) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
+		return chichi.NewInvalidUIValuesError("username length must be in range [1,16]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
+		return chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
+	}
+	// Validate Database.
+	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
+		return chichi.NewInvalidUIValuesError("database length must be in range [1,64]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil || test {
+		return err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = my.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	my.settings = &s
+	return nil
+}
+
 type Settings struct {
 	Host     string
 	Port     int
@@ -354,38 +393,4 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Year(), nil
 	}
 	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func validateValues(ctx context.Context, values []byte) ([]byte, error) {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return nil, chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
-	}
-	// Validate Username.
-	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-		return nil, chichi.NewInvalidUIValuesError("username length must be in range [1,16]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return nil, chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
-	}
-	// Validate Database.
-	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-		return nil, chichi.NewInvalidUIValuesError("database length must be in range [1,64]")
-	}
-	err = testConnection(ctx, &s)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(&s)
 }
