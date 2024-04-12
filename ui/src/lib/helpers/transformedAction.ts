@@ -455,7 +455,7 @@ const transformInActionToSet = async (
 		}
 	}
 
-	let timestampFormat: string | undefined;
+	let updatedAtFormat: string | undefined;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
 		if (action.UniqueIDColumn == null || action.UniqueIDColumn === '') {
 			throw 'User identifier cannot be empty';
@@ -472,11 +472,11 @@ const transformInActionToSet = async (
 		if (action.UpdatedAtColumn) {
 			const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.UpdatedAtColumn) !== -1;
 			if (!isAlreadyInSchema) {
-				const timestampColumnProperty = flattenedInputSchema[action.UpdatedAtColumn];
-				if (timestampColumnProperty == null) {
-					throw 'Timestamp must be a valid property';
+				const updatedAtColumnProperty = flattenedInputSchema[action.UpdatedAtColumn];
+				if (updatedAtColumnProperty == null) {
+					throw 'UpdatedAt column must be a valid property';
 				}
-				inSchema.properties.push(timestampColumnProperty.full);
+				inSchema.properties.push(updatedAtColumnProperty.full);
 			}
 			if (doesUpdatedAtColumnNeedFormat(action.UpdatedAtColumn, actionType.InputSchema)) {
 				if (
@@ -492,9 +492,9 @@ const transformInActionToSet = async (
 						throw err;
 					}
 					// custom format must be wrapped in single quotes.
-					timestampFormat = `'${action.UpdatedAtFormat}'`;
+					updatedAtFormat = `'${action.UpdatedAtFormat}'`;
 				} else {
-					timestampFormat = action.UpdatedAtFormat;
+					updatedAtFormat = action.UpdatedAtFormat;
 				}
 			}
 		}
@@ -560,7 +560,7 @@ const transformInActionToSet = async (
 		exportMode: action.ExportMode,
 		UniqueIDColumn: action.UniqueIDColumn,
 		UpdatedAtColumn: action.UpdatedAtColumn,
-		UpdatedAtFormat: timestampFormat,
+		UpdatedAtFormat: updatedAtFormat,
 		DisplayedID: action.DisplayedID,
 		matchingProperties: matchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
@@ -677,16 +677,16 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	return fields;
 };
 
-const doesUpdatedAtColumnNeedFormat = (timestampColumn: string, schema: ObjectType): boolean => {
-	if (timestampColumn == null || timestampColumn === '') {
+const doesUpdatedAtColumnNeedFormat = (updatedAtColumn: string, schema: ObjectType): boolean => {
+	if (updatedAtColumn == null || updatedAtColumn === '') {
 		return false;
 	}
 	const flatInputSchema = flattenSchema(schema);
-	const timestampProperty = flatInputSchema[timestampColumn];
-	if (timestampProperty == null) {
+	const updatedAtProperty = flatInputSchema[updatedAtColumn];
+	if (updatedAtProperty == null) {
 		return false;
 	}
-	const type = timestampProperty.type;
+	const type = updatedAtProperty.type;
 	return type === 'JSON' || type === 'Text';
 };
 

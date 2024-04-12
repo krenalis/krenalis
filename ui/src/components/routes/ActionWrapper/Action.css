@@ -176,7 +176,7 @@
 	margin-bottom: 0;
 }
 
-.action .specialProperties .timestampColumn {
+.action .specialProperties .updatedAtColumn {
 	display: flex;
 	align-items: baseline;
 	gap: 15px;
@@ -184,7 +184,7 @@
 
 .action .specialProperties .displayedID,
 .action .specialProperties .uniqueIDColumn,
-.action .specialProperties .timestampColumn .timestamp {
+.action .specialProperties .updatedAtColumn .updatedAt {
 	display: grid;
 	justify-content: start;
 	gap: 10px;
@@ -192,34 +192,34 @@
 	grid-template-columns: 150px 350px;
 }
 
-.action .specialProperties .timestampColumn .format {
+.action .specialProperties .updatedAtColumn .format {
 	display: flex;
 	align-items: baseline;
 	gap: 15px;
 }
 
-.action .specialProperties .timestampColumn .timestampFormat,
-.action .specialProperties .timestampColumn .timestampCustomFormat {
+.action .specialProperties .updatedAtColumn .updatedAtFormat,
+.action .specialProperties .updatedAtColumn .updatedAtCustomFormat {
 	display: flex;
 	align-items: center;
 	gap: 15px;
 }
 
-.action .specialProperties .timestampColumn .timestampCustomFormat sl-input::part(form-control-help-text) {
+.action .specialProperties .updatedAtColumn .updatedAtCustomFormat sl-input::part(form-control-help-text) {
 	position: absolute;
 }
 
-.action .specialProperties .timestampColumn .format .label {
+.action .specialProperties .updatedAtColumn .format .label {
 	text-wrap: nowrap;
 }
 
-.action .specialProperties .timestampColumn .format sl-select {
+.action .specialProperties .updatedAtColumn .format sl-select {
 	width: 100%;
 }
 
 .action .specialProperties .displayedID .label,
 .action .specialProperties .uniqueIDColumn .label,
-.action .specialProperties .timestampColumn .label {
+.action .specialProperties .updatedAtColumn .label {
 	font-size: 14px;
 }
 

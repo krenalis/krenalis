@@ -62,7 +62,7 @@ const defaultTransformationParameterByTarget = {
 	Events: 'event',
 };
 
-const timestampFormats = {
+const updatedAtFormats = {
 	dateTime: 'DateTime',
 	dateOnly: 'DateOnly',
 	iso8601: 'ISO8601',
@@ -73,7 +73,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
-	const [isCustomTimestampSelected, setIsCustomTimestampSelected] = useState<boolean>(false);
+	const [isCustomUpdatedAtFormatSelected, setIsCustomUpdatedAtFormatSelected] = useState<boolean>(false);
 
 	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
@@ -140,17 +140,17 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		if (!hasSpecialProperties || !action.UpdatedAtColumn) {
 			return;
 		}
-		// check if the timestamp format is custom.
-		const formats = Object.values(timestampFormats);
+		// check if the 'updated at' format is custom.
+		const formats = Object.values(updatedAtFormats);
 		if (!formats.includes(action.UpdatedAtFormat)) {
-			setIsCustomTimestampSelected(true);
+			setIsCustomUpdatedAtFormatSelected(true);
 		}
 	}, []);
 
 	useEffect(() => {
 		if (hasSpecialProperties && isFirstCompilation.current) {
 			// precompile the 'UniqueIDColumn', 'displayedID' and
-			// 'TimestampColumn' fields, if possible.
+			// 'UpdatedAtColumn' fields, if possible.
 			const a = { ...action };
 			if (connection.isApp) {
 				const suggestedDisplayedID = connection.connector.suggestedDisplayedID;
@@ -174,7 +174,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				if (hasUpdatedAtColumn) {
 					a.UpdatedAtColumn = 'timestamp';
 					if (doesUpdatedAtColumnNeedFormat(a.UpdatedAtColumn, actionType.InputSchema)) {
-						a.UpdatedAtFormat = timestampFormats['dateTime'];
+						a.UpdatedAtFormat = updatedAtFormats['dateTime'];
 					}
 				}
 			}
@@ -251,7 +251,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		return checkIfPropertyExists(action.DisplayedID, flatSchema);
 	}, [action, flatSchema]);
 
-	const timestampColumnError = useMemo<string>(() => {
+	const updatedAtColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
 			return checkIfPropertyExists(action.UpdatedAtColumn, flatSchema);
 		}
@@ -324,7 +324,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			a.DisplayedID = value;
 			setAction(a);
 			return;
-		} else if (input.name === 'timestampColumn') {
+		} else if (input.name === 'updatedAtColumn') {
 			const a = { ...action };
 			a.UpdatedAtColumn = value;
 			if (value === '' || !doesUpdatedAtColumnNeedFormat(value, actionType.InputSchema)) {
@@ -355,23 +355,23 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const onUpdateTimestampColumn = async (e) => {
+	const onUpdateUpdatedAtColumn = async (e) => {
 		const target = e.target;
 		let { value } = target;
 		const a = { ...action };
 		a.UpdatedAtColumn = value;
 		if (value === '' || !doesUpdatedAtColumnNeedFormat(value, actionType.InputSchema)) {
-			setIsCustomTimestampSelected(false);
+			setIsCustomUpdatedAtFormatSelected(false);
 			a.UpdatedAtFormat = '';
 		}
 		setAction(a);
 	};
 
-	const onChangeTimestampFormat = (e) => {
+	const onChangeUpdatedAtFormat = (e) => {
 		const a = { ...action };
 		const v = e.target.value;
 		if (v === 'custom') {
-			setIsCustomTimestampSelected(true);
+			setIsCustomUpdatedAtFormatSelected(true);
 			a.UpdatedAtFormat = '';
 			setTimeout(() => {
 				if (updatedAtCustomFormatInputRef.current) {
@@ -379,13 +379,13 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				}
 			}, 50);
 		} else {
-			setIsCustomTimestampSelected(false);
-			a.UpdatedAtFormat = timestampFormats[e.target.value];
+			setIsCustomUpdatedAtFormatSelected(false);
+			a.UpdatedAtFormat = updatedAtFormats[e.target.value];
 		}
 		setAction(a);
 	};
 
-	const onInputTimestampCustomFormat = (e) => {
+	const onInputUpdatedAtCustomFormat = (e) => {
 		const a = { ...action };
 		a.UpdatedAtFormat = e.target.value;
 		setAction(a);
@@ -484,37 +484,37 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 							)}
 						</div>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='timestampColumn'>
-								<div className='timestamp'>
+							<div className='updatedAtColumn'>
+								<div className='updatedAt'>
 									<div className='label'>Updated at:</div>
 									<ComboBoxInput
 										comboBoxListRef={updatedAtListRef}
-										onInput={onUpdateTimestampColumn}
+										onInput={onUpdateUpdatedAtColumn}
 										value={action.UpdatedAtColumn!}
-										name='timestampColumn'
+										name='updatedAtColumn'
 										disabled={isTransformationDisabled}
 										className='inputProperty'
 										caret={true}
 										clearable={action.UpdatedAtColumn?.length > 0}
-										error={timestampColumnError}
+										error={updatedAtColumnError}
 										size='small'
 									/>
 								</div>
 								<div className='format'>
-									<div className='timestampFormat'>
+									<div className='updatedAtFormat'>
 										<div className='label'>Format:</div>
 										<SlSelect
-											onSlChange={onChangeTimestampFormat}
+											onSlChange={onChangeUpdatedAtFormat}
 											value={
-												isCustomTimestampSelected
+												isCustomUpdatedAtFormatSelected
 													? 'custom'
 													: action.UpdatedAtColumn
-													? Object.keys(timestampFormats).find(
-															(key) => timestampFormats[key] === action.UpdatedAtFormat,
+													? Object.keys(updatedAtFormats).find(
+															(key) => updatedAtFormats[key] === action.UpdatedAtFormat,
 													  )
 													: ''
 											}
-											name='timestampFormat'
+											name='updatedAtFormat'
 											disabled={!needFormat}
 											size='small'
 										>
@@ -527,12 +527,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 											<SlOption value='custom'>Custom...</SlOption>
 										</SlSelect>
 									</div>
-									{needFormat && isCustomTimestampSelected && (
-										<div className='timestampCustomFormat'>
+									{needFormat && isCustomUpdatedAtFormatSelected && (
+										<div className='updatedAtCustomFormat'>
 											<SlInput
-												onSlInput={onInputTimestampCustomFormat}
+												onSlInput={onInputUpdatedAtCustomFormat}
 												value={action.UpdatedAtFormat}
-												name='timestampCustomFormat'
+												name='updatedAtCustomFormat'
 												placeholder='%Y-%m-%d'
 												helpText='C89 "strftime" format string'
 												size='small'
