@@ -37,7 +37,7 @@ const ConnectionOverview = () => {
 			}, 300);
 		};
 		const fetchData = async () => {
-			if (c.type !== 'App' && c.type !== 'Database' && c.type !== 'File') {
+			if (c.type !== 'App' && c.type !== 'Database' && c.type !== 'FileStorage') {
 				setHasExecutions(false);
 				stopLoading();
 				return;
