@@ -1,6 +1,6 @@
 {
 	"imports": {
-		"std/": "https://deno.land/std@0.219.0/"
+		"std/": "https://deno.land/std@0.222.1/"
 	},
 	"tasks": {
 		"bundle": "deno lint && deno test --fail-fast && npx esbuild chichi.js --bundle --sourcemap --outfile=build/chichi.bundle.js",
