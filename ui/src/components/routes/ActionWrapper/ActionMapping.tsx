@@ -429,10 +429,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	return (
 		<div className={`action-mapping${isTransformationDisabled ? ' disabled' : ''}`} ref={ref}>
 			{hasSpecialProperties && (
-				<Section
-					title={connection.isApp || connection.isEventBased ? 'Special properties' : 'Special columns'}
-					padded={true}
-				>
+				<Section title='Special properties' padded={true}>
 					<div className='specialProperties'>
 						{(connection.isFileStorage || connection.isDatabase) && (
 							<div className='uniqueIDColumn'>
