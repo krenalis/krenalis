@@ -46,21 +46,13 @@ first_name
 last_name
 ```
 
+#### Objects with "nullable" properties
 
-#### Nullability of Objects
+Properties of type Object can never be "nullable", but the properties of the Object may be.
 
-> This section **may be obsolete**. See the issue [#574](https://github.com/open2b/chichi/issues/574).
+In such cases, "nullable" properties are represented in the data warehouse as "nullable" columns.
 
-In the case that a property with type Object has been obtained through the grouping of columns, such property will never be nullable, regardless of the nullability of the individual columns.
-
-For example:
-
-```
-ios_id (nullable)
-ios_idfa (nullable)
-```
-
-is represented as:
+For example, the `ios` property defined this way:
 
 ```
 ios {
@@ -69,7 +61,12 @@ ios {
 }
 ```
 
-where the `ios` property is non-nullable.
+is represented as:
+
+```
+ios_id (nullable)
+ios_idfa (nullable)
+```
 
 ## Meta properties
 
