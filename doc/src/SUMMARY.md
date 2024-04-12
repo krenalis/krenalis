@@ -34,7 +34,7 @@
     - [Workspace Identity Resolution](./identity-resolution/workspace-identity-resolution.md)
     - [Allowed Types For Identifiers](./identity-resolution/allowed-types-for-identifiers.md)
     - [Anonymous Users Strategies](./identity-resolution/anonymous-users-strategies.md)
-- [Schemas and properties](./schemas-and-properties.md)
+- [Change the "users" schema](./change-the-users-schema.md)
 - [Data Warehouse](./data-warehouse.md)
     - [ClickHouse](./clickhouse.md)
     - [PostgreSQL](./postgresql.md)
