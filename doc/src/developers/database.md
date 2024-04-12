@@ -137,7 +137,7 @@ The `Columns` method returns the table's columns as a slice of `Property` values
 ### Query method
 
 ```go
-Query(ctx context.Context, query string) (Rows, []types.Property, error)
+Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error)
 ```
 
 Chichi invokes the `Query` method when previewing the rows returned by a query while creating or updating a database source action, and to get the data during an import. The query is provided after replacing any placeholders like `${limit}`.

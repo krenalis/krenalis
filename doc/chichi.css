@@ -55,7 +55,7 @@ table thead th {
 }
 table td {
     line-height: 1.6em;
-    padding: 10px;
+    padding: 10px 12px;
 }
 table td .hljs { background: none; box-shadow: none; }
 

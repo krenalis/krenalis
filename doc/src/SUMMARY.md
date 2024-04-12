@@ -47,3 +47,5 @@
     - [File Connectors](./developers/file.md)
     - [File Storage Connectors](./developers/file-storage.md)
     - [Settings and UI](./developers/settings-and-ui.md)
+    - [Data Types](./developers/data-types.md)
+    - [Data Values](./developers/data-values.md)
