@@ -45,7 +45,7 @@ In the Workspace Identity Resolution, users are merged by taking the `max` value
 
 > `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
 
-For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* by the Workspace Identity Resolution and thus must be merged:
+For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* (see [the issue #657](https://github.com/open2b/chichi/issues/657)) by the Workspace Identity Resolution and thus must be merged:
 
 | email | name     | totalOrders |
 |-------|----------|-------------|
