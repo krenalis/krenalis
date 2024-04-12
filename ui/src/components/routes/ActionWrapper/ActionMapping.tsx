@@ -437,7 +437,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 						{(connection.isFileStorage || connection.isDatabase) && (
 							<div className='uniqueIDColumn'>
 								<div className='label'>
-									User identifier<span className='asterisk'>*</span>:
+									Identity<span className='asterisk'>*</span>:
 								</div>
 								<ComboBoxInput
 									comboBoxListRef={uniqueIDListRef}
@@ -460,7 +460,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 							</div>
 						)}
 						<div className='displayedID'>
-							<div className='label'>Displayed identifier:</div>
+							<div className='label'>Displayed:</div>
 							{connection.isEventBased ? (
 								<SlInput
 									onSlInput={onUpdateDisplayedID}
@@ -486,7 +486,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 						{(connection.isFileStorage || connection.isDatabase) && (
 							<div className='updatedAtColumn'>
 								<div className='updatedAt'>
-									<div className='label'>Updated at:</div>
+									<div className='label'>Last change time:</div>
 									<ComboBoxInput
 										comboBoxListRef={updatedAtListRef}
 										onInput={onUpdateUpdatedAtColumn}
