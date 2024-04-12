@@ -9,7 +9,6 @@ package test
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -154,7 +153,7 @@ func TestIdentityResolution(t *testing.T) {
 		}
 		err = os.WriteFile(jsonAbsPath, content, 0755)
 		if err != nil {
-			log.Fatalf("cannot write the incoming user to the JSON file: %s", err)
+			t.Fatalf("cannot write the incoming user to the JSON file: %s", err)
 		}
 
 		// Import the users in the JSON.
