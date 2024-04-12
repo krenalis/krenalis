@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,7 +55,7 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		fatal("cannot read modules and packages in the repository: %s", err)
 	}
 	slices.Sort(modules)
 	slices.Sort(packages)
@@ -65,8 +64,7 @@ func main() {
 	// certainly should be found.
 	for _, mod := range []string{".", "chichi-cli"} {
 		if !slices.Contains(modules, mod) {
-			log.Fatalf("module %q not found, maybe you ran this script incorrectly"+
-				" or this script is out-of-date", mod)
+			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
 		}
 	}
 
@@ -74,15 +72,14 @@ func main() {
 	// certainly should be found.
 	for _, pkg := range []string{".", "apis", "chichi-cli"} {
 		if !slices.Contains(packages, pkg) {
-			log.Fatalf("package %q not found, maybe you ran this script incorrectly"+
-				" or this script is out-of-date", pkg)
+			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
 		}
 	}
 
 	// Get the cwd.
 	repo, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		fatal("cannot read the cwd: %s", err)
 	}
 
 	fmt.Println("Tidying modules")
@@ -153,8 +150,13 @@ func cmd(name string, arg []string, repo, moduleDir string, echo bool) {
 	}
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		fatal("command %q failed (%s)", name, err)
 	}
+}
+
+func fatal(msg string, args ...any) {
+	fmt.Fprintf(os.Stderr, "Fatal error: "+msg+"\n", args...)
+	os.Exit(1)
 }
 
 func removeGoSum(repo, module string, verbose bool) {
@@ -163,7 +165,7 @@ func removeGoSum(repo, module string, verbose bool) {
 	}
 	err := os.Remove(filepath.Join(repo, module, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Fatal(err)
+		fatal("cannot remove 'go.sum': %s", err)
 	}
 }
 
