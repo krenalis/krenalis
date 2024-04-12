@@ -483,7 +483,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			Role:   this.connection.Role,
 			Region: this.connection.Workspace().PrivacyRegion,
 		}
-		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, action.UIValues)
+		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
 			return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 		}

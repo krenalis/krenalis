@@ -224,7 +224,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			Region:       state.PrivacyRegion(this.PrivacyRegion),
 		}
 		var err error
-		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, c, conf, values)
+		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, c, conf, values)
 		if err != nil {
 			if err != connectors.ErrNoUserInterface {
 				return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)

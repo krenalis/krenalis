@@ -210,12 +210,12 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	return marshalUI(ui, role)
 }
 
-// ValidateUIValues validates the user-entered values for the provided connector
-// and returns the new connector's settings.
+// UpdatedSettings returns the settings, for the given connector, updated with
+// the provided user-entered values.
 //
 // It returns an *InvalidUIValuesError error value if the values are not valid.
 // It panics if the connector has no UI.
-func (connectors *Connectors) ValidateUIValues(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, values []byte) ([]byte, error) {
+func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues []byte) ([]byte, error) {
 	var inner any
 	var err error
 	r := chichi.Role(conf.Role)
@@ -259,7 +259,7 @@ func (connectors *Connectors) ValidateUIValues(ctx context.Context, connector *s
 	if err != nil {
 		return nil, err
 	}
-	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", values)
+	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
 	if err != nil {
 		if err, ok := err.(chichi.InvalidUIValuesError); ok {
 			return nil, &InvalidUIValuesError{Msg: err.Error()}

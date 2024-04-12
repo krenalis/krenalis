@@ -460,7 +460,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			Role:   this.action.Connection().Role,
 			Region: this.action.Connection().Workspace().PrivacyRegion,
 		}
-		n.Settings, err = this.apis.connectors.ValidateUIValues(ctx, fileConnector, conf, action.UIValues)
+		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
 			return errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
 		}
