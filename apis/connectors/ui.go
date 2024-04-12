@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"unicode/utf8"
@@ -212,16 +213,21 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 // ValidateUIValues validates the user-entered values for the provided connector
 // and returns the new connector's settings.
 //
-// It returns the ErrNoUserInterface error if the connector does not have a user
-// interface.
 // It returns an *InvalidUIValuesError error value if the values are not valid.
+// It panics if the connector has no UI.
 func (connectors *Connectors) ValidateUIValues(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, values []byte) ([]byte, error) {
 	var inner any
 	var err error
 	r := chichi.Role(conf.Role)
-	var savedSettings []byte
+	var newSettings []byte
 	setSettings := func(_ context.Context, settings []byte) error {
-		savedSettings = settings
+		if !utf8.Valid(settings) {
+			return errors.New("settings is not valid UTF-8")
+		}
+		if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
+			return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
+		}
+		newSettings = settings
 		return nil
 	}
 	switch c := connector; c.Type {
@@ -253,24 +259,14 @@ func (connectors *Connectors) ValidateUIValues(ctx context.Context, connector *s
 	if err != nil {
 		return nil, err
 	}
-	uih, ok := inner.(chichi.UIHandler)
-	if !ok {
-		return nil, ErrNoUserInterface
-	}
-	_, err = uih.ServeUI(ctx, "save", values)
+	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", values)
 	if err != nil {
 		if err, ok := err.(chichi.InvalidUIValuesError); ok {
 			return nil, &InvalidUIValuesError{Msg: err.Error()}
 		}
 		return nil, err
 	}
-	if savedSettings == nil {
-		return nil, fmt.Errorf("%s connector has not set the settings", connector.Name)
-	}
-	if utf8.RuneCount(savedSettings) > maxSettingsLen {
-		return nil, fmt.Errorf("settings returned by %s are longer than %d runes", connector.Name, maxSettingsLen)
-	}
-	return savedSettings, nil
+	return newSettings, nil
 }
 
 // marshalUI marshals the provided UI, in the given role, into JSON format.
