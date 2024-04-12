@@ -1863,18 +1863,20 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 				actionTypes = slices.Insert(actionTypes, 0, at)
 			}
 		case state.AppType:
-			eventTypes, err := this.app().EventTypes(ctx)
-			if err != nil {
-				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
-			for _, et := range eventTypes {
-				id := et.ID
-				actionTypes = append(actionTypes, ActionType{
-					Name:        et.Name,
-					Description: et.Description,
-					Target:      Events,
-					EventType:   &id,
-				})
+			if c.Role == state.Destination {
+				eventTypes, err := this.app().EventTypes(ctx)
+				if err != nil {
+					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+				}
+				for _, et := range eventTypes {
+					id := et.ID
+					actionTypes = append(actionTypes, ActionType{
+						Name:        et.Name,
+						Description: et.Description,
+						Target:      Events,
+						EventType:   &id,
+					})
+				}
 			}
 		}
 	}
