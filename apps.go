@@ -130,11 +130,11 @@ type App interface {
 
 // EventRequest represents an event request.
 type EventRequest struct {
-	Endpoint string
-	Method   string
-	URL      string
-	Header   http.Header
-	Body     []byte
+	Endpoint string      // Destination identifier, e.g., "us", "europe", or leave empty.
+	Method   string      // HTTP method (e.g., "POST").
+	URL      string      // URL to which the request will be sent.
+	Header   http.Header // Header fields to be included with the request.
+	Body     []byte      // The body of the request.
 }
 
 // EventType represents a type of event that the app can receive.
