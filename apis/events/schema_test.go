@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package eventschema
+package events
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ import (
 
 func Test_SchemaWithoutGID(t *testing.T) {
 
-	props := SchemaWithoutGID.Properties()
+	props := Schema.Properties()
 	if len(props) != 15 {
 		t.Fatalf("expecting 15 properties, got %d", len(props))
 	}

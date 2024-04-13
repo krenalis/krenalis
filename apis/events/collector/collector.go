@@ -5,12 +5,13 @@
 // Copyright (c) 2022 Open2b
 //
 
-package events
+package collector
 
 import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,6 +34,9 @@ import (
 	"github.com/open2b/chichi/apis/culture"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/events"
+	"github.com/open2b/chichi/apis/events/dispatcher"
+	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
 
@@ -40,12 +44,12 @@ import (
 	"github.com/mssola/useragent"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/relvacode/iso8601"
-	"github.com/segmentio/ksuid"
-	"golang.org/x/text/unicode/norm"
 )
 
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
+
+const geoLite2Path = "GeoLite2-City.mmdb"
 
 // Errors handled by the HTTP server of the collector.
 var (
@@ -57,35 +61,63 @@ var (
 
 type batchEvents struct {
 	Batch    []*collectedEvent `json:"batch"`
-	Context  *eventContext     `json:"context,omitempty"`
+	Context  *events.Context   `json:"context,omitempty"`
 	SentAt   string            `json:"sentAt,omitempty"`
 	WriteKey string            `json:"writeKey,omitempty"`
 }
 
-// A collector collects events, store them in the event log and sends them to
-// the processor.
-type collector struct {
-	state       *eventsState
+// collectedEvent represents an event as collected from a client.
+type collectedEvent struct {
+	header *events.Header
+
+	id [20]byte
+
+	AnonymousId  string          `json:"anonymousId,omitempty"`
+	Category     string          `json:"category,omitempty"`
+	Context      events.Context  `json:"context,omitempty"`
+	Event        string          `json:"event,omitempty"`
+	GroupId      string          `json:"groupId,omitempty"`
+	Integrations json.RawMessage `json:"integrations,omitempty"`
+	MessageId    string          `json:"messageId,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	receivedAt   time.Time
+	SentAt       string `json:"sentAt,omitempty"`
+	sentAt       time.Time
+	Timestamp    string `json:"timestamp,omitempty"`
+	timestamp    time.Time
+	Traits       map[string]any `json:"traits,omitempty"`
+	Type         *string        `json:"type"`
+	UserId       string         `json:"userId,omitempty"`
+	PreviousId   string         `json:"previousId,omitempty"`
+	Properties   map[string]any `json:"properties,omitempty"`
+
+	WriteKey string `json:"writeKey,omitempty"`
+}
+
+// A Collector collects events, persists them in the database and sends them to
+// the dispatcher.
+type Collector struct {
+	db          *postgres.DB
+	state       *state.State
 	datastore   *datastore.Datastore
-	eventLog    *eventsLog
-	events      chan *collectedEvent
 	observer    *Observer
 	messageIds  sync.Map
 	transformer transformers.Function
+	dispatcher  *dispatcher.Dispatcher
 	geoLiteDB   *geoip2.Reader
 }
 
-// newCollector returns a new event collector. It receives HTTP requests from
-// mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, transformer transformers.Function, observer *Observer) (*collector, error) {
-	var collector = collector{
+// New returns a new event collector. It receives HTTP requests from mobile,
+// server and website sources and sends them to the dispatcher.
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Function, dispatcher *dispatcher.Dispatcher) (*Collector, error) {
+	var collector = Collector{
+		db:          db,
 		state:       st,
 		datastore:   ds,
-		eventLog:    eventLog,
-		events:      make(chan *collectedEvent, 1000),
-		observer:    observer,
+		observer:    newObserver(db),
 		messageIds:  sync.Map{},
 		transformer: transformer,
+		dispatcher:  dispatcher,
 	}
 	var err error
 	collector.geoLiteDB, err = geoip2.Open(geoLite2Path)
@@ -95,15 +127,15 @@ func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog,
 	return &collector, nil
 }
 
-// Events returns the events channel.
-func (c *collector) Events() <-chan *collectedEvent {
-	return c.events
+// Observer returns the observer for the collected events.
+func (c *Collector) Observer() *Observer {
+	return c.observer
 }
 
 // ServeHTTP serves both settings and event messages over HTTP.
 // A message is a JSON stream of JSON objects where the first object is the
 // message header.
-func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
@@ -152,9 +184,101 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// actions returns the app destination actions that are enabled, have the Events
+// target, and their connection is enabled.
+func (c *Collector) actions() []*state.Action {
+	var actions []*state.Action
+	for _, action := range c.state.Actions() {
+		if !action.Enabled || action.Target != state.Events {
+			continue
+		}
+		c := action.Connection()
+		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.AppType {
+			continue
+		}
+		actions = append(actions, action)
+	}
+	return actions
+}
+
+// canCollectEvents reports whether the provided connection can collect events.
+// It can collect events if it is enabled and has an enabled action, or is
+// enabled and has an enabled event destination with an enabled action on
+// events.
+func (c *Collector) canCollectEvents(connection *state.Connection) bool {
+	return connection.Enabled && (c.hasImportEventsAction(connection) ||
+		c.hasImportUsersAction(connection) || c.hasEventDestinations(connection))
+}
+
+// connectionByKey returns an enable source mobile, server or website connection
+// given its key and true, if exists, otherwise returns nil and false.
+func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
+	conn, ok := c.state.ConnectionByKey(key)
+	if ok && conn.Enabled && conn.Role == state.Source {
+		switch conn.Connector().Type {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			return conn, true
+		}
+	}
+	return nil, false
+}
+
+// hasEnabledActions reports whether connection is enabled and has at least one
+// enabled action.
+func (c *Collector) hasEnabledActions(connection *state.Connection) bool {
+	if !connection.Enabled {
+		return false
+	}
+	for _, a := range connection.Actions() {
+		if a.Enabled {
+			return true
+		}
+	}
+	return false
+}
+
+// HasEventDestinations reports whether source has an enabled event destination
+// with an enabled action on events.
+func (c *Collector) hasEventDestinations(source *state.Connection) bool {
+	for _, id := range source.EventConnections {
+		c, ok := c.state.Connection(id)
+		if !ok || !c.Enabled {
+			continue
+		}
+		for _, action := range c.Actions() {
+			if action.Enabled && action.Target == state.Events {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasImportEventsAction reports whether source has an enabled action that
+// import the events.
+func (c *Collector) hasImportEventsAction(source *state.Connection) bool {
+	for _, a := range source.Actions() {
+		if a.Enabled && a.Target == state.Events {
+			return true
+		}
+	}
+	return false
+}
+
+// HasImportUsersAction reports whether source has an enabled action that
+// import the users.
+func (c *Collector) hasImportUsersAction(source *state.Connection) bool {
+	for _, a := range source.Actions() {
+		if a.Enabled && a.Target == state.Users {
+			return true
+		}
+	}
+	return false
+}
+
 // importUsersIdentities imports users identities from the given events batch
 // collected on the source connection.
-func (c *collector) importUsersIdentities(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
+func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Connection, events []*events.Event) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
 			continue
@@ -178,7 +302,7 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 		defer iw.Close(ctx)
 
 		// Import the user identities from the events batch.
-		for _, event := range eventsBatch {
+		for _, event := range events {
 			mapEvent := event.ToMap()
 			var properties map[string]any
 			// If the action specifies mappings, apply them to the event and
@@ -229,7 +353,7 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 				ID:          event.UserId,
 				Properties:  properties,
 				AnonymousID: event.AnonymousId,
-				UpdatedAt:   event.timestamp,
+				UpdatedAt:   event.Timestamp,
 				DisplayedID: displayedID,
 			})
 			if !ok {
@@ -249,8 +373,33 @@ func (c *collector) importUsersIdentities(ctx context.Context, source *state.Con
 	return nil
 }
 
+// persistEvents persists events in the database.
+func (c *Collector) persistEvents(events []*collectedEvent) <-chan error {
+	ack := make(chan error, 1)
+	go func() {
+		var b bytes.Buffer
+		enc := json.NewEncoder(&b)
+		enc.SetEscapeHTML(false)
+		for _, event := range events {
+			header := event.header
+			remoteAddr, _, _ := net.SplitHostPort(header.RemoteAddr)
+			_ = enc.Encode(event)
+			payload := b.Bytes()
+			_, err := c.db.Exec(context.Background(), "INSERT INTO event_payloads (id, connection, received_at, remote_addr, user_agent, payload) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING",
+				event.id[:], header.Connection, header.ReceivedAt, remoteAddr, header.Headers.Get("User-Agent"), payload)
+			if err != nil {
+				ack <- err
+				return
+			}
+			b.Reset()
+		}
+		ack <- nil
+	}()
+	return ack
+}
+
 // serveSettings is called by the ServeHTTP method to serve a settings request.
-func (c *collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
+func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		origin = "*"
@@ -273,7 +422,7 @@ func (c *collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	if !ok || strings.Contains(writeKey, "/") {
 		return errNotFound
 	}
-	source, ok := c.state.ConnectionByKey(writeKey)
+	source, ok := c.connectionByKey(writeKey)
 	if !ok || source.Strategy == nil {
 		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 		w.Header().Set("Cache-Control", "max-age=31536000")
@@ -294,7 +443,7 @@ func (c *collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 }
 
 // serveEvents is called by the ServeHTTP method to serve an events request.
-func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
+func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ctx := r.Context()
 
@@ -348,7 +497,7 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	header := &EventHeader{
+	header := &events.Header{
 		ReceivedAt: date,
 		RemoteAddr: r.RemoteAddr,
 		Method:     r.Method,
@@ -357,51 +506,18 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		Headers:    collectHeader(r),
 	}
 
-	// Read the body and check that is not be longer than maxRequestSize bytes and,
-	// it is a streaming of JSON objects, otherwise return the errBadRequest error.
-	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(r.Body)
-	if err != nil {
-		return err
-	}
-	if lr.N == 0 {
-		return errBadRequest
-	}
-	b := buf.Bytes()
-
-	// Read the events.
-	nr := norm.NFC.Reader(bytes.NewReader(b))
-	dec := json.NewDecoder(nr)
-	dec.UseNumber()
-
-	var events batchEvents
-	if method == "batch" {
-		err = dec.Decode(&events)
-	} else {
-		events.Batch = make([]*collectedEvent, 1)
-		err = dec.Decode(&events.Batch[0])
-	}
+	// Parse the request's body.
+	evs, err := parse(r.Body, method == "batch")
 	if err != nil {
 		return errBadRequest
-	}
-	if len(events.Batch) == 0 {
-		return errBadRequest
-	}
-
-	// Discard duplicated events.
-	events.Batch = c.removeDuplicatedEvents(events.Batch)
-	if len(events.Batch) == 0 {
-		writeOK(w, origin)
-		return nil
 	}
 
 	// Validate the write key.
-	var source *state.Connection
+	var connection *state.Connection
 	{
-		writeKey := events.WriteKey
+		writeKey := evs.WriteKey
 		if method != "batch" {
-			writeKey = events.Batch[0].WriteKey
+			writeKey = evs.Batch[0].WriteKey
 		}
 		if writeKey == "" {
 			if key, _, ok := r.BasicAuth(); ok {
@@ -409,52 +525,69 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if writeKey != "" {
-			source, _ = c.state.ConnectionByKey(writeKey)
+			connection, _ = c.connectionByKey(writeKey)
 		}
-		if source == nil {
-			c.setEventsAsReceived(events.Batch)
+		if connection == nil {
 			writeOK(w, origin)
 			return nil
 		}
 	}
-	header.source = source.ID
+	header.Connection = connection.ID
 
-	for i := 0; i < len(events.Batch); i++ {
-		event := events.Batch[i]
-		if event.Type == nil && method != "batch" {
-			event.Type = &method
-		}
-		if event.SentAt == "" {
-			event.SentAt = events.SentAt
-		}
-		event.header = header
-		mergeContexts(&event.Context, events.Context)
-		err = validateEvent(method, event)
-		c.observer.addEvent(header.source, event, err)
-		if err != nil {
-			// Remove the invalid event.
-			events.Batch = slices.Delete(events.Batch, i, i+1)
-			c.setEventAsReceived(event)
-			i--
-			continue
-		}
-		event.id = ksuid.New()
-	}
-	if len(events.Batch) == 0 {
-		return nil
+	// Assign an identifier to each event concatenating the connection with the message ID.
+	var id bytes.Buffer
+	for _, event := range evs.Batch {
+		id.WriteString(strconv.Itoa(connection.ID))
+		id.WriteRune(':')
+		id.WriteString(event.MessageId)
+		h := sha1.New()
+		_, _ = id.WriteTo(h)
+		copy(event.id[:], h.Sum(nil))
+		id.Reset()
 	}
 
-	if !c.state.CanCollectEvents(source) {
-		c.setEventsAsReceived(events.Batch)
+	// Discard duplicated events.
+	evs.Batch = c.removeDuplicatedEvents(evs.Batch)
+	if len(evs.Batch) == 0 {
 		writeOK(w, origin)
 		return nil
 	}
 
-	// Append the events sources to the events log.
-	ack := c.eventLog.Append(events.Batch)
+	for i := 0; i < len(evs.Batch); i++ {
+		event := evs.Batch[i]
+		if event.Type == nil && method != "batch" {
+			event.Type = &method
+		}
+		if event.SentAt == "" {
+			event.SentAt = evs.SentAt
+		}
+		event.header = header
+		mergeContexts(&event.Context, evs.Context)
+		err = validateEvent(method, event)
+		c.observer.addEvent(header.Connection, event, err)
+		if err != nil {
+			// Remove the invalid event.
+			evs.Batch = slices.Delete(evs.Batch, i, i+1)
+			c.setEventAsReceived(event)
+			i--
+			continue
+		}
+	}
+	if len(evs.Batch) == 0 {
+		return nil
+	}
+
+	if !c.canCollectEvents(connection) {
+		c.setEventsAsReceived(evs.Batch)
+		writeOK(w, origin)
+		return nil
+	}
+
+	// Add the events to the database.
+	ack := c.persistEvents(evs.Batch)
 
 	// Enrich the events.
-	for _, event := range events.Batch {
+	for _, event := range evs.Batch {
 		c.enrichEvent(event)
 	}
 
@@ -464,28 +597,59 @@ func (c *collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Set the events as received.
-	c.setEventsAsReceived(events.Batch)
+	c.setEventsAsReceived(evs.Batch)
 
 	// Send a successful response to the client.
 	writeOK(w, origin)
 
-	if c.state.HasImportEventsAction(source) {
-		// Store the events into the data warehouse.
-		c.storeEvents(source.Workspace().ID, events.Batch)
+	batch := make([]*events.Event, len(evs.Batch))
+	for i, event := range evs.Batch {
+		batch[i] = &events.Event{
+			Header:       event.header,
+			Id:           event.id,
+			AnonymousId:  event.AnonymousId,
+			Category:     event.Category,
+			Context:      event.Context,
+			Event:        event.Event,
+			GroupId:      event.GroupId,
+			Integrations: event.Integrations,
+			MessageId:    event.MessageId,
+			Name:         event.Name,
+			ReceivedAt:   event.receivedAt,
+			SentAt:       event.sentAt,
+			Timestamp:    event.timestamp,
+			Traits:       event.Traits,
+			Type:         event.Type,
+			UserId:       event.UserId,
+			PreviousId:   event.PreviousId,
+			Properties:   event.Properties,
+		}
 	}
 
-	if c.state.HasImportUsersAction(source) {
+	if c.hasImportEventsAction(connection) {
+		// Store the events into the data warehouse.
+		c.storeEvents(connection.Workspace().ID, batch)
+	}
+
+	if c.hasImportUsersAction(connection) {
 		// Import the users identities.
-		err = c.importUsersIdentities(ctx, source, events.Batch)
+		err = c.importUsersIdentities(ctx, connection, batch)
 		if err != nil {
 			return err
 		}
 	}
 
-	if c.state.HasEventDestinations(source) {
-		// Send the events to the next stage.
-		for _, event := range events.Batch {
-			c.events <- event
+	if c.hasEventDestinations(connection) {
+		// Send the events to the dispatcher.
+		for _, event := range batch {
+			for _, action := range c.actions() {
+				eventAsMap := event.ToMap()
+				ok, err := filterApplies(action.Filter, eventAsMap)
+				if err != nil || !ok {
+					continue
+				}
+				c.dispatcher.Dispatch(event, action)
+			}
 		}
 	}
 
@@ -529,7 +693,7 @@ func validateEvent(method string, event *collectedEvent) error {
 		return errors.New("unexpected event category")
 	}
 
-	// Event.
+	// EventI.
 	if event.Event == "" && isTrack {
 		return errors.New("missing event name")
 	}
@@ -574,7 +738,7 @@ func validateEvent(method string, event *collectedEvent) error {
 }
 
 // mergeContexts merges defaultCtx into ctx.
-func mergeContexts(ctx, defaultCtx *eventContext) {
+func mergeContexts(ctx, defaultCtx *events.Context) {
 	if defaultCtx == nil {
 		return
 	}
@@ -747,10 +911,7 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 }
 
 // enrichEvent enriches the given event.
-func (c *collector) enrichEvent(event *collectedEvent) {
-
-	// Source.
-	event.source = event.header.source
+func (c *Collector) enrichEvent(event *collectedEvent) {
 
 	// AnonymousId.
 	if event.AnonymousId == "" {
@@ -759,31 +920,31 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 
 	// Browser and OS.
 	if event.Context.UserAgent == "" {
-		event.Context.browser.Name = "None"
+		event.Context.Browser.Name = "None"
 		event.Context.OS.Name = "None"
 	} else {
 		ua := useragent.New(event.Context.UserAgent)
 		browserName, browserVersion := ua.Browser()
 		switch browserName {
 		default:
-			event.Context.browser.Name = "Other"
+			event.Context.Browser.Name = "Other"
 			if len(browserName) <= 25 {
-				event.Context.browser.Other = browserName
+				event.Context.Browser.Other = browserName
 			}
 		case "Chrome":
-			event.Context.browser.Name = "Chrome"
+			event.Context.Browser.Name = "Chrome"
 		case "Safari":
-			event.Context.browser.Name = "Safari"
+			event.Context.Browser.Name = "Safari"
 		case "Edge":
-			event.Context.browser.Name = "Edge"
+			event.Context.Browser.Name = "Edge"
 		case "Firefox":
-			event.Context.browser.Name = "Firefox"
+			event.Context.Browser.Name = "Firefox"
 		case "Samsung Internet":
-			event.Context.browser.Name = "Samsung Internet"
+			event.Context.Browser.Name = "Samsung Internet"
 		case "Opera":
-			event.Context.browser.Name = "Opera"
+			event.Context.Browser.Name = "Opera"
 		}
-		if event.Context.browser.Name != "Other" || event.Context.browser.Other != "" {
+		if event.Context.Browser.Name != "Other" || event.Context.Browser.Other != "" {
 			if strings.Contains(browserVersion, ".") {
 				parts := strings.SplitN(browserVersion, ".", 3)
 				if len(parts) == 3 {
@@ -794,7 +955,7 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 				}
 			}
 			if utf8.RuneCountInString(browserVersion) <= 10 {
-				event.Context.browser.Version = browserVersion
+				event.Context.Browser.Version = browserVersion
 			}
 		}
 		osInfo := ua.OSInfo()
@@ -922,9 +1083,9 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 
 // removeDuplicatedEvents removes duplicated events returning the modified
 // slice.
-func (c *collector) removeDuplicatedEvents(events []*collectedEvent) []*collectedEvent {
+func (c *Collector) removeDuplicatedEvents(events []*collectedEvent) []*collectedEvent {
 	for i := 0; i < len(events); i++ {
-		if _, ok := c.messageIds.Load(events[i].MessageId); ok {
+		if _, ok := c.messageIds.Load(events[i].id); ok {
 			events = slices.Delete(events, i, i+1)
 			i--
 		}
@@ -933,19 +1094,19 @@ func (c *collector) removeDuplicatedEvents(events []*collectedEvent) []*collecte
 }
 
 // setEventAsReceived sets the provided event as received.
-func (c *collector) setEventAsReceived(event *collectedEvent) {
-	c.messageIds.Store(event.MessageId, nil)
+func (c *Collector) setEventAsReceived(event *collectedEvent) {
+	c.messageIds.Store(event.id, nil)
 }
 
 // setEventsAsReceived sets the provided events as received.
-func (c *collector) setEventsAsReceived(events []*collectedEvent) {
-	for i := 0; i < len(events); i++ {
-		c.messageIds.Store(events[i].MessageId, nil)
+func (c *Collector) setEventsAsReceived(events []*collectedEvent) {
+	for _, event := range events {
+		c.messageIds.Store(event.id, nil)
 	}
 }
 
 // storeEvents store the events in the data warehouse.
-func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
+func (c *Collector) storeEvents(workspace int, events []*events.Event) {
 
 	store := c.datastore.Store(workspace)
 	if store == nil {
@@ -1008,9 +1169,9 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 					"namespace": e.Context.App.Namespace,
 				},
 				"browser": map[string]any{
-					"name":    e.Context.browser.Name,
-					"other":   e.Context.browser.Other,
-					"version": e.Context.browser.Version,
+					"name":    e.Context.Browser.Name,
+					"other":   e.Context.Browser.Other,
+					"version": e.Context.Browser.Version,
 				},
 				"campaign": map[string]any{
 					"name":    e.Context.Campaign.Name,
@@ -1080,10 +1241,10 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 			"messageId":  e.MessageId,
 			"name":       e.Name,
 			"properties": json.RawMessage(slices.Clone(properties.Bytes())),
-			"receivedAt": e.receivedAt,
-			"sentAt":     e.sentAt,
-			"source":     e.source,
-			"timestamp":  e.timestamp,
+			"receivedAt": e.ReceivedAt,
+			"sentAt":     e.SentAt,
+			"source":     e.Header.Connection,
+			"timestamp":  e.Timestamp,
 			"traits":     json.RawMessage(slices.Clone(traits.Bytes())),
 			"type":       *e.Type,
 			"userId":     e.UserId,

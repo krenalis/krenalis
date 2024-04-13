@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/types"
 )
 
@@ -22,7 +22,7 @@ const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Even
 
 var eventsMergeTable = warehouses.MergeTable{
 	Name:       "events",
-	Properties: eventschema.SchemaWithoutGID.Properties(),
+	Properties: events.Schema.Properties(),
 	PrimaryKeys: []types.Property{
 		{Name: "messageId", Type: types.Text()},
 	},

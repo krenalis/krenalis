@@ -5,19 +5,18 @@
 // Copyright (c) 2024 Open2b
 //
 
-package eventschema
+package events
 
 import "github.com/open2b/chichi/types"
 
 // SchemaWithGID is the schema of an event which includes the GID property.
 var SchemaWithGID = types.Object(append(
 	[]types.Property{{Name: "gid", Type: types.Int(32)}},
-	SchemaWithoutGID.Properties()...,
+	Schema.Properties()...,
 ))
 
-// SchemaWithoutGID is the schema of an event which does not include the GID
-// property.
-var SchemaWithoutGID = types.Object([]types.Property{
+// Schema is the schema of an event. It does not include the GID property.
+var Schema = types.Object([]types.Property{
 	{Name: "anonymousId", Type: types.Text()},
 	{Name: "category", Type: types.Text()},
 	{

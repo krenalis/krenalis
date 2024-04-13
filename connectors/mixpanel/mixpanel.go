@@ -78,9 +78,10 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, typ string, event *chichi.
 	}
 
 	req := &chichi.EventRequest{
-		Method: "POST",
-		URL:    "https://api.mixpanel.com/",
-		Header: http.Header{},
+		Endpoint: "api",
+		Method:   "POST",
+		URL:      "https://api.mixpanel.com/",
+		Header:   http.Header{},
 	}
 	if mp.conf.Region == chichi.PrivacyRegionEurope {
 		req.URL = "https://api-eu.mixpanel.com/"

@@ -14,65 +14,50 @@ import (
 
 	"github.com/open2b/chichi"
 
-	"github.com/segmentio/ksuid"
 	"github.com/shopspring/decimal"
 )
 
-// Event represents an event as returned by the ParseObservedEvent method of the
-// *Events type.
-type Event interface {
-	ToConnectorEvent() *chichi.Event
-	ToMap() map[string]any
-}
-
-// EventHeader represents the header of an event as collected from a client.
-type EventHeader struct {
+// Header represents the Header of an event.
+type Header struct {
 	ReceivedAt time.Time   `json:"receivedAt"`
 	RemoteAddr string      `json:"remoteAddr"`
 	Method     string      `json:"method"`
 	Proto      string      `json:"proto"`
 	URL        string      `json:"url"`
 	Headers    http.Header `json:"headers"`
-	source     int
+	Connection int
 }
 
-// collectedEvent represents an event as collected from a client.
-type collectedEvent struct {
-	header *EventHeader
-
-	id     ksuid.KSUID
-	source int
-
-	AnonymousId  string          `json:"anonymousId,omitempty"`
-	Category     string          `json:"category,omitempty"`
-	Context      eventContext    `json:"context,omitempty"`
-	Event        string          `json:"event,omitempty"`
-	GroupId      string          `json:"groupId,omitempty"`
-	Integrations json.RawMessage `json:"integrations,omitempty"`
-	MessageId    string          `json:"messageId,omitempty"`
-	Name         string          `json:"name,omitempty"`
-	receivedAt   time.Time
-	SentAt       string `json:"sentAt,omitempty"`
-	sentAt       time.Time
-	Timestamp    string `json:"timestamp,omitempty"`
-	timestamp    time.Time
-	Traits       map[string]any `json:"traits,omitempty"`
-	Type         *string        `json:"type"`
-	UserId       string         `json:"userId,omitempty"`
-	PreviousId   string         `json:"previousId,omitempty"`
-	Properties   map[string]any `json:"properties,omitempty"`
-
-	WriteKey string `json:"writeKey,omitempty"`
+// Event represents an event.
+type Event struct {
+	Header       *Header
+	Id           [20]byte
+	AnonymousId  string
+	Category     string
+	Context      Context
+	Event        string
+	GroupId      string
+	Integrations json.RawMessage
+	MessageId    string
+	Name         string
+	ReceivedAt   time.Time
+	SentAt       time.Time
+	Timestamp    time.Time
+	Traits       map[string]any
+	Type         *string
+	UserId       string
+	PreviousId   string
+	Properties   map[string]any
 }
 
-type eventContext struct {
+type Context struct {
 	App struct {
 		Name      string `json:"name,omitempty"`
 		Version   string `json:"version,omitempty"`
 		Build     string `json:"build,omitempty"`
 		Namespace string `json:"namespace,omitempty"`
 	} `json:"app,omitempty"`
-	browser struct {
+	Browser struct { // TODO: this should be unexported
 		Name    string `json:"name,omitempty"`
 		Other   string `json:"other,omitempty"`
 		Version string `json:"version,omitempty"`
@@ -144,8 +129,8 @@ type eventContext struct {
 
 // ToConnectorEvent returns event as a connector event to be passed as an
 // argument to the SendEvent and PreviewSendEvent methods of an app connector.
-func (event *collectedEvent) ToConnectorEvent() *chichi.Event {
-	// Keep in sync with the connector.Event type.
+func (event *Event) ToConnectorEvent() *chichi.Event {
+	// Keep in sync with the connector.EventI type.
 	groupId := event.GroupId
 	if event.GroupId == "" {
 		groupId = event.Context.GroupId
@@ -204,16 +189,16 @@ func (event *collectedEvent) ToConnectorEvent() *chichi.Event {
 	e.GroupId = groupId
 	e.MessageId = event.MessageId
 	e.Name = event.Name
-	e.ReceivedAt = event.receivedAt
-	e.SentAt = event.sentAt
-	e.Timestamp = event.timestamp
+	e.ReceivedAt = event.ReceivedAt
+	e.SentAt = event.SentAt
+	e.Timestamp = event.Timestamp
 	e.Type = *event.Type
 	e.UserId = event.UserId
 	return &e
 }
 
 // ToMap returns event as a map, enabling its use in transformations.
-func (event *collectedEvent) ToMap() map[string]any {
+func (event *Event) ToMap() map[string]any {
 
 	// Keep in sync with the schema in "apis/events/schema.go".
 
@@ -238,9 +223,9 @@ func (event *collectedEvent) ToMap() map[string]any {
 				"namespace": event.Context.App.Namespace,
 			},
 			"browser": map[string]any{
-				"name":    event.Context.browser.Name,
-				"other":   event.Context.browser.Other,
-				"version": event.Context.browser.Version,
+				"name":    event.Context.Browser.Name,
+				"other":   event.Context.Browser.Other,
+				"version": event.Context.Browser.Version,
 			},
 			"campaign": map[string]any{
 				"name":    event.Context.Campaign.Name,
@@ -310,10 +295,10 @@ func (event *collectedEvent) ToMap() map[string]any {
 		"messageId":  event.MessageId,
 		"name":       event.Name,
 		"properties": event.Properties,
-		"receivedAt": event.receivedAt,
-		"sentAt":     event.sentAt,
-		"source":     event.source,
-		"timestamp":  event.timestamp,
+		"receivedAt": event.ReceivedAt,
+		"sentAt":     event.SentAt,
+		"source":     event.Header.Connection,
+		"timestamp":  event.Timestamp,
 		"traits":     traits,
 		"type":       *event.Type,
 		"userId":     event.UserId,

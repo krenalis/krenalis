@@ -31,7 +31,7 @@ import (
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
-	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/events/collector"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
@@ -235,7 +235,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			// GID is added by the identity resolution directly to the data
 			// warehouse, without affecting the events sent to the apps.
 			return &ActionSchemas{
-				In:  eventschema.SchemaWithoutGID,
+				In:  events.Schema,
 				Out: eventTypeSchema,
 			}, nil
 		}
@@ -298,12 +298,12 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			return &ActionSchemas{
-				In:  eventschema.SchemaWithoutGID,
+				In:  events.Schema,
 				Out: removeMetaProperties(users),
 			}, nil
 		case Groups:
 			return &ActionSchemas{
-				In:  eventschema.SchemaWithoutGID,
+				In:  events.Schema,
 				Out: removeMetaProperties(groups),
 			}, nil
 		}
@@ -372,7 +372,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		// The input schema is the events schema without GID because this
 		// actions imports users identities from incoming events, which,
 		// clearly, still do not have any user associated.
-		inSchema = eventschema.SchemaWithoutGID
+		inSchema = events.Schema
 	}
 
 	n := state.AddAction{
@@ -1286,9 +1286,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	}
 
 	// Parse the event.
-	ev, err := this.apis.events.ParseObservedEvent(&events.ObservedEvent{
+	ev, err := this.apis.events.collector.ParseObservedEvent(&collector.ObservedEvent{
 		Source: event.Source,
-		Header: &events.EventHeader{
+		Header: &events.Header{
 			ReceivedAt: event.Header.ReceivedAt,
 			RemoteAddr: event.Header.RemoteAddr,
 			Method:     event.Header.Method,
@@ -1316,7 +1316,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		// the GID, as they are sent as they are after enrichment; the GID is
 		// added by the identity resolution directly to the data warehouse,
 		// without affecting the events sent to the apps.
-		inSchema := eventschema.SchemaWithoutGID
+		inSchema := events.Schema
 
 		// Validate the mapping and the transformation.
 		switch {

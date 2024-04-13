@@ -17,7 +17,7 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/apis/transformers/mappings"
@@ -51,7 +51,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		// The input schema is the events schema without GID because this
 		// actions imports users identities from incoming events, which,
 		// clearly, still do not have any user associated.
-		inSchema = eventschema.SchemaWithoutGID
+		inSchema = events.Schema
 	}
 
 	// First, do formal validations.

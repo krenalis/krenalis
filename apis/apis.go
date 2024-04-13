@@ -25,7 +25,8 @@ import (
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events"
+	"github.com/open2b/chichi/apis/events/collector"
+	"github.com/open2b/chichi/apis/events/dispatcher"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
@@ -52,12 +53,16 @@ type ValidationError interface {
 }
 
 type APIs struct {
-	db                  *postgres.DB
-	state               *state.State
-	datastore           *datastore.Datastore
-	connectors          *connectors.Connectors
-	statistics          *statistics.Collector
-	events              *events.Events
+	db         *postgres.DB
+	state      *state.State
+	datastore  *datastore.Datastore
+	connectors *connectors.Connectors
+	statistics *statistics.Collector
+	events     struct {
+		collector  *collector.Collector
+		observer   *collector.Observer
+		dispatcher *dispatcher.Dispatcher
+	}
 	functionTransformer transformers.Function
 	mu                  sync.Mutex // for the scheduler field
 	scheduler           *scheduler
@@ -181,12 +186,20 @@ func New(conf *Config) (*APIs, error) {
 	apis.statistics = statistics.New(db)
 
 	// Init the events.
-	apis.events, err = events.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.connectors)
+	apis.events.dispatcher, err = dispatcher.New(db, apis.state, apis.functionTransformer, apis.connectors)
 	if err != nil {
 		apis.datastore.Close()
 		apis.state.Close()
 		return nil, err
 	}
+	apis.events.collector, err = collector.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.events.dispatcher)
+	if err != nil {
+		apis.events.dispatcher.Close()
+		apis.datastore.Close()
+		apis.state.Close()
+		return nil, err
+	}
+	apis.events.observer = apis.events.collector.Observer()
 
 	// Keep the state updated.
 	apis.state.Keep()
@@ -280,8 +293,8 @@ func (apis *APIs) Close() {
 	apis.mu.Unlock()
 	// Wait for the completion of actions initiated via API.
 	apis.close.Wait()
-	// Close events, statistics, datastore and state.
-	apis.events.Close()
+	// Close event dispatcher, statistics, datastore and state.
+	apis.events.dispatcher.Close()
 	apis.statistics.Close()
 	apis.datastore.Close()
 	apis.state.Close()
@@ -519,7 +532,7 @@ func (apis *APIs) Organizations(ctx context.Context, order OrganizationSort, fir
 // ServeEvents serves the events sent via HTTP.
 func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	apis.mustBeOpen()
-	apis.events.ServeHTTP(w, r)
+	apis.events.collector.ServeHTTP(w, r)
 }
 
 // TransformData transforms data using a mapping or a function transformation

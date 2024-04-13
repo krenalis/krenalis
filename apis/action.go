@@ -19,7 +19,7 @@ import (
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
@@ -354,7 +354,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	inSchema := action.InSchema
 	if importsUsersIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
 		// Use the schema without GID because incoming events do not have a GID.
-		inSchema = eventschema.SchemaWithoutGID
+		inSchema = events.Schema
 	}
 
 	span.Log("action validated successfully")

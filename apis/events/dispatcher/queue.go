@@ -5,35 +5,35 @@
 // Copyright (c) 2023 Open2b
 //
 
-package events
+package dispatcher
 
 import (
 	"github.com/open2b/chichi/backoff"
 )
 
-// dispatcherQueue represents an event dispatcher warehouseQueue.
-type dispatcherQueue struct {
-	destination    int               // destination connection.
-	endpoint       int               // endpoint.
-	head           int               // offset of the head of the warehouseQueue.
-	events         []*processedEvent // events in the warehouseQueue.
-	sendingOffsets map[string]int    // maps the anonymousId of a sending event to its offset in the warehouseQueue.
-	backoff        *backoff.Backoff  // backoff policy for retries.
+// queue represents an event queue.
+type queue struct {
+	destination    int                 // destination connection.
+	endpoint       int                 // endpoint.
+	head           int                 // offset of the head of the queue.
+	events         []*dispatchingEvent // events in the queue.
+	sendingOffsets map[string]int      // maps the anonymousId of a sending event to its offset in the queue.
+	backoff        *backoff.Backoff    // backoff policy for retries.
 }
 
-// newDispatcherQueue returns a new empty dispatcher warehouseQueue for the given
-// destination connection and action's endpoint.
-func newDispatcherQueue(destination, endpoint int) *dispatcherQueue {
-	return &dispatcherQueue{
+// newQueue returns a new empty queue for the given destination connection and
+// action's endpoint.
+func newQueue(destination, endpoint int) *queue {
+	return &queue{
 		destination:    destination,
 		endpoint:       endpoint,
-		events:         []*processedEvent{},
+		events:         []*dispatchingEvent{},
 		sendingOffsets: map[string]int{},
 	}
 }
 
-// Ack acks an event in the warehouseQueue.
-func (q *dispatcherQueue) Ack(event *processedEvent, remove bool) {
+// Ack acks an event in the queue.
+func (q *queue) Ack(event *dispatchingEvent, remove bool) {
 	off := q.sendingOffsets[event.AnonymousId]
 	delete(q.sendingOffsets, event.AnonymousId)
 	if !remove {
@@ -46,13 +46,13 @@ func (q *dispatcherQueue) Ack(event *processedEvent, remove bool) {
 }
 
 // Len returns the length of q.
-func (q *dispatcherQueue) Len() int {
+func (q *queue) Len() int {
 	return len(q.events) - q.head
 }
 
-// Pop pops an event from the dispatcherQueue.
+// Pop pops an event from the queue.
 // It panics if the state of q is not ready.
-func (q *dispatcherQueue) Pop() *processedEvent {
+func (q *queue) Pop() *dispatchingEvent {
 	for i := q.head; i < len(q.events); i++ {
 		event := q.events[i]
 		if event == nil {
@@ -68,13 +68,13 @@ func (q *dispatcherQueue) Pop() *processedEvent {
 	return nil
 }
 
-// Push pushes an event into the dispatcherQueue.
-func (q *dispatcherQueue) Push(event *processedEvent) {
+// Push pushes an event into the queue.
+func (q *queue) Push(event *dispatchingEvent) {
 	q.events = append(q.events, event)
 }
 
-// compact compacts the dispatcherQueue.
-func (q *dispatcherQueue) compact() {
+// compact compacts the queue.
+func (q *queue) compact() {
 	var i int
 	for i = 0; i < q.head; i++ {
 		if q.events[i] != nil {

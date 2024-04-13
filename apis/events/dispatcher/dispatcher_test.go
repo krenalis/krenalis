@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package events
+package dispatcher
 
 //const debug = false
 //
@@ -17,15 +17,15 @@ package events
 //
 //// TestDispatcher tests the dispatcher.
 //func TestDispatcher(t *testing.T) {
-//	events := make(chan *processedEvent, 1)
-//	done := make(chan *processedEvent, 1)
-//	out := newDispatcher(dispatcher.Pipe{Events: events, Done: done})
+//	events := make(chan *dispatchingEvent, 1)
+//	sent := make(chan *dispatchingEvent, 1)
+//	out := newDispatcher(dispatcher.Pipe{Events: events, Done: sent})
 //	newSenderPool(context.Background(), 10, out)
 //	end := make(chan struct{})
 //	go func() {
-//		for event := range done {
+//		for event := range sent {
 //			if debug {
-//				log.Printf("done received for event %d", event.ID)
+//				log.Printf("sent received for event %d", event.ID)
 //			}
 //		}
 //		end <- struct{}{}
@@ -33,7 +33,7 @@ package events
 //	start := time.Now()
 //	for i := 0; i < 100; i++ {
 //		anonymousId := string(byte(r.Intn(26) + 'a'))
-//		event := &processedEvent{
+//		event := &dispatchingEvent{
 //			ID:          i,
 //			AnonymousId: anonymousId,
 //			Connection:  1,

@@ -209,20 +209,19 @@ CREATE TABLE election (
 
 INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
 
-CREATE TABLE event_collected (
-    id bytea NOT NULL,
-    source bytea NOT NULL,
-    PRIMARY KEY (id)
+CREATE TABLE event_dispatching (
+    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
+    request bytea
 );
 
-CREATE TYPE event_job_state AS ENUM ('Running', 'Delivered', 'TransformationFailed');
-
-CREATE TABLE event_processed (
+CREATE TABLE event_payloads (
     id bytea NOT NULL,
-    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
-    timestamp timestamp NOT NULL,
-    state event_job_state NOT NULL DEFAULT 'Running',
-    error varchar(1000) NOT NULL DEFAULT ''
+    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    received_at timestamp NOT NULL,
+    remote_addr inet NOT NULL,
+    user_agent TEXT NOT NULL,
+    payload bytea NOT NULL,
+    PRIMARY KEY (id)
 );
 
 CREATE TYPE avatar_mime_type AS ENUM ('image/jpeg', 'image/png');

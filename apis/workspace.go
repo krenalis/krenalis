@@ -32,7 +32,7 @@ import (
 	"github.com/open2b/chichi/apis/datastore/warehouses/snowflake"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events"
+	"github.com/open2b/chichi/apis/events/collector"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
@@ -389,10 +389,10 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 		}
 	}
 
-	id, err := this.apis.events.Observer().AddListener(size, source, onlyValid)
+	id, err := this.apis.events.observer.AddListener(size, source, onlyValid)
 	if err != nil {
-		if err == events.ErrTooManyListeners {
-			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", events.MaxEventListeners)
+		if err == collector.ErrTooManyListeners {
+			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
 		}
 		return "", err
 	}
@@ -913,9 +913,9 @@ type ObservedEventHeader struct {
 // It returns an errors.NotFoundError error, if the listener does not exist.
 func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, error) {
 	this.apis.mustBeOpen()
-	observedEvents, discarded, err := this.apis.events.Observer().Events(listener)
+	observedEvents, discarded, err := this.apis.events.observer.Events(listener)
 	if err != nil {
-		if err == events.ErrEventListenerNotFound {
+		if err == collector.ErrEventListenerNotFound {
 			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
 		}
 		return nil, 0, err
@@ -1008,7 +1008,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 // does nothing if the listener does not exist.
 func (this *Workspace) RemoveEventListener(listener string) {
 	this.apis.mustBeOpen()
-	this.apis.events.Observer().RemoveListener(listener)
+	this.apis.events.observer.RemoveListener(listener)
 }
 
 // Rename renames the workspace with the given new name.

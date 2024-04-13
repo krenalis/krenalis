@@ -14,7 +14,7 @@ import (
 
 	"github.com/open2b/chichi/apis"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/types"
 )
 
@@ -63,7 +63,7 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return eventschema.SchemaWithoutGID, nil // TODO: eventschema is an internal package
+	return events.Schema, nil // TODO: eventschema is an internal package
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a

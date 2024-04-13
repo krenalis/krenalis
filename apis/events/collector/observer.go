@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package events
+package collector
 
 import (
 	"bytes"
@@ -15,24 +15,32 @@ import (
 	"log/slog"
 	"math"
 	"math/rand"
+	"net"
+	"net/netip"
+	"net/url"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/open2b/chichi/apis/errors"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/postgres"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/unicode/norm"
 )
 
 const MaxEventListeners = 100 // maximum number of event listeners.
+
+// eventDateLayout is the layout used for dates in events.
+const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 var (
 	ErrEventListenerNotFound = errors.New("event listener does not exist")
 	ErrTooManyListeners      = errors.New("too many listeners")
 )
 
-// Observer represents the event observer.
+// Observer represents an event observer.
 type Observer struct {
 	db *postgres.DB
 	sync.RWMutex
@@ -68,7 +76,7 @@ type ObservedEvent struct {
 
 	// Header is the message header. It is nil if a validation error occurred
 	// processing the entire message.
-	Header *EventHeader
+	Header *events.Header
 
 	// Data contains the data, encoded in JSON, of a single event in the message,
 	// if header is not nil, or the data of the entire message, if Header is nil.
@@ -240,6 +248,75 @@ func (observer *Observer) Events(listener string) ([]ObservedEvent, int, error) 
 	}
 	observer.RUnlock()
 	return nil, 0, ErrEventListenerNotFound
+}
+
+// ParseObservedEvent parses an observed event, enriches and returns it.
+// It returns an error if the event is not valid.
+func (c *Collector) ParseObservedEvent(event *ObservedEvent) (*events.Event, error) {
+
+	// Validate the arguments.
+	if event.Header == nil {
+		return nil, errors.New("header is nil")
+	}
+	ip, _, err := net.SplitHostPort(event.Header.RemoteAddr)
+	if err != nil {
+		return nil, errors.New("header.RemoteAddr is not valid")
+	}
+	if _, err := netip.ParseAddr(ip); err != nil {
+		return nil, errors.New("header.RemoteAddr is not valid")
+	}
+	if _, err := url.Parse(event.Header.URL); err != nil {
+		return nil, errors.New("header.URL is not valid")
+	}
+	if len(event.Data) > maxRequestSize {
+		return nil, errors.New("event is too long")
+	}
+
+	// Decode the event.
+	nr := norm.NFC.Reader(bytes.NewReader(event.Data))
+	dec := json.NewDecoder(nr)
+	dec.UseNumber()
+	ev := &collectedEvent{}
+	err = dec.Decode(ev)
+	if err != nil {
+		return nil, errors.New("cannot decode JSON")
+	}
+
+	// Validate the event.
+	if ev.Type == nil {
+		return nil, errors.New("missing event type")
+	}
+	err = validateEvent(*ev.Type, ev)
+	if err != nil {
+		return nil, err
+	}
+	ev.header = event.Header
+
+	// Enrich the event.
+	c.enrichEvent(ev)
+
+	e := &events.Event{
+		Header:       ev.header,
+		Id:           ev.id,
+		AnonymousId:  ev.AnonymousId,
+		Category:     ev.Category,
+		Context:      ev.Context,
+		Event:        ev.Event,
+		GroupId:      ev.GroupId,
+		Integrations: ev.Integrations,
+		MessageId:    ev.MessageId,
+		Name:         ev.Name,
+		ReceivedAt:   ev.receivedAt,
+		SentAt:       ev.sentAt,
+		Timestamp:    ev.timestamp,
+		Traits:       ev.Traits,
+		Type:         ev.Type,
+		UserId:       ev.UserId,
+		PreviousId:   ev.PreviousId,
+		Properties:   ev.Properties,
+	}
+
+	return e, nil
 }
 
 // RemoveListener removes the listener with identifier id.

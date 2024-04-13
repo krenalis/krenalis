@@ -17,7 +17,7 @@ import (
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events/eventschema"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 )
@@ -55,7 +55,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 
 	// Read the event schema's properties.
-	schema := eventschema.SchemaWithGID
+	schema := events.SchemaWithGID
 	properties := schema.Properties()
 
 	// Retrieve the events records.

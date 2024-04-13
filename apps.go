@@ -130,10 +130,11 @@ type App interface {
 
 // EventRequest represents an event request.
 type EventRequest struct {
-	Method string
-	URL    string
-	Header http.Header
-	Body   []byte
+	Endpoint string
+	Method   string
+	URL      string
+	Header   http.Header
+	Body     []byte
 }
 
 // EventType represents a type of event that the app can receive.

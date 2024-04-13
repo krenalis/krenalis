@@ -30,7 +30,6 @@ require (
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/relvacode/iso8601 v1.4.0
 	github.com/segmentio/analytics-go/v3 v3.3.0
-	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
 	github.com/snowflakedb/gosnowflake v1.9.0
 	github.com/twmb/franz-go v1.16.1
