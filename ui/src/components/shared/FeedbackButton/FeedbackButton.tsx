@@ -14,6 +14,7 @@ interface FeedbackButtonProps {
 	animationDuration?: number;
 	variant?: Variant;
 	onClick?: () => void;
+	disabled?: boolean;
 }
 
 interface FeedbackButtonRef {
@@ -25,7 +26,10 @@ interface FeedbackButtonRef {
 }
 
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
-	({ children, loading, className, animationDuration, variant, onClick, size = 'medium', ...delegated }, ref) => {
+	(
+		{ children, loading, className, animationDuration, variant, onClick, size = 'medium', disabled, ...delegated },
+		ref,
+	) => {
 		const [isLoading, setIsLoading] = useState<boolean>(false);
 		const [error, setError] = useState<ReactNode>(null);
 
@@ -118,7 +122,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				onClick={onClick}
 				variant={variant ? variant : 'default'}
 				style={{ '--scale-animation-duration': `${halfAnimation / 1.5}ms` } as React.CSSProperties}
-				disabled={loading || isLoading}
+				disabled={disabled || loading || isLoading}
 				loading={loading || isLoading}
 				{...delegated}
 			>
