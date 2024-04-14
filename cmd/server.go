@@ -28,7 +28,8 @@ import (
 
 type Settings struct {
 	Main struct {
-		Host string
+		Host  string
+		HTTPS bool
 	}
 	UI struct {
 		SessionKey string `yaml:"sessionKey"`
@@ -183,18 +184,25 @@ func Run(ctx context.Context, settings *Settings) error {
 		Addr:    addr,
 		Handler: handler,
 	}
-	certPem, err := filepath.Abs("cert.pem")
-	if err != nil {
-		return err
-	}
-	keyPem, err := filepath.Abs("key.pem")
-	if err != nil {
-		return err
+	var certPem, keyPem string
+	if settings.Main.HTTPS {
+		certPem, err = filepath.Abs("cert.pem")
+		if err != nil {
+			return err
+		}
+		keyPem, err = filepath.Abs("key.pem")
+		if err != nil {
+			return err
+		}
 	}
 
 	exited := make(chan error)
 	go func() {
-		exited <- httpServer.ListenAndServeTLS(certPem, keyPem)
+		if settings.Main.HTTPS {
+			exited <- httpServer.ListenAndServeTLS(certPem, keyPem)
+		} else {
+			exited <- httpServer.ListenAndServe()
+		}
 	}()
 
 	select {

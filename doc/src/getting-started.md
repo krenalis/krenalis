@@ -136,7 +136,7 @@ Now that you have obtained the executable file of `chichi`, it is necessary to p
 2. Take [the example configuration file `config.example.yaml`](https://github.com/open2b/chichi/blob/main/config.example.yaml) and copy it into the chosen directory in a file named `config.yaml`
 3. Modify `config.yaml` according to your needs.
 
-Proceed now with the creation of the certificates.
+If the `https` configuration parameter is set to `true` in the configuration file, then proceed with the creation of the certificates; otherwise, proceed with the setup of the database.
 
 ## Certificates
 

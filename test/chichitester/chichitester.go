@@ -161,6 +161,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 
 	setts := cmd.Settings{}
 	setts.Main.Host = testsSettings.ChichiHost
+	setts.Main.HTTPS = true
 	setts.UI.SessionKey = sessionKey
 	setts.PostgreSQL.Host = testsSettings.Database.Host
 	setts.PostgreSQL.Port = testsSettings.Database.Port
