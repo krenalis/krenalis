@@ -346,10 +346,8 @@ func marshalUI(ui *chichi.UI, role chichi.Role) ([]byte, error) {
 func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi.Role, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
-	if role != chichi.Both {
-		if r := chichi.Role(rv.FieldByName("Role").Int()); r != chichi.Both && r != role {
-			return false, nil
-		}
+	if r := chichi.Role(rv.FieldByName("Role").Int()); r != chichi.Both && r != role {
+		return false, nil
 	}
 	if comma {
 		b.WriteString(`,`)
@@ -395,10 +393,8 @@ func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi
 // marshalUIFieldSet marshals fieldSet with the provided role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marshaled.
 func marshalUIFieldSet(b *bytes.Buffer, fieldSet chichi.FieldSet, role chichi.Role, values map[string]any, comma bool) (bool, error) {
-	if role != chichi.Both {
-		if fieldSet.Role != chichi.Both && fieldSet.Role != role {
-			return false, nil
-		}
+	if fieldSet.Role != chichi.Both && fieldSet.Role != role {
+		return false, nil
 	}
 	if comma {
 		b.WriteByte(',')
