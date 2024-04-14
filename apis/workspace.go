@@ -1056,6 +1056,9 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	if connector < 1 || connector > maxInt32 {
 		return nil, errors.BadRequest("connector identifier %d is not valid", connector)
 	}
+	if role != Source && role != Destination {
+		return nil, errors.BadRequest("role %d is not valid", role)
+	}
 	c, ok := this.apis.state.Connector(connector)
 	if !ok {
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
