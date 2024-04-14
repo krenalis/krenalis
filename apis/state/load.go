@@ -260,7 +260,7 @@ func (state *State) load() error {
 				if resource > 0 {
 					c.resource = state.resources[resource]
 				}
-				if c.SendingMode == nil && c.connector.SendingMode != nil {
+				if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {
 					mode := Cloud
 					if sm := *c.connector.SendingMode; sm == Device {
 						mode = Device
