@@ -63,7 +63,7 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return events.Schema, nil // TODO: eventschema is an internal package
+	return events.Schema, nil
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a
