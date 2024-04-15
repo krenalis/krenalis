@@ -602,10 +602,8 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 // Connection returns the connection with identifier id of the workspace.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
+// If an error occurred fetching the schema, it returns an
+// errors.UnprocessableError error with code FetchSchemaFailed.
 func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
 	this.apis.mustBeOpen()
 	if id < 1 || id > maxInt32 {
@@ -616,9 +614,6 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	conn := c.Connector()
-	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
-	}
 
 	connection := Connection{
 		apis:             this.apis,

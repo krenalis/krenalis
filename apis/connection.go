@@ -148,19 +148,12 @@ var dummyGroupsSchema = types.Object([]types.Property{
 // It returns an errors.UnprocessableError error with code
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FetchSchemaFailed, if an error occurred fetching the schema.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
 
 	this.apis.mustBeOpen()
 
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.ActionSchemas", "target", target, "eventType", eventType)
 	defer span.End()
-
-	// Verify that the workspace has a data warehouse.
-	if this.store == nil {
-		ws := this.connection.Workspace()
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
-	}
 
 	// Validate the target and the event type.
 	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
