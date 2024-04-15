@@ -84,6 +84,7 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, typ string, event *chichi.
 		Header:   http.Header{},
 	}
 	if mp.conf.Region == chichi.PrivacyRegionEurope {
+		req.Endpoint = "api-eu"
 		req.URL = "https://api-eu.mixpanel.com/"
 	}
 	req.URL += "import?strict=0&project_id=" + mp.settings.ProjectID
