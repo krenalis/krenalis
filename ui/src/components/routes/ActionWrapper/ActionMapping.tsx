@@ -3,7 +3,7 @@ import { checkIfPropertyExists, updateMappingProperty } from './Action.helpers';
 import {
 	getDisplayedIDComboboxItems,
 	getSchemaComboboxItems,
-	getUniqueIDComboboxItems,
+	getIdentityPropertyComboboxItems,
 	getUpdatedAtComboboxItems,
 } from '../../helpers/getSchemaComboBoxItems';
 import {
@@ -90,7 +90,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	} = useContext(ActionContext);
 
 	const mappingListRef = useRef(null);
-	const uniqueIDListRef = useRef(null);
+	const identityPropertyListRef = useRef(null);
 	const displayedIDListRef = useRef(null);
 	const updatedAtListRef = useRef(null);
 	const isFirstCompilation = useRef(true);
@@ -149,7 +149,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (hasSpecialProperties && isFirstCompilation.current) {
-			// precompile the 'UniqueIDColumn', 'displayedID' and
+			// precompile the 'IdentityProperty', 'displayedID' and
 			// 'UpdatedAtColumn' fields, if possible.
 			const a = { ...action };
 			if (connection.isApp) {
@@ -165,7 +165,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			} else if (connection.isDatabase || connection.isFileStorage) {
 				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 				if (hasIdColumn) {
-					a.UniqueIDColumn = 'id';
+					a.IdentityProperty = 'id';
 					a.DisplayedID = 'id';
 					isFirstCompilation.current = false;
 				}
@@ -235,12 +235,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		return flattenSchema(actionType.InputSchema);
 	}, [actionType]);
 
-	const uniqueIDColumnError = useMemo<string>(() => {
+	const identityPropertyError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			if (action.UniqueIDColumn === '' && !isFirstCompilation.current) {
+			if (action.IdentityProperty === '' && !isFirstCompilation.current) {
 				return 'The user identifier cannot be empty';
 			}
-			return checkIfPropertyExists(action.UniqueIDColumn, flatSchema);
+			return checkIfPropertyExists(action.IdentityProperty, flatSchema);
 		}
 	}, [action, flatSchema]);
 
@@ -257,9 +257,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	}, [action, flatSchema]);
 
-	const { uniqueIDList, displayedIDList, updatedAtList, mappingList } = useMemo(() => {
+	const { identityPropertyList, displayedIDList, updatedAtList, mappingList } = useMemo(() => {
 		return {
-			uniqueIDList: getUniqueIDComboboxItems(actionType.InputSchema),
+			identityPropertyList: getIdentityPropertyComboboxItems(actionType.InputSchema),
 			displayedIDList: getDisplayedIDComboboxItems(actionType.InputSchema),
 			updatedAtList: getUpdatedAtComboboxItems(actionType.InputSchema),
 			mappingList: getSchemaComboboxItems(actionType.InputSchema),
@@ -308,9 +308,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	};
 
 	const onSelectProperty = async (input, value) => {
-		if (input.name === 'uniqueIDColumn') {
+		if (input.name === 'identityProperty') {
 			const a = { ...action };
-			a.UniqueIDColumn = value;
+			a.IdentityProperty = value;
 			if (isFirstCompilation.current && a.DisplayedID === '') {
 				a.DisplayedID = value;
 			}
@@ -336,10 +336,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		await updateMapping(input.name, value);
 	};
 
-	const onUpdateUniqueIDColumn = async (e) => {
+	const onUpdateIdentityProperty = async (e) => {
 		const a = { ...action };
 		const value = e.target.value;
-		a.UniqueIDColumn = value;
+		a.IdentityProperty = value;
 		if (isFirstCompilation.current && a.DisplayedID === '') {
 			a.DisplayedID = value;
 		}
@@ -432,25 +432,25 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				<Section title='Special properties' padded={true}>
 					<div className='specialProperties'>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='uniqueIDColumn'>
+							<div className='identityProperty'>
 								<div className='label'>
 									Identity<span className='asterisk'>*</span>:
 								</div>
 								<ComboBoxInput
-									comboBoxListRef={uniqueIDListRef}
-									onInput={onUpdateUniqueIDColumn}
-									value={uniqueIDList.length === 0 ? '' : action.UniqueIDColumn!}
-									name='uniqueIDColumn'
-									disabled={isTransformationDisabled || uniqueIDList.length === 0}
+									comboBoxListRef={identityPropertyListRef}
+									onInput={onUpdateIdentityProperty}
+									value={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
+									name='identityProperty'
+									disabled={isTransformationDisabled || identityPropertyList.length === 0}
 									className='inputProperty'
 									caret={true}
-									clearable={action.UniqueIDColumn?.length > 0}
+									clearable={action.IdentityProperty?.length > 0}
 									error={
-										uniqueIDList.length === 0
+										identityPropertyList.length === 0
 											? `No column ${
 													connection.isFileStorage ? 'in the file' : 'returned by the query'
 											  } can be used as user identifier`
-											: uniqueIDColumnError
+											: identityPropertyError
 									}
 									size='small'
 								/>
@@ -557,7 +557,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					inputSchema={actionType.InputSchema}
 					outputSchema={actionType.OutputSchema}
 				/>
-				<ComboBoxList ref={uniqueIDListRef} items={uniqueIDList} onSelect={onSelectProperty} />
+				<ComboBoxList ref={identityPropertyListRef} items={identityPropertyList} onSelect={onSelectProperty} />
 				<ComboBoxList ref={displayedIDListRef} items={displayedIDList} onSelect={onSelectProperty} />
 				<ComboBoxList ref={updatedAtListRef} items={updatedAtList} onSelect={onSelectProperty} />
 				<ComboBoxList ref={mappingListRef} items={mappingList} onSelect={onSelectProperty} />

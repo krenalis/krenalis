@@ -53,7 +53,7 @@ type Action struct {
 	Sheet                   *string
 	Compression             Compression
 	Table                   *string
-	UniqueIDColumn          *string
+	IdentityProperty        *string
 	DisplayedID             string
 	UpdatedAtColumn         *string
 	UpdatedAtFormat         *string
@@ -152,9 +152,9 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		table := action.TableName
 		this.Table = &table
 	}
-	if action.UniqueIDColumn != "" {
-		column := action.UniqueIDColumn
-		this.UniqueIDColumn = &column
+	if action.IdentityProperty != "" {
+		p := action.IdentityProperty
+		this.IdentityProperty = &p
 	}
 	this.DisplayedID = action.DisplayedID
 	if action.UpdatedAtColumn != "" {
@@ -378,7 +378,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Sheet:                   action.Sheet,
 		Compression:             state.Compression(action.Compression),
 		TableName:               action.TableName,
-		UniqueIDColumn:          action.UniqueIDColumn,
+		IdentityProperty:        action.IdentityProperty,
 		DisplayedID:             action.DisplayedID,
 		UpdatedAtColumn:         action.UpdatedAtColumn,
 		UpdatedAtFormat:         action.UpdatedAtFormat,
@@ -520,14 +520,14 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
-			"sheet = $13, compression = $14, settings = $15, table_name = $16,  unique_id_column = $17, "+
+			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_property = $17, "+
 			"displayed_id = $18, updated_at_column = $19, updated_at_format = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.UniqueIDColumn, n.DisplayedID, n.UpdatedAtColumn, n.UpdatedAtFormat,
+			n.IdentityProperty, n.DisplayedID, n.UpdatedAtColumn, n.UpdatedAtFormat,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -740,10 +740,10 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	TableName string
 
-	// UniqueIDColumn is the column name used as identity when importing from a file or
-	// from a database.
+	// IdentityProperty is the property name used as identity when importing
+	// from a file or from a database.
 	// It cannot be longer than 1024 runes.
-	UniqueIDColumn string
+	IdentityProperty string
 
 	// DisplayedID, if not empty, is the property or the column that holds the
 	// identifier displayed in the UI for the imported user or group.

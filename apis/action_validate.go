@@ -226,13 +226,13 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	default:
 		return errors.BadRequest("compression %q is not valid", action.Compression)
 	}
-	// Validate the unique ID column.
-	if action.UniqueIDColumn != "" {
-		if !types.IsValidPropertyName(action.UniqueIDColumn) {
-			return errors.BadRequest("column name for the unique ID is not a valid property name")
+	// Validate the identity property.
+	if action.IdentityProperty != "" {
+		if !types.IsValidPropertyName(action.IdentityProperty) {
+			return errors.BadRequest("identity property is not a valid property name")
 		}
-		if utf8.RuneCountInString(action.UniqueIDColumn) > 1024 {
-			return errors.BadRequest("column name for the unique ID is longer than 1024 runes")
+		if utf8.RuneCountInString(action.IdentityProperty) > 1024 {
+			return errors.BadRequest("identity property is longer than 1024 runes")
 		}
 	}
 	// Validate the displayed ID.
@@ -356,27 +356,27 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
-	// Check the column for the unique ID and for the timestamp.
+	// Check the column for the identity property and for the timestamp.
 	importFromColumns := c.Role == state.Source &&
 		(connector.Type == state.DatabaseType || connector.Type == state.FileStorageType)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		// Validate the unique ID column.
-		if action.UniqueIDColumn == "" {
-			return errors.BadRequest("column name for the unique ID is mandatory")
+		// Validate the identity property.
+		if action.IdentityProperty == "" {
+			return errors.BadRequest("identity property is mandatory")
 		}
-		uniqueIDColumn, ok := inSchema.Property(action.UniqueIDColumn)
+		identityProperty, ok := inSchema.Property(action.IdentityProperty)
 		if !ok {
-			return errors.BadRequest("unique ID column %q not found within input schema", action.UniqueIDColumn)
+			return errors.BadRequest("identity property %q not found within input schema", action.IdentityProperty)
 		}
-		switch k := uniqueIDColumn.Type.Kind(); k {
+		switch k := identityProperty.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return errors.BadRequest("unique ID column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.UniqueIDColumn, k)
+			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
 		}
-		usedInPaths = append(usedInPaths, types.Path{action.UniqueIDColumn})
+		usedInPaths = append(usedInPaths, types.Path{action.IdentityProperty})
 		// Validate the 'updated at' column and format.
 		var requiresUpdatedAtFormat bool
 		if action.UpdatedAtColumn != "" {
@@ -399,8 +399,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("'updated at' format is required")
 		}
 	} else {
-		if action.UniqueIDColumn != "" {
-			return errors.BadRequest("action cannot specify a column name for the unique ID")
+		if action.IdentityProperty != "" {
+			return errors.BadRequest("action cannot specify an identity property")
 		}
 		if action.UpdatedAtColumn != "" {
 			return errors.BadRequest("action cannot specify an 'updated at' column")

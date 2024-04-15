@@ -11,7 +11,7 @@ const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(flatSchema);
 };
 
-const getUniqueIDComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getIdentityPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -92,4 +92,9 @@ const computeItems = (flatSchema: TransformedMapping) => {
 	return items;
 };
 
-export { getSchemaComboboxItems, getUniqueIDComboboxItems, getDisplayedIDComboboxItems, getUpdatedAtComboboxItems };
+export {
+	getSchemaComboboxItems,
+	getIdentityPropertyComboboxItems,
+	getDisplayedIDComboboxItems,
+	getUpdatedAtComboboxItems,
+};

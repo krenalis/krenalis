@@ -62,8 +62,8 @@ func TestImportUsersFromFile(t *testing.T) {
 				"email":     "email",
 			},
 		},
-		UniqueIDColumn: "identity",
-		Connector:      chichitester.CSVConnector,
+		IdentityProperty: "identity",
+		Connector:        chichitester.CSVConnector,
 		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,

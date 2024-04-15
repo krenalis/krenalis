@@ -72,7 +72,7 @@ type Action struct {
 	Sheet                   *string
 	Compression             Compression
 	Table                   *string
-	UniqueIDColumn          *string
+	IdentityProperty        *string
 	DisplayedID             string
 	UpdatedAtColumn         *string
 	UpdatedAtFormat         *string
@@ -95,7 +95,7 @@ type ActionToSet struct {
 	Compression             Compression
 	UIValues                json.RawMessage `json:",omitempty"`
 	TableName               string
-	UniqueIDColumn          string
+	IdentityProperty        string
 	DisplayedID             string
 	UpdatedAtColumn         string
 	UpdatedAtFormat         string

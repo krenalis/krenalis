@@ -71,7 +71,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // with the schema read from the file, the iterator will return a *SchemaError
 // error.
 //
-// If the unique ID column specified in the action of the file is found within
+// If the identity property specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
 // The same applies for the 'updated at' column, if specified.
 //
@@ -103,7 +103,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Format: file.action.UpdatedAtFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.UniqueIDColumn, updatedAtColumn, file.action.DisplayedID,
+		file.action.IdentityProperty, updatedAtColumn, file.action.DisplayedID,
 		storageUpdatedAt, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
@@ -358,7 +358,7 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // storageUpdatedAt is the 'updated at' value provided by the storage connector,
 // and it is used in the case when the file columns do not specify an 'update
 // at' column.
-func newRecordWriter(connector int, schema types.Type, uniqueIDColumn string, updatedAt UpdatedAtColumn, displayedID string, storageUpdatedAt time.Time, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, identityProperty string, updatedAt UpdatedAtColumn, displayedID string, storageUpdatedAt time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -367,10 +367,10 @@ func newRecordWriter(connector int, schema types.Type, uniqueIDColumn string, up
 		records:         []map[string]any{},
 	}
 	rw.displayedID.name = displayedID
-	if uniqueIDColumn != "" {
-		rw.uniqueIDColumn.name = uniqueIDColumn
-		typ, _ := schema.Property(uniqueIDColumn)
-		rw.uniqueIDColumn.typ = typ.Type
+	if identityProperty != "" {
+		rw.identityProperty.name = identityProperty
+		typ, _ := schema.Property(identityProperty)
+		rw.identityProperty.typ = typ.Type
 	}
 	if updatedAt.Name != "" {
 		rw.updatedAtColumn.name = updatedAt.Name
@@ -398,7 +398,7 @@ type recordWriter struct {
 		column types.Property
 		index  int
 	}
-	uniqueIDColumn struct {
+	identityProperty struct {
 		name  string
 		typ   types.Type
 		index int
@@ -435,17 +435,17 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			rw.textColumnsOnly = c.Type.Kind() == types.TextKind
 		}
 	}
-	// Validate the unique ID column.
-	if name := rw.uniqueIDColumn.name; name != "" {
+	// Validate the identity property.
+	if name := rw.identityProperty.name; name != "" {
 		c, ok := columnByName[name]
 		if !ok {
-			return fmt.Errorf("there is no unique ID column %q", name)
+			return fmt.Errorf("there is no identity property %q", name)
 		}
-		if typ := rw.uniqueIDColumn.typ; c.Type.Kind() != typ.Kind() {
-			return fmt.Errorf("unique ID column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
+		if typ := rw.identityProperty.typ; c.Type.Kind() != typ.Kind() {
+			return fmt.Errorf("identity property %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
 		}
-		rw.uniqueIDColumn.typ = c.Type
-		rw.uniqueIDColumn.index = columnIndex[c.Name]
+		rw.identityProperty.typ = c.Type
+		rw.identityProperty.index = columnIndex[c.Name]
 	}
 	// Validate the 'updated at' column.
 	if name := rw.updatedAtColumn.name; name != "" {
@@ -522,8 +522,8 @@ func (rw *recordWriter) Record(record []any) error {
 			}
 			rd.Properties[c.Name] = value
 		}
-		// Parse the unique ID column.
-		rd.ID, err = parseUniqueIDColumn(rw.uniqueIDColumn.name, rw.uniqueIDColumn.typ, record[rw.uniqueIDColumn.index])
+		// Parse the identity property.
+		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index])
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -595,8 +595,8 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			}
 			rd.Properties[c.Name] = value
 		}
-		// Parse the unique ID column.
-		rd.ID, err = parseUniqueIDColumn(rw.uniqueIDColumn.name, rw.uniqueIDColumn.typ, record[rw.uniqueIDColumn.name])
+		// Parse the identity property.
+		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name])
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -677,8 +677,8 @@ func (rw *recordWriter) RecordString(record []string) error {
 			}
 			rd.Properties[c.Name] = value
 		}
-		// Parse the unique ID column.
-		rd.ID, err = parseUniqueIDColumn(rw.uniqueIDColumn.name, rw.uniqueIDColumn.typ, record[rw.uniqueIDColumn.index])
+		// Parse the identity property.
+		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index])
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err

@@ -89,9 +89,9 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: chichitester.Transformation{
 			Mapping: mapping,
 		},
-		UniqueIDColumn: "dummyId",
-		Connector:      chichitester.JSONConnector,
-		UIValues:       []byte("{}"),
+		IdentityProperty: "dummyId",
+		Connector:        chichitester.JSONConnector,
+		UIValues:         []byte("{}"),
 	})
 
 	// Add the action B.
@@ -103,9 +103,9 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: chichitester.Transformation{
 			Mapping: mapping,
 		},
-		UniqueIDColumn: "dummyId",
-		Connector:      chichitester.JSONConnector,
-		UIValues:       []byte("{}"),
+		IdentityProperty: "dummyId",
+		Connector:        chichitester.JSONConnector,
+		UIValues:         []byte("{}"),
 	})
 
 	// Define a function "expectUsers" which checks if the expected users match

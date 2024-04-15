@@ -6,7 +6,7 @@ import Grid from '../../shared/Grid/Grid';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 
 const ConnectionIdentities = () => {
-	const { isLoading, uniqueIDColumns, identitiesRows } = useConnectionIdentities();
+	const { isLoading, identityProperties, identitiesRows } = useConnectionIdentities();
 
 	return (
 		<div className={`connection-identities${isLoading ? ' loading' : ''}`}>
@@ -27,7 +27,7 @@ const ConnectionIdentities = () => {
 					</div>
 				</div>
 			) : (
-				<Grid columns={uniqueIDColumns} rows={identitiesRows} />
+				<Grid columns={identityProperties} rows={identitiesRows} />
 			)}
 		</div>
 	);

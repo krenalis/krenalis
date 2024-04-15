@@ -103,7 +103,7 @@ interface TransformedAction {
 	Path?: string | null;
 	Table?: string | null;
 	Sheet?: string | null;
-	UniqueIDColumn?: string | null;
+	IdentityProperty?: string | null;
 	UpdatedAtColumn?: string | null;
 	UpdatedAtFormat?: string | null;
 	DisplayedID?: string | null;
@@ -333,7 +333,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		Path: action.Path,
 		Table: action.Table,
 		Sheet: action.Sheet,
-		UniqueIDColumn: action.UniqueIDColumn,
+		IdentityProperty: action.IdentityProperty,
 		UpdatedAtColumn: action.UpdatedAtColumn,
 		UpdatedAtFormat: action.UpdatedAtFormat,
 		DisplayedID: action.DisplayedID,
@@ -457,16 +457,16 @@ const transformInActionToSet = async (
 
 	let updatedAtFormat: string | undefined;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-		if (action.UniqueIDColumn == null || action.UniqueIDColumn === '') {
+		if (action.IdentityProperty == null || action.IdentityProperty === '') {
 			throw 'User identifier cannot be empty';
 		}
-		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.UniqueIDColumn) !== -1;
+		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.IdentityProperty) !== -1;
 		if (!isAlreadyInSchema) {
-			const uniqueIDColumnProperty = flattenedInputSchema[action.UniqueIDColumn];
-			if (uniqueIDColumnProperty == null) {
+			const identityProperty = flattenedInputSchema[action.IdentityProperty];
+			if (identityProperty == null) {
 				throw 'User identifier must be a valid property';
 			}
-			inSchema.properties.push(uniqueIDColumnProperty.full);
+			inSchema.properties.push(identityProperty.full);
 		}
 
 		if (action.UpdatedAtColumn) {
@@ -558,7 +558,7 @@ const transformInActionToSet = async (
 		tableName: action.Table,
 		sheet: action.Sheet,
 		exportMode: action.ExportMode,
-		UniqueIDColumn: action.UniqueIDColumn,
+		IdentityProperty: action.IdentityProperty,
 		UpdatedAtColumn: action.UpdatedAtColumn,
 		UpdatedAtFormat: updatedAtFormat,
 		DisplayedID: action.DisplayedID,
@@ -603,7 +603,7 @@ const computeDefaultAction = (
 	}
 	if (fields.includes('File')) {
 		action.Path = '';
-		action.UniqueIDColumn = '';
+		action.IdentityProperty = '';
 		action.UpdatedAtColumn = '';
 		action.UpdatedAtFormat = '';
 		action.Sheet = null;

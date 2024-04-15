@@ -664,8 +664,8 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any)
 	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 }
 
-// parseUniqueIDColumn parses a unique ID column value.
-func parseUniqueIDColumn(name string, typ types.Type, value any) (string, error) {
+// parseIdentityProperty parses the value for the identity property.
+func parseIdentityProperty(name string, typ types.Type, value any) (string, error) {
 	id, err := normalizeDatabaseFileProperty(name, typ, value, false)
 	if err != nil {
 		return "", err

@@ -39,11 +39,11 @@ func TestImportFromDatabase(t *testing.T) {
 				"email": "email",
 			},
 		},
-		Query:           `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
-		UniqueIDColumn:  "id",
-		UpdatedAtColumn: "",
-		UpdatedAtFormat: "",
-		DisplayedID:     "customer_id",
+		Query:            `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
+		IdentityProperty: "id",
+		UpdatedAtColumn:  "",
+		UpdatedAtFormat:  "",
+		DisplayedID:      "customer_id",
 	})
 
 	c.ExecuteAction(pgSQL, importUsers, false)

@@ -394,7 +394,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Sheet:                   action.Sheet,
 		Compression:             state.Compression(action.Compression),
 		TableName:               action.TableName,
-		UniqueIDColumn:          action.UniqueIDColumn,
+		IdentityProperty:        action.IdentityProperty,
 		DisplayedID:             action.DisplayedID,
 		UpdatedAtColumn:         action.UpdatedAtColumn,
 		UpdatedAtFormat:         action.UpdatedAtFormat,
@@ -527,7 +527,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, query,\n" +
-			"connector, path, sheet, compression, settings, table_name, unique_id_column,\n" +
+			"connector, path, sheet, compression, settings, table_name, identity_property,\n" +
 			"updated_at_column, updated_at_format, export_mode, matching_properties_internal,\n" +
 			"matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
@@ -536,7 +536,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(filter), mapping, function.Source, function.Language, function.Version,
 			n.Query, connectorID, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.UniqueIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.ExportMode,
+			n.IdentityProperty, n.UpdatedAtColumn, n.UpdatedAtFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {

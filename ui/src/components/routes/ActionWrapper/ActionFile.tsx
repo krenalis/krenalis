@@ -163,7 +163,7 @@ const ActionFile = () => {
 		a.Compression = '';
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
-		a.UniqueIDColumn = '';
+		a.IdentityProperty = '';
 		a.DisplayedID = '';
 		a.UpdatedAtColumn = '';
 		a.UpdatedAtFormat = '';

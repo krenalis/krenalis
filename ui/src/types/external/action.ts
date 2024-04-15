@@ -48,7 +48,7 @@ interface Action {
 	Path: string | null;
 	Table: string | null;
 	Sheet: string | null;
-	UniqueIDColumn: string | null;
+	IdentityProperty: string | null;
 	UpdatedAtColumn: string | null;
 	UpdatedAtFormat: string | null;
 	DisplayedID: string | null;
@@ -77,7 +77,7 @@ interface ActionToSet {
 	path?: string | null;
 	tableName?: string | null;
 	sheet?: string | null;
-	UniqueIDColumn?: string | null;
+	IdentityProperty?: string | null;
 	UpdatedAtColumn?: string | null;
 	UpdatedAtFormat?: string | null;
 	DisplayedID?: string | null;

@@ -168,7 +168,7 @@
 }
 
 .action .specialProperties .displayedID,
-.action .specialProperties .uniqueIDColumn {
+.action .specialProperties .identityProperty {
 	margin-bottom: 30px;
 }
 
@@ -183,7 +183,7 @@
 }
 
 .action .specialProperties .displayedID,
-.action .specialProperties .uniqueIDColumn,
+.action .specialProperties .identityProperty,
 .action .specialProperties .updatedAtColumn .updatedAt {
 	display: grid;
 	justify-content: start;
@@ -218,12 +218,12 @@
 }
 
 .action .specialProperties .displayedID .label,
-.action .specialProperties .uniqueIDColumn .label,
+.action .specialProperties .identityProperty .label,
 .action .specialProperties .updatedAtColumn .label {
 	font-size: 14px;
 }
 
-.action .specialProperties .uniqueIDColumn .label .asterisk {
+.action .specialProperties .identityProperty .label .asterisk {
 	color: var(--sl-color-danger-500);
 }
 

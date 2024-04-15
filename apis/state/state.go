@@ -930,7 +930,7 @@ type Action struct {
 	Compression             Compression
 	Settings                []byte
 	TableName               string
-	UniqueIDColumn          string
+	IdentityProperty        string
 	UpdatedAtColumn         string
 	UpdatedAtFormat         string
 	DisplayedID             string
