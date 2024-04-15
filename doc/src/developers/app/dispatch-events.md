@@ -115,6 +115,6 @@ type EventRequest struct {
 }
 ```
 
-The `Endpoint` field identifies the specific destination for dispatching events. For instance, you can label endpoints as "us" or "europe" if events go to different locations based on privacy regions. Events going to the same endpoint get grouped into one queue, which avoids bottlenecks and keeps the system efficient. If a server where the events with the same endpoint are dispatched becomes unavailable, it affects only events routed to that queue. You can name this field anything, and if all events go to one destination, you can leave it empty.
+The `Endpoint` field identifies the specific destination for dispatching events. For instance, you can label endpoints as "us" or "europe" if events go to different locations based on privacy regions. Events going to the same endpoint get grouped into one queue, which avoids bottlenecks and keeps the system efficient. If a server where the events with the same endpoint are dispatched becomes unavailable, it affects only events routed to that queue. You can assign any value to this field, and if all events go to one destination, you can leave it empty.
 
 To redact the returned request, when the `redacted` argument is `true`, replace authorization data in the URL, header, and body with "REDACTED".
