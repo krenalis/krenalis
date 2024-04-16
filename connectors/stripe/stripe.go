@@ -61,14 +61,14 @@ type Stripe struct {
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
-		Name:                   "Stripe",
-		Targets:                chichi.Users,
-		SourceDescription:      "import customers as users",
-		DestinationDescription: "export users as customers",
-		TermForUsers:           "customers",
-		SuggestedDisplayedID:   "email",
-		Icon:                   icon,
-		WebhooksPer:            chichi.WebhooksPerSource,
+		Name:                       "Stripe",
+		Targets:                    chichi.Users,
+		SourceDescription:          "import customers as users",
+		DestinationDescription:     "export users as customers",
+		TermForUsers:               "customers",
+		SuggestedDisplayedProperty: "email",
+		Icon:                       icon,
+		WebhooksPer:                chichi.WebhooksPerSource,
 	}, New)
 }
 

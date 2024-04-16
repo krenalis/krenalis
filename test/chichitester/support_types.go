@@ -73,7 +73,7 @@ type Action struct {
 	Compression             Compression
 	Table                   *string
 	IdentityProperty        *string
-	DisplayedID             string
+	DisplayedProperty       string
 	UpdatedAtColumn         *string
 	UpdatedAtFormat         *string
 	ExportMode              *ExportMode
@@ -96,7 +96,7 @@ type ActionToSet struct {
 	UIValues                json.RawMessage `json:",omitempty"`
 	TableName               string
 	IdentityProperty        string
-	DisplayedID             string
+	DisplayedProperty       string
 	UpdatedAtColumn         string
 	UpdatedAtFormat         string
 	ExportMode              *ExportMode
@@ -163,11 +163,11 @@ type FilterCondition struct {
 }
 
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
-	Connection   int
-	ExternalId   LabelValue
-	DisplayedId  string
-	AnonymousIds []string
-	UpdatedAt    time.Time
+	Connection        int
+	ExternalId        LabelValue
+	DisplayedProperty string
+	AnonymousIds      []string
+	UpdatedAt         time.Time
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

@@ -79,9 +79,9 @@ type Record struct {
 	Properties map[string]any // Properties.
 	UpdatedAt  time.Time      // Last modification time, in UTC.
 
-	// DisplayedID, if any, otherwise the empty string. Cannot be longer than 40
+	// DisplayedProperty, if any, otherwise the empty string. Cannot be longer than 40
 	// runes.
-	DisplayedID string
+	DisplayedProperty string
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
@@ -479,24 +479,24 @@ func checkConformity(name string, t1, t2 types.Type) error {
 // Keep in sync with the events.maxSettingsLen constant.
 const maxSettingsLen = 10_000
 
-// displayedIDFromSchema returns the displayed ID from the given schema, if
-// found and its type is compatible, otherwise returns the zero Property and an
-// error.
-func displayedIDFromSchema(schema types.Type, displayedIDName string) (types.Property, error) {
-	p, ok := schema.Property(displayedIDName)
+// displayedPropertyFromSchema returns the displayed property from the given
+// schema, if found and its type is compatible, otherwise returns the zero
+// Property and an error.
+func displayedPropertyFromSchema(schema types.Type, displayedPropertyName string) (types.Property, error) {
+	p, ok := schema.Property(displayedPropertyName)
 	if !ok {
-		return types.Property{}, fmt.Errorf("the displayed ID property %q not found in schema", displayedIDName)
+		return types.Property{}, fmt.Errorf("displayed property %q not found in schema", displayedPropertyName)
 	}
-	if !supportedTypeForDisplayedID(p.Type) {
-		return types.Property{}, fmt.Errorf("the displayed ID property %q has an unsupported type %s", displayedIDName, p.Type)
+	if !supportedTypeForDisplayedProperty(p.Type) {
+		return types.Property{}, fmt.Errorf("displayed property %q has an unsupported type %s", displayedPropertyName, p.Type)
 	}
 	return p, nil
 }
 
-// displayedIDToString returns a string representation of the displayed ID
-// value. If value cannot be represented as a valid displayed ID value, an error
-// is returned.
-func displayedIDToString(value any) (string, error) {
+// displayedPropertyToString returns a string representation of the displayed property
+// value. If value cannot be represented as a valid displayed property value, an
+// error is returned.
+func displayedPropertyToString(value any) (string, error) {
 	var s string
 	switch src := value.(type) {
 	case int: // Int(n).
@@ -512,10 +512,10 @@ func displayedIDToString(value any) (string, error) {
 	case float64:
 		s = fmt.Sprint(src)
 	default:
-		return "", fmt.Errorf("unexpected displayed ID value with type %T", src)
+		return "", fmt.Errorf("unexpected displayed property value with type %T", src)
 	}
 	if utf8.RuneCountInString(s) > 40 {
-		return "", fmt.Errorf("the displayed ID value is longer than 40 runes")
+		return "", fmt.Errorf("the displayed property value is longer than 40 runes")
 	}
 	return s, nil
 }
@@ -772,9 +772,9 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 	return err
 }
 
-// supportedTypeForDisplayedID reports whether the type t is supported as a
-// displayed ID type.
-func supportedTypeForDisplayedID(t types.Type) bool {
+// supportedTypeForDisplayedProperty reports whether the type t is supported as
+// a displayed property type.
+func supportedTypeForDisplayedProperty(t types.Type) bool {
 	switch t.Kind() {
 	case types.IntKind,
 		types.UintKind,

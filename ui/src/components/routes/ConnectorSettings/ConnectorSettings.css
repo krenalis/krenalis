@@ -38,12 +38,12 @@
 	max-width: 280px;
 }
 
-.connectorSettings sl-input.displayedIDName {
+.connectorSettings sl-input.displayedPropertyName {
 	max-width: 500px;
 }
 
 .connectorSettings sl-input.name,
-.connectorSettings sl-input.displayedIDName {
+.connectorSettings sl-input.displayedPropertyName {
 	padding-top: 2em;
 }
 

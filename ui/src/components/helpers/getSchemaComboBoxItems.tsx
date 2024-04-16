@@ -26,7 +26,7 @@ const getIdentityPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] =>
 	return computeItems(filteredSchema);
 };
 
-const getDisplayedIDComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getDisplayedPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -95,6 +95,6 @@ const computeItems = (flatSchema: TransformedMapping) => {
 export {
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
-	getDisplayedIDComboboxItems,
+	getDisplayedPropertyComboboxItems,
 	getUpdatedAtComboboxItems,
 };

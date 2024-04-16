@@ -103,7 +103,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Format: file.action.UpdatedAtFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.IdentityProperty, updatedAtColumn, file.action.DisplayedID,
+		file.action.IdentityProperty, updatedAtColumn, file.action.DisplayedProperty,
 		storageUpdatedAt, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
@@ -358,7 +358,7 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // storageUpdatedAt is the 'updated at' value provided by the storage connector,
 // and it is used in the case when the file columns do not specify an 'update
 // at' column.
-func newRecordWriter(connector int, schema types.Type, identityProperty string, updatedAt UpdatedAtColumn, displayedID string, storageUpdatedAt time.Time, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, identityProperty string, updatedAt UpdatedAtColumn, displayedProperty string, storageUpdatedAt time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -366,7 +366,7 @@ func newRecordWriter(connector int, schema types.Type, identityProperty string, 
 		textColumnsOnly: true,
 		records:         []map[string]any{},
 	}
-	rw.displayedID.name = displayedID
+	rw.displayedProperty.name = displayedProperty
 	if identityProperty != "" {
 		rw.identityProperty.name = identityProperty
 		typ, _ := schema.Property(identityProperty)
@@ -385,15 +385,15 @@ func newRecordWriter(connector int, schema types.Type, identityProperty string, 
 
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
-	connector       int
-	limit           int
-	yield           func(Record) error
-	schema          types.Type
-	properties      []types.Property // schema's properties, or the file's columns if a schema has not been provided
-	columnIndexOf   map[int]int      // map a property index in the schema to the corresponding file's column
-	columns         int              // number of file's columns
-	textColumnsOnly bool
-	displayedID     struct {
+	connector         int
+	limit             int
+	yield             func(Record) error
+	schema            types.Type
+	properties        []types.Property // schema's properties, or the file's columns if a schema has not been provided
+	columnIndexOf     map[int]int      // map a property index in the schema to the corresponding file's column
+	columns           int              // number of file's columns
+	textColumnsOnly   bool
+	displayedProperty struct {
 		name   string
 		column types.Property
 		index  int
@@ -459,15 +459,15 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		rw.updatedAtColumn.typ = c.Type
 		rw.updatedAtColumn.index = columnIndex[c.Name]
 	}
-	// Validate the displayed ID column.
-	if rw.displayedID.name != "" {
-		col, err := displayedIDFromSchema(fileSchema, rw.displayedID.name)
+	// Validate the displayed property.
+	if rw.displayedProperty.name != "" {
+		col, err := displayedPropertyFromSchema(fileSchema, rw.displayedProperty.name)
 		if err != nil {
-			slog.Warn("cannot determine the displayed ID column", "err", err)
-			rw.displayedID.name = ""
+			slog.Warn("cannot determine the displayed property", "err", err)
+			rw.displayedProperty.name = ""
 		} else {
-			rw.displayedID.column = col
-			rw.displayedID.index = columnIndex[col.Name]
+			rw.displayedProperty.column = col
+			rw.displayedProperty.index = columnIndex[col.Name]
 		}
 	}
 	// Check that the schema, if valid, is compatible with the file's schema.
@@ -541,19 +541,19 @@ func (rw *recordWriter) Record(record []any) error {
 				rd.UpdatedAt = rw.storageUpdatedAt
 			}
 		}
-		// Parse the displayed ID column.
-		if rd.Err == nil && rw.displayedID.name != "" {
-			v := record[rw.displayedID.index]
-			c := rw.displayedID.column
+		// Parse the displayed property.
+		if rd.Err == nil && rw.displayedProperty.name != "" {
+			v := record[rw.displayedProperty.index]
+			c := rw.displayedProperty.column
 			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
 			if err != nil {
-				slog.Warn("the displayed ID value cannot be normalized", "err", err)
+				slog.Warn("the displayed property value cannot be normalized", "err", err)
 			} else {
-				s, err := displayedIDToString(vv)
+				s, err := displayedPropertyToString(vv)
 				if err != nil {
-					slog.Warn("invalid displayed ID value", "err", err)
+					slog.Warn("invalid displayed property value", "err", err)
 				} else {
-					rd.DisplayedID = s
+					rd.DisplayedProperty = s
 				}
 			}
 		}
@@ -617,19 +617,19 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		if err := rw.yield(rd); err != nil {
 			return yieldError{err: err}
 		}
-		// Parse the displayed ID column.
-		if rd.Err == nil && rw.displayedID.name != "" {
-			v := record[rw.displayedID.name]
-			c := rw.displayedID.column
+		// Parse the displayed property.
+		if rd.Err == nil && rw.displayedProperty.name != "" {
+			v := record[rw.displayedProperty.name]
+			c := rw.displayedProperty.column
 			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
 			if err != nil {
-				slog.Warn("displayed ID value cannot be normalized", "err", err)
+				slog.Warn("displayed property value cannot be normalized", "err", err)
 			} else {
-				s, err := displayedIDToString(vv)
+				s, err := displayedPropertyToString(vv)
 				if err != nil {
-					slog.Warn("invalid displayed ID value", "err", err)
+					slog.Warn("invalid displayed property value", "err", err)
 				} else {
-					rd.DisplayedID = s
+					rd.DisplayedProperty = s
 				}
 			}
 		}
@@ -696,19 +696,19 @@ func (rw *recordWriter) RecordString(record []string) error {
 				rd.UpdatedAt = rw.storageUpdatedAt
 			}
 		}
-		// Parse the displayed ID column.
-		if rd.Err == nil && rw.displayedID.name != "" {
-			v := record[rw.displayedID.index]
-			c := rw.displayedID.column
+		// Parse the displayed property.
+		if rd.Err == nil && rw.displayedProperty.name != "" {
+			v := record[rw.displayedProperty.index]
+			c := rw.displayedProperty.column
 			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
 			if err != nil {
-				slog.Warn("displayed ID value cannot be normalized", "err", err)
+				slog.Warn("displayed property value cannot be normalized", "err", err)
 			} else {
-				s, err := displayedIDToString(vv)
+				s, err := displayedPropertyToString(vv)
 				if err != nil {
-					slog.Warn("invalid displayed ID value", "err", err)
+					slog.Warn("invalid displayed property value", "err", err)
 				} else {
-					rd.DisplayedID = s
+					rd.DisplayedProperty = s
 				}
 			}
 		}

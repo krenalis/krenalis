@@ -58,7 +58,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"lastName":  "lastName",
 				},
 			},
-			DisplayedID: "email",
+			DisplayedProperty: "email",
 		})
 		c.ExecuteAction(dummy, dummyAction, true)
 		c.WaitActionsToFinish(dummy)
@@ -106,11 +106,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"gender": "gender",
 				},
 			},
-			IdentityProperty: "csv_id",
-			UpdatedAtColumn:  "timestamp",
-			UpdatedAtFormat:  "'%Y-%m-%d %H:%M:%S'",
-			DisplayedID:      "email",
-			Connector:        chichitester.CSVConnector,
+			IdentityProperty:  "csv_id",
+			UpdatedAtColumn:   "timestamp",
+			UpdatedAtFormat:   "'%Y-%m-%d %H:%M:%S'",
+			DisplayedProperty: "email",
+			Connector:         chichitester.CSVConnector,
 			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma":          ",",
 				"HasColumnNames": true,
@@ -156,7 +156,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 						"email": "traits.email",
 					},
 				},
-				DisplayedID: "email",
+				DisplayedProperty: "email",
 			})
 		}
 
@@ -224,11 +224,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		dummyIdentity := identities[0]
 		dummyIdentity.UpdatedAt = time.Time{}
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
-			Connection:   dummy,
-			ExternalId:   chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
-			DisplayedId:  "kbuessen0@example.com",
-			AnonymousIds: nil,
-			UpdatedAt:    time.Time{},
+			Connection:        dummy,
+			ExternalId:        chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
+			DisplayedProperty: "kbuessen0@example.com",
+			AnonymousIds:      nil,
+			UpdatedAt:         time.Time{},
 		})
 	}
 	t.Log("identity imported from Dummy is ok")
@@ -240,9 +240,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				Label: "ID",
 				Value: "1",
 			},
-			DisplayedId:  "kbuessen0@example.com",
-			AnonymousIds: nil,
-			UpdatedAt:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+			DisplayedProperty: "kbuessen0@example.com",
+			AnonymousIds:      nil,
+			UpdatedAt:         time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
 		})
 	}
 	t.Log("identity imported from CSV is ok")
@@ -250,11 +250,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity := identities[2]
 		eventIdentity.UpdatedAt = time.Time{}
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
-			Connection:   javaScript,
-			ExternalId:   chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
-			DisplayedId:  "kbuessen0@example.com",
-			AnonymousIds: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
-			UpdatedAt:    time.Time{},
+			Connection:        javaScript,
+			ExternalId:        chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
+			DisplayedProperty: "kbuessen0@example.com",
+			AnonymousIds:      []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
+			UpdatedAt:         time.Time{},
 		})
 	}
 	t.Log("identity imported from JavaScript is ok")

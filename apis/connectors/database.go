@@ -162,18 +162,18 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		return nil, err
 	}
 
-	// Determine the displayed ID, if necessary.
-	var displayedIDColumn types.Property
-	if action.DisplayedID != "" {
-		displayedIDColumn, err = displayedIDFromSchema(querySchema, action.DisplayedID)
+	// Determine the displayed property, if necessary.
+	var displayedProperty types.Property
+	if action.DisplayedProperty != "" {
+		displayedProperty, err = displayedPropertyFromSchema(querySchema, action.DisplayedProperty)
 		if err != nil {
-			slog.Warn("cannot determine the displayed ID column", "err", err)
+			slog.Warn("cannot determine the displayed property", "err", err)
 		}
 	}
 
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityProperty,
-		updatedAtColumn, action.UpdatedAtFormat, displayedIDColumn)
+		updatedAtColumn, action.UpdatedAtFormat, displayedProperty)
 	return records, nil
 }
 
@@ -329,14 +329,14 @@ type databaseRecords struct {
 	identityProperty  types.Property
 	updatedAtColumn   types.Property
 	updatedAtFormat   string
-	displayedIDColumn types.Property
+	displayedProperty types.Property
 	err               error
 	closed            bool
 }
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 	identityProperty, updatedAtColumn types.Property, updatedAtFormat string,
-	displayedIDColumn types.Property) *databaseRecords {
+	displayedProperty types.Property) *databaseRecords {
 	records := databaseRecords{
 		columns:           columns,
 		rows:              rows,
@@ -345,7 +345,7 @@ func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 		identityProperty:  identityProperty,
 		updatedAtColumn:   updatedAtColumn,
 		updatedAtFormat:   updatedAtFormat,
-		displayedIDColumn: displayedIDColumn,
+		displayedProperty: displayedProperty,
 	}
 	for _, p := range properties {
 		records.propertyOf[p.Name] = p
@@ -381,11 +381,11 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 		}
 		for i, c := range r.columns {
 			p := r.propertyOf[c.Name]
-			if c.Name == r.displayedIDColumn.Name {
-				// This is necessary as the displayed ID property is not
+			if c.Name == r.displayedProperty.Name {
+				// This is necessary as the displayed property is not
 				// necessarily included in "propertyOf"; even if it is, the type
 				// of its property must be taken from the query.
-				p = r.displayedIDColumn
+				p = r.displayedProperty
 			}
 			r.dst[i] = recordsScanValue{
 				property:          p,
@@ -393,7 +393,7 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 				identityProperty:  r.identityProperty,
 				updatedAtColumn:   r.updatedAtColumn,
 				updatedAtFormat:   r.updatedAtFormat,
-				displayedIDColumn: r.displayedIDColumn,
+				displayedProperty: r.displayedProperty,
 			}
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
@@ -421,7 +421,7 @@ type recordsScanValue struct {
 	identityProperty  types.Property
 	updatedAtColumn   types.Property
 	updatedAtFormat   string
-	displayedIDColumn types.Property
+	displayedProperty types.Property
 }
 
 func (sv recordsScanValue) Scan(src any) error {
@@ -431,17 +431,17 @@ func (sv recordsScanValue) Scan(src any) error {
 		return nil
 	}
 
-	if p.Name == sv.displayedIDColumn.Name {
-		col := sv.displayedIDColumn
+	if p.Name == sv.displayedProperty.Name {
+		col := sv.displayedProperty
 		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
 		if err != nil {
-			slog.Warn("displayed ID value cannot be normalized", "err", err)
+			slog.Warn("displayed property value cannot be normalized", "err", err)
 		} else {
-			displayedID, err := displayedIDToString(normalizedValue)
+			dp, err := displayedPropertyToString(normalizedValue)
 			if err != nil {
-				slog.Warn("invalid displayed ID value", "err", err)
+				slog.Warn("invalid displayed property value", "err", err)
 			} else {
-				sv.record.DisplayedID = displayedID
+				sv.record.DisplayedProperty = dp
 			}
 		}
 	}

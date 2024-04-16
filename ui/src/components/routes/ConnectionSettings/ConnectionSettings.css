@@ -19,7 +19,7 @@
 .connectionSettings .generalSettings .strategyField,
 .connectionSettings .generalSettings .modeField,
 .connectionSettings .generalSettings .websiteHostField,
-.connectionSettings .generalSettings .displayedIDField {
+.connectionSettings .generalSettings .displayedPropertyField {
 	margin-bottom: 30px;
 }
 

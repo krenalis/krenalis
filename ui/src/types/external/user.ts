@@ -123,7 +123,7 @@ interface UserIdentityLabelValue {
 interface UserIdentity {
 	Connection: number;
 	ExternalId: UserIdentityLabelValue;
-	DisplayedId: string;
+	DisplayedProperty: string;
 	AnonymousIds: string[] | null;
 	UpdatedAt: string;
 }

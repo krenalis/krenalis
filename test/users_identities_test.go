@@ -50,9 +50,9 @@ func Test_UsersIdentities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityProperty: "identity",
-		DisplayedID:      "email",
-		Connector:        chichitester.CSVConnector,
+		IdentityProperty:  "identity",
+		DisplayedProperty: "email",
+		Connector:         chichitester.CSVConnector,
 		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
@@ -74,9 +74,9 @@ func Test_UsersIdentities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityProperty: "identity",
-		DisplayedID:      "email",
-		Connector:        chichitester.CSVConnector,
+		IdentityProperty:  "identity",
+		DisplayedProperty: "email",
+		Connector:         chichitester.CSVConnector,
 		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
@@ -140,9 +140,9 @@ func Test_UsersIdentities(t *testing.T) {
 				t.Fatalf("unexpected external ID %q, it should have prefix %q", extID, externalIDPrefix)
 			}
 
-			// Check the displayed ID.
-			if !strings.Contains(identity.DisplayedId, "@") {
-				t.Fatalf("expecting displayed ID value with a '@', got %q", identity.DisplayedId)
+			// Check the displayed property.
+			if !strings.Contains(identity.DisplayedProperty, "@") {
+				t.Fatalf("expecting displayed property value with a '@', got %q", identity.DisplayedProperty)
 			}
 
 			totalIdentities++

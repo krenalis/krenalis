@@ -51,7 +51,7 @@ interface Action {
 	IdentityProperty: string | null;
 	UpdatedAtColumn: string | null;
 	UpdatedAtFormat: string | null;
-	DisplayedID: string | null;
+	DisplayedProperty: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
 	ExportOnDuplicatedUsers: boolean | null;
@@ -80,7 +80,7 @@ interface ActionToSet {
 	IdentityProperty?: string | null;
 	UpdatedAtColumn?: string | null;
 	UpdatedAtFormat?: string | null;
-	DisplayedID?: string | null;
+	DisplayedProperty?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
 	exportOnDuplicatedUsers?: boolean | null;

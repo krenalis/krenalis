@@ -289,11 +289,11 @@ type IdentitiesWriter interface {
 
 // Identity is a user identity to be written on the data warehouse.
 type Identity struct {
-	ID          string // external ID.
-	Properties  map[string]any
-	AnonymousID string    // empty string if not present.
-	DisplayedID string    // cannot be longer than 40 runes.
-	UpdatedAt   time.Time // in UTC.
+	ID                string // external ID.
+	Properties        map[string]any
+	AnonymousID       string    // empty string if not present.
+	DisplayedProperty string    // cannot be longer than 40 runes.
+	UpdatedAt         time.Time // in UTC.
 }
 
 // Records is the iterator interface used to iterate over the records read from

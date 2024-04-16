@@ -325,36 +325,36 @@ func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Con
 					"anonymous ID", event.AnonymousId)
 				continue
 			}
-			// Determine the displayed ID.
-			var displayedID string
-			if action.DisplayedID != "" {
-				v, ok := mapEvent["traits"].(map[string]any)[action.DisplayedID]
+			// Determine the displayed property.
+			var displayedProperty string
+			if action.DisplayedProperty != "" {
+				v, ok := mapEvent["traits"].(map[string]any)[action.DisplayedProperty]
 				if ok {
 					switch v := v.(type) {
 					case string:
-						displayedID = v
+						displayedProperty = v
 					case json.Number:
 						if f, err := v.Float64(); err == nil && math.Floor(f) == f {
-							displayedID = v.String()
+							displayedProperty = v.String()
 						}
 					case float64:
 						if math.Floor(v) == v {
-							displayedID = fmt.Sprint(v)
+							displayedProperty = fmt.Sprint(v)
 						}
 					}
 				}
 			}
-			if utf8.RuneCountInString(displayedID) > 40 {
-				slog.Error("the displayed ID value is longer than 40 runes")
-				displayedID = ""
+			if utf8.RuneCountInString(displayedProperty) > 40 {
+				slog.Error("the displayed property value is longer than 40 runes")
+				displayedProperty = ""
 			}
 			// Write the user identity on the data warehouse.
 			ok := iw.Write(ctx, warehouses.Identity{
-				ID:          event.UserId,
-				Properties:  properties,
-				AnonymousID: event.AnonymousId,
-				UpdatedAt:   event.Timestamp,
-				DisplayedID: displayedID,
+				ID:                event.UserId,
+				Properties:        properties,
+				AnonymousID:       event.AnonymousId,
+				UpdatedAt:         event.Timestamp,
+				DisplayedProperty: displayedProperty,
 			})
 			if !ok {
 				return iw.Close(ctx)

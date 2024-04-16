@@ -54,7 +54,7 @@ type Action struct {
 	Compression             Compression
 	Table                   *string
 	IdentityProperty        *string
-	DisplayedID             string
+	DisplayedProperty       string
 	UpdatedAtColumn         *string
 	UpdatedAtFormat         *string
 	ExportMode              *ExportMode
@@ -156,7 +156,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		p := action.IdentityProperty
 		this.IdentityProperty = &p
 	}
-	this.DisplayedID = action.DisplayedID
+	this.DisplayedProperty = action.DisplayedProperty
 	if action.UpdatedAtColumn != "" {
 		column := action.UpdatedAtColumn
 		this.UpdatedAtColumn = &column
@@ -379,7 +379,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Compression:             state.Compression(action.Compression),
 		TableName:               action.TableName,
 		IdentityProperty:        action.IdentityProperty,
-		DisplayedID:             action.DisplayedID,
+		DisplayedProperty:       action.DisplayedProperty,
 		UpdatedAtColumn:         action.UpdatedAtColumn,
 		UpdatedAtFormat:         action.UpdatedAtFormat,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
@@ -521,13 +521,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_property = $17, "+
-			"displayed_id = $18, updated_at_column = $19, updated_at_format = $20, export_mode = $21, "+
+			"displayed_property = $18, updated_at_column = $19, updated_at_format = $20, export_mode = $21, "+
 			"matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.DisplayedID, n.UpdatedAtColumn, n.UpdatedAtFormat,
+			n.IdentityProperty, n.DisplayedProperty, n.UpdatedAtColumn, n.UpdatedAtFormat,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -745,13 +745,13 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	IdentityProperty string
 
-	// DisplayedID, if not empty, is the property or the column that holds the
+	// DisplayedProperty, if not empty, is the property that holds the
 	// identifier displayed in the UI for the imported user or group.
 	//
 	// In particular, for apps actions it is an app property, for file and
 	// database actions it is a column name, while for event-based actions it is
 	// a "traits" property.
-	DisplayedID string
+	DisplayedProperty string
 
 	// UpdatedAtColumn is the column name used as 'updated at' when importing
 	// from a file or from a database. May be empty to indicate that no

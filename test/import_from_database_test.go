@@ -39,11 +39,11 @@ func TestImportFromDatabase(t *testing.T) {
 				"email": "email",
 			},
 		},
-		Query:            `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
-		IdentityProperty: "id",
-		UpdatedAtColumn:  "",
-		UpdatedAtFormat:  "",
-		DisplayedID:      "customer_id",
+		Query:             `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
+		IdentityProperty:  "id",
+		UpdatedAtColumn:   "",
+		UpdatedAtFormat:   "",
+		DisplayedProperty: "customer_id",
 	})
 
 	c.ExecuteAction(pgSQL, importUsers, false)
@@ -58,9 +58,9 @@ func TestImportFromDatabase(t *testing.T) {
 	}
 
 	for _, identity := range identities {
-		const expectedDisplayedID = "ABC123"
-		if identity.DisplayedId != expectedDisplayedID {
-			t.Fatalf("expected displayed ID %q, got %q", expectedDisplayedID, identity.DisplayedId)
+		const expectedDisplayedProperty = "ABC123"
+		if identity.DisplayedProperty != expectedDisplayedProperty {
+			t.Fatalf("expected displayed property %q, got %q", expectedDisplayedProperty, identity.DisplayedProperty)
 		}
 	}
 }

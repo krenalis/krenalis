@@ -48,18 +48,18 @@ const (
 
 // AppInfo represents an app connector info.
 type AppInfo struct {
-	Name                   string
-	Targets                Targets
-	SourceDescription      string // It should complete the sentence "Add an action to ..."
-	DestinationDescription string // It should complete the sentence "Add an action to ..."
-	TermForUsers           string
-	TermForGroups          string
-	ExternalIDLabel        string
-	SuggestedDisplayedID   string      // suggested property name to use as the displayed identifier
-	Icon                   string      // icon in SVG format
-	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
-	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
-	SendingMode            SendingMode // mode of event sending. None for sources and non-supporting event apps.
+	Name                       string
+	Targets                    Targets
+	SourceDescription          string // It should complete the sentence "Add an action to ..."
+	DestinationDescription     string // It should complete the sentence "Add an action to ..."
+	TermForUsers               string
+	TermForGroups              string
+	ExternalIDLabel            string
+	SuggestedDisplayedProperty string      // suggested property name to use as the displayed property
+	Icon                       string      // icon in SVG format
+	WebhooksPer                WebhooksPer // indicates if webhooks are per connector, resource or connection
+	OAuth                      OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
+	SendingMode                SendingMode // mode of event sending. None for sources and non-supporting event apps.
 
 	// Layout for date and time values. If left empty, it is ISO 8601.
 	DateTimeLayout string // If left empty, values are formatted with the layout "2006-01-02T15:04:05.999Z".

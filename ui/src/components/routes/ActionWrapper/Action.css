@@ -167,7 +167,7 @@
 	padding-bottom: 30px;
 }
 
-.action .specialProperties .displayedID,
+.action .specialProperties .displayedProperty,
 .action .specialProperties .identityProperty {
 	margin-bottom: 30px;
 }
@@ -182,7 +182,7 @@
 	gap: 15px;
 }
 
-.action .specialProperties .displayedID,
+.action .specialProperties .displayedProperty,
 .action .specialProperties .identityProperty,
 .action .specialProperties .updatedAtColumn .updatedAt {
 	display: grid;
@@ -217,7 +217,7 @@
 	width: 100%;
 }
 
-.action .specialProperties .displayedID .label,
+.action .specialProperties .displayedProperty .label,
 .action .specialProperties .identityProperty .label,
 .action .specialProperties .updatedAtColumn .label {
 	font-size: 14px;

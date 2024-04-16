@@ -388,7 +388,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Compression:             state.Compression(action.Compression),
 		TableName:               action.TableName,
 		IdentityProperty:        action.IdentityProperty,
-		DisplayedID:             action.DisplayedID,
+		DisplayedProperty:       action.DisplayedProperty,
 		UpdatedAtColumn:         action.UpdatedAtColumn,
 		UpdatedAtFormat:         action.UpdatedAtFormat,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
 import { checkIfPropertyExists, updateMappingProperty } from './Action.helpers';
 import {
-	getDisplayedIDComboboxItems,
+	getDisplayedPropertyComboboxItems,
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
 	getUpdatedAtComboboxItems,
@@ -91,7 +91,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	const mappingListRef = useRef(null);
 	const identityPropertyListRef = useRef(null);
-	const displayedIDListRef = useRef(null);
+	const displayedPropertyListRef = useRef(null);
 	const updatedAtListRef = useRef(null);
 	const isFirstCompilation = useRef(true);
 	const updatedAtCustomFormatInputRef = useRef(null);
@@ -149,24 +149,24 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (hasSpecialProperties && isFirstCompilation.current) {
-			// precompile the 'IdentityProperty', 'displayedID' and
+			// precompile the 'IdentityProperty', 'displayedProperty' and
 			// 'UpdatedAtColumn' fields, if possible.
 			const a = { ...action };
 			if (connection.isApp) {
-				const suggestedDisplayedID = connection.connector.suggestedDisplayedID;
-				if (suggestedDisplayedID !== '') {
-					// check if the sugested displayed ID exists in
-					// the input schema.
+				const suggestedDisplayedProperty = connection.connector.suggestedDisplayedProperty;
+				if (suggestedDisplayedProperty !== '') {
+					// check if the suggested displayed property exists in the
+					// input schema.
 					const flatSchema = flattenSchema(actionType.InputSchema);
-					if (flatSchema[suggestedDisplayedID]) {
-						a.DisplayedID = suggestedDisplayedID;
+					if (flatSchema[suggestedDisplayedProperty]) {
+						a.DisplayedProperty = suggestedDisplayedProperty;
 					}
 				}
 			} else if (connection.isDatabase || connection.isFileStorage) {
 				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 				if (hasIdColumn) {
 					a.IdentityProperty = 'id';
-					a.DisplayedID = 'id';
+					a.DisplayedProperty = 'id';
 					isFirstCompilation.current = false;
 				}
 				const hasUpdatedAtColumn =
@@ -244,11 +244,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	}, [action, flatSchema]);
 
-	const displayedIDError = useMemo<string>(() => {
+	const displayedProperty = useMemo<string>(() => {
 		if (!hasSpecialProperties || connection.isEventBased) {
 			return;
 		}
-		return checkIfPropertyExists(action.DisplayedID, flatSchema);
+		return checkIfPropertyExists(action.DisplayedProperty, flatSchema);
 	}, [action, flatSchema]);
 
 	const updatedAtColumnError = useMemo<string>(() => {
@@ -257,10 +257,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	}, [action, flatSchema]);
 
-	const { identityPropertyList, displayedIDList, updatedAtList, mappingList } = useMemo(() => {
+	const { identityPropertyList, displayedPropertyList, updatedAtList, mappingList } = useMemo(() => {
 		return {
 			identityPropertyList: getIdentityPropertyComboboxItems(actionType.InputSchema),
-			displayedIDList: getDisplayedIDComboboxItems(actionType.InputSchema),
+			displayedPropertyList: getDisplayedPropertyComboboxItems(actionType.InputSchema),
 			updatedAtList: getUpdatedAtComboboxItems(actionType.InputSchema),
 			mappingList: getSchemaComboboxItems(actionType.InputSchema),
 		};
@@ -311,17 +311,17 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		if (input.name === 'identityProperty') {
 			const a = { ...action };
 			a.IdentityProperty = value;
-			if (isFirstCompilation.current && a.DisplayedID === '') {
-				a.DisplayedID = value;
+			if (isFirstCompilation.current && a.DisplayedProperty === '') {
+				a.DisplayedProperty = value;
 			}
 			setAction(a);
 			if (isFirstCompilation.current) {
 				isFirstCompilation.current = false;
 			}
 			return;
-		} else if (input.name === 'displayedID') {
+		} else if (input.name === 'displayedProperty') {
 			const a = { ...action };
-			a.DisplayedID = value;
+			a.DisplayedProperty = value;
 			setAction(a);
 			return;
 		} else if (input.name === 'updatedAtColumn') {
@@ -340,8 +340,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		const a = { ...action };
 		const value = e.target.value;
 		a.IdentityProperty = value;
-		if (isFirstCompilation.current && a.DisplayedID === '') {
-			a.DisplayedID = value;
+		if (isFirstCompilation.current && a.DisplayedProperty === '') {
+			a.DisplayedProperty = value;
 		}
 		setAction(a);
 		if (isFirstCompilation.current) {
@@ -349,9 +349,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const onUpdateDisplayedID = (e) => {
+	const onUpdateDisplayedProperty = (e) => {
 		const a = { ...action };
-		a.DisplayedID = e.target.value;
+		a.DisplayedProperty = e.target.value;
 		setAction(a);
 	};
 
@@ -456,26 +456,26 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								/>
 							</div>
 						)}
-						<div className='displayedID'>
+						<div className='displayedProperty'>
 							<div className='label'>Displayed:</div>
 							{connection.isEventBased ? (
 								<SlInput
-									onSlInput={onUpdateDisplayedID}
-									value={action.DisplayedID}
+									onSlInput={onUpdateDisplayedProperty}
+									value={action.DisplayedProperty}
 									disabled={isTransformationDisabled}
 									size='small'
 								/>
 							) : (
 								<ComboBoxInput
-									comboBoxListRef={displayedIDListRef}
-									onInput={onUpdateDisplayedID}
-									value={action.DisplayedID}
-									name='displayedID'
+									comboBoxListRef={displayedPropertyListRef}
+									onInput={onUpdateDisplayedProperty}
+									value={action.DisplayedProperty}
+									name='displayedProperty'
 									disabled={isTransformationDisabled}
 									className='inputProperty'
 									caret={true}
-									clearable={action.DisplayedID?.length > 0}
-									error={displayedIDError}
+									clearable={action.DisplayedProperty?.length > 0}
+									error={displayedProperty}
 									size='small'
 								/>
 							)}
@@ -558,7 +558,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					outputSchema={actionType.OutputSchema}
 				/>
 				<ComboBoxList ref={identityPropertyListRef} items={identityPropertyList} onSelect={onSelectProperty} />
-				<ComboBoxList ref={displayedIDListRef} items={displayedIDList} onSelect={onSelectProperty} />
+				<ComboBoxList
+					ref={displayedPropertyListRef}
+					items={displayedPropertyList}
+					onSelect={onSelectProperty}
+				/>
 				<ComboBoxList ref={updatedAtListRef} items={updatedAtList} onSelect={onSelectProperty} />
 				<ComboBoxList ref={mappingListRef} items={mappingList} onSelect={onSelectProperty} />
 			</Section>

@@ -235,13 +235,13 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("identity property is longer than 1024 runes")
 		}
 	}
-	// Validate the displayed ID.
-	if action.DisplayedID != "" {
-		if !types.IsValidPropertyName(action.DisplayedID) {
-			return errors.BadRequest("displayed ID is not a valid property name")
+	// Validate the displayed property.
+	if action.DisplayedProperty != "" {
+		if !types.IsValidPropertyName(action.DisplayedProperty) {
+			return errors.BadRequest("displayed property is not a valid property name")
 		}
-		if n := utf8.RuneCountInString(action.DisplayedID); n > 1024 {
-			return errors.BadRequest("displayed ID is longer than 1024 runes")
+		if n := utf8.RuneCountInString(action.DisplayedProperty); n > 1024 {
+			return errors.BadRequest("displayed property is longer than 1024 runes")
 		}
 	}
 	// Validate the 'updated at' column.
@@ -410,15 +410,15 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
-	// Validate the displayed ID.
-	if action.DisplayedID != "" {
+	// Validate the displayed property.
+	if action.DisplayedProperty != "" {
 		if c.Role != state.Source {
-			return errors.BadRequest("destination actions cannot have a displayed ID")
+			return errors.BadRequest("destination actions cannot have a displayed property")
 		}
 		if t := connector.Type; t == state.StreamType {
-			return errors.BadRequest("%s actions cannot have a displayed ID", strings.ToLower(t.String()))
+			return errors.BadRequest("%s actions cannot have a displayed property", strings.ToLower(t.String()))
 		} else if eventBasedConn && target == state.Events {
-			return errors.BadRequest("%s actions importing events cannot have a displayed ID", strings.ToLower(target.String()))
+			return errors.BadRequest("%s actions importing events cannot have a displayed property", strings.ToLower(target.String()))
 		}
 	}
 

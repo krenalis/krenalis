@@ -1581,11 +1581,11 @@ type labelValue struct {
 	Value string
 }
 type identity struct {
-	Connection   int
-	ExternalId   labelValue // zero struct for identities imported from anonymous events.
-	DisplayedId  string     // empty string for identities with no displayed ID.
-	AnonymousIds []string   // nil for identities not imported from events.
-	UpdatedAt    time.Time
+	Connection        int
+	ExternalId        labelValue // zero struct for identities imported from anonymous events.
+	DisplayedProperty string     // empty string for identities with no displayed property.
+	AnonymousIds      []string   // nil for identities not imported from events.
+	UpdatedAt         time.Time
 }
 
 // userIdentities returns the users identities matching the "where" expression,
@@ -1607,11 +1607,11 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		{Name: "UpdatedAt", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
 		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "DisplayedId", Type: types.Text().WithCharLen(40)},
+		{Name: "DisplayedProperty", Type: types.Text().WithCharLen(40)},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
 		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
-			{"UpdatedAt"}, {"DisplayedId"}},
+			{"UpdatedAt"}, {"DisplayedProperty"}},
 		Where:   where,
 		OrderBy: types.Property{Name: "IdentityId", Type: types.Int(32)},
 		Schema:  schema,
@@ -1676,8 +1676,8 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		// Determine the "updated_at" timestamp.
 		updatedAt := record.Properties["UpdatedAt"].(time.Time)
 
-		// Determine the displayed ID.
-		displayedID := record.Properties["DisplayedId"].(string)
+		// Determine the displayed property.
+		displayedProperty := record.Properties["DisplayedProperty"].(string)
 
 		identities = append(identities, identity{
 			Connection: connID,
@@ -1685,9 +1685,9 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 				Label: extIDLabel,
 				Value: extIDValue,
 			},
-			DisplayedId:  displayedID,
-			AnonymousIds: anonIDs,
-			UpdatedAt:    updatedAt,
+			DisplayedProperty: displayedProperty,
+			AnonymousIds:      anonIDs,
+			UpdatedAt:         updatedAt,
 		})
 
 		return nil

@@ -54,7 +54,7 @@ const useConnectionIdentities = () => {
 			return { identityProperties: columns, identitiesRows: rows };
 		}
 
-		const isDisplayedIdDefined = identities[0].DisplayedId !== '';
+		const isDisplayedPropertyDefined = identities[0].DisplayedProperty !== '';
 
 		const columns: GridColumn[] = [
 			{
@@ -65,10 +65,10 @@ const useConnectionIdentities = () => {
 				name: identities[0].ExternalId.Label,
 			},
 		];
-		if (isDisplayedIdDefined) {
+		if (isDisplayedPropertyDefined) {
 			columns.push({
-				name: 'Displayed ID',
-				explanation: 'TODO: Description of displayed ID',
+				name: 'Displayed property',
+				explanation: 'TODO: Description of displayed property',
 			});
 		}
 		if (connection.hasAnonymousIdentifiers) {
@@ -83,8 +83,8 @@ const useConnectionIdentities = () => {
 				cells: [identity.UpdatedAt, identity.ExternalId.Value],
 				key: identity.ExternalId.Value,
 			};
-			if (isDisplayedIdDefined) {
-				row.cells.push(identity.DisplayedId);
+			if (isDisplayedPropertyDefined) {
+				row.cells.push(identity.DisplayedProperty);
 			}
 			if (connection.hasAnonymousIdentifiers) {
 				const anonymousIds: ReactNode[] = [];

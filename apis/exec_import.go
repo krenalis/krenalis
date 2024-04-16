@@ -53,7 +53,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 				return err
 			}
 		}
-		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedID, cursor)
+		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedProperty, cursor)
 	case state.DatabaseType:
 		replacer := func(name string) (string, bool) {
 			if name == "limit" {
@@ -126,10 +126,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.TransformedStep)
 			stats.Passed(statistics.OutputValidatedStep)
 			ok := iw.Write(ctx, warehouses.Identity{
-				ID:          user.ID,
-				Properties:  user.Properties,
-				UpdatedAt:   user.UpdatedAt,
-				DisplayedID: user.DisplayedID,
+				ID:                user.ID,
+				Properties:        user.Properties,
+				UpdatedAt:         user.UpdatedAt,
+				DisplayedProperty: user.DisplayedProperty,
 			})
 			if !ok {
 				err := iw.Close(ctx)

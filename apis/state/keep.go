@@ -292,7 +292,7 @@ type AddAction struct {
 	Settings                []byte
 	TableName               string
 	IdentityProperty        string
-	DisplayedID             string
+	DisplayedProperty       string
 	UpdatedAtColumn         string
 	UpdatedAtFormat         string
 	ExportMode              *ExportMode
@@ -330,7 +330,7 @@ func (state *State) addAction(n notification) {
 		Settings:                e.Settings,
 		TableName:               e.TableName,
 		IdentityProperty:        e.IdentityProperty,
-		DisplayedID:             e.DisplayedID,
+		DisplayedProperty:       e.DisplayedProperty,
 		UpdatedAtColumn:         e.UpdatedAtColumn,
 		UpdatedAtFormat:         e.UpdatedAtFormat,
 		ExportMode:              e.ExportMode,
@@ -877,7 +877,7 @@ type SetAction struct {
 	Settings                []byte
 	TableName               string
 	IdentityProperty        string
-	DisplayedID             string
+	DisplayedProperty       string
 	UpdatedAtColumn         string
 	UpdatedAtFormat         string
 	ExportMode              *ExportMode
@@ -907,7 +907,7 @@ func (state *State) setAction(n notification) {
 		a.Settings = e.Settings
 		a.TableName = e.TableName
 		a.IdentityProperty = e.IdentityProperty
-		a.DisplayedID = e.DisplayedID
+		a.DisplayedProperty = e.DisplayedProperty
 		a.UpdatedAtColumn = e.UpdatedAtColumn
 		a.UpdatedAtFormat = e.UpdatedAtFormat
 		a.ExportMode = e.ExportMode

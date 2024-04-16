@@ -164,7 +164,7 @@ const ActionFile = () => {
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
 		a.IdentityProperty = '';
-		a.DisplayedID = '';
+		a.DisplayedProperty = '';
 		a.UpdatedAtColumn = '';
 		a.UpdatedAtFormat = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);

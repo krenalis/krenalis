@@ -102,7 +102,7 @@ The `AppInfo` type describes information about the app connector:
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `ExternalIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
-- `SuggestedDisplayedID`: suggestion for the property name to use as the displayed identifier. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
+- `SuggestedDisplayedProperty`: suggestion for the property name to use as the displayed property. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterApp` function that, executed during package initialization, registers the app connector:

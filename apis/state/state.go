@@ -377,25 +377,25 @@ type Layouts struct {
 
 // Connector represents a connector.
 type Connector struct {
-	ID                     int
-	Name                   string
-	SourceDescription      string
-	DestinationDescription string
-	TermForUsers           string
-	TermForGroups          string
-	Type                   ConnectorType
-	Targets                ConnectorTargets
-	SendingMode            *SendingMode
-	HasSheets              bool
-	HasUI                  bool
-	ExternalIDLabel        string
-	SuggestedDisplayedID   string
-	Icon                   string
-	Layouts                Layouts
-	FileExtension          string
-	SampleQuery            string
-	WebhooksPer            WebhooksPer
-	OAuth                  *OAuth
+	ID                         int
+	Name                       string
+	SourceDescription          string
+	DestinationDescription     string
+	TermForUsers               string
+	TermForGroups              string
+	Type                       ConnectorType
+	Targets                    ConnectorTargets
+	SendingMode                *SendingMode
+	HasSheets                  bool
+	HasUI                      bool
+	ExternalIDLabel            string
+	SuggestedDisplayedProperty string
+	Icon                       string
+	Layouts                    Layouts
+	FileExtension              string
+	SampleQuery                string
+	WebhooksPer                WebhooksPer
+	OAuth                      *OAuth
 }
 
 // ConnectorTargets represents the targets of a connector.
@@ -933,7 +933,7 @@ type Action struct {
 	IdentityProperty        string
 	UpdatedAtColumn         string
 	UpdatedAtFormat         string
-	DisplayedID             string
+	DisplayedProperty       string
 	UserCursor              Cursor
 	Health                  Health
 	ExportMode              *ExportMode

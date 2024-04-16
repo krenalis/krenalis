@@ -63,7 +63,7 @@ interface TransformedMatchingProperties {
 }
 
 type ActionTypeField =
-	| 'DisplayedID'
+	| 'DisplayedProperty'
 	| 'Filter'
 	| 'Mapping'
 	| 'MatchingProperties'
@@ -106,7 +106,7 @@ interface TransformedAction {
 	IdentityProperty?: string | null;
 	UpdatedAtColumn?: string | null;
 	UpdatedAtFormat?: string | null;
-	DisplayedID?: string | null;
+	DisplayedProperty?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: TransformedMatchingProperties | null;
 	ExportOnDuplicatedUsers?: boolean | null;
@@ -336,7 +336,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		IdentityProperty: action.IdentityProperty,
 		UpdatedAtColumn: action.UpdatedAtColumn,
 		UpdatedAtFormat: action.UpdatedAtFormat,
-		DisplayedID: action.DisplayedID,
+		DisplayedProperty: action.DisplayedProperty,
 		ExportMode: action.ExportMode,
 		MatchingProperties: transformedMatchingProperties,
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
@@ -561,7 +561,7 @@ const transformInActionToSet = async (
 		IdentityProperty: action.IdentityProperty,
 		UpdatedAtColumn: action.UpdatedAtColumn,
 		UpdatedAtFormat: updatedAtFormat,
-		DisplayedID: action.DisplayedID,
+		DisplayedProperty: action.DisplayedProperty,
 		matchingProperties: matchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Compression: action.Compression,
@@ -595,8 +595,8 @@ const computeDefaultAction = (
 		InSchema: null,
 		OutSchema: null,
 	};
-	if (fields.includes('DisplayedID')) {
-		action.DisplayedID = '';
+	if (fields.includes('DisplayedProperty')) {
+		action.DisplayedProperty = '';
 	}
 	if (fields.includes('Query')) {
 		action.Query = connection.connector.sampleQuery;
@@ -660,7 +660,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 			connection.type === 'Database' ||
 			connection.isEventBased)
 	) {
-		fields.push('DisplayedID');
+		fields.push('DisplayedProperty');
 	}
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');

@@ -45,14 +45,14 @@ var _ interface {
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
-		Name:                   "Mailchimp",
-		Targets:                chichi.Users,
-		SourceDescription:      "import contacts as users from Mailchimp",
-		DestinationDescription: "export users as contacts to Mailchimp",
-		TermForUsers:           "contacts",
-		SuggestedDisplayedID:   "EmailAddress",
-		Icon:                   icon,
-		WebhooksPer:            chichi.WebhooksPerSource,
+		Name:                       "Mailchimp",
+		Targets:                    chichi.Users,
+		SourceDescription:          "import contacts as users from Mailchimp",
+		DestinationDescription:     "export users as contacts to Mailchimp",
+		TermForUsers:               "contacts",
+		SuggestedDisplayedProperty: "EmailAddress",
+		Icon:                       icon,
+		WebhooksPer:                chichi.WebhooksPerSource,
 		OAuth: chichi.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",

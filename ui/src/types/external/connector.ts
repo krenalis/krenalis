@@ -23,7 +23,7 @@ interface Connector {
 	TermForGroups: string;
 	SendingMode: SendingMode | null;
 	Targets: Record<ActionTarget, boolean>;
-	SuggestedDisplayedID: string;
+	SuggestedDisplayedProperty: string;
 }
 
 export type { Connector, ConnectorType, WebhooksPer, SendingMode };
