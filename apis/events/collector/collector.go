@@ -353,7 +353,7 @@ func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Con
 				ID:                event.UserId,
 				Properties:        properties,
 				AnonymousID:       event.AnonymousId,
-				UpdatedAt:         event.Timestamp,
+				LastChangeTime:    event.Timestamp,
 				DisplayedProperty: displayedProperty,
 			})
 			if !ok {

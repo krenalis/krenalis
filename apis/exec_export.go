@@ -346,7 +346,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 		}
 
 		// Set the user cursor.
-		err = this.setUserCursor(ctx, state.Cursor{ID: user.ID, UpdatedAt: user.UpdatedAt})
+		err = this.setUserCursor(ctx, state.Cursor{ID: user.ID, LastChangeTime: user.LastChangeTime})
 		if err != nil {
 			return actionExecutionError{err}
 		}

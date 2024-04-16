@@ -55,8 +55,8 @@ type Action struct {
 	Table                   *string
 	IdentityProperty        *string
 	DisplayedProperty       string
-	UpdatedAtColumn         *string
-	UpdatedAtFormat         *string
+	LastChangeTimeProperty  *string
+	LastChangeTimeFormat    *string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -157,13 +157,13 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.IdentityProperty = &p
 	}
 	this.DisplayedProperty = action.DisplayedProperty
-	if action.UpdatedAtColumn != "" {
-		column := action.UpdatedAtColumn
-		this.UpdatedAtColumn = &column
+	if action.LastChangeTimeProperty != "" {
+		column := action.LastChangeTimeProperty
+		this.LastChangeTimeProperty = &column
 	}
-	if action.UpdatedAtFormat != "" {
-		format := action.UpdatedAtFormat
-		this.UpdatedAtFormat = &format
+	if action.LastChangeTimeFormat != "" {
+		format := action.LastChangeTimeFormat
+		this.LastChangeTimeFormat = &format
 	}
 	this.ExportMode = (*ExportMode)(action.ExportMode)
 	if props := action.MatchingProperties; props != nil {
@@ -380,8 +380,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		TableName:               action.TableName,
 		IdentityProperty:        action.IdentityProperty,
 		DisplayedProperty:       action.DisplayedProperty,
-		UpdatedAtColumn:         action.UpdatedAtColumn,
-		UpdatedAtFormat:         action.UpdatedAtFormat,
+		LastChangeTimeProperty:  action.LastChangeTimeProperty,
+		LastChangeTimeFormat:    action.LastChangeTimeFormat,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -521,13 +521,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_property = $17, "+
-			"displayed_property = $18, updated_at_column = $19, updated_at_format = $20, export_mode = $21, "+
-			"matching_properties_internal = $22, matching_properties_external = $23, "+
+			"displayed_property = $18, last_change_time_property = $19, last_change_time_format = $20, "+
+			"export_mode = $21, matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorID,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.DisplayedProperty, n.UpdatedAtColumn, n.UpdatedAtFormat,
+			n.IdentityProperty, n.DisplayedProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -558,8 +558,8 @@ func (this *Action) setUserCursor(ctx context.Context, cursor state.Cursor) erro
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions\n"+
-			"SET user_cursor.id = $1, user_cursor.updated_at = $2 WHERE id = $3",
-			n.UserCursor.ID, n.UserCursor.UpdatedAt, n.ID)
+			"SET user_cursor.id = $1, user_cursor.last_change_time = $2 WHERE id = $3",
+			n.UserCursor.ID, n.UserCursor.LastChangeTime, n.ID)
 		if err != nil {
 			return err
 		}
@@ -683,8 +683,8 @@ type ActionToSet struct {
 	// - the internal matching property, if this action has matching
 	//   properties.
 	// - the properties referred in the filters, if this action has filters.
-	// - the id and 'updated at' properties, if this action specifies an id and
-	//   an 'updated at' property.
+	// - the identity and the last change time properties, if this action
+	//   specifies them.
 	InSchema types.Type
 
 	// OutSchema is the output schema of the action.
@@ -753,17 +753,18 @@ type ActionToSet struct {
 	// a "traits" property.
 	DisplayedProperty string
 
-	// UpdatedAtColumn is the column name used as 'updated at' when importing
+	// LastChangeTimeProperty is the last change time property when importing
 	// from a file or from a database. May be empty to indicate that no
-	// properties should be used as 'updated at'. Also refer to the documentation
-	// of UpdatedAtFormat, which is strictly related to this.
+	// properties should be used for reading the last change times. Also refer
+	// to the documentation of LastChangeTimeFormat, which is strictly related
+	// to this.
 	// It cannot be longer than 1024 runes.
-	UpdatedAtColumn string
+	LastChangeTimeProperty string
 
-	// UpdatedAtFormat indicates the 'updated at' timestamp format for parsing
-	// the value read from the 'updated at' column.
+	// LastChangeTimeFormat indicates the last change time value format for
+	// parsing the value read from the last change time property.
 	//
-	// Represents a format when a UpdatedAtColumn is provided and its
+	// Represents a format when a LastChangeTimeProperty is provided and its
 	// corresponding property kind is JSON or Text, otherwise it is the empty
 	// string.
 	//
@@ -778,7 +779,7 @@ type ActionToSet struct {
 	//     with the standard C89 functions strptime/strftime.
 	//
 	// It cannot be longer than 64 runes.
-	UpdatedAtFormat string
+	LastChangeTimeFormat string
 
 	// ExportMode is the export mode, if it has one.
 	ExportMode *ExportMode

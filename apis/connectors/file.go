@@ -73,7 +73,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 //
 // If the identity property specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
-// The same applies for the 'updated at' column, if specified.
+// The same applies for the last change time property, if specified.
 //
 // If the action's sheet is not found in the file, the For method of the
 // iterator returns immediately, and a subsequent call to the Err method will
@@ -91,20 +91,20 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.action.Compression)
-	rc, storageUpdatedAt, err := s.Reader(ctx, file.action.Path)
+	rc, storageLastChangeTime, err := s.Reader(ctx, file.action.Path)
 	if err != nil {
 		return nil, err
 	}
-	if err = validateTimestamp(storageUpdatedAt); err != nil {
-		return nil, fmt.Errorf("invalid 'updated at' value returned by the storage: %s", err)
+	if err = validateTimestamp(storageLastChangeTime); err != nil {
+		return nil, fmt.Errorf("invalid last change time returned by the storage: %s", err)
 	}
-	updatedAtColumn := UpdatedAtColumn{
-		Name:   file.action.UpdatedAtColumn,
-		Format: file.action.UpdatedAtFormat,
+	lastChangeTimeProperty := LastChangeTimeProperty{
+		Name:   file.action.LastChangeTimeProperty,
+		Format: file.action.LastChangeTimeFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
-		file.action.IdentityProperty, updatedAtColumn, file.action.DisplayedProperty,
-		storageUpdatedAt, math.MaxInt)
+		file.action.IdentityProperty, lastChangeTimeProperty, file.action.DisplayedProperty,
+		storageLastChangeTime, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -355,10 +355,10 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If the yield function is not nil, it calls the yield function for
 // each record, otherwise it stores the records in the records field.
-// storageUpdatedAt is the 'updated at' value provided by the storage connector,
-// and it is used in the case when the file columns do not specify an 'update
-// at' column.
-func newRecordWriter(connector int, schema types.Type, identityProperty string, updatedAt UpdatedAtColumn, displayedProperty string, storageUpdatedAt time.Time, limit int) *recordWriter {
+// storageLastChangeTime is the lat change time provided by the storage
+// connector, and it is used in the case when the file columns do not specify a
+// last change time property.
+func newRecordWriter(connector int, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, displayedProperty string, storageLastChangeTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -372,13 +372,13 @@ func newRecordWriter(connector int, schema types.Type, identityProperty string, 
 		typ, _ := schema.Property(identityProperty)
 		rw.identityProperty.typ = typ.Type
 	}
-	if updatedAt.Name != "" {
-		rw.updatedAtColumn.name = updatedAt.Name
-		typ, _ := schema.Property(updatedAt.Name)
-		rw.updatedAtColumn.typ = typ.Type
-		rw.updatedAtColumn.format = updatedAt.Format
+	if lastChangeTime.Name != "" {
+		rw.lastChangeTimeProperty.name = lastChangeTime.Name
+		typ, _ := schema.Property(lastChangeTime.Name)
+		rw.lastChangeTimeProperty.typ = typ.Type
+		rw.lastChangeTimeProperty.format = lastChangeTime.Format
 	} else {
-		rw.storageUpdatedAt = storageUpdatedAt
+		rw.storageLastChangeTime = storageLastChangeTime
 	}
 	return &rw
 }
@@ -403,14 +403,14 @@ type recordWriter struct {
 		typ   types.Type
 		index int
 	}
-	updatedAtColumn struct {
+	lastChangeTimeProperty struct {
 		name   string
 		typ    types.Type
 		index  int
 		format string
 	}
-	storageUpdatedAt time.Time
-	records          []map[string]any
+	storageLastChangeTime time.Time
+	records               []map[string]any
 }
 
 // Columns sets the columns of the records as properties.
@@ -447,17 +447,17 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		rw.identityProperty.typ = c.Type
 		rw.identityProperty.index = columnIndex[c.Name]
 	}
-	// Validate the 'updated at' column.
-	if name := rw.updatedAtColumn.name; name != "" {
+	// Validate the last change time property.
+	if name := rw.lastChangeTimeProperty.name; name != "" {
 		c, ok := columnByName[name]
 		if !ok {
-			return fmt.Errorf("there is no 'updated at' column %q", name)
+			return fmt.Errorf("there is no last change time property %q", name)
 		}
-		if typ := rw.updatedAtColumn.typ; c.Type.Kind() != typ.Kind() {
-			return fmt.Errorf("'updated at' column %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
+		if typ := rw.lastChangeTimeProperty.typ; c.Type.Kind() != typ.Kind() {
+			return fmt.Errorf("last change time property %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
 		}
-		rw.updatedAtColumn.typ = c.Type
-		rw.updatedAtColumn.index = columnIndex[c.Name]
+		rw.lastChangeTimeProperty.typ = c.Type
+		rw.lastChangeTimeProperty.index = columnIndex[c.Name]
 	}
 	// Validate the displayed property.
 	if rw.displayedProperty.name != "" {
@@ -529,16 +529,16 @@ func (rw *recordWriter) Record(record []any) error {
 				rd.Err = err
 			}
 		}
-		// Parse the 'updated at' column.
+		// Parse the last change time property.
 		if rd.Err == nil {
-			if rw.updatedAtColumn.name != "" {
-				ts := record[rw.updatedAtColumn.index]
-				rd.UpdatedAt, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
+			if rw.lastChangeTimeProperty.name != "" {
+				ts := record[rw.lastChangeTimeProperty.index]
+				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.UpdatedAt = rw.storageUpdatedAt
+				rd.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
 		// Parse the displayed property.
@@ -602,16 +602,16 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				rd.Err = err
 			}
 		}
-		// Parse the 'updated at' column.
+		// Parse the last change time property.
 		if rd.Err == nil {
-			if rw.updatedAtColumn.name != "" {
-				ts := record[rw.updatedAtColumn.name]
-				rd.UpdatedAt, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
+			if rw.lastChangeTimeProperty.name != "" {
+				ts := record[rw.lastChangeTimeProperty.name]
+				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.UpdatedAt = rw.storageUpdatedAt
+				rd.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
 		if err := rw.yield(rd); err != nil {
@@ -684,16 +684,16 @@ func (rw *recordWriter) RecordString(record []string) error {
 				rd.Err = err
 			}
 		}
-		// Parse the 'updated at' column.
+		// Parse the last change time property.
 		if rd.Err == nil {
-			if rw.updatedAtColumn.name != "" {
-				ts := record[rw.updatedAtColumn.index]
-				rd.UpdatedAt, err = parseTimestampColumn(rw.updatedAtColumn.name, rw.updatedAtColumn.typ, rw.updatedAtColumn.format, ts)
+			if rw.lastChangeTimeProperty.name != "" {
+				ts := record[rw.lastChangeTimeProperty.index]
+				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts)
 				if err != nil {
 					rd.Err = err
 				}
 			} else {
-				rd.UpdatedAt = rw.storageUpdatedAt
+				rd.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
 		// Parse the displayed property.
@@ -756,7 +756,7 @@ func newCompressedStorage(s chichi.FileStorage, c state.Compression) *compressor
 }
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
-// from which to read the file and its 'updated at' value.
+// from which to read the file and its last change time.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	r, t, err := cs.storage.Reader(ctx, name)

@@ -58,7 +58,7 @@ const useConnectionIdentities = () => {
 
 		const columns: GridColumn[] = [
 			{
-				name: 'Last update',
+				name: 'Last change time',
 				type: 'DateTime',
 			},
 			{
@@ -80,7 +80,7 @@ const useConnectionIdentities = () => {
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
 			const row: GridRow = {
-				cells: [identity.UpdatedAt, identity.ExternalId.Value],
+				cells: [identity.LastChangeTime, identity.ExternalId.Value],
 				key: identity.ExternalId.Value,
 			};
 			if (isDisplayedPropertyDefined) {

@@ -229,9 +229,9 @@ func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, proper
 	users := make([]chichi.Record, len(response.Data))
 	for i, customer := range response.Data {
 		users[i] = chichi.Record{
-			ID:         customer["id"].(string),
-			Properties: customer,
-			UpdatedAt:  time.Now().UTC(),
+			ID:             customer["id"].(string),
+			Properties:     customer,
+			LastChangeTime: time.Now().UTC(),
 		}
 	}
 

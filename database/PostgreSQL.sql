@@ -107,7 +107,7 @@ CREATE TABLE connections (
 
 CREATE TYPE cursor AS (
     id text,
-    updated_at timestamp(6)
+    last_change_time timestamp(6)
 );
 
 CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
@@ -137,8 +137,8 @@ CREATE TABLE actions (
     settings varchar(65535),
     table_name varchar(1024) NOT NULL DEFAULT '',
     identity_property varchar(1024) NOT NULL DEFAULT '',
-    updated_at_column varchar(1024) NOT NULL DEFAULT '',
-    updated_at_format varchar(64) NOT NULL DEFAULT '',
+    last_change_time_property varchar(1024) NOT NULL DEFAULT '',
+    last_change_time_format varchar(64) NOT NULL DEFAULT '',
     displayed_property varchar(1024) NOT NULL DEFAULT '',
     user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00")',
     health health NOT NULL DEFAULT 'Healthy',

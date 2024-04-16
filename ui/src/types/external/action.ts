@@ -49,8 +49,8 @@ interface Action {
 	Table: string | null;
 	Sheet: string | null;
 	IdentityProperty: string | null;
-	UpdatedAtColumn: string | null;
-	UpdatedAtFormat: string | null;
+	LastChangeTimeProperty: string | null;
+	LastChangeTimeFormat: string | null;
 	DisplayedProperty: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
@@ -78,8 +78,8 @@ interface ActionToSet {
 	tableName?: string | null;
 	sheet?: string | null;
 	IdentityProperty?: string | null;
-	UpdatedAtColumn?: string | null;
-	UpdatedAtFormat?: string | null;
+	LastChangeTimeProperty?: string | null;
+	LastChangeTimeFormat?: string | null;
 	DisplayedProperty?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;

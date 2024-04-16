@@ -904,8 +904,8 @@ func (target Target) Value() (driver.Value, error) {
 
 // Cursor represents a cursor.
 type Cursor struct {
-	ID        string
-	UpdatedAt time.Time
+	ID             string
+	LastChangeTime time.Time
 }
 
 type Action struct {
@@ -931,8 +931,8 @@ type Action struct {
 	Settings                []byte
 	TableName               string
 	IdentityProperty        string
-	UpdatedAtColumn         string
-	UpdatedAtFormat         string
+	LastChangeTimeProperty  string
+	LastChangeTimeFormat    string
 	DisplayedProperty       string
 	UserCursor              Cursor
 	Health                  Health

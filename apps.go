@@ -168,16 +168,16 @@ type AppEvents interface {
 
 // Cursor represents a cursor used to implement pagination.
 type Cursor struct {
-	ID        string    // Identifier of the last returned user or group.
-	UpdatedAt time.Time // 'Updated at' timestamp of the last returned user or group, with preserved Location.
-	Next      string    // Returned string value of the last call to Users or Groups.
+	ID             string    // Identifier of the last returned user or group.
+	LastChangeTime time.Time // Last change time of the last returned user or group, with preserved Location.
+	Next           string    // Returned string value of the last call to Users or Groups.
 }
 
 // Record represents an app record.
 type Record struct {
-	ID         string         // Identifier.
-	Properties map[string]any // Properties.
-	UpdatedAt  time.Time      // 'Updated at' timestamp, whose location can be anything, not necessarily UTC.
+	ID             string         // Identifier.
+	Properties     map[string]any // Properties.
+	LastChangeTime time.Time      // Last change time, whose location can be anything, not necessarily UTC.
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.

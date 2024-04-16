@@ -288,8 +288,8 @@ func (r *appRecords) For(yield func(Record) error) error {
 	}
 
 	cursor := chichi.Cursor{
-		ID:        r.cursor.ID,
-		UpdatedAt: r.cursor.UpdatedAt,
+		ID:             r.cursor.ID,
+		LastChangeTime: r.cursor.LastChangeTime,
 	}
 
 	properties := r.schema.Properties()
@@ -377,9 +377,9 @@ func (r *appRecords) For(yield func(Record) error) error {
 				}
 			}
 
-			// Read the 'updated at' timestamp.
-			user.UpdatedAt = appUser.UpdatedAt.UTC()
-			if err = validateTimestamp(user.UpdatedAt); err != nil {
+			// Read the last change time.
+			user.LastChangeTime = appUser.LastChangeTime.UTC()
+			if err = validateTimestamp(user.LastChangeTime); err != nil {
 				return err
 			}
 
@@ -394,7 +394,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 
 		last := users[len(users)-1]
 		cursor.ID = last.ID
-		cursor.UpdatedAt = last.UpdatedAt
+		cursor.LastChangeTime = last.LastChangeTime
 		cursor.Next = next
 
 	}

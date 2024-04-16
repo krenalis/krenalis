@@ -119,7 +119,7 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 	// for bulk writing rather than writing individual users.
 	// See the issue https://github.com/open2b/chichi/issues/627.
 	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID,
-		identity.AnonymousID, identity.DisplayedProperty, iw.connection, iw.fromEvent, identity.UpdatedAt)
+		identity.AnonymousID, identity.DisplayedProperty, iw.connection, iw.fromEvent, identity.LastChangeTime)
 	iw.ack(err, []string{identity.ID})
 	if err != nil {
 		iw.err = err
@@ -129,7 +129,7 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 }
 
 func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string]any,
-	schema types.Type, id, anonID, displayedProperty string, connection int, fromEvent bool, updatedAt time.Time) error {
+	schema types.Type, id, anonID, displayedProperty string, connection int, fromEvent bool, lastChangeTime time.Time) error {
 
 	// Query the matching user identities, which can be 0 (the identity is a new
 	// identity), 1 (the identity already exists and must be updated) or more
@@ -139,16 +139,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND _external_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _updated_at, _identity_id"
+				" AND _external_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _last_change_time, _identity_id"
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _updated_at, _identity_id"
+				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _last_change_time, _identity_id"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
 		query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-			" AND _external_id = $2 ORDER BY _updated_at, _identity_id"
+			" AND _external_id = $2 ORDER BY _last_change_time, _identity_id"
 		args = []any{connection, id}
 	}
 	var matchingIdentities []int
@@ -179,7 +179,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	newIdentity["_connection"] = connection
 	newIdentity["_external_id"] = id
-	newIdentity["_updated_at"] = updatedAt.Format(time.DateTime)
+	newIdentity["_last_change_time"] = lastChangeTime.Format(time.DateTime)
 	newIdentity["_displayed_property"] = displayedProperty
 	if anonID != "" {
 		newIdentity["_anonymous_ids"] = []string{anonID}
@@ -259,7 +259,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Merge the other fields.
 	for _, p := range tableColumns {
-		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_updated_at" {
+		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_last_change_time" {
 			continue
 		}
 		b.Reset()
@@ -271,7 +271,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" IS NOT NULL AND _identity_id IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
 		b.WriteString(idsStr.String())
-		b.WriteString(") ORDER BY _updated_at DESC, _identity_id DESC LIMIT 1)\n")
+		b.WriteString(") ORDER BY _last_change_time DESC, _identity_id DESC LIMIT 1)\n")
 		b.WriteString(` WHERE _identity_id = $1`)
 		_, err = db.Exec(ctx, b.String(), newIdentityID)
 		if err != nil {

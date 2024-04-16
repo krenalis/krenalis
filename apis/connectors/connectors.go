@@ -75,9 +75,9 @@ type EventType = chichi.EventType
 // validation of the record, the Err field contains the specific error,
 // which type implements the ValidationError interface of apis.
 type Record struct {
-	ID         string         // Identifier.
-	Properties map[string]any // Properties.
-	UpdatedAt  time.Time      // Last modification time, in UTC.
+	ID             string         // Identifier.
+	Properties     map[string]any // Properties.
+	LastChangeTime time.Time      // Last modification time, in UTC.
 
 	// DisplayedProperty, if any, otherwise the empty string. Cannot be longer than 40
 	// runes.
@@ -157,9 +157,9 @@ type CommittableWriter interface {
 	Commit(ctx context.Context) error
 }
 
-// UpdatedAtColumn represents the 'updated at' column passed to the
+// LastChangeTimeProperty represents the lat change time property passed to the
 // (*File).ReadFunc method.
-type UpdatedAtColumn struct {
+type LastChangeTimeProperty struct {
 	Name   string
 	Format string
 }

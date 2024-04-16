@@ -127,8 +127,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	// Validate the identity property and 'updated at' columns.
-	var identityProperty, updatedAtColumn types.Property
+	// Validate the identity and the last change time properties.
+	var identityProperty, lastChangeTimeProperty types.Property
 	for _, c := range columns {
 		if c.Name == action.IdentityProperty {
 			property, _ := action.InSchema.Property(action.IdentityProperty)
@@ -137,20 +137,20 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			}
 			identityProperty = property
 		}
-		if action.UpdatedAtColumn != "" && c.Name == action.UpdatedAtColumn {
-			property, _ := action.InSchema.Property(action.UpdatedAtColumn)
+		if action.LastChangeTimeProperty != "" && c.Name == action.LastChangeTimeProperty {
+			property, _ := action.InSchema.Property(action.LastChangeTimeProperty)
 			if c.Type.Kind() != property.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`'updated at' column %q has type %s instead of %s`,
-					action.UpdatedAtColumn, c.Type.Kind(), property.Type.Kind())}
+				return nil, &SchemaError{fmt.Sprintf(`last change time property %q has type %s instead of %s`,
+					action.LastChangeTimeProperty, c.Type.Kind(), property.Type.Kind())}
 			}
-			updatedAtColumn = property
+			lastChangeTimeProperty = property
 		}
 	}
 	if identityProperty.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no identity property %q", action.IdentityProperty)}
 	}
-	if action.UpdatedAtColumn != "" && updatedAtColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no 'updated at' column %q", action.UpdatedAtColumn)}
+	if action.LastChangeTimeProperty != "" && lastChangeTimeProperty.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no last change time property %q", action.LastChangeTimeProperty)}
 	}
 	// Check that schema is compatible with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
@@ -173,7 +173,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityProperty,
-		updatedAtColumn, action.UpdatedAtFormat, displayedProperty)
+		lastChangeTimeProperty, action.LastChangeTimeFormat, displayedProperty)
 	return records, nil
 }
 
@@ -322,30 +322,30 @@ func (sv queryScanValue) Scan(src any) error {
 
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
-	columns           []types.Property
-	rows              chichi.Rows
-	propertyOf        map[string]types.Property
-	dst               []any
-	identityProperty  types.Property
-	updatedAtColumn   types.Property
-	updatedAtFormat   string
-	displayedProperty types.Property
-	err               error
-	closed            bool
+	columns              []types.Property
+	rows                 chichi.Rows
+	propertyOf           map[string]types.Property
+	dst                  []any
+	identityProperty     types.Property
+	lastChangeTime       types.Property
+	lastChangeTimeFormat string
+	displayedProperty    types.Property
+	err                  error
+	closed               bool
 }
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
-	identityProperty, updatedAtColumn types.Property, updatedAtFormat string,
+	identityProperty, lastChangeTimeProperty types.Property, lastChangeTimeFormat string,
 	displayedProperty types.Property) *databaseRecords {
 	records := databaseRecords{
-		columns:           columns,
-		rows:              rows,
-		dst:               make([]any, len(columns)),
-		propertyOf:        make(map[string]types.Property, len(properties)),
-		identityProperty:  identityProperty,
-		updatedAtColumn:   updatedAtColumn,
-		updatedAtFormat:   updatedAtFormat,
-		displayedProperty: displayedProperty,
+		columns:              columns,
+		rows:                 rows,
+		dst:                  make([]any, len(columns)),
+		propertyOf:           make(map[string]types.Property, len(properties)),
+		identityProperty:     identityProperty,
+		lastChangeTime:       lastChangeTimeProperty,
+		lastChangeTimeFormat: lastChangeTimeFormat,
+		displayedProperty:    displayedProperty,
 	}
 	for _, p := range properties {
 		records.propertyOf[p.Name] = p
@@ -388,20 +388,20 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 				p = r.displayedProperty
 			}
 			r.dst[i] = recordsScanValue{
-				property:          p,
-				record:            &record,
-				identityProperty:  r.identityProperty,
-				updatedAtColumn:   r.updatedAtColumn,
-				updatedAtFormat:   r.updatedAtFormat,
-				displayedProperty: r.displayedProperty,
+				property:             p,
+				record:               &record,
+				identityProperty:     r.identityProperty,
+				lastChangeTime:       r.lastChangeTime,
+				lastChangeTimeFormat: r.lastChangeTimeFormat,
+				displayedProperty:    r.displayedProperty,
 			}
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
 			r.err = err
 			return nil
 		}
-		if record.UpdatedAt.IsZero() {
-			record.UpdatedAt = time.Now().UTC()
+		if record.LastChangeTime.IsZero() {
+			record.LastChangeTime = time.Now().UTC()
 		}
 		if err := yield(record); err != nil {
 			return err
@@ -416,12 +416,12 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 // recordsScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
 type recordsScanValue struct {
-	property          types.Property
-	record            *Record
-	identityProperty  types.Property
-	updatedAtColumn   types.Property
-	updatedAtFormat   string
-	displayedProperty types.Property
+	property             types.Property
+	record               *Record
+	identityProperty     types.Property
+	lastChangeTime       types.Property
+	lastChangeTimeFormat string
+	displayedProperty    types.Property
 }
 
 func (sv recordsScanValue) Scan(src any) error {
@@ -457,15 +457,15 @@ func (sv recordsScanValue) Scan(src any) error {
 		}
 		sv.record.ID = id
 		return nil
-	case sv.updatedAtColumn.Name:
+	case sv.lastChangeTime.Name:
 		if src == nil {
-			return errors.New("'updated at' value is NULL")
+			return errors.New("last change time value is NULL")
 		}
-		updatedAt, err := parseTimestampColumn(p.Name, p.Type, sv.updatedAtFormat, src)
+		lastChangeTime, err := parseTimestampColumn(p.Name, p.Type, sv.lastChangeTimeFormat, src)
 		if err != nil {
 			return err
 		}
-		sv.record.UpdatedAt = updatedAt
+		sv.record.LastChangeTime = lastChangeTime
 		return nil
 	}
 	value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)

@@ -42,7 +42,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		var cursor state.Cursor
 		if exe, _ := action.Execution(); !exe.Reimport {
 			cursor.ID = action.UserCursor.ID
-			cursor.UpdatedAt = action.UserCursor.UpdatedAt
+			cursor.LastChangeTime = action.UserCursor.LastChangeTime
 		}
 		if exe, _ := action.Execution(); exe.Reimport {
 			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
@@ -128,7 +128,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			ok := iw.Write(ctx, warehouses.Identity{
 				ID:                user.ID,
 				Properties:        user.Properties,
-				UpdatedAt:         user.UpdatedAt,
+				LastChangeTime:    user.LastChangeTime,
 				DisplayedProperty: user.DisplayedProperty,
 			})
 			if !ok {
@@ -150,7 +150,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		// Set the user cursor.
 		if connector.Type == state.AppType {
 			last := users[len(users)-1]
-			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, UpdatedAt: last.UpdatedAt})
+			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, LastChangeTime: last.LastChangeTime})
 			if err != nil {
 				return actionExecutionError{err}
 			}

@@ -109,10 +109,10 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 
 	hs.buf.Reset()
 	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
-	if cursor.UpdatedAt.IsZero() {
+	if cursor.LastChangeTime.IsZero() {
 		hs.buf.WriteByte('0')
 	} else {
-		hs.buf.WriteString(strconv.FormatInt(cursor.UpdatedAt.UnixMilli(), 10))
+		hs.buf.WriteString(strconv.FormatInt(cursor.LastChangeTime.UnixMilli(), 10))
 	}
 	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
 		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
@@ -158,7 +158,7 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 			continue
 		}
 		records[i].Properties = result.Properties
-		records[i].UpdatedAt = updatedAt.UTC()
+		records[i].LastChangeTime = updatedAt.UTC()
 	}
 
 	if target == chichi.Groups {

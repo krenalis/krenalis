@@ -158,8 +158,8 @@ func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, propert
 		"sort_dir":   {"ASC"},
 		"count":      {"1000"},
 	}
-	if !cursor.UpdatedAt.IsZero() {
-		values.Set("since_last_changed", cursor.UpdatedAt.Format(time.RFC3339))
+	if !cursor.LastChangeTime.IsZero() {
+		values.Set("since_last_changed", cursor.LastChangeTime.Format(time.RFC3339))
 	}
 	if cursor.Next != "" {
 		values.Set("offset", cursor.Next)
@@ -181,15 +181,15 @@ func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, propert
 	users := make([]chichi.Record, len(response.Members))
 	for i, member := range response.Members {
 		users[i] = chichi.Record{
-			ID:         member.ID,
-			Properties: member.Properties(),
-			UpdatedAt:  member.LastChanged.UTC(),
+			ID:             member.ID,
+			Properties:     member.Properties(),
+			LastChangeTime: member.LastChanged.UTC(),
 		}
 	}
 
 	offset, _ := strconv.Atoi(cursor.Next)
 	eof := offset+len(response.Members) >= response.TotalItems
-	if last := users[len(users)-1]; last.UpdatedAt.Equal(cursor.UpdatedAt) {
+	if last := users[len(users)-1]; last.LastChangeTime.Equal(cursor.LastChangeTime) {
 		offset += len(response.Members)
 	} else {
 		offset = 0

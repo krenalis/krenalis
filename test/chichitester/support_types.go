@@ -74,8 +74,8 @@ type Action struct {
 	Table                   *string
 	IdentityProperty        *string
 	DisplayedProperty       string
-	UpdatedAtColumn         *string
-	UpdatedAtFormat         *string
+	LastChangeTimeProperty  *string
+	LastChangeTimeFormat    *string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -97,8 +97,8 @@ type ActionToSet struct {
 	TableName               string
 	IdentityProperty        string
 	DisplayedProperty       string
-	UpdatedAtColumn         string
-	UpdatedAtFormat         string
+	LastChangeTimeProperty  string
+	LastChangeTimeFormat    string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -167,7 +167,7 @@ type UserIdentity struct { // copy-pasted from the not-exported type 'identity' 
 	ExternalId        LabelValue
 	DisplayedProperty string
 	AnonymousIds      []string
-	UpdatedAt         time.Time
+	LastChangeTime    time.Time
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

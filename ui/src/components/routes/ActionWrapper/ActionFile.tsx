@@ -165,8 +165,8 @@ const ActionFile = () => {
 		a.Path = '';
 		a.IdentityProperty = '';
 		a.DisplayedProperty = '';
-		a.UpdatedAtColumn = '';
-		a.UpdatedAtFormat = '';
+		a.LastChangeTimeProperty = '';
+		a.LastChangeTimeFormat = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
 		a.Transformation.Function = null;
 		setValues(null);

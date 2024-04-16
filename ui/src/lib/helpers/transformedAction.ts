@@ -104,8 +104,8 @@ interface TransformedAction {
 	Table?: string | null;
 	Sheet?: string | null;
 	IdentityProperty?: string | null;
-	UpdatedAtColumn?: string | null;
-	UpdatedAtFormat?: string | null;
+	LastChangeTimeProperty?: string | null;
+	LastChangeTimeFormat?: string | null;
 	DisplayedProperty?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: TransformedMatchingProperties | null;
@@ -296,12 +296,12 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 	}
 
 	if (
-		action.UpdatedAtFormat != null &&
-		action.UpdatedAtFormat != '' &&
-		action.UpdatedAtFormat.startsWith("'") &&
-		action.UpdatedAtFormat.endsWith("'")
+		action.LastChangeTimeFormat != null &&
+		action.LastChangeTimeFormat != '' &&
+		action.LastChangeTimeFormat.startsWith("'") &&
+		action.LastChangeTimeFormat.endsWith("'")
 	) {
-		action.UpdatedAtFormat = action.UpdatedAtFormat.substring(1, action.UpdatedAtFormat.length - 1);
+		action.LastChangeTimeFormat = action.LastChangeTimeFormat.substring(1, action.LastChangeTimeFormat.length - 1);
 	}
 
 	let transformedMatchingProperties: TransformedMatchingProperties;
@@ -334,8 +334,8 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		Table: action.Table,
 		Sheet: action.Sheet,
 		IdentityProperty: action.IdentityProperty,
-		UpdatedAtColumn: action.UpdatedAtColumn,
-		UpdatedAtFormat: action.UpdatedAtFormat,
+		LastChangeTimeProperty: action.LastChangeTimeProperty,
+		LastChangeTimeFormat: action.LastChangeTimeFormat,
 		DisplayedProperty: action.DisplayedProperty,
 		ExportMode: action.ExportMode,
 		MatchingProperties: transformedMatchingProperties,
@@ -455,7 +455,7 @@ const transformInActionToSet = async (
 		}
 	}
 
-	let updatedAtFormat: string | undefined;
+	let lastChangeTimeFormat: string | undefined;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
 		if (action.IdentityProperty == null || action.IdentityProperty === '') {
 			throw 'User identifier cannot be empty';
@@ -469,32 +469,33 @@ const transformInActionToSet = async (
 			inSchema.properties.push(identityProperty.full);
 		}
 
-		if (action.UpdatedAtColumn) {
-			const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.UpdatedAtColumn) !== -1;
+		if (action.LastChangeTimeProperty) {
+			const isAlreadyInSchema =
+				inSchema.properties!.findIndex((p) => p.name === action.LastChangeTimeProperty) !== -1;
 			if (!isAlreadyInSchema) {
-				const updatedAtColumnProperty = flattenedInputSchema[action.UpdatedAtColumn];
-				if (updatedAtColumnProperty == null) {
-					throw 'UpdatedAt column must be a valid property';
+				const lastChangeTimeProperty = flattenedInputSchema[action.LastChangeTimeProperty];
+				if (lastChangeTimeProperty == null) {
+					throw 'LastChangeTimeProperty must be a valid property';
 				}
-				inSchema.properties.push(updatedAtColumnProperty.full);
+				inSchema.properties.push(lastChangeTimeProperty.full);
 			}
-			if (doesUpdatedAtColumnNeedFormat(action.UpdatedAtColumn, actionType.InputSchema)) {
+			if (doesLastChangeTimePropertyNeedFormat(action.LastChangeTimeProperty, actionType.InputSchema)) {
 				if (
-					action.UpdatedAtFormat !== 'ISO8601' &&
-					action.UpdatedAtFormat !== 'Excel' &&
-					action.UpdatedAtFormat !== 'DateTime' &&
-					action.UpdatedAtFormat !== 'DateOnly'
+					action.LastChangeTimeFormat !== 'ISO8601' &&
+					action.LastChangeTimeFormat !== 'Excel' &&
+					action.LastChangeTimeFormat !== 'DateTime' &&
+					action.LastChangeTimeFormat !== 'DateOnly'
 				) {
 					// the format is custom.
 					try {
-						validateCustomUpdatedAtFormat(action.UpdatedAtFormat);
+						validateCustomLastChangeTimeFormat(action.LastChangeTimeFormat);
 					} catch (err) {
 						throw err;
 					}
 					// custom format must be wrapped in single quotes.
-					updatedAtFormat = `'${action.UpdatedAtFormat}'`;
+					lastChangeTimeFormat = `'${action.LastChangeTimeFormat}'`;
 				} else {
-					updatedAtFormat = action.UpdatedAtFormat;
+					lastChangeTimeFormat = action.LastChangeTimeFormat;
 				}
 			}
 		}
@@ -559,8 +560,8 @@ const transformInActionToSet = async (
 		sheet: action.Sheet,
 		exportMode: action.ExportMode,
 		IdentityProperty: action.IdentityProperty,
-		UpdatedAtColumn: action.UpdatedAtColumn,
-		UpdatedAtFormat: updatedAtFormat,
+		LastChangeTimeProperty: action.LastChangeTimeProperty,
+		LastChangeTimeFormat: lastChangeTimeFormat,
 		DisplayedProperty: action.DisplayedProperty,
 		matchingProperties: matchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
@@ -604,8 +605,8 @@ const computeDefaultAction = (
 	if (fields.includes('File')) {
 		action.Path = '';
 		action.IdentityProperty = '';
-		action.UpdatedAtColumn = '';
-		action.UpdatedAtFormat = '';
+		action.LastChangeTimeProperty = '';
+		action.LastChangeTimeFormat = '';
 		action.Sheet = null;
 		action.Compression = '';
 		action.Connector = 0;
@@ -677,28 +678,28 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	return fields;
 };
 
-const doesUpdatedAtColumnNeedFormat = (updatedAtColumn: string, schema: ObjectType): boolean => {
-	if (updatedAtColumn == null || updatedAtColumn === '') {
+const doesLastChangeTimePropertyNeedFormat = (lastChangeTimeProperty: string, schema: ObjectType): boolean => {
+	if (lastChangeTimeProperty == null || lastChangeTimeProperty === '') {
 		return false;
 	}
 	const flatInputSchema = flattenSchema(schema);
-	const updatedAtProperty = flatInputSchema[updatedAtColumn];
-	if (updatedAtProperty == null) {
+	const p = flatInputSchema[lastChangeTimeProperty];
+	if (p == null) {
 		return false;
 	}
-	const type = updatedAtProperty.type;
+	const type = p.type;
 	return type === 'JSON' || type === 'Text';
 };
 
-const validateCustomUpdatedAtFormat = (format: string) => {
+const validateCustomLastChangeTimeFormat = (format: string) => {
 	if (format === '') {
-		throw '"Updated at" format cannot be empty';
+		throw 'Last change time format cannot be empty';
 	}
 	if (Array.from(format).length > 64) {
-		throw new Error('"Updated at" format is longer than 64 characters');
+		throw new Error('Last change time format is longer than 64 characters');
 	}
 	if (!format.includes('%')) {
-		throw new Error(`"Updated at" format "${format}" is not a valid format`);
+		throw new Error(`Last change time format "${format}" is not a valid format`);
 	}
 };
 
@@ -711,7 +712,7 @@ export {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
-	doesUpdatedAtColumnNeedFormat,
+	doesLastChangeTimePropertyNeedFormat,
 };
 
 export type { TransformedMapping, TransformedActionType, TransformedAction, ActionTypeField };

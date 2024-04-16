@@ -293,8 +293,8 @@ type AddAction struct {
 	TableName               string
 	IdentityProperty        string
 	DisplayedProperty       string
-	UpdatedAtColumn         string
-	UpdatedAtFormat         string
+	LastChangeTimeProperty  string
+	LastChangeTimeFormat    string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -331,8 +331,8 @@ func (state *State) addAction(n notification) {
 		TableName:               e.TableName,
 		IdentityProperty:        e.IdentityProperty,
 		DisplayedProperty:       e.DisplayedProperty,
-		UpdatedAtColumn:         e.UpdatedAtColumn,
-		UpdatedAtFormat:         e.UpdatedAtFormat,
+		LastChangeTimeProperty:  e.LastChangeTimeProperty,
+		LastChangeTimeFormat:    e.LastChangeTimeFormat,
 		ExportMode:              e.ExportMode,
 		MatchingProperties:      e.MatchingProperties,
 		ExportOnDuplicatedUsers: e.ExportOnDuplicatedUsers,
@@ -878,8 +878,8 @@ type SetAction struct {
 	TableName               string
 	IdentityProperty        string
 	DisplayedProperty       string
-	UpdatedAtColumn         string
-	UpdatedAtFormat         string
+	LastChangeTimeProperty  string
+	LastChangeTimeFormat    string
 	ExportMode              *ExportMode
 	MatchingProperties      *MatchingProperties
 	ExportOnDuplicatedUsers *bool
@@ -908,8 +908,8 @@ func (state *State) setAction(n notification) {
 		a.TableName = e.TableName
 		a.IdentityProperty = e.IdentityProperty
 		a.DisplayedProperty = e.DisplayedProperty
-		a.UpdatedAtColumn = e.UpdatedAtColumn
-		a.UpdatedAtFormat = e.UpdatedAtFormat
+		a.LastChangeTimeProperty = e.LastChangeTimeProperty
+		a.LastChangeTimeFormat = e.LastChangeTimeFormat
 		a.ExportMode = e.ExportMode
 		a.MatchingProperties = e.MatchingProperties
 		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers

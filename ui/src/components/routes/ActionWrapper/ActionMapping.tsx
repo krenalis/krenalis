@@ -4,13 +4,13 @@ import {
 	getDisplayedPropertyComboboxItems,
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
-	getUpdatedAtComboboxItems,
+	getLastChangeTimeComboboxItems,
 } from '../../helpers/getSchemaComboBoxItems';
 import {
 	TransformedAction,
 	TransformedActionType,
 	TransformedMapping,
-	doesUpdatedAtColumnNeedFormat,
+	doesLastChangeTimePropertyNeedFormat,
 	flattenSchema,
 	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
@@ -62,7 +62,7 @@ const defaultTransformationParameterByTarget = {
 	Events: 'event',
 };
 
-const updatedAtFormats = {
+const lastChangeTimeFormats = {
 	dateTime: 'DateTime',
 	dateOnly: 'DateOnly',
 	iso8601: 'ISO8601',
@@ -73,7 +73,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
-	const [isCustomUpdatedAtFormatSelected, setIsCustomUpdatedAtFormatSelected] = useState<boolean>(false);
+	const [isCustomLastChangeTimeFormatSelected, setIsCustomLastChangeTimeFormatSelected] = useState<boolean>(false);
 
 	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
@@ -92,9 +92,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const mappingListRef = useRef(null);
 	const identityPropertyListRef = useRef(null);
 	const displayedPropertyListRef = useRef(null);
-	const updatedAtListRef = useRef(null);
+	const lastChangeTimePropertyListRef = useRef(null);
 	const isFirstCompilation = useRef(true);
-	const updatedAtCustomFormatInputRef = useRef(null);
+	const lastChangeTimeCustomFormatInputRef = useRef(null);
 
 	const hasSpecialProperties = useMemo(() => {
 		return (
@@ -137,20 +137,20 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (!hasSpecialProperties || !action.UpdatedAtColumn) {
+		if (!hasSpecialProperties || !action.LastChangeTimeProperty) {
 			return;
 		}
-		// check if the 'updated at' format is custom.
-		const formats = Object.values(updatedAtFormats);
-		if (!formats.includes(action.UpdatedAtFormat)) {
-			setIsCustomUpdatedAtFormatSelected(true);
+		// check if the last change time format is custom.
+		const formats = Object.values(lastChangeTimeFormats);
+		if (!formats.includes(action.LastChangeTimeFormat)) {
+			setIsCustomLastChangeTimeFormatSelected(true);
 		}
 	}, []);
 
 	useEffect(() => {
 		if (hasSpecialProperties && isFirstCompilation.current) {
 			// precompile the 'IdentityProperty', 'displayedProperty' and
-			// 'UpdatedAtColumn' fields, if possible.
+			// 'lastChangeTimeProperty' fields, if possible.
 			const a = { ...action };
 			if (connection.isApp) {
 				const suggestedDisplayedProperty = connection.connector.suggestedDisplayedProperty;
@@ -169,12 +169,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					a.DisplayedProperty = 'id';
 					isFirstCompilation.current = false;
 				}
-				const hasUpdatedAtColumn =
+				const hasLastChangeTimeProperty =
 					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
-				if (hasUpdatedAtColumn) {
-					a.UpdatedAtColumn = 'timestamp';
-					if (doesUpdatedAtColumnNeedFormat(a.UpdatedAtColumn, actionType.InputSchema)) {
-						a.UpdatedAtFormat = updatedAtFormats['dateTime'];
+				if (hasLastChangeTimeProperty) {
+					a.LastChangeTimeProperty = 'timestamp';
+					if (doesLastChangeTimePropertyNeedFormat(a.LastChangeTimeProperty, actionType.InputSchema)) {
+						a.LastChangeTimeFormat = lastChangeTimeFormats['dateTime'];
 					}
 				}
 			}
@@ -216,10 +216,10 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	const needFormat: boolean = useMemo(() => {
 		if (
 			(connection.isFileStorage || connection.isDatabase) &&
-			action.UpdatedAtColumn &&
+			action.LastChangeTimeProperty &&
 			!isTransformationDisabled
 		) {
-			return doesUpdatedAtColumnNeedFormat(action.UpdatedAtColumn, actionType.InputSchema);
+			return doesLastChangeTimePropertyNeedFormat(action.LastChangeTimeProperty, actionType.InputSchema);
 		}
 		return false;
 	}, [action, actionType, isTransformationDisabled]);
@@ -251,17 +251,17 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		return checkIfPropertyExists(action.DisplayedProperty, flatSchema);
 	}, [action, flatSchema]);
 
-	const updatedAtColumnError = useMemo<string>(() => {
+	const lastChangeTimePropertyError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			return checkIfPropertyExists(action.UpdatedAtColumn, flatSchema);
+			return checkIfPropertyExists(action.LastChangeTimeProperty, flatSchema);
 		}
 	}, [action, flatSchema]);
 
-	const { identityPropertyList, displayedPropertyList, updatedAtList, mappingList } = useMemo(() => {
+	const { identityPropertyList, displayedPropertyList, lastChangeTimeList, mappingList } = useMemo(() => {
 		return {
 			identityPropertyList: getIdentityPropertyComboboxItems(actionType.InputSchema),
 			displayedPropertyList: getDisplayedPropertyComboboxItems(actionType.InputSchema),
-			updatedAtList: getUpdatedAtComboboxItems(actionType.InputSchema),
+			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.InputSchema),
 			mappingList: getSchemaComboboxItems(actionType.InputSchema),
 		};
 	}, [actionType]);
@@ -324,11 +324,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 			a.DisplayedProperty = value;
 			setAction(a);
 			return;
-		} else if (input.name === 'updatedAtColumn') {
+		} else if (input.name === 'lastChangeTimeProperty') {
 			const a = { ...action };
-			a.UpdatedAtColumn = value;
-			if (value === '' || !doesUpdatedAtColumnNeedFormat(value, actionType.InputSchema)) {
-				a.UpdatedAtFormat = '';
+			a.LastChangeTimeProperty = value;
+			if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.InputSchema)) {
+				a.LastChangeTimeFormat = '';
 			}
 			setAction(a);
 			return;
@@ -355,39 +355,39 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const onUpdateUpdatedAtColumn = async (e) => {
+	const onUpdateLastChangeTimeProperty = async (e) => {
 		const target = e.target;
 		let { value } = target;
 		const a = { ...action };
-		a.UpdatedAtColumn = value;
-		if (value === '' || !doesUpdatedAtColumnNeedFormat(value, actionType.InputSchema)) {
-			setIsCustomUpdatedAtFormatSelected(false);
-			a.UpdatedAtFormat = '';
+		a.LastChangeTimeProperty = value;
+		if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.InputSchema)) {
+			setIsCustomLastChangeTimeFormatSelected(false);
+			a.LastChangeTimeFormat = '';
 		}
 		setAction(a);
 	};
 
-	const onChangeUpdatedAtFormat = (e) => {
+	const onChangeLastChangeTimeFormat = (e) => {
 		const a = { ...action };
 		const v = e.target.value;
 		if (v === 'custom') {
-			setIsCustomUpdatedAtFormatSelected(true);
-			a.UpdatedAtFormat = '';
+			setIsCustomLastChangeTimeFormatSelected(true);
+			a.LastChangeTimeFormat = '';
 			setTimeout(() => {
-				if (updatedAtCustomFormatInputRef.current) {
-					updatedAtCustomFormatInputRef.current.focus();
+				if (lastChangeTimeCustomFormatInputRef.current) {
+					lastChangeTimeCustomFormatInputRef.current.focus();
 				}
 			}, 50);
 		} else {
-			setIsCustomUpdatedAtFormatSelected(false);
-			a.UpdatedAtFormat = updatedAtFormats[e.target.value];
+			setIsCustomLastChangeTimeFormatSelected(false);
+			a.LastChangeTimeFormat = lastChangeTimeFormats[e.target.value];
 		}
 		setAction(a);
 	};
 
-	const onInputUpdatedAtCustomFormat = (e) => {
+	const onInputLastChangeTimeCustomFormat = (e) => {
 		const a = { ...action };
-		a.UpdatedAtFormat = e.target.value;
+		a.LastChangeTimeFormat = e.target.value;
 		setAction(a);
 	};
 
@@ -481,37 +481,39 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 							)}
 						</div>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='updatedAtColumn'>
-								<div className='updatedAt'>
+							<div className='lastChangeTimeProperty'>
+								<div className='lastChangeTimeProperty'>
 									<div className='label'>Last change time:</div>
 									<ComboBoxInput
-										comboBoxListRef={updatedAtListRef}
-										onInput={onUpdateUpdatedAtColumn}
-										value={action.UpdatedAtColumn!}
-										name='updatedAtColumn'
+										comboBoxListRef={lastChangeTimePropertyListRef}
+										onInput={onUpdateLastChangeTimeProperty}
+										value={action.LastChangeTimeProperty!}
+										name='lastChangeTimeProperty'
 										disabled={isTransformationDisabled}
 										className='inputProperty'
 										caret={true}
-										clearable={action.UpdatedAtColumn?.length > 0}
-										error={updatedAtColumnError}
+										clearable={action.LastChangeTimeProperty?.length > 0}
+										error={lastChangeTimePropertyError}
 										size='small'
 									/>
 								</div>
 								<div className='format'>
-									<div className='updatedAtFormat'>
+									<div className='lastChangeTimeFormat'>
 										<div className='label'>Format:</div>
 										<SlSelect
-											onSlChange={onChangeUpdatedAtFormat}
+											onSlChange={onChangeLastChangeTimeFormat}
 											value={
-												isCustomUpdatedAtFormatSelected
+												isCustomLastChangeTimeFormatSelected
 													? 'custom'
-													: action.UpdatedAtColumn
-													? Object.keys(updatedAtFormats).find(
-															(key) => updatedAtFormats[key] === action.UpdatedAtFormat,
+													: action.LastChangeTimeProperty
+													? Object.keys(lastChangeTimeFormats).find(
+															(key) =>
+																lastChangeTimeFormats[key] ===
+																action.LastChangeTimeFormat,
 													  )
 													: ''
 											}
-											name='updatedAtFormat'
+											name='lastChangeTimeFormat'
 											disabled={!needFormat}
 											size='small'
 										>
@@ -524,16 +526,16 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 											<SlOption value='custom'>Custom...</SlOption>
 										</SlSelect>
 									</div>
-									{needFormat && isCustomUpdatedAtFormatSelected && (
-										<div className='updatedAtCustomFormat'>
+									{needFormat && isCustomLastChangeTimeFormatSelected && (
+										<div className='lastChangeTimeCustomFormat'>
 											<SlInput
-												onSlInput={onInputUpdatedAtCustomFormat}
-												value={action.UpdatedAtFormat}
-												name='updatedAtCustomFormat'
+												onSlInput={onInputLastChangeTimeCustomFormat}
+												value={action.LastChangeTimeFormat}
+												name='lastChangeTimeCustomFormat'
 												placeholder='%Y-%m-%d'
 												helpText='C89 "strftime" format string'
 												size='small'
-												ref={updatedAtCustomFormatInputRef}
+												ref={lastChangeTimeCustomFormatInputRef}
 											></SlInput>
 										</div>
 									)}
@@ -563,7 +565,11 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 					items={displayedPropertyList}
 					onSelect={onSelectProperty}
 				/>
-				<ComboBoxList ref={updatedAtListRef} items={updatedAtList} onSelect={onSelectProperty} />
+				<ComboBoxList
+					ref={lastChangeTimePropertyListRef}
+					items={lastChangeTimeList}
+					onSelect={onSelectProperty}
+				/>
 				<ComboBoxList ref={mappingListRef} items={mappingList} onSelect={onSelectProperty} />
 			</Section>
 		</div>

@@ -244,18 +244,18 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("displayed property is longer than 1024 runes")
 		}
 	}
-	// Validate the 'updated at' column.
-	if action.UpdatedAtColumn != "" {
-		if !types.IsValidPropertyName(action.UpdatedAtColumn) {
-			return errors.BadRequest("'updated at' column is a not valid property name")
+	// Validate the last change time property.
+	if action.LastChangeTimeProperty != "" {
+		if !types.IsValidPropertyName(action.LastChangeTimeProperty) {
+			return errors.BadRequest("last change time property is a not valid property name")
 		}
-		if utf8.RuneCountInString(action.UpdatedAtColumn) > 1024 {
-			return errors.BadRequest("'updated at' column is longer than 1024 runes")
+		if utf8.RuneCountInString(action.LastChangeTimeProperty) > 1024 {
+			return errors.BadRequest("last change time property is longer than 1024 runes")
 		}
 	}
-	// Validate the 'updated at' format.
-	if action.UpdatedAtFormat != "" {
-		if err := validateTimestampFormat(action.UpdatedAtFormat); err != nil {
+	// Validate the last change time format.
+	if action.LastChangeTimeFormat != "" {
+		if err := validateTimestampFormat(action.LastChangeTimeFormat); err != nil {
 			return errors.BadRequest(err.Error())
 		}
 	}
@@ -377,36 +377,36 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
 		}
 		usedInPaths = append(usedInPaths, types.Path{action.IdentityProperty})
-		// Validate the 'updated at' column and format.
-		var requiresUpdatedAtFormat bool
-		if action.UpdatedAtColumn != "" {
-			updatedAtColumn, ok := inSchema.Property(action.UpdatedAtColumn)
+		// Validate the last change time property and format.
+		var requiresLastChangeTimeFormat bool
+		if action.LastChangeTimeProperty != "" {
+			lastChangeTime, ok := inSchema.Property(action.LastChangeTimeProperty)
 			if !ok {
-				return errors.BadRequest("'updated at' column %q not found within input schema", action.UpdatedAtColumn)
+				return errors.BadRequest("last change time property %q not found within input schema", action.LastChangeTimeProperty)
 			}
-			switch k := updatedAtColumn.Type.Kind(); k {
+			switch k := lastChangeTime.Type.Kind(); k {
 			case types.DateTimeKind, types.DateKind:
 			case types.JSONKind, types.TextKind:
-				requiresUpdatedAtFormat = true
+				requiresLastChangeTimeFormat = true
 			default:
-				return errors.BadRequest("'updated at' column %q has kind %s instead of DateTime, Date, JSON, or Text", action.UpdatedAtColumn, k)
+				return errors.BadRequest("last change time property %q has kind %s instead of DateTime, Date, JSON, or Text", action.LastChangeTimeProperty, k)
 			}
-			usedInPaths = append(usedInPaths, types.Path{action.UpdatedAtColumn})
+			usedInPaths = append(usedInPaths, types.Path{action.LastChangeTimeProperty})
 		}
-		if !requiresUpdatedAtFormat && action.UpdatedAtFormat != "" {
-			return errors.BadRequest("action cannot specify an 'updated at' format")
-		} else if requiresUpdatedAtFormat && action.UpdatedAtFormat == "" {
-			return errors.BadRequest("'updated at' format is required")
+		if !requiresLastChangeTimeFormat && action.LastChangeTimeFormat != "" {
+			return errors.BadRequest("action cannot specify a last change time format")
+		} else if requiresLastChangeTimeFormat && action.LastChangeTimeFormat == "" {
+			return errors.BadRequest("last change time format is required")
 		}
 	} else {
 		if action.IdentityProperty != "" {
 			return errors.BadRequest("action cannot specify an identity property")
 		}
-		if action.UpdatedAtColumn != "" {
-			return errors.BadRequest("action cannot specify an 'updated at' column")
+		if action.LastChangeTimeProperty != "" {
+			return errors.BadRequest("action cannot specify a last change time property")
 		}
-		if action.UpdatedAtFormat != "" {
-			return errors.BadRequest("action cannot specify an 'updated at' format")
+		if action.LastChangeTimeFormat != "" {
+			return errors.BadRequest("action cannot specify a last change time format")
 		}
 	}
 

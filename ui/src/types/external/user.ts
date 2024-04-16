@@ -125,7 +125,7 @@ interface UserIdentity {
 	ExternalId: UserIdentityLabelValue;
 	DisplayedProperty: string;
 	AnonymousIds: string[] | null;
-	UpdatedAt: string;
+	LastChangeTime: string;
 }
 
 interface User {

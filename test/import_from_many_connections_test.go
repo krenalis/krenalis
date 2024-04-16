@@ -106,11 +106,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"gender": "gender",
 				},
 			},
-			IdentityProperty:  "csv_id",
-			UpdatedAtColumn:   "timestamp",
-			UpdatedAtFormat:   "'%Y-%m-%d %H:%M:%S'",
-			DisplayedProperty: "email",
-			Connector:         chichitester.CSVConnector,
+			IdentityProperty:       "csv_id",
+			LastChangeTimeProperty: "timestamp",
+			LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+			DisplayedProperty:      "email",
+			Connector:              chichitester.CSVConnector,
 			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma":          ",",
 				"HasColumnNames": true,
@@ -222,13 +222,13 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 	{
 		dummyIdentity := identities[0]
-		dummyIdentity.UpdatedAt = time.Time{}
+		dummyIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
 			Connection:        dummy,
 			ExternalId:        chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
 			DisplayedProperty: "kbuessen0@example.com",
 			AnonymousIds:      nil,
-			UpdatedAt:         time.Time{},
+			LastChangeTime:    time.Time{},
 		})
 	}
 	t.Log("identity imported from Dummy is ok")
@@ -242,19 +242,19 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			},
 			DisplayedProperty: "kbuessen0@example.com",
 			AnonymousIds:      nil,
-			UpdatedAt:         time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+			LastChangeTime:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
 		})
 	}
 	t.Log("identity imported from CSV is ok")
 	{
 		eventIdentity := identities[2]
-		eventIdentity.UpdatedAt = time.Time{}
+		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
 			Connection:        javaScript,
 			ExternalId:        chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
 			DisplayedProperty: "kbuessen0@example.com",
 			AnonymousIds:      []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
-			UpdatedAt:         time.Time{},
+			LastChangeTime:    time.Time{},
 		})
 	}
 	t.Log("identity imported from JavaScript is ok")

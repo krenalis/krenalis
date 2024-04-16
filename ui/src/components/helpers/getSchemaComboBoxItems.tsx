@@ -48,7 +48,7 @@ const getDisplayedPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] =
 	return computeItems(filteredSchema);
 };
 
-const getUpdatedAtComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getLastChangeTimeComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -96,5 +96,5 @@ export {
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
 	getDisplayedPropertyComboboxItems,
-	getUpdatedAtComboboxItems,
+	getLastChangeTimeComboboxItems,
 };

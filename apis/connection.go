@@ -389,8 +389,8 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		TableName:               action.TableName,
 		IdentityProperty:        action.IdentityProperty,
 		DisplayedProperty:       action.DisplayedProperty,
-		UpdatedAtColumn:         action.UpdatedAtColumn,
-		UpdatedAtFormat:         action.UpdatedAtFormat,
+		LastChangeTimeProperty:  action.LastChangeTimeProperty,
+		LastChangeTimeFormat:    action.LastChangeTimeFormat,
 		ExportMode:              (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 	}
@@ -521,15 +521,15 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, query,\n" +
 			"connector, path, sheet, compression, settings, table_name, identity_property,\n" +
-			"updated_at_column, updated_at_format, export_mode, matching_properties_internal,\n" +
-			"matching_properties_external, export_on_duplicated_users)\n" +
+			"last_change_time_property, last_change_time_format, export_mode,\n" +
+			"matching_properties_internal, matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
 			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(filter), mapping, function.Source, function.Language, function.Version,
 			n.Query, connectorID, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.UpdatedAtColumn, n.UpdatedAtFormat, n.ExportMode,
+			n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -649,8 +649,8 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 
 	// Build the cursor.
 	cursor, err = serializeCursor(state.Cursor{
-		ID:        last.ID,
-		UpdatedAt: last.UpdatedAt,
+		ID:             last.ID,
+		LastChangeTime: last.LastChangeTime,
 	})
 	if err != nil {
 		return nil, "", err
