@@ -30,6 +30,58 @@ func TestDiff(t *testing.T) {
 		expectedErr string
 	}{
 		{
+			name: "First level property drop and rename",
+			fromSchema: types.Object([]types.Property{
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "lastName", Type: types.Text()},
+			}),
+			rePaths: map[string]any{
+				"lastName": "firstName",
+			},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationDropProperty, Path: "lastName"},
+				{Operation: warehouses.OperationRenameProperty, Path: "firstName", Name: "lastName"},
+			},
+		},
+		{
+			name: "Second level property drop and rename",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "firstName", Type: types.Text()},
+					{Name: "lastName", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "lastName", Type: types.Text()},
+				})},
+			}),
+			rePaths: map[string]any{
+				"x.lastName": "x.firstName",
+			},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationDropProperty, Path: "x.lastName"},
+				{Operation: warehouses.OperationRenameProperty, Path: "x.firstName", Name: "lastName"},
+			},
+		},
+		{
+			name: "First level property drop and rename, but its type has changed",
+			fromSchema: types.Object([]types.Property{
+				{Name: "firstName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "lastName", Type: types.Text().WithCharLen(10)},
+			}),
+			rePaths: map[string]any{
+				"lastName": "firstName",
+			},
+			expectedErr: `error on property "lastName": type changes are not supported`,
+		},
+		{
 			name: "No changes",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text()},

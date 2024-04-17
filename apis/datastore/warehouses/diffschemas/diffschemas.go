@@ -64,21 +64,32 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	// - DroppedNames ≜ OldNames - NewNames
 	// - KeptNames ≜ OldNames ∩ NewNames
 	//
-	// AddedNames contains:
+	// AddedNames contains the added names, thus contains:
 	//
-	// - the names of the properties added to the NewSchema
-	// - the names of renamed properties
+	// - New properties, whose name did not already exist in the schema. They do
+	//   not appear in "rePaths".
+	// - Renamed properties, whose new name did not already exist in the schema.
+	//   They appear in "rePaths" (the key is the new name, the value is the old
+	//   name).
 	//
-	// DroppedNames contains:
+	// DroppedNames contains the dropped names, thus contains:
 	//
-	// - the names of properties dropped
-	// - the names of renamed properties (the same ones present in AddedNames)
+	// - Deleted properties, whose name has not been reused by any property.
+	//   They do not appear in "rePaths".
+	// - Renamed properties, whose old name has not been reused by any property.
+	//   They appear in "rePaths" (the key is the new name, the value is the old
+	//   name).
 	//
-	// KeptNames contains:
+	// KeptNames contains the names that remained unchanged, thus contains:
 	//
-	// - the names of unchanged properties
-	// - the names of removed and recreated properties (as new properties) with
-	//   the same name
+	// - Unchanged properties, that are properties that have not been
+	//   added/dropped or renamed. They do not appear in "rePaths".
+	// - New properties with the same name as a deleted property. They appear in
+	//   "rePaths" (the key is the name of the created property, the value is
+	//   nil).
+	// - Deleted properties whose name has been reused by a renamed property.
+	//   They appear in "rePaths" (the key is the name of the property that
+	//   "occupied the name", the value is the name of the deleted property).
 
 	oldNames := oldSchema.PropertiesNames()
 	newNames := newSchema.PropertiesNames()
@@ -87,12 +98,18 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	droppedNames := difference(oldNames, newNames)
 	keptNames := intersection(oldNames, newNames)
 
-	// Iterate over AddedNames.
+	// Keep track of property renamings, it will be useful later to determine
+	// whether the ordering has changed or not.
 	newNameOf := map[string]string{}
+
+	// Iterate over AddedNames.
 	for _, addedName := range addedNames {
+
+		// Renamed properties, whose new name did not already exist in the
+		// schema. They appear in "rePaths" (the key is the new name, the
+		// value is the old name).
 		newPath := appendPath(path, addedName)
 		if oldPath, ok := rePaths[newPath].(string); ok {
-			// Property has been renamed.
 			oldName := propPathToName(oldPath)
 			oldProp := oldPropsByName[oldName]
 			newProp := newPropsByName[addedName]
@@ -108,53 +125,75 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				Path:      oldPath,
 				Name:      addedName,
 			})
-		} else {
-			// Property has been added.
-			if path != "" {
-				return nil, fmt.Errorf("cannot add properties to already existent Object properties")
-			}
-			p := newPropsByName[addedName]
-			if containsNullableObject(p) {
-				return nil, fmt.Errorf("nullable properties with type Object are not supported")
-			}
-			operations = append(operations, warehouses.AlterSchemaOperation{
-				Operation: warehouses.OperationAddProperty,
-				Path:      appendPath(path, addedName),
-				Type:      p.Type,
-				Nullable:  p.Nullable,
-			})
+			continue
 		}
+
+		// New properties, whose name did not already exist in the schema.
+		// They do not appear in "rePaths".
+		if path != "" {
+			return nil, fmt.Errorf("cannot add properties to already existent Object properties")
+		}
+		p := newPropsByName[addedName]
+		if containsNullableObject(p) {
+			return nil, fmt.Errorf("nullable properties with type Object are not supported")
+		}
+		operations = append(operations, warehouses.AlterSchemaOperation{
+			Operation: warehouses.OperationAddProperty,
+			Path:      appendPath(path, addedName),
+			Type:      p.Type,
+			Nullable:  p.Nullable,
+		})
 	}
 
 	// Iterate over DroppedNames.
 	dropped := map[string]bool{}
 	for _, droppedName := range droppedNames {
-		if _, ok := newNameOf[droppedName]; ok {
-			// Rename operation already added above.
-		} else {
-			dropped[droppedName] = true
-			droppedProp := oldPropsByName[droppedName]
-			if droppedProp.Type.Kind() == types.ObjectKind {
-				for _, p := range propertyPaths(droppedProp.Type) {
-					operations = append(operations, warehouses.AlterSchemaOperation{
-						Operation: warehouses.OperationDropProperty,
-						Path:      appendPath(path, appendPath(droppedName, p)),
-					})
-				}
-			} else {
+
+		// Renamed properties, whose old name has not been reused by any
+		// property. They appear in "rePaths" (the key is the new name, the
+		// value is the old name).
+		// They have been already handled by the code above.
+		alreadyHandled := false
+		droppedPath := appendPath(path, droppedName)
+		for _, v := range rePaths {
+			if v == droppedPath {
+				alreadyHandled = true
+				break
+			}
+		}
+		if alreadyHandled {
+			continue
+		}
+
+		// Deleted properties, whose name has not been reused by any property.
+		// They do not appear in "rePaths".
+		dropped[droppedName] = true
+		droppedProp := oldPropsByName[droppedName]
+		if droppedProp.Type.Kind() == types.ObjectKind {
+			for _, p := range propertyPaths(droppedProp.Type) {
 				operations = append(operations, warehouses.AlterSchemaOperation{
 					Operation: warehouses.OperationDropProperty,
-					Path:      appendPath(path, droppedName),
+					Path:      appendPath(path, appendPath(droppedName, p)),
 				})
 			}
+		} else {
+			operations = append(operations, warehouses.AlterSchemaOperation{
+				Operation: warehouses.OperationDropProperty,
+				Path:      appendPath(path, droppedName),
+			})
 		}
 	}
 
 	// Iterate over KeptNames.
 	for _, keptName := range keptNames {
+
 		oldProp := oldPropsByName[keptName]
 		newProp := newPropsByName[keptName]
 		keptPath := appendPath(path, keptName)
+
+		// New properties with the same name as a deleted property. They appear
+		// in "rePaths" (the key is the name of the created property, the value
+		// is nil).
 		if v, ok := rePaths[keptPath]; ok && v == nil {
 			operations = append(operations,
 				warehouses.AlterSchemaOperation{
@@ -169,6 +208,34 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				})
 			continue
 		}
+
+		// Deleted properties whose name has been reused by a renamed property.
+		// They appear in "rePaths" (the key is the name of the property that
+		// "occupied the name", the value is the name of the deleted property).
+		if oldPath, ok := rePaths[keptPath].(string); ok {
+			dropped[keptName] = true
+			operations = append(operations, warehouses.AlterSchemaOperation{
+				Operation: warehouses.OperationDropProperty,
+				Path:      keptPath,
+			})
+			if !oldProp.Type.EqualTo(newProp.Type) {
+				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
+			}
+			if oldProp.Nullable != newProp.Nullable {
+				return nil, fmt.Errorf("error on property %q: nullability changes are not supported", appendPath(path, oldProp.Name))
+			}
+			newNameOf[propPathToName(oldPath)] = keptName
+			operations = append(operations, warehouses.AlterSchemaOperation{
+				Operation: warehouses.OperationRenameProperty,
+				Path:      oldPath,
+				Name:      keptName,
+			})
+			continue
+		}
+
+		// Unchanged properties, that are properties that have not been
+		// added/dropped or renamed. They do not appear in "rePaths".
+
 		if oldProp.Type.Kind() == types.ObjectKind && newProp.Type.Kind() == types.ObjectKind {
 			ops, err := Diff(oldProp.Type, newProp.Type, rePaths, appendPath(path, keptName))
 			if err != nil {
@@ -177,20 +244,22 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			operations = append(operations, ops...)
 			continue
 		}
+
 		if !oldProp.Type.EqualTo(newProp.Type) {
 			return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
 		}
 		if oldProp.Nullable != newProp.Nullable {
 			return nil, fmt.Errorf("error on property %q: nullability changes are not supported", appendPath(path, oldProp.Name))
 		}
+
 	}
 
 	// Check if the ordering of the properties in the new schema is correct,
 	// that is:
 	//
-	// * old properties must be in the same position as before (after applying
+	// - old properties must be in the same position as before (after applying
 	//   renamings)
-	// * new properties are appended at the end of the properties
+	// - new properties are appended at the end of the properties
 	//
 	oldNamesUpdated := []string{}
 	for _, oldName := range oldNames {
