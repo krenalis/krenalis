@@ -31,6 +31,9 @@ import (
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/cmd"
 	"github.com/open2b/chichi/types"
+
+	// Import the package that imports the standard connectors of Chichi.
+	_ "github.com/open2b/chichi/cmd/stdconnectors"
 )
 
 // launchChichiExternally determines if Chichi should be launched externally

@@ -79,7 +79,7 @@ Steps:
     go get github.com/open2b/chichi@latest
     ```
 
-4. Just leave the import of the connectors you want to include in the build
+4. Optionally, you can customize the imports of the connectors you want to include in the build by changing the imports in the `main.go` file.
 
 5. Execute:
 
