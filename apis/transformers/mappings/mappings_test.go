@@ -115,7 +115,7 @@ func TestCompile(t *testing.T) {
 		dt            types.Type
 		required      bool
 		nullable      bool
-		layouts       *state.Layouts
+		layouts       *state.TimeLayouts
 		compileErr    error
 		evalErr       error
 		expectedValue any

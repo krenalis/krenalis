@@ -34,20 +34,23 @@ import (
 var storageTimeout = 10 * time.Second
 
 type File struct {
-	state  *state.State
-	action *state.Action
-	inner  chichi.File
-	err    error
+	state       *state.State
+	action      *state.Action
+	timeLayouts *state.TimeLayouts
+	inner       chichi.File
+	err         error
 }
 
 // File returns a file for the provided action, on a connection with the given
 // role. Errors are deferred until a file's method is called.
 func (connectors *Connectors) File(action *state.Action, role state.Role) *File {
+	connector := action.Connector()
 	file := &File{
-		state:  connectors.state,
-		action: action,
+		state:       connectors.state,
+		action:      action,
+		timeLayouts: &connector.TimeLayouts,
 	}
-	file.inner, file.err = chichi.RegisteredFile(action.Connector().Name).New(&chichi.FileConfig{
+	file.inner, file.err = chichi.RegisteredFile(connector.Name).New(&chichi.FileConfig{
 		Role:        chichi.Role(role),
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
@@ -104,7 +107,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 	}
 	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
 		file.action.IdentityProperty, lastChangeTimeProperty, file.action.DisplayedProperty,
-		storageLastChangeTime, math.MaxInt)
+		storageLastChangeTime, file.timeLayouts, math.MaxInt)
 	records := &fileRecords{
 		ctx:   ctx,
 		rw:    rw,
@@ -358,12 +361,13 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // storageLastChangeTime is the lat change time provided by the storage
 // connector, and it is used in the case when the file columns do not specify a
 // last change time property.
-func newRecordWriter(connector int, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, displayedProperty string, storageLastChangeTime time.Time, limit int) *recordWriter {
+func newRecordWriter(connector int, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, displayedProperty string, storageLastChangeTime time.Time, layout *state.TimeLayouts, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
 		limit:           limit,
 		textColumnsOnly: true,
+		timeLayouts:     layout,
 		records:         []map[string]any{},
 	}
 	rw.displayedProperty.name = displayedProperty
@@ -410,6 +414,7 @@ type recordWriter struct {
 		format string
 	}
 	storageLastChangeTime time.Time
+	timeLayouts           *state.TimeLayouts
 	records               []map[string]any
 }
 
@@ -470,9 +475,9 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			rw.displayedProperty.index = columnIndex[col.Name]
 		}
 	}
-	// Check that the schema, if valid, is compatible with the file's schema.
+	// Check that the schema, if valid, is aligned with the file's schema.
 	if rw.schema.Valid() {
-		err := checkConformity("", rw.schema, fileSchema)
+		err := checkSchemaAlignment(rw.schema, fileSchema)
 		if err != nil {
 			return err
 		}
@@ -504,7 +509,7 @@ func (rw *recordWriter) Record(record []any) error {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
 		for i, c := range rw.properties {
-			rd[c.Name], err = normalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
+			rd[c.Name], err = normalize(c.Name, c.Type, record[i], c.Nullable, rw.timeLayouts)
 			if err != nil {
 				return err
 			}
@@ -515,7 +520,7 @@ func (rw *recordWriter) Record(record []any) error {
 		rd := Record{Properties: map[string]any{}}
 		for i, c := range rw.properties {
 			j := rw.columnIndexOf[i]
-			value, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[j], c.Nullable)
+			value, err := normalize(c.Name, c.Type, record[j], c.Nullable, rw.timeLayouts)
 			if err != nil {
 				rd.Err = err
 				break
@@ -523,7 +528,7 @@ func (rw *recordWriter) Record(record []any) error {
 			rd.Properties[c.Name] = value
 		}
 		// Parse the identity property.
-		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index])
+		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -533,7 +538,7 @@ func (rw *recordWriter) Record(record []any) error {
 		if rd.Err == nil {
 			if rw.lastChangeTimeProperty.name != "" {
 				ts := record[rw.lastChangeTimeProperty.index]
-				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts)
+				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 				if err != nil {
 					rd.Err = err
 				}
@@ -545,7 +550,7 @@ func (rw *recordWriter) Record(record []any) error {
 		if rd.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.index]
 			c := rw.displayedProperty.column
-			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
+			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
 			if err != nil {
 				slog.Warn("the displayed property value cannot be normalized", "err", err)
 			} else {
@@ -578,7 +583,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
 		for _, c := range rw.properties {
-			rd[c.Name], err = normalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
+			rd[c.Name], err = normalize(c.Name, c.Type, record[c.Name], c.Nullable, rw.timeLayouts)
 			if err != nil {
 				return err
 			}
@@ -588,7 +593,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		// Call the rw.write function to store the record.
 		rd := Record{Properties: record}
 		for _, c := range rw.properties {
-			value, err := normalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
+			value, err := normalize(c.Name, c.Type, record[c.Name], c.Nullable, rw.timeLayouts)
 			if err != nil {
 				rd.Err = err
 				break
@@ -596,7 +601,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			rd.Properties[c.Name] = value
 		}
 		// Parse the identity property.
-		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name])
+		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -606,7 +611,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		if rd.Err == nil {
 			if rw.lastChangeTimeProperty.name != "" {
 				ts := record[rw.lastChangeTimeProperty.name]
-				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts)
+				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 				if err != nil {
 					rd.Err = err
 				}
@@ -621,7 +626,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		if rd.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.name]
 			c := rw.displayedProperty.column
-			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
+			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
 			if err != nil {
 				slog.Warn("displayed property value cannot be normalized", "err", err)
 			} else {
@@ -678,7 +683,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 			rd.Properties[c.Name] = value
 		}
 		// Parse the identity property.
-		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index])
+		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
 		if err != nil {
 			if rd.Err != nil {
 				rd.Err = err
@@ -688,7 +693,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 		if rd.Err == nil {
 			if rw.lastChangeTimeProperty.name != "" {
 				ts := record[rw.lastChangeTimeProperty.index]
-				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts)
+				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 				if err != nil {
 					rd.Err = err
 				}
@@ -700,7 +705,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 		if rd.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.index]
 			c := rw.displayedProperty.column
-			vv, err := normalizeDatabaseFileProperty(c.Name, c.Type, v, c.Nullable)
+			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
 			if err != nil {
 				slog.Warn("displayed property value cannot be normalized", "err", err)
 			} else {

@@ -73,7 +73,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	var err error
 	var transformer *transformers.Transformer
 	if tr := this.action.Transformation; tr.Mapping != nil || tr.Function != nil {
-		transformer, err = transformers.New(action.InSchema, action.OutSchema, tr, action.ID, this.apis.functionTransformer, &connector.Layouts)
+		transformer, err = transformers.New(action.InSchema, action.OutSchema, tr, action.ID, this.apis.functionTransformer, &connector.TimeLayouts)
 		if err != nil {
 			return err
 		}

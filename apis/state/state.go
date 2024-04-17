@@ -367,9 +367,9 @@ type DisplayedProperties struct {
 	Information string
 }
 
-// Layouts represents the layouts used to format DateTime, Date, and Time
+// TimeLayouts represents the layouts used to format DateTime, Date, and Time
 // values.
-type Layouts struct {
+type TimeLayouts struct {
 	DateTime string
 	Date     string
 	Time     string
@@ -391,7 +391,7 @@ type Connector struct {
 	ExternalIDLabel            string
 	SuggestedDisplayedProperty string
 	Icon                       string
-	Layouts                    Layouts
+	TimeLayouts                TimeLayouts
 	FileExtension              string
 	SampleQuery                string
 	WebhooksPer                WebhooksPer

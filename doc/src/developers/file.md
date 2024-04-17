@@ -70,8 +70,9 @@ Then add a Go file to the new directory. For example copy the previous template 
 The `FileInfo` type describes information about the file connector:
 
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
-- `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 - `Extension`: main extension of the file type that the connector reads and writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
+- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Layouts](data-values.md#layouts) in [Data Values](data-values.md) for more details.
+- `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFile` function that, executed during package initialization, registers the file connector:
 

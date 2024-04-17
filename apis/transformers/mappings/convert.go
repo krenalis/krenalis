@@ -56,7 +56,7 @@ var (
 //
 // For Array, Object, and Map values, it can modify the argument v. It returns
 // an error if v cannot be converted.
-func convert(v any, st, dt types.Type, nullable bool, layouts *state.Layouts) (any, error) {
+func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts) (any, error) {
 	spt := st.Kind()
 	dpt := dt.Kind()
 	// Convert between nil and other values.
@@ -1068,8 +1068,6 @@ func convertTextToDate(s string) (time.Time, error) {
 // digits or can be missing. The hour must be in range [0, 23], minute and second
 // must be in range [0, 59], and any trailing characters are discarded.
 // The boolean return value indicates whether the time was successfully parsed.
-//
-// Keep in sync with the parseTime function in the normalization package.
 func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 	if len(p) < 8 {
 		return

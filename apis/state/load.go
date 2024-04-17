@@ -68,7 +68,6 @@ func (state *State) load() error {
 					}
 					c.ExternalIDLabel = app.ExternalIDLabel
 					c.SuggestedDisplayedProperty = app.SuggestedDisplayedProperty
-					c.Icon = app.Icon
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
 					if app.OAuth.AuthURL != "" {
 						c.OAuth = &OAuth{
@@ -77,20 +76,21 @@ func (state *State) load() error {
 							ClientID:     oauthClientID,
 						}
 					}
-					c.Layouts.DateTime = app.DateTimeLayout
-					c.Layouts.Date = app.DateLayout
-					c.Layouts.Time = app.TimeLayout
+					c.TimeLayouts = TimeLayouts(app.TimeLayouts)
+					c.Icon = app.Icon
 					ct = app.ReflectType()
 				case DatabaseType:
 					database := chichi.RegisteredDatabase(c.Name)
 					c.Targets = UsersFlag | GroupsFlag
-					c.Icon = database.Icon
+					c.TimeLayouts = TimeLayouts(database.TimeLayouts)
 					c.SampleQuery = database.SampleQuery
+					c.Icon = database.Icon
 					ct = database.ReflectType()
 				case FileType:
 					file := chichi.RegisteredFile(c.Name)
-					c.Icon = file.Icon
 					c.FileExtension = file.Extension
+					c.TimeLayouts = TimeLayouts(file.TimeLayouts)
+					c.Icon = file.Icon
 					ct = file.ReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
 				case FileStorageType:

@@ -28,7 +28,7 @@ type Transformer struct {
 //
 // For mappings, it returns a types.PathNotExistError error if a path in
 // expressions does not exist in the source schema.
-func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, function Function, layouts *state.Layouts) (*Transformer, error) {
+func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, function Function, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if !outSchema.Valid() {
 		return nil, errors.New("output schema is not valid")

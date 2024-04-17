@@ -31,13 +31,13 @@ type (
 
 // App represents the app of an app connection.
 type App struct {
-	name       string
-	role       state.Role
-	layouts    *state.Layouts
-	httpClient *httpclient.Client
-	users      schema
-	inner      chichi.App
-	err        error
+	name        string
+	role        state.Role
+	timeLayouts *state.TimeLayouts
+	httpClient  *httpclient.Client
+	users       schema
+	inner       chichi.App
+	err         error
 }
 
 // App returns an app for the provided connection. Errors are deferred until an
@@ -45,11 +45,11 @@ type App struct {
 func (connectors *Connectors) App(connection *state.Connection) *App {
 	connector := connection.Connector()
 	app := &App{
-		name:       connector.Name,
-		role:       connection.Role,
-		layouts:    &connector.Layouts,
-		httpClient: connectors.http.ConnectionClient(connection.ID),
-		users:      schema{lock: make(chan struct{}, 1)},
+		name:        connector.Name,
+		role:        connection.Role,
+		timeLayouts: &connector.TimeLayouts,
+		httpClient:  connectors.http.ConnectionClient(connection.ID),
+		users:       schema{lock: make(chan struct{}, 1)},
 	}
 	var resourceID int
 	var resourceCode string
@@ -182,12 +182,12 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 	if !schema.Valid() {
 		return nil, fmt.Errorf("schema is not valid")
 	}
-	// Check that the schema conforms to the source users schema.
+	// Check that the schema is aligned with the source users schema.
 	usersSchema, err := app.usersSchema(ctx, types.SourceRole)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get users schema: %s", err)
 	}
-	err = checkConformity("", schema, usersSchema)
+	err = checkSchemaAlignment(schema, usersSchema)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 	records := &appRecords{
 		ctx:               ctx,
 		schema:            schema,
-		layouts:           app.layouts,
+		timeLayouts:       app.timeLayouts,
 		cursor:            cursor,
 		appName:           app.name,
 		inner:             app.inner,
@@ -262,7 +262,7 @@ func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
 type appRecords struct {
 	ctx               context.Context
 	schema            types.Type
-	layouts           *state.Layouts
+	timeLayouts       *state.TimeLayouts
 	cursor            state.Cursor
 	appName           string
 	inner             chichi.App
@@ -336,7 +336,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 			if r.displayedProperty.Name != "" {
 				for p, v := range appUser.Properties {
 					if p == r.displayedProperty.Name {
-						normalizedValue, err := normalizeAppProperty(r.displayedProperty.Name, r.displayedProperty.Type, v, r.displayedProperty.Nullable, r.layouts)
+						normalizedValue, err := normalize(r.displayedProperty.Name, r.displayedProperty.Type, v, r.displayedProperty.Nullable, r.timeLayouts)
 						if err != nil {
 							slog.Warn("displayed property value cannot be normalized", "err", err)
 							break
@@ -359,7 +359,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 					user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
 					break
 				}
-				value, err = normalizeAppProperty(p.Name, p.Type, value, p.Nullable, r.layouts)
+				value, err = normalize(p.Name, p.Type, value, p.Nullable, r.timeLayouts)
 				if err != nil {
 					user.Err = err
 					break

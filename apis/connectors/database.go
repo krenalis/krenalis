@@ -22,10 +22,11 @@ import (
 
 // Database represents the database of a database connection.
 type Database struct {
-	closed    bool
-	connector int
-	inner     chichi.Database
-	err       error
+	closed      bool
+	connector   int
+	timeLayouts *state.TimeLayouts
+	inner       chichi.Database
+	err         error
 }
 
 // Database returns a database for the provided connection. Errors are deferred
@@ -35,10 +36,12 @@ type Database struct {
 // The caller must call the database's Close method when the database is no
 // longer needed.
 func (connectors *Connectors) Database(connection *state.Connection) *Database {
+	connector := connection.Connector()
 	database := &Database{
-		connector: connection.Connector().ID,
+		connector:   connection.Connector().ID,
+		timeLayouts: &connector.TimeLayouts,
 	}
-	database.inner, database.err = chichi.RegisteredDatabase(connection.Connector().Name).New(&chichi.DatabaseConfig{
+	database.inner, database.err = chichi.RegisteredDatabase(connector.Name).New(&chichi.DatabaseConfig{
 		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
@@ -87,7 +90,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	if err != nil {
 		return nil, err
 	}
-	return newRows(rows, columns), nil
+	return newRows(rows, columns, database.timeLayouts), nil
 }
 
 // Records executes the action's query and returns an iterator to iterate over
@@ -152,12 +155,12 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if action.LastChangeTimeProperty != "" && lastChangeTimeProperty.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no last change time property %q", action.LastChangeTimeProperty)}
 	}
-	// Check that schema is compatible with the query's schema.
+	// Check that schema is aligned with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
 	if err != nil {
 		return nil, fmt.Errorf("connector %d has returned invalid columns: %s", database.connector, err)
 	}
-	err = checkConformity("", action.InSchema, querySchema)
+	err = checkSchemaAlignment(action.InSchema, querySchema)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +176,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityProperty,
-		lastChangeTimeProperty, action.LastChangeTimeFormat, displayedProperty)
+		lastChangeTimeProperty, action.LastChangeTimeFormat, displayedProperty, database.timeLayouts)
 	return records, nil
 }
 
@@ -246,17 +249,19 @@ func (w *databaseWriter) upsert(ctx context.Context) {
 
 // Rows is the result of a query.
 type Rows struct {
-	rows    chichi.Rows
-	columns []types.Property
-	dst     []any
-	closed  bool
+	rows        chichi.Rows
+	columns     []types.Property
+	timeLayouts *state.TimeLayouts
+	dst         []any
+	closed      bool
 }
 
-func newRows(rows chichi.Rows, columns []types.Property) *Rows {
+func newRows(rows chichi.Rows, columns []types.Property, layouts *state.TimeLayouts) *Rows {
 	rs := &Rows{
-		rows:    rows,
-		columns: columns,
-		dst:     make([]any, len(columns)),
+		rows:        rows,
+		columns:     columns,
+		timeLayouts: layouts,
+		dst:         make([]any, len(columns)),
 	}
 	return rs
 }
@@ -295,7 +300,7 @@ func (rs *Rows) Next() bool {
 func (rs *Rows) Scan() (map[string]any, error) {
 	row := make(map[string]any, len(rs.columns))
 	for i, c := range rs.columns {
-		rs.dst[i] = queryScanValue{column: c, row: row}
+		rs.dst[i] = queryScanValue{column: c, row: row, timeLayouts: rs.timeLayouts}
 	}
 	if err := rs.rows.Scan(rs.dst...); err != nil {
 		return nil, err
@@ -306,13 +311,14 @@ func (rs *Rows) Scan() (map[string]any, error) {
 // queryScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
 type queryScanValue struct {
-	column types.Property
-	row    map[string]any
+	column      types.Property
+	row         map[string]any
+	timeLayouts *state.TimeLayouts
 }
 
 func (sv queryScanValue) Scan(src any) error {
 	c := sv.column
-	value, err := normalizeDatabaseFileProperty(c.Name, c.Type, src, c.Nullable)
+	value, err := normalize(c.Name, c.Type, src, c.Nullable, sv.timeLayouts)
 	if err != nil {
 		return err
 	}
@@ -330,13 +336,14 @@ type databaseRecords struct {
 	lastChangeTime       types.Property
 	lastChangeTimeFormat string
 	displayedProperty    types.Property
+	timeLayouts          *state.TimeLayouts
 	err                  error
 	closed               bool
 }
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 	identityProperty, lastChangeTimeProperty types.Property, lastChangeTimeFormat string,
-	displayedProperty types.Property) *databaseRecords {
+	displayedProperty types.Property, layouts *state.TimeLayouts) *databaseRecords {
 	records := databaseRecords{
 		columns:              columns,
 		rows:                 rows,
@@ -346,6 +353,7 @@ func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 		lastChangeTime:       lastChangeTimeProperty,
 		lastChangeTimeFormat: lastChangeTimeFormat,
 		displayedProperty:    displayedProperty,
+		timeLayouts:          layouts,
 	}
 	for _, p := range properties {
 		records.propertyOf[p.Name] = p
@@ -394,6 +402,7 @@ func (r *databaseRecords) For(yield func(Record) error) error {
 				lastChangeTime:       r.lastChangeTime,
 				lastChangeTimeFormat: r.lastChangeTimeFormat,
 				displayedProperty:    r.displayedProperty,
+				timeLayouts:          r.timeLayouts,
 			}
 		}
 		if err := r.rows.Scan(r.dst...); err != nil {
@@ -422,6 +431,7 @@ type recordsScanValue struct {
 	lastChangeTime       types.Property
 	lastChangeTimeFormat string
 	displayedProperty    types.Property
+	timeLayouts          *state.TimeLayouts
 }
 
 func (sv recordsScanValue) Scan(src any) error {
@@ -433,7 +443,7 @@ func (sv recordsScanValue) Scan(src any) error {
 
 	if p.Name == sv.displayedProperty.Name {
 		col := sv.displayedProperty
-		normalizedValue, err := normalizeDatabaseFileProperty(col.Name, col.Type, src, col.Nullable)
+		normalizedValue, err := normalize(col.Name, col.Type, src, col.Nullable, sv.timeLayouts)
 		if err != nil {
 			slog.Warn("displayed property value cannot be normalized", "err", err)
 		} else {
@@ -451,7 +461,7 @@ func (sv recordsScanValue) Scan(src any) error {
 		if src == nil {
 			return errors.New("identity value is NULL")
 		}
-		id, err := parseIdentityProperty(p.Name, p.Type, src)
+		id, err := parseIdentityProperty(p.Name, p.Type, src, sv.timeLayouts)
 		if err != nil {
 			return err
 		}
@@ -461,14 +471,14 @@ func (sv recordsScanValue) Scan(src any) error {
 		if src == nil {
 			return errors.New("last change time value is NULL")
 		}
-		lastChangeTime, err := parseTimestampColumn(p.Name, p.Type, sv.lastChangeTimeFormat, src)
+		lastChangeTime, err := parseTimestampColumn(p.Name, p.Type, sv.lastChangeTimeFormat, src, sv.timeLayouts)
 		if err != nil {
 			return err
 		}
 		sv.record.LastChangeTime = lastChangeTime
 		return nil
 	}
-	value, err := normalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
+	value, err := normalize(p.Name, p.Type, src, p.Nullable, sv.timeLayouts)
 	if err != nil {
 		return err
 	}

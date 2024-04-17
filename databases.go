@@ -17,8 +17,9 @@ import (
 // DatabaseInfo represents a database connector info.
 type DatabaseInfo struct {
 	Name        string
-	SampleQuery string // sample query
-	Icon        string // icon in SVG format
+	SampleQuery string      // sample query
+	TimeLayouts TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
+	Icon        string      // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type

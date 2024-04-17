@@ -31,7 +31,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		t types.Type
 		v any
 		e any
-		l *state.Layouts
+		l *state.TimeLayouts
 	}{
 		// Boolean.
 		{types.Boolean(), true, true, nil},
@@ -56,9 +56,9 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Uint(32), json.Number("47303"), uint(47303), nil},
 		{types.Uint(32), json.Number("47303.0"), uint(47303), nil},
 		// Float(32).
-		{types.Float(32), 12.79, 12.79, nil},
-		{types.Float(32), json.Number("12"), 12.0, nil},
-		{types.Float(32), json.Number("12.79"), 12.79, nil},
+		{types.Float(32), float64(float32(12.79)), float64(float32(12.79)), nil},
+		{types.Float(32), json.Number("12"), float64(float32(12.0)), nil},
+		{types.Float(32), json.Number("12.79"), float64(float32(12.79)), nil},
 		{types.Float(32), math.NaN(), math.NaN(), nil},
 		// Float(64).
 		{types.Float(64), 12.7902743017496882, 12.7902743017496882, nil},
@@ -72,28 +72,28 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Decimal(10, 3), json.Number("6.639"), decimal.NewFromFloat(6.639), nil},
 		// DateTime.
 		{types.DateTime(), aDateTime, aDateTime, nil},
-		{types.DateTime(), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: "unix"}},
-		{types.DateTime(), strconv.FormatInt(aDateTime.UnixMilli(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC), &state.Layouts{DateTime: "unixmilli"}},
-		{types.DateTime(), strconv.FormatInt(aDateTime.UnixMicro(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC), &state.Layouts{DateTime: "unixmicro"}},
-		{types.DateTime(), strconv.FormatInt(aDateTime.UnixNano(), 10), aDateTime, &state.Layouts{DateTime: "unixnano"}},
-		{types.DateTime(), "2023-05-03 15:47:22", time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: time.DateTime}},
-		{types.DateTime(), "2023-05-03", time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC), &state.Layouts{DateTime: time.DateOnly}},
-		{types.DateTime(), float64(aDateTime.Unix()), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: "unix"}},
-		{types.DateTime(), float64(aDateTime.UnixMilli()), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC), &state.Layouts{DateTime: "unixmilli"}},
-		{types.DateTime(), float64(aDateTime.UnixMicro()), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC), &state.Layouts{DateTime: "unixmicro"}},
-		{types.DateTime(), float64(aDateTime.UnixNano()), time.Date(2023, 5, 3, 15, 47, 22, 769802496, time.UTC), &state.Layouts{DateTime: "unixnano"}},
-		{types.DateTime(), json.Number(strconv.FormatInt(aDateTime.Unix(), 10)), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.Layouts{DateTime: "unix"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.TimeLayouts{DateTime: "unix"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.UnixMilli(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC), &state.TimeLayouts{DateTime: "unixmilli"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.UnixMicro(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC), &state.TimeLayouts{DateTime: "unixmicro"}},
+		{types.DateTime(), strconv.FormatInt(aDateTime.UnixNano(), 10), aDateTime, &state.TimeLayouts{DateTime: "unixnano"}},
+		{types.DateTime(), "2023-05-03 15:47:22", time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.TimeLayouts{DateTime: time.DateTime}},
+		{types.DateTime(), "2023-05-03", time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC), &state.TimeLayouts{DateTime: time.DateOnly}},
+		{types.DateTime(), float64(aDateTime.Unix()), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.TimeLayouts{DateTime: "unix"}},
+		{types.DateTime(), float64(aDateTime.UnixMilli()), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC), &state.TimeLayouts{DateTime: "unixmilli"}},
+		{types.DateTime(), float64(aDateTime.UnixMicro()), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC), &state.TimeLayouts{DateTime: "unixmicro"}},
+		{types.DateTime(), float64(aDateTime.UnixNano()), time.Date(2023, 5, 3, 15, 47, 22, 769802496, time.UTC), &state.TimeLayouts{DateTime: "unixnano"}},
+		{types.DateTime(), json.Number(strconv.FormatInt(aDateTime.Unix(), 10)), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.TimeLayouts{DateTime: "unix"}},
 		// Date.
 		{types.Date(), aDate, aDate, nil},
-		{types.Date(), "2023-05-03", aDate, &state.Layouts{Date: time.DateOnly}},
-		{types.Date(), "Wed, 03 May 2023", aDate, &state.Layouts{Date: "Mon, 02 Jan 2006"}},
+		{types.Date(), "2023-05-03", aDate, &state.TimeLayouts{Date: time.DateOnly}},
+		{types.Date(), "Wed, 03 May 2023", aDate, &state.TimeLayouts{Date: "Mon, 02 Jan 2006"}},
 		// Time.
 		{types.Time(), time.Date(2023, 5, 3, 17, 34, 41, 804019312, time.UTC), time.Date(1970, 1, 1, 17, 34, 41, 804019312, time.UTC), nil},
-		{types.Time(), "00:00:00", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), &state.Layouts{Time: "15:04:05.999999999"}},
-		{types.Time(), "13:16:47.801", time.Date(1970, 1, 1, 13, 16, 47, 801000000, time.UTC), &state.Layouts{Time: "15:04:05.999999999"}},
-		{types.Time(), "23:59:59.999999999", time.Date(1970, 1, 1, 23, 59, 59, 999999999, time.UTC), &state.Layouts{Time: "15:04:05.999999999"}},
-		{types.Time(), "09:22:51.834", time.Date(1970, 1, 1, 9, 22, 51, 834000000, time.UTC), &state.Layouts{Time: "15:04:05.000"}},
-		{types.Time(), "09h 31m 13s", time.Date(1970, 1, 1, 9, 31, 13, 0, time.UTC), &state.Layouts{Time: "15h 04m 05s"}},
+		{types.Time(), "00:00:00", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), &state.TimeLayouts{Time: "15:04:05.999999999"}},
+		{types.Time(), "13:16:47.801", time.Date(1970, 1, 1, 13, 16, 47, 801000000, time.UTC), &state.TimeLayouts{Time: "15:04:05.999999999"}},
+		{types.Time(), "23:59:59.999999999", time.Date(1970, 1, 1, 23, 59, 59, 999999999, time.UTC), &state.TimeLayouts{Time: "15:04:05.999999999"}},
+		{types.Time(), "09:22:51.834", time.Date(1970, 1, 1, 9, 22, 51, 834000000, time.UTC), &state.TimeLayouts{Time: "15:04:05.000"}},
+		{types.Time(), "09h 31m 13s", time.Date(1970, 1, 1, 9, 31, 13, 0, time.UTC), &state.TimeLayouts{Time: "15h 04m 05s"}},
 		// Year.
 		{types.Year(), 2023, 2023, nil},
 		{types.Year(), 2023.0, 2023, nil},
@@ -116,8 +116,8 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Text().WithCharLen(3), "bòò", "bòò", nil},
 		// Array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, nil},
-		{types.Array(types.Int(32)), []any{1.0, 2.3}, []any{1, 2}, nil},
-		{types.Array(types.Int(32)), []any{json.Number("1.0"), json.Number("2.3")}, []any{1, 2}, nil},
+		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, nil},
+		{types.Array(types.Int(32)), []any{json.Number("1.0"), json.Number("2.0")}, []any{1, 2}, nil},
 		{types.Array(types.Array(types.Text())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, nil},
 		// Object.
 		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, nil},
@@ -127,7 +127,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := normalizeAppProperty("k", test.t, test.v, false, test.l)
+		got, err := normalize("k", test.t, test.v, false, test.l)
 		if err != nil {
 			t.Fatal(err)
 		}

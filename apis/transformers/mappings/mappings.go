@@ -64,11 +64,11 @@ func (err *invalidConversionError) Error() string {
 // source to a destination. An Expression can contain strings, numbers, true,
 // false, null, property paths and function calls.
 type Expression struct {
-	parts    []part     // expression parts.
-	dt       types.Type // destination type.
-	required bool       // reports whether the resulting value is required and consequently it cannot be void.
-	nullable bool       // reports whether the resulting value can be nil.
-	layouts  *state.Layouts
+	parts       []part     // expression parts.
+	dt          types.Type // destination type.
+	required    bool       // reports whether the resulting value is required and consequently it cannot be void.
+	nullable    bool       // reports whether the resulting value can be nil.
+	timeLayouts *state.TimeLayouts
 }
 
 // part represents an expression part within an Expression. An expression part
@@ -114,7 +114,7 @@ type part struct {
 // Date, and Time values as strings.
 //
 // An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema types.Type, dt types.Type, required, nullable bool, layouts *state.Layouts) (*Expression, error) {
+func Compile(expr string, schema types.Type, dt types.Type, required, nullable bool, layouts *state.TimeLayouts) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
@@ -136,11 +136,11 @@ func Compile(expr string, schema types.Type, dt types.Type, required, nullable b
 		return nil, err
 	}
 	expression := &Expression{
-		parts:    parts,
-		dt:       dt,
-		required: required,
-		nullable: nullable,
-		layouts:  layouts,
+		parts:       parts,
+		dt:          dt,
+		required:    required,
+		nullable:    nullable,
+		timeLayouts: layouts,
 	}
 	return expression, nil
 }
@@ -150,7 +150,7 @@ func Compile(expr string, schema types.Type, dt types.Type, required, nullable b
 // that conforms to the expression's destination type or Void if the result is
 // void.
 func (expr *Expression) Eval(values map[string]any) (any, error) {
-	v, st, err := eval(expr.parts, values, expr.layouts)
+	v, st, err := eval(expr.parts, values, expr.timeLayouts)
 	if err != nil {
 		if err == errVoid {
 			if !expr.required {
@@ -161,7 +161,7 @@ func (expr *Expression) Eval(values map[string]any) (any, error) {
 		return nil, err
 	}
 	if v != nil || !expr.nullable {
-		c, err := convert(v, st, expr.dt, expr.nullable, expr.layouts)
+		c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts)
 		if err != nil {
 			if err == errInvalidConversion {
 				err = &invalidConversionError{v, st, expr.dt}
@@ -219,7 +219,7 @@ type mappingExpr struct {
 // The source type can be the invalid type if expressions do not contain paths.
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
-func New(expressions map[string]string, st, dt types.Type, layouts *state.Layouts) (*Mapping, error) {
+func New(expressions map[string]string, st, dt types.Type, layouts *state.TimeLayouts) (*Mapping, error) {
 	if len(expressions) == 0 {
 		return nil, errors.New("there are no expressions")
 	}
@@ -361,11 +361,11 @@ func appendProperties(properties []types.Path, expression []part) []types.Path {
 }
 
 // eval evaluates expression and returns its value and type. values contains the
-// property values. layouts represents, if not null, the layouts used to format
-// DateTime, Date, and Time values as strings.
+// property values. layouts represents, if not null, the layouts used to
+// format DateTime, Date, and Time values as strings.
 //
 // If the result of the evaluation is void, it returns the errVoid error.
-func eval(expression []part, values map[string]any, layouts *state.Layouts) (any, types.Type, error) {
+func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
@@ -491,9 +491,9 @@ func stringifyPath(path []string) string {
 }
 
 // evalCall evaluates p representing a function call, and returns its value and
-// type. values contains the property values. layouts represents, if not null,
-// the layouts used to format DateTime, Date, and Time values as strings.
-func evalCall(p part, values map[string]any, layouts *state.Layouts) (any, types.Type, error) {
+// type. values contains the property values. timeLayouts represents, if not null,
+// the timeLayouts used to format DateTime, Date, and Time values as strings.
+func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, types.Type, error) {
 	switch name := p.path[0]; name {
 	case "and":
 		for _, arg := range p.args {

@@ -62,6 +62,14 @@ func SuggestPropertyName(s string) string {
 // A SetSettingsFunc value is a function used by connectors to set settings.
 type SetSettingsFunc func(context.Context, []byte) error
 
+// TimeLayouts represents the layouts for time values.
+// If a layout is left empty, it is ISO 8601.
+type TimeLayouts struct {
+	DateTime string // if left empty, values are formatted with the layout "2006-01-02T15:04:05.999Z"
+	Date     string // if left empty, values are formatted with the layout "2006-01-02"
+	Time     string // if left empty, values are formatted with the layout "15:04:05.999Z"
+}
+
 // HTTPClient is the interface implemented by the HTTP client used by
 // connectors.
 type HTTPClient interface {
