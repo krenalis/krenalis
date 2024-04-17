@@ -22,18 +22,18 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-type ui struct {
+type UI struct {
 	apis *apis.APIs
 }
 
-func New(apis *apis.APIs) *ui {
-	a := &ui{
+func New(apis *apis.APIs) *UI {
+	a := &UI{
 		apis: apis,
 	}
 	return a
 }
 
-func (ui *ui) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (ui *UI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx, s := telemetry.TraceSpan(r.Context(), "ui.ServeHTTP", "urlPath", r.URL.Path)
 	defer s.End()
@@ -49,7 +49,7 @@ func (ui *ui) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (ui *ui) serveWithESBuild(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (ui *UI) serveWithESBuild(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	_, span := telemetry.TraceSpan(ctx, "ui.serveWithESBuild", "path", r.URL.Path)
 	defer span.End()
 	file, err := filepath.Abs("ui/src/index.jsx")
