@@ -2,7 +2,7 @@
 # Connectors Data Types
 
 | Kind      | Go              | json.Unmarshal               | ClickHouse      | PostgreSQL  | MySQL     | Snowflake   | Parquet      | JSON            | CSV    | Excel  |
-| --------- | --------------- | ---------------------------- | --------------- | ----------- | --------- | ----------- | ------------ | --------------- | ------ | ------ |
+|-----------|-----------------|------------------------------|-----------------|-------------|-----------|-------------|--------------|-----------------|--------|--------|
 | Boolean   | bool            | bool                         | bool            | bool        | -         | bool        | bool         | -               | -      | -      |
 | Int(8)    | int             | float64, json.Number         | int8            | -           | []byte    | -           |              | -               | -      | -      |
 | Int(16)   | int             | float64, json.Number         | int16           | int64       | []byte    | -           |              | -               | -      | -      |
