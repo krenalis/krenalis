@@ -164,7 +164,7 @@ type FilterCondition struct {
 
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
 	Connection        int
-	ExternalId        LabelValue
+	IdentityId        LabelValue
 	DisplayedProperty string
 	AnonymousIds      []string
 	LastChangeTime    time.Time

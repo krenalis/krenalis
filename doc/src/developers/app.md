@@ -100,7 +100,7 @@ The `AppInfo` type describes information about the app connector:
 - `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
-- `ExternalIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
+- `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 - `SuggestedDisplayedProperty`: suggestion for the property name to use as the displayed property. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
 - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Layouts](data-values.md#layouts) in [Data Values](data-values.md) for more details.

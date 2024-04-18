@@ -122,7 +122,7 @@ interface UserIdentityLabelValue {
 
 interface UserIdentity {
 	Connection: number;
-	ExternalId: UserIdentityLabelValue;
+	IdentityId: UserIdentityLabelValue;
 	DisplayedProperty: string;
 	AnonymousIds: string[] | null;
 	LastChangeTime: string;

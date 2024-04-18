@@ -1,7 +1,7 @@
 CREATE TABLE users_identities (
     "_identity_key" serial,
     "_connection" int NOT NULL DEFAULT 0,
-    "_external_id" text NOT NULL DEFAULT '',
+    "_identity_id" text NOT NULL DEFAULT '',
     "_displayed_property" varchar(40) NOT NULL DEFAULT '',
     "_anonymous_ids" text[],
     "_last_change_time" timestamp NOT NULL,

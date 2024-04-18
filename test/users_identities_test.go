@@ -117,27 +117,27 @@ func Test_UsersIdentities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for user with GID %d that has"+
-					" connection = %d, external ID = %v and last change time = %q",
-				id, identity.Connection, identity.ExternalId, identity.LastChangeTime)
+					" connection = %d, identity ID = %v and last change time = %q",
+				id, identity.Connection, identity.IdentityId, identity.LastChangeTime)
 
-			var externalIDPrefix string
+			var idPrefix string
 			switch identity.Connection {
 			case fs1:
-				externalIDPrefix = "users1_"
+				idPrefix = "users1_"
 			case fs2:
-				externalIDPrefix = "users2_"
+				idPrefix = "users2_"
 			default:
 				t.Fatalf("unexpected connection %d", identity.Connection)
 			}
 
-			// Check the External ID label.
-			extID := identity.ExternalId
-			const expectedExternalIDLabel = "ID"
-			if expectedExternalIDLabel != extID.Label {
-				t.Fatalf("expected External ID label %q, got %q", expectedExternalIDLabel, extID.Label)
+			// Check the identity ID label.
+			id := identity.IdentityId
+			const expectedIdentityIDLabel = "ID"
+			if expectedIdentityIDLabel != id.Label {
+				t.Fatalf("expected identity ID label %q, got %q", expectedIdentityIDLabel, id.Label)
 			}
-			if !strings.HasPrefix(extID.Value, externalIDPrefix) {
-				t.Fatalf("unexpected external ID %q, it should have prefix %q", extID, externalIDPrefix)
+			if !strings.HasPrefix(id.Value, idPrefix) {
+				t.Fatalf("unexpected identity ID %q, it should have prefix %q", id, idPrefix)
 			}
 
 			// Check the displayed property.

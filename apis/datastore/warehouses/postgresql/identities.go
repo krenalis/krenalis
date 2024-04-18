@@ -139,16 +139,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
 			query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
-				" AND _external_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _last_change_time, _identity_key"
+				" AND _identity_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _last_change_time, _identity_key"
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
-				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _last_change_time, _identity_key"
+				" AND (_identity_id = $2) OR (_identity_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _last_change_time, _identity_key"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
 		query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
-			" AND _external_id = $2 ORDER BY _last_change_time, _identity_key"
+			" AND _identity_id = $2 ORDER BY _last_change_time, _identity_key"
 		args = []any{connection, id}
 	}
 	var matchingIdentities []int
@@ -178,7 +178,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	warehouses.SerializeRow(newIdentity, schema)
 
 	newIdentity["_connection"] = connection
-	newIdentity["_external_id"] = id
+	newIdentity["_identity_id"] = id
 	newIdentity["_last_change_time"] = lastChangeTime.Format(time.DateTime)
 	newIdentity["_displayed_property"] = displayedProperty
 	if anonID != "" {
@@ -259,7 +259,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Merge the other fields.
 	for _, p := range tableColumns {
-		if p == "_connection" || p == "_anonymous_ids" || p == "_external_id" || p == "_last_change_time" {
+		if p == "_connection" || p == "_anonymous_ids" || p == "_identity_id" || p == "_last_change_time" {
 			continue
 		}
 		b.Reset()

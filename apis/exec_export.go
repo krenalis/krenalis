@@ -363,9 +363,9 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	return nil
 }
 
-// resolveExternalIdentities resolves the external identities of user and
-// returns its external IDs, if resolved, or the empty slice if such user does
-// not exist on the remote app.
+// resolveExternalIdentities resolves the external identities of the user and
+// returns its external app identifiers, if resolved, or the empty slice if such
+// user does not exist on the remote app.
 func (this *Action) resolveExternalIdentities(ctx context.Context, user warehouses.Record) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
@@ -377,11 +377,11 @@ func (this *Action) resolveExternalIdentities(ctx context.Context, user warehous
 		return nil, err
 	}
 	c := this.connection
-	externalIDs, err := c.store.DestinationUsers(ctx, this.action.ID, string(p))
+	ids, err := c.store.DestinationUsers(ctx, this.action.ID, string(p))
 	if err != nil {
 		return nil, err
 	}
-	return externalIDs, nil
+	return ids, nil
 }
 
 // newPathPlaceholderReplacer returns a placeholder replacer that replaces the

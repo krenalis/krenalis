@@ -112,20 +112,22 @@ func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection i
 	return store.warehouse.DeleteConnectionIdentities(ctx, connection)
 }
 
-// DestinationUsers returns the external IDs of the destination users of the
-// action whose external matching property value matches with the given property
-// value. If it cannot be found, then an empty slice and false are returned.
+// DestinationUsers returns the external app identifiers of the destination
+// users of the action whose external matching property value matches with the
+// given property value. If it cannot be found, then an empty slice and false
+// are returned.
 func (store *Store) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	store.mustBeOpen()
 	return store.warehouse.DestinationUsers(ctx, action, propertyValue)
 }
 
-// DuplicatedDestinationUsers returns the external IDs of two users on the
-// action which have the same value for the matching property, along with true.
+// DuplicatedDestinationUsers returns the external app identifiers of two users
+// on the action which have the same value for the matching property, along with
+// true.
 //
-// If there are no users on the action matching this condition, no external IDs
-// are returned and the returned boolean is false. If an error occurs with the
-// data warehouse, it returns a *DataWarehouseError error.
+// If there are no users on the action matching this condition, no external app
+// identifiers are returned and the returned boolean is false. If an error
+// occurs with the data warehouse, it returns a *DataWarehouseError error.
 func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
 	store.mustBeOpen()
 	return store.warehouse.DuplicatedDestinationUsers(ctx, action)

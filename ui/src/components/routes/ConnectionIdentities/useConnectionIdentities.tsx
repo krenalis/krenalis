@@ -62,7 +62,7 @@ const useConnectionIdentities = () => {
 				type: 'DateTime',
 			},
 			{
-				name: identities[0].ExternalId.Label,
+				name: identities[0].IdentityId.Label,
 			},
 		];
 		if (isDisplayedPropertyDefined) {
@@ -80,8 +80,8 @@ const useConnectionIdentities = () => {
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
 			const row: GridRow = {
-				cells: [identity.LastChangeTime, identity.ExternalId.Value],
-				key: identity.ExternalId.Value,
+				cells: [identity.LastChangeTime, identity.IdentityId.Value],
+				key: identity.IdentityId.Value,
 			};
 			if (isDisplayedPropertyDefined) {
 				row.cells.push(identity.DisplayedProperty);

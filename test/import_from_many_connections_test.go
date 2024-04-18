@@ -225,7 +225,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		dummyIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
 			Connection:        dummy,
-			ExternalId:        chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
+			IdentityId:        chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
 			DisplayedProperty: "kbuessen0@example.com",
 			AnonymousIds:      nil,
 			LastChangeTime:    time.Time{},
@@ -236,7 +236,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		csvIdentity := identities[1]
 		assertEqualIdentity(csvIdentity, chichitester.UserIdentity{
 			Connection: fs,
-			ExternalId: chichitester.LabelValue{
+			IdentityId: chichitester.LabelValue{
 				Label: "ID",
 				Value: "1",
 			},
@@ -251,7 +251,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
 			Connection:        javaScript,
-			ExternalId:        chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
+			IdentityId:        chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
 			DisplayedProperty: "kbuessen0@example.com",
 			AnonymousIds:      []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			LastChangeTime:    time.Time{},

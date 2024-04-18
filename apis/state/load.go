@@ -66,7 +66,7 @@ func (state *State) load() error {
 						mode := Combined
 						c.SendingMode = &mode
 					}
-					c.ExternalIDLabel = app.ExternalIDLabel
+					c.IdentityIDLabel = app.IdentityIDLabel
 					c.SuggestedDisplayedProperty = app.SuggestedDisplayedProperty
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
 					if app.OAuth.AuthURL != "" {

@@ -326,7 +326,7 @@
 	left: 2px;
 }
 
-.users-list .user-drawer .user-drawer__identity-external-id,
+.users-list .user-drawer .user-drawer__identity-id,
 .users-list .user-drawer .user-drawer__identity-displayed-property,
 .users-list .user-drawer .user-drawer__identity-anonymous-ids {
 	font-weight: 500;

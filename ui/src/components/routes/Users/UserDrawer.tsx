@@ -269,8 +269,8 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 													)}
 												</div>
 											</div>
-											<div className='user-drawer__identity-external-id'>
-												{identity.ExternalId.Label}: <code>{identity.ExternalId.Value}</code>
+											<div className='user-drawer__identity-id'>
+												{identity.IdentityId.Label}: <code>{identity.IdentityId.Value}</code>
 											</div>
 											<div className='user-drawer__identity-displayed-property'>
 												Displayed property: <code>{identity.DisplayedProperty}</code>

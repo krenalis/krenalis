@@ -122,7 +122,7 @@ AS $$
         "events"."source" = "users_identities"."_connection"
             AND
         (
-            ("events"."user_id" <> '' AND "events"."user_id" = "users_identities"."_external_id")
+            ("events"."user_id" <> '' AND "events"."user_id" = "users_identities"."_identity_id")
                 OR
             ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("users_identities"."_anonymous_ids"))
         );

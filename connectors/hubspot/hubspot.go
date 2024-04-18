@@ -49,7 +49,7 @@ func init() {
 		DestinationDescription:     "export users as contacts and groups as companies to HubSpot",
 		TermForUsers:               "contacts",
 		TermForGroups:              "companies",
-		ExternalIDLabel:            "HubSpot ID",
+		IdentityIDLabel:            "HubSpot ID",
 		SuggestedDisplayedProperty: "email",
 		Icon:                       icon,
 		WebhooksPer:                chichi.WebhooksPerConnector,

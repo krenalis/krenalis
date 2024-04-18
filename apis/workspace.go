@@ -1582,7 +1582,7 @@ type labelValue struct {
 }
 type identity struct {
 	Connection        int
-	ExternalId        labelValue // zero struct for identities imported from anonymous events.
+	IdentityId        labelValue // zero struct for identities imported from anonymous events.
 	DisplayedProperty string     // empty string for identities with no displayed property.
 	AnonymousIds      []string   // nil for identities not imported from events.
 	LastChangeTime    time.Time
@@ -1603,14 +1603,14 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 	// Retrieve the identities from the data warehouse.
 	schema := types.Object([]types.Property{
 		{Name: "Connection", Type: types.Int(32)},
-		{Name: "ExternalId", Type: types.Text()},
+		{Name: "IdentityId", Type: types.Text()},
 		{Name: "LastChangeTime", Type: types.DateTime()},
 		{Name: "Gid", Type: types.Int(32)},
 		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
 		{Name: "DisplayedProperty", Type: types.Text().WithCharLen(40)},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
+		Properties: []types.Path{{"Connection"}, {"IdentityId"}, {"AnonymousIds"},
 			{"LastChangeTime"}, {"DisplayedProperty"}},
 		Where:   where,
 		OrderBy: types.Property{Name: "IdentityKey", Type: types.Int(32)},
@@ -1638,27 +1638,27 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 			return nil
 		}
 
-		// Determine the value for the external ID, which may be the empty
+		// Determine the value for the identity ID, which may be the empty
 		// string for identities incoming from anonymous events.
-		extIDValue := record.Properties["ExternalId"].(string)
+		identityID := record.Properties["IdentityId"].(string)
 
-		// Determine the label for the External ID, except for the case of
+		// Determine the label for the Identity ID, except for the case of
 		// "anonymous identities", which are identities imported from anonymous
-		// events. In that case, both the External ID value and label must be
+		// events. In that case, both the Identity ID value and label must be
 		// empty.
-		var extIDLabel string
-		if extIDValue != "" {
+		var identityIDLabel string
+		if identityID != "" {
 			c := conn.Connector()
 			switch c.Type {
 			case state.AppType:
-				extIDLabel = c.ExternalIDLabel
-				if extIDLabel == "" {
-					extIDLabel = "ID"
+				identityIDLabel = c.IdentityIDLabel
+				if identityIDLabel == "" {
+					identityIDLabel = "ID"
 				}
 			case state.DatabaseType, state.FileStorageType:
-				extIDLabel = "ID"
+				identityIDLabel = "ID"
 			case state.MobileType, state.ServerType, state.WebsiteType:
-				extIDLabel = "User ID"
+				identityIDLabel = "User ID"
 			default:
 				return fmt.Errorf("unexpected connector type %v", c.Type)
 			}
@@ -1681,9 +1681,9 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 
 		identities = append(identities, identity{
 			Connection: connID,
-			ExternalId: labelValue{
-				Label: extIDLabel,
-				Value: extIDValue,
+			IdentityId: labelValue{
+				Label: identityIDLabel,
+				Value: identityID,
 			},
 			DisplayedProperty: displayedProperty,
 			AnonymousIds:      anonIDs,

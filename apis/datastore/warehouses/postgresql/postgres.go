@@ -135,20 +135,20 @@ func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, p
 		return nil, warehouses.Error(err)
 	}
 	defer rows.Close()
-	externalIDs := []string{}
+	ids := []string{}
 	for rows.Next() {
-		var extID string
-		err := rows.Scan(&extID)
+		var id string
+		err := rows.Scan(&id)
 		if err != nil {
 			return nil, warehouses.Error(err)
 		}
-		externalIDs = append(externalIDs, extID)
+		ids = append(ids, id)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, warehouses.Error(err)
 	}
-	return externalIDs, nil
+	return ids, nil
 }
 
 // DuplicatedDestinationUsers retrieves duplicated destination users.

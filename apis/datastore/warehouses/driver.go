@@ -124,18 +124,19 @@ type Warehouse interface {
 	DeleteConnectionIdentities(ctx context.Context, connection int) error
 
 	// DestinationUsers returns the destination users of the action.
-	// In particular, returns the external IDs of the destination users of the
-	// action whose external matching property value matches with the given property
-	// value. If it cannot be found, then the empty string and false are returned.
+	// In particular, returns the external app identifiers of the destination users
+	// of the action whose external matching property value matches with the given
+	// property value. If it cannot be found, then the empty string and false are
+	// returned.
 	DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error)
 
 	// DuplicatedDestinationUsers retrieves duplicated destination users.
-	// In particular, it returns the external IDs of two users on the
+	// In particular, it returns the external app identifiers of two users on the
 	// action which have the same value for the matching property, along with true.
 	//
-	// If there are no users on the action matching this condition, no external IDs
-	// are returned and the returned boolean is false. If an error occurs with the
-	// data warehouse, it returns a *DataWarehouseError error.
+	// If there are no users on the action matching this condition, no external app
+	// identifiers are returned and the returned boolean is false. If an error
+	// occurs with the data warehouse, it returns a *DataWarehouseError error.
 	DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error)
 
 	// DuplicatedUsers returns the GIDs of two duplicated users.
@@ -289,7 +290,7 @@ type IdentitiesWriter interface {
 
 // Identity is a user identity to be written on the data warehouse.
 type Identity struct {
-	ID                string // external ID.
+	ID                string
 	Properties        map[string]any
 	AnonymousID       string    // empty string if not present.
 	DisplayedProperty string    // cannot be longer than 40 runes.
