@@ -1613,7 +1613,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		Properties: []types.Path{{"Connection"}, {"ExternalId"}, {"AnonymousIds"},
 			{"LastChangeTime"}, {"DisplayedProperty"}},
 		Where:   where,
-		OrderBy: types.Property{Name: "IdentityId", Type: types.Int(32)},
+		OrderBy: types.Property{Name: "IdentityKey", Type: types.Int(32)},
 		Schema:  schema,
 		First:   first,
 		Limit:   limit,

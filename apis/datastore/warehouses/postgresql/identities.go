@@ -138,17 +138,17 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	var args []any
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
-			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND _external_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _last_change_time, _identity_id"
+			query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
+				" AND _external_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _last_change_time, _identity_key"
 			args = []any{connection, anonID}
 		} else {
-			query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _last_change_time, _identity_id"
+			query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
+				" AND (_external_id = $2) OR (_external_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _last_change_time, _identity_key"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
-		query = "SELECT _identity_id FROM users_identities WHERE _connection = $1" +
-			" AND _external_id = $2 ORDER BY _last_change_time, _identity_id"
+		query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
+			" AND _external_id = $2 ORDER BY _last_change_time, _identity_key"
 		args = []any{connection, id}
 	}
 	var matchingIdentities []int
@@ -170,7 +170,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	}
 
 	// Create the new identity.
-	var newIdentityID int
+	var newIdentityKey int
 
 	newIdentity := make(map[string]any, len(identity)+3)
 	maps.Copy(newIdentity, identity)
@@ -206,8 +206,8 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(strconv.Itoa(i + 1))
 		values[i] = newIdentity[name]
 	}
-	b.WriteString(") RETURNING _identity_id")
-	err = db.QueryRow(ctx, b.String(), values...).Scan(&newIdentityID)
+	b.WriteString(") RETURNING _identity_key")
+	err = db.QueryRow(ctx, b.String(), values...).Scan(&newIdentityKey)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -225,7 +225,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		idsStr.WriteString(strconv.Itoa(id))
 		idsStr.WriteByte(',')
 	}
-	idsStr.WriteString(strconv.Itoa(newIdentityID))
+	idsStr.WriteString(strconv.Itoa(newIdentityKey))
 
 	// Merge the anonymous IDS.
 	b.Reset()
@@ -234,12 +234,12 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		FROM (
 			SELECT unnest("_anonymous_ids") as ids
 			FROM users_identities
-			WHERE _identity_id IN (`)
+			WHERE _identity_key IN (`)
 	b.WriteString(idsStr.String())
 	b.WriteString(`) AND _anonymous_ids IS NOT NULL
 			) AS anon_ids
-		) WHERE _identity_id = $1`)
-	_, err = db.Exec(ctx, b.String(), newIdentityID)
+		) WHERE _identity_key = $1`)
+	_, err = db.Exec(ctx, b.String(), newIdentityKey)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -269,11 +269,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" FROM users_identities WHERE "`)
 		b.WriteString(p)
-		b.WriteString(`" IS NOT NULL AND _identity_id IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
+		b.WriteString(`" IS NOT NULL AND _identity_key IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
 		b.WriteString(idsStr.String())
-		b.WriteString(") ORDER BY _last_change_time DESC, _identity_id DESC LIMIT 1)\n")
-		b.WriteString(` WHERE _identity_id = $1`)
-		_, err = db.Exec(ctx, b.String(), newIdentityID)
+		b.WriteString(") ORDER BY _last_change_time DESC, _identity_key DESC LIMIT 1)\n")
+		b.WriteString(` WHERE _identity_key = $1`)
+		_, err = db.Exec(ctx, b.String(), newIdentityKey)
 		if err != nil {
 			return warehouses.Error(err)
 		}
@@ -288,7 +288,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		idsToDelete.WriteString(strconv.Itoa(id))
 	}
 	b.Reset()
-	b.WriteString("DELETE FROM users_identities WHERE _identity_id IN (")
+	b.WriteString("DELETE FROM users_identities WHERE _identity_key IN (")
 	b.WriteString(idsToDelete.String())
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())

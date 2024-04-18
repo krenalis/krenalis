@@ -333,7 +333,7 @@ func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQue
 		Table:      "users_identities",
 		Schema:     query.Schema,
 		Properties: query.Properties,
-		ID:         types.Property{Name: "IdentityId", Type: types.Int(32)},
+		ID:         types.Property{Name: "IdentityKey", Type: types.Int(32)},
 		Where:      query.Where,
 		OrderBy:    query.OrderBy,
 		OrderDesc:  query.OrderDesc,

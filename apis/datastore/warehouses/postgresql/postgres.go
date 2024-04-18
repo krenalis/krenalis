@@ -472,7 +472,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`"__identity_ids__"`)
+	usersSyncQueries.WriteString(`"__identity_keys__"`)
 	usersSyncQueries.WriteString(") SELECT\n")
 	for _, c := range usersColumns {
 		if c.Name == "_id" {
@@ -485,7 +485,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "_identity_id")`)
+	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "_identity_key")`)
 	usersSyncQueries.WriteString(" FROM users_identities GROUP BY __cluster__")
 
 	// Replace the placeholders in the stored procedure query and run it.
