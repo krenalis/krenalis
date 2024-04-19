@@ -34,7 +34,7 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	return ws.AddConnection(r.Context(), body.Connection, body.OAuthToken)
 }
@@ -53,7 +53,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	var size = 10
 	if body.Size != nil {
@@ -78,7 +78,7 @@ func (workspace workspace) ChangeUsersSchema(_ http.ResponseWriter, r *http.Requ
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.ChangeUsersSchema(r.Context(), body.Schema, body.RePaths)
 	return nil, err
@@ -97,7 +97,7 @@ func (workspace workspace) ChangeUsersSchemaQueries(_ http.ResponseWriter, r *ht
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	queries, err := ws.ChangeUsersSchemaQueries(r.Context(), body.Schema, body.RePaths)
 	if err != nil {
@@ -119,7 +119,7 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.ChangeWarehouseSettings(r.Context(), body.Type, body.Settings)
 	return nil, err
@@ -163,7 +163,7 @@ func (workspace workspace) ConnectWarehouse(_ http.ResponseWriter, r *http.Reque
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.ConnectWarehouse(r.Context(), body.Type, body.Settings)
 	return nil, err
@@ -242,7 +242,7 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	return ws.OAuthToken(r.Context(), body.OAuthCode, body.RedirectURI, body.Connector)
 }
@@ -260,7 +260,7 @@ func (workspace workspace) PingWarehouse(_ http.ResponseWriter, r *http.Request)
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.PingWarehouse(r.Context(), body.Type, body.Settings)
 	return nil, err
@@ -310,7 +310,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	if strings.HasSuffix(r.URL.Path, "/ui") {
 		body.Event = "load"
@@ -348,7 +348,7 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.Set(r.Context(), body.Name, body.PrivacyRegion, body.DisplayedProperties)
 	return nil, err
@@ -365,7 +365,7 @@ func (workspace workspace) SetIdentifiers(_ http.ResponseWriter, r *http.Request
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.SetIdentifiers(r.Context(), body.Identifiers)
 	return nil, err
@@ -388,7 +388,7 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	users, schema, count, err := ws.Users(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, body.Limit)
 	if err != nil {

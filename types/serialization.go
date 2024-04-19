@@ -65,7 +65,7 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 	dec.UseNumber()
 	t2, err := unmarshalType(dec)
 	if err != nil && err != errNullToken {
-		return err
+		return fmt.Errorf("json: %s", err)
 	}
 	*t = t2
 	return nil
@@ -240,11 +240,11 @@ func (p *Property) UnmarshalJSON(data []byte) error {
 	}
 	d, ok := tok.(json.Delim)
 	if !ok || d != '{' {
-		return errors.New("invalid property syntax")
+		return errors.New("json: invalid property syntax")
 	}
 	p2, err := unmarshalProperty(dec)
 	if err != nil {
-		return err
+		return fmt.Errorf("json: %s", err)
 	}
 	*p = p2
 	return nil
@@ -957,7 +957,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 		if key == "type" {
 			if p.Type.Valid() {
-				return Property{}, errors.New("repeated 'type' key")
+				return Property{}, errors.New("json: repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec)
 			if err != nil {
@@ -977,7 +977,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 		switch key {
 		case "name":
 			if p.Name != "" {
-				return Property{}, errors.New("repeated 'name' key")
+				return Property{}, errors.New("json: repeated 'name' key")
 			}
 			p.Name, ok = tok.(string)
 			if !ok {

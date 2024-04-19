@@ -2034,11 +2034,11 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.Role value: %s", err)
+		return err
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.Role value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an api.Role value", v)
 	}
 	var r Role
 	switch s {
@@ -2047,7 +2047,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	case "Destination":
 		r = Destination
 	default:
-		return fmt.Errorf("invalid apis.Role: %s", s)
+		return fmt.Errorf("json: invalid apis.Role: %s", s)
 	}
 	*role = r
 	return nil

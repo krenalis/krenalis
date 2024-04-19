@@ -32,7 +32,7 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = api.apis.AcceptInvitation(r.Context(), r.PathValue("token"), body.Name, body.Password)
 	return nil, err
@@ -78,7 +78,7 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	return api.apis.ExpressionsProperties(body.Expressions, body.Schema)
 }
@@ -118,7 +118,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	data, err := api.apis.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation)
 	if err != nil {
@@ -150,7 +150,7 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	message := api.apis.ValidateExpression(body.Expression, body.Properties, body.Type, body.Required, body.Nullable)
 	return message, nil

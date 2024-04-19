@@ -42,7 +42,7 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	ui, err := a.ServeUI(r.Context(), body.Event, body.Values)
 	if err != nil {
@@ -63,7 +63,7 @@ func (action action) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
 	var body apis.ActionToSet
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = a.Set(r.Context(), body)
 	return nil, err
@@ -80,7 +80,7 @@ func (action action) SetStatus(_ http.ResponseWriter, r *http.Request) (any, err
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = a.SetStatus(r.Context(), body.Enabled)
 	return nil, err
@@ -97,7 +97,7 @@ func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = a.SetSchedulePeriod(r.Context(), body.SchedulePeriod)
 	return nil, err
@@ -114,7 +114,7 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = a.Execute(r.Context(), body.Reimport)
 	return nil, err

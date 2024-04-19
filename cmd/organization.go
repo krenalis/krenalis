@@ -34,7 +34,7 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion)
 	if err != nil {
@@ -65,7 +65,7 @@ func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Req
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	emailTemplate := strings.ReplaceAll(inviteMemberEmail, "${invitationFrom}", html.EscapeString(member.Email))
 	emailTemplate = strings.ReplaceAll(emailTemplate, "${organization}", html.EscapeString(o.Name))
@@ -98,7 +98,7 @@ func (organization organization) SetMember(_ http.ResponseWriter, r *http.Reques
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	memberToSet := apis.MemberToSet{
 		Name:     body.MemberToSet.Name,

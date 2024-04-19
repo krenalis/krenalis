@@ -60,7 +60,7 @@ func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	return c.AddAction(r.Context(), body.Target, body.EventType, body.Action)
 }
@@ -91,7 +91,7 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	users, cursor, err := c.AppUsers(r.Context(), body.Schema, body.Cursor)
 	if err != nil {
@@ -135,7 +135,7 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	rows, schema, err := c.ExecQuery(r.Context(), body.Query, body.Limit)
 	if err != nil {
@@ -165,7 +165,7 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	identities, count, err := c.Identities(r.Context(), body.First, body.Limit)
 	if err != nil {
@@ -209,7 +209,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	preview, err := c.PreviewSendEvent(r.Context(), body.EventType, body.Event, body.Transformation, body.OutSchema)
 	if err != nil {
@@ -235,7 +235,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	records, schema, err := c.Records(r.Context(), body.FileConnector, body.Path, body.Sheet, body.Compression, body.UIValues, body.Limit)
 	if err != nil {
@@ -284,7 +284,7 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 	} else {
 		err = json.NewDecoder(r.Body).Decode(&body)
 		if err != nil {
-			return nil, err
+			return nil, errors.BadRequest("%s", err)
 		}
 	}
 	ui, err := c.ServeUI(r.Context(), body.Event, body.Values)
@@ -307,7 +307,7 @@ func (connection connection) Set(_ http.ResponseWriter, r *http.Request) (any, e
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	err = c.Set(r.Context(), body.Connection)
 	return nil, err
@@ -327,7 +327,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, body.UIValues, body.Compression)
 	if err != nil {

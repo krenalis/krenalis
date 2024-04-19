@@ -47,7 +47,7 @@ func (user user) Identities(_ http.ResponseWriter, r *http.Request) (any, error)
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return nil, err
+		return nil, errors.BadRequest("%s", err)
 	}
 	identities, count, err := u.Identities(r.Context(), body.First, body.Limit)
 	if err != nil {

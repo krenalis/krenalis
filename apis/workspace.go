@@ -1541,11 +1541,11 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a WarehouseType value: %s", err)
+		return err
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an WarehouseType value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an WarehouseType value", v)
 	}
 	var t WarehouseType
 	switch s {
@@ -1560,7 +1560,7 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 	case "Snowflake":
 		t = Snowflake
 	default:
-		return fmt.Errorf("invalid WarehouseType: %s", s)
+		return fmt.Errorf("json: invalid WarehouseType: %s", s)
 	}
 	*typ = t
 	return nil

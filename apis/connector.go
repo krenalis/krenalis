@@ -92,11 +92,11 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.ConnectorType value: %s", err)
+		return err
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.ConnectorType value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an api.ConnectorType value", v)
 	}
 	var t ConnectorType
 	switch s {
@@ -117,7 +117,7 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	case "Website":
 		t = WebsiteType
 	default:
-		return fmt.Errorf("invalid apis.ConnectionType: %s", s)
+		return fmt.Errorf("json: invalid apis.ConnectionType: %s", s)
 	}
 	*typ = t
 	return nil

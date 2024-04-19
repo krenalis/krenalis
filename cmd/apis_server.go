@@ -155,10 +155,6 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		s.mux.HandleFunc(rewrittenPath(path), func(w http.ResponseWriter, r *http.Request) {
 			response, err := serve(w, r)
 			if err != nil {
-				switch err.(type) {
-				case *json.SyntaxError:
-					err = errors.BadRequest("invalid JSON")
-				}
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
 					return

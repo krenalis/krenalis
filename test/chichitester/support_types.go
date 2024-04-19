@@ -260,11 +260,11 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into an apis.SchedulePeriod value: %s", err)
+		return err
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.SchedulePeriod value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an api.SchedulePeriod value", v)
 	}
 	var p SchedulePeriod
 	switch s {
@@ -289,7 +289,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	case "24h":
 		p = 1440
 	default:
-		return fmt.Errorf("invalid apis.SchedulePeriod: %s", s)
+		return fmt.Errorf("json: invalid apis.SchedulePeriod: %s", s)
 	}
 	*period = p
 	return nil
@@ -324,11 +324,11 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	var v any
 	err := json.Unmarshal(data, &v)
 	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.Target value: %s", err)
+		return err
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.Target value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an api.Target value", v)
 	}
 	switch s {
 	case "Events":
@@ -338,7 +338,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	case "Groups":
 		*at = Groups
 	default:
-		return fmt.Errorf("invalid apis.Target: %s", s)
+		return fmt.Errorf("json: invalid apis.Target: %s", s)
 	}
 	return nil
 }
