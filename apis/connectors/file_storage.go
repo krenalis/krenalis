@@ -80,7 +80,7 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // and limit restricts the number of records to return. If limit is negative,
 // there is no upper limit on the number of records returned.
 //
-// If the UI values are not valid, it returns an *InvalidUIValuesError error.
+// If the UI values are not valid, it returns an InvalidUIValuesError error.
 // If the file has no columns, it returns the ErrNoColumns error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
 func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
@@ -110,10 +110,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	if file.HasUI {
 		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
 		if err != nil {
-			if err, ok := err.(chichi.InvalidUIValuesError); ok {
-				return nil, nil, &InvalidUIValuesError{Msg: err.Error()}
-			}
-			return nil, nil, fmt.Errorf("connector %s has returned an unexpected error serving the UI with a 'save' event: %s", file.Name, err)
+			return nil, nil, err
 		}
 	}
 
@@ -140,7 +137,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // uiValues, if the file connector has a UI, represents the user-entered values
 // as a JSON object. compression indicates if the file is compressed and how.
 //
-// If the UI values are not valid, it returns an *InvalidUIValuesError error.
+// If the UI values are not valid, it returns an InvalidUIValuesError error.
 // It panics if the file connector does not support sheets.
 func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, uiValues []byte, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
@@ -157,10 +154,7 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	if file.HasUI {
 		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
 		if err != nil {
-			if err, ok := err.(chichi.InvalidUIValuesError); ok {
-				return nil, &InvalidUIValuesError{Msg: err.Error()}
-			}
-			return nil, fmt.Errorf("connector %s has returned an unexpected error serving the UI with a 'save' event: %s", file.Name, err)
+			return nil, err
 		}
 	}
 

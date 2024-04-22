@@ -141,21 +141,14 @@ type LastChangeTimeProperty struct {
 
 // An InvalidUIValuesError is returned by UI-related functions when the
 // user-entered values passed as an argument are not valid.
-type InvalidUIValuesError struct {
-	Msg string
-}
-
-func (err InvalidUIValuesError) Error() string {
-	return err.Msg
-}
+type InvalidUIValuesError = chichi.InvalidUIValuesError
 
 var (
-	ErrEventNotExist       = errors.New("user interface event does not exist")
 	ErrEventTypeNotExist   = chichi.ErrEventTypeNotExist
 	ErrNoColumns           = errors.New("file has no columns")
-	ErrNoUserInterface     = errors.New("connector has no user interface")
 	ErrNoWebhooks          = errors.New("app has no webhooks")
 	ErrSheetNotExist       = errors.New("sheet does not exist")
+	ErrUIEventNotExist     = chichi.ErrUIEventNotExist
 	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
 )
 

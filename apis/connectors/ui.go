@@ -24,10 +24,9 @@ import (
 // returns the new serialized interface to be sent back to the client. event is
 // the event to be served, and values are the user-entered values.
 //
-// It returns the ErrNoUserInterface error if the connector does not have a user
-// interface.
-// It returns the ErrEventNotExist error if the event does not exist.
-// It returns an *InvalidUIValuesError error value if the values are not valid.
+// It returns the ErrUIEventNotExist error if the event does not exist.
+// It returns an InvalidUIValuesError error value if the values are not valid.
+// It panics if the connector has no UI.
 func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values []byte) ([]byte, error) {
 	role := chichi.Role(action.Connection().Role)
 	c := action.Connector()
@@ -39,18 +38,8 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 	if err != nil {
 		return nil, err
 	}
-	uih, ok := inner.(chichi.UIHandler)
-	if !ok {
-		return nil, ErrNoUserInterface
-	}
-	ui, err := uih.ServeUI(ctx, event, values)
+	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values)
 	if err != nil {
-		if err == chichi.ErrUIEventNotExist {
-			return nil, ErrEventNotExist
-		}
-		if err, ok := err.(chichi.InvalidUIValuesError); ok {
-			return nil, &InvalidUIValuesError{Msg: err.Error()}
-		}
 		return nil, err
 	}
 	return marshalUI(ui, role)
@@ -60,10 +49,9 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 // returns the new serialized interface to be sent back to the client. event
 // is the event to be served, and values are the user-entered values.
 //
-// It returns the ErrNoUserInterface error if the connector does not have a user
-// interface.
-// It returns the ErrEventNotExist error if the event does not exist.
-// It returns an *InvalidUIValuesError error value if the values are not valid.
+// It returns the ErrUIEventNotExist error if the event does not exist.
+// It returns an InvalidUIValuesError error value if the values are not valid.
+// It panics if the connector has no UI.
 func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values []byte) ([]byte, error) {
 	var resourceID int
 	var resourceCode string
@@ -127,18 +115,8 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	if err != nil {
 		return nil, err
 	}
-	uih, ok := inner.(chichi.UIHandler)
-	if !ok {
-		return nil, ErrNoUserInterface
-	}
-	ui, err := uih.ServeUI(ctx, event, values)
+	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values)
 	if err != nil {
-		if err == chichi.ErrUIEventNotExist {
-			return nil, ErrEventNotExist
-		}
-		if err, ok := err.(chichi.InvalidUIValuesError); ok {
-			return nil, &InvalidUIValuesError{Msg: err.Error()}
-		}
 		return nil, err
 	}
 	return marshalUI(ui, role)
@@ -156,10 +134,9 @@ type ConnectorConfig struct {
 // returns the new serialized interface to be sent back to the client. event
 // is the event to be served, and values are the user-entered values.
 //
-// It returns the ErrNoUserInterface error if the connector does not have a user
-// interface.
-// It returns the ErrEventNotExist error if the event does not exist.
-// It returns an *InvalidUIValuesError error value if the values are not valid.
+// It returns the ErrUIEventNotExist error if the event does not exist.
+// It returns an InvalidUIValuesError error value if the values are not valid.
+// It panics if the connector has no UI.
 func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values []byte) ([]byte, error) {
 	var inner any
 	var err error
@@ -193,18 +170,8 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	if err != nil {
 		return nil, err
 	}
-	uih, ok := inner.(chichi.UIHandler)
-	if !ok {
-		return nil, ErrNoUserInterface
-	}
-	ui, err := uih.ServeUI(ctx, event, values)
+	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values)
 	if err != nil {
-		if err == chichi.ErrUIEventNotExist {
-			return nil, ErrEventNotExist
-		}
-		if err, ok := err.(chichi.InvalidUIValuesError); ok {
-			return nil, &InvalidUIValuesError{Msg: err.Error()}
-		}
 		return nil, err
 	}
 	return marshalUI(ui, role)
@@ -213,7 +180,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 // UpdatedSettings returns the settings, for the given connector, updated with
 // the provided user-entered values.
 //
-// It returns an *InvalidUIValuesError error value if the values are not valid.
+// It returns an InvalidUIValuesError error value if the values are not valid.
 // It panics if the connector has no UI.
 func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues []byte) ([]byte, error) {
 	var inner any
@@ -261,9 +228,6 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	}
 	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
 	if err != nil {
-		if err, ok := err.(chichi.InvalidUIValuesError); ok {
-			return nil, &InvalidUIValuesError{Msg: err.Error()}
-		}
 		return nil, err
 	}
 	return newSettings, nil

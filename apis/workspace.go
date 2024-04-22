@@ -66,9 +66,10 @@ var (
 // OAuth authentication.
 //
 // It returns an errors.UnprocessableError error with code
+//
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventConnectionNotExist, if an event connection does not exist.
-//   - InvalidUIValues, if the UI values are not valid.
+//   - InvalidUIValues, if the user-entered values are not valid.
 func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -223,17 +224,12 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			AccessToken:  n.Resource.AccessToken,
 			Region:       state.PrivacyRegion(this.PrivacyRegion),
 		}
-		var err error
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, c, conf, values)
 		if err != nil {
-			if err != connectors.ErrNoUserInterface {
-				return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
+			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+				err = errors.Unprocessable(InvalidUIValues, "%w", err2)
 			}
-			if connection.UIValues != nil {
-				return 0, errors.BadRequest("UI values cannot be provided because connector %s has no UI", c.Name)
-			}
-		} else if connection.UIValues == nil {
-			return 0, errors.BadRequest("UI values must be provided because connector %s has a UI", c.Name)
+			return 0, err
 		}
 	}
 
@@ -1042,8 +1038,10 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 // it is required if the connector requires OAuth.
 //
 // It returns an errors.UnprocessableError error with code:
-// - ConnectorNotExist, if the connector does not exist.
-// - EventNotExist, if the event does not exist.
+//
+//   - ConnectorNotExist, if the connector does not exist.
+//   - EventNotExist, if the event does not exist.
+//   - InvalidUIValues, if the user-entered values are not valid.
 func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector int, role Role, oAuth string) ([]byte, error) {
 
 	this.apis.mustBeOpen()
@@ -1057,6 +1055,10 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	c, ok := this.apis.state.Connector(connector)
 	if !ok {
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+	}
+
+	if !c.HasUI {
+		return nil, errors.BadRequest("connector %d does not have a UI", connector)
 	}
 
 	if (oAuth == "") != (c.OAuth == nil) {
@@ -1094,11 +1096,10 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	// before saving to database
 	ui, err := this.apis.connectors.ServeConnectorUI(ctx, c, conf, event, values)
 	if err != nil {
-		switch err {
-		case connectors.ErrNoUserInterface:
-			err = errors.BadRequest("connector %d does not have a UI", c.ID)
-		case connectors.ErrEventNotExist:
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
+		if err == connectors.ErrUIEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
+		} else if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+			err = errors.Unprocessable(InvalidUIValues, "%w", err2)
 		}
 		return nil, err
 	}

@@ -315,9 +315,10 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
+//
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorNotExist, if the file connector of the action does not exist.
-//   - InvalidUIValues, if the UI values are not valid.
+//   - InvalidUIValues, if the user-entered values are not valid.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TargetAlreadyExist, if an action already exists for a target for the
 //     connection.
@@ -478,7 +479,10 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
-			return 0, errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
+			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+				err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+			}
+			return 0, err
 		}
 	}
 
@@ -1018,7 +1022,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 // It returns an errors.UnprocessableError error with code
 //
 //   - ConnectorNotExist, if the connector does not exist.
-//   - InvalidUIValues, if the UI values are not valid.
+//   - InvalidUIValues, if the user-entered values are not valid.
 //   - NoColumns, if the file has no columns.
 //   - ReadFileFailed, if an error occurred reading the file.
 //   - SheetNotExist, if the file does not contain the provided sheet.
@@ -1088,14 +1092,15 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 
 	columns, records, err := this.storage().Read(ctx, file, path, sheet, uiValues, state.Compression(compression), limit)
 	if err != nil {
-		if _, ok := err.(*connectors.InvalidUIValuesError); ok {
-			return nil, types.Type{}, errors.Unprocessable(InvalidUIValues, "%s", err)
-		}
 		switch err {
-		case connectors.ErrSheetNotExist:
-			return nil, types.Type{}, errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		case connectors.ErrNoColumns:
 			return nil, types.Type{}, errors.Unprocessable(NoColumns, "file does not have columns")
+		case connectors.ErrSheetNotExist:
+			return nil, types.Type{}, errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
+		default:
+			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+				return nil, types.Type{}, errors.Unprocessable(InvalidUIValues, "%w", err2)
+			}
 		}
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", c.Connector().Name, err)
 	}
@@ -1404,10 +1409,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	req, err := this.app().EventRequest(ctx, typ, ev.ToConnectorEvent(), extra, outSchema, true)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
-			return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
-		}
-		if err, ok := err.(*connectors.SchemaError); ok {
-			return nil, errors.Unprocessable(NotCompatibleSchema, "out schema is not compatible with the event type's schema: %w", err)
+			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
+		} else if err2, ok := err.(*connectors.SchemaError); ok {
+			err = errors.Unprocessable(NotCompatibleSchema, "out schema is not compatible with the event type's schema: %w", err2)
 		}
 		return nil, err
 	}
@@ -1534,20 +1538,24 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 // ServeUI serves the user interface for the connection. event is the event and
 // values are the user-entered values in JSON format.
 //
-// If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExist.
+// It returns an errors.UnprocessableError error with code:
+//
+//   - EventNotExist, if the event does not exist.
+//   - InvalidUIValues, if the user-entered values are not valid.
 func (this *Connection) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
 	this.apis.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
+	connector := this.connection.Connector()
+	if !connector.HasUI {
+		return nil, errors.BadRequest("connector %d does not have a UI", connector.ID)
+	}
 	ui, err := this.apis.connectors.ServeConnectionUI(ctx, this.connection, event, values)
 	if err != nil {
-		name := this.connection.Connector().Name
-		switch err {
-		case connectors.ErrNoUserInterface:
-			err = errors.BadRequest("connector %s has no UI", name)
-		case connectors.ErrEventNotExist:
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, name)
+		if err == connectors.ErrUIEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
+		} else if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+			err = errors.Unprocessable(InvalidUIValues, "%w", err2)
 		}
 		return nil, err
 	}
@@ -1606,8 +1614,15 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 		return nil, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
 	}
 
+	if !file.HasSheets {
+		return nil, errors.BadRequest("connector %s does not have sheets", file.Name)
+	}
+
 	sheets, err := this.storage().Sheets(ctx, file, path, uiValues, state.Compression(compression))
 	if err != nil {
+		if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+			return nil, errors.Unprocessable(InvalidUIValues, "%w", err2)
+		}
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 

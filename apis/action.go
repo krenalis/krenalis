@@ -251,8 +251,10 @@ func (this *Action) Delete(ctx context.Context) error {
 // connection). event is the event to be served and values are the user-entered
 // values in JSON format.
 //
-// If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExist.
+// It returns an errors.UnprocessableError error with code:
+//
+//   - EventNotExist, if the event does not exist.
+//   - InvalidUIValues, if the user-entered values are not valid.
 func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
 	this.apis.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
@@ -261,13 +263,15 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 	if connector.Type != state.FileStorageType {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
+	if !connector.HasUI {
+		return nil, errors.BadRequest("connector %d does not have a UI", connector.ID)
+	}
 	ui, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
 	if err != nil {
-		switch err {
-		case connectors.ErrNoUserInterface:
-			err = errors.BadRequest("connector %d does not have a UI", connector.ID)
-		case connectors.ErrEventNotExist:
+		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
+		} else if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+			err = errors.Unprocessable(InvalidUIValues, "%w", err2)
 		}
 		return nil, err
 	}
@@ -314,8 +318,9 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // Refer to the specifications in the file "apis/Actions.md" for more details.
 //
 // It returns an errors.UnprocessableError error with code:
+//
 //   - ConnectorNotExist, if the connector does not exist.
-//   - InvalidUIValues, if the UI values are not valid.
+//   - InvalidUIValues, if the user-entered values are not valid.
 //   - LanguageNotSupported, if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
@@ -466,7 +471,10 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
-			return errors.Unprocessable(InvalidUIValues, "UI values are not valid: %w", err)
+			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
+				err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+			}
+			return err
 		}
 	}
 
