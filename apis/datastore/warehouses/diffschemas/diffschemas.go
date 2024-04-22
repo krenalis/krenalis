@@ -195,6 +195,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// in "rePaths" (the key is the name of the created property, the value
 		// is nil).
 		if v, ok := rePaths[keptPath]; ok && v == nil {
+			dropped[keptName] = true
 			operations = append(operations,
 				warehouses.AlterSchemaOperation{
 					Operation: warehouses.OperationDropProperty,

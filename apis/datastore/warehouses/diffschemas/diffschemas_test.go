@@ -627,6 +627,46 @@ func TestDiff(t *testing.T) {
 			}),
 			expectedErr: "old schema is not valid for diff: property cannot specify a role",
 		},
+		{
+			name: "https://github.com/open2b/chichi/issues/693 (1)",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+				{Name: "b", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+				{Name: "e", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "b", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+				{Name: "e", Type: types.Text()},
+				{Name: "a", Type: types.Text()},
+			}),
+			rePaths: map[string]any{"a": nil},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationDropProperty, Path: "a"},
+				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
+			},
+		},
+		{
+			name: "https://github.com/open2b/chichi/issues/693 (2)",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+				{Name: "e", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "e", Type: types.Text()},
+				{Name: "a", Type: types.Text()},
+			}),
+			rePaths: map[string]any{"a": nil},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationDropProperty, Path: "a"},
+				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
+			},
+		},
 	}
 
 	for _, test := range tests {
