@@ -31,10 +31,10 @@ import (
 // "users_identities") schema.
 type AlterSchemaOperation struct {
 	Operation OperationType
-	Path      string     // Property path.
-	Type      types.Type // Only for adding.
-	Nullable  bool       // Only for adding.
-	Name      string     // Only for renaming.
+	Path      string     // For "Add", "Drop" and "Rename" operations.
+	Type      types.Type // For "Add" operations.
+	Nullable  bool       // For "Add" operations.
+	Name      string     // For "Rename" operations.
 }
 
 // MergeTable represents a table in which rows will be merged.
