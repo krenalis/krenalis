@@ -118,8 +118,9 @@ func main() {
 		}
 	}
 
-	// Call command(s) on the workspace.
+	// Sync and vendor the workspace.
 	cmd("go", []string{"work", "sync"}, repo, ".", true)
+	cmd("go", []string{"work", "vendor"}, repo, ".", true)
 
 	// Run 'npm install' in the UI.
 	cmd("npm", []string{"install"}, repo, "ui", true)
