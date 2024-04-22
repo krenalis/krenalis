@@ -46,6 +46,8 @@ import {
 	MemberInvitationResponse,
 	UserIdentitiesResponse,
 	ConnectionIdentitiesResponse,
+	ChangeUsersSchemaQueriesResponse,
+	RePaths,
 } from '../../types/external/api';
 
 class API {
@@ -589,6 +591,23 @@ class Workspaces {
 
 	runIdentityResolution = async (): Promise<void> => {
 		return await call(`${this.apiURL}/run-identity-resolution`, http.POST);
+	};
+
+	changeUsersSchema = async (schema: ObjectType, rePaths: RePaths): Promise<void> => {
+		return await call(`${this.apiURL}/change-users-schema`, http.POST, {
+			schema,
+			rePaths,
+		});
+	};
+
+	changeUsersSchemaQueries = async (
+		schema: ObjectType,
+		rePaths: RePaths,
+	): Promise<ChangeUsersSchemaQueriesResponse> => {
+		return await call(`${this.apiURL}/change-users-schema-queries`, http.POST, {
+			schema,
+			rePaths,
+		});
 	};
 }
 

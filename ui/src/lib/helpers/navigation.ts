@@ -6,6 +6,7 @@ const FULLSCREEN_PATTERNS = [
 	'/ui/connections/:id/actions/add/event/:eventType',
 	'/ui/connections/:id/actions/add/event',
 	'/ui/connections/:id/actions/add/:actionTarget',
+	'/ui/schema/edit',
 ];
 
 export { FULLSCREEN_PATTERNS };

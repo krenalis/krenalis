@@ -1,0 +1,34 @@
+.schema-grid .schema-grid__toolbar {
+	display: flex;
+	justify-content: space-between;
+}
+
+.schema-grid .schema-grid__expansion-buttons {
+	display: flex;
+	gap: 15px;
+}
+
+.schema-grid .schema-grid__expansion-buttons sl-icon {
+	font-size: 16px;
+}
+
+.schema-grid .schema-grid__edit-button::part(base) {
+	min-width: 150px;
+}
+
+.schema-grid > .grid {
+	border-radius: 0;
+	border: 0;
+	box-shadow: none;
+}
+
+.schema-grid > .grid .noRows,
+.schema-grid > .grid .loading {
+	background-color: var(--bg-gray);
+}
+
+.schema-grid > .grid .gridHeaderRow {
+	position: sticky;
+	top: 0;
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+}

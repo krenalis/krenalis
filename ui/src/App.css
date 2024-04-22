@@ -53,13 +53,23 @@ body,
 *::after {
 	font-family: 'Inter', sans-serif;
 	box-sizing: border-box;
-	line-height: 1.5;
 	outline-color: var(--color-primary-500);
-	color: var(--sl-color-neutral-700);
 }
 
 *::part(base) {
 	font-family: Inter, sans-serif;
+}
+
+div,
+p,
+span,
+a,
+code {
+	line-height: 1.5;
+}
+
+button {
+	line-height: normal;
 }
 
 h1,
@@ -138,12 +148,9 @@ sl-button > a {
 	height: 100%;
 }
 
-sl-button[variant='primary'] > *,
-sl-button[variant='neutral'] > *,
-sl-button[variant='danger'] > *,
-sl-button[variant='success'] > *,
-sl-button[variant='warning'] > * {
-	color: var(--text-onaccent);
+sl-button[size='medium']:not([circle]) sl-icon {
+	position: relative;
+	bottom: 1px;
 }
 
 sl-alert[variant='primary'] > *,
@@ -243,7 +250,7 @@ sl-select::part(control) {
 }
 
 ::part(form-control-label) {
-	font-weight: 600;
+	font-weight: 500;
 	padding-bottom: 5px;
 }
 
@@ -262,7 +269,7 @@ sl-dialog.fullscreen::part(base) {
 }
 
 sl-dialog::part(title) {
-	font-weight: 600;
+	font-weight: 500;
 }
 
 sl-dialog::part(body) {
@@ -278,10 +285,6 @@ sl-dialog::part(body) {
 }
 
 .app .routeContent.connection {
-	min-height: calc(100vh - 140px);
-}
-
-.app .routeContent.schema {
 	min-height: calc(100vh - 140px);
 }
 

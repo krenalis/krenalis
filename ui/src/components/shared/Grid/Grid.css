@@ -185,3 +185,92 @@ sl-popup::part(arrow) {
 	text-align: center;
 	padding: 120px 30px 170px 30px;
 }
+
+.grid.sortableGrid .gridHeaderRow,
+.grid.sortableGrid .gridRow {
+	padding-left: 30px;
+}
+
+.grid.sortableGrid .gridNestedRows .expand {
+	left: calc(var(--parent-indentation) + 30px);
+}
+
+.grid.sortableGrid .gridNestedRows .gridRow.children::before {
+	left: calc(var(--children-indentation) + 30px);
+}
+
+.grid.sortableGrid .sortableRows .gridRow,
+.grid.sortableGrid .sortableRows .gridRow .gridCell {
+	background-color: var(--sl-color-primary-50);
+	font-weight: 500;
+}
+
+.grid.sortableGrid .sortableRows .gridNestedRows .gridRow.children,
+.grid.sortableGrid .sortableRows .gridNestedRows .gridRow.children .gridCell,
+.grid.sortableGrid .sortableRows .gridNestedRows .gridNestedRows .gridRow.parent,
+.grid.sortableGrid .sortableRows .gridNestedRows .gridNestedRows .gridRow.parent .gridCell {
+	background-color: var(--sl-color-primary-100) !important;
+	font-weight: 500 !important;
+}
+
+.grid.sortableGrid .sortableRows .gridNestedRows.expanded > .gridRow.parent,
+.grid.sortableGrid .sortableRows .gridNestedRows > .children:last-child {
+	border-top: 0 !important;
+	border-bottom: 0 !important;
+}
+
+.grid.sortableGrid .draggable-wrapper {
+	position: relative;
+}
+
+.grid.sortableGrid .draggable-wrapper__handle {
+	background-color: transparent;
+	border: 0;
+	font-size: 21px;
+	position: absolute;
+	left: 10px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	cursor: grab;
+	width: 30px;
+	top: 15px;
+	z-index: 10;
+}
+
+.grid.sortableGrid .draggable-wrapper__handle sl-icon {
+	color: var(--sl-color-primary-600);
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.grid.sortableGrid .overlay-row {
+	cursor: grabbing;
+	display: flex;
+	background-color: var(--sl-color-primary-50);
+	gap: 5px;
+	border-radius: var(--radius);
+	align-items: center;
+	font-weight: 500;
+	width: max-content;
+	box-shadow: 0px 0px 15px 1px var(--sl-color-primary-50);
+	border: 1px solid var(--sl-color-primary-200);
+}
+
+.grid.sortableGrid .overlay-row__handle {
+	background-color: transparent;
+	border: 0;
+	font-size: 21px;
+	cursor: grabbing;
+}
+
+.grid.sortableGrid .overlay-row__handle sl-icon {
+	color: var(--sl-color-primary-600);
+	display: block;
+	height: 100%;
+}
+
+.grid.sortableGrid .overlay-row__name {
+	color: var(--sl-color-primary-600);
+}

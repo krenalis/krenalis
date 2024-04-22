@@ -4,6 +4,28 @@ type Placeholder = string | null;
 
 type Role = 'Both' | 'Source' | 'Destination';
 
+type TypeName =
+	| 'Boolean'
+	| 'Int'
+	| 'Uint'
+	| 'Float'
+	| 'Decimal'
+	| 'DateTime'
+	| 'Date'
+	| 'Time'
+	| 'Year'
+	| 'UUID'
+	| 'JSON'
+	| 'Inet'
+	| 'Text'
+	| 'Array'
+	| 'Object'
+	| 'Map';
+
+type IntBitSize = 8 | 16 | 24 | 32 | 64;
+
+type FloatBitSize = 32 | 64;
+
 interface Property {
 	name: string;
 	label: string;
@@ -39,21 +61,21 @@ interface BooleanType {
 
 interface IntType {
 	name: 'Int';
-	bitSize: 8 | 16 | 24 | 32 | 64;
+	bitSize: IntBitSize;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface UintType {
 	name: 'Uint';
-	bitSize: 8 | 16 | 24 | 32 | 64;
+	bitSize: IntBitSize;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface FloatType {
 	name: 'Float';
-	bitSize: 32 | 64;
+	bitSize: FloatBitSize;
 	real?: boolean;
 	minimum?: number;
 	maximum?: number;
@@ -125,4 +147,19 @@ interface MapType {
 }
 
 export default Type;
-export type { Property, ArrayType, TextType, ObjectType, IntType, UintType, FloatType };
+export type {
+	Property,
+	ArrayType,
+	TextType,
+	ObjectType,
+	IntType,
+	UintType,
+	DecimalType,
+	FloatType,
+	Role,
+	Placeholder,
+	TypeName,
+	IntBitSize,
+	FloatBitSize,
+	MapType,
+};

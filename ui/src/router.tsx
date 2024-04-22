@@ -11,7 +11,7 @@ import ConnectionWrapper from './components/routes/ConnectionWrapper/ConnectionW
 import { ConnectionProvider } from './context/providers/ConnectionProvider';
 import RootError from './components/routes/RootError/RootError';
 import { Users } from './components/routes/Users/Users';
-import Schema from './components/routes/Schema/Schema';
+import SchemaGrid from './components/routes/SchemaGrid/SchemaGrid';
 import OAuth from './components/routes/OAuth/OAuth';
 import NotFound from './components/routes/NotFound/NotFound';
 import ConnectionOverview from './components/routes/ConnectionOverview/ConnectionOverview';
@@ -31,6 +31,8 @@ import Organization from './components/routes/Organization/Organization';
 import Workspaces from './components/routes/Workspaces/Workspaces';
 import SignUp from './components/routes/SignUp/SignUp';
 import { FileConnector } from './components/routes/FileConnector/FileConnector';
+import { Schema } from './components/routes/Schema/Schema';
+import { SchemaEditWrapper } from './components/routes/SchemaEdit/SchemaEditWrapper';
 
 const router = createBrowserRouter([
 	{
@@ -80,6 +82,18 @@ const router = createBrowserRouter([
 					{
 						path: 'schema',
 						element: <Schema />,
+						children: [
+							{
+								path: '',
+								element: <SchemaGrid />,
+								children: [
+									{
+										path: 'edit',
+										element: <SchemaEditWrapper />,
+									},
+								],
+							},
+						],
 					},
 					{
 						path: 'settings',

@@ -10,7 +10,7 @@ interface AlertDialogProps {
 	onClose: () => void;
 	title: string;
 	actions?: ReactNode;
-	children: ReactNode;
+	children?: ReactNode;
 }
 
 const AlertDialog = ({ variant, isOpen, onClose, title, actions, children }: AlertDialogProps) => {

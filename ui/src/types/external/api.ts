@@ -157,6 +157,12 @@ interface MemberInvitationResponse {
 	organization: string;
 }
 
+type RePaths = Record<string, string | null>;
+
+interface ChangeUsersSchemaQueriesResponse {
+	Queries: string[];
+}
+
 export type {
 	authCodeURLResponse,
 	ConnectorUIResponse,
@@ -186,4 +192,6 @@ export type {
 	MemberToSet,
 	MemberAvatar,
 	MemberInvitationResponse,
+	RePaths,
+	ChangeUsersSchemaQueriesResponse,
 };

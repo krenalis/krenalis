@@ -2,11 +2,12 @@ import React, { ReactNode } from 'react';
 import './Toolbar.css';
 
 interface ToolbarProps {
+	className?: string;
 	children: ReactNode;
 }
 
-const Toolbar = ({ children }: ToolbarProps) => {
-	return <div className='toolbar'>{children}</div>;
+const Toolbar = ({ className, children }: ToolbarProps) => {
+	return <div className={`toolbar${className ? ' ' + className : ''}`}>{children}</div>;
 };
 
 export default Toolbar;

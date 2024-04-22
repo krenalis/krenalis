@@ -1,21 +1,22 @@
-import React, { useState, useLayoutEffect, useRef, ReactNode } from 'react';
+import React, { ReactNode, forwardRef, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
-import GridRow from './GridRow/GridRow';
-import GridNestedRows from './GridNestedRows/GridNestedRows';
-import getChildIndexClassname from '../../../lib/utils/getChildIndexClassname';
 import {
-	GridRow as GridRowInterface,
-	StandardGridRow,
-	NestedGridRows,
+	GridRow as GridRowType,
 	GridColumn,
+	NestedGridRows,
+	StandardGridRow,
 } from '../../../types/componentTypes/Grid.types';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { useGrid } from './useGrid';
+import getChildIndexClassname from '../../../lib/utils/getChildIndexClassname';
+import GridNestedRows from './GridNestedRows/GridNestedRows';
+import GridRow from './GridRow/GridRow';
 
 interface GridProps {
 	columns: GridColumn[];
-	rows: GridRowInterface[];
+	rows: GridRowType[];
 	showColumnBorder?: boolean;
 	showRowBorder?: boolean;
 	isLoading?: boolean;
@@ -26,104 +27,120 @@ interface GridProps {
 	isShown?: boolean;
 }
 
-const Grid = ({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }: GridProps) => {
-	const [columnsWidths, setColumnsWidths] = useState('');
+interface gridMethods {
+	expand: () => void;
+	collapse: () => void;
+}
 
-	const gridRef = useRef<any>(null);
+type GridRef = gridMethods & any;
 
-	useLayoutEffect(() => {
-		if (isLoading || (isShown != null && !isShown)) {
-			return;
-		}
-		const widthsOfColumn = {};
-		for (let i = 0; i < columns.length; i++) {
-			widthsOfColumn[i] = [];
-		}
-		if (gridRef.current == null) return;
-		const rowElements = gridRef.current.querySelectorAll('.gridHeaderRow, .gridRow');
-		for (const r of rowElements) {
-			const contents = r.querySelectorAll('.cellContent');
-			for (const [i, c] of contents.entries()) {
-				if (c instanceof HTMLElement) {
-					widthsOfColumn[i].push(c.offsetWidth);
-				}
-			}
-		}
-		const maxWidths = [] as number[];
-		for (const k in widthsOfColumn) {
-			const widths = widthsOfColumn[k];
-			maxWidths.push(Math.max(...widths) + 40); // 40 is the left/right padding of the cells.
-		}
-		let columnsWidths = '';
-		for (let i = 0; i < maxWidths.length; i++) {
-			if (i === 0) {
-				columnsWidths += `${maxWidths[i]}px`;
-			} else {
-				columnsWidths += ` ${maxWidths[i]}px`;
-			}
-		}
-		setColumnsWidths(columnsWidths);
-	}, [isLoading, rows, columns, isShown]);
+const Grid = forwardRef<GridRef, GridProps>(
+	({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }, ref) => {
+		const gridRef = useRef<any>();
 
-	const rowComponents = [] as ReactNode[];
-	for (const [i, row] of rows.entries()) {
-		const className = getChildIndexClassname(i, rows.length);
-		if (Array.isArray(row)) {
-			const r = row as NestedGridRows;
-			rowComponents.push(
-				<GridNestedRows
-					key={i}
-					rows={r}
-					columns={columns}
-					className={`gridNestedRows ${className}`}
-					nesting={1}
-				/>,
-			);
-			continue;
-		}
-		const r = row as StandardGridRow;
-		rowComponents.push(
-			<GridRow key={i} row={r} columns={columns} className={`gridRow${className ? ' ' + className : ''}`} />,
-		);
-	}
+		const { columnsWidths } = useGrid(gridRef, rows, columns, isLoading, isShown);
 
-	return (
-		<div
-			ref={gridRef}
-			className={`grid${showColumnBorder ? ' column-border' : ''}${showRowBorder ? ' row-border' : ''}`}
-			style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
-		>
-			{isLoading ? (
-				<div className='loading'>
-					<SlSpinner
-						style={
-							{
-								fontSize: '3rem',
-								'--track-width': '6px',
-							} as React.CSSProperties
+		useImperativeHandle(
+			ref,
+			() => {
+				return {
+					expand: () => {
+						const nestedRows = gridRef.current.querySelectorAll('.gridNestedRows');
+						for (const r of nestedRows) {
+							const isExpanded = r.classList.contains('expanded');
+							if (!isExpanded) {
+								const expandIcon = r.querySelector('sl-icon.expand');
+								expandIcon.click();
+							}
 						}
-					/>
-				</div>
-			) : (
-				<>
-					<GridHeaderRow columns={columns} />
-					{rowComponents.length > 0 ? (
-						rowComponents
-					) : noRowsMessage ? (
-						<div className='noRows'>
-							<SlIcon name='exclamation-circle'></SlIcon>
-							{noRowsMessage}
-						</div>
-					) : (
-						<div className='noRows'>
-							<SlIcon name='exclamation-circle'></SlIcon>
-							No rows to show
-						</div>
-					)}
-				</>
-			)}
-		</div>
-	);
-};
+					},
+					collapse: () => {
+						const nestedRows = gridRef.current.querySelectorAll('.gridNestedRows');
+						for (const r of nestedRows) {
+							const isExpanded = r.classList.contains('expanded');
+							if (isExpanded) {
+								const expandIcon = r.querySelector('sl-icon.expand');
+								expandIcon.click();
+							}
+						}
+					},
+				};
+			},
+			[],
+		);
+
+		useEffect(() => {
+			ref = gridRef.current;
+		}, []);
+
+		const rowComponents = useMemo(() => {
+			const rowComponents = [] as ReactNode[];
+			for (const [i, row] of rows.entries()) {
+				const className = getChildIndexClassname(i, rows.length);
+				if (Array.isArray(row)) {
+					const r = row as NestedGridRows;
+					rowComponents.push(
+						<GridNestedRows
+							key={i}
+							rows={r}
+							columns={columns}
+							className={`gridNestedRows ${className}`}
+							nesting={1}
+						/>,
+					);
+					continue;
+				}
+				const r = row as StandardGridRow;
+				rowComponents.push(
+					<GridRow
+						key={i}
+						row={r}
+						columns={columns}
+						className={`gridRow${className ? ' ' + className : ''}`}
+					/>,
+				);
+			}
+			return rowComponents;
+		}, [rows]);
+
+		return (
+			<div
+				ref={gridRef}
+				className={`grid${showColumnBorder ? ' column-border' : ''}${showRowBorder ? ' row-border' : ''}`}
+				style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
+			>
+				{isLoading ? (
+					<div className='loading'>
+						<SlSpinner
+							style={
+								{
+									fontSize: '3rem',
+									'--track-width': '6px',
+								} as React.CSSProperties
+							}
+						/>
+					</div>
+				) : (
+					<>
+						<GridHeaderRow columns={columns} />
+						{rowComponents.length > 0 ? (
+							rowComponents
+						) : noRowsMessage ? (
+							<div className='noRows'>
+								<SlIcon name='exclamation-circle'></SlIcon>
+								{noRowsMessage}
+							</div>
+						) : (
+							<div className='noRows'>
+								<SlIcon name='exclamation-circle'></SlIcon>
+								No rows to show
+							</div>
+						)}
+					</>
+				)}
+			</div>
+		);
+	},
+);
 
 export default Grid;

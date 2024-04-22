@@ -1,7 +1,7 @@
 import React, { useState, ReactNode, Fragment } from 'react';
 import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
-import { NestedGridRows, GridColumn, StandardGridRow } from '../../../../types/componentTypes/Grid.types';
+import { NestedGridRows, GridColumn } from '../../../../types/componentTypes/Grid.types';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface GridNestedRowsProps {
@@ -29,7 +29,7 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 			);
 		} else {
 			let rowComponent: ReactNode;
-			const r = row as StandardGridRow;
+			const r = row as any;
 			if (i === 0) {
 				rowComponent = (
 					<Fragment key={i}>
@@ -40,11 +40,12 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 								setIsExpanded(!isExpanded);
 							}}
 						></SlIcon>
-						<GridRow row={r} columns={columns} className='gridRow parent' />
+
+						<GridRow row={r} columns={columns} className='gridRow parent' id={r.id} />
 					</Fragment>
 				);
 			} else {
-				rowComponent = <GridRow key={i} row={r} columns={columns} className='gridRow children' />;
+				rowComponent = <GridRow key={i} row={r} columns={columns} className='gridRow children' id={r.id} />;
 			}
 			rowComponents.push(rowComponent);
 		}

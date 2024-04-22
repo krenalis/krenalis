@@ -1,0 +1,64 @@
+.property-dialog::part(panel) {
+	max-height: calc(100% - 40%);
+}
+
+.property-dialog .property-dialog__control,
+.property-dialog .property-dialog__type,
+.property-dialog .property-dialog__nullable {
+	margin-bottom: 20px;
+}
+
+.property-dialog label,
+.property-dialog .property-dialog__type-label,
+.property-dialog .property-dialog__nullable-label {
+	display: block;
+	font-weight: 500;
+	padding-bottom: 5px;
+	font-size: 14px;
+}
+
+.property-dialog .property-dialog__control-type {
+	display: flex;
+	flex-flow: row wrap;
+	gap: 15px;
+}
+
+.property-dialog .property-dialog__type-select {
+	width: 40%;
+}
+
+.property-dialog .property-dialog__bitsize,
+.property-dialog .property-dialog__itemtype,
+.property-dialog .property-dialog__valuetype {
+	width: 40%;
+}
+
+.property-dialog .property-dialog__precision,
+.property-dialog .property-dialog__scale {
+	width: 25%;
+}
+
+.property-dialog .property-dialog__control-error {
+	color: var(--sl-color-danger-600);
+	font-size: 13px;
+	padding-top: 5px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.property-dialog .property-dialog__control-error sl-icon {
+	color: var(--sl-color-danger-600);
+}
+
+.property-dialog .property-dialog__buttons {
+	display: flex;
+	justify-content: end;
+	align-items: center;
+	gap: 15px;
+	margin-top: 30px;
+}
+
+.property-dialog .property-dialog__save::part(base) {
+	min-width: 150px;
+}

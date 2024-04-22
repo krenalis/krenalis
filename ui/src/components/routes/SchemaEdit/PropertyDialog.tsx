@@ -1,0 +1,440 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import './PropertyDialog.css';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import {
+	ArrayType,
+	DecimalType,
+	FloatBitSize,
+	FloatType,
+	IntBitSize,
+	IntType,
+	MapType,
+	TypeName,
+	UintType,
+} from '../../../types/external/types';
+import { PropertyToEdit } from './useSchemaEdit';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
+
+const TYPE_NAMES: TypeName[] = [
+	'Boolean',
+	'Int',
+	'Uint',
+	'Float',
+	'Decimal',
+	'DateTime',
+	'Date',
+	'Time',
+	'Year',
+	'UUID',
+	'JSON',
+	'Inet',
+	'Text',
+	'Array',
+	'Object',
+	'Map',
+];
+
+const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
+const FLOAT_BITSIZES: string[] = ['32', '64'];
+const MAX_DECIMAL_PRECISION: number = 76;
+const MAX_DECIMAL_SCALE: number = 37;
+
+interface PropertyDialogProps {
+	propertyToEdit: PropertyToEdit | null;
+	setPropertyToEdit: React.Dispatch<React.SetStateAction<PropertyToEdit | null>>;
+	onAddProperty: (property: PropertyToEdit) => void;
+	onEditProperty: (property: PropertyToEdit) => void;
+}
+
+const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEditProperty }: PropertyDialogProps) => {
+	const [property, setProperty] = useState<PropertyToEdit>();
+	const [nameError, setNameError] = useState<string>('');
+	const [typeError, setTypeError] = useState<string>('');
+
+	const nameInputRef = useRef<any>();
+	const bitSizeSelectRef = useRef<any>();
+	const precisionInputRef = useRef<any>();
+	const itemTypeSelectRef = useRef<any>();
+	const valueTypeSelectRef = useRef<any>();
+
+	const isEditing = useMemo(() => {
+		if (propertyToEdit == null) {
+			return false;
+		}
+		return propertyToEdit.key != null;
+	}, [propertyToEdit]);
+
+	useEffect(() => {
+		if (propertyToEdit == null) {
+			return;
+		}
+		setNameError('');
+		setTypeError('');
+		setProperty(propertyToEdit);
+	}, [propertyToEdit]);
+
+	const onInputName = (e) => {
+		const name = e.target.value;
+		if (name === '') {
+			setNameError('Name cannot be empty');
+		} else {
+			setNameError('');
+		}
+		const p = { ...property };
+		p.name = name;
+		setProperty(p);
+	};
+
+	const onChangeType = (e) => {
+		const p = { ...property };
+		const typeName = e.target.value as TypeName;
+		const typ: any = { name: typeName };
+		if (typeName === 'Int' || typeName === 'Uint') {
+			typ.bitSize = 32;
+			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
+		}
+		if (typeName === 'Float') {
+			typ.bitSize = 64;
+			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
+		}
+		if (typeName === 'Decimal') {
+			typ.scale = '';
+			typ.precision = '';
+			setTimeout(() => precisionInputRef.current?.focus(), 50);
+		}
+		if (typeName === 'Array') {
+			typ.itemType = { name: '' };
+			setTimeout(() => itemTypeSelectRef.current?.focus(), 50);
+		}
+		if (typeName === 'Map') {
+			typ.valueType = { name: '' };
+			setTimeout(() => valueTypeSelectRef.current?.focus(), 50);
+		}
+		p.type = typ;
+		setProperty(p);
+		if (typeError !== '') {
+			setTypeError('');
+		}
+	};
+
+	const onChangeBitSize = (e) => {
+		const p = { ...property };
+		const typ = p.type as IntType | UintType | FloatType;
+		typ.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
+		p.type = typ;
+		setProperty(p);
+	};
+
+	const onInputPrecision = (e) => {
+		const p = { ...property };
+		const typ = p.type as DecimalType;
+		typ.precision = Number(e.target.value);
+		p.type = typ;
+		setProperty(p);
+		if (typeError !== '') {
+			setTypeError('');
+		}
+	};
+
+	const onInputScale = (e) => {
+		const p = { ...property };
+		const typ = p.type as DecimalType;
+		typ.scale = Number(e.target.value);
+		p.type = typ;
+		setProperty(p);
+		if (typeError !== '') {
+			setTypeError('');
+		}
+	};
+
+	const onChangeItemType = (e) => {
+		const p = { ...property };
+		const typ = p.type as ArrayType;
+		typ.itemType.name = e.target.value;
+		p.type = typ;
+		setProperty(p);
+	};
+
+	const onChangeValueType = (e) => {
+		const p = { ...property };
+		const typ = p.type as MapType;
+		typ.valueType.name = e.target.value;
+		p.type = typ;
+		setProperty(p);
+	};
+
+	const onChangeNullable = () => {
+		const p = { ...property };
+		p.nullable = !p.nullable;
+		setProperty(p);
+	};
+
+	const onInputLabel = (e) => {
+		const p = { ...property };
+		p.label = e.target.value;
+		setProperty(p);
+	};
+
+	const onChangeDescription = (e) => {
+		const p = { ...property };
+		p.description = e.target.value;
+		setProperty(p);
+	};
+
+	const onHide = (e) => {
+		if (e.target.tagName === 'SL-DIALOG') {
+			setPropertyToEdit(null);
+		}
+	};
+
+	const onShow = (e) => {
+		if (e.target.tagName === 'SL-DIALOG') {
+			if (nameInputRef.current) {
+				nameInputRef.current.focus();
+			}
+		}
+	};
+
+	const onSave = () => {
+		if (property.name === '') {
+			setNameError('Name cannot be empty');
+			return;
+		}
+		if (property.type === null) {
+			setTypeError('Type cannot be empty');
+			return;
+		}
+		if (property.type.name === 'Decimal') {
+			if (property.type.precision < 1 || property.type.precision > MAX_DECIMAL_PRECISION) {
+				setTypeError(`Precision must be in range [1, ${MAX_DECIMAL_PRECISION}]`);
+				return;
+			}
+			if (property.type.scale < 0 || property.type.scale > MAX_DECIMAL_SCALE) {
+				setTypeError(`Scale must be in range [0, ${MAX_DECIMAL_SCALE}]`);
+				return;
+			}
+		}
+		if (isEditing) {
+			try {
+				onEditProperty(property);
+			} catch (err) {
+				setNameError(err);
+				return;
+			}
+		} else {
+			try {
+				onAddProperty(property);
+			} catch (err) {
+				setNameError(err);
+				return;
+			}
+		}
+		setPropertyToEdit(null);
+	};
+
+	return (
+		<SlDialog
+			className='property-dialog'
+			open={propertyToEdit != null}
+			label={isEditing ? `Edit "${propertyToEdit?.name}"` : 'Add a new property'}
+			onSlAfterHide={onHide}
+			onSlAfterShow={onShow}
+		>
+			{property != null && (
+				<>
+					<div className='property-dialog__control'>
+						<SlInput
+							ref={nameInputRef}
+							size='small'
+							value={property.name}
+							label='Name'
+							onSlInput={onInputName}
+						/>
+						{nameError !== '' && (
+							<div className='property-dialog__control-error'>
+								<SlIcon name='exclamation-circle' />
+								{nameError}
+							</div>
+						)}
+					</div>
+					{!isEditing || property.isEditable ? (
+						<div className='property-dialog__control'>
+							<div className='property-dialog__control-type'>
+								<SlSelect
+									className='property-dialog__type-select'
+									size='small'
+									label='Type'
+									value={property.type?.name}
+									onSlChange={onChangeType}
+									hoist={true}
+								>
+									{TYPE_NAMES.map((t) => (
+										<SlOption key={t} value={t}>
+											{t}
+										</SlOption>
+									))}
+								</SlSelect>
+								{(property.type?.name === 'Int' ||
+									property.type?.name === 'Uint' ||
+									property.type?.name === 'Float') && (
+									<SlSelect
+										className='property-dialog__bitsize'
+										ref={bitSizeSelectRef}
+										size='small'
+										label='Size'
+										value={String(property.type?.bitSize)}
+										onSlChange={onChangeBitSize}
+									>
+										{property.type?.name === 'Int' || property.type?.name === 'Uint'
+											? INT_BITSIZES.map((s) => (
+													<SlOption key={s} value={s}>
+														{s}
+													</SlOption>
+											  ))
+											: FLOAT_BITSIZES.map((s) => (
+													<SlOption key={s} value={s}>
+														{s}
+													</SlOption>
+											  ))}
+									</SlSelect>
+								)}
+								{property.type?.name === 'Decimal' && (
+									<>
+										<SlInput
+											className='property-dialog__precision'
+											ref={precisionInputRef}
+											size='small'
+											label='Precision'
+											value={String(property.type?.precision)}
+											type='number'
+											max={MAX_DECIMAL_PRECISION}
+											maxlength={2}
+											onSlInput={onInputPrecision}
+										/>
+										<SlInput
+											className='property-dialog__scale'
+											size='small'
+											label='Scale'
+											value={String(property.type?.scale)}
+											type='number'
+											max={MAX_DECIMAL_SCALE}
+											maxlength={2}
+											onSlInput={onInputScale}
+										/>
+									</>
+								)}
+								{property.type?.name === 'Array' && (
+									<SlSelect
+										className='property-dialog__itemtype'
+										ref={itemTypeSelectRef}
+										size='small'
+										label='Item type'
+										value={property.type?.itemType?.name}
+										onSlChange={onChangeItemType}
+										hoist={true}
+									>
+										{TYPE_NAMES.map((t) => {
+											if (t !== 'Array' && t !== 'Map') {
+												return (
+													<SlOption key={t} value={t}>
+														{t}
+													</SlOption>
+												);
+											}
+										})}
+									</SlSelect>
+								)}
+								{property.type?.name === 'Map' && (
+									<SlSelect
+										className='property-dialog__valuetype'
+										ref={valueTypeSelectRef}
+										size='small'
+										label='Value type'
+										value={property.type?.valueType?.name}
+										onSlChange={onChangeValueType}
+										hoist={true}
+									>
+										{TYPE_NAMES.map((t) => {
+											if (t !== 'Array' && t !== 'Map') {
+												return (
+													<SlOption key={t} value={t}>
+														{t}
+													</SlOption>
+												);
+											}
+										})}
+									</SlSelect>
+								)}
+							</div>
+							{typeError !== '' && (
+								<div className='property-dialog__control-error'>
+									<SlIcon name='exclamation-circle' />
+									{typeError}
+								</div>
+							)}
+						</div>
+					) : (
+						<div className='property-dialog__type'>
+							<div className='property-dialog__type-label'>Type</div>
+							<div className='property-dialog__type-value'>{property.type?.name}</div>
+						</div>
+					)}
+					{property.type?.name !== 'Object' &&
+						(!isEditing || property.isEditable ? (
+							<SlCheckbox
+								className='property-dialog__control'
+								size='small'
+								checked={property.nullable}
+								onSlChange={onChangeNullable}
+							>
+								Nullable
+							</SlCheckbox>
+						) : (
+							<div className='property-dialog__nullable'>
+								<div className='property-dialog__nullable-label'>Nullable</div>
+								<div className='property-dialog__nullable-value'>
+									{property.nullable ? 'Yes' : 'No'}
+								</div>
+							</div>
+						))}
+					<SlInput
+						className='property-dialog__control'
+						size='small'
+						value={property.label}
+						label='Label'
+						onSlInput={onInputLabel}
+					/>
+					<SlTextarea
+						className='property-dialog__control'
+						size='small'
+						value={property.description}
+						label='Description'
+						onSlChange={onChangeDescription}
+					/>
+					<div className='property-dialog__buttons'>
+						<SlButton size='small' variant='neutral' onClick={() => setPropertyToEdit(null)}>
+							Cancel
+						</SlButton>
+						<SlButton
+							className='property-dialog__save'
+							size='small'
+							variant='primary'
+							onClick={onSave}
+							disabled={nameError !== '' || typeError !== ''}
+						>
+							{isEditing ? 'Save' : 'Add'}
+						</SlButton>
+					</div>
+				</>
+			)}
+		</SlDialog>
+	);
+};
+
+export { PropertyDialog };

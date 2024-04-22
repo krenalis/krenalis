@@ -17,6 +17,12 @@ interface StandardGridRow {
 	selected?: boolean;
 }
 
+interface SortableGridRow extends StandardGridRow {
+	isSortable: boolean;
+	dragKey: string; // the key used to identify the row in the drag and drop.
+	id: string;
+}
+
 type NestedGridRows = GridRow[];
 
 interface GridCell {
@@ -25,4 +31,4 @@ interface GridCell {
 	alignment?: string;
 }
 
-export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows };
+export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows, SortableGridRow };

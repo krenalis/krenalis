@@ -1,2 +1,4 @@
 .schema {
+	background-color: var(--bg-gray);
+	min-height: calc(100vh - 70px);
 }
