@@ -1,0 +1,17 @@
+{
+  "name": "internmap",
+  "version": "2.0.3",
+  "author": {
+    "name": "Mike Bostock",
+    "url": "https://bost.ocks.org/mike"
+  },
+  "license": "ISC",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    "default": "./src/index.js",
+    "umd": "./dist/internmap.min.js"
+  },
+  "sideEffects": false
+}

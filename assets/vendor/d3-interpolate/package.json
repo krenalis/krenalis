@@ -1,0 +1,17 @@
+{
+  "name": "d3-interpolate",
+  "version": "3.0.1",
+  "author": {
+    "name": "Mike Bostock",
+    "url": "http://bost.ocks.org/mike"
+  },
+  "license": "ISC",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    "default": "./src/index.js",
+    "umd": "./dist/d3-interpolate.min.js"
+  },
+  "sideEffects": false
+}

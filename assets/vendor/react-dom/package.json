@@ -1,0 +1,24 @@
+{
+  "name": "react-dom",
+  "version": "18.2.0",
+  "license": "MIT",
+  "main": "index.js",
+  "browser": {
+    "./server.js": "./server.browser.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./profiling": "./profiling.js",
+    "./server": {
+      "browser": "./server.browser.js",
+      "default": "./server.node.js",
+      "deno": "./server.browser.js",
+      "worker": "./server.browser.js"
+    },
+    "./server.browser": "./server.browser.js",
+    "./server.node": "./server.node.js",
+    "./test-utils": "./test-utils.js"
+  }
+}

@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/open2b/chichi/apis"
 	"github.com/open2b/chichi/telemetry"
-	"github.com/open2b/chichi/ui"
 )
 
 type Settings struct {
@@ -77,7 +77,7 @@ type LocalConfig struct {
 // Run runs the server.
 // Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
 // return any error.
-func Run(ctx context.Context, settings *Settings) error {
+func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	if settings.Telemetry.Enable {
 		err := telemetry.Init(ctx)
@@ -123,7 +123,11 @@ func Run(ctx context.Context, settings *Settings) error {
 	}
 	defer apis.Close()
 
-	ui := ui.New(apis)
+	ui, err := newUI(apis, assetsFS)
+	if err != nil {
+		return err
+	}
+	defer ui.Close()
 
 	apisServer := newAPIsServer(apis, sessionKey)
 

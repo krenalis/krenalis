@@ -1,0 +1,17 @@
+{
+  "name": "d3-scale",
+  "version": "4.0.2",
+  "author": {
+    "name": "Mike Bostock",
+    "url": "https://bost.ocks.org/mike"
+  },
+  "license": "ISC",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    "default": "./src/index.js",
+    "umd": "./dist/d3-scale.min.js"
+  },
+  "sideEffects": false
+}

@@ -66,6 +66,8 @@ $ go mod init s3
 
 Then add a Go file to the new directory. For example copy the previous template file.
 
+Later on, you can [compile an executable with your connector](../getting-started.md#compile-with-additional-connectors).
+
 ### About the Connector
 
 The `FileStorageInfo` type describes information about the file storage connector:

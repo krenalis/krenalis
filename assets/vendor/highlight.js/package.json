@@ -1,0 +1,10 @@
+{
+  "name": "highlight.js",
+  "version": "10.7.3",
+  "author": {
+    "email": "maniac@softwaremaniacs.org",
+    "name": "Ivan Sagalaev"
+  },
+  "license": "BSD-3-Clause",
+  "main": "./lib/index.js"
+}

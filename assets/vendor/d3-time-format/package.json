@@ -1,0 +1,22 @@
+{
+  "name": "d3-time-format",
+  "version": "4.1.0",
+  "author": {
+    "name": "Mike Bostock",
+    "url": "http://bost.ocks.org/mike"
+  },
+  "license": "ISC",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": {
+      "default": "./src/index.js",
+      "umd": "./dist/d3-time-format.min.js"
+    },
+    "./locale/*": "./locale/*.json"
+  },
+  "sideEffects": [
+    "./src/defaultLocale.js"
+  ]
+}

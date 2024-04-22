@@ -1,0 +1,8 @@
+{
+  "name": "state-local",
+  "version": "1.0.7",
+  "author": "Suren Atoyan \u003ccontact@surenatoyan.com\u003e",
+  "license": "MIT",
+  "main": "lib/cjs/state-local.js",
+  "module": "lib/es/state-local.js"
+}

@@ -122,17 +122,20 @@ func main() {
 	cmd("go", []string{"work", "sync"}, repo, ".", true)
 	cmd("go", []string{"work", "vendor"}, repo, ".", true)
 
-	// Run 'npm install' in the UI.
-	cmd("npm", []string{"install"}, repo, "ui", true)
+	// Run 'npm install' in the 'assets' directory.
+	cmd("npm", []string{"install"}, repo, "assets", true)
 
-	// Minify the JavaScript snippet in the UI.
-	cmd("deno", []string{"task", "minify-javascript-snippet"}, repo, "ui", true)
+	// Minify the JavaScript snippet in the 'assets' directory.
+	cmd("deno", []string{"task", "minify-javascript-snippet"}, repo, "assets", true)
 
-	// Format the files in the UI.
-	cmd("npm", []string{"run", "prettier"}, repo, "ui", true)
+	// Format the files in the 'assets' directory.
+	cmd("npm", []string{"run", "prettier"}, repo, "assets", true)
 
-	// Typecheck the Typescript code in the UI.
-	cmd("npm", []string{"run", "typecheck"}, repo, "ui", true)
+	// Typecheck the Typescript code in the 'assets' directory.
+	cmd("npm", []string{"run", "typecheck"}, repo, "assets", true)
+
+	// Make the vendor of the assets.
+	cmd("go", []string{"run", "./assets/make-vendor"}, repo, ".", true)
 
 	// Format and test the files in the 'javascript-sdk' directory.
 	cmd("deno", []string{"fmt"}, repo, "javascript-sdk", true)

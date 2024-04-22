@@ -1,0 +1,15 @@
+{
+  "name": "react",
+  "version": "18.2.0",
+  "license": "MIT",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js",
+      "react-server": "./react.shared-subset.js"
+    },
+    "./jsx-dev-runtime": "./jsx-dev-runtime.js",
+    "./jsx-runtime": "./jsx-runtime.js",
+    "./package.json": "./package.json"
+  }
+}

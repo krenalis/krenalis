@@ -1,0 +1,8 @@
+{
+  "name": "react-transition-group",
+  "version": "2.9.0",
+  "author": "",
+  "license": "BSD-3-Clause",
+  "main": "index.js",
+  "sideEffects": false
+}

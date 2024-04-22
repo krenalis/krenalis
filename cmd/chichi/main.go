@@ -1,37 +1,43 @@
-//
-// SPDX-License-Identifier: Elastic-2.0
-//
-//
-// Copyright (c) 2022 Open2b
-//
+//go:generate go run github.com/open2b/chichi/assets
 
-// There is no need to modify Chichi's source code to compile a customized
-// version. Just follow these steps:
+// To compile:
 //
-//  1. Copy this file (main.go) into a new empty folder
-//  2. Execute 'go mod init chichi'
-//  3. Execute 'go get github.com/open2b/chichi@latest'
-//  4. Customize the imported connectors below
-//  5. Execute 'go mod tidy'
-//  6. Execute 'go install' or 'go build' to install/build a custom binary
+// 1. go generate
+// 2. go build
+//
+// To add your custom connectors or choose what connector to build into Chichi:
+//
+//  1. Create a new directory: mkdir chichi
+//  2. Change into it: cd chichi
+//  3. Copy this file into the new directory
+//  4. Edit the copied file to add your connectors (optional):
+//     import _ "github.com/example/connector"
+//  5. Initialize a Go module: go mod init chichi
+//  6. Tidy the module: go mod tidy
+//  7. Get the UI's source assets: go get github.com/open2b/chichi/assets
+//  8. Bundle and compress them: go generate
+//  9. Build: go build
+//
+// Remember to execute 'go generate' if you pull the repository.
+//
+// See also https://github.com/open2b/chichi/blob/main/doc/src/getting-started.md
 package main
 
 import (
+	"embed"
+
 	"github.com/open2b/chichi/cmd"
 
-	// Imports Chichi's standard connectors. You can remove this import to stop
-	// importing Chichi's standard connectors, or you can copy the imports from
-	// "chichi/cmd/stdconnectors" here instead of this import and then choose
-	// which standard connectors to import.
-	_ "github.com/open2b/chichi/cmd/stdconnectors"
-	//
-	//
-	// You can add the imports of your custom connectors here, for example:
-	//
-	// "myproject/chichi/connector/foo"
-	// "myproject/chichi/connector/bar"
+	// Add your custom connectors here:
+	// _ "github.com/example/connector"
+
+	// Imports the standard connectors:
+	_ "github.com/open2b/chichi/connectors"
 )
 
+//go:embed chichi-assets
+var assets embed.FS
+
 func main() {
-	cmd.Main()
+	cmd.Main(assets)
 }

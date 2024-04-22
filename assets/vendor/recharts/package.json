@@ -1,0 +1,11 @@
+{
+  "name": "recharts",
+  "version": "2.8.0",
+  "author": {
+    "name": "recharts group"
+  },
+  "license": "MIT",
+  "main": "lib/index",
+  "module": "es6/index",
+  "sideEffects": false
+}

@@ -1,0 +1,12 @@
+{
+  "name": "decimal.js-light",
+  "version": "2.5.1",
+  "author": {
+    "email": "M8ch88l@gmail.com",
+    "name": "Michael Mclaughlin"
+  },
+  "license": "MIT",
+  "main": "decimal",
+  "browser": "decimal.js",
+  "module": "decimal.mjs"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "lodash",
+  "version": "4.17.21",
+  "author": "John-David Dalton \u003cjohn.david.dalton@gmail.com\u003e",
+  "license": "MIT",
+  "main": "lodash.js"
+}

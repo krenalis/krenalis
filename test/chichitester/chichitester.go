@@ -32,8 +32,7 @@ import (
 	"github.com/open2b/chichi/cmd"
 	"github.com/open2b/chichi/types"
 
-	// Import the package that imports the standard connectors of Chichi.
-	_ "github.com/open2b/chichi/cmd/stdconnectors"
+	_ "github.com/open2b/chichi/connectors"
 )
 
 // launchChichiExternally determines if Chichi should be launched externally
@@ -235,7 +234,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 			defer func() {
 				close(c.chichiRunning)
 			}()
-			err := cmd.Run(ctxWithCancel, &setts)
+			err := cmd.Run(ctxWithCancel, &setts, nil)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return

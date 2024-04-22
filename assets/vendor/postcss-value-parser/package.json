@@ -1,0 +1,7 @@
+{
+  "name": "postcss-value-parser",
+  "version": "3.3.1",
+  "author": "Bogdan Chadkin \u003ctrysound@yandex.ru\u003e",
+  "license": "MIT",
+  "main": "lib/index.js"
+}

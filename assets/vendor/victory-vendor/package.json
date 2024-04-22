@@ -1,0 +1,14 @@
+{
+  "name": "victory-vendor",
+  "version": "36.6.11",
+  "author": "Formidable",
+  "license": "MIT AND ISC",
+  "exports": {
+    "./d3-*": {
+      "default": "./lib/d3-*.js",
+      "import": "./es/d3-*.js",
+      "types": "./d3-*.d.ts"
+    },
+    "./package.json": "./package.json"
+  }
+}

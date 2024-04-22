@@ -1,0 +1,167 @@
+{
+  "name": "lit",
+  "version": "2.8.0",
+  "author": "Google LLC",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "main": "index.js",
+  "module": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js",
+      "types": "./development/index.d.ts"
+    },
+    "./async-directive.js": {
+      "default": "./async-directive.js",
+      "types": "./development/async-directive.d.ts"
+    },
+    "./decorators.js": {
+      "default": "./decorators.js",
+      "types": "./development/decorators.d.ts"
+    },
+    "./decorators/custom-element.js": {
+      "default": "./decorators/custom-element.js",
+      "types": "./development/decorators/custom-element.d.ts"
+    },
+    "./decorators/event-options.js": {
+      "default": "./decorators/event-options.js",
+      "types": "./development/decorators/event-options.d.ts"
+    },
+    "./decorators/property.js": {
+      "default": "./decorators/property.js",
+      "types": "./development/decorators/property.d.ts"
+    },
+    "./decorators/query-all.js": {
+      "default": "./decorators/query-all.js",
+      "types": "./development/decorators/query-all.d.ts"
+    },
+    "./decorators/query-assigned-elements.js": {
+      "default": "./decorators/query-assigned-elements.js",
+      "types": "./development/decorators/query-assigned-elements.d.ts"
+    },
+    "./decorators/query-assigned-nodes.js": {
+      "default": "./decorators/query-assigned-nodes.js",
+      "types": "./development/decorators/query-assigned-nodes.d.ts"
+    },
+    "./decorators/query-async.js": {
+      "default": "./decorators/query-async.js",
+      "types": "./development/decorators/query-async.d.ts"
+    },
+    "./decorators/query.js": {
+      "default": "./decorators/query.js",
+      "types": "./development/decorators/query.d.ts"
+    },
+    "./decorators/state.js": {
+      "default": "./decorators/state.js",
+      "types": "./development/decorators/state.d.ts"
+    },
+    "./directive-helpers.js": {
+      "default": "./directive-helpers.js",
+      "types": "./development/directive-helpers.d.ts"
+    },
+    "./directive.js": {
+      "default": "./directive.js",
+      "types": "./development/directive.d.ts"
+    },
+    "./directives/async-append.js": {
+      "default": "./directives/async-append.js",
+      "types": "./development/directives/async-append.d.ts"
+    },
+    "./directives/async-replace.js": {
+      "default": "./directives/async-replace.js",
+      "types": "./development/directives/async-replace.d.ts"
+    },
+    "./directives/cache.js": {
+      "default": "./directives/cache.js",
+      "types": "./development/directives/cache.d.ts"
+    },
+    "./directives/choose.js": {
+      "default": "./directives/choose.js",
+      "types": "./development/directives/choose.d.ts"
+    },
+    "./directives/class-map.js": {
+      "default": "./directives/class-map.js",
+      "types": "./development/directives/class-map.d.ts"
+    },
+    "./directives/guard.js": {
+      "default": "./directives/guard.js",
+      "types": "./development/directives/guard.d.ts"
+    },
+    "./directives/if-defined.js": {
+      "default": "./directives/if-defined.js",
+      "types": "./development/directives/if-defined.d.ts"
+    },
+    "./directives/join.js": {
+      "default": "./directives/join.js",
+      "types": "./development/directives/join.d.ts"
+    },
+    "./directives/keyed.js": {
+      "default": "./directives/keyed.js",
+      "types": "./development/directives/keyed.d.ts"
+    },
+    "./directives/live.js": {
+      "default": "./directives/live.js",
+      "types": "./development/directives/live.d.ts"
+    },
+    "./directives/map.js": {
+      "default": "./directives/map.js",
+      "types": "./development/directives/map.d.ts"
+    },
+    "./directives/range.js": {
+      "default": "./directives/range.js",
+      "types": "./development/directives/range.d.ts"
+    },
+    "./directives/ref.js": {
+      "default": "./directives/ref.js",
+      "types": "./development/directives/ref.d.ts"
+    },
+    "./directives/repeat.js": {
+      "default": "./directives/repeat.js",
+      "types": "./development/directives/repeat.d.ts"
+    },
+    "./directives/style-map.js": {
+      "default": "./directives/style-map.js",
+      "types": "./development/directives/style-map.d.ts"
+    },
+    "./directives/template-content.js": {
+      "default": "./directives/template-content.js",
+      "types": "./development/directives/template-content.d.ts"
+    },
+    "./directives/unsafe-html.js": {
+      "default": "./directives/unsafe-html.js",
+      "types": "./development/directives/unsafe-html.d.ts"
+    },
+    "./directives/unsafe-svg.js": {
+      "default": "./directives/unsafe-svg.js",
+      "types": "./development/directives/unsafe-svg.d.ts"
+    },
+    "./directives/until.js": {
+      "default": "./directives/until.js",
+      "types": "./development/directives/until.d.ts"
+    },
+    "./directives/when.js": {
+      "default": "./directives/when.js",
+      "types": "./development/directives/when.d.ts"
+    },
+    "./experimental-hydrate-support.js": {
+      "default": "./experimental-hydrate-support.js",
+      "types": "./development/experimental-hydrate-support.d.ts"
+    },
+    "./experimental-hydrate.js": {
+      "default": "./experimental-hydrate.js",
+      "types": "./development/experimental-hydrate.d.ts"
+    },
+    "./html.js": {
+      "default": "./html.js",
+      "types": "./development/html.d.ts"
+    },
+    "./polyfill-support.js": {
+      "default": "./polyfill-support.js",
+      "types": "./development/polyfill-support.d.ts"
+    },
+    "./static-html.js": {
+      "default": "./static-html.js",
+      "types": "./development/static-html.d.ts"
+    }
+  }
+}

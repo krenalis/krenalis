@@ -1,0 +1,24 @@
+{
+  "name": "composed-offset-position",
+  "version": "0.0.4",
+  "author": "jcfranco",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/composed-offset-position.umd.js",
+  "module": "./dist/composed-offset-position.esm.js",
+  "exports": {
+    ".": {
+      "default": "./dist/composed-offset-position.umd.js",
+      "import": {
+        "browser": {
+          "default": "./dist/composed-offset-position.browser.min.mjs",
+          "development": "./dist/composed-offset-position.browser.mjs"
+        },
+        "default": "./dist/composed-offset-position.mjs"
+      },
+      "module": "./dist/composed-offset-position.esm.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  }
+}

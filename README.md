@@ -65,35 +65,45 @@ pattern ./...: main module (chichi) does not contain package chichi/connectors/m
 that may mean that the file `go.work` at the top of this repository has not been
 updated to use a given module.
 
-## How to execute Chichi
+## How to execute Chichi for development
 
 ### 1. Install React and other dependencies
 
 ```
-cd ui
+cd assets
 npm install
 ```
 
-It is recommended to add the `/ui/node_modules/` directory your local `.gitignore` file.
+It is recommended to add the `/assets/node_modules/` directory your local `.gitignore` file.
 
 ### 2. Configure and add certificates
 
 Add a configuration file `config.yaml` (see `config.example.yaml`) in the same directory of
 the `chichi` executable, as well as a `cert.pem` and `key.pem` certificate files.
 
-### 3. Compile the server command
+### 3. Build the assets
 
 Within the root of this repository execute:
 
 ```bash
-go build -tags osusergo,netgo -trimpath ./cmd/chichi
+go generate ./cmd/chichi
 ```
 
-### 4. Populate the database
+Note that the assets will be embedded into the executable. However, in development mode, the assets are rebuilt for each invocation of the UI.
+
+### 4. Compile the server command in dev mode
+
+Within the root of this repository execute:
+
+```bash 
+go build -tags dev,osusergo,netgo -trimpath ./cmd/chichi
+```
+
+### 5. Populate the database
 
 Populate the Chichi's database with the queries in [database/PostgreSQL.sql](database/PostgreSQL.sql).
 
-### 5. Connect the data warehouse
+### 6. Connect the data warehouse
 
 (note that these steps requires [the chichi-cli executable](#interact-with-chichi-using-chichi-cli) installed and available on your system)
 
@@ -134,7 +144,7 @@ and `./clickhouse.json` is a JSON file containing the information to access the 
 }
 ```
 
-### 6. Initialize the warehouse
+### 7. Initialize the warehouse
 
 Initialize the warehouse with:
 
@@ -142,11 +152,11 @@ Initialize the warehouse with:
 chichi-cli init-warehouse
 ```
 
-### 7. Run and open the browser
+### 8. Run and open the browser
 
-Launch the server command executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/ui/.
+Launch the server command executing `./chichi` (or `./chichi.exe` on Windows) and visit https://localhost:9090/ui/.
 
-### 8. Add properties to the `users` / `users_identities` schemas
+### 9. Add properties to the `users` / `users_identities` schemas
 
 Within the root of the repository, run:
 

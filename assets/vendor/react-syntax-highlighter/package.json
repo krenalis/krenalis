@@ -1,0 +1,9 @@
+{
+  "name": "react-syntax-highlighter",
+  "version": "15.5.0",
+  "author": "Conor Hastings",
+  "license": "MIT",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "sideEffects": false
+}

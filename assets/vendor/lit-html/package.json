@@ -1,0 +1,271 @@
+{
+  "name": "lit-html",
+  "version": "2.8.0",
+  "author": "Google LLC",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "main": "lit-html.js",
+  "exports": {
+    ".": {
+      "default": "./lit-html.js",
+      "development": "./development/lit-html.js",
+      "node": {
+        "default": "./node/lit-html.js",
+        "development": "./node/development/lit-html.js"
+      },
+      "types": "./development/lit-html.d.ts"
+    },
+    "./async-directive.js": {
+      "default": "./async-directive.js",
+      "development": "./development/async-directive.js",
+      "node": {
+        "default": "./node/async-directive.js",
+        "development": "./node/development/async-directive.js"
+      },
+      "types": "./development/async-directive.d.ts"
+    },
+    "./directive-helpers.js": {
+      "default": "./directive-helpers.js",
+      "development": "./development/directive-helpers.js",
+      "node": {
+        "default": "./node/directive-helpers.js",
+        "development": "./node/development/directive-helpers.js"
+      },
+      "types": "./development/directive-helpers.d.ts"
+    },
+    "./directive.js": {
+      "default": "./directive.js",
+      "development": "./development/directive.js",
+      "node": {
+        "default": "./node/directive.js",
+        "development": "./node/development/directive.js"
+      },
+      "types": "./development/directive.d.ts"
+    },
+    "./directives/async-append.js": {
+      "default": "./directives/async-append.js",
+      "development": "./development/directives/async-append.js",
+      "node": {
+        "default": "./node/directives/async-append.js",
+        "development": "./node/development/directives/async-append.js"
+      },
+      "types": "./development/directives/async-append.d.ts"
+    },
+    "./directives/async-replace.js": {
+      "default": "./directives/async-replace.js",
+      "development": "./development/directives/async-replace.js",
+      "node": {
+        "default": "./node/directives/async-replace.js",
+        "development": "./node/development/directives/async-replace.js"
+      },
+      "types": "./development/directives/async-replace.d.ts"
+    },
+    "./directives/cache.js": {
+      "default": "./directives/cache.js",
+      "development": "./development/directives/cache.js",
+      "node": {
+        "default": "./node/directives/cache.js",
+        "development": "./node/development/directives/cache.js"
+      },
+      "types": "./development/directives/cache.d.ts"
+    },
+    "./directives/choose.js": {
+      "default": "./directives/choose.js",
+      "development": "./development/directives/choose.js",
+      "node": {
+        "default": "./node/directives/choose.js",
+        "development": "./node/development/directives/choose.js"
+      },
+      "types": "./development/directives/choose.d.ts"
+    },
+    "./directives/class-map.js": {
+      "default": "./directives/class-map.js",
+      "development": "./development/directives/class-map.js",
+      "node": {
+        "default": "./node/directives/class-map.js",
+        "development": "./node/development/directives/class-map.js"
+      },
+      "types": "./development/directives/class-map.d.ts"
+    },
+    "./directives/guard.js": {
+      "default": "./directives/guard.js",
+      "development": "./development/directives/guard.js",
+      "node": {
+        "default": "./node/directives/guard.js",
+        "development": "./node/development/directives/guard.js"
+      },
+      "types": "./development/directives/guard.d.ts"
+    },
+    "./directives/if-defined.js": {
+      "default": "./directives/if-defined.js",
+      "development": "./development/directives/if-defined.js",
+      "node": {
+        "default": "./node/directives/if-defined.js",
+        "development": "./node/development/directives/if-defined.js"
+      },
+      "types": "./development/directives/if-defined.d.ts"
+    },
+    "./directives/join.js": {
+      "default": "./directives/join.js",
+      "development": "./development/directives/join.js",
+      "node": {
+        "default": "./node/directives/join.js",
+        "development": "./node/development/directives/join.js"
+      },
+      "types": "./development/directives/join.d.ts"
+    },
+    "./directives/keyed.js": {
+      "default": "./directives/keyed.js",
+      "development": "./development/directives/keyed.js",
+      "node": {
+        "default": "./node/directives/keyed.js",
+        "development": "./node/development/directives/keyed.js"
+      },
+      "types": "./development/directives/keyed.d.ts"
+    },
+    "./directives/live.js": {
+      "default": "./directives/live.js",
+      "development": "./development/directives/live.js",
+      "node": {
+        "default": "./node/directives/live.js",
+        "development": "./node/development/directives/live.js"
+      },
+      "types": "./development/directives/live.d.ts"
+    },
+    "./directives/map.js": {
+      "default": "./directives/map.js",
+      "development": "./development/directives/map.js",
+      "node": {
+        "default": "./node/directives/map.js",
+        "development": "./node/development/directives/map.js"
+      },
+      "types": "./development/directives/map.d.ts"
+    },
+    "./directives/range.js": {
+      "default": "./directives/range.js",
+      "development": "./development/directives/range.js",
+      "node": {
+        "default": "./node/directives/range.js",
+        "development": "./node/development/directives/range.js"
+      },
+      "types": "./development/directives/range.d.ts"
+    },
+    "./directives/ref.js": {
+      "default": "./directives/ref.js",
+      "development": "./development/directives/ref.js",
+      "node": {
+        "default": "./node/directives/ref.js",
+        "development": "./node/development/directives/ref.js"
+      },
+      "types": "./development/directives/ref.d.ts"
+    },
+    "./directives/repeat.js": {
+      "default": "./directives/repeat.js",
+      "development": "./development/directives/repeat.js",
+      "node": {
+        "default": "./node/directives/repeat.js",
+        "development": "./node/development/directives/repeat.js"
+      },
+      "types": "./development/directives/repeat.d.ts"
+    },
+    "./directives/style-map.js": {
+      "default": "./directives/style-map.js",
+      "development": "./development/directives/style-map.js",
+      "node": {
+        "default": "./node/directives/style-map.js",
+        "development": "./node/development/directives/style-map.js"
+      },
+      "types": "./development/directives/style-map.d.ts"
+    },
+    "./directives/template-content.js": {
+      "default": "./directives/template-content.js",
+      "development": "./development/directives/template-content.js",
+      "node": {
+        "default": "./node/directives/template-content.js",
+        "development": "./node/development/directives/template-content.js"
+      },
+      "types": "./development/directives/template-content.d.ts"
+    },
+    "./directives/unsafe-html.js": {
+      "default": "./directives/unsafe-html.js",
+      "development": "./development/directives/unsafe-html.js",
+      "node": {
+        "default": "./node/directives/unsafe-html.js",
+        "development": "./node/development/directives/unsafe-html.js"
+      },
+      "types": "./development/directives/unsafe-html.d.ts"
+    },
+    "./directives/unsafe-svg.js": {
+      "default": "./directives/unsafe-svg.js",
+      "development": "./development/directives/unsafe-svg.js",
+      "node": {
+        "default": "./node/directives/unsafe-svg.js",
+        "development": "./node/development/directives/unsafe-svg.js"
+      },
+      "types": "./development/directives/unsafe-svg.d.ts"
+    },
+    "./directives/until.js": {
+      "default": "./directives/until.js",
+      "development": "./development/directives/until.js",
+      "node": {
+        "default": "./node/directives/until.js",
+        "development": "./node/development/directives/until.js"
+      },
+      "types": "./development/directives/until.d.ts"
+    },
+    "./directives/when.js": {
+      "default": "./directives/when.js",
+      "development": "./development/directives/when.js",
+      "node": {
+        "default": "./node/directives/when.js",
+        "development": "./node/development/directives/when.js"
+      },
+      "types": "./development/directives/when.d.ts"
+    },
+    "./experimental-hydrate.js": {
+      "default": "./experimental-hydrate.js",
+      "development": "./development/experimental-hydrate.js",
+      "node": {
+        "default": "./node/experimental-hydrate.js",
+        "development": "./node/development/experimental-hydrate.js"
+      },
+      "types": "./development/experimental-hydrate.d.ts"
+    },
+    "./is-server.js": {
+      "default": "./is-server.js",
+      "development": "./development/is-server.js",
+      "node": {
+        "default": "./node/is-server.js",
+        "development": "./node/development/is-server.js"
+      },
+      "types": "./development/is-server.d.ts"
+    },
+    "./polyfill-support.js": {
+      "default": "./polyfill-support.js",
+      "development": "./development/polyfill-support.js",
+      "node": {
+        "default": "./node/polyfill-support.js",
+        "development": "./node/development/polyfill-support.js"
+      },
+      "types": "./development/polyfill-support.d.ts"
+    },
+    "./private-ssr-support.js": {
+      "default": "./private-ssr-support.js",
+      "development": "./development/private-ssr-support.js",
+      "node": {
+        "default": "./node/private-ssr-support.js",
+        "development": "./node/development/private-ssr-support.js"
+      },
+      "types": "./development/private-ssr-support.d.ts"
+    },
+    "./static.js": {
+      "default": "./static.js",
+      "development": "./development/static.js",
+      "node": {
+        "default": "./node/static.js",
+        "development": "./node/development/static.js"
+      },
+      "types": "./development/static.d.ts"
+    }
+  }
+}

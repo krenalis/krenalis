@@ -1,0 +1,8 @@
+{
+  "name": "react-xarrows",
+  "version": "2.0.2",
+  "author": "Eliav Louski",
+  "license": "MIT",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "react-resize-detector",
+  "version": "8.1.0",
+  "author": "Vitalii Maslianok \u003cmaslianok@gmail.com\u003e (https://github.com/maslianok)",
+  "license": "MIT",
+  "main": "build/index.js",
+  "module": "build/index.esm.js",
+  "sideEffects": false
+}

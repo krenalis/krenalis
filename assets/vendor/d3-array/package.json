@@ -1,0 +1,17 @@
+{
+  "name": "d3-array",
+  "version": "3.2.4",
+  "author": {
+    "name": "Mike Bostock",
+    "url": "http://bost.ocks.org/mike"
+  },
+  "license": "ISC",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    "default": "./src/index.js",
+    "umd": "./dist/d3-array.min.js"
+  },
+  "sideEffects": false
+}

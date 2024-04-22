@@ -1,0 +1,7 @@
+{
+  "name": "eventemitter3",
+  "version": "4.0.7",
+  "author": "Arnout Kazemier",
+  "license": "MIT",
+  "main": "index.js"
+}
