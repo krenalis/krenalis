@@ -123,7 +123,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			operations = append(operations, warehouses.AlterSchemaOperation{
 				Operation: warehouses.OperationRenameProperty,
 				Path:      oldPath,
-				Name:      addedName,
+				NewPath:   appendPath(path, addedName),
 			})
 			continue
 		}
@@ -229,7 +229,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			operations = append(operations, warehouses.AlterSchemaOperation{
 				Operation: warehouses.OperationRenameProperty,
 				Path:      oldPath,
-				Name:      keptName,
+				NewPath:   keptPath,
 			})
 			continue
 		}

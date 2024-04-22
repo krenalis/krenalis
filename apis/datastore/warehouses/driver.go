@@ -34,7 +34,7 @@ type AlterSchemaOperation struct {
 	Path      string     // For "Add", "Drop" and "Rename" operations.
 	Type      types.Type // For "Add" operations.
 	Nullable  bool       // For "Add" operations.
-	Name      string     // For "Rename" operations.
+	NewPath   string     // For "Rename" operations.
 }
 
 // MergeTable represents a table in which rows will be merged.

@@ -104,8 +104,7 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 			alterOps = append(alterOps, `DROP COLUMN "`+column+`"`)
 
 		case warehouses.OperationRenameProperty:
-			newPropertyPath := replacePropertyPathName(op.Path, op.Name)
-			newColumn := propertyPathToColumn(newPropertyPath)
+			newColumn := propertyPathToColumn(op.NewPath)
 			alterOps = append(alterOps, `RENAME COLUMN "`+column+`" TO "`+newColumn+`"`)
 
 		default:

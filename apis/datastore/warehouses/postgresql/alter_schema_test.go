@@ -160,7 +160,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		{
 			name: "Rename a first level property",
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "a", Name: "b"},
+				{Operation: warehouses.OperationRenameProperty, Path: "a", NewPath: "b"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"users\"\n\tRENAME COLUMN \"a\" TO \"b\"",
