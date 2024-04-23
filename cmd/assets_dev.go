@@ -32,11 +32,11 @@ func init() {
 		panic("cannot get current working directory")
 	}
 	for {
-		st, err := os.Stat("go.mod")
+		st, err := os.Stat(filepath.Join(dir, "go.mod"))
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			panic(err)
 		}
-		if !errors.Is(err, os.ErrNotExist) && st.Mode().IsRegular() {
+		if err == nil && st.Mode().IsRegular() {
 			moduleRoot = dir
 			return
 		}
