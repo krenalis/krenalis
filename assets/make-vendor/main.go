@@ -74,6 +74,9 @@ func makeVendor(explicit bool) error {
 		Setup: func(build api.PluginBuild) {
 			build.OnResolve(api.OnResolveOptions{Filter: `^.*$`},
 				func(args api.OnResolveArgs) (api.OnResolveResult, error) {
+					if args.Namespace == "" {
+						return api.OnResolveResult{}, nil
+					}
 					var key string
 					if dir, ok := strings.CutPrefix(args.ResolveDir, nodeModulesDir); ok {
 						key = pathKey(dir, args.Path)
@@ -107,6 +110,7 @@ func makeVendor(explicit bool) error {
 					if !ok {
 						return api.OnResolveResult{}, fmt.Errorf("esbuild has resolved %s to a path that is not in 'node_packages' directory: %s", key, result.Path)
 					}
+					value = filepath.ToSlash(value)
 					resolve.AddImport(key, value, result.SideEffects)
 					printX("\t--- %q --> %s\n", key, value)
 					res := api.OnResolveResult{
@@ -297,6 +301,7 @@ func (f *resolveFile) MarshalJSON() ([]byte, error) {
 }
 
 func pathKey(dir, name string) string {
+	dir = filepath.ToSlash(dir)
 	if isPackagePath(name) {
 		i := strings.LastIndex(dir, "/node_modules/")
 		if i != -1 {
