@@ -1,0 +1,4 @@
+# Do not version control the '.gitattributes' files, as they would be read by
+# Git and the files inside the vendor would be modified, which, instead, should
+# be left as they are.
+../vendor/**/.gitattributes
