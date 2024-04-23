@@ -47,8 +47,12 @@ func buildAssets() error {
 		return fmt.Errorf("cannot create a temporary directory: %s", err)
 	}
 	defer func() {
+		err = os.Chdir("..")
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "warning: cannot chdir to directory %q: %s\n", filepath.Join(buildDir, ".."), err)
+		}
 		if err = os.RemoveAll(buildDir); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: cannot remove temporary directory %q: %s", buildDir, err)
+			_, _ = fmt.Fprintf(os.Stderr, "warning: cannot remove temporary directory %q: %s\n", buildDir, err)
 		}
 	}()
 
@@ -215,6 +219,9 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 			Setup: func(build api.PluginBuild) {
 				build.OnResolve(api.OnResolveOptions{Filter: `.*`},
 					func(args api.OnResolveArgs) (api.OnResolveResult, error) {
+						if args.Path == entryPoint {
+							return api.OnResolveResult{}, nil
+						}
 						var key string
 						if dir, ok := strings.CutPrefix(args.ResolveDir, vendorDir); ok {
 							key = pathKey(dir, args.Path)
@@ -225,7 +232,7 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 						}
 						value, ok := resolve[key]
 						if !ok {
-							return api.OnResolveResult{}, fmt.Errorf("key %q (imported as %q from %q) is missing from vendor", key, args.Path, args.ResolveDir)
+							return api.OnResolveResult{}, fmt.Errorf("vendor does not contain the key %q (imported as %q from %q)", key, args.Path, args.ResolveDir)
 						}
 						var sideEffect api.SideEffects
 						if value, ok = strings.CutSuffix(value, ";true"); ok {
@@ -234,6 +241,7 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 							value = strings.TrimSuffix(value, ";false")
 							sideEffect = api.SideEffectsFalse
 						}
+						value = filepath.ToSlash(value)
 						res := api.OnResolveResult{
 							Path:        filepath.Join(vendorDir, value),
 							Namespace:   "file",
@@ -296,6 +304,7 @@ func readResolveFile() (map[string]string, error) {
 // pathKey returns the key to use in the resolve.json file, relative to the
 // given name when imported from the directory dir.
 func pathKey(dir, name string) string {
+	dir = filepath.ToSlash(dir)
 	if isPackagePath(name) {
 		i := strings.LastIndex(dir, "/node_modules/")
 		if i != -1 {
@@ -318,7 +327,7 @@ func copyFS(dir string, fsys fs.FS) error {
 		if err != nil {
 			return err
 		}
-		dst := filepath.Join(dir, path)
+		dst := filepath.Join(dir, filepath.FromSlash(path))
 		if d.IsDir() {
 			return os.MkdirAll(dst, 0755)
 		}
