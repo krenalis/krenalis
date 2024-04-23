@@ -27,7 +27,7 @@ import (
 )
 
 //go:embed package.json public/index.html all:src tsconfig.json all:vendor vendor/resolve.json
-var uiFs embed.FS
+var assetsFS embed.FS
 
 func main() {
 	err := buildAssets()
@@ -83,7 +83,7 @@ func buildAssets() error {
 	}
 
 	// Copy the UI's assets into the uiDir directory.
-	err = copyFS(uiDir, uiFs)
+	err = copyFS(uiDir, assetsFS)
 	if err != nil {
 		return fmt.Errorf("cannot copy assets: %s", err)
 	}
@@ -112,7 +112,7 @@ func buildAssets() error {
 	}
 
 	// Copy the "index.html" file.
-	data, _ := uiFs.ReadFile("public/index.html")
+	data, _ := assetsFS.ReadFile("public/index.html")
 	err = os.WriteFile(outDir+"index.html", data, 0666)
 	if err != nil {
 		return err
@@ -292,7 +292,7 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 
 // readResolveFile reads the 'resolve.json' file.
 func readResolveFile() (map[string]string, error) {
-	data, _ := uiFs.ReadFile("vendor/resolve.json")
+	data, _ := assetsFS.ReadFile("vendor/resolve.json")
 	resolve := map[string]string{}
 	err := json.Unmarshal(data, &resolve)
 	if err != nil {

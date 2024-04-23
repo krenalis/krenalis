@@ -56,7 +56,7 @@ Besides the requirements listed at the beginning of this page, for this installa
 
 3. **Generate assets**
 
-   Use the following commands to bundle and compress the assets, which will be embedded into the executable:
+   Use the following command to bundle and compress the assets, which will be embedded into the executable:
 
    ```sh
    go generate
