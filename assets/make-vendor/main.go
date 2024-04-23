@@ -74,7 +74,7 @@ func makeVendor(explicit bool) error {
 		Setup: func(build api.PluginBuild) {
 			build.OnResolve(api.OnResolveOptions{Filter: `^.*$`},
 				func(args api.OnResolveArgs) (api.OnResolveResult, error) {
-					if args.Namespace == "" {
+					if args.Path == entryPoint {
 						return api.OnResolveResult{}, nil
 					}
 					var key string
