@@ -4,6 +4,7 @@
         "properties": [
             {
                 "name": "email",
+                "label": "Email",
                 "type": {
                     "name": "Text",
                     "charLen": 300
@@ -12,6 +13,7 @@
             },
             {
                 "name": "dummyId",
+                "label": "Dummy ID",
                 "type": {
                     "name": "Text"
                 },
@@ -19,11 +21,13 @@
             },
             {
                 "name": "android",
+                "label": "Android",
                 "type": {
                     "name": "Object",
                     "properties": [
                         {
                             "name": "id",
+                            "label": "ID",
                             "type": {
                                 "name": "Text"
                             },
@@ -31,6 +35,7 @@
                         },
                         {
                             "name": "idfa",
+                            "label": "IDFA",
                             "type": {
                                 "name": "Text"
                             },
@@ -38,6 +43,7 @@
                         },
                         {
                             "name": "pushToken",
+                            "label": "Push token",
                             "type": {
                                 "name": "Text"
                             },
@@ -48,11 +54,13 @@
             },
             {
                 "name": "ios",
+                "label": "IOS",
                 "type": {
                     "name": "Object",
                     "properties": [
                         {
                             "name": "id",
+                            "label": "ID",
                             "type": {
                                 "name": "Text"
                             },
@@ -60,6 +68,7 @@
                         },
                         {
                             "name": "idfa",
+                            "label": "IDFA",
                             "type": {
                                 "name": "Text"
                             },
@@ -67,6 +76,7 @@
                         },
                         {
                             "name": "pushToken",
+                            "label": "Push token",
                             "type": {
                                 "name": "Text"
                             },
@@ -77,6 +87,7 @@
             },
             {
                 "name": "firstName",
+                "label": "First name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
@@ -85,6 +96,7 @@
             },
             {
                 "name": "lastName",
+                "label": "Last name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
@@ -93,6 +105,7 @@
             },
             {
                 "name": "gender",
+                "label": "Gender",
                 "type": {
                     "name": "Text"
                 },
@@ -100,11 +113,13 @@
             },
             {
                 "name": "foodPreferences",
+                "label": "Food preferences",
                 "type": {
                     "name": "Object",
                     "properties": [
                         {
                             "name": "drink",
+                            "label": "Drink",
                             "type": {
                                 "name": "Text"
                             },
@@ -112,6 +127,7 @@
                         },
                         {
                             "name": "fruit",
+                            "label": "Fruit",
                             "type": {
                                 "name": "Text"
                             },
@@ -122,6 +138,7 @@
             },
             {
                 "name": "phoneNumbers",
+                "label": "Phone numbers",
                 "type": {
                     "name": "Array",
                     "itemType": {
@@ -133,11 +150,13 @@
             },
             {
                 "name": "favoriteMovie",
+                "label": "Favorite movie",
                 "type": {
                     "name": "Object",
                     "properties": [
                         {
                             "name": "title",
+                            "label": "Title",
                             "type": {
                                 "name": "Text"
                             },
@@ -145,6 +164,7 @@
                         },
                         {
                             "name": "length",
+                            "label": "Length",
                             "type": {
                                 "name": "Float",
                                 "bitSize": 64
@@ -153,11 +173,13 @@
                         },
                         {
                             "name": "soundtrack",
+                            "label": "Soundtrack",
                             "type": {
                                 "name": "Object",
                                 "properties": [
                                     {
                                         "name": "title",
+                                        "label": "Title",
                                         "type": {
                                             "name": "Text"
                                         },
@@ -165,6 +187,7 @@
                                     },
                                     {
                                         "name": "author",
+                                        "label": "Author",
                                         "type": {
                                             "name": "Text"
                                         },
@@ -172,6 +195,7 @@
                                     },
                                     {
                                         "name": "length",
+                                        "label": "Length",
                                         "type": {
                                             "name": "Float",
                                             "bitSize": 64
@@ -180,6 +204,7 @@
                                     },
                                     {
                                         "name": "genre",
+                                        "label": "Genre",
                                         "type": {
                                             "name": "Text"
                                         },
