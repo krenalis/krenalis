@@ -667,6 +667,50 @@ func TestDiff(t *testing.T) {
 				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
 			},
 		},
+		{
+			name: "Renaming of an Object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+				{Name: "b", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Object([]types.Property{
+							{Name: "h", Type: types.Text()},
+							{Name: "i", Type: types.Text()},
+						})},
+					})},
+				})},
+				{Name: "j", Type: types.Text()},
+				{Name: "k", Type: types.Text()},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+				{Name: "b", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e_new_name", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Object([]types.Property{
+							{Name: "h", Type: types.Text()},
+							{Name: "i", Type: types.Text()},
+						})},
+					})},
+				})},
+				{Name: "j", Type: types.Text()},
+				{Name: "k", Type: types.Text()},
+			}),
+			rePaths: map[string]any{
+				"b.e_new_name": "b.e",
+			},
+			expectedErr: "renaming of Object properties is currently not supported (see https://github.com/open2b/chichi/issues/691)",
+			// expectedOps: []warehouses.AlterSchemaOperation{
+			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.f", NewPath: "b.e_new_name.f"},
+			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.g.h", NewPath: "b.e_new_name.g.h"},
+			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.g.i", NewPath: "b.e_new_name.g.i"},
+			// },
+		},
 	}
 
 	for _, test := range tests {

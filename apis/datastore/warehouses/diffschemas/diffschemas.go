@@ -119,6 +119,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			if oldProp.Nullable != newProp.Nullable {
 				return nil, fmt.Errorf("error on property %q (renamed to %q): nullability changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
 			}
+			if newProp.Type.Kind() == types.ObjectKind {
+				return nil, fmt.Errorf("renaming of Object properties is currently not supported (see https://github.com/open2b/chichi/issues/691)")
+			}
 			newNameOf[oldName] = addedName
 			operations = append(operations, warehouses.AlterSchemaOperation{
 				Operation: warehouses.OperationRenameProperty,
@@ -224,6 +227,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			if oldProp.Nullable != newProp.Nullable {
 				return nil, fmt.Errorf("error on property %q: nullability changes are not supported", appendPath(path, oldProp.Name))
+			}
+			if newProp.Type.Kind() == types.ObjectKind {
+				return nil, fmt.Errorf("renaming of Object properties is currently not supported (see https://github.com/open2b/chichi/issues/691)")
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
 			operations = append(operations, warehouses.AlterSchemaOperation{
