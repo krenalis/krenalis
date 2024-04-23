@@ -147,6 +147,14 @@ func New(conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
+	// Ping the PostgreSQL connection to test if it works.
+	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+
 	var smtp *SMTPConfig
 	if conf.SMTP.Host != "" {
 		smtp = &conf.SMTP
