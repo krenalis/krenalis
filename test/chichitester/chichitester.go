@@ -38,7 +38,7 @@ import (
 // launchChichiExternally determines if Chichi should be launched externally
 // when testing.
 //
-//   - Set this to true when testing Chichi using 'go run commit/commit.go' or
+//   - Set this to true when testing Chichi using 'go run ./commit' or
 //     'go test'.
 //
 //   - Set this to false when debugging a single Chichi test.

@@ -30,7 +30,7 @@
 From the root of this repository, run:
 
 ```
-go run commit/commit.go
+go run ./commit
 ```
 
 ### Troubleshoot tests
@@ -38,7 +38,7 @@ go run commit/commit.go
 To troubleshoot bad tests, for example if they block indefinitely, you can run:
 
 ```
-go run commit/commit.go -pkg -v
+go run ./commit -pkg -v
 ```
 
 to execute tests on every package printing verbose output. This should help
@@ -49,7 +49,7 @@ locating the problem.
 For short tests during development you can also use the command:
 
 ```
-go run commit/commit.go -short
+go run ./commit -short
 ```
 
 Note: don't use the option `-short` before committing because it runs only a
