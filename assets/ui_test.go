@@ -11,12 +11,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"regexp"
 	"testing"
 )
-
-// This regular expression is used to fix the files generated from esbuild.
-var fixReg = regexp.MustCompile(`(React\d+ = __toESM\(require_react\(\)), 1\)`)
 
 func Test_Build(t *testing.T) {
 
@@ -50,31 +46,26 @@ func Test_Build(t *testing.T) {
 			t.Fatalf("cannot read file %q in directory %q: %s", name, vendorContent, err)
 		}
 
-		vendorContent = bytes.ReplaceAll(vendorContent, []byte(`// ../vendor/`), []byte(`// ../node_modules/`))
-		vendorContent = bytes.ReplaceAll(vendorContent, []byte(`"../vendor/`), []byte(`"../node_modules/`))
-		vendorContent = fixReg.ReplaceAll(vendorContent, []byte(`$1)`))
-		nodeContent = fixReg.ReplaceAll(nodeContent, []byte(`$1)`))
+		if !bytes.Equal(nodeContent, vendorContent) {
 
-		if bytes.Equal(nodeContent, vendorContent) {
-			continue
-		}
+			tmpDir, err := os.MkdirTemp("", "chichi-test-build")
+			if err != nil {
+				t.Fatalf("cannot create temporary directory: %s", err)
+			}
 
-		tmpDir, err := os.MkdirTemp("", "chichi-test-build")
-		if err != nil {
-			t.Fatalf("cannot create temporary directory: %s", err)
-		}
+			err = os.WriteFile(filepath.Join(tmpDir, "node.js"), nodeContent, 0666)
+			if err != nil {
+				t.Fatalf("cannot write file 'node.js': %s", err)
+			}
+			err = os.WriteFile(filepath.Join(tmpDir, "vendor.js"), vendorContent, 0666)
+			if err != nil {
+				t.Fatalf("cannot write file 'vendor.js': %s", err)
+			}
 
-		err = os.WriteFile(filepath.Join(tmpDir, "node.js"), nodeContent, 0666)
-		if err != nil {
-			t.Fatalf("cannot write file 'node.js': %s", err)
-		}
-		err = os.WriteFile(filepath.Join(tmpDir, "vendor.js"), vendorContent, 0666)
-		if err != nil {
-			t.Fatalf("cannot write file 'vendor.js': %s", err)
-		}
+			t.Fatalf("The files %q built from 'node_modules' and 'vendor' differ."+
+				" Please refer to the files located in the directory %q for more information.", name, tmpDir)
 
-		t.Fatalf("The files %q built from 'node_modules' and 'vendor' differ."+
-			" Please refer to the files located in the directory %q for more information.", name, tmpDir)
+		}
 
 	}
 
