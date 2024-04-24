@@ -1,0 +1,8 @@
+{
+  "name": "@monaco-editor/loader",
+  "version": "1.3.2",
+  "author": "Suren Atoyan \u003ccontact@surenatoyan.com\u003e",
+  "license": "MIT",
+  "main": "lib/cjs/index.js",
+  "module": "lib/es/index.js"
+}

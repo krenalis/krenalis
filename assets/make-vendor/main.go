@@ -197,6 +197,9 @@ func makeVendor(explicit bool) error {
 			return err
 		}
 		i := 0
+		if strings.HasPrefix(name, "@") {
+			i = strings.Index(name, "/") + 1
+		}
 		for {
 			if p := strings.Index(name[i:], "/"); p != -1 {
 				i += p

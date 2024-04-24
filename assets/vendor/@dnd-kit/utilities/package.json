@@ -1,0 +1,8 @@
+{
+  "name": "@dnd-kit/utilities",
+  "version": "3.2.2",
+  "author": "Claudéric Demers",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/utilities.esm.js"
+}

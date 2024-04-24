@@ -1,0 +1,146 @@
+{
+  "name": "@lit/reactive-element",
+  "version": "1.6.3",
+  "author": "Google LLC",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "main": "reactive-element.js",
+  "module": "reactive-element.js",
+  "exports": {
+    ".": {
+      "default": "./reactive-element.js",
+      "development": "./development/reactive-element.js",
+      "node": {
+        "default": "./node/reactive-element.js",
+        "development": "./node/development/reactive-element.js"
+      },
+      "types": "./development/reactive-element.d.ts"
+    },
+    "./css-tag.js": {
+      "default": "./css-tag.js",
+      "development": "./development/css-tag.js",
+      "node": {
+        "default": "./node/css-tag.js",
+        "development": "./node/development/css-tag.js"
+      },
+      "types": "./development/css-tag.d.ts"
+    },
+    "./decorators.js": {
+      "default": "./decorators.js",
+      "development": "./development/decorators.js",
+      "node": {
+        "default": "./node/decorators.js",
+        "development": "./node/development/decorators.js"
+      },
+      "types": "./development/decorators.d.ts"
+    },
+    "./decorators/base.js": {
+      "default": "./decorators/base.js",
+      "development": "./development/decorators/base.js",
+      "node": {
+        "default": "./node/decorators/base.js",
+        "development": "./node/development/decorators/base.js"
+      },
+      "types": "./development/decorators/base.d.ts"
+    },
+    "./decorators/custom-element.js": {
+      "default": "./decorators/custom-element.js",
+      "development": "./development/decorators/custom-element.js",
+      "node": {
+        "default": "./node/decorators/custom-element.js",
+        "development": "./node/development/decorators/custom-element.js"
+      },
+      "types": "./development/decorators/custom-element.d.ts"
+    },
+    "./decorators/event-options.js": {
+      "default": "./decorators/event-options.js",
+      "development": "./development/decorators/event-options.js",
+      "node": {
+        "default": "./node/decorators/event-options.js",
+        "development": "./node/development/decorators/event-options.js"
+      },
+      "types": "./development/decorators/event-options.d.ts"
+    },
+    "./decorators/property.js": {
+      "default": "./decorators/property.js",
+      "development": "./development/decorators/property.js",
+      "node": {
+        "default": "./node/decorators/property.js",
+        "development": "./node/development/decorators/property.js"
+      },
+      "types": "./development/decorators/property.d.ts"
+    },
+    "./decorators/query-all.js": {
+      "default": "./decorators/query-all.js",
+      "development": "./development/decorators/query-all.js",
+      "node": {
+        "default": "./node/decorators/query-all.js",
+        "development": "./node/development/decorators/query-all.js"
+      },
+      "types": "./development/decorators/query-all.d.ts"
+    },
+    "./decorators/query-assigned-elements.js": {
+      "default": "./decorators/query-assigned-elements.js",
+      "development": "./development/decorators/query-assigned-elements.js",
+      "node": {
+        "default": "./node/decorators/query-assigned-elements.js",
+        "development": "./node/development/decorators/query-assigned-elements.js"
+      },
+      "types": "./development/decorators/query-assigned-elements.d.ts"
+    },
+    "./decorators/query-assigned-nodes.js": {
+      "default": "./decorators/query-assigned-nodes.js",
+      "development": "./development/decorators/query-assigned-nodes.js",
+      "node": {
+        "default": "./node/decorators/query-assigned-nodes.js",
+        "development": "./node/development/decorators/query-assigned-nodes.js"
+      },
+      "types": "./development/decorators/query-assigned-nodes.d.ts"
+    },
+    "./decorators/query-async.js": {
+      "default": "./decorators/query-async.js",
+      "development": "./development/decorators/query-async.js",
+      "node": {
+        "default": "./node/decorators/query-async.js",
+        "development": "./node/development/decorators/query-async.js"
+      },
+      "types": "./development/decorators/query-async.d.ts"
+    },
+    "./decorators/query.js": {
+      "default": "./decorators/query.js",
+      "development": "./development/decorators/query.js",
+      "node": {
+        "default": "./node/decorators/query.js",
+        "development": "./node/development/decorators/query.js"
+      },
+      "types": "./development/decorators/query.d.ts"
+    },
+    "./decorators/state.js": {
+      "default": "./decorators/state.js",
+      "development": "./development/decorators/state.js",
+      "node": {
+        "default": "./node/decorators/state.js",
+        "development": "./node/development/decorators/state.js"
+      },
+      "types": "./development/decorators/state.d.ts"
+    },
+    "./polyfill-support.js": {
+      "default": "./polyfill-support.js",
+      "development": "./development/polyfill-support.js",
+      "node": {
+        "default": "./node/polyfill-support.js",
+        "development": "./node/development/polyfill-support.js"
+      },
+      "types": "./development/polyfill-support.d.ts"
+    },
+    "./reactive-controller.js": {
+      "default": "./reactive-controller.js",
+      "development": "./development/reactive-controller.js",
+      "node": {
+        "default": "./node/reactive-controller.js",
+        "development": "./node/development/reactive-controller.js"
+      },
+      "types": "./development/reactive-controller.d.ts"
+    }
+  }
+}

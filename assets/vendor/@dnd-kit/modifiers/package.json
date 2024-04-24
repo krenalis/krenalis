@@ -1,0 +1,8 @@
+{
+  "name": "@dnd-kit/modifiers",
+  "version": "7.0.0",
+  "author": "Claudéric Demers",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/modifiers.esm.js"
+}

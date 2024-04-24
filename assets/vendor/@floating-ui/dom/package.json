@@ -1,0 +1,21 @@
+{
+  "name": "@floating-ui/dom",
+  "version": "1.5.3",
+  "author": "atomiks",
+  "license": "MIT",
+  "main": "./dist/floating-ui.dom.umd.js",
+  "module": "./dist/floating-ui.dom.esm.js",
+  "exports": {
+    ".": {
+      "default": "./dist/floating-ui.dom.umd.js",
+      "import": {
+        "default": "./dist/floating-ui.dom.mjs",
+        "types": "./src/types.d.ts"
+      },
+      "module": "./dist/floating-ui.dom.esm.js",
+      "types": "./src/types.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false
+}
