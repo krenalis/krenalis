@@ -219,7 +219,7 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 			Setup: func(build api.PluginBuild) {
 				build.OnResolve(api.OnResolveOptions{Filter: `.*`},
 					func(args api.OnResolveArgs) (api.OnResolveResult, error) {
-						if args.Path == entryPoint {
+						if args.Kind == api.ResolveEntryPoint {
 							return api.OnResolveResult{}, nil
 						}
 						var key string
