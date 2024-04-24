@@ -9,13 +9,10 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 // This regular expression is used to fix the files generated from esbuild.
@@ -76,13 +73,7 @@ func Test_Build(t *testing.T) {
 			t.Fatalf("cannot write file 'vendor.js': %s", err)
 		}
 
-		diff := cmp.Diff(nodeContent, vendorContent)
-		err = os.WriteFile(filepath.Join(tmpDir, "diff"), []byte(diff), 0666)
-		if err != nil {
-			t.Fatalf("cannot write file 'diff': %s", err)
-		}
-
-		fmt.Printf("The files %q built from 'node_modules' and 'vendor' differ."+
+		t.Fatalf("The files %q built from 'node_modules' and 'vendor' differ."+
 			" Please refer to the files located in the directory %q for more information.", name, tmpDir)
 
 	}
