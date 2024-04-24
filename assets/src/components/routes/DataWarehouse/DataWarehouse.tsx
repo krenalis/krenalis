@@ -7,6 +7,7 @@ import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import PasswordToggle from '../../shared/PasswordToggle/PasswordToggle';
 import { WarehouseSettings, WarehouseType } from '../../../types/external/warehouse';
 import Grid from '../../shared/Grid/Grid';
+import * as icons from '../../../constants/icons';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -94,8 +95,9 @@ const WarehouseInfo = ({
 }: WarehouseInfoProps) => {
 	const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState<boolean>(false);
 	const [isDisconnectButtonLoading, setIsDisconnectButtonLoading] = useState<boolean>(false);
+	const [isInitWarehouseLoading, setIsInitWarehouseLoading] = useState<boolean>(false);
 
-	const { api, handleError, setIsLoadingState } = useContext(appContext);
+	const { api, handleError, setIsLoadingState, showStatus } = useContext(appContext);
 
 	const warehouse = warehouses.find((w) => w.label === warehouseName)!;
 
@@ -139,13 +141,36 @@ const WarehouseInfo = ({
 		setIsConfirmationDialogOpen(false);
 	};
 
+	const onInitWarehouse = async () => {
+		setIsInitWarehouseLoading(true);
+		try {
+			await api.workspaces.initWarehouse();
+		} catch (err) {
+			setTimeout(() => {
+				setIsInitWarehouseLoading(false);
+				handleError(err);
+			}, 300);
+			return;
+		}
+		setTimeout(() => {
+			setIsInitWarehouseLoading(false);
+			showStatus({ variant: 'success', icon: icons.OK, text: 'The warehouse has been successfully initialized' });
+		}, 300);
+	};
+
 	return (
 		<div className='warehouse-info'>
 			<div className='warehouse-info__info'>
-				<div className='warehouse-info__icon'>
-					<LittleLogo icon={warehouse.icon} />
+				<div className='warehouse-info__title'>
+					<div className='warehouse-info__icon'>
+						<LittleLogo icon={warehouse.icon} />
+					</div>
+					<div className='warehouse-info__name'>{warehouse.label}</div>
 				</div>
-				<div className='warehouse-info__name'>{warehouse.label}</div>
+				<SlButton className='warehouse-info__init' onClick={onInitWarehouse} loading={isInitWarehouseLoading}>
+					<SlIcon slot='prefix' name='database-up' />
+					Init warehouse
+				</SlButton>
 			</div>
 			<div className='warehouse-info__settings'>
 				<Grid rows={rows} columns={warehouseInfoColumns} />

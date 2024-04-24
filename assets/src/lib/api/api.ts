@@ -585,6 +585,10 @@ class Workspaces {
 		});
 	};
 
+	initWarehouse = async (): Promise<void> => {
+		return await call(`${this.apiURL}/init-warehouse`, http.POST);
+	};
+
 	disconnectWarehouse = async (): Promise<void> => {
 		return await call(`${this.apiURL}/disconnect-warehouse`, http.POST);
 	};
