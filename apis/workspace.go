@@ -429,9 +429,6 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
-	if len(operations) == 0 {
-		return nil
-	}
 
 	// Add the "Id" meta property.
 	// TODO(Gianluca): see https://github.com/open2b/chichi/issues/573.
@@ -461,15 +458,17 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	}
 
 	// Alter the schema on the data warehouse.
-	err = this.store.AlterSchema(ctx, operations)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+	if len(operations) > 0 {
+		err = this.store.AlterSchema(ctx, operations)
+		if err != nil {
+			if err, ok := err.(*datastore.DataWarehouseError); ok {
+				return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+			}
+			if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
+				return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
+			}
+			return err
 		}
-		if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
-			return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
-		}
-		return err
 	}
 
 	return nil
