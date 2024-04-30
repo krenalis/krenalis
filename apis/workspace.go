@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -425,6 +426,15 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	}
 	current := removeMetaProperties(this.workspace.UsersSchema)
 	schema = removeMetaProperties(schema)
+
+	// TODO(Gianluca): this check is a temporary workaround for
+	// https://github.com/open2b/chichi/issues/700 and
+	// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
+	// understand.
+	if !onlyAlphaNumericPropertyNames(schema) {
+		return errors.BadRequest("schema cannot contain property names made of characters which are not alphanumeric")
+	}
+
 	operations, err := diffschemas.Diff(current, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -504,6 +514,13 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)
 	schema = removeMetaProperties(schema)
+	// TODO(Gianluca): this check is a temporary workaround for
+	// https://github.com/open2b/chichi/issues/700 and
+	// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
+	// understand.
+	if !onlyAlphaNumericPropertyNames(schema) {
+		return nil, errors.BadRequest("schema cannot contain property names made of characters which are not alphanumeric")
+	}
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -1480,6 +1497,44 @@ type ConnectionToAdd struct {
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
 	UIValues json.RawMessage
+}
+
+var alphaNumeric = regexp.MustCompile(`^[a-zA-Z\d]+$`)
+
+// isAlphaNumeric reports whether s is an alphanumeric string.
+//
+// TODO(Gianluca): this function is used as temporary workaround for
+// https://github.com/open2b/chichi/issues/700 and
+// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
+// understand.
+func isAlphaNumeric(s string) bool {
+	return alphaNumeric.MatchString(s)
+}
+
+// onlyAlphaNumericPropertyNames reports whether the schema s contains only
+// property names which contain only alphanumeric characters.
+//
+// TODO(Gianluca): this function is used as temporary workaround for
+// https://github.com/open2b/chichi/issues/700 and
+// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
+// understand.
+//
+// Some checks are redundant with the checks done in the "IsValidPropertyName",
+// but this is not a problem as this function will be reviewed and/or deleted
+// when #701 will be addressed.
+func onlyAlphaNumericPropertyNames(s types.Type) bool {
+	props := s.Properties()
+	for _, p := range props {
+		if !isAlphaNumeric(p.Name) {
+			return false
+		}
+		if p.Type.Kind() == types.ObjectKind {
+			if !onlyAlphaNumericPropertyNames(p.Type) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // openWarehouse opens a data store with the given type and settings.
