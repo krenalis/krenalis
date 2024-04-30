@@ -1911,6 +1911,76 @@ func (this *Connection) storage() *connectors.FileStorage {
 	return this.apis.connectors.FileStorage(this.connection)
 }
 
+// updateConnectionsStats updates the statistics about the connection.
+func (this *Connection) updateConnectionsStats(ctx context.Context, count int) error {
+	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, user_identities)\n"+
+		"VALUES ($1, $2, $3)\n"+
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET user_identities = cs.user_identities + $3",
+		this.connection.ID, statsTimeSlot(time.Now().UTC()), count)
+	return err
+}
+
+// validateTargetAndEventType validates a target and an event type and, if the
+// event type is not empty, it returns its schema.
+//
+// It returns an errors.BadRequestError error if target or eventType is not
+// valid, or the connection does not support them, and returns an
+// errors.UnprocessableError error with code:
+//   - EventTypeNotExist, if the connection does not have the event type.
+//   - FetchSchemaFailed, if an error occurred fetching the event type schema.
+func (this *Connection) validateTargetAndEventType(ctx context.Context, target Target, eventType string) (types.Type, error) {
+	// Perform a formal validation.
+	if target != Users && target != Groups && target != Events {
+		return types.Type{}, errors.BadRequest("target %d is not valid", int(target))
+	}
+	if eventType != "" && target != Events {
+		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
+	}
+	// Perform a validation based on the connection's type and role.
+	// (Refer to the specifications in the file "apis/Actions.md" for more
+	// details)
+	c := this.connection
+	connector := c.Connector()
+	var supported bool
+	switch connector.Type {
+	case state.AppType:
+		supported = c.Role == state.Destination || target != Events
+	case state.DatabaseType, state.FileStorageType:
+		supported = target != Events
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		supported = c.Role == state.Source
+	case state.StreamType:
+		supported = false
+	}
+	if !supported {
+		return types.Type{}, errors.BadRequest("%s are not supported by %s connections", strings.ToLower(target.String()), connector.Type)
+	}
+	if target == Events {
+		if c.Role == state.Source && eventType != "" {
+			return types.Type{}, errors.BadRequest("source connections do not have an event type")
+		}
+		if c.Role == state.Destination && eventType == "" {
+			return types.Type{}, errors.BadRequest("destination connections want an event type")
+		}
+	}
+	// Check if the target is supported by the connection.
+	if !connector.Targets.Contains(state.Target(target)) {
+		return types.Type{}, errors.BadRequest("connection %d does not support %s target", c.ID, target)
+	}
+	// Check if the event type is supported by the connection.
+	if eventType != "" {
+		schema, err := this.app().Schema(ctx, state.Target(target), eventType)
+		if err != nil {
+			if err == connectors.ErrEventTypeNotExist {
+				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+			}
+			return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+		}
+		return schema, nil
+	}
+	return types.Type{}, nil
+}
+
 // validateEventConnections validates the given event connections for a
 // connection with the provided connector, workspace and role. If they are not
 // valid, it returns an errors.BadRequestError error. If a connection does not
@@ -2068,15 +2138,6 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// updateConnectionsStats updates the statistics about the connection.
-func (this *Connection) updateConnectionsStats(ctx context.Context, count int) error {
-	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, user_identities)\n"+
-		"VALUES ($1, $2, $3)\n"+
-		"ON CONFLICT (connection, time_slot) DO UPDATE SET user_identities = cs.user_identities + $3",
-		this.connection.ID, statsTimeSlot(time.Now().UTC()), count)
-	return err
-}
-
 // ConnectionToSet represents a connection to set in a workspace, by adding a
 // new connection (using the method Workspace.AddConnection) or updating an
 // existing one (using the method Connection.Set).
@@ -2145,67 +2206,6 @@ func removeMetaProperties(schema types.Type) types.Type {
 func statsTimeSlot(t time.Time) int {
 	epoch := int(t.Unix())
 	return epoch / (60 * 60)
-}
-
-// validateTargetAndEventType validates a target and an event type and, if the
-// event type is not empty, it returns its schema.
-//
-// It returns an errors.BadRequestError error if target or eventType is not
-// valid, or the connection does not support them, and returns an
-// errors.UnprocessableError error with code:
-//   - EventTypeNotExist, if the connection does not have the event type.
-//   - FetchSchemaFailed, if an error occurred fetching the event type schema.
-func (this *Connection) validateTargetAndEventType(ctx context.Context, target Target, eventType string) (types.Type, error) {
-	// Perform a formal validation.
-	if target != Users && target != Groups && target != Events {
-		return types.Type{}, errors.BadRequest("target %d is not valid", int(target))
-	}
-	if eventType != "" && target != Events {
-		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
-	}
-	// Perform a validation based on the connection's type and role.
-	// (Refer to the specifications in the file "apis/Actions.md" for more
-	// details)
-	c := this.connection
-	connector := c.Connector()
-	var supported bool
-	switch connector.Type {
-	case state.AppType:
-		supported = c.Role == state.Destination || target != Events
-	case state.DatabaseType, state.FileStorageType:
-		supported = target != Events
-	case state.MobileType, state.ServerType, state.WebsiteType:
-		supported = c.Role == state.Source
-	case state.StreamType:
-		supported = false
-	}
-	if !supported {
-		return types.Type{}, errors.BadRequest("%s are not supported by %s connections", strings.ToLower(target.String()), connector.Type)
-	}
-	if target == Events {
-		if c.Role == state.Source && eventType != "" {
-			return types.Type{}, errors.BadRequest("source connections do not have an event type")
-		}
-		if c.Role == state.Destination && eventType == "" {
-			return types.Type{}, errors.BadRequest("destination connections want an event type")
-		}
-	}
-	// Check if the target is supported by the connection.
-	if !connector.Targets.Contains(state.Target(target)) {
-		return types.Type{}, errors.BadRequest("connection %d does not support %s target", c.ID, target)
-	}
-	// Check if the event type is supported by the connection.
-	if eventType != "" {
-		schema, err := this.app().Schema(ctx, state.Target(target), eventType)
-		if err != nil {
-			if err == connectors.ErrEventTypeNotExist {
-				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
-			}
-			return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-		}
-		return schema, nil
-	}
-	return types.Type{}, nil
 }
 
 // deserializeCursor deserializes a cursor passed to the API.
