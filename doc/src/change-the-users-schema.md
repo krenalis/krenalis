@@ -1,8 +1,9 @@
 # Change the "users" schema
 
-The `users` schema can be changed through the `chichi-cli` tool.
+The "users" schema can be modified both: 
 
-> In the issue [#664](https://github.com/open2b/chichi/issues/664) we discuss the UI that changes the schema.
+* through the UI
+* by using the "chichi-cli" tool from the command line.
 
 When changing the `users` schema, these operations are supported:
 
