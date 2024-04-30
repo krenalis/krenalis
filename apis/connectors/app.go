@@ -29,6 +29,9 @@ type (
 	WebhookPayload = chichi.WebhookPayload
 )
 
+// ErrUnsupportedTarget indicates that a target is not supported.
+var ErrUnsupportedTarget = errors.New("target is not supported")
+
 // App represents the app of an app connection.
 type App struct {
 	name        string
@@ -36,6 +39,7 @@ type App struct {
 	timeLayouts *state.TimeLayouts
 	httpClient  *httpclient.Client
 	users       schema
+	targets     state.ConnectorTargets
 	inner       chichi.App
 	err         error
 }
@@ -50,6 +54,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		timeLayouts: &connector.TimeLayouts,
 		httpClient:  connectors.http.ConnectionClient(connection.ID),
 		users:       schema{lock: make(chan struct{}, 1)},
+		targets:     connector.Targets,
 	}
 	var resourceID int
 	var resourceCode string
@@ -211,32 +216,38 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 	return records, nil
 }
 
-// Writer returns a Writer to create and update users. target can only be
-// state.Users.
+// Writer returns a Writer to create and update records of the provided target.
+// The target can be either Users or Groups.
 //
-// It panics if the app does not support the users target.
+// If the app does not support the provided target, it returns an
+// ErrUnsupportedTarget error.
 func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	if target != state.Users {
-		return nil, errors.New("invalid target")
+	if target != state.Users && target != state.Groups {
+		return nil, fmt.Errorf("target must be either Users or Groups")
+	}
+	if !app.targets.Contains(target) {
+		return nil, ErrUnsupportedTarget
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
 	w := appWriter{
-		ack:   ack,
-		users: app.inner.(chichi.AppRecords),
+		ack:     ack,
+		target:  chichi.Targets(target),
+		records: app.inner.(chichi.AppRecords),
 	}
 	return &w, nil
 }
 
 // appWriter implements the Writer interface for apps.
 type appWriter struct {
-	ack    AckFunc
-	closed bool
-	users  chichi.AppRecords
+	ack     AckFunc
+	target  chichi.Targets
+	records chichi.AppRecords
+	closed  bool
 }
 
 func (w *appWriter) Close(ctx context.Context) error {
@@ -250,9 +261,9 @@ func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
 	}
 	var err error
 	if record.ID == "" {
-		err = w.users.Create(ctx, chichi.Users, record.Properties)
+		err = w.records.Create(ctx, w.target, record.Properties)
 	} else {
-		err = w.users.Update(ctx, chichi.Users, record.ID, record.Properties)
+		err = w.records.Update(ctx, w.target, record.ID, record.Properties)
 	}
 	w.ack(err, []int{gid})
 	return true

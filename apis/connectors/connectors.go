@@ -405,7 +405,7 @@ func (err yieldError) Error() string {
 }
 
 // checkSchemaAlignment checks whether the schema t1 is aligned with t2 and
-// returns a *SchemaError error if it does not conform.
+// returns a *SchemaError error if it is not aligned.
 // It panics if a schema is not valid.
 func checkSchemaAlignment(t1, t2 types.Type) error {
 	return checkTypeAlignment("", t1, t2)
