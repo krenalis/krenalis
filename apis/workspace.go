@@ -424,8 +424,8 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
-	current := removeMetaProperties(this.workspace.UsersSchema)
-	schema = removeMetaProperties(schema)
+	current := removeMetaProperties(this.workspace.UsersSchema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
+	schema = removeMetaProperties(schema)                       // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 
 	// TODO(Gianluca): this check is a temporary workaround for
 	// https://github.com/open2b/chichi/issues/700 and
@@ -512,8 +512,8 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", this.workspace.ID)
 	}
 	users := this.workspace.UsersSchema
-	users = removeMetaProperties(users)
-	schema = removeMetaProperties(schema)
+	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
+	schema = removeMetaProperties(schema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	// TODO(Gianluca): this check is a temporary workaround for
 	// https://github.com/open2b/chichi/issues/700 and
 	// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
