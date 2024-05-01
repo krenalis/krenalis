@@ -5,8 +5,8 @@
 // Copyright (c) 2024 Open2b
 //
 
-// This program builds and compresses the UI's assets, storing them in a
-// directory named 'chichi-assets' within the current directory. If a directory
+// This program builds and compresses the assets, storing them in a directory
+// named 'chichi-assets' within the current working directory. If a directory
 // with the same name already exists, it will be deleted.
 package main
 
