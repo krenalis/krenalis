@@ -11,8 +11,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -26,24 +26,13 @@ import (
 
 func main() {
 
-	var explicit bool
-	flag.BoolVar(&explicit, "x", false, "print each step explicitly")
-	flag.Parse()
-
-	err := makeVendor(explicit)
+	err := makeVendor()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
-func makeVendor(explicit bool) error {
-
-	printX := func(format string, args ...any) {
-		if !explicit {
-			return
-		}
-		fmt.Printf(format, args...)
-	}
+func makeVendor() error {
 
 	root, err := moveToModuleRoot()
 	if err != nil {
@@ -63,9 +52,7 @@ func makeVendor(explicit bool) error {
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "warning: could not remove the temporary directory %q: %s", outDir, err)
 		}
-		printX("temporary directory %q removed\n", outDir)
 	}()
-	printX("created the temporary directory %q\n", outDir)
 
 	var resolve = newResolveFile()
 
@@ -88,13 +75,9 @@ func makeVendor(explicit bool) error {
 							return api.OnResolveResult{}, nil
 						}
 					}
-					printX("resolve: Path: %q, Importer: %s, Namespace: %s, ResolveDir: %q, Kind: %d\n",
-						args.Path, args.Importer, args.Namespace, args.ResolveDir, args.Kind)
 					if key == "" {
-						printX("\t--- skip")
 						return api.OnResolveResult{}, nil
 					}
-					printX("\t--- resolve %q\n", args.Path)
 					resolve.AddImport(key, "", false)
 					result := build.Resolve(args.Path, api.ResolveOptions{
 						Importer:   args.Importer,
@@ -103,7 +86,6 @@ func makeVendor(explicit bool) error {
 						ResolveDir: args.ResolveDir,
 					})
 					if len(result.Errors) > 0 {
-						printX("\t--- errors %#v\n", result.Errors)
 						return api.OnResolveResult{Errors: result.Errors}, nil
 					}
 					value, ok := strings.CutPrefix(result.Path, nodeModulesDir)
@@ -112,7 +94,6 @@ func makeVendor(explicit bool) error {
 					}
 					value = filepath.ToSlash(value)
 					resolve.AddImport(key, value, result.SideEffects)
-					printX("\t--- %q --> %s\n", key, value)
 					res := api.OnResolveResult{
 						Path:        result.Path,
 						External:    result.External,
@@ -128,7 +109,6 @@ func makeVendor(explicit bool) error {
 	}
 
 	// Run esbuild.
-	printX("running esbuild...\n")
 	result := api.Build(api.BuildOptions{
 		Bundle:            true,
 		EntryPoints:       []string{entryPoint},
@@ -174,16 +154,13 @@ func makeVendor(explicit bool) error {
 		}
 		return errors.New(msg)
 	}
-	printX("esbuild execution completed\n")
 
 	// Copy the resolved files from the "node_modules" directory to "node_modules_vendor".
 	paths := resolve.ResolvedPaths()
-	printX("preparing writing of %d file(s) to 'assets/node_modules_vendor'...\n", len(paths))
 	err = os.RemoveAll("./assets/node_modules_vendor")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("cannot remove the current 'assets/node_modules_vendor' directory: %s", err)
 	}
-	printX("current directory 'assets/node_modules_vendor' removed\n")
 	packages := map[string]struct{}{}
 	for _, name := range paths {
 		src := filepath.Join("assets/node_modules", name)
