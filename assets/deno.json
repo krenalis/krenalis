@@ -1,8 +1,0 @@
-{
-  "imports": {
-    "std/": "https://deno.land/std@0.222.1/"
-  },
-  "tasks": {
-    "minify-javascript-snippet": "npx esbuild javascript-snippet.js --minify --format=iife --target=es5 | deno run transform-snippet.js > src/constants/javascriptSnippet.ts"
-  }
-}
