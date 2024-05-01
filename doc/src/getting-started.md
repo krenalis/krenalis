@@ -132,65 +132,6 @@ Besides the requirements listed at the beginning of this page, for this installa
 
 Proceed with the [configuration](#configuration) after completing these steps.
 
-### Build with your custom connectors
-
-Besides the requirements listed at the beginning of this page, for this installation method you also need to have:
-
-* [Go v1.22](https://go.dev/doc/install)
-
-#### Steps
-
-1. Create a new directory
-
-   ```sh
-   mkdir chichi
-   cd chichi 
-   ```
-
-3. Copy the Chichi's `main.go` file
-   
-   > [github.com/open2b/chichi/cmd/chichi/main.go](https://github.com/open2b/chichi/blob/main/cmd/chichi/main.go)
-   
-4. Import your connectors (optional)
-
-   Edit the `main.go` file adding an import for each connector that you want to build in Chichi:
-
-   ```go
-   import (
-      _ "github.com/example/connector"
-   )
-   ```
-   
-   You can also replace the import of the package [`github.com/open2b/chichi/connectors`](https://github.com/open2b/chichi/tree/main/connectors/connectors.go) with its single imports of the connectors that you want to build into Chichi.
-
-5. Initialize a Go module
-
-   ```sh
-   go mod init chichi
-   go mod tidy
-   ```
-
-6. Get, bundle, and compress the assets
-
-   The following commands get, bundle, and compress the assets and save them in a directory called `chichi-assets`. They will be automatically embedded into the executable.
-
-   ```sh
-   go get github.com/open2b/chichi/assets
-   go generate
-   ```
-
-   `go generate` must be re-executed if you change the Chichi version used by this module.
-
-7. Build the executable
-
-    ```sh
-   go build
-   ```
-
-   Verify that the executable `chichi` (or `chichi.exe` on Windows) has been created in the current directory.
-
-Then you can proceed with the [configuration](#configuration).
-
 ## Configuration
 
 Now that you have obtained the executable file of `chichi`, it is necessary to proceed with the configuration.
