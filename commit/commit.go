@@ -125,11 +125,11 @@ func main() {
 	// Run 'npm install' in the 'assets' directory.
 	cmd("npm", []string{"install"}, repo, "assets", true)
 
-	// Minify the JavaScript snippet in the 'assets' directory.
-	cmd("npm", []string{"run", "minify-snippet"}, repo, "assets", true)
-
 	// Format the files in the 'assets' directory.
 	cmd("npm", []string{"run", "prettier"}, repo, "assets", true)
+
+	// Minify the JavaScript snippet in the 'assets' directory.
+	cmd("npm", []string{"run", "minify-snippet"}, repo, "assets", true)
 
 	// Typecheck the Typescript code in the 'assets' directory.
 	cmd("npm", []string{"run", "typecheck"}, repo, "assets", true)
