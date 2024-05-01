@@ -93,10 +93,10 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 					isDisabled
 						? ' disabled'
 						: isSelected
-						? ' selected'
-						: isChildrenSelected
-						? ' isChildrenSelected'
-						: ''
+							? ' selected'
+							: isChildrenSelected
+								? ' isChildrenSelected'
+								: ''
 				}`}
 				onClick={isDisabled ? null : () => redirect(`${item.link}`)}
 			>

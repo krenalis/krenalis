@@ -449,7 +449,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										identityPropertyList.length === 0
 											? `No column ${
 													connection.isFileStorage ? 'in the file' : 'returned by the query'
-											  } can be used as user identifier`
+												} can be used as user identifier`
 											: identityPropertyError
 									}
 									size='small'
@@ -506,12 +506,12 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 												isCustomLastChangeTimeFormatSelected
 													? 'custom'
 													: action.LastChangeTimeProperty
-													? Object.keys(lastChangeTimeFormats).find(
-															(key) =>
-																lastChangeTimeFormats[key] ===
-																action.LastChangeTimeFormat,
-													  )
-													: ''
+														? Object.keys(lastChangeTimeFormats).find(
+																(key) =>
+																	lastChangeTimeFormats[key] ===
+																	action.LastChangeTimeFormat,
+															)
+														: ''
 											}
 											name='lastChangeTimeFormat'
 											disabled={!needFormat}
@@ -1332,8 +1332,8 @@ const FullscreenTransformation = ({
 													<div className='sampleFullName'>
 														{firstNameIdentifier.current && lastNameIdentifier.current
 															? s[firstNameIdentifier.current].value +
-															  ' ' +
-															  s[lastNameIdentifier.current].value
+																' ' +
+																s[lastNameIdentifier.current].value
 															: `Sample ${i}`}
 													</div>
 													{emailIdentifier.current && (
@@ -1672,8 +1672,8 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 				{language === ''
 					? property.type.name
 					: language === 'Python'
-					? fromKindToPythonType(property.type)
-					: fromKindToJavascriptType(property.type)}
+						? fromKindToPythonType(property.type)
+						: fromKindToJavascriptType(property.type)}
 			</div>
 		</div>
 	);

@@ -423,8 +423,8 @@ const ConnectorSettings = () => {
 												SendingMode === 'Cloud'
 													? 'cloud'
 													: SendingMode === 'Device'
-													? 'phone'
-													: 'send'
+														? 'phone'
+														: 'send'
 											}
 										/>
 									</div>

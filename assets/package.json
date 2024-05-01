@@ -24,7 +24,7 @@
   "scripts": {
     "minify-snippet": "node minify-snippet.js",
     "typecheck": "npx -p typescript@5.2.2 tsc",
-    "prettier": "npx prettier@3.0.3 --log-level warn --write 'src/**/*' minify-snippet.js"
+    "prettier": "npx prettier@3.2.5 --log-level warn --write 'src/**/*' minify-snippet.js"
   },
   "eslintConfig": {
     "extends": [
@@ -45,7 +45,7 @@
     ]
   },
   "devDependencies": {
-    "prettier": "3.0.3",
+    "prettier": "3.2.5",
     "typescript": "5.2.2"
   }
 }

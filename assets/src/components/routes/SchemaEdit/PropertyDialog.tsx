@@ -296,12 +296,12 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 													<SlOption key={s} value={s}>
 														{s}
 													</SlOption>
-											  ))
+												))
 											: FLOAT_BITSIZES.map((s) => (
 													<SlOption key={s} value={s}>
 														{s}
 													</SlOption>
-											  ))}
+												))}
 									</SlSelect>
 								)}
 								{property.type?.name === 'Decimal' && (

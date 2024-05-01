@@ -141,8 +141,8 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 								connectionToSet.SendingMode === 'Cloud'
 									? 'cloud'
 									: connectionToSet.SendingMode === 'Device'
-									? 'phone'
-									: 'send'
+										? 'phone'
+										: 'send'
 							}
 						/>
 					</div>
