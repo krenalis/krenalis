@@ -26,7 +26,7 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-//go:embed package.json public/index.html all:src tsconfig.json all:vendor vendor/resolve.json
+//go:embed package.json public/index.html all:src tsconfig.json all:node_modules_vendor node_modules_vendor/resolve.json
 var assetsFS embed.FS
 
 func main() {
@@ -210,7 +210,7 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 	}
 
 	entryPoint := filepath.Join(assetsDir, "src", "index.tsx")
-	vendorDir := filepath.Join(assetsDir, "vendor") + string(os.PathSeparator)
+	vendorDir := filepath.Join(assetsDir, "node_modules_vendor") + string(os.PathSeparator)
 
 	var plugins []api.Plugin
 	if resolve != nil {
@@ -292,7 +292,7 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 
 // readResolveFile reads the 'resolve.json' file.
 func readResolveFile() (map[string]string, error) {
-	data, _ := assetsFS.ReadFile("vendor/resolve.json")
+	data, _ := assetsFS.ReadFile("node_modules_vendor/resolve.json")
 	resolve := map[string]string{}
 	err := json.Unmarshal(data, &resolve)
 	if err != nil {

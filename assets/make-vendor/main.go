@@ -176,18 +176,18 @@ func makeVendor(explicit bool) error {
 	}
 	printX("esbuild execution completed\n")
 
-	// Copy the resolved files from the "node_modules" directory to "vendor".
+	// Copy the resolved files from the "node_modules" directory to "node_modules_vendor".
 	paths := resolve.ResolvedPaths()
-	printX("preparing writing of %d file(s) to 'assets/vendor'...\n", len(paths))
-	err = os.RemoveAll("./assets/vendor")
+	printX("preparing writing of %d file(s) to 'assets/node_modules_vendor'...\n", len(paths))
+	err = os.RemoveAll("./assets/node_modules_vendor")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("cannot remove the current 'assets/vendor' directory: %s", err)
+		return fmt.Errorf("cannot remove the current 'assets/node_modules_vendor' directory: %s", err)
 	}
-	printX("current directory 'assets/vendor' removed\n")
+	printX("current directory 'assets/node_modules_vendor' removed\n")
 	packages := map[string]struct{}{}
 	for _, name := range paths {
 		src := filepath.Join("assets/node_modules", name)
-		dst := filepath.Join("assets/vendor", name)
+		dst := filepath.Join("assets/node_modules_vendor", name)
 		err := os.MkdirAll(filepath.Dir(dst), 0755)
 		if err != nil {
 			return err
@@ -216,14 +216,14 @@ func makeVendor(explicit bool) error {
 	// Copy 'package.json' and 'LICENSE' files.
 	for dir := range packages {
 		src := filepath.Join("assets/node_modules", dir, "package.json")
-		dst := filepath.Join("assets/vendor", dir, "package.json")
+		dst := filepath.Join("assets/node_modules_vendor", dir, "package.json")
 		err = copyPackageFile(dst, src)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		for _, license := range []string{"LICENSE", "license", "License"} {
 			src = filepath.Join("assets/node_modules", dir, license)
-			dst = filepath.Join("assets/vendor", dir, strings.ToUpper(license))
+			dst = filepath.Join("assets/node_modules_vendor", dir, strings.ToUpper(license))
 			err = copyFile(dst, src)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
@@ -233,7 +233,7 @@ func makeVendor(explicit bool) error {
 
 	// Save the 'resolve.json' file.
 	b, _ := resolve.MarshalJSON()
-	err = os.WriteFile("assets/vendor/resolve.json", b, 0644)
+	err = os.WriteFile("assets/node_modules_vendor/resolve.json", b, 0644)
 	if err != nil {
 		return err
 	}
