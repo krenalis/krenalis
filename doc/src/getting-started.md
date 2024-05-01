@@ -21,56 +21,15 @@ Various installation methods may then require additional requirements depending 
 
 There are several ways you can install Chichi. Choose the method that you deem most suitable for your needs and skills:
 
-- [Download a pre-built release](#download-a-pre-built-release). Recommended for those who want to start using Chichi immediately without needing of compiling or customize the executable.
-- [Build from Git source](#build-from-git-source). Recommended for those familiar with Go tools and want some degree of control over their builds.
-- [Build with your custom connectors](#build-with-your-custom-connectors). Recommended for those with advanced customization needs who want to configure the available connectors in Chichi.
+- [Download a pre-built release](#download-a-pre-built-release). Recommended if you want to start using Chichi immediately without needing to compile or customize the executable.
+- [Build with your custom connectors](#build-with-your-custom-connectors). Recommended if you wish to choose the connectors to include in the executable.
+- [Build from Git source](#build-from-git-source). Recommended if you want to work with Chichi's source code.
 
 ### Download a pre-built release
 
 > 🚧 Releases are not available yet, so this section is just a stub.
 
 You can download a build of Chichi from the [releases page of the repository](https://github.com/open2b/chichi/releases) or from the [Chichi's website](https://example.com).
-
-Then you can proceed with the [configuration](#configuration).
-
-### Build from Git source
-
-Besides the requirements listed at the beginning of this page, for this installation method you also need to have:
-
-* [Git](https://git-scm.com/)
-* [Go v1.22](https://go.dev/doc/install)
-
-#### Steps
-
-1. **Clone the repository**
-
-    ```sh
-   git clone https://github.com/open2b/chichi
-   ```
-
-2. **Change into the chichi/cmd/chichi directory**
-
-    ```sh
-   cd chichi/cmd/chichi
-   ```
-
-3. **Generate the assets**
-
-   Use the following command to bundle and compress the assets, which will be embedded into the executable:
-
-   ```sh
-   go generate
-   ```
-
-   It must be re-executed if you pull a new version of Chichi.
-
-4. **Build the executable**
-
-    ```sh
-    go build
-    ```
-
-   Verify that the executable `chichi` (or `chichi.exe` on Windows) has been created in the current directory.
 
 Then you can proceed with the [configuration](#configuration).
 
@@ -131,6 +90,47 @@ Besides the requirements listed at the beginning of this page, for this installa
    Check that the `chichi` executable (or `chichi.exe` on Windows) is created in the current directory.
 
 Proceed with the [configuration](#configuration) after completing these steps.
+
+### Build from Git source
+
+Besides the requirements listed at the beginning of this page, for this installation method you also need to have:
+
+* [Git](https://git-scm.com/)
+* [Go v1.22](https://go.dev/doc/install)
+
+#### Steps
+
+1. **Clone the repository**
+
+    ```sh
+   git clone https://github.com/open2b/chichi
+   ```
+
+2. **Change into the chichi/cmd/chichi directory**
+
+    ```sh
+   cd chichi/cmd/chichi
+   ```
+
+3. **Generate the assets**
+
+   Use the following command to bundle and compress the assets, which will be embedded into the executable:
+
+   ```sh
+   go generate
+   ```
+
+   It must be re-executed if you pull a new version of Chichi.
+
+4. **Build the executable**
+
+    ```sh
+    go build
+    ```
+
+   Verify that the executable `chichi` (or `chichi.exe` on Windows) has been created in the current directory.
+
+Then you can proceed with the [configuration](#configuration).
 
 ## Configuration
 
