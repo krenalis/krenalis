@@ -42,19 +42,19 @@ Besides the requirements listed at the beginning of this page, for this installa
 
 #### Steps
 
-1. Clone the repository
+1. **Clone the repository**
 
     ```sh
    git clone https://github.com/open2b/chichi
    ```
 
-2. Change into the `chichi/cmd/chichi` directory
+2. **Change into the chichi/cmd/chichi directory**
 
     ```sh
    cd chichi/cmd/chichi
    ```
 
-3. **Generate assets**
+3. **Generate the assets**
 
    Use the following command to bundle and compress the assets, which will be embedded into the executable:
 
@@ -64,7 +64,7 @@ Besides the requirements listed at the beginning of this page, for this installa
 
    It must be re-executed if you pull a new version of Chichi.
 
-4. Build the executable
+4. **Build the executable**
 
     ```sh
     go build
@@ -112,16 +112,15 @@ Besides the requirements listed at the beginning of this page, for this installa
    go mod tidy
    ```
 
-5. **Generate assets**
+5. **Generate the assets**
 
-   Use the following commands to bundle and compress the assets, which will be embedded into the executable:
+   Use the following command to bundle and compress the assets, which will be embedded into the executable:
 
    ```sh
-   go get github.com/open2b/chichi/assets
    go generate
    ```
 
-   Note: Re-run `go generate` if you update the version of Chichi used in this module.
+   Note: Re-execute `go generate` if you change Chichi module version.
 
 6. **Build the executable**
 

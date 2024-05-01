@@ -14,11 +14,10 @@
 //     import _ "github.com/example/connector"
 //  5. Initialize a Go module: go mod init chichi
 //  6. Tidy the module: go mod tidy
-//  7. Get the assets: go get github.com/open2b/chichi/assets
-//  8. Bundle and compress them: go generate
-//  9. Build: go build
+//  7. Generate the assets: go generate
+//  8. Build: go build
 //
-// Remember to execute 'go generate' if you pull the repository.
+// Note: Re-execute 'go generate' if you change Chichi module version.
 //
 // See also https://github.com/open2b/chichi/blob/main/doc/src/getting-started.md
 package main
