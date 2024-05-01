@@ -134,8 +134,8 @@ func main() {
 	// Typecheck the Typescript code in the 'assets' directory.
 	cmd("npm", []string{"run", "typecheck"}, repo, "assets", true)
 
-	// Make the vendor of the assets.
-	cmd("go", []string{"run", "./assets/make-vendor"}, repo, ".", true)
+	// Make the vendor of assets' 'node_modules' directory.
+	cmd("npm", []string{"run", "make-vendor"}, repo, "assets", true)
 
 	// Format and test the files in the 'javascript-sdk' directory.
 	cmd("deno", []string{"fmt"}, repo, "javascript-sdk", true)
