@@ -1,4 +1,4 @@
-// Minimize this code snippet by running: deno task minify-javascript-snippet
+// Minimize this code snippet by running: npm run minify-snippet
 var analytics = window.chichiAnalytics = window.chichiAnalytics || [];
 if (analytics.load) {
   window.console && console.error &&
