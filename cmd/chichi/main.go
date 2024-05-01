@@ -2,8 +2,8 @@
 
 // To compile:
 //
-// 1. go generate
-// 2. go build
+//  1. go generate
+//  2. go build
 //
 // To add your custom connectors or choose what connector to build into Chichi:
 //
@@ -14,7 +14,7 @@
 //     import _ "github.com/example/connector"
 //  5. Initialize a Go module: go mod init chichi
 //  6. Tidy the module: go mod tidy
-//  7. Get the UI's source assets: go get github.com/open2b/chichi/assets
+//  7. Get the assets: go get github.com/open2b/chichi/assets
 //  8. Bundle and compress them: go generate
 //  9. Build: go build
 //
