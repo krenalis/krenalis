@@ -1553,7 +1553,7 @@ func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, er
 	return nil, fmt.Errorf("store type %d is not valid", typ)
 }
 
-// WarehouseType represents a data store type.
+// WarehouseType represents a data warehouse type.
 type WarehouseType int
 
 const (
