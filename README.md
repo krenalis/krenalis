@@ -33,18 +33,6 @@ From the root of this repository, run:
 go run ./commit
 ```
 
-If you have changed Go dependencies in the `go.mod` file, run:
-
-```
-git add vendor
-```
-
-If you have changed Node dependencies in the `assets/package.json` file, run:
-
-```
-git add assets/node_modules_vendor
-```
-
 ### Troubleshoot tests
 
 To troubleshoot bad tests, for example if they block indefinitely, you can run:
