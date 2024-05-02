@@ -27,10 +27,7 @@ import (
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/datastore/warehouses/clickhouse"
 	"github.com/open2b/chichi/apis/datastore/warehouses/diffschemas"
-	"github.com/open2b/chichi/apis/datastore/warehouses/postgresql"
-	"github.com/open2b/chichi/apis/datastore/warehouses/snowflake"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events/collector"
@@ -1212,63 +1209,6 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	return err
 }
 
-// SetWarehouseSettings sets the settings of the workspace's data store.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist,
-// and it returns an errors.UnprocessableError error with code
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - InvalidWarehouseSettings, if the settings are not valid.
-//   - NotConnected, if the workspace is not connected to a data store.
-func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
-	this.apis.mustBeOpen()
-	ws := this.workspace
-	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
-	}
-	if state.WarehouseType(typ) != ws.Warehouse.Type {
-		return errors.Unprocessable(InvalidWarehouseSettings, "settings are not valid: %w", fmt.Errorf(
-			"workspace %d is connected to a %s data store, but settings are for a %s data store",
-			ws.ID, ws.Warehouse.Type, typ))
-	}
-	warehouse, err := openWarehouse(typ, settings)
-	if err != nil {
-		return errors.Unprocessable(InvalidWarehouseSettings, "settings are not valid: %w", err)
-	}
-	err = warehouse.Ping(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err)
-		}
-		return err
-	}
-	n := state.SetWarehouse{
-		Workspace: ws.ID,
-		Warehouse: &state.Warehouse{
-			Type:     state.WarehouseType(typ),
-			Settings: warehouse.Settings(),
-		},
-	}
-	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
-			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			return errors.Unprocessable(NoWarehouse, "workspace %d is not connected to a PostgreSQL data store", ws.ID)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
 // PingWarehouse pings the data warehouse with the given settings, verifying
 // that the settings are valid and a connection can be established.
 //
@@ -1535,22 +1475,6 @@ func onlyAlphaNumericPropertyNames(s types.Type) bool {
 		}
 	}
 	return true
-}
-
-// openWarehouse opens a data store with the given type and settings.
-// It returns an error if typ or settings are not valid.
-func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
-	switch typ {
-	case BigQuery, Redshift:
-		return nil, fmt.Errorf("store type %s is not yet supported", typ)
-	case ClickHouse:
-		return clickhouse.Open(settings)
-	case PostgreSQL:
-		return postgresql.Open(settings)
-	case Snowflake:
-		return snowflake.Open(settings)
-	}
-	return nil, fmt.Errorf("store type %d is not valid", typ)
 }
 
 // WarehouseType represents a data warehouse type.
