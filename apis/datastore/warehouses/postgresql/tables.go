@@ -226,8 +226,20 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 }
 
 func tableFds(ctx context.Context, tx pgx.Tx, table string, cols []string) ([]pgconn.FieldDescription, error) {
-	query := "SELECT " + strings.Join(cols, ", ") + " FROM " + table + " LIMIT 0"
-	rows, err := tx.Query(ctx, query)
+	var query strings.Builder
+	query.WriteString("SELECT ")
+	for i, c := range cols {
+		if i > 0 {
+			query.WriteRune(',')
+		}
+		query.WriteRune('"')
+		query.WriteString(c)
+		query.WriteRune('"')
+	}
+	query.WriteString(" FROM \"")
+	query.WriteString(table)
+	query.WriteString("\" LIMIT 0")
+	rows, err := tx.Query(ctx, query.String())
 	if err != nil {
 		return nil, err
 	}
