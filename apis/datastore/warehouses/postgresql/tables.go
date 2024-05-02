@@ -217,17 +217,7 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		}
 		fds, err := tableFds(ctx, tx, table.name, cols)
 		if err != nil {
-			// Try again. This seems to be a workaround for invalidating the
-			// queries cache of PostgreSQL in some cases where the query for
-			// retrieving the field descriptions fails after altering the
-			// schemas.
-			//
-			// TODO(Gianluca): anyway, we will review this in
-			// https://github.com/open2b/chichi/issues/582.
-			fds, err = tableFds(ctx, tx, table.name, cols)
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
 		}
 		table.fds = fds
 	}
