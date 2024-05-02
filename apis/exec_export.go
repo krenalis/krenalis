@@ -20,7 +20,6 @@ import (
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
@@ -129,7 +128,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			// TODO(marco): log the error in a log specific of the workspace.
 			ws := action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
-			return errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
+			return err
 		case *datastore.SchemaError:
 			err.Msg += ". Please review and update the action before attempting to export the users."
 			return err
