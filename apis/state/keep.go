@@ -8,7 +8,6 @@
 package state
 
 import (
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -1187,68 +1186,4 @@ func removeEventConnection(connections []int, id int) []int {
 		j++
 	}
 	return cc
-}
-
-// WarehouseType represents a data warehouse type.
-type WarehouseType int
-
-const (
-	BigQuery WarehouseType = iota + 1
-	ClickHouse
-	PostgreSQL
-	Redshift
-	Snowflake
-)
-
-// String returns the string representation of typ.
-// It panics if typ is not a valid WarehouseType value.
-func (typ WarehouseType) String() string {
-	s, err := typ.Value()
-	if err != nil {
-		panic("invalid warehouse type")
-	}
-	return s.(string)
-}
-
-// Scan implements the sql.Scanner interface.
-func (typ *WarehouseType) Scan(src any) error {
-	s, ok := src.(string)
-	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an WarehouseType value", src)
-	}
-	var t WarehouseType
-	switch s {
-	case "BigQuery":
-		t = BigQuery
-	case "ClickHouse":
-		t = ClickHouse
-	case "PostgreSQL":
-		t = PostgreSQL
-	case "Redshift":
-		t = Redshift
-	case "Snowflake":
-		t = Snowflake
-	default:
-		return fmt.Errorf("invalid WarehouseType: %s", s)
-	}
-	*typ = t
-	return nil
-}
-
-// Value implements driver.Valuer interface.
-// It returns an error if typ is not a valid WarehouseType.
-func (typ WarehouseType) Value() (driver.Value, error) {
-	switch typ {
-	case BigQuery:
-		return "BigQuery", nil
-	case ClickHouse:
-		return "ClickHouse", nil
-	case PostgreSQL:
-		return "PostgreSQL", nil
-	case Redshift:
-		return "Redshift", nil
-	case Snowflake:
-		return "Snowflake", nil
-	}
-	return nil, fmt.Errorf("not a valid WarehouseType: %d", typ)
 }
