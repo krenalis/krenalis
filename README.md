@@ -75,8 +75,6 @@ cd assets
 npm install
 ```
 
-It is recommended to add the `/assets/node_modules/` directory your local `.gitignore` file.
-
 ### 2. Configure and add certificates
 
 Add a configuration file `config.yaml` (see `config.example.yaml`) in the same directory of
