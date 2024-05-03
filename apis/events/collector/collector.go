@@ -282,8 +282,9 @@ func (c *Collector) hasImportUsersAction(source *state.Connection) bool {
 // importUsersIdentities imports users identities from the given events batch
 // collected on the source connection.
 //
-// If the data warehouse is un maintenance mode, it returns the
-// datastore.ErrMaintenanceMode error.
+// If the data warehouse is in inspection mode, it returns the
+// datastore.ErrInspectionMode error. If it is in maintenance mode, it returns
+// the datastore.ErrMaintenanceMode error.
 func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Connection, events []*events.Event) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
@@ -376,6 +377,9 @@ func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Con
 		// Run the Workspace Identity Resolution.
 		err = store.RunWorkspaceIdentityResolution(ctx)
 		if err != nil {
+			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
+				return err
+			}
 			return fmt.Errorf("cannot resolve and sync users: %s", err)
 		}
 	}
@@ -639,7 +643,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		// Store the events into the data warehouse.
 		err = c.storeEvents(connection.Workspace().ID, batch)
 		if err != nil {
-			if err == datastore.ErrMaintenanceMode {
+			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
 			}
 			return err
@@ -650,7 +654,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		// Import the users identities.
 		err = c.importUsersIdentities(ctx, connection, batch)
 		if err != nil {
-			if err == datastore.ErrMaintenanceMode {
+			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
 			}
 			return err
@@ -1123,8 +1127,11 @@ func (c *Collector) setEventsAsReceived(events []*collectedEvent) {
 	}
 }
 
-// storeEvents store the events in the data warehouse. If the data warehouse is
-// in maintenance mode, it returns the datastore.ErrMaintenanceMode error.
+// storeEvents store the events in the data warehouse.
+//
+// If the data warehouse is in inspection mode, it returns the
+// datastore.ErrInspectionMode error. If it is in maintenance mode, it returns
+// the datastore.ErrMaintenanceMode error.
 func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 
 	store := c.datastore.Store(workspace)

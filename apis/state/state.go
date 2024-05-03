@@ -346,6 +346,7 @@ type WarehouseMode int
 
 const (
 	Normal WarehouseMode = iota
+	Inspection
 	Maintenance
 )
 
@@ -369,6 +370,8 @@ func (mode *WarehouseMode) Scan(src any) error {
 	switch s {
 	case "Normal":
 		m = Normal
+	case "Inspection":
+		m = Inspection
 	case "Maintenance":
 		m = Maintenance
 	default:
@@ -384,6 +387,8 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 	switch mode {
 	case Normal:
 		return "Normal", nil
+	case Inspection:
+		return "Inspection", nil
 	case Maintenance:
 		return "Maintenance", nil
 	}

@@ -22,6 +22,10 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
+// ErrInspectionMode is returned by Store methods when they cannot execute due
+// to the data warehouse being in inspection mode.
+var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
+
 // ErrMaintenanceMode is returned by Store methods when they cannot execute due
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
@@ -104,10 +108,16 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, operations []warehou
 	return store.warehouse.AlterSchemaQueries(ctx, operations)
 }
 
-// AddEvents adds events to the store. If the data warehouse is in maintenance
-// mode, it returns the ErrMaintenanceMode error.
+// AddEvents adds events to the store.
+//
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If it is in maintenance mode, it returns the
+// ErrMaintenanceMode error.
 func (store *Store) AddEvents(events []map[string]any) error {
-	if store.mode == state.Maintenance {
+	switch store.mode {
+	case state.Inspection:
+		return ErrInspectionMode
+	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
 	store.mustBeOpen()
@@ -118,12 +128,17 @@ func (store *Store) AddEvents(events []map[string]any) error {
 }
 
 // DeleteConnectionIdentities deletes the identities of a connection.
-// If the data warehouse is in maintenance mode, it returns the
+//
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
 func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection int) error {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	switch store.mode {
+	case state.Inspection:
+		return ErrInspectionMode
+	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
 	return store.warehouse.DeleteConnectionIdentities(ctx, connection)
@@ -234,14 +249,18 @@ type IdentitiesWriter = warehouses.IdentitiesWriter
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
 //
-// If the data warehouse is in maintenance mode, it returns the
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema specified is not conform to the
 // schema of the table 'users_identities' in the data warehouse, calls to the
 // method 'Write' of the returned 'IdentitiesWriter' return a *SchemaError
 // error.
 func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) (IdentitiesWriter, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	switch store.mode {
+	case state.Inspection:
+		return nil, ErrInspectionMode
+	case state.Maintenance:
 		return nil, ErrMaintenanceMode
 	}
 	return store.warehouse.IdentitiesWriter(ctx, schema, connection, fromEvent, ack), nil
@@ -259,9 +278,16 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
+//
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If it is in maintenance mode, it returns the
+// ErrMaintenanceMode error.
 func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 
-	if store.mode == state.Maintenance {
+	switch store.mode {
+	case state.Inspection:
+		return ErrInspectionMode
+	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
 
@@ -310,12 +336,16 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 
 // SetDestinationUser sets the destination user for an action.
 //
-// If the data warehouse is in maintenance mode, it returns the
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	switch store.mode {
+	case state.Inspection:
+		return ErrInspectionMode
+	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
 	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)

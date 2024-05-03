@@ -48,7 +48,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if exe, _ := action.Execution(); exe.Reimport {
 			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
 			if err != nil {
-				if err == datastore.ErrMaintenanceMode {
+				if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 					return actionExecutionError{err}
 				}
 				if err, ok := err.(*warehouses.DataWarehouseError); ok {
@@ -92,7 +92,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	iw, err := this.connection.store.IdentitiesWriter(ctx, this.action.OutSchema, connection.ID, false, ack)
 	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
+		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
 		}
 		return err

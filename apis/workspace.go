@@ -47,6 +47,7 @@ var (
 	AlreadyConnected         errors.Code = "AlreadyConnected"
 	CurrentlyConnected       errors.Code = "CurrentlyConnected"
 	DataWarehouseFailed      errors.Code = "DataWarehouseFailed"
+	InspectionMode           errors.Code = "InspectionMode"
 	InvalidSchemaChange      errors.Code = "InvalidSchemaChange"
 	InvalidUIValues          errors.Code = "InvalidUIValues"
 	InvalidWarehouseSettings errors.Code = "InvalidWarehouseSettings"
@@ -548,7 +549,7 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	this.apis.mustBeOpen()
 
 	switch mode {
-	case Normal, Maintenance:
+	case Normal, Inspection, Maintenance:
 	default:
 		return errors.BadRequest("mode %d is not valid", mode)
 	}
@@ -758,7 +759,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 	this.apis.mustBeOpen()
 
 	switch mode {
-	case Normal, Maintenance:
+	case Normal, Inspection, Maintenance:
 	default:
 		return errors.BadRequest("mode %d is not valid", mode)
 	}
@@ -935,6 +936,9 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	slog.Info("running Workspace Identity Resolution", "workspace", this.workspace.ID)
 	err := this.store.RunWorkspaceIdentityResolution(ctx)
 	if err != nil {
+		if err == datastore.ErrInspectionMode {
+			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		}
 		if err == datastore.ErrMaintenanceMode {
 			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
@@ -1617,6 +1621,7 @@ type WarehouseMode int
 
 const (
 	Normal WarehouseMode = iota
+	Inspection
 	Maintenance
 )
 
@@ -1632,6 +1637,8 @@ func (mode WarehouseMode) String() string {
 	switch mode {
 	case Normal:
 		return "Normal"
+	case Inspection:
+		return "Inspection"
 	case Maintenance:
 		return "Maintenance"
 	}
@@ -1656,6 +1663,8 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 	switch m {
 	case "Normal":
 		mo = Normal
+	case "Inspection":
+		mo = Inspection
 	case "Maintenance":
 		mo = Maintenance
 	default:
