@@ -195,7 +195,6 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property strin
 	if err != nil {
 		return 0, 0, false, err
 	}
-	column := warehouses.PropertyNameToColumnName(property)
 	query := `SELECT gid1, gid2
 		FROM (
 			SELECT
@@ -203,7 +202,7 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property strin
 				max("__id__") as gid2,
 				count(*) AS cnt
 			FROM users
-			GROUP BY "` + column + `") AS subquery
+			GROUP BY "` + property + `") AS subquery
 		WHERE subquery.cnt > 1
 		LIMIT 1`
 	rows, err := db.Query(ctx, query)

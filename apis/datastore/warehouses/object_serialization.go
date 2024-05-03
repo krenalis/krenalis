@@ -120,27 +120,18 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range PropertiesToColumns(p.Type.Properties()) {
-				column.Name = PropertyNameToColumnName(p.Name) + "_" + column.Name
+				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}
 			continue
 		}
 		columns = append(columns, types.Property{
-			Name:     PropertyNameToColumnName(p.Name),
+			Name:     p.Name,
 			Type:     p.Type,
 			Nullable: p.Nullable,
 		})
 	}
 	return columns
-}
-
-// PropertyNameToColumnName returns the given property name as column name.
-//
-// TODO(Gianluca): this code will probably be rewritten or removed when we
-// implement the changes related to the schemas/properties/columns discussed in
-// the issue https://github.com/open2b/chichi/issues/708.
-func PropertyNameToColumnName(name string) string {
-	return name
 }
 
 // PropertyPathToColumn returns the column for the property path in schema.
@@ -158,7 +149,7 @@ func PropertyPathToColumn(schema types.Type, path string) (column types.Property
 		}
 		typ = prop.Type
 		if i == 0 {
-			name.WriteString(PropertyNameToColumnName(prop.Name))
+			name.WriteString(prop.Name)
 		} else {
 			name.WriteByte('_')
 			name.WriteString(prop.Name)
@@ -207,14 +198,10 @@ func serialize(v any, t types.Type) {
 			}
 			if p.Type.Kind() == types.ObjectKind {
 				delete(v, p.Name)
-				flattenInto(v, value.(map[string]any), PropertyNameToColumnName(p.Name), p.Type)
+				flattenInto(v, value.(map[string]any), p.Name, p.Type)
 				continue
 			}
 			serialize(value, p.Type)
-			if name := PropertyNameToColumnName(p.Name); name != p.Name {
-				v[name] = v[p.Name]
-				delete(v, p.Name)
-			}
 			continue
 		}
 	case types.ArrayKind:
@@ -236,10 +223,10 @@ func flattenInto(dst, obj map[string]any, prefix string, t types.Type) {
 	for name, value := range obj {
 		p, _ := t.Property(name)
 		if p.Type.Kind() == types.ObjectKind {
-			flattenInto(dst, value.(map[string]any), prefix+"_"+PropertyNameToColumnName(name), p.Type)
+			flattenInto(dst, value.(map[string]any), prefix+"_"+name, p.Type)
 			continue
 		}
 		serialize(value, p.Type)
-		dst[prefix+"_"+PropertyNameToColumnName(name)] = value
+		dst[prefix+"_"+name] = value
 	}
 }

@@ -237,15 +237,7 @@ func typeToPostgresType(t types.Type) (string, string, bool) {
 }
 
 func propertyPathToColumn(path string) string {
-	parts := strings.Split(path, ".")
-	var column string
-	for i, p := range parts {
-		if i > 0 {
-			column += "_"
-		}
-		column += warehouses.PropertyNameToColumnName(p)
-	}
-	return column
+	return strings.ReplaceAll(path, ".", "_")
 }
 
 func replacePropertyPathName(path string, newName string) string {

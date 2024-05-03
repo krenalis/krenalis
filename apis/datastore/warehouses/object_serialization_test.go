@@ -408,33 +408,3 @@ func TestSerializeRow(t *testing.T) {
 	}
 
 }
-
-func TestPropertyNameToColumnName(t *testing.T) {
-	tests := []struct {
-		p, c string
-	}{
-		{"a", "a"},
-		{"ab", "ab"},
-		{"a_b", "a_b"},
-		{"ab_c", "ab_c"},
-		{"a5", "a5"},
-		{"a_bc", "a_bc"},
-		{"a_b_c", "a_b_c"},
-		{"a_b_cd", "a_b_cd"},
-		{"a_b_c_d", "a_b_c_d"},
-		{"a_b5d6", "a_b5d6"},
-		{"a_b5_d6", "a_b5_d6"},
-		{"_a", "_a"},
-		{"_ab", "_ab"},
-		{"_a_b", "_a_b"},
-		{"_ab_c", "_ab_c"},
-	}
-	for _, test := range tests {
-		t.Run(test.p, func(t *testing.T) {
-			c := PropertyNameToColumnName(test.p)
-			if test.c != c {
-				t.Fatalf("expected column %q, got %q", test.c, c)
-			}
-		})
-	}
-}
