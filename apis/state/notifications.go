@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"math"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/backoff"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -170,19 +172,27 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 		<-stopped
 		close(ch)
 	}
+	var bo *backoff.Backoff
 	go func() {
 		var err error
 		var b bytes.Buffer
 		var sleep time.Duration
 		for {
+			select {
+			case <-ctx.Done():
+				close(stopped)
+				return
+			default:
+			}
 			if err != nil {
-				select {
-				case <-ctx.Done():
-					close(stopped)
-					return
-				default:
-					slog.Error("error occurred listening notifications", "err", err)
+				if bo == nil {
+					bo = backoff.New(10)
+					bo.SetCap(5 * time.Second)
 				}
+				slog.Error(fmt.Sprintf("error occurred listening notifications, try again after %s", bo.WaitTime()), "err", err)
+				err = nil
+				bo.Next(ctx)
+				continue
 			}
 			if sleep > 0 {
 				time.Sleep(sleep)
@@ -192,7 +202,6 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 			var conn *pgxpool.Conn
 			conn, err = state.db.Acquire(ctx)
 			if err != nil {
-				sleep = 10 * time.Millisecond
 				continue
 			}
 			_, err = conn.Exec(ctx, "LISTEN chichi")
@@ -207,6 +216,9 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 					n, err := conn.Conn().WaitForNotification(ctx)
 					if err != nil {
 						return err
+					}
+					if bo != nil {
+						bo = nil
 					}
 					if n.Channel != "chichi" {
 						continue
