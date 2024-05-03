@@ -21,5 +21,4 @@ That's all you need to get started with Chichi!
    - [File Connectors](./file.md)
    - [File Storage Connectors](./file-storage.md)
    - [Settings and UI](./settings-and-ui.md)
-   - [Data Types](./data-types.md)
    - [Data Values](./data-values.md)
