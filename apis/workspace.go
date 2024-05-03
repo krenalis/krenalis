@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -426,23 +425,15 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	current := removeMetaProperties(this.workspace.UsersSchema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema)                       // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 
-	// TODO(Gianluca): this check is a temporary workaround for
-	// https://github.com/open2b/chichi/issues/700 and
-	// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
-	// understand.
-	if !onlyAlphaNumericPropertyNames(schema) {
-		return errors.BadRequest("schema cannot contain property names made of characters which are not alphanumeric")
-	}
-
 	operations, err := diffschemas.Diff(current, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
 
-	// Add the "Id" meta property.
+	// Add the "__id__" meta property.
 	// TODO(Gianluca): see https://github.com/open2b/chichi/issues/573.
 	schema = types.Object(append([]types.Property{
-		{Name: "Id", Type: types.Int(32)},
+		{Name: "__id__", Type: types.Int(32)},
 	}, schema.Properties()...))
 
 	// Update the database and send the notification.
@@ -513,13 +504,6 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
-	// TODO(Gianluca): this check is a temporary workaround for
-	// https://github.com/open2b/chichi/issues/700 and
-	// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
-	// understand.
-	if !onlyAlphaNumericPropertyNames(schema) {
-		return nil, errors.BadRequest("schema cannot contain property names made of characters which are not alphanumeric")
-	}
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -1316,7 +1300,7 @@ func (this *Workspace) User(id int) (*User, error) {
 // be empty.
 //
 // order is the property by which to sort the returned users and cannot have
-// type JSON, Array, Object, or Map; it defaults to the "Id" property.
+// type JSON, Array, Object, or Map; it defaults to the "__id__" property.
 //
 // orderDesc control whether the returned users should be ordered in descending
 // order instead of ascending, which is the default.
@@ -1387,7 +1371,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		orderProperty = types.Property{Name: "Id", Type: types.Int(32)}
+		orderProperty = types.Property{Name: "__id__", Type: types.Int(32)}
 	}
 	if first < 0 || first > maxInt32 {
 		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
@@ -1508,44 +1492,6 @@ type ConnectionToAdd struct {
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
 	UIValues json.RawMessage
-}
-
-var alphaNumeric = regexp.MustCompile(`^[a-zA-Z\d]+$`)
-
-// isAlphaNumeric reports whether s is an alphanumeric string.
-//
-// TODO(Gianluca): this function is used as temporary workaround for
-// https://github.com/open2b/chichi/issues/700 and
-// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
-// understand.
-func isAlphaNumeric(s string) bool {
-	return alphaNumeric.MatchString(s)
-}
-
-// onlyAlphaNumericPropertyNames reports whether the schema s contains only
-// property names which contain only alphanumeric characters.
-//
-// TODO(Gianluca): this function is used as temporary workaround for
-// https://github.com/open2b/chichi/issues/700 and
-// https://github.com/open2b/chichi/issues/701, to avoid errors difficult to
-// understand.
-//
-// Some checks are redundant with the checks done in the "IsValidPropertyName",
-// but this is not a problem as this function will be reviewed and/or deleted
-// when #701 will be addressed.
-func onlyAlphaNumericPropertyNames(s types.Type) bool {
-	props := s.Properties()
-	for _, p := range props {
-		if !isAlphaNumeric(p.Name) {
-			return false
-		}
-		if p.Type.Kind() == types.ObjectKind {
-			if !onlyAlphaNumericPropertyNames(p.Type) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // WarehouseType represents a data warehouse type.
@@ -1712,18 +1658,18 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 
 	// Retrieve the identities from the data warehouse.
 	schema := types.Object([]types.Property{
-		{Name: "Connection", Type: types.Int(32)},
-		{Name: "IdentityId", Type: types.Text()},
-		{Name: "LastChangeTime", Type: types.DateTime()},
-		{Name: "Gid", Type: types.Int(32)},
-		{Name: "AnonymousIds", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "DisplayedProperty", Type: types.Text().WithCharLen(40)},
+		{Name: "__connection__", Type: types.Int(32)},
+		{Name: "__identity_id__", Type: types.Text()},
+		{Name: "__last_change_time__", Type: types.DateTime()},
+		{Name: "__gid__", Type: types.Int(32)},
+		{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
+		{Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
 	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"Connection"}, {"IdentityId"}, {"AnonymousIds"},
-			{"LastChangeTime"}, {"DisplayedProperty"}},
+		Properties: []types.Path{{"__connection__"}, {"__identity_id__"},
+			{"__anonymous_ids__"}, {"__last_change_time__"}, {"__displayed_property__"}},
 		Where:   where,
-		OrderBy: types.Property{Name: "IdentityKey", Type: types.Int(32)},
+		OrderBy: types.Property{Name: "__identity_key__", Type: types.Int(32)},
 		Schema:  schema,
 		First:   first,
 		Limit:   limit,
@@ -1743,7 +1689,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		}
 
 		// Retrieve the connection.
-		connID := record.Properties["Connection"].(int)
+		connID := record.Properties["__connection__"].(int)
 		conn, ok := this.apis.state.Connection(connID)
 		if !ok {
 			// The connection for this user identity no longer exists, so skip
@@ -1753,7 +1699,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 
 		// Determine the value for the identity ID, which may be the empty
 		// string for identities incoming from anonymous events.
-		identityID := record.Properties["IdentityId"].(string)
+		identityID := record.Properties["__identity_id__"].(string)
 
 		// Determine the label for the Identity ID, except for the case of
 		// "anonymous identities", which are identities imported from anonymous
@@ -1779,7 +1725,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 
 		// Determine the anonymous IDs.
 		var anonIDs []string
-		if ids, ok := record.Properties["AnonymousIds"].([]any); ok {
+		if ids, ok := record.Properties["__anonymous_ids__"].([]any); ok {
 			anonIDs = make([]string, len(ids))
 			for i := range ids {
 				anonIDs[i] = ids[i].(string)
@@ -1787,10 +1733,10 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		}
 
 		// Determine the last change time.
-		lastChangeTime := record.Properties["LastChangeTime"].(time.Time)
+		lastChangeTime := record.Properties["__last_change_time__"].(time.Time)
 
 		// Determine the displayed property.
-		displayedProperty := record.Properties["DisplayedProperty"].(string)
+		displayedProperty := record.Properties["__displayed_property__"].(string)
 
 		identities = append(identities, identity{
 			Connection: connID,

@@ -72,7 +72,7 @@ func TestUsersIdentitiesFromEvents(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 
 	// Retrieve the user imported from the event.
-	users, _, count := c.Users([]string{"Id", "email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"__id__", "email"}, "", 0, 100)
 	const expectedUsersCount = 1
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d user(s), got %d", expectedUsersCount, count)
@@ -81,7 +81,7 @@ func TestUsersIdentitiesFromEvents(t *testing.T) {
 	for _, user := range users {
 		email, _ := user["email"].(string)
 		if email == eventUserEmail {
-			userGID, _ = user["Id"].(json.Number).Int64()
+			userGID, _ = user["__id__"].(json.Number).Int64()
 			if userGID <= 0 {
 				t.Fatalf("invalid user GID %d", userGID)
 			}

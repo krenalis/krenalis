@@ -18,6 +18,7 @@ import (
 var typ = types.Int(32)
 
 var properties = []types.Property{
+	{Name: "__id__", Type: typ},
 	{Name: "a", Type: typ},
 	{Name: "b", Type: typ},
 	{Name: "c", Type: types.Object([]types.Property{
@@ -26,19 +27,25 @@ var properties = []types.Property{
 		{Name: "d", Type: typ},
 	})},
 	{Name: "dd", Type: types.Object([]types.Property{
-		{Name: "eeF", Type: typ},
-		{Name: "edG", Type: typ},
+		{Name: "ee_f", Type: typ},
+		{Name: "ed_g", Type: typ},
 	})},
-	{Name: "eF", Type: types.Object([]types.Property{
-		{Name: "gH", Type: typ},
+	{Name: "e_f", Type: types.Object([]types.Property{
+		{Name: "g_h", Type: typ},
 		{Name: "i", Type: typ},
 	})},
 	{Name: "f", Type: types.Object([]types.Property{
 		{Name: "g", Type: typ},
+		{Name: "h_", Type: typ},
 		{Name: "i", Type: typ},
-		{Name: "jK", Type: typ},
+		{Name: "j_k", Type: typ},
+	})},
+	{Name: "g", Type: types.Object([]types.Property{
+		{Name: "a_", Type: typ},
+		{Name: "c_", Type: typ},
 	})},
 	{Name: "h", Type: types.Object([]types.Property{
+		{Name: "a_", Type: typ},
 		{Name: "b", Type: typ},
 	})},
 	{Name: "i", Type: types.Object([]types.Property{
@@ -46,15 +53,17 @@ var properties = []types.Property{
 			{Name: "b", Type: typ},
 			{Name: "c", Type: typ},
 		})},
-		{Name: "bC", Type: typ},
+		{Name: "b_c", Type: typ},
 	})},
 	{Name: "k", Type: typ},
-	{Name: "kA", Type: typ},
+	{Name: "k_", Type: typ},
+	{Name: "k_a", Type: typ},
 }
 
 func TestColumnsToProperties(t *testing.T) {
 
 	columns := []types.Property{
+		{Name: "__id__", Type: typ},
 		{Name: "a", Type: typ},
 		{Name: "b", Type: typ},
 		{Name: "c_a", Type: typ},
@@ -144,6 +153,7 @@ func TestColumnsToPropertiesNullable(t *testing.T) {
 func TestPropertiesToColumns(t *testing.T) {
 
 	columns := []types.Property{
+		{Name: "__id__", Type: typ},
 		{Name: "a", Type: typ},
 		{Name: "b", Type: typ},
 		{Name: "c_a", Type: typ},
@@ -154,13 +164,18 @@ func TestPropertiesToColumns(t *testing.T) {
 		{Name: "e_f_g_h", Type: typ},
 		{Name: "e_f_i", Type: typ},
 		{Name: "f_g", Type: typ},
+		{Name: "f_h_", Type: typ},
 		{Name: "f_i", Type: typ},
 		{Name: "f_j_k", Type: typ},
+		{Name: "g_a_", Type: typ},
+		{Name: "g_c_", Type: typ},
+		{Name: "h_a_", Type: typ},
 		{Name: "h_b", Type: typ},
 		{Name: "i_a_b", Type: typ},
 		{Name: "i_a_c", Type: typ},
 		{Name: "i_b_c", Type: typ},
 		{Name: "k", Type: typ},
+		{Name: "k_", Type: typ},
 		{Name: "k_a", Type: typ},
 	}
 
@@ -214,6 +229,7 @@ func TestColumnsCommonPrefix(t *testing.T) {
 		{[]string{"a_b", "_a"}, "", 0},
 		{[]string{"a", "a_", "a_b"}, "", 0},
 		{[]string{"_a", "_b", "_c"}, "", 0},
+		{[]string{"__id__", "__identity_keys__"}, "", 0},
 	}
 
 	for _, test := range tests {
@@ -240,7 +256,7 @@ func Test_PropertyPathToColumn(t *testing.T) {
 		{path: "a", col: types.Property{Name: "a", Type: types.Int(32)}},
 		{path: "b.c", col: types.Property{Name: "b_c", Type: types.Text()}},
 		{path: "b.i.j", err: "path refers to a non-object type"},
-		{path: "VIA.z", col: types.Property{Name: "_v_i_a_z", Type: types.Float(32)}},
+		{path: "VIA.z", col: types.Property{Name: "VIA_z", Type: types.Float(32)}},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -352,7 +368,7 @@ func TestSerializeRow(t *testing.T) {
 	}
 
 	expected := map[string]any{
-		"_a":    "boo",
+		"A":     "boo",
 		"a":     56,
 		"b_c":   "foo",
 		"b_d_e": true,
@@ -383,7 +399,7 @@ func TestSerializeRow(t *testing.T) {
 				"s_u": 3,
 			},
 		},
-		"_v_i_a_z": 3.14,
+		"VIA_z": 3.14,
 	}
 
 	SerializeRow(row, testSchema)
@@ -399,55 +415,25 @@ func TestPropertyNameToColumnName(t *testing.T) {
 	}{
 		{"a", "a"},
 		{"ab", "ab"},
-		{"aB", "a_b"},
-		{"abC", "ab_c"},
+		{"a_b", "a_b"},
+		{"ab_c", "ab_c"},
 		{"a5", "a5"},
-		{"aBc", "a_bc"},
-		{"aBC", "a_b_c"},
-		{"aBcd", "a_bcd"},
-		{"aBcD", "a_bc_d"},
-		{"aB5d6", "a_b5d6"},
-		{"aB5D6", "a_b5_d6"},
-		{"A", "_a"},
-		{"Ab", "_ab"},
-		{"AB", "_a_b"},
-		{"AbC", "_ab_c"},
+		{"a_bc", "a_bc"},
+		{"a_b_c", "a_b_c"},
+		{"a_b_cd", "a_b_cd"},
+		{"a_b_c_d", "a_b_c_d"},
+		{"a_b5d6", "a_b5d6"},
+		{"a_b5_d6", "a_b5_d6"},
+		{"_a", "_a"},
+		{"_ab", "_ab"},
+		{"_a_b", "_a_b"},
+		{"_ab_c", "_ab_c"},
 	}
 	for _, test := range tests {
 		t.Run(test.p, func(t *testing.T) {
 			c := PropertyNameToColumnName(test.p)
 			if test.c != c {
 				t.Fatalf("expected column %q, got %q", test.c, c)
-			}
-		})
-	}
-}
-
-func TestColumnNameToPropertyName(t *testing.T) {
-	tests := []struct {
-		c, p string
-	}{
-		{"a", "a"},
-		{"ab", "ab"},
-		{"a_b", "aB"},
-		{"ab_c", "abC"},
-		{"a5", "a5"},
-		{"a_bc", "aBc"},
-		{"a_b_c", "aBC"},
-		{"a_bcd", "aBcd"},
-		{"a_bc_d", "aBcD"},
-		{"a_b5d6", "aB5d6"},
-		{"a_b5_d6", "aB5D6"},
-		{"_a", "A"},
-		{"_ab", "Ab"},
-		{"_a_b", "AB"},
-		{"_ab_c", "AbC"},
-	}
-	for _, test := range tests {
-		t.Run(test.c, func(t *testing.T) {
-			p := ColumnNameToPropertyName(test.c)
-			if test.p != p {
-				t.Fatalf("expected property %q, got %q", test.p, p)
 			}
 		})
 	}

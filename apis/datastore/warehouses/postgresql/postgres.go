@@ -199,8 +199,8 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property strin
 	query := `SELECT gid1, gid2
 		FROM (
 			SELECT
-				min("_id") AS gid1,
-				max("_id") as gid2,
+				min("__id__") AS gid1,
+				max("__id__") as gid2,
 				count(*) AS cnt
 			FROM users
 			GROUP BY "` + column + `") AS subquery
@@ -425,7 +425,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	if len(connections) == 0 {
 		b.WriteString(`DELETE FROM "users_identities"`)
 	} else {
-		b.WriteString(`DELETE FROM "users_identities" WHERE "_connection" NOT IN (`)
+		b.WriteString(`DELETE FROM "users_identities" WHERE "__connection__" NOT IN (`)
 		for i, connection := range connections {
 			if i > 0 {
 				b.WriteByte(',')
@@ -464,7 +464,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	var usersSyncQueries strings.Builder
 	usersSyncQueries.WriteString(`TRUNCATE users; INSERT INTO users (`)
 	for _, c := range usersColumns {
-		if c.Name == "_id" {
+		if c.Name == "__id__" {
 			continue
 		}
 		usersSyncQueries.WriteByte('"')
@@ -475,7 +475,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	usersSyncQueries.WriteString(`"__identity_keys__"`)
 	usersSyncQueries.WriteString(") SELECT\n")
 	for _, c := range usersColumns {
-		if c.Name == "_id" {
+		if c.Name == "__id__" {
 			continue
 		}
 		usersSyncQueries.WriteString(`MAX(DISTINCT "`)
@@ -485,7 +485,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "_identity_key")`)
+	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__identity_key__")`)
 	usersSyncQueries.WriteString(" FROM users_identities GROUP BY __cluster__")
 
 	// Replace the placeholders in the stored procedure query and run it.

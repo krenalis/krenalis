@@ -85,16 +85,16 @@ func TestActionsCreation(t *testing.T) {
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "identity", Type: types.Text()},
-					{Name: "Email", Type: types.Text()},
+					{Name: "__email__", Type: types.Text()},
 					{Name: "timestamp", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "Email", Type: types.Text()},
+					{Name: "__email__", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Transformation: chichitester.Transformation{
 					Mapping: map[string]string{
-						"Email":     "Email",
+						"__email__": "__email__",
 						"timestamp": "timestamp",
 					},
 				},

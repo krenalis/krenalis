@@ -32,20 +32,6 @@ address_city
 address_country
 ```
 
-Property names are converted from camelCase to snake_case. For example, the property names:
-
-```
-firstName
-lastName
-```
-
-are represented as columns:
-
-```
-first_name
-last_name
-```
-
 #### Objects with "nullable" properties
 
 Properties of type Object can never be "nullable", but the properties of the Object may be.
@@ -70,16 +56,12 @@ ios_idfa (nullable)
 
 ## Meta properties
 
-> This section **may be obsolete**. See the issue [#573](https://github.com/open2b/chichi/issues/573).
+> This section may be extended and moved to a more appropriate place.
 
-Properties representing columns with names starting with an underscore are referred to as meta properties and are not writable during transformations. Such properties start with an uppercase letter. For example the column
-
-```
-_anonymous_ids
-```
-
-is represented by the meta property
+Properties whose names start and end with `__`, and which are at least 5 characters long, are defined as 'meta properties'. For example, these are considered meta properties:
 
 ```
-AnonymousIds
+__id__
+__anonymous_id__
+__GID__
 ```

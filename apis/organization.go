@@ -143,7 +143,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 // It will be removed in future versions of Chichi.
 // TODO(Gianluca): see the issue https://github.com/open2b/chichi/issues/628.
 var defaultUsersSchema = types.Object([]types.Property{
-	{Name: "Id", Type: types.Int(32)},
+	{Name: "__id__", Type: types.Int(32)},
 	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
 })
 

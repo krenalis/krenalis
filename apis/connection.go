@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/open2b/chichi/apis/connectors"
@@ -923,7 +922,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byt
 		store:     this.store,
 		workspace: ws,
 	}
-	where := expr.NewBaseExpr("Connection", expr.OperatorEqual, this.connection.ID)
+	where := expr.NewBaseExpr("__connection__", expr.OperatorEqual, this.connection.ID)
 	identities, count, err := apisWs.userIdentities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
@@ -2167,12 +2166,9 @@ type ConnectionToSet struct {
 }
 
 // isMetaProperty reports whether the given property name refers to a property
-// considered a meta-property by a data warehouse.
+// considered a meta property by a data warehouse.
 func isMetaProperty(name string) bool {
-	for _, r := range name {
-		return unicode.IsUpper(r)
-	}
-	return false
+	return len(name) > 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
 }
 
 // marshalSchema marshals the given schema.

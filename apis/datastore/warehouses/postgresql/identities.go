@@ -26,7 +26,7 @@ func (warehouse *PostgreSQL) DeleteConnectionIdentities(ctx context.Context, con
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, `DELETE FROM "users_identities" WHERE "_connection" = $1`, connection)
+	_, err = db.Exec(ctx, `DELETE FROM "users_identities" WHERE "__connection__" = $1`, connection)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -138,17 +138,17 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	var args []any
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
-			query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
-				" AND _identity_id = '' AND $2 = ANY(_anonymous_ids) ORDER BY _last_change_time, _identity_key"
+			query = "SELECT __identity_key__ FROM users_identities WHERE __connection__ = $1" +
+				" AND __identity_id__ = '' AND $2 = ANY(__anonymous_ids__) ORDER BY __last_change_time__, __identity_key__"
 			args = []any{connection, anonID}
 		} else {
-			query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
-				" AND (_identity_id = $2) OR (_identity_id = '' AND $3 = ANY(_anonymous_ids)) ORDER BY _last_change_time, _identity_key"
+			query = "SELECT __identity_key__ FROM users_identities WHERE __connection__ = $1" +
+				" AND (__identity_id__ = $2) OR (__identity_id__ = '' AND $3 = ANY(__anonymous_ids__)) ORDER BY __last_change_time__, __identity_key__"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
-		query = "SELECT _identity_key FROM users_identities WHERE _connection = $1" +
-			" AND _identity_id = $2 ORDER BY _last_change_time, _identity_key"
+		query = "SELECT __identity_key__ FROM users_identities WHERE __connection__ = $1" +
+			" AND __identity_id__ = $2 ORDER BY __last_change_time__, __identity_key__"
 		args = []any{connection, id}
 	}
 	var matchingIdentities []int
@@ -177,12 +177,12 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	warehouses.SerializeRow(newIdentity, schema)
 
-	newIdentity["_connection"] = connection
-	newIdentity["_identity_id"] = id
-	newIdentity["_last_change_time"] = lastChangeTime.Format(time.DateTime)
-	newIdentity["_displayed_property"] = displayedProperty
+	newIdentity["__connection__"] = connection
+	newIdentity["__identity_id__"] = id
+	newIdentity["__last_change_time__"] = lastChangeTime.Format(time.DateTime)
+	newIdentity["__displayed_property__"] = displayedProperty
 	if anonID != "" {
-		newIdentity["_anonymous_ids"] = []string{anonID}
+		newIdentity["__anonymous_ids__"] = []string{anonID}
 	}
 
 	b := strings.Builder{}
@@ -206,7 +206,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(strconv.Itoa(i + 1))
 		values[i] = newIdentity[name]
 	}
-	b.WriteString(") RETURNING _identity_key")
+	b.WriteString(") RETURNING __identity_key__")
 	err = db.QueryRow(ctx, b.String(), values...).Scan(&newIdentityKey)
 	if err != nil {
 		return warehouses.Error(err)
@@ -229,16 +229,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Merge the anonymous IDS.
 	b.Reset()
-	b.WriteString(`UPDATE users_identities SET _anonymous_ids = (
-		SELECT array_agg(DISTINCT anon_ids.ids) as _anonymous_ids
+	b.WriteString(`UPDATE users_identities SET __anonymous_ids__ = (
+		SELECT array_agg(DISTINCT anon_ids.ids) as __anonymous_ids__
 		FROM (
-			SELECT unnest("_anonymous_ids") as ids
+			SELECT unnest("__anonymous_ids__") as ids
 			FROM users_identities
-			WHERE _identity_key IN (`)
+			WHERE __identity_key__ IN (`)
 	b.WriteString(idsStr.String())
-	b.WriteString(`) AND _anonymous_ids IS NOT NULL
+	b.WriteString(`) AND __anonymous_ids__ IS NOT NULL
 			) AS anon_ids
-		) WHERE _identity_key = $1`)
+		) WHERE __identity_key__ = $1`)
 	_, err = db.Exec(ctx, b.String(), newIdentityKey)
 	if err != nil {
 		return warehouses.Error(err)
@@ -259,7 +259,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Merge the other fields.
 	for _, p := range tableColumns {
-		if p == "_connection" || p == "_anonymous_ids" || p == "_identity_id" || p == "_last_change_time" {
+		if p == "__connection__" || p == "__anonymous_ids__" || p == "__identity_id__" || p == "__last_change_time__" {
 			continue
 		}
 		b.Reset()
@@ -269,10 +269,10 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" FROM users_identities WHERE "`)
 		b.WriteString(p)
-		b.WriteString(`" IS NOT NULL AND _identity_key IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
+		b.WriteString(`" IS NOT NULL AND __identity_key__ IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
 		b.WriteString(idsStr.String())
-		b.WriteString(") ORDER BY _last_change_time DESC, _identity_key DESC LIMIT 1)\n")
-		b.WriteString(` WHERE _identity_key = $1`)
+		b.WriteString(") ORDER BY __last_change_time__ DESC, __identity_key__ DESC LIMIT 1)\n")
+		b.WriteString(` WHERE __identity_key__ = $1`)
 		_, err = db.Exec(ctx, b.String(), newIdentityKey)
 		if err != nil {
 			return warehouses.Error(err)
@@ -288,7 +288,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		idsToDelete.WriteString(strconv.Itoa(id))
 	}
 	b.Reset()
-	b.WriteString("DELETE FROM users_identities WHERE _identity_key IN (")
+	b.WriteString("DELETE FROM users_identities WHERE __identity_key__ IN (")
 	b.WriteString(idsToDelete.String())
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())

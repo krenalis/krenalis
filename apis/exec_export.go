@@ -125,7 +125,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	records, _, err := store.Users(ctx, datastore.UsersQuery{
 		Properties: properties,
 		Where:      where,
-		OrderBy:    types.Property{Name: "Id", Type: types.Int(32)},
+		OrderBy:    types.Property{Name: "__id__", Type: types.Int(32)},
 		Schema:     schema,
 	})
 	if err != nil {

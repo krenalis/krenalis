@@ -19,12 +19,12 @@ import (
 // Consecutive columns with a common prefix are grouped into a single object
 // property. It could change the columns slice and the column names.
 //
-// Columns ending with an underscore ('_') are considered hidden, meaning they
-// are grouped as if the underscore were not present but are not returned as
-// properties.
-//
 // Grouping columns can result in properties with the same name. In this case,
 // it returns a RepeatedPropertyNameError error.
+//
+// TODO(Gianluca): this code will probably be rewritten or removed when we
+// implement the changes related to the schemas/properties/columns discussed in
+// the issue https://github.com/open2b/chichi/issues/708.
 func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 	var properties []types.Property
 	for i := 0; i < len(columns); i++ {
@@ -37,14 +37,6 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 			i += n - 1
 			for j := 0; j < n; j++ {
 				column := group[j]
-				// remove from the group the hidden columns.
-				if column.Name[len(column.Name)-1] == '_' {
-					copy(group[j:], group[j+1:])
-					j--
-					n--
-					continue
-				}
-				// remove the prefix from the column names.
 				group[j].Name = strings.TrimPrefix(column.Name, prefix)
 			}
 			if n == 0 {
@@ -54,16 +46,20 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 			if err != nil {
 				return nil, err
 			}
-			property = types.Property{
-				Name: ColumnNameToPropertyName(strings.TrimSuffix(prefix, "_")),
-				Type: types.Object(props),
+			if strings.HasPrefix(prefix, "__") && strings.HasSuffix(prefix, "__") {
+				property = types.Property{
+					Name: prefix,
+					Type: types.Object(props),
+				}
+			} else {
+				property = types.Property{
+					Name: strings.TrimSuffix(prefix, "_"),
+					Type: types.Object(props),
+				}
 			}
 		} else {
-			if c.Name[len(c.Name)-1] == '_' { // skip if hidden
-				continue
-			}
 			property = c
-			property.Name = ColumnNameToPropertyName(c.Name)
+			property.Name = c.Name
 		}
 		for _, p := range properties {
 			if p.Name == property.Name {
@@ -86,6 +82,9 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 // See TestColumnsCommonPrefix for some examples.
 func columnsCommonPrefix(columns []types.Property) (string, int) {
 	first := columns[0].Name
+	if strings.HasPrefix(first, "__") && strings.HasSuffix(first, "__") {
+		return "", 0
+	}
 	var prefix string
 	var n = len(columns)
 Columns:
@@ -135,60 +134,13 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	return columns
 }
 
-// ColumnNameToPropertyName returns the given column name as property name.
-// name must be in snake case, so it cannot contain upper letters, cannot end
-// with an underscore, and cannot contain consecutive underscores.
-//
-// For example, given "a_bc_d", it returns "aBcD", and given "_eg", it returns
-// "Eg".
-func ColumnNameToPropertyName(name string) string {
-	b := strings.Builder{}
-	var start int
-	for i := 0; i < len(name); i++ {
-		if c := name[i]; c == '_' {
-			if start < i {
-				b.WriteString(name[start:i])
-			}
-			b.WriteByte(name[i+1] - ('a' - 'A'))
-			i++
-			start = i + 1
-		}
-	}
-	if start == 0 {
-		return name
-	}
-	if start != len(name) {
-		b.WriteString(name[start:])
-	}
-	return b.String()
-}
-
 // PropertyNameToColumnName returns the given property name as column name.
-// name must be in the camel case, so it cannot contain underscores, and cannot
-// contain consecutive uppercase letters.
 //
-// For example, given "aBcD", it returns "a_bc_d", and given "Eg", it returns
-// "_eg".
+// TODO(Gianluca): this code will probably be rewritten or removed when we
+// implement the changes related to the schemas/properties/columns discussed in
+// the issue https://github.com/open2b/chichi/issues/708.
 func PropertyNameToColumnName(name string) string {
-	b := strings.Builder{}
-	var start int
-	for i, c := range []byte(name) {
-		if 'A' <= c && c <= 'Z' {
-			if start < i {
-				b.WriteString(name[start:i])
-			}
-			b.WriteByte('_')
-			b.WriteByte(c + ('a' - 'A'))
-			start = i + 1
-		}
-	}
-	if start == 0 {
-		return name
-	}
-	if start != len(name) {
-		b.WriteString(name[start:])
-	}
-	return b.String()
+	return name
 }
 
 // PropertyPathToColumn returns the column for the property path in schema.

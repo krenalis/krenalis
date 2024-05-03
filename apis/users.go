@@ -56,7 +56,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 
 	// Read the event schema's properties.
-	schema := events.SchemaWithGID
+	schema := events.WarehouseSchema
 	properties := schema.Properties()
 
 	// Retrieve the events records.
@@ -82,6 +82,9 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		if record.Err != nil {
 			return err
 		}
+		// Convert "snake_case" property names (used in the data warehouse) to
+		// "camelCase" (used in the exposed events).
+		convertEventPropertyCase(record.Properties)
 		evs = append(evs, record.Properties)
 		return nil
 	})
@@ -92,7 +95,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		return nil, err
 	}
 
-	return encoding.MarshalSlice(schema, evs)
+	return encoding.MarshalSlice(events.Schema, evs)
 }
 
 // Identities returns the users identities of the user, and an estimate of their
@@ -118,7 +121,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	if this.store == nil {
 		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-	where := expr.NewBaseExpr("Gid", expr.OperatorEqual, this.id)
+	where := expr.NewBaseExpr("__gid__", expr.OperatorEqual, this.id)
 	ws := &Workspace{
 		apis:      this.apis,
 		store:     this.store,
@@ -164,7 +167,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
 		Schema:     ws.UsersSchema,
 		Properties: properties,
-		Where:      expr.NewBaseExpr("Id", expr.OperatorEqual, this.id),
+		Where:      expr.NewBaseExpr("__id__", expr.OperatorEqual, this.id),
 		Limit:      1,
 	})
 	if err != nil {
@@ -197,4 +200,43 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	}
 
 	return encoding.Marshal(ws.UsersSchema, traits)
+}
+
+// convertEventPropertyCase converts the case of the event property names from
+// "snake_case" (used in the data warehouse) to "camelCase" (used in the event
+// exposed via HTTP or in the action).
+func convertEventPropertyCase(event map[string]any) {
+
+	// Anonymous ID.
+	event["anonymousId"] = event["anonymous_id"]
+	delete(event, "anonymous_id")
+
+	context := event["context"].(map[string]any)
+
+	// Context > Device.
+	device := context["device"].(map[string]any)
+	device["advertisingId"] = device["advertising_id"]
+	delete(device, "advertising_id")
+	device["adTrackingEnabled"] = device["ad_tracking_enabled"]
+	delete(device, "ad_tracking_enabled")
+
+	// Context > User agent.
+	context["userAgent"] = context["user_agent"]
+	delete(context, "user_agent")
+
+	// Group ID.
+	event["groupId"] = event["group_id"]
+	delete(event, "group_id")
+
+	// Message ID.
+	event["messageId"] = event["message_id"]
+	delete(event, "message_id")
+
+	// Received at.
+	event["receivedAt"] = event["received_at"]
+	delete(event, "received_at")
+
+	// User ID.
+	event["userId"] = event["user_id"]
+	delete(event, "user_id")
 }

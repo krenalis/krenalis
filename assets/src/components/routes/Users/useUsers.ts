@@ -93,7 +93,7 @@ const useUsers = () => {
 		const propertiesNames: string[] = [];
 		for (const p of properties) {
 			// always request the id as it is needed for navigation.
-			if (p.name === 'Id' || p.isUsed) {
+			if (p.name === '__id__' || p.isUsed) {
 				propertiesNames.push(p.name);
 			}
 		}
@@ -137,7 +137,7 @@ const useUsers = () => {
 		// compute the list of users ids needed for navigating between users.
 		const ids: number[] = [];
 		for (const user of users) {
-			ids.push(user.Id);
+			ids.push(user.__id__);
 		}
 		setUserIDList(ids);
 

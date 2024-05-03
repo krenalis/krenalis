@@ -183,7 +183,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	c.RunWorkspaceIdentityResolution()
 
 	// Ensure that there are 10 users.
-	users, _, count := c.Users([]string{"Id", "email"}, "", 0, 1000)
+	users, _, count := c.Users([]string{"__id__", "email"}, "", 0, 1000)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d", count)
 	}
@@ -192,7 +192,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var kBuessenGid int
 	for _, user := range users {
 		if user["email"] == "kbuessen0@example.com" {
-			gid, err := user["Id"].(json.Number).Int64()
+			gid, err := user["__id__"].(json.Number).Int64()
 			if err != nil {
 				t.Fatal(err)
 			}

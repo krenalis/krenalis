@@ -62,7 +62,7 @@ func TestChangeUsersSchema(t *testing.T) {
 
 	// Add a single property.
 	schema := types.Object(append(file.Schema.Properties(), types.Property{
-		Name: "newProp", Type: types.Text(),
+		Name: "new_prop", Type: types.Text(),
 	}))
 	queries = c.ChangeUsersSchemaQueries(schema, nil)
 	expectedQueries := []string{

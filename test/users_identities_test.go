@@ -89,7 +89,7 @@ func Test_UsersIdentities(t *testing.T) {
 	c.WaitActionsToFinish(fs1)
 	c.WaitActionsToFinish(fs2)
 
-	users, _, count := c.Users([]string{"Id"}, "", 0, 100)
+	users, _, count := c.Users([]string{"__id__"}, "", 0, 100)
 
 	const expectedCount = 4
 	if expectedCount != count {
@@ -101,7 +101,7 @@ func Test_UsersIdentities(t *testing.T) {
 
 	for _, user := range users {
 
-		id, _ := user["Id"].(json.Number).Int64()
+		id, _ := user["__id__"].(json.Number).Int64()
 
 		identities, count := c.UserIdentities(int(id), 0, 1000)
 

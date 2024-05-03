@@ -158,9 +158,6 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		if columnName == nil {
 			return nil, errors.New("database has returned NULL as column name")
 		}
-		if strings.HasPrefix(*columnName, "__") && strings.HasSuffix(*columnName, "__") { // used internally by Chichi.
-			continue
-		}
 		if !types.IsValidPropertyName(*columnName) {
 			return nil, fmt.Errorf("column name %q is not supported", *columnName)
 		}

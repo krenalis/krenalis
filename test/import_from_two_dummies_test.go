@@ -84,7 +84,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Since the users have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 users, even if they have the same properties.
-	users, _, count := c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)
+	users, _, count := c.Users([]string{"__id__", "email", "firstName", "lastName"}, "__id__", 0, 100)
 	expectedCount := 20
 	if expectedCount != count {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
@@ -93,7 +93,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every user now should have just one identity associated.
 	totalUsers := 0
 	for _, user := range users {
-		id, _ := user["Id"].(json.Number).Int64()
+		id, _ := user["__id__"].(json.Number).Int64()
 		_, count := c.UserIdentities(int(id), 0, 100)
 		const expectedCount = 1
 		if expectedCount != count {
@@ -111,7 +111,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	c.RunWorkspaceIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
-	users, _, count = c.Users([]string{"Id", "email", "firstName", "lastName"}, "Id", 0, 100)
+	users, _, count = c.Users([]string{"__id__", "email", "firstName", "lastName"}, "__id__", 0, 100)
 	expectedCount = 10
 	if expectedCount != count {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
@@ -120,7 +120,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every user now should have two identities associated.
 	totalUsers = 0
 	for _, user := range users {
-		id, _ := user["Id"].(json.Number).Int64()
+		id, _ := user["__id__"].(json.Number).Int64()
 		_, count := c.UserIdentities(int(id), 0, 100)
 		const expectedCount = 2
 		if expectedCount != count {

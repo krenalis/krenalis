@@ -1,8 +1,8 @@
 CREATE TABLE users
 (
-    `_id` Int32,
+    `__id__` Int32,
 )
 ENGINE = MergeTree
-PRIMARY KEY `_id`
-ORDER BY `_id`
+PRIMARY KEY `__id__`
+ORDER BY `__id__`
 SETTINGS index_granularity = 8192;
