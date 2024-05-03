@@ -123,13 +123,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer apis.Close()
 
-	ui, err := newUI(apis, assetsFS)
+	apisServer := newAPIsServer(apis, sessionKey)
+
+	assets, err := newAssets(assetsFS)
 	if err != nil {
 		return err
 	}
-	defer ui.Close()
-
-	apisServer := newAPIsServer(apis, sessionKey)
+	defer assets.Close()
 
 	addr := settings.Main.Host
 	if addr == "" {
@@ -164,7 +164,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/ui/"):
-			ui.ServeHTTP(w, r)
+			assets.ServeHTTP(w, r)
 			return
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
 			apis.ServeEvents(w, r)
