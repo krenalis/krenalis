@@ -186,3 +186,20 @@ func Test_SetNextWaitTime(t *testing.T) {
 		}
 	}
 }
+
+func Test_WaitTime(t *testing.T) {
+	ctx := context.Background()
+	bo := New(1)
+	if got := bo.WaitTime(); got != 0 {
+		t.Fatalf("expected waiting time 0, got %s", got)
+	}
+	bo.SetAttempts(2)
+	bo.Next(ctx)
+	if got := bo.WaitTime(); got < time.Millisecond || got >= 3*time.Millisecond {
+		t.Fatalf("expected waiting time in range [1,3), got %s", got)
+	}
+	bo.Next(ctx)
+	if got := bo.WaitTime(); got != 0 {
+		t.Fatalf("expected waiting time 0, got %s", got)
+	}
+}

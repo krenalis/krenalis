@@ -7,13 +7,13 @@
 
 // Package backoff implements an exponential backoff algorithm with jitter.
 //
-// For the backoff New(attempts, base, cap), the waiting time is calculated in
-// milliseconds as a random value within the range [0, min(base * 2^attempt, cap)]
-// where attempt varies in the range [1, attempts].
+// For the backoff New(base), the first waiting time is zero, and subsequent
+// waiting times are calculated in milliseconds as a random value within the
+// range [1, 1 + (base * 2^attempt)] with attempt > 0.
 //
 // How to use:
 //
-//	bo := backoff.New(attempts, 10, 2*time.Second) // use backoff.NoLimit for unlimited attempts
+//	bo := backoff.New(base)
 //	bo.SetNextWaitTime(10 * time.Millisecond) // waits 10ms before the first attempt.
 //	for bo.Next(ctx) {
 //		err := doSomething()
@@ -51,7 +51,7 @@ type Backoff struct {
 	timer    *time.Timer
 }
 
-// New returns a new Backoff with the given base, with limitless attempts and
+// New returns a new Backoff with the given base, with unlimited attempts and
 // without a cap. It panics if base < 0.
 func New(base int) *Backoff {
 	if base < 0 {
@@ -139,7 +139,8 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 	return true
 }
 
-// SetAttempts sets the attempts. It panics if attempts is zero or negative.
+// SetAttempts sets the attempts. Use backoff.NoLimit for unlimited attempts.
+// It panics if attempts is zero or negative.
 func (bo *Backoff) SetAttempts(attempts int) {
 	if attempts <= 0 {
 		panic("backoff: attempts is zero or negative")
@@ -168,8 +169,11 @@ func (bo *Backoff) SetNextWaitTime(d time.Duration) {
 	bo.waitTime = d
 }
 
-// WaitTime returns the wait time for the next retry attempt. If there are no
-// other retry attempts, it returns 0.
+// WaitTime returns the wait time for the next retry attempt in the range
+// [min, max), where min is 1ms and max is 1 + base * 2^attempt milliseconds,
+// but never greater than the cap if it has been set.
+// As a special case, it returns 0 if the Next and AfterFunc methods have not
+// already been called or if there are no other retry attempts.
 func (bo *Backoff) WaitTime() time.Duration {
 	if bo.attempt > 0 {
 		if bo.attempt == bo.attempts {
