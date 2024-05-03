@@ -233,7 +233,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
     npm install
     deno task build
     ```
-6. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/index.html.
+6. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/.
 
 ## Interact with Chichi using `chichi-cli`
 

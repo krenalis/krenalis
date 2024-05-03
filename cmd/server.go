@@ -163,9 +163,6 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}()
 
 		switch {
-		case strings.HasPrefix(r.URL.Path, "/ui/"):
-			assets.ServeHTTP(w, r)
-			return
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
 			apis.ServeEvents(w, r)
 		case strings.HasPrefix(r.URL.Path, "/api/"):
@@ -174,8 +171,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		case strings.HasPrefix(r.URL.Path, "/webhook/"):
 			apis.ServeWebhook(w, r)
 			return
-		case strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
-			fileServer(".").ServeHTTP(w, r)
+		case strings.HasPrefix(r.URL.Path, "/ui/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
+			assets.ServeHTTP(w, r)
 			return
 		default:
 			http.NotFound(w, r)

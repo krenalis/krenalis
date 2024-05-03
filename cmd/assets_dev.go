@@ -124,6 +124,16 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer bw.Close()
 		w = brotliResponseWriter{bw, w}
 	}
+	if strings.HasPrefix(r.URL.Path, "/javascript-sdk/dist/chichi.min.js") {
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "chichi.min.js"))
+		return
+	}
+	if r.URL.Path == "/javascript-sdk/mywebsite/" || r.URL.Path == "/javascript-sdk/mywebsite/index.html" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "mywebsite", "index.html"))
+		return
+	}
 	if strings.HasPrefix(r.URL.Path, "/ui/src/") {
 		h.fs.ServeHTTP(w, r)
 		return
