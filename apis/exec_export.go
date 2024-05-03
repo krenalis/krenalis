@@ -46,6 +46,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		if !*action.ExportOnDuplicatedUsers {
 			u1, u2, ok, err := store.DuplicatedDestinationUsers(ctx, action.ID)
 			if err != nil {
+				if err == datastore.ErrMaintenanceMode {
+					return actionExecutionError{err}
+				}
 				return actionExecutionError{fmt.Errorf("cannot look for duplicated destination users: %s", err)}
 			}
 			if ok {
@@ -58,6 +61,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		{
 			u1, u2, ok, err := store.DuplicatedUsers(ctx, action.MatchingProperties.Internal)
 			if err != nil {
+				if err == datastore.ErrMaintenanceMode {
+					return actionExecutionError{err}
+				}
 				return actionExecutionError{fmt.Errorf("cannot look for duplicated users on data warehouse: %s", err)}
 			}
 			if ok {
@@ -123,6 +129,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		Schema:     schema,
 	})
 	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return actionExecutionError{err}
+		}
 		switch err := err.(type) {
 		case *datastore.DataWarehouseError:
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -250,6 +259,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			// Resolve the external identities.
 			ids, err := this.resolveExternalIdentities(ctx, user)
 			if err != nil {
+				if err == datastore.ErrMaintenanceMode {
+					return actionExecutionError{err}
+				}
 				return err
 			}
 			// Determine if this user must be exported or not.
@@ -365,6 +377,9 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 // resolveExternalIdentities resolves the external identities of the user and
 // returns its external app identifiers, if resolved, or the empty slice if such
 // user does not exist on the remote app.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// datastore.ErrMaintenanceMode error.
 func (this *Action) resolveExternalIdentities(ctx context.Context, user warehouses.Record) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]

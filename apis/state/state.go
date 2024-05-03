@@ -341,8 +341,58 @@ func (typ WarehouseType) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid WarehouseType: %d", typ)
 }
 
+// WarehouseMode represents a data warehouse mode.
+type WarehouseMode int
+
+const (
+	Normal WarehouseMode = iota
+	Maintenance
+)
+
+// String returns the string representation of mode.
+// It panics if mode is not a valid WarehouseMode value.
+func (mode WarehouseMode) String() string {
+	m, err := mode.Value()
+	if err != nil {
+		panic("invalid warehouse mode")
+	}
+	return m.(string)
+}
+
+// Scan implements the sql.Scanner interface.
+func (mode *WarehouseMode) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an WarehouseMode value", src)
+	}
+	var m WarehouseMode
+	switch s {
+	case "Normal":
+		m = Normal
+	case "Maintenance":
+		m = Maintenance
+	default:
+		return fmt.Errorf("invalid WarehouseMode: %s", s)
+	}
+	*mode = m
+	return nil
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if typ is not a valid WarehouseMode.
+func (mode WarehouseMode) Value() (driver.Value, error) {
+	switch mode {
+	case Normal:
+		return "Normal", nil
+	case Maintenance:
+		return "Maintenance", nil
+	}
+	return nil, fmt.Errorf("not a valid WarehouseMode: %d", mode)
+}
+
 type Warehouse struct {
 	Type     WarehouseType
+	Mode     WarehouseMode
 	Settings json.RawMessage
 }
 

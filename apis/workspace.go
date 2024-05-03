@@ -51,6 +51,7 @@ var (
 	InvalidUIValues          errors.Code = "InvalidUIValues"
 	InvalidWarehouseSettings errors.Code = "InvalidWarehouseSettings"
 	InvalidWarehouseType     errors.Code = "InvalidWarehouseType"
+	MaintenanceMode          errors.Code = "MaintenanceMode"
 	NoWarehouse              errors.Code = "NoWarehouse"
 	NotConnected             errors.Code = "NotConnected"
 	OrderNotExist            errors.Code = "OrderNotExist"
@@ -538,6 +539,56 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	return queries, nil
 }
 
+// ChangeWarehouseMode changes the mode of the data warehouse for the workspace.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore, and it returns an errors.UnprocessableError error with code
+// NotConnected, if the workspace is not connected to a data warehouse.
+func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMode) error {
+	this.apis.mustBeOpen()
+
+	switch mode {
+	case Normal, Maintenance:
+	default:
+		return errors.BadRequest("mode %d is not valid", mode)
+	}
+
+	ws := this.workspace
+	if this.store == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+	}
+
+	n := state.SetWarehouse{
+		Workspace: ws.ID,
+		Warehouse: &state.Warehouse{
+			Type:     ws.Warehouse.Type,
+			Mode:     state.WarehouseMode(mode),
+			Settings: ws.Warehouse.Settings,
+		},
+	}
+
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_type IS NOT NULL",
+			n.Warehouse.Mode, n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
+}
+
 // ChangeWarehouseSettings changes the settings of the data warehouse for the
 // workspace.
 //
@@ -580,6 +631,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     ws.Warehouse.Type,
+			Mode:     ws.Warehouse.Mode,
 			Settings: settings,
 		},
 	}
@@ -702,8 +754,14 @@ func (this *Workspace) Connections() []*Connection {
 //     warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
+func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte) error {
 	this.apis.mustBeOpen()
+
+	switch mode {
+	case Normal, Maintenance:
+	default:
+		return errors.BadRequest("mode %d is not valid", mode)
+	}
 
 	ws := this.workspace
 	if ws.Warehouse != nil {
@@ -722,14 +780,15 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     state.WarehouseType(typ),
+			Mode:     state.WarehouseMode(mode),
 			Settings: settings,
 		},
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2"+
-			"  WHERE id = $3 AND warehouse_type IS NULL",
-			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_mode = $2, warehouse_settings = $3"+
+			"  WHERE id = $4 AND warehouse_type IS NULL",
+			n.Warehouse.Type, n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -811,7 +870,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '' WHERE id = $1", n.Workspace)
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_mode = NULL, warehouse_settings = '' WHERE id = $1", n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -865,6 +924,7 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NotConnected, if the workspace is not connected to a data warehouse
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
@@ -875,6 +935,9 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	slog.Info("running Workspace Identity Resolution", "workspace", this.workspace.ID)
 	err := this.store.RunWorkspaceIdentityResolution(ctx)
 	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
 		return err
 	}
 	slog.Info("execution of Workspace Identity Resolution is completed", "workspace", this.workspace.ID)
@@ -1259,6 +1322,7 @@ func (this *Workspace) User(id int) (*User, error) {
 // It returns an errors.UnprocessableError error with code
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data store.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
@@ -1343,6 +1407,9 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		Limit:      limit,
 	})
 	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
@@ -1545,6 +1612,59 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// WarehouseMode represents a data warehouse mode.
+type WarehouseMode int
+
+const (
+	Normal WarehouseMode = iota
+	Maintenance
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if mode is not a valid WarehouseMode value.
+func (mode WarehouseMode) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + mode.String() + `"`), nil
+}
+
+// String returns the string representation of mode.
+// It panics if mode is not a valid WarehouseMode value.
+func (mode WarehouseMode) String() string {
+	switch mode {
+	case Normal:
+		return "Normal"
+	case Maintenance:
+		return "Maintenance"
+	}
+	panic("invalid warehouse mode")
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	m, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("json: cannot scan a %T value into an WarehouseMode value", v)
+	}
+	var mo WarehouseMode
+	switch m {
+	case "Normal":
+		mo = Normal
+	case "Maintenance":
+		mo = Maintenance
+	default:
+		return fmt.Errorf("json: invalid WarehouseMode: %s", m)
+	}
+	*mode = mo
+	return nil
+}
+
 // isValidDisplayedPropertyName reports whether property is a valid displayed
 // property name. A valid displayed property name is an empty string, or
 // alternatively a valid property name between 1 and 100 runes long.
@@ -1575,8 +1695,10 @@ type identity struct {
 //
 // If there are no identities, a nil slice is returned.
 //
-// It returns an errors.UnprocessableError error with code DataWarehouseFailed,
-// if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
 func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, first, limit int) ([]identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
@@ -1598,6 +1720,9 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		Limit:   limit,
 	})
 	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
 		return nil, 0, err
 	}
 

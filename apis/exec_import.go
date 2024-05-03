@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
@@ -47,6 +48,9 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if exe, _ := action.Execution(); exe.Reimport {
 			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
 			if err != nil {
+				if err == datastore.ErrMaintenanceMode {
+					return actionExecutionError{err}
+				}
 				if err, ok := err.(*warehouses.DataWarehouseError); ok {
 					return actionExecutionError{fmt.Errorf("cannot delete the already-existing identities before starting the import: %s", err)}
 				}
@@ -86,7 +90,13 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.ImportedStep)
 		}
 	}
-	iw := this.connection.store.IdentitiesWriter(ctx, this.action.OutSchema, connection.ID, false, ack)
+	iw, err := this.connection.store.IdentitiesWriter(ctx, this.action.OutSchema, connection.ID, false, ack)
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return actionExecutionError{err}
+		}
+		return err
+	}
 	defer iw.Close(ctx)
 
 	var (

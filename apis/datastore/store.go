@@ -22,10 +22,15 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
+// ErrMaintenanceMode is returned by Store methods when they cannot execute due
+// to the data warehouse being in maintenance mode.
+var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
+
 type Store struct {
 	ds        *Datastore
 	workspace int
 	warehouse warehouses.Warehouse
+	mode      state.WarehouseMode
 	mu        sync.Mutex // for the events field
 	events    []map[string]any
 	closed    atomic.Bool
@@ -37,6 +42,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store := &Store{
 		ds:        ds,
 		workspace: ws.ID,
+		mode:      ws.Warehouse.Mode,
 		runningIR: make(chan struct{}, 1),
 	}
 	var err error
@@ -44,18 +50,20 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
-	go func() {
-		ticker := time.NewTicker(flushEventsQueueTimeout)
-		for range ticker.C {
-			store.mu.Lock()
-			events := store.events
-			store.events = nil
-			store.mu.Unlock()
-			if events != nil {
-				go store.flushEvents(events)
+	if ws.Warehouse.Mode == state.Normal {
+		go func() {
+			ticker := time.NewTicker(flushEventsQueueTimeout)
+			for range ticker.C {
+				store.mu.Lock()
+				events := store.events
+				store.events = nil
+				store.mu.Unlock()
+				if events != nil {
+					go store.flushEvents(events)
+				}
 			}
-		}
-	}()
+		}()
+	}
 	return store, nil
 }
 
@@ -96,19 +104,28 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, operations []warehou
 	return store.warehouse.AlterSchemaQueries(ctx, operations)
 }
 
-// AddEvents adds events to the store.
-func (store *Store) AddEvents(events []map[string]any) {
+// AddEvents adds events to the store. If the data warehouse is in maintenance
+// mode, it returns the ErrMaintenanceMode error.
+func (store *Store) AddEvents(events []map[string]any) error {
+	if store.mode == state.Maintenance {
+		return ErrMaintenanceMode
+	}
 	store.mustBeOpen()
 	store.mu.Lock()
 	store.events = append(store.events, events...)
 	store.mu.Unlock()
+	return nil
 }
 
 // DeleteConnectionIdentities deletes the identities of a connection.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection int) error {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return ErrMaintenanceMode
+	}
 	return store.warehouse.DeleteConnectionIdentities(ctx, connection)
 }
 
@@ -116,8 +133,15 @@ func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection i
 // users of the action whose external matching property value matches with the
 // given property value. If it cannot be found, then an empty slice and false
 // are returned.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return nil, ErrMaintenanceMode
+	}
 	return store.warehouse.DestinationUsers(ctx, action, propertyValue)
 }
 
@@ -126,10 +150,16 @@ func (store *Store) DestinationUsers(ctx context.Context, action int, propertyVa
 // true.
 //
 // If there are no users on the action matching this condition, no external app
-// identifiers are returned and the returned boolean is false. If an error
-// occurs with the data warehouse, it returns a *DataWarehouseError error.
+// identifiers are returned and the returned boolean is false.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return "", "", false, ErrMaintenanceMode
+	}
 	return store.warehouse.DuplicatedDestinationUsers(ctx, action)
 }
 
@@ -137,21 +167,30 @@ func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) 
 // the given property, along with true.
 // If there are no users matching this condition, no GIDs are returned and the
 // returned boolean is false.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return 0, 0, false, ErrMaintenanceMode
+	}
 	return store.warehouse.DuplicatedUsers(ctx, property)
 }
 
 // Events returns an iterator over the results of the query on the 'events'
 // table of the data warehouse, ordered from the most recent to the oldest.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error. If the schema specified in the query is not conform to the schema of
-// the 'events' table, it returns a *SchemaError error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If the schema specified in the query is not conform
+// to the schema of the 'events' table, it returns a *SchemaError error. If an
+// error occurs with the data warehouse, it returns a *DataWarehouseError error.
 func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, error) {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return nil, ErrMaintenanceMode
+	}
 	records, _, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
 		Table:      "events",
 		Schema:     query.Schema,
@@ -194,19 +233,26 @@ type IdentitiesWriter = warehouses.IdentitiesWriter
 // fromEvent indicates if the user identities are imported from an event or not.
 // ack is the ack function (see the documentation of IdentitiesWriter for more
 // details about it).
-// If the schema specified is not conform to the schema of the table
-// 'users_identities' in the data warehouse, calls to the method 'Write' of the
-// returned 'IdentitiesWriter' return a *SchemaError error.
-func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) IdentitiesWriter {
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If the schema specified is not conform to the
+// schema of the table 'users_identities' in the data warehouse, calls to the
+// method 'Write' of the returned 'IdentitiesWriter' return a *SchemaError
+// error.
+func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) (IdentitiesWriter, error) {
 	store.mustBeOpen()
-	return store.warehouse.IdentitiesWriter(ctx, schema, connection, fromEvent, ack)
+	if store.mode == state.Maintenance {
+		return nil, ErrMaintenanceMode
+	}
+	return store.warehouse.IdentitiesWriter(ctx, schema, connection, fromEvent, ack), nil
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
 	return store.warehouse.Init(ctx)
@@ -214,6 +260,10 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
 func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
+
+	if store.mode == state.Maintenance {
+		return ErrMaintenanceMode
+	}
 
 	// Prevent concurrent executions of the Workspace Identity Resolution. This
 	// is a workaround for the PostgreSQL error:
@@ -260,10 +310,14 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 
 // SetDestinationUser sets the destination user for an action.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return ErrMaintenanceMode
+	}
 	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
 }
 
@@ -273,11 +327,16 @@ type Records = warehouses.Records
 // of the data warehouse and an estimated count of the users that would be
 // returned if First and Limit were not provided in the query.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error. If the schema specified in the query is not conform to the schema of
-// the 'users' table, it returns a *SchemaError error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error. If the schema specified in the query is
+// not conform to the schema of the 'users' table, it returns a *SchemaError
+// error.
 func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, int, error) {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return nil, 0, ErrMaintenanceMode
+	}
 	records, count, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
 		Table:      "users",
 		Schema:     query.Schema,
@@ -326,11 +385,16 @@ type UsersQuery struct {
 // user identities that would be returned if First and Limit were not provided
 // in the query.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error. If the schema specified in the query is not conform to the schema of
-// the 'users_identities' table, it returns a *SchemaError error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error. If the schema specified in the query is
+// not conform to the schema of the 'users_identities' table, it returns a
+// *SchemaError error.
 func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQuery) (Records, int, error) {
 	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return nil, 0, ErrMaintenanceMode
+	}
 	records, count, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
 		Table:      "users_identities",
 		Schema:     query.Schema,

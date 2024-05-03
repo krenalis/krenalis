@@ -53,10 +53,11 @@ const geoLite2Path = "GeoLite2-City.mmdb"
 
 // Errors handled by the HTTP server of the collector.
 var (
-	errUnauthorized     = errors.New("unauthorized")
-	errBadRequest       = errors.New("bad request")
-	errMethodNotAllowed = errors.New("method not allowed")
-	errNotFound         = errors.New("not found")
+	errBadRequest         = errors.New("bad request")
+	errMethodNotAllowed   = errors.New("method not allowed")
+	errNotFound           = errors.New("not found")
+	errServiceUnavailable = errors.New("service unavailable")
+	errUnauthorized       = errors.New("unauthorized")
 )
 
 type batchEvents struct {
@@ -171,6 +172,8 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		case errNotFound:
 			http.Error(w, "Not Found", http.StatusNotFound)
+		case errServiceUnavailable:
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		case errUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
@@ -278,6 +281,9 @@ func (c *Collector) hasImportUsersAction(source *state.Connection) bool {
 
 // importUsersIdentities imports users identities from the given events batch
 // collected on the source connection.
+//
+// If the data warehouse is un maintenance mode, it returns the
+// datastore.ErrMaintenanceMode error.
 func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Connection, events []*events.Event) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
@@ -298,7 +304,10 @@ func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Con
 			}
 			slog.Warn("users identities imported successfully", "action", action.ID, "ids", ids)
 		}
-		iw := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
+		iw, err := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
+		if err != nil {
+			return err
+		}
 		defer iw.Close(ctx)
 
 		// Import the user identities from the events batch.
@@ -360,7 +369,7 @@ func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Con
 				return iw.Close(ctx)
 			}
 		}
-		err := iw.Close(ctx)
+		err = iw.Close(ctx)
 		if err != nil {
 			return err
 		}
@@ -628,13 +637,22 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	if c.hasImportEventsAction(connection) {
 		// Store the events into the data warehouse.
-		c.storeEvents(connection.Workspace().ID, batch)
+		err = c.storeEvents(connection.Workspace().ID, batch)
+		if err != nil {
+			if err == datastore.ErrMaintenanceMode {
+				err = errServiceUnavailable
+			}
+			return err
+		}
 	}
 
 	if c.hasImportUsersAction(connection) {
 		// Import the users identities.
 		err = c.importUsersIdentities(ctx, connection, batch)
 		if err != nil {
+			if err == datastore.ErrMaintenanceMode {
+				err = errServiceUnavailable
+			}
 			return err
 		}
 	}
@@ -1105,12 +1123,13 @@ func (c *Collector) setEventsAsReceived(events []*collectedEvent) {
 	}
 }
 
-// storeEvents store the events in the data warehouse.
-func (c *Collector) storeEvents(workspace int, events []*events.Event) {
+// storeEvents store the events in the data warehouse. If the data warehouse is
+// in maintenance mode, it returns the datastore.ErrMaintenanceMode error.
+func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 
 	store := c.datastore.Store(workspace)
 	if store == nil {
-		return
+		return nil
 	}
 
 	var traits bytes.Buffer
@@ -1252,8 +1271,7 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) {
 
 	}
 
-	store.AddEvents(rows)
-
+	return store.AddEvents(rows)
 }
 
 // collectHeader returns selected headers of r.

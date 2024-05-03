@@ -106,6 +106,23 @@ func (workspace workspace) ChangeUsersSchemaQueries(_ http.ResponseWriter, r *ht
 	return map[string]any{"Queries": queries}, nil
 }
 
+// ChangeWarehouseMode changes the mode of the data warehouse for a workspace.
+func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	body := struct {
+		Mode apis.WarehouseMode
+	}{}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.ChangeWarehouseMode(r.Context(), body.Mode)
+	return nil, err
+}
+
 // ChangeWarehouseSettings changes the settings of the data warehouse for a
 // workspace.
 func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -159,13 +176,14 @@ func (workspace workspace) ConnectWarehouse(_ http.ResponseWriter, r *http.Reque
 	}
 	body := struct {
 		Type     apis.WarehouseType
+		Mode     apis.WarehouseMode
 		Settings rawJSON
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ConnectWarehouse(r.Context(), body.Type, body.Settings)
+	err = ws.ConnectWarehouse(r.Context(), body.Type, body.Mode, body.Settings)
 	return nil, err
 }
 

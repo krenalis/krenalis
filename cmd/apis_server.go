@@ -147,6 +147,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"PUT    /api/workspaces/{workspace}":                                                            workspace.Set,
 		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                  action.Set,
 		"PUT    /api/workspaces/{workspace}/event-listeners/":                                           workspace.AddEventListener,
+		"PUT    /api/workspaces/{workspace}/warehouse-mode":                                             workspace.ChangeWarehouseMode,
 		"PUT    /api/workspaces/{workspace}/warehouse-settings":                                         workspace.ChangeWarehouseSettings,
 	}
 

@@ -903,8 +903,9 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 //
 // It returns an errors.UnprocessableError error with code
 //
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
 	this.apis.mustBeOpen()
 	if first < 0 {

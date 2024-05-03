@@ -167,12 +167,14 @@ func (state *State) load() error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_settings, users_schema,\n"+
-			"identifiers, privacy_region, displayed_image, displayed_first_name, displayed_last_name, displayed_information\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
+			" warehouse_settings, users_schema, identifiers, privacy_region, displayed_image, displayed_first_name,"+
+			" displayed_last_name, displayed_information\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
 				var warehouseType *WarehouseType
+				var warehouseMode *WarehouseMode
 				var displayedImage string
 				var displayedFirstName string
 				var displayedLastName string
@@ -185,8 +187,8 @@ func (state *State) load() error {
 						connections: map[int]*Connection{},
 						resources:   map[int]*Resource{},
 					}
-					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseSettings,
-						&usersSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
+					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseMode,
+						&warehouseSettings, &usersSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
 						&displayedFirstName, &displayedLastName, &displayedInformation); err != nil {
 						return err
 					}
@@ -194,6 +196,7 @@ func (state *State) load() error {
 					if warehouseType != nil {
 						ws.Warehouse = &Warehouse{
 							Type:     *warehouseType,
+							Mode:     *warehouseMode,
 							Settings: warehouseSettings,
 						}
 					}

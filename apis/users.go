@@ -36,9 +36,10 @@ type User struct {
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoEventsSchema, if the data warehouse does not have events schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 
 	this.apis.mustBeOpen()
@@ -70,6 +71,9 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		Limit:      limit,
 	})
 	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
 		return nil, err
 	}
 
@@ -100,8 +104,9 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 // It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
 	this.apis.mustBeOpen()
 	if first < 0 {
@@ -136,6 +141,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 // It returns an errors.UnprocessableError error with code
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Traits(ctx context.Context) ([]byte, error) {
 
@@ -162,6 +168,9 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		Limit:      1,
 	})
 	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
