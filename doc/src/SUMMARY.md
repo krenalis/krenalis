@@ -36,6 +36,7 @@
     - [Anonymous Users Strategies](./identity-resolution/anonymous-users-strategies.md)
 - [Change the "users" schema](./change-the-users-schema.md)
 - [Data Warehouse](./data-warehouse.md)
+    - [Implementing a driver](./implementing-a-driver.md)
     - [ClickHouse](./clickhouse.md)
     - [PostgreSQL](./postgresql.md)
     - [Snowflake](./snowflake.md)

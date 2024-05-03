@@ -53,15 +53,3 @@ is represented as:
 ios_id (nullable)
 ios_idfa (nullable)
 ```
-
-## Meta properties
-
-> This section may be extended and moved to a more appropriate place.
-
-Properties whose names start and end with `__`, and which are at least 5 characters long, are defined as 'meta properties'. For example, these are considered meta properties:
-
-```
-__id__
-__anonymous_id__
-__GID__
-```
