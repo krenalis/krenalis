@@ -906,8 +906,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if kind != ArrayKind {
 			return Type{}, errors.New("unexpected uniqueItems for non-Array type")
 		}
-		if k := t.vl.(Type).kind; k == ArrayKind || k == ObjectKind {
-			return Type{}, errors.New("unexpected uniqueItems for items with type Array or Object")
+		if k := t.vl.(Type).kind; k == JSONKind || k == ArrayKind || k == MapKind || k == ObjectKind {
+			return Type{}, errors.New("unexpected uniqueItems for items with type JSON, Array, Map, or Object")
 		}
 		t.unique = uniqueItems
 	}

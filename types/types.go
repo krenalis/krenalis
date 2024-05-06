@@ -1064,14 +1064,14 @@ func (t Type) Unique() bool {
 }
 
 // WithUnique returns the type t but with unique items. t must be an Array and
-// its item type cannot be Array or Object.
-// Panics if t is not an Array or the item type is Array or Object.
+// its item type cannot be JSON, Array, Map, or Object.
+// Panics if t is not an Array or the item type is JSON, Array, Map, or Object.
 func (t Type) WithUnique() Type {
 	if t.kind != ArrayKind {
 		panic("cannot set unique of a non-Array type")
 	}
-	if k := t.vl.(Type).kind; k == ArrayKind || k == ObjectKind {
-		panic("cannot set unique for an Array with items of type Array or Object")
+	if k := t.vl.(Type).kind; k == JSONKind || k == ArrayKind || k == MapKind || k == ObjectKind {
+		panic("cannot set unique for an Array with items of type Array, Map, or Object")
 	}
 	t.unique = true
 	return t
