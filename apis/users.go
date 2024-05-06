@@ -34,6 +34,7 @@ type User struct {
 // oldest. limit is the maximum number of events to return, it must be in range
 // [1, 200].
 //
+// It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
@@ -94,7 +95,22 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	if err = records.Err(); err != nil {
 		return nil, err
 	}
-
+	if len(evs) == 0 {
+		// Verify that the user exists.
+		where := expr.NewBaseExpr("__gid__", expr.OperatorEqual, this.id)
+		ws := &Workspace{
+			apis:      this.apis,
+			store:     this.store,
+			workspace: this.workspace,
+		}
+		_, count, err := ws.userIdentities(ctx, where, 0, 1)
+		if err != nil {
+			return nil, err
+		}
+		if count == 0 {
+			return nil, errors.NotFound("user %d does not exist", this.id)
+		}
+	}
 	return encoding.MarshalSlice(events.Schema, evs)
 }
 
