@@ -494,14 +494,22 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			if it1.EqualTo(it2) {
-				return s, nil
+			if !it1.EqualTo(it2) {
+				var err error
+				for i, item := range s {
+					s[i], err = convert(item, it1, it2, false, layouts)
+					if err != nil {
+						return nil, err
+					}
+				}
 			}
-			var err error
-			for i, item := range s {
-				s[i], err = convert(item, it1, it2, false, layouts)
-				if err != nil {
-					return nil, err
+			if !st.Unique() && dt.Unique() {
+				for i, item := range s {
+					for _, item2 := range s[i:] {
+						if item == item2 {
+							return nil, errInvalidConversion
+						}
+					}
 				}
 			}
 			return s, nil
@@ -518,6 +526,15 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				s[i], err = convert(item, types.JSON(), it2, false, layouts)
 				if err != nil {
 					return nil, err
+				}
+			}
+			if dt.Unique() {
+				for i, item := range s {
+					for _, item2 := range s[i:] {
+						if item == item2 {
+							return nil, errInvalidConversion
+						}
+					}
 				}
 			}
 			return s, nil

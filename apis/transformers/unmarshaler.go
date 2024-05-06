@@ -348,6 +348,15 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		if len(items) < minItems {
 			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d %s", minItems, d.opts.terms["items"]), "", d.opts.terms)
 		}
+		if t.Unique() {
+			for i, item := range items {
+				for _, item2 := range items[i+1:] {
+					if item == item2 {
+						return nil, newErrInvalidValue(fmt.Sprintf("contains a duplicated value: %v", item), "", d.opts.terms)
+					}
+				}
+			}
+		}
 		return items, nil
 	case '{':
 		// Unmarshal an object.

@@ -522,6 +522,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 						return nil, err
 					}
 				}
+				if typ.Unique() {
+					for i, e := range a {
+						for _, e2 := range a[i:] {
+							if e == e2 {
+								return nil, newNormalizationErrorf(name, "contains the duplicated value %v", e)
+							}
+						}
+					}
+				}
 				value = a
 				valid = true
 			}
