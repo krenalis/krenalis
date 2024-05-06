@@ -156,7 +156,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 
 	this.apis.mustBeOpen()
 
-	if name == "" || utf8.RuneCountInString(name) > 100 {
+	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
 		return 0, errors.BadRequest("name %q is not valid", name)
 	}
 	switch region {
@@ -517,6 +517,9 @@ func validateMemberToSet(member MemberToSet, validateEmail bool, validatePasswor
 	// Validate name.
 	if member.Name == "" {
 		return errors.New("name is empty")
+	}
+	if containsNUL(member.Name) {
+		return errors.New("name contains NUL rune")
 	}
 	if !utf8.ValidString(member.Name) {
 		return errors.New("name is not UTF-8 encoded")

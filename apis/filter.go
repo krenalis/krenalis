@@ -39,7 +39,7 @@ type FilterLogical string
 type FilterCondition struct {
 	Property string // property's path.
 	Operator string // operator, can be "is" or "is not".
-	Value    string // value, cannot be longer than 60 runes.
+	Value    string // value, cannot be longer than 60 runes and cannot contain the NUL rune.
 }
 
 // validateFilter validates a filter and returns its properties, possibly
@@ -65,6 +65,9 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		}
 		if op := cond.Operator; op != "is" && op != "is not" {
 			return nil, fmt.Errorf("invalid operator %q", op)
+		}
+		if containsNUL(cond.Value) {
+			return nil, errors.New("condition value contains the NUL rune")
 		}
 		if n := utf8.RuneCountInString(cond.Value); n > 60 {
 			return nil, errors.New("condition value is longer than 60 runes")

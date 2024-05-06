@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -740,6 +741,10 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 		defer apis.close.Done()
 		a.exec(apis.close.ctx)
 	}()
+}
+
+func containsNUL(s string) bool {
+	return strings.ContainsRune(s, '\x00')
 }
 
 func isValidInvitationToken(token string) bool {

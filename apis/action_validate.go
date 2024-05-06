@@ -63,6 +63,9 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	if !utf8.ValidString(action.Name) {
 		return errors.BadRequest("name is not UTF-8 encoded")
 	}
+	if containsNUL(action.Name) {
+		return errors.BadRequest("name contains NUL rune")
+	}
 	if n := utf8.RuneCountInString(action.Name); n > 60 {
 		return errors.BadRequest("name is longer than 60 runes")
 	}
@@ -130,6 +133,9 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if function.Source == "" {
 			return errors.BadRequest("function transformation source is empty")
 		}
+		if containsNUL(function.Source) {
+			return errors.BadRequest("function transformation source contains NUL rune")
+		}
 		switch function.Language {
 		case "JavaScript":
 			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
@@ -149,6 +155,9 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	if action.Path != "" {
 		if !utf8.ValidString(action.Path) {
 			return errors.BadRequest("path is not UTF-8 encoded")
+		}
+		if containsNUL(action.Path) {
+			return errors.BadRequest("path contains NUL rune")
 		}
 		if n := utf8.RuneCountInString(action.Path); n > 1024 {
 			return errors.BadRequest("path is longer than 1024 runes")
@@ -175,6 +184,9 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	if action.TableName != "" {
 		if !utf8.ValidString(action.TableName) {
 			return errors.BadRequest("table name is not UTF-8 encoded")
+		}
+		if containsNUL(action.TableName) {
+			return errors.BadRequest("table name contains NUL rune")
 		}
 		if n := utf8.RuneCountInString(action.TableName); n > 1024 {
 			return errors.BadRequest("table name is longer than 1024 runes")
@@ -314,6 +326,9 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.Source; needsQuery {
 		if action.Query == "" {
 			return errors.BadRequest("query cannot be empty for database actions")
+		}
+		if containsNUL(action.Query) {
+			return errors.BadRequest("query contains NUL rune")
 		}
 	} else {
 		if action.Query != "" {

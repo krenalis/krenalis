@@ -783,6 +783,9 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	if !utf8.ValidString(query) {
 		return nil, types.Type{}, errors.BadRequest("query is not UTF-8 encoded")
 	}
+	if containsNUL(query) {
+		return nil, types.Type{}, errors.BadRequest("query contains NUL rune")
+	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
 		return nil, types.Type{}, errors.BadRequest("query is longer than 16,777,215 runes")
 	}
@@ -1042,6 +1045,9 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 	}
 	if !utf8.ValidString(path) {
 		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
+	}
+	if containsNUL(path) {
+		return nil, types.Type{}, errors.BadRequest("path contains NUL rune")
 	}
 	if n := utf8.RuneCountInString(path); n > 1024 {
 		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
@@ -1451,7 +1457,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.Set", "connection", this.connection.ID)
 	defer span.End()
 
-	if connection.Name == "" || utf8.RuneCountInString(connection.Name) > 100 {
+	if connection.Name == "" || containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
 		return errors.BadRequest("name %q is not valid", connection.Name)
 	}
 	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
@@ -1581,6 +1587,9 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 	}
 	if path == "" {
 		return nil, errors.BadRequest("path is empty")
+	}
+	if containsNUL(path) {
+		return nil, errors.BadRequest("path contains NUL rune")
 	}
 	if !utf8.ValidString(path) {
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
@@ -1978,12 +1987,13 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 }
 
 // parseWebsiteHost parses a website host from the format "host:port" and
-// returns the host and the port. The host cannot be empty and cannot be longer
-// than 255 characters. If a port is present, it must be in the range [1,65535].
-// If no port is present, it defaults to returning 443 as the port.
+// returns the host and the port. The host cannot be empty, cannot contain the
+// NUL rune and cannot be longer than 255 characters. If a port is present, it
+// must be in the range [1,65535]. If no port is present, it defaults to
+// returning 443 as the port.
 func parseWebsiteHost(s string) (string, int, error) {
 	h, p, found := strings.Cut(s, ":")
-	if h == "" || len(s) > 255 {
+	if h == "" || len(s) > 255 || containsNUL(h) {
 		return "", 0, errors.New("website host is not valid")
 	}
 	port := 443

@@ -79,7 +79,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if connection.Connector < 1 || connection.Connector > maxInt32 {
 		return 0, errors.BadRequest("connector identifier %d is not valid", connection.Connector)
 	}
-	if utf8.RuneCountInString(connection.Name) > 100 {
+	if containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", connection.Name)
 	}
 	if s := connection.Strategy; s != nil {
