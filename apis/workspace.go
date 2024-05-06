@@ -100,8 +100,13 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if !ok {
 		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connection.Connector)
 	}
-	if c.Type == state.FileType {
+	switch c.Type {
+	case state.FileType:
 		return 0, errors.BadRequest("cannot add a connection with type File")
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		if connection.Role == Destination {
+			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
+		}
 	}
 
 	// Validate the event connections.

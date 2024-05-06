@@ -62,6 +62,9 @@ const ConnectorsList = () => {
 
 	const connectorsCards = [];
 	for (const c of connectors) {
+		if (connectionRole === 'Destination' && (c.type === 'Website' || c.type === 'Mobile' || c.type === 'Server')) {
+			continue;
+		}
 		const name = c.name;
 		if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
 			connectorsCards.push(
