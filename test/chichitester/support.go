@@ -373,16 +373,12 @@ func (c *Chichi) UserEvents(user int) []map[string]any {
 }
 
 func (c *Chichi) UserIdentities(user int, first, limit int) ([]UserIdentity, int) {
-	req := map[string]any{
-		"First": first,
-		"Limit": limit,
-	}
 	var response struct {
 		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/users/%d/identities", c.ws, user)
-	c.MustCall("POST", method, req, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/users/%d/identities?first=%d&limit=%d", c.ws, user, first, limit)
+	c.MustCall("GET", method, nil, &response)
 	return response.Identities, response.Count
 }
 

@@ -159,11 +159,7 @@ func Test_UsersIdentities(t *testing.T) {
 	// returns a NotFound error.
 	{
 		url := "/api/workspaces/1/users/12345/identities"
-		req := map[string]any{
-			"First": 0,
-			"Limit": 100,
-		}
-		err := c.Call("POST", url, req, nil)
+		err := c.Call("GET", url, nil, nil)
 		if err == nil {
 			t.Fatalf("expecting error, got nothing")
 		}

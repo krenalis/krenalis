@@ -474,10 +474,10 @@ class Users {
 	};
 
 	identities = async (user: number, first: number, limit: number): Promise<UserIdentitiesResponse> => {
-		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/identities`, http.POST, {
-			first: first,
-			limit: limit,
-		});
+		return await call(
+			`${this.apiURL}/users/${encodeURIComponent(user)}/identities?first=${first}&limit=${limit}`,
+			http.GET,
+		);
 	};
 }
 
