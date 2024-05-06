@@ -82,7 +82,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if utf8.RuneCountInString(connection.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", connection.Name)
 	}
-
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
 			return 0, errors.BadRequest("strategy %q is not valid", *s)
@@ -91,9 +90,13 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			return 0, errors.BadRequest("destination connections cannot have a strategy")
 		}
 	}
-
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
 		return 0, errors.BadRequest("sending mode %q is not valid", *sm)
+	}
+	if host := connection.WebsiteHost; host != "" {
+		if _, _, err := parseWebsiteHost(host); err != nil {
+			return 0, errors.BadRequest("website host %q is not valid", host)
+		}
 	}
 
 	c, ok := this.apis.state.Connector(connection.Connector)
@@ -107,6 +110,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		if connection.Role == Destination {
 			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
 		}
+	}
+
+	if connection.WebsiteHost != "" && c.Type != state.WebsiteType {
+		return 0, errors.BadRequest("%s connections cannot have a website host", strings.ToLower(c.Type.String()))
 	}
 
 	// Validate the event connections.

@@ -1460,6 +1460,11 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
 		return errors.BadRequest("sending mode %q is not valid", *sm)
 	}
+	if host := connection.WebsiteHost; host != "" {
+		if _, _, err := parseWebsiteHost(host); err != nil {
+			return errors.BadRequest("website host %q is not valid", host)
+		}
+	}
 
 	n := state.SetConnection{
 		Connection:  this.connection.ID,
@@ -1505,18 +1510,9 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	}
 
 	// Validate the website host.
-	if n.WebsiteHost != "" {
-		if c.Type != state.WebsiteType {
-			return errors.BadRequest("connector %d cannot have a website host, it's a %s",
-				c.ID, strings.ToLower(c.Type.String()))
-		}
-		if h, p, found := strings.Cut(n.WebsiteHost, ":"); h == "" || len(n.WebsiteHost) > 255 {
-			return errors.BadRequest("website host %q is not valid", n.WebsiteHost)
-		} else if found {
-			if port, _ := strconv.Atoi(p); port < 1 || port > 65535 {
-				return errors.BadRequest("website host %q is not valid", n.WebsiteHost)
-			}
-		}
+	if n.WebsiteHost != "" && c.Type != state.WebsiteType {
+		return errors.BadRequest("connector %d cannot have a website host, it's a %s",
+			c.ID, strings.ToLower(c.Type.String()))
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -1979,6 +1975,24 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return schema, nil
 	}
 	return types.Type{}, nil
+}
+
+// parseWebsiteHost parses a website host from the format "host:port" and
+// returns the host and the port. The host cannot be empty and cannot be longer
+// than 255 characters. If a port is present, it must be in the range [1,65535].
+// If no port is present, it defaults to returning 443 as the port.
+func parseWebsiteHost(s string) (string, int, error) {
+	h, p, found := strings.Cut(s, ":")
+	if h == "" || len(s) > 255 {
+		return "", 0, errors.New("website host is not valid")
+	}
+	port := 443
+	if found {
+		if port, _ = strconv.Atoi(p); port < 1 || port > 65535 {
+			return "", 0, errors.New("website host is not valid")
+		}
+	}
+	return h, port, nil
 }
 
 // validateEventConnections validates the given event connections for a
