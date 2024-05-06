@@ -32,7 +32,7 @@ The table below provides the types that can appears in a schema:
 | `JSON`         | A JSON data.                                                              |
 | `Inet`         | An IP4 or IP6 address.                                                    |
 | `Text`         | An UTF-8 encoded text. [^5]                                               |
-| `Array(T)`     | An array with items with type `T`. [^6]                                   |
+| `Array(T)`     | An array with items with type `T`. [^6] [^7]                              |
 | `Object`       | An object with specified properties.                                      |
 | `Map(T)`       | A map with keys of type `Text` and values of type `T`.                    |
 
@@ -47,3 +47,5 @@ The table below provides the types that can appears in a schema:
 [^5]: `Text` can be restricted by a list of allowed values, a regular expression, or maximum lengths in bytes and characters.
 
 [^6]: An `Array` can have a minimum and maximum limit on the number of items.
+
+[^7]: An `Array` can be constrained to have unique values for its items, except for arrays of `JSON`, `Array`, `Map`, and `Object`.

@@ -250,6 +250,16 @@ types.Array(types.Decimal(10, 2)).WithMaxItems(10)
 types.Array(types.Text()).WithMinItems(5).WithMaxItems(15)
 ```
 
+Arrays can also be constrained to have unique values for their items, except for arrays of `JSON`, `Array`, `Map`, and `Object`:
+
+```go
+// Array of 64-bit signed integers with unique values.
+types.Array(types.Uint64()).WithUnique()
+
+// Array of UUIDs with unique values.
+types.Array(types.UUID()).WithUnique()
+```
+
 ### Object
 
 Represents an object with specified properties.
