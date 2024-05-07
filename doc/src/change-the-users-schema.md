@@ -1,20 +1,29 @@
 # Change the "users" schema
 
+## How to change the users schema
+
 The "users" schema can be modified both: 
 
 * through the UI
 * by using the "chichi-cli" tool from the command line.
 
+## Supported operations
+
 When changing the `users` schema, these operations are supported:
 
-* add a new property to the schema, necessarily at top level (so already existent Object properties cannot be extended with new properties) and at the end of the already present properties.
+* adding a new property to the schema
 * dropping a property
-* renaming a property, that is changing a property name without altering its position in the schema
+* renaming a property
+* changing the order of the properties
 * changing the label or the description of a property
 
-Any other operation (as changes in the order of the properties, or the change of a type or nullability) is not supported.
+Any other operation (as changing a property type or nullability) is not supported.
 
 Further limits may be introduced by data warehouses. See [Data Warehouse](./data-warehouse.md) and its subsections.
+
+> NOTE: altering of Object properties is not fully implemented. See the issue [#722](https://github.com/open2b/chichi/issues/722).
+
+> NOTE: renaming of Object properties is not implemented. See the issue [#691](https://github.com/open2b/chichi/issues/691).
 
 ## Object properties and nullability
 

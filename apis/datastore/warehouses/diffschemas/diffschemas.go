@@ -149,7 +149,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	}
 
 	// Iterate over DroppedNames.
-	dropped := map[string]bool{}
 	for _, droppedName := range droppedNames {
 
 		// Renamed properties, whose old name has not been reused by any
@@ -170,7 +169,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 		// Deleted properties, whose name has not been reused by any property.
 		// They do not appear in "rePaths".
-		dropped[droppedName] = true
 		droppedProp := oldPropsByName[droppedName]
 		if droppedProp.Type.Kind() == types.ObjectKind {
 			for _, p := range propertyPaths(droppedProp.Type) {
@@ -198,7 +196,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// in "rePaths" (the key is the name of the created property, the value
 		// is nil).
 		if v, ok := rePaths[keptPath]; ok && v == nil {
-			dropped[keptName] = true
 			operations = append(operations,
 				warehouses.AlterSchemaOperation{
 					Operation: warehouses.OperationDropProperty,
@@ -217,7 +214,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They appear in "rePaths" (the key is the name of the property that
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
-			dropped[keptName] = true
 			operations = append(operations, warehouses.AlterSchemaOperation{
 				Operation: warehouses.OperationDropProperty,
 				Path:      keptPath,
@@ -259,39 +255,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			return nil, fmt.Errorf("error on property %q: nullability changes are not supported", appendPath(path, oldProp.Name))
 		}
 
-	}
-
-	// Check if the ordering of the properties in the new schema is correct,
-	// that is:
-	//
-	// - old properties must be in the same position as before (after applying
-	//   renamings)
-	// - new properties are appended at the end of the properties
-	//
-	oldNamesUpdated := []string{}
-	for _, oldName := range oldNames {
-		// Dropped properties must not be taken in account.
-		if dropped[oldName] {
-			continue
-		}
-		// Renamed properties should be compared with their new name, not the
-		// old one.
-		if newName, ok := newNameOf[oldName]; ok {
-			oldNamesUpdated = append(oldNamesUpdated, newName)
-			continue
-		}
-		// Add the property name as it is.
-		oldNamesUpdated = append(oldNamesUpdated, oldName)
-	}
-	for i, oldName := range oldNamesUpdated {
-		newName := newNames[i] // len(newNames) is always >= len(oldNamesUpdated)
-		if oldName != newName {
-			return nil, fmt.Errorf("properties order has changed (expected property %q, got %q)", oldName, newName)
-		}
-		// Other properties present in newNames and not present in
-		// oldNamesUpdated does not required checking, as they are new
-		// properties and they are necessarily to the end of the properties
-		// list.
 	}
 
 	return operations, nil

@@ -385,7 +385,7 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Text()},
 				{Name: "a", Type: types.Text()},
 			}),
-			expectedErr: `properties order has changed (expected property "a", got "b")`,
+			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "Property order is changed at first level (total of three properties), no renamings",
@@ -399,7 +399,7 @@ func TestDiff(t *testing.T) {
 				{Name: "c", Type: types.Text()},
 				{Name: "b", Type: types.Text()},
 			}),
-			expectedErr: `properties order has changed (expected property "b", got "c")`,
+			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "Property order is changed at first level, with renamings",
@@ -415,8 +415,10 @@ func TestDiff(t *testing.T) {
 				{Name: "d", Type: types.Text()},
 				{Name: "c", Type: types.Text()},
 			}),
-			rePaths:     map[string]any{"b2": "b"},
-			expectedErr: `properties order has changed (expected property "c", got "d")`,
+			rePaths: map[string]any{"b2": "b"},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameProperty, Path: "b", NewPath: "b2"},
+			},
 		},
 		{
 			name: "Property order is changed at second level, with renamings",
@@ -436,8 +438,10 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text()},
 				})},
 			}),
-			rePaths:     map[string]any{"x.b2": "x.b"},
-			expectedErr: `properties order has changed (expected property "c", got "d")`,
+			rePaths: map[string]any{"x.b2": "x.b"},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameProperty, Path: "x.b", NewPath: "x.b2"},
+			},
 		},
 		{
 			name: "Changes in first level property nullability",
