@@ -10,14 +10,14 @@ However, for much more complex use cases, a more powerful language is recommende
 
 For each output property, you can provide an expression whose evaluation provides its value. In the expression you can refer the input properties.
 
-As an example, the following mapping maps the `first_name` and `last_name` properties from the input to the `firstName` and `lastName` properties of the output, respectively. The output property `email` remains unmapped.
+As an example, the following mapping maps the `firstName` and `lastName` properties from the input to the `first_name` and `last_name` properties of the output, respectively. The output property `email` remains unmapped.
 
 ```
 ┌─────────────────────────────────┐
-│ first_name                      │ ->  firstName  
+│ firstName                       │ ->  first_name  
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ last_name                       │ ->  lastName  
+│ lastName                        │ ->  last_name  
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
 │                                 │ ->  email  
@@ -26,14 +26,14 @@ As an example, the following mapping maps the `first_name` and `last_name` prope
 
 With this mapping, the input:
 ```
-first_name: "Emma"
-last_name: "Johnson"
+firstName: "Emma"
+lastName: "Johnson"
 email: "emma.johnson@example.com"
 ```
 will become:
 ```
-firstName: "Emma"
-lastName: "Johnson"
+first_name: "Emma"
+last_name: "Johnson"
 ```
 
 ### Constants
@@ -61,7 +61,7 @@ Strings can also be written with single quotes:
 To include a single or double quote within a string, simply prefix the quote with a backslash:
 ```
 ┌─────────────────────────────────┐
-│ 'O\'Connor'                     │ ->  lastName  
+│ 'O\'Connor'                     │ ->  last_name  
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
 │ "123 Main Street, \"Apt 4B\""   │ ->  street  
@@ -74,18 +74,18 @@ Properties, strings, numbers and booleans can be concatenated by writing them on
 
 ```
 ┌─────────────────────────────────┐
-│ first_name " " last_name        │ ->  fullName  
+│ firstName " " lastName          │ ->  full_name  
 └─────────────────────────────────┘
 ```
 
 With this mapping, the input:
 ```
-first_name: "Emma"
-last_name: "Johnson"
+firstName: "Emma"
+lastName: "Johnson"
 ```
 will become:
 ```
-fullName: "Emma Johnson"
+full_name: "Emma Johnson"
 ```
 
 ### Sub-properties, map keys and JSON Object keys
@@ -97,7 +97,7 @@ In expressions, you can reference sub-properties, map keys, and JSON object keys
 │ address.city                    │ ->  city  
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ properties["birth day"]         │ ->  birthDay  
+│ properties["birth day"]         │ ->  birth_day  
 └─────────────────────────────────┘
 ```
 
@@ -105,20 +105,20 @@ In expressions, you can reference sub-properties, map keys, and JSON object keys
 
 In expressions, you can use some functions to do slightly more complex tasks.
 
-For instance, consider a scenario where the input property `marital_status` is `null`, indicating an unknown marital status. You must map this property to the non-nullable output property `maritalStatus`. To address this situation, you could use the `coalesce` function, which returns the first non-null argument:
+For instance, consider a scenario where the input property `maritalStatus` is `null`, indicating an unknown marital status. You must map this property to the non-nullable output property `marital_status`. To address this situation, you could use the `coalesce` function, which returns the first non-null argument:
 ```
 ┌─────────────────────────────────────┐
-│ coalesce(marital_status, "Unknown") │ ->  maritalStatus  
+│ coalesce(maritalStatus, "Unknown")  │ ->  marital_status  
 └─────────────────────────────────────┘
 ```
 
 With this mapping, the input:
 ```
-marital_status: null
+maritalStatus: null
 ```
 will become:
 ```
-maritalStatus: "Unknown"
+marital_status: "Unknown"
 ```
 
 Below is a list of available functions:
@@ -128,7 +128,7 @@ Below is a list of available functions:
 The `and` function returns `true` only when all of its arguments are `true`; otherwise, it returns `false`. For example:
 ```
 ┌─────────────────────────────────┐
-│ and(active, newsletter_consent) │ ->  marketingConsent  
+│ and(active, newsletterConsent)  │ ->  marketing_consent  
 └─────────────────────────────────┘
 ```
 
@@ -151,7 +151,7 @@ The `coalesce` function returns the first non-null argument, or `null` if all ar
 
 ```
 ┌───────────────────────────────────────────┐
-│ coalesce(shippingAddress, billingAddress) │ ->  shipAddress  
+│ coalesce(shippingAddress, billingAddress) │ ->  ship_address  
 └───────────────────────────────────────────┘
 ```
 
@@ -162,7 +162,7 @@ The `coalesce` function returns a value in the form of a JSON value (`JSON` type
 The `eq` function takes two values and returns `true` if they are equal; otherwise, it returns `false`. For example:
 ```
 ┌─────────────────────────────────┐
-│ eq(level, "VIP")                │ ->  vipCustomer
+│ eq(level, "VIP")                │ ->  vip_customer
 └─────────────────────────────────┘
 ```
 
