@@ -86,10 +86,6 @@ const Login = () => {
 						minLength={8}
 						required
 					/>
-					<div className='note'>
-						<span>Note:</span> sign in with email <span>acme@open2b.com</span> and password{' '}
-						<span>foopass2</span>
-					</div>
 					<SlButton className='loginButton' type='submit' variant='primary' loading={isLoading}>
 						Login
 					</SlButton>
