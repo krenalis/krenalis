@@ -12,7 +12,7 @@
                 "nullable": true
             },
             {
-                "name": "dummyId",
+                "name": "dummy_id",
                 "label": "Dummy ID",
                 "type": {
                     "name": "Text"
@@ -42,7 +42,7 @@
                             "nullable": true
                         },
                         {
-                            "name": "pushToken",
+                            "name": "push_token",
                             "label": "Push token",
                             "type": {
                                 "name": "Text"
@@ -75,7 +75,7 @@
                             "nullable": true
                         },
                         {
-                            "name": "pushToken",
+                            "name": "push_token",
                             "label": "Push token",
                             "type": {
                                 "name": "Text"
@@ -86,7 +86,7 @@
                 }
             },
             {
-                "name": "firstName",
+                "name": "first_name",
                 "label": "First name",
                 "type": {
                     "name": "Text",
@@ -95,7 +95,7 @@
                 "nullable": true
             },
             {
-                "name": "lastName",
+                "name": "last_name",
                 "label": "Last name",
                 "type": {
                     "name": "Text",
@@ -112,7 +112,7 @@
                 "nullable": true
             },
             {
-                "name": "foodPreferences",
+                "name": "food_preferences",
                 "label": "Food preferences",
                 "type": {
                     "name": "Object",
@@ -137,7 +137,7 @@
                 }
             },
             {
-                "name": "phoneNumbers",
+                "name": "phone_numbers",
                 "label": "Phone numbers",
                 "type": {
                     "name": "Array",
@@ -149,7 +149,7 @@
                 "nullable": true
             },
             {
-                "name": "favoriteMovie",
+                "name": "favorite_movie",
                 "label": "Favorite movie",
                 "type": {
                     "name": "Object",
