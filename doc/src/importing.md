@@ -12,16 +12,16 @@ Actions on **file storage** and **database** source connections **must** indicat
 
 > It is advisable that the user identifier be unique for each user found on the source connection (be it a file or a set of values returned by a database query), as this value is then used for the [Connection Identity Resolution](./identity-resolution/connection-identity-resolution.md).
 
-## 'Updated at' column
+## Last change time column
 
-Actions on **file storage** and **database** source connections **may** indicate a column containing a timestamp indicating the 'update at' timestamp for the user. It must be a column with one of the following [types](data-validation.html#data-types):
+Actions on **file storage** and **database** source connections **may** indicate a column containing a timestamp indicating the last change time of the user. It must be a column with one of the following [types](data-validation.html#data-types):
 
 * `DateTime`
 * `Date`
 * `JSON`
 * `Text`
 
-If an 'updated at' column is provided and its type is JSON or Text, a timestamp format must be provided for parsing the 'updated at' value.
+If a last change time column is provided and its type is JSON or Text, a timestamp format must be provided for parsing its value.
 
 ## Importing anonymous user identities from events
 
