@@ -254,6 +254,7 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 							size='small'
 							value={property.name}
 							label='Name'
+							placeholder='first_name'
 							onSlInput={onInputName}
 						/>
 						{nameError !== '' && (
@@ -408,6 +409,7 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 						size='small'
 						value={property.label}
 						label='Label'
+						placeholder='First name'
 						onSlInput={onInputLabel}
 					/>
 					<SlTextarea
