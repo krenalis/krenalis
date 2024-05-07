@@ -71,7 +71,7 @@ class API {
 	};
 
 	eventsSchema = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/events-schema`, http.GET);
+		return await call(`${this.apiURL}/event-schema`, http.GET);
 	};
 
 	validateExpression = async (
@@ -113,7 +113,7 @@ class API {
 		outSchema: ObjectType,
 		transformation: Transformation,
 	): Promise<TransformDataResponse> => {
-		return await call(`${this.apiURL}/transform-data`, http.POST, {
+		return await call(`${this.apiURL}/transformations`, http.POST, {
 			data,
 			inSchema,
 			outSchema,
@@ -175,7 +175,7 @@ class Connections {
 	};
 
 	set = async (connection: number, connectionToSet: ConnectionToSet) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.POST, {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.PUT, {
 			connection: connectionToSet,
 		});
 	};
@@ -200,7 +200,7 @@ class Connections {
 	};
 
 	query = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/exec-query`, http.POST, {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/query/executions`, http.POST, {
 			query: query,
 			limit: limit,
 		});
@@ -275,12 +275,12 @@ class Connections {
 			return await call(
 				`${this.apiURL}/connections/${encodeURIComponent(
 					connection,
-				)}/action-schemas/Events/${encodeURIComponent(eventType)}`,
+				)}/actions/schemas/Events/${encodeURIComponent(eventType)}`,
 				http.GET,
 			);
 		} else {
 			return await call(
-				`${this.apiURL}/connections/${encodeURIComponent(connection)}/action-schemas/${encodeURIComponent(
+				`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/schemas/${encodeURIComponent(
 					target,
 				)}`,
 				http.GET,
@@ -319,7 +319,7 @@ class Connections {
 	setActionStatus = async (connection: number, action: number, enabled: boolean): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}/status`,
-			http.POST,
+			http.PUT,
 			{ Enabled: enabled },
 		);
 	};
@@ -333,7 +333,7 @@ class Connections {
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
 				action,
 			)}/schedule-period`,
-			http.POST,
+			http.PUT,
 			{ SchedulePeriod: schedulePeriod },
 		);
 	};
@@ -342,7 +342,7 @@ class Connections {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
 				action,
-			)}/execute`,
+			)}/executions`,
 			http.POST,
 			{ Reimport: reimport },
 		);
@@ -398,17 +398,21 @@ class Connections {
 		outSchema: ObjectType,
 		transformation?: Transformation,
 	): Promise<EventPreviewResponse> => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-preview`, http.POST, {
-			eventType: eventType,
-			event: event,
-			outSchema: outSchema,
-			transformation: transformation,
-		});
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/send-previews`,
+			http.POST,
+			{
+				eventType: eventType,
+				event: event,
+				outSchema: outSchema,
+				transformation: transformation,
+			},
+		);
 	};
 
 	removeEventConnection = async (connection: number, eventConnection: number): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-connections/${encodeURIComponent(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/connections/${encodeURIComponent(
 				eventConnection,
 			)}`,
 			http.DELETE,
@@ -417,7 +421,7 @@ class Connections {
 
 	addEventConnection = async (connection: number, eventConnection: number): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-connections/${encodeURIComponent(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/connections/${encodeURIComponent(
 				eventConnection,
 			)}`,
 			http.POST,
@@ -433,7 +437,7 @@ class Eventlisteners {
 	}
 
 	add = async (size: number, source: number, onlyValid: boolean): Promise<AddEventListenerResponse> => {
-		return await call(`${this.apiURL}/event-listeners`, http.PUT, {
+		return await call(`${this.apiURL}/events-listeners`, http.POST, {
 			size: size,
 			source: source,
 			onlyValid: onlyValid,
@@ -539,7 +543,7 @@ class Workspaces {
 	};
 
 	addConnection = async (connection: ConnectionToAdd, oAuthToken: string): Promise<number> => {
-		return await call(`${this.apiURL}/add-connection`, http.POST, {
+		return await call(`${this.apiURL}/connections`, http.POST, {
 			connection: connection,
 			oAuthToken: oAuthToken,
 		});
@@ -555,50 +559,50 @@ class Workspaces {
 	};
 
 	setIdentifiers = async (identifiers: Identifiers): Promise<void> => {
-		return await call(`${this.apiURL}/identifiers`, http.POST, {
+		return await call(`${this.apiURL}/identifiers`, http.PUT, {
 			identifiers: identifiers,
 		});
 	};
 
 	warehouseSettings = async (): Promise<WarehouseResponse> => {
-		return await call(`${this.apiURL}/warehouse-settings`, http.GET);
+		return await call(`${this.apiURL}/warehouse/settings`, http.GET);
 	};
 
 	changeWarehouseSettings = async (type: WarehouseType, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/warehouse-settings`, http.PUT, {
+		return await call(`${this.apiURL}/warehouse/settings`, http.PUT, {
 			Type: type,
 			Settings: settings,
 		});
 	};
 
 	pingWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/ping-warehouse`, http.POST, {
+		return await call(`${this.apiURL}/warehouse/pings`, http.POST, {
 			Type: warehouseType,
 			Settings: settings,
 		});
 	};
 
 	connectWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/connect-warehouse`, http.POST, {
+		return await call(`${this.apiURL}/warehouse`, http.POST, {
 			Type: warehouseType,
 			Settings: settings,
 		});
 	};
 
 	initWarehouse = async (): Promise<void> => {
-		return await call(`${this.apiURL}/init-warehouse`, http.POST);
+		return await call(`${this.apiURL}/warehouse/initializations`, http.POST);
 	};
 
 	disconnectWarehouse = async (): Promise<void> => {
-		return await call(`${this.apiURL}/disconnect-warehouse`, http.POST);
+		return await call(`${this.apiURL}/warehouse`, http.DELETE);
 	};
 
 	runIdentityResolution = async (): Promise<void> => {
-		return await call(`${this.apiURL}/run-identity-resolution`, http.POST);
+		return await call(`${this.apiURL}/identity-resolutions`, http.POST);
 	};
 
 	changeUsersSchema = async (schema: ObjectType, rePaths: RePaths): Promise<void> => {
-		return await call(`${this.apiURL}/change-users-schema`, http.POST, {
+		return await call(`${this.apiURL}/user-schema`, http.PUT, {
 			schema,
 			rePaths,
 		});

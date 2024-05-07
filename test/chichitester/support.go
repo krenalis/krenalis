@@ -44,7 +44,7 @@ func (c *Chichi) Action(connection, action int) Action {
 }
 
 func (c *Chichi) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/action-schemas/%s", c.ws, conn, target)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/schemas/%s", c.ws, conn, target)
 	if eventType != "" {
 		method += "/" + eventType
 	}
@@ -94,7 +94,7 @@ func (c *Chichi) AddConnection(connection ConnectionToAdd) int {
 		"Connection": connection,
 	}
 	var id int
-	method := fmt.Sprintf("/api/workspaces/%d/add-connection", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/connections", c.ws)
 	c.MustCall("POST", method, data, &id)
 	return id
 }
@@ -198,12 +198,12 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 }
 
 func (c *Chichi) ChangeUsersSchema(schema types.Type, rePaths map[string]any) {
-	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
 	}
-	c.MustCall("POST", method, req, nil)
+	c.MustCall("PUT", method, req, nil)
 }
 
 func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]any) []string {
@@ -255,7 +255,7 @@ func (c *Chichi) DeleteConnection(conn int) {
 }
 
 func (c *Chichi) ExecuteAction(conn, action int, reimport bool) {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d/execute", c.ws, conn, action)
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d/executions", c.ws, conn, action)
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport}, nil)
 }
 
@@ -292,7 +292,7 @@ func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, com
 }
 
 func (c *Chichi) RunWorkspaceIdentityResolution() {
-	method := fmt.Sprintf("/api/workspaces/%d/run-identity-resolution", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/identity-resolutions", c.ws)
 	c.MustCall("POST", method, nil, nil)
 }
 
@@ -338,7 +338,7 @@ func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 		"Identifiers": identifiers,
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/identifiers", c.ws)
-	c.MustCall("POST", method, body, nil)
+	c.MustCall("PUT", method, body, nil)
 }
 
 func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression Compression, uiValues json.RawMessage) []string {

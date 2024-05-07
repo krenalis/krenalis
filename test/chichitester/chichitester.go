@@ -353,12 +353,12 @@ func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 		"Type":     whType,
 		"Settings": whSettings,
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/connect-warehouse", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse", c.ws)
 	return c.call("POST", method, body, nil)
 }
 
 func (c *Chichi) initWarehouse() error {
-	method := fmt.Sprintf("/api/workspaces/%d/init-warehouse", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse/initializations", c.ws)
 	return c.call("POST", method, nil, nil)
 }
 
@@ -376,8 +376,8 @@ func (c *Chichi) changeUsersSchema() error {
 	if err != nil {
 		return err
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema", c.ws)
-	return c.call("POST", method, req, nil)
+	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
+	return c.call("PUT", method, req, nil)
 }
 
 func (c *Chichi) login() error {

@@ -116,7 +116,7 @@ func WorkspaceChangeUsersSchema(workspace int, schema types.Type, rePaths map[st
 	}
 	var b bytes.Buffer
 	_ = json.NewEncoder(&b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/change-users-schema", &b, nil)
+	err := callAPI("PUT", "api/workspaces/"+strconv.Itoa(workspace)+"/user-schema", &b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -146,28 +146,28 @@ func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte) {
 	}{typ, settings}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/connect-warehouse", b, nil)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func WorkspaceDisconnectWarehouse(workspace int) {
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/disconnect-warehouse", nil, nil)
+	err := callAPI("DELETE", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func WorkspaceInitWarehouse(workspace int) {
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/init-warehouse", nil, nil)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/initializations", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func WorkspaceRunIdentityResolution(workspace int) {
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/run-identity-resolution", nil, nil)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/identity-resolutions", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func WorkspacePingWarehouse(workspace int, typ string, settings []byte) {
 	}{typ, settings}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/ping-warehouse", b, nil)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/pings", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
