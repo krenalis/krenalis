@@ -52,13 +52,13 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text(), Nullable: true},
 			{Name: "email", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
-				"firstName": "name",
-				"email":     "email",
+				"first_name": "name",
+				"email":      "email",
 			},
 		},
 		IdentityProperty: "identity",
@@ -79,13 +79,13 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "last_name", Type: types.Text(), Nullable: true},
 			{Name: "email", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
-				"lastName": "lastname",
-				"email":    "email",
+				"last_name": "lastname",
+				"email":     "email",
 			},
 		},
 		IdentityProperty: "identity",
@@ -96,7 +96,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		}),
 	})
 
-	// Import from the first action, which should import just the firstName.
+	// Import from the first action, which should import just the first name.
 	c.ExecuteAction(fsID, actionFirstName, false)
 	c.WaitActionsToFinish(fsID)
 
@@ -108,31 +108,31 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedCount = 2
-	users, _, count := c.Users([]string{"email", "firstName", "lastName"}, "email", 0, 2)
+	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "email", 0, 2)
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
 	assertEq("run #1: first  user email", "mario.rossi@example.com", users[0]["email"])
-	assertEq("run #1: first  user firstName", "Mario", users[0]["firstName"])
-	assertEq("run #1: first  user last name", nil, users[0]["lastName"])
+	assertEq("run #1: first  user first name", "Mario", users[0]["first_name"])
+	assertEq("run #1: first  user last name", nil, users[0]["last_name"])
 	assertEq("run #1: second user email", "luigi.rossi@example.com", users[1]["email"])
-	assertEq("run #1: second user firstName", "Luigi", users[1]["firstName"])
-	assertEq("run #1: second user last name", nil, users[0]["lastName"])
+	assertEq("run #1: second user first name", "Luigi", users[1]["first_name"])
+	assertEq("run #1: second user last name", nil, users[0]["last_name"])
 
-	// Import from the second action, which should import just the lastName, and
-	// that should result in users with both firstName and lastName.
+	// Import from the second action, which should import just the last name,
+	// and that should result in users with both first name and last name.
 	c.ExecuteAction(fsID, actionLastName, false)
 	c.WaitActionsToFinish(fsID)
 
 	// Check the users.
-	users, _, count = c.Users([]string{"email", "firstName", "lastName"}, "email", 0, 2)
+	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", 0, 2)
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
 	assertEq("run #2: first  user email", "mario.rossi@example.com", users[0]["email"])
-	assertEq("run #2: first  user firstName", "Mario", users[0]["firstName"])
-	assertEq("run #2: first  user last name", "Rossi", users[0]["lastName"])
+	assertEq("run #2: first  user first name", "Mario", users[0]["first_name"])
+	assertEq("run #2: first  user last name", "Rossi", users[0]["last_name"])
 	assertEq("run #2: second user email", "luigi.rossi@example.com", users[1]["email"])
-	assertEq("run #2: second user firstName", "Luigi", users[1]["firstName"])
-	assertEq("run #2: second user last name", "Bianchi", users[1]["lastName"])
+	assertEq("run #2: second user first name", "Luigi", users[1]["first_name"])
+	assertEq("run #2: second user last name", "Bianchi", users[1]["last_name"])
 }

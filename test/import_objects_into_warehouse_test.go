@@ -70,9 +70,9 @@ def transform(user: dict) -> dict:
 	expectedUsers := []map[string]any{
 		{"email": "kbuessen0@example.com",
 			"ios": map[string]any{
-				"id":        "kbuessen0@example.com-id",
-				"idfa":      "kbuessen0@example.com-idfa",
-				"pushToken": nil},
+				"id":         "kbuessen0@example.com-id",
+				"idfa":       "kbuessen0@example.com-idfa",
+				"push_token": nil},
 		},
 	}
 	if len(expectedUsers) != len(users) {

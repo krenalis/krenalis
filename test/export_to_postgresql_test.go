@@ -36,16 +36,16 @@ func TestExportToPostgreSQL(t *testing.T) {
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "last_name", Type: types.Text(), Nullable: true},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
-					"email":     "coalesce(email, 'default.email@example.com')",
-					"firstName": "firstName",
-					"lastName":  "lastName",
-					"gender":    "'male'",
+					"email":      "coalesce(email, 'default.email@example.com')",
+					"first_name": "firstName",
+					"last_name":  "lastName",
+					"gender":     "'male'",
 				},
 			},
 		})
@@ -85,8 +85,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 		TableName: "test_export_to_db",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text(), Nullable: true},
+			{Name: "last_name", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -95,7 +95,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
-				"full_name": `firstName " " lastName`,
+				"full_name": `first_name " " last_name`,
 			},
 		},
 	})

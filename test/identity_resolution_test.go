@@ -59,25 +59,24 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the Filesystem connection.
 	fsID := c.AddSourceFilesystem(storageDir)
 
-	allProps := []string{"dummyId", "email", "phoneNumbers"}
-	identifiers := []string{"dummyId", "email"}
 	inSchemaProps := []types.Property{
 		{Name: "dummyId", Type: types.JSON()},
 		{Name: "email", Type: types.JSON()},
 		{Name: "phoneNumbers", Type: types.JSON()},
 	}
 	outSchemaProps := []types.Property{
-		{Name: "dummyId", Type: types.Text(), Nullable: true},
+		{Name: "dummy_id", Type: types.Text(), Nullable: true},
 		{Name: "email", Type: types.Text(), Nullable: true},
-		{Name: "phoneNumbers", Type: types.Array(types.Text()), Nullable: true},
+		{Name: "phone_numbers", Type: types.Array(types.Text()), Nullable: true},
 	}
 
-	c.SetWorkspaceIdentifiers(identifiers)
+	c.SetWorkspaceIdentifiers([]string{"dummy_id", "email"})
 
 	// Generate and add an action to the JSON for importing the users.
-	mapping := map[string]string{}
-	for _, p := range allProps {
-		mapping[p] = p
+	mapping := map[string]string{
+		"dummy_id":      "dummyId",
+		"email":         "email",
+		"phone_numbers": "phoneNumbers",
 	}
 
 	// Add the action A.
@@ -113,7 +112,7 @@ func TestIdentityResolution(t *testing.T) {
 	expectUsers := func(expected []map[string]any) {
 
 		// Retrieve the users from the APIs.
-		users, _, _ := c.Users(allProps, "", 0, 1000)
+		users, _, _ := c.Users([]string{"dummy_id", "email", "phone_numbers"}, "", 0, 1000)
 
 		// Check if the users are equal to the expected or not.
 		if len(expected) != len(users) {
@@ -171,30 +170,30 @@ func TestIdentityResolution(t *testing.T) {
 	expectUsers([]map[string]any{})
 	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{}})
 	expectUsers([]map[string]any{
-		{"dummyId": "AAA", "email": "", "phoneNumbers": []any{}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{}},
 	})
 
 	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
 	})
 
 	importUser(actionA, map[string]any{"dummyId": "BBB", "email": "", "phoneNumbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}},
-		{"dummyId": "BBB", "email": "", "phoneNumbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
 	importUser(actionB, map[string]any{"dummyId": "BBB", "email": "a@b", "phoneNumbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}},
-		{"dummyId": "BBB", "email": "a@b", "phoneNumbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"333"}},
 	})
 
 	importUser(actionB, map[string]any{"dummyId": "BBB", "email": "a@b", "phoneNumbers": []any{"444"}})
 	expectUsers([]map[string]any{
-		{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}},
-		{"dummyId": "BBB", "email": "a@b", "phoneNumbers": []any{"444"}},
+		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"444"}},
 	})
 
 	// -------------------------------------------------------------------------

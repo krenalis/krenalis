@@ -36,12 +36,12 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
-					"email":     "email",
-					"firstName": "firstName",
+					"email":      "email",
+					"first_name": "firstName",
 				},
 			},
 		})
@@ -94,26 +94,26 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "last_name", Type: types.Text(), Nullable: true},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
-					"email":     "email",
-					"firstName": "firstName",
-					"lastName":  "lastName",
+					"email":      "email",
+					"first_name": "firstName",
+					"last_name":  "lastName",
 				},
 			},
 		})
 		c.ExecuteAction(dummySrc, importUsersID, true)
 		c.WaitActionsToFinish(dummySrc)
-		users, _, _ := c.Users([]string{"email", "firstName", "lastName"}, "", 0, 100)
+		users, _, _ := c.Users([]string{"email", "first_name", "last_name"}, "", 0, 100)
 		if len(users) == 0 {
 			t.Fatal("no users re-imported from Dummy")
 		}
 		for _, user := range users {
-			if user["email"] != user["lastName"] {
-				t.Fatalf("expecting 'email' to be equal to 'lastName', got '%v' != '%v'", user["email"], user["lastName"])
+			if user["email"] != user["last_name"] {
+				t.Fatalf("expecting 'email' to be equal to 'last_name', got '%v' != '%v'", user["email"], user["last_name"])
 			}
 		}
 	}

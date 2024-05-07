@@ -48,16 +48,16 @@ func TestExportUsersToFile(t *testing.T) {
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "last_name", Type: types.Text(), Nullable: true},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
-					"email":     "coalesce(email, 'default.email@example.com')",
-					"firstName": "firstName",
-					"lastName":  "lastName",
-					"gender":    "'male'",
+					"email":      "coalesce(email, 'default.email@example.com')",
+					"first_name": "firstName",
+					"last_name":  "lastName",
+					"gender":     "'male'",
 				},
 			},
 		})
@@ -88,8 +88,8 @@ func TestExportUsersToFile(t *testing.T) {
 		Path: exportedFilename,
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text(), Nullable: true},
+			{Name: "last_name", Type: types.Text(), Nullable: true},
 			{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 		}),
 		Connector: chichitester.CSVConnector,
@@ -130,8 +130,8 @@ func TestExportUsersToFile(t *testing.T) {
 			Path: exportedFilename,
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "last_name", Type: types.Text(), Nullable: true},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Connector: chichitester.CSVConnector,
@@ -180,7 +180,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := `email,firstName,lastName,gender
+		expected := `email,first_name,last_name,gender
 kbuessen0@example.com,Kinsley,Buessen,male
 jdebrett9@example.com,Jerad,Debrett,male
 emoakes2r@example.com,Edyth,Moakes,male

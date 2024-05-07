@@ -30,7 +30,7 @@ func TestReimport(t *testing.T) {
 	// Add an action that imports users from Dummy, that imports:
 	//
 	// - the email
-	// - the firstName
+	// - the first name
 	//
 	dummyAction := c.AddAction(dummy, "Users", chichitester.ActionToSet{
 		Name: "Import users from Dummy",
@@ -40,12 +40,12 @@ func TestReimport(t *testing.T) {
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
-				"email":     "email",
-				"firstName": "firstName",
+				"email":      "email",
+				"first_name": "firstName",
 			},
 		},
 	})
@@ -62,21 +62,21 @@ func TestReimport(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedCount = 10
-	users, _, count := c.Users([]string{"email", "firstName", "lastName"}, "email", 0, 2)
+	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "email", 0, 2)
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
 	assertEq("first  user email", "kbuessen0@example.com", users[0]["email"])
-	assertEq("first  user firstName", "Kinsley", users[0]["firstName"])
-	assertEq("first  user last name", nil, users[0]["lastName"])
+	assertEq("first  user first name", "Kinsley", users[0]["first_name"])
+	assertEq("first  user last name", nil, users[0]["last_name"])
 	assertEq("second user email", "jdebrett9@example.com", users[1]["email"])
-	assertEq("second user firstName", "Jerad", users[1]["firstName"])
-	assertEq("second user last name", nil, users[1]["lastName"])
+	assertEq("second user first name", "Jerad", users[1]["first_name"])
+	assertEq("second user last name", nil, users[1]["last_name"])
 
 	// Change an action that imports users from Dummy, that imports:
 	//
 	// - the email
-	// - the lastName (instead of the firstName)
+	// - the last name (instead of the first name)
 	//
 	c.SetAction(dummy, dummyAction, chichitester.ActionToSet{
 		Name: "Import users from Dummy",
@@ -86,12 +86,12 @@ func TestReimport(t *testing.T) {
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "last_name", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
-				"email":    "email",
-				"lastName": "lastName",
+				"email":     "email",
+				"last_name": "lastName",
 			},
 		},
 	})
@@ -102,17 +102,17 @@ func TestReimport(t *testing.T) {
 
 	// Check the users again.
 	//
-	// This time the firstName must be nil (as it the users have been deleted),
-	// while the lastName should have a value.
-	users, _, count = c.Users([]string{"email", "firstName", "lastName"}, "email", 0, 2)
+	// This time the first name must be nil (as it the users have been deleted),
+	// while the last name should have a value.
+	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", 0, 2)
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
 	assertEq("first  user email", "kbuessen0@example.com", users[0]["email"])
-	assertEq("first  user firstName", nil, users[0]["firstName"])     // <- now is nil
-	assertEq("first  user lastName", "Buessen", users[0]["lastName"]) // <- now has a value
+	assertEq("first  user first name", nil, users[0]["first_name"])     // <- now is nil
+	assertEq("first  user last name", "Buessen", users[0]["last_name"]) // <- now has a value
 	assertEq("second user email", "jdebrett9@example.com", users[1]["email"])
-	assertEq("second user firstName", nil, users[1]["firstName"])     // <- now is nil
-	assertEq("second user lastName", "Debrett", users[1]["lastName"]) // <- now has a value
+	assertEq("second user first name", nil, users[1]["first_name"])     // <- now is nil
+	assertEq("second user last name", "Debrett", users[1]["last_name"]) // <- now has a value
 
 }

@@ -37,14 +37,14 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text(), Nullable: true},
+			{Name: "last_name", Type: types.Text(), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
-				"email":     "email",
-				"firstName": "firstName",
-				"lastName":  "lastName",
+				"email":      "email",
+				"first_name": "firstName",
+				"last_name":  "lastName",
 			},
 		},
 	}

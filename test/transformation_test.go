@@ -39,7 +39,7 @@ func TestImportWithTransformation(t *testing.T) {
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text(), Nullable: true},
 			{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 		}),
 		Transformation: chichitester.Transformation{
@@ -52,7 +52,7 @@ def transform(user: dict) -> dict:
 		gender = "female"
 	return {
 		"email": user["email"],
-		"firstName": user["firstName"],
+		"first_name": user["firstName"],
 		"gender": gender,
 	}`,
 				Language: "Python",
@@ -64,7 +64,7 @@ def transform(user: dict) -> dict:
 
 	// Retrieve the users.
 	const expectedTotalCount = 10
-	users, _, count := c.Users([]string{"email", "firstName", "gender"}, "", 0, expectedTotalCount)
+	users, _, count := c.Users([]string{"email", "first_name", "gender"}, "", 0, expectedTotalCount)
 
 	// Validate the users count.
 	if count != expectedTotalCount {
@@ -79,16 +79,16 @@ def transform(user: dict) -> dict:
 
 	// Validate the users.
 	expectedUsers := []map[string]any{
-		{"email": "kbuessen0@example.com", "firstName": "Kinsley", "gender": "female"},
-		{"email": "jdebrett9@example.com", "firstName": "Jerad", "gender": "male"},
-		{"email": "emoakes2r@example.com", "firstName": "Edyth", "gender": "female"},
-		{"email": "lwhitesonrr@example.com", "firstName": "Leann", "gender": "female"},
-		{"email": "sattestone2s@example.com", "firstName": "Susanne", "gender": "female"},
-		{"email": "aquittonden2t@example.com", "firstName": "Aimil", "gender": "female"},
-		{"email": "tbrayson2u@example.com", "firstName": "Teodora", "gender": "female"},
-		{"email": "csifflett2v@example.com", "firstName": "Cristiano", "gender": "female"},
-		{"email": "mpordal2w@example.com", "firstName": "Mona", "gender": "female"},
-		{"email": "aniece2x@example.com", "firstName": "Ashil", "gender": "female"},
+		{"email": "kbuessen0@example.com", "first_name": "Kinsley", "gender": "female"},
+		{"email": "jdebrett9@example.com", "first_name": "Jerad", "gender": "male"},
+		{"email": "emoakes2r@example.com", "first_name": "Edyth", "gender": "female"},
+		{"email": "lwhitesonrr@example.com", "first_name": "Leann", "gender": "female"},
+		{"email": "sattestone2s@example.com", "first_name": "Susanne", "gender": "female"},
+		{"email": "aquittonden2t@example.com", "first_name": "Aimil", "gender": "female"},
+		{"email": "tbrayson2u@example.com", "first_name": "Teodora", "gender": "female"},
+		{"email": "csifflett2v@example.com", "first_name": "Cristiano", "gender": "female"},
+		{"email": "mpordal2w@example.com", "first_name": "Mona", "gender": "female"},
+		{"email": "aniece2x@example.com", "first_name": "Ashil", "gender": "female"},
 	}
 	if len(expectedUsers) != len(users) {
 		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))

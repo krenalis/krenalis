@@ -39,7 +39,7 @@ func TestExportZeroUsers(t *testing.T) {
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "last_name", Type: types.Text(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -48,7 +48,7 @@ func TestExportZeroUsers(t *testing.T) {
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
 					"email":    "email",
-					"lastName": "lastName",
+					"lastName": "last_name",
 				},
 			},
 			ExportMode: chichitester.ExportModeCreateOrUpdate,
@@ -91,8 +91,8 @@ func TestExportZeroUsers(t *testing.T) {
 			Path: exportedFilename,
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "last_name", Type: types.Text(), Nullable: true},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
 			}),
 			Connector: chichitester.CSVConnector,
@@ -133,7 +133,7 @@ func TestExportZeroUsers(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		const expected = "email,firstName,lastName,gender\n"
+		const expected = "email,first_name,last_name,gender\n"
 
 		if !bytes.Equal(content, []byte(expected)) {
 			t.Fatalf("file content not matching expected content. Expected %q, got %q", expected, string(content))

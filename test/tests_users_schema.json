@@ -11,7 +11,7 @@
                 "nullable": true
             },
             {
-                "name": "dummyId",
+                "name": "dummy_id",
                 "type": {
                     "name": "Text"
                 },
@@ -37,7 +37,7 @@
                             "nullable": true
                         },
                         {
-                            "name": "pushToken",
+                            "name": "push_token",
                             "type": {
                                 "name": "Text"
                             },
@@ -66,7 +66,7 @@
                             "nullable": true
                         },
                         {
-                            "name": "pushToken",
+                            "name": "push_token",
                             "type": {
                                 "name": "Text"
                             },
@@ -76,7 +76,7 @@
                 }
             },
             {
-                "name": "firstName",
+                "name": "first_name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
@@ -84,7 +84,7 @@
                 "nullable": true
             },
             {
-                "name": "lastName",
+                "name": "last_name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
@@ -99,7 +99,7 @@
                 "nullable": true
             },
             {
-                "name": "foodPreferences",
+                "name": "food_preferences",
                 "type": {
                     "name": "Object",
                     "properties": [
@@ -121,7 +121,7 @@
                 }
             },
             {
-                "name": "phoneNumbers",
+                "name": "phone_numbers",
                 "type": {
                     "name": "Array",
                     "itemType": {
@@ -132,7 +132,7 @@
                 "nullable": true
             },
             {
-                "name": "favoriteMovie",
+                "name": "favorite_movie",
                 "type": {
                     "name": "Object",
                     "properties": [
