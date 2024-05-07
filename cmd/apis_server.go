@@ -101,7 +101,6 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"GET    /api/workspaces/{workspace}/connections/{connection}/ui":                                connection.ServeUI,
 		"GET    /api/workspaces/{workspace}/event-listeners/{listener}/events":                          workspace.ListenedEvents,
 		"GET    /api/workspaces/{workspace}/identifiers-schema":                                         workspace.IdentifiersSchema,
-		"GET    /api/workspaces/{workspace}/privacy-region":                                             workspace.PrivacyRegion,
 		"GET    /api/workspaces/{workspace}/user-schema":                                                workspace.UsersSchema,
 		"GET    /api/workspaces/{workspace}/users/{user}/events":                                        user.Events,
 		"GET    /api/workspaces/{workspace}/users/{user}/identities":                                    user.Identities,

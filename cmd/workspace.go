@@ -284,15 +284,6 @@ func (workspace workspace) PingWarehouse(_ http.ResponseWriter, r *http.Request)
 	return nil, err
 }
 
-// PrivacyRegion returns the privacy region of a workspace.
-func (workspace workspace) PrivacyRegion(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	return ws.PrivacyRegion, nil
-}
-
 // RemoveEventListener removes an event listener from a workspace.
 func (workspace workspace) RemoveEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
