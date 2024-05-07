@@ -300,9 +300,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 
 // normalize normalizes a value returned by PostgreSQL and returns its
 // normalized form. If the value is not valid it returns an error.
-//
-// This function must make assumptions based on the behavior of the
-// 'warehouses.CheckConformity' function.
 func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 	if v == nil {
 		if !nullable {

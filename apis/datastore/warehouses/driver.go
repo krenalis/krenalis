@@ -154,9 +154,6 @@ type Warehouse interface {
 	// indicates if the user identities are imported from an event or not. ack is
 	// the ack function (see the documentation of IdentitiesWriter for more details
 	// about it).
-	// If the schema specified is not conform to the schema of the table
-	// 'users_identities' in the data warehouse, calls to the method 'Write' of the
-	// returned 'IdentitiesWriter' return a *SchemaError error.
 	IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack IdentitiesAckFunc) IdentitiesWriter
 
 	// Init initializes the data warehouse by creating the supporting tables.
@@ -169,8 +166,6 @@ type Warehouse interface {
 	// exist.
 	// rows or deleted can be empty but not both, and both may be changed by this
 	// method.
-	// If the table schema is not conform to the schema of the table on the data
-	// warehouse, this method returns a *SchemaError error.
 	Merge(ctx context.Context, table MergeTable, rows []map[string]any, deleted map[string]any) error
 
 	// Ping checks the connection to the data warehouse.
@@ -204,8 +199,7 @@ type Warehouse interface {
 	// First and Limit were not provided in the query.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error. If the schema specified in the query is not conform to the schema of
-	// the table in the data warehouse, it returns a *SchemaError error.
+	// error.
 	//
 	// As a simplification, it is currently assumed that the table schema does not
 	// change in the data warehouse during the execution of this method.
@@ -587,54 +581,4 @@ func isValidJSON(src any) bool {
 		return json.Valid(src)
 	}
 	return false
-}
-
-type SchemaError struct {
-	Msg string
-}
-
-func (err *SchemaError) Error() string {
-	return err.Msg
-}
-
-// CheckConformity checks whether the schema t1 conforms to the new schema t2
-// and returns a *SchemaError error if it does not conform.
-// It panics if a schema is not valid.
-func CheckConformity(name string, t1, t2 types.Type) error {
-	if t1.EqualTo(t2) {
-		return nil
-	}
-	pt1 := t1.Kind()
-	pt2 := t2.Kind()
-	if pt1 != pt2 {
-		return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
-	}
-	switch pt1 {
-	case types.ArrayKind:
-		return CheckConformity(name, t1.Elem(), t2.Elem())
-	case types.ObjectKind:
-		for _, p1 := range t1.Properties() {
-			path := p1.Name
-			if name != "" {
-				path = name + "." + path
-			}
-			p2, ok := t2.Property(p1.Name)
-			if !ok {
-				return &SchemaError{Msg: fmt.Sprintf(`"%s" property no longer exists`, path)}
-			}
-			if p1.Nullable != p2.Nullable {
-				if p1.Nullable && !p2.Nullable {
-					return &SchemaError{Msg: fmt.Sprintf("property %q has changed from nullable to non-nullable", p1.Name)}
-				}
-				return &SchemaError{Msg: fmt.Sprintf("property %q has changed from non-nullable to nullable", p1.Name)}
-			}
-			err := CheckConformity(path, p1.Type, p2.Type)
-			if err != nil {
-				return err
-			}
-		}
-	case types.MapKind:
-		return CheckConformity(name, t1.Elem(), t2.Elem())
-	}
-	return nil
 }

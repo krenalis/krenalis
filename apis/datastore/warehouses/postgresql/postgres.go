@@ -12,7 +12,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -25,7 +24,6 @@ import (
 	"github.com/open2b/chichi/types"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var (
@@ -48,18 +46,10 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 type PostgreSQL struct {
-	mu           sync.Mutex // for the db and closed fields
-	db           *postgres.DB
-	closed       bool
-	settings     *psSettings
-	tableInfos   map[string]tableInfo
-	tableInfosMu sync.Mutex
-}
-
-// A tableInfo holds information about a table.
-type tableInfo struct {
-	schema types.Type
-	fds    []pgconn.FieldDescription
+	mu       sync.Mutex // for the db and closed fields
+	db       *postgres.DB
+	closed   bool
+	settings *psSettings
 }
 
 type psSettings struct {
@@ -262,17 +252,6 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	columns := warehouses.PropertiesToColumns(table.Properties)
 	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
-
-	// Check the conformity of the passed table schema with the schema of the
-	// table on the data warehouse.
-	ti, err := warehouse.tableInfo(ctx, table.Name, false)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-	err = warehouses.CheckConformity("", tableSchema, ti.schema)
-	if err != nil {
-		return err
-	}
 
 	var b strings.Builder
 
@@ -505,54 +484,6 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	return nil
 }
 
-// tableInfo returns the table info for the table. The 'fresh' parameter
-// controls whether the returned 'tableInfo' should be reloaded from the
-// database or if it is not necessary.
-func (warehouse *PostgreSQL) tableInfo(ctx context.Context, table string, fresh bool) (tableInfo, error) {
-
-	// Determine if there is the need to refresh.
-	warehouse.tableInfosMu.Lock()
-	fresh = fresh || warehouse.tableInfos == nil
-	warehouse.tableInfosMu.Unlock()
-
-	// Read a fresh tableInfos, if necessary.
-	if fresh {
-		tables, err := warehouse.tables(ctx)
-		if err != nil {
-			return tableInfo{}, err
-		}
-		tableInfos := map[string]tableInfo{}
-		for _, table := range tables {
-			props, err := warehouses.ColumnsToProperties(table.columns)
-			if err != nil {
-				return tableInfo{}, err
-			}
-			schema, err := types.ObjectOf(props)
-			if err != nil {
-				return tableInfo{}, err
-			}
-			tableInfos[table.name] = tableInfo{
-				schema: schema,
-				fds:    table.fds,
-			}
-		}
-		warehouse.tableInfosMu.Lock()
-		warehouse.tableInfos = tableInfos
-		warehouse.tableInfosMu.Unlock()
-	}
-
-	// Take the tableInfo for the given table.
-	warehouse.tableInfosMu.Lock()
-	ti, ok := warehouse.tableInfos[table]
-	warehouse.tableInfosMu.Unlock()
-	if !ok {
-		// TODO(Gianluca): see the issue https://github.com/open2b/chichi/issues/413.
-		return tableInfo{}, fmt.Errorf("schema '%s' not loaded from data warehouse", table)
-	}
-
-	return ti, nil
-}
-
 // SetDestinationUser sets the destination user for an action.
 func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	db, err := warehouse.connection()
@@ -573,31 +504,6 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 func (warehouse *PostgreSQL) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
 	return s
-}
-
-func (warehouse *PostgreSQL) tables(ctx context.Context) ([]*tableSchema, error) {
-	// Get the connection.
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, err
-	}
-
-	// Read the table schemas.
-	tx, err := db.UnderlyingPool().Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-	tables, err := tablesSchemas(ctx, tx, warehouse.settings.Schema,
-		[]string{"users", "users_identities", "groups", "groups_identities", "events"})
-	if err != nil {
-		return nil, err
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return tables, nil
 }
 
 // connection returns the database connection.

@@ -138,9 +138,6 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			ws := action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return err
-		case *datastore.SchemaError:
-			err.Msg += ". Please review and update the action before attempting to export the users."
-			return err
 		}
 		return err
 	}

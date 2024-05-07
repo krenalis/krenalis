@@ -198,9 +198,8 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, 
 // table of the data warehouse, ordered from the most recent to the oldest.
 //
 // If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If the schema specified in the query is not conform
-// to the schema of the 'events' table, it returns a *SchemaError error. If an
-// error occurs with the data warehouse, it returns a *DataWarehouseError error.
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, error) {
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
@@ -251,10 +250,7 @@ type IdentitiesWriter = warehouses.IdentitiesWriter
 //
 // If the data warehouse is in inspection mode, it returns the
 // ErrInspectionMode error. If it is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If the schema specified is not conform to the
-// schema of the table 'users_identities' in the data warehouse, calls to the
-// method 'Write' of the returned 'IdentitiesWriter' return a *SchemaError
-// error.
+// ErrMaintenanceMode error.
 func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) (IdentitiesWriter, error) {
 	store.mustBeOpen()
 	switch store.mode {
@@ -359,9 +355,7 @@ type Records = warehouses.Records
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error. If the schema specified in the query is
-// not conform to the schema of the 'users' table, it returns a *SchemaError
-// error.
+// returns a *DataWarehouseError error.
 func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, int, error) {
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
@@ -417,9 +411,7 @@ type UsersQuery struct {
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error. If the schema specified in the query is
-// not conform to the schema of the 'users_identities' table, it returns a
-// *SchemaError error.
+// returns a *DataWarehouseError error.
 func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQuery) (Records, int, error) {
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {

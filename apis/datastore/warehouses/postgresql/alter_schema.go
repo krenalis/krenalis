@@ -239,11 +239,3 @@ func typeToPostgresType(t types.Type) (string, string, bool) {
 func propertyPathToColumn(path string) string {
 	return strings.ReplaceAll(path, ".", "_")
 }
-
-func replacePropertyPathName(path string, newName string) string {
-	if !strings.Contains(path, ".") {
-		return newName
-	}
-	parts := strings.Split(path, ".")
-	return strings.Join(parts[:len(parts)-1], ".") + "." + newName
-}
