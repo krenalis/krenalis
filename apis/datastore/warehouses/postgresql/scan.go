@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"math"
 	"net/netip"
-	"reflect"
 	"strings"
 	"time"
 
@@ -49,13 +48,6 @@ func newScanValues(columns []types.Property, rows *[][]any) []any {
 
 func (sv scanValue) Scan(src any) error {
 	c := sv.column
-	if src != nil && c.Type.Kind() == types.ArrayKind {
-		var err error
-		src, err = sv.scanArray(src)
-		if err != nil {
-			return err
-		}
-	}
 	value, err := normalize(c.Name, c.Type, src, c.Nullable)
 	if err != nil {
 		return err
@@ -72,7 +64,7 @@ func (sv scanValue) Scan(src any) error {
 }
 
 // scanArray scans an array and returns the values.
-func (sv scanValue) scanArray(src any) (any, error) {
+func scanArray(src any) ([]any, error) {
 	data, ok := src.([]byte)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
@@ -363,26 +355,23 @@ func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 			return warehouses.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
-		rv := reflect.ValueOf(v)
-		if rv.Kind() != reflect.Slice {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		v, err := scanArray(v)
+		if err != nil {
+			return nil, err
 		}
-		n := rv.Len()
+		n := len(v)
 		if n < typ.MinItems() || n > typ.MaxItems() {
 			return nil, fmt.Errorf("data warehouse returned an array with %d items for column %s, which is not within the expected range of [%d, %d]",
 				n, name, typ.MinItems(), typ.MaxItems())
 		}
-		a := make([]any, n)
 		t := typ.Elem()
-		var err error
 		for i := 0; i < n; i++ {
-			e := rv.Index(i).Interface()
-			a[i], err = normalize(name, t, e, false)
+			v[i], err = normalize(name, t, v[i], false)
 			if err != nil {
 				return nil, err
 			}
 		}
-		return a, nil
+		return v, nil
 	}
 	return nil, fmt.Errorf("PostgreSQL has returned an unsupported type %T for column %s", v, name)
 }
