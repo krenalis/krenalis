@@ -60,3 +60,11 @@ telemetry:
     # See the documentation under the directory "telemetry" of this repository
     # for more details.
     enable: false
+
+connectors:
+    HubSpot:
+        oauthClientID:
+        oauthClientSecret:
+    Mailchimp:
+        oauthClientID:
+        oauthClientSecret:

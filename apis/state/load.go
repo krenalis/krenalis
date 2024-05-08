@@ -22,7 +22,7 @@ var (
 )
 
 // load loads the state.
-func (state *State) load() error {
+func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 
 	n := LoadState{ID: state.id}
 
@@ -73,6 +73,12 @@ func (state *State) load() error {
 				}
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.Icon = connector.Icon
+				if connectorSettings != nil {
+					if setting, ok := connectorSettings[c.Name]; ok {
+						c.OAuth.ClientID = setting.OAuthClientID
+						c.OAuth.ClientSecret = setting.OAuthClientSecret
+					}
+				}
 				ct = connector.ReflectType()
 			case chichi.DatabaseInfo:
 				c.Name = connector.Name
@@ -137,25 +143,6 @@ func (state *State) load() error {
 			}
 			c.HasUI = ct.Implements(uiHandlerType)
 			state.connectors[name] = &c
-		}
-		err = state.db.QueryScan(ctx, "SELECT name, oauth_client_id, oauth_client_secret FROM connectors", func(rows *postgres.Rows) error {
-			for rows.Next() {
-				var name string
-				var clientID, clientSecret string
-				if err := rows.Scan(&name, &clientID, &clientSecret); err != nil {
-					return err
-				}
-				c, ok := state.connectors[name]
-				if !ok {
-					continue
-				}
-				c.OAuth.ClientID = clientID
-				c.OAuth.ClientSecret = clientSecret
-			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 
 		// Read all organizations.

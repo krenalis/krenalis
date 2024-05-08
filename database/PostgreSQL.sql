@@ -4,17 +4,6 @@ CREATE COLLATION case_insensitive (provider = icu, locale = 'und-u-ks-level2', d
 
 CREATE TYPE action_target AS ENUM ('Events', 'Users', 'Groups');
 
-CREATE TABLE connectors (
-    name varchar(200) NOT NULL DEFAULT '',
-    oauth_client_id varchar(500) NOT NULL DEFAULT '',
-    oauth_client_secret varchar(500) NOT NULL DEFAULT '',
-    PRIMARY KEY (name)
-);
-
-INSERT INTO connectors (name, oauth_client_id, oauth_client_secret) VALUES
-    ('HubSpot','cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668'),
-    ('Mailchimp', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac');
-
 CREATE TABLE organizations (
     id SERIAL,
     name varchar(45) NOT NULL DEFAULT '',

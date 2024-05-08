@@ -83,6 +83,7 @@ type Config struct {
 	PostgreSQL  PostgreSQLConfig
 	Transformer any // must be a LambdaConfig or LocalConfig value
 	SMTP        SMTPConfig
+	Connectors  map[string]*state.ConnectorSetting
 }
 
 type PostgreSQLConfig struct {
@@ -176,7 +177,7 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	// Instantiate the state.
-	apis.state, err = state.New(db)
+	apis.state, err = state.New(db, conf.Connectors)
 	if err != nil {
 		return nil, err
 	}

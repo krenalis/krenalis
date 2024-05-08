@@ -23,7 +23,10 @@ import (
 	"time"
 
 	"github.com/open2b/chichi/apis"
+	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/telemetry"
+
+	"golang.org/x/exp/maps"
 )
 
 type Settings struct {
@@ -48,7 +51,8 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	Telemetry struct {
+	Connectors map[string]*state.ConnectorSetting
+	Telemetry  struct {
 		Enable bool
 	}
 }
@@ -100,6 +104,20 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 			return errors.New("cannot specify both the Lambda and the local transformer in the configuration (hint: check your 'config.yaml' file)")
 		}
 		config.Transformer = apis.LocalConfig(settings.Transformer.Local)
+	}
+
+	// Validate the settings of the connectors.
+	if settings.Connectors != nil {
+		for name, setting := range settings.Connectors {
+			if (setting.OAuthClientID == "") == (setting.OAuthClientSecret == "") {
+				continue
+			}
+			if setting.OAuthClientID == "" {
+				return fmt.Errorf("oAuthClientID value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+			}
+			return fmt.Errorf("OAuthClientSecret value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+		}
+		config.Connectors = maps.Clone(settings.Connectors)
 	}
 
 	// Decode the UI session key.
