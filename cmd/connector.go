@@ -9,10 +9,8 @@ package cmd
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/open2b/chichi/apis"
-	"github.com/open2b/chichi/apis/errors"
 )
 
 type connector struct {
@@ -38,13 +36,5 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 }
 
 func (connector connector) connector(r *http.Request) (*apis.Connector, error) {
-	v := r.PathValue("connector")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.NotFound("")
-	}
-	return connector.apis.Connector(r.Context(), id)
+	return connector.apis.Connector(r.Context(), r.PathValue("connector"))
 }

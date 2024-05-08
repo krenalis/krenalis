@@ -208,7 +208,7 @@ class Connections {
 
 	records = async (
 		connection: number,
-		fileConnector: number,
+		fileConnector: string,
 		path: string,
 		sheet: string | null,
 		compression: string,
@@ -227,7 +227,7 @@ class Connections {
 
 	sheets = async (
 		connection: number,
-		fileConnector: number,
+		fileConnector: string,
 		path: string,
 		compression: string,
 		uiValues: ConnectorValues,
@@ -549,7 +549,7 @@ class Workspaces {
 		});
 	};
 
-	oauthToken = async (connector: number, oauthCode: string): Promise<string> => {
+	oauthToken = async (connector: string, oauthCode: string): Promise<string> => {
 		const redirectURI = `${this.origin}${uiBasePath}oauth/authorize`;
 		return await call(`${this.apiURL}/oauth-token`, http.POST, {
 			connector: connector,
@@ -628,7 +628,7 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authCodeURL = async (connector: number): Promise<authCodeURLResponse> => {
+	authCodeURL = async (connector: string): Promise<authCodeURLResponse> => {
 		const redirectURI = `${this.origin}${uiBasePath}oauth/authorize`;
 		return await call(
 			`${this.apiURL}/connectors/${connector}/auth-code-url?redirecturi=${encodeURIComponent(redirectURI)}`,
@@ -640,13 +640,13 @@ class Connectors {
 		return await call(`${this.apiURL}/connectors`, http.GET);
 	};
 
-	get = async (connector: number): Promise<Connector> => {
+	get = async (connector: string): Promise<Connector> => {
 		return await call(`${this.apiURL}/connectors/${connector}`, http.GET);
 	};
 
 	ui = async (
 		workspace: number,
-		connector: number,
+		connector: string,
 		role: ConnectionRole,
 		oauthToken: string,
 	): Promise<ConnectorUIResponse> => {
@@ -659,7 +659,7 @@ class Connectors {
 
 	uiEvent = async (
 		workspace: number,
-		connector: number,
+		connector: string,
 		event: string,
 		values: ConnectorValues,
 		role: ConnectionRole,

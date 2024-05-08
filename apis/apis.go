@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -309,21 +310,20 @@ func (apis *APIs) Close() {
 	apis.state.Close()
 }
 
-// Connector returns the connector with identifier id.
+// Connector returns the connector with the provided name.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
-func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
+func (apis *APIs) Connector(ctx context.Context, name string) (*Connector, error) {
 	apis.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "apis.Connector", "id", id)
+	_, t := telemetry.TraceSpan(ctx, "apis.Connector", "name", name)
 	defer t.End()
-	c, ok := apis.state.Connector(id)
+	c, ok := apis.state.Connector(name)
 	if !ok {
-		return nil, errors.NotFound("connector %d does not exist", id)
+		return nil, errors.NotFound("connector %q does not exist", name)
 	}
 	connector := Connector{
 		apis:                       apis,
 		connector:                  c,
-		ID:                         c.ID,
 		Name:                       c.Name,
 		SourceDescription:          c.SourceDescription,
 		DestinationDescription:     c.DestinationDescription,
@@ -364,7 +364,6 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 		connector := Connector{
 			apis:                       apis,
 			connector:                  c,
-			ID:                         c.ID,
 			Name:                       c.Name,
 			SourceDescription:          c.SourceDescription,
 			DestinationDescription:     c.DestinationDescription,
@@ -393,9 +392,11 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 		connector.Targets.Events = c.Targets.Contains(state.Events)
 		connectors[i] = &connector
 	}
-	sort.Slice(connectors, func(i, j int) bool {
-		a, b := connectors[i], connectors[j]
-		return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
+	slices.SortFunc(connectors, func(a, b *Connector) int {
+		if a.Name < b.Name {
+			return -1
+		}
+		return 1
 	})
 	return connectors
 }

@@ -357,10 +357,10 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
 		if fileConnector.HasSheets && action.Sheet == "" {
-			return errors.BadRequest("sheet cannot be empty because connector %d has sheets", fileConnector.ID)
+			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", fileConnector.Name)
 		}
 		if !fileConnector.HasSheets && action.Sheet != "" {
-			return errors.BadRequest("connector %d does not have sheets", fileConnector.ID)
+			return errors.BadRequest("connector %s does not have sheets", fileConnector.Name)
 		}
 	} else {
 		if action.Path != "" {

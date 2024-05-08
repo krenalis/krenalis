@@ -76,8 +76,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if connection.Role != Source && connection.Role != Destination {
 		return 0, errors.BadRequest("role %d is not valid", int(connection.Role))
 	}
-	if connection.Connector < 1 || connection.Connector > maxInt32 {
-		return 0, errors.BadRequest("connector identifier %d is not valid", connection.Connector)
+	if connection.Connector == "" {
+		return 0, errors.BadRequest("connector name is empty")
 	}
 	if containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", connection.Name)
@@ -101,7 +101,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 
 	c, ok := this.apis.state.Connector(connection.Connector)
 	if !ok {
-		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connection.Connector)
+		return 0, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
 	}
 	switch c.Type {
 	case state.FileType:
@@ -171,8 +171,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	// Validate the website host.
 	if n.WebsiteHost != "" {
 		if c.Type != state.WebsiteType {
-			return 0, errors.BadRequest("connector %d cannot have a website host, it's a %s",
-				c.ID, strings.ToLower(c.Type.String()))
+			return 0, errors.BadRequest("connector %s cannot have a website host, it's a %s",
+				c.Name, strings.ToLower(c.Type.String()))
 		}
 		if h, p, found := strings.Cut(n.WebsiteHost, ":"); h == "" || len(n.WebsiteHost) > 255 {
 			return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
@@ -186,9 +186,9 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	// Validate OAuth.
 	if (oAuthToken == "") != (c.OAuth == nil) {
 		if oAuthToken == "" {
-			return 0, errors.BadRequest("OAuth is required by connector %d", n.Connector)
+			return 0, errors.BadRequest("OAuth is required by connector %s", n.Connector)
 		}
-		return 0, errors.BadRequest("connector %d does not support OAuth", n.Connector)
+		return 0, errors.BadRequest("connector %s does not support OAuth", n.Connector)
 	}
 
 	// Set the resource. It can be an existing resource or a resource that needs to be created.
@@ -202,7 +202,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
-		if resource.Workspace != this.workspace.ID || resource.Connector != c.ID {
+		if resource.Workspace != this.workspace.ID || resource.Connector != c.Name {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
 		n.Resource.Code = resource.Code
@@ -293,13 +293,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 					n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn, n.Resource.ID)
 			}
 			if err != nil {
-				if postgres.IsForeignKeyViolation(err) {
-					switch postgres.ErrConstraintName(err) {
-					case "resources_workspace_fkey":
-						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
-					case "resources_connector_fkey":
-						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
-					}
+				if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "resources_workspace_fkey" {
+					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
 				return err
 			}
@@ -312,13 +307,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Resource.ID,
 			n.Strategy, n.SendingMode, n.WebsiteHost, n.EventConnections, string(n.Settings))
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				switch postgres.ErrConstraintName(err) {
-				case "connections_workspace_fkey":
-					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
-				case "connections_connector_fkey":
-					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
-				}
+			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_workspace_fkey" {
+				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 			}
 			return err
 		}
@@ -682,7 +672,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Type:             ConnectorType(conn.Type),
 		Role:             Role(c.Role),
 		Enabled:          c.Enabled,
-		Connector:        conn.ID,
+		Connector:        conn.Name,
 		Strategy:         (*Strategy)(c.Strategy),
 		SendingMode:      (*SendingMode)(c.SendingMode),
 		WebsiteHost:      c.WebsiteHost,
@@ -724,7 +714,7 @@ func (this *Workspace) Connections() []*Connection {
 			Type:             ConnectorType(conn.Type),
 			Role:             Role(c.Role),
 			Enabled:          c.Enabled,
-			Connector:        conn.ID,
+			Connector:        conn.Name,
 			Strategy:         (*Strategy)(c.Strategy),
 			SendingMode:      (*SendingMode)(c.SendingMode),
 			WebsiteHost:      c.WebsiteHost,
@@ -1015,7 +1005,7 @@ func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, er
 // create a new connection.
 type authorizedResource struct {
 	Workspace    int
-	Connector    int
+	Connector    string
 	Code         string
 	AccessToken  string
 	RefreshToken string
@@ -1029,23 +1019,23 @@ type authorizedResource struct {
 // It returns an errors.NotFound error if the workspace does not exist anymore.
 // It returns an errors.UnprocessableError error with code ConnectorNotExist if
 // the connector does not exist.
-func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI string, connector int) (string, error) {
+func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI string, connector string) (string, error) {
 
 	this.apis.mustBeOpen()
 
 	if code == "" {
 		return "", errors.BadRequest("authorization code is empty")
 	}
-	if connector < 1 || connector > maxInt32 {
-		return "", errors.BadRequest("connector identifier %d is not valid", connector)
+	if connector == "" {
+		return "", errors.BadRequest("connector name is empty")
 	}
 
 	c, ok := this.apis.state.Connector(connector)
 	if !ok {
-		return "", errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
 	if c.OAuth == nil {
-		return "", errors.BadRequest("connector %d does not support OAuth", connector)
+		return "", errors.BadRequest("connector %s does not support OAuth", connector)
 	}
 
 	region := state.PrivacyRegion(this.PrivacyRegion)
@@ -1118,30 +1108,30 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventNotExist, if the event does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector int, role Role, oAuth string) ([]byte, error) {
+func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector string, role Role, oAuth string) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
-	if connector < 1 || connector > maxInt32 {
-		return nil, errors.BadRequest("connector identifier %d is not valid", connector)
+	if connector == "" {
+		return nil, errors.BadRequest("connector name is empty")
 	}
 	if role != Source && role != Destination {
 		return nil, errors.BadRequest("role %d is not valid", role)
 	}
 	c, ok := this.apis.state.Connector(connector)
 	if !ok {
-		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
 
 	if !c.HasUI {
-		return nil, errors.BadRequest("connector %d does not have a UI", connector)
+		return nil, errors.BadRequest("connector %s does not have a UI", connector)
 	}
 
 	if (oAuth == "") != (c.OAuth == nil) {
 		if oAuth == "" {
-			return nil, errors.BadRequest("OAuth is required by connector %d", c.ID)
+			return nil, errors.BadRequest("OAuth is required by connector %s", c.Name)
 		}
-		return nil, errors.BadRequest("connector %d does not support OAuth", c.ID)
+		return nil, errors.BadRequest("connector %s does not support OAuth", c.Name)
 	}
 
 	// Decode oAuth.
@@ -1478,8 +1468,8 @@ type ConnectionToAdd struct {
 	// Enable reports whether the connection is enabled or disabled when added.
 	Enabled bool
 
-	// Connector is the identifier of the connector.
-	Connector int
+	// Connector is the name of the connector.
+	Connector string
 
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It must be nil for destination connections and

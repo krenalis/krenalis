@@ -284,7 +284,7 @@ type AddAction struct {
 	Filter                  *Filter
 	Transformation          Transformation
 	Query                   string
-	Connector               int
+	Connector               string
 	Path                    string
 	Sheet                   string
 	Compression             Compression
@@ -354,7 +354,7 @@ type AddConnection struct {
 	Name      string   // name
 	Role      Role     // role
 	Enabled   bool     // enabled or disabled
-	Connector int      // connector identifier
+	Connector string   // connector name
 	Resource  struct { // resource.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
@@ -869,7 +869,7 @@ type SetAction struct {
 	Filter                  *Filter
 	Transformation          Transformation
 	Query                   string
-	Connector               int
+	Connector               string
 	Path                    string
 	Sheet                   string
 	Compression             Compression

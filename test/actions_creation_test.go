@@ -71,7 +71,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -101,7 +101,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -118,7 +118,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "Email", Type: types.Text()}, // allowed because this is a destination connection.
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Connector: chichitester.CSVConnector,
+				Connector: "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -147,7 +147,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -176,7 +176,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -204,7 +204,7 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 				IdentityProperty: "- - invalid - -",
-				Connector:        chichitester.CSVConnector,
+				Connector:        "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -231,7 +231,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -246,7 +246,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
@@ -274,7 +274,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
-				Connector:              chichitester.CSVConnector,
+				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,

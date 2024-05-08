@@ -807,7 +807,7 @@ func webhookURL(connection *state.Connection, resource int) string {
 	case state.WebhooksPerConnection:
 		return u + "s/" + strconv.Itoa(connection.ID) + "/"
 	case state.WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(connector.ID) + "/"
+		return u + "c/" + url.PathEscape(connector.Name) + "/"
 	case state.WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(resource) + "/"
 	}

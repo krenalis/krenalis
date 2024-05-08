@@ -256,7 +256,7 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 	body := struct {
 		OAuthCode   string
 		RedirectURI string
-		Connector   int
+		Connector   string
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -311,7 +311,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 		return nil, err
 	}
 	var body struct {
-		Connector  int
+		Connector  string
 		Event      string
 		Values     rawJSON
 		Role       string

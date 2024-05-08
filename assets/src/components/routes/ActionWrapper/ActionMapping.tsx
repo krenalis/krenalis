@@ -226,7 +226,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 
 	const fileConnector: TransformedConnector | null = useMemo(() => {
 		if (action.Connector) {
-			return connectors.find((c) => c.id === action.Connector);
+			return connectors.find((c) => c.name === action.Connector);
 		}
 		return null;
 	}, [action]);

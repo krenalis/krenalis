@@ -93,7 +93,7 @@ type Connection struct {
 	Type             ConnectorType
 	Role             Role
 	Enabled          bool
-	Connector        int
+	Connector        string
 	Strategy         *Strategy
 	SendingMode      *SendingMode
 	WebsiteHost      string
@@ -330,21 +330,18 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	// Validate the Connector.
 	actionOnFile := this.connection.Connector().Type == state.FileStorageType
-	if actionOnFile && action.Connector == 0 {
+	if actionOnFile && action.Connector == "" {
 		return 0, errors.BadRequest("actions on file storage connections must have a connector")
 	}
-	if !actionOnFile && action.Connector != 0 {
+	if !actionOnFile && action.Connector != "" {
 		return 0, errors.BadRequest("actions on %v connections cannot have a connector", this.connection.Connector().Type)
 	}
 	var fileConnector *state.Connector
-	if action.Connector != 0 {
-		if action.Connector < 1 || action.Connector > maxInt32 {
-			return 0, errors.BadRequest("connector identifier %d is not valid", action.Connector)
-		}
+	if action.Connector != "" {
 		var ok bool
 		fileConnector, ok = this.apis.state.Connector(action.Connector)
 		if !ok {
-			return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", action.Connector)
+			return 0, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", action.Connector)
 		}
 		if fileConnector.Type != state.FileType {
 			return 0, errors.BadRequest("type of the action's connector must be File, got %v", fileConnector.Type)
@@ -420,11 +417,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 	}
 
-	// Determine the connector ID, for file actions.
-	var connectorID *int
+	// Determine the connector name, for file actions.
+	var connectorName *string
 	if fileConnector != nil {
-		id := fileConnector.ID
-		connectorID = &id
+		name := fileConnector.Name
+		connectorName = &name
 	}
 
 	// Generate a random identifier.
@@ -531,17 +528,12 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(filter), mapping, function.Source, function.Language, function.Version,
-			n.Query, connectorID, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
+			n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
 			n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ExportMode,
 			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				switch postgres.ErrConstraintName(err) {
-				case "actions_connection_fkey":
-					err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
-				case "actions_connector_fkey":
-					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
-				}
+			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
+				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
 			}
 			return err
 		}
@@ -1029,7 +1021,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 //   - NoColumns, if the file has no columns.
 //   - ReadFileFailed, if an error occurred reading the file.
 //   - SheetNotExist, if the file does not contain the provided sheet.
-func (this *Connection) Records(ctx context.Context, fileConnector int, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1054,12 +1046,9 @@ func (this *Connection) Records(ctx context.Context, fileConnector int, path, sh
 	}
 
 	// Validate the connector.
-	if fileConnector < 1 || fileConnector > maxInt32 {
-		return nil, types.Type{}, errors.BadRequest("connector identifier %d is not valid", fileConnector)
-	}
 	file, ok := this.apis.state.Connector(fileConnector)
 	if !ok {
-		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
+		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", fileConnector)
 	}
 	if file.Type != state.FileType {
 		return nil, types.Type{}, errors.BadRequest("connector %s is not a file connector", file.Name)
@@ -1517,8 +1506,8 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 
 	// Validate the website host.
 	if n.WebsiteHost != "" && c.Type != state.WebsiteType {
-		return errors.BadRequest("connector %d cannot have a website host, it's a %s",
-			c.ID, strings.ToLower(c.Type.String()))
+		return errors.BadRequest("connector %s cannot have a website host, it's a %s",
+			c.Name, strings.ToLower(c.Type.String()))
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -1550,7 +1539,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	// before saving to database
 	connector := this.connection.Connector()
 	if !connector.HasUI {
-		return nil, errors.BadRequest("connector %d does not have a UI", connector.ID)
+		return nil, errors.BadRequest("connector %s does not have a UI", connector.Name)
 	}
 	ui, err := this.apis.connectors.ServeConnectionUI(ctx, this.connection, event, values)
 	if err != nil {
@@ -1576,7 +1565,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 //   - ConnectorNotExist, if the file connector does not exist.
 //   - InvalidUIValues, if the UI values are not valid.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Sheets(ctx context.Context, fileConnector int, path string, uiValues []byte, compression Compression) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, fileConnector string, path string, uiValues []byte, compression Compression) ([]string, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1596,12 +1585,9 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector int, path stri
 	}
 
 	// Validate the file connector.
-	if fileConnector < 1 || fileConnector > maxInt32 {
-		return nil, errors.BadRequest("connector identifier %d is not valid", fileConnector)
-	}
 	file, ok := this.apis.state.Connector(fileConnector)
 	if !ok {
-		return nil, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", fileConnector)
+		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", fileConnector)
 	}
 	if file.Type != state.FileType {
 		return nil, errors.BadRequest("connector %s is not a file connector", file.Name)
@@ -2018,7 +2004,7 @@ func validateEventConnections(connections []int, c *state.Connector, ws *state.W
 		return errors.BadRequest("event connections cannot be empty")
 	}
 	if !c.Targets.Contains(state.Events) {
-		return errors.BadRequest("connector %d does not support event connections", c.ID)
+		return errors.BadRequest("connector %s does not support event connections", c.Name)
 	}
 	for i, id := range connections {
 		if id < 1 || id > maxInt32 {

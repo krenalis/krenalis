@@ -89,7 +89,7 @@ func TestIdentityResolution(t *testing.T) {
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
-		Connector:        chichitester.JSONConnector,
+		Connector:        "JSON",
 		UIValues:         []byte("{}"),
 	})
 
@@ -103,7 +103,7 @@ func TestIdentityResolution(t *testing.T) {
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
-		Connector:        chichitester.JSONConnector,
+		Connector:        "JSON",
 		UIValues:         []byte("{}"),
 	})
 

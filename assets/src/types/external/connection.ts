@@ -12,7 +12,7 @@ interface Connection {
 	Name: string;
 	Type: ConnectorType;
 	Role: ConnectionRole;
-	Connector: number;
+	Connector: string;
 	Storage: number;
 	Compression: Compression;
 	Strategy?: Strategy | null;
@@ -37,7 +37,7 @@ interface ConnectionToAdd {
 	name: string;
 	role: string;
 	enabled: boolean;
-	connector: number;
+	connector: string;
 	strategy?: Strategy | null;
 	websiteHost: string;
 	SendingMode?: SendingMode | null;

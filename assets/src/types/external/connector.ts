@@ -7,7 +7,6 @@ type WebhooksPer = 'None' | 'Connector' | 'Resource' | 'Source';
 type SendingMode = 'Cloud' | 'Device' | 'Combined';
 
 interface Connector {
-	ID: number;
 	Name: string;
 	SourceDescription: string;
 	DestinationDescription: string;

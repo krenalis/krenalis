@@ -77,7 +77,6 @@ const useApp = (
 			for (const c of connectors) {
 				transformedConnectors.push(
 					new TransformedConnector(
-						c.ID,
 						c.Name,
 						c.Type,
 						c.HasSheets,

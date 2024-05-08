@@ -27,10 +27,10 @@ const OAuth = () => {
 
 	useEffect(() => {
 		const fetchOAuthToken = async () => {
-			const connectorID = localStorage.getItem('chichi_ui_add_connection_id');
-			const connector = connectors.find((c) => c.id === Number(connectorID));
+			const connectorName = localStorage.getItem('chichi_ui_add_connector_name');
+			const connector = connectors.find((c) => c.name === connectorName);
 			if (connector == null) {
-				console.error(`connector with id ${Number(connectorID)} does not exist`);
+				console.error(`connector with name ${connectorName} does not exist`);
 				setErrorMessage(
 					'Something went wrong, please try again and contact the administrator if the error persist',
 				);
@@ -61,7 +61,7 @@ const OAuth = () => {
 			localStorage.removeItem('chichi_ui_add_connection_role');
 			let oauthToken: string;
 			try {
-				oauthToken = await api.workspaces.oauthToken(Number(connectorID), oauthCode);
+				oauthToken = await api.workspaces.oauthToken(connectorName, oauthCode);
 			} catch (err) {
 				console.error(err);
 				setErrorMessage(
@@ -70,7 +70,9 @@ const OAuth = () => {
 				return;
 			}
 			setTimeout(() => {
-				setRedirectURL(`connectors/${connectorID}?role=${connectionRole}&oauthToken=${oauthToken}`);
+				setRedirectURL(
+					`connectors/${encodeURIComponent(connectorName)}?role=${connectionRole}&oauthToken=${oauthToken}`,
+				);
 			}, 1000);
 		};
 		fetchOAuthToken();

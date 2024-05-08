@@ -10,7 +10,6 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/open2b/chichi/apis"
 	"github.com/open2b/chichi/apis/errors"
@@ -43,10 +42,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	connector, err := api.connector(r)
-	if err != nil {
-		return nil, err
-	}
+	connector := api.connector(r)
 	return api.apis.Connector(r.Context(), connector)
 }
 
@@ -156,14 +152,6 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	return message, nil
 }
 
-func (api api) connector(r *http.Request) (int, error) {
-	v := r.PathValue("connector")
-	if v[0] == '+' {
-		return 0, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return 0, errors.NotFound("")
-	}
-	return id, nil
+func (api api) connector(r *http.Request) string {
+	return r.PathValue("connector")
 }

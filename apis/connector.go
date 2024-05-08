@@ -20,7 +20,6 @@ import (
 type Connector struct {
 	apis                       *APIs
 	connector                  *state.Connector
-	ID                         int
 	Name                       string
 	SourceDescription          string
 	DestinationDescription     string
@@ -153,7 +152,7 @@ func isValidSendingMode(sm SendingMode) bool {
 func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 	this.apis.mustBeOpen()
 	if this.connector.OAuth == nil {
-		return "", errors.BadRequest("connector %d does not support OAuth", this.connector.ID)
+		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Name)
 	}
 	return this.apis.connectors.AuthorizationEndpoint(this.connector, redirectURI)
 }

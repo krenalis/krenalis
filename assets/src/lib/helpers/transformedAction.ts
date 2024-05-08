@@ -111,7 +111,7 @@ interface TransformedAction {
 	MatchingProperties?: TransformedMatchingProperties | null;
 	ExportOnDuplicatedUsers?: boolean | null;
 	Compression?: Compression;
-	Connector?: number;
+	Connector?: string;
 }
 
 const hasTransformationFunction = (action: ActionToSet) => {
@@ -609,7 +609,7 @@ const computeDefaultAction = (
 		action.LastChangeTimeFormat = '';
 		action.Sheet = null;
 		action.Compression = '';
-		action.Connector = 0;
+		action.Connector = '';
 	}
 	if (fields.includes('Table')) {
 		action.Table = '';

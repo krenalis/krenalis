@@ -102,7 +102,7 @@ const useAction = (
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
 					let values: ConnectorValues = null;
-					const connector = connectors.find((c) => c.id === providedAction.Connector);
+					const connector = connectors.find((c) => c.name === providedAction.Connector);
 					if (connector.hasUI) {
 						// get the values of the file settings.
 						let ui: ConnectorUIResponse;

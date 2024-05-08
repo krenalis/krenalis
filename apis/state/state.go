@@ -39,7 +39,7 @@ type State struct {
 	syncing          bool // reports whether the keeper has started synchronizing the state.
 	election         election
 	organizations    map[int]*Organization
-	connectors       map[int]*Connector
+	connectors       map[string]*Connector
 	workspaces       map[int]*Workspace
 	connections      map[int]*Connection
 	connectionsByKey map[string]*Connection
@@ -85,7 +85,7 @@ func New(db *postgres.DB) (*State, error) {
 		db:               db,
 		mu:               new(sync.Mutex),
 		organizations:    map[int]*Organization{},
-		connectors:       map[int]*Connector{},
+		connectors:       map[string]*Connector{},
 		workspaces:       map[int]*Workspace{},
 		connections:      map[int]*Connection{},
 		connectionsByKey: map[string]*Connection{},
@@ -191,11 +191,11 @@ func (state *State) Connections() []*Connection {
 	return connections
 }
 
-// Connector returns the connector with identifier id.
+// Connector returns the connector with the provided name.
 // The boolean return value reports whether the connector exists.
-func (state *State) Connector(id int) (*Connector, bool) {
+func (state *State) Connector(name string) (*Connector, bool) {
 	state.mu.Lock()
-	c, ok := state.connectors[id]
+	c, ok := state.connectors[name]
 	state.mu.Unlock()
 	return c, ok
 }
@@ -211,7 +211,7 @@ func (state *State) Connectors() []*Connector {
 	}
 	state.mu.Unlock()
 	sort.Slice(connectors, func(i, j int) bool {
-		return connectors[i].ID < connectors[j].ID
+		return connectors[i].Name < connectors[j].Name
 	})
 	return connectors
 }
@@ -496,7 +496,6 @@ type TimeLayouts struct {
 
 // Connector represents a connector.
 type Connector struct {
-	ID                         int
 	Name                       string
 	SourceDescription          string
 	DestinationDescription     string

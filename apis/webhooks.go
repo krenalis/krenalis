@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 
@@ -136,11 +137,8 @@ func (apis *APIs) receiveWebhook(req *http.Request) error {
 		}
 		events, err = apis.connectors.ReceivePerConnectionWebhook(connection, req)
 	case "c":
-		id, _ := strconv.Atoi(m[2])
-		if id < 1 || id > maxInt32 {
-			return errNotFound
-		}
-		connector, ok := apis.state.Connector(id)
+		name := url.PathEscape(m[2])
+		connector, ok := apis.state.Connector(name)
 		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
 			return errNotFound
 		}

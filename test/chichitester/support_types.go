@@ -16,40 +16,6 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-const (
-	HubSpotConnector = iota + 1
-	MySQLConnector
-	DummyConnector
-	MailchimpConnector
-	CSVConnector
-	SFTPConnector
-	HTTPConnector
-	ExcelConnector
-	S3Connector
-	PostgreSQLConnector
-	ParquetConnector
-	JavaScriptConnector
-	KafkaConnector
-	RabbitMQConnector
-	UISampleConnector
-	DotNetConnector
-	KlaviyoConnector
-	GoogleConnector
-	FilesystemConnector
-	ClickHouseConnector
-	JSONConnector
-	MixpanelConnector
-	SnowflakeConnector
-	StripeConnector
-	GoConnector
-	JavaConnector
-	NodeConnector
-	PHPConnector
-	PythonConnector
-	AndroidConnector
-	AppleConnector
-)
-
 // These data types are copy-paste of the types defined within the APIs.
 
 type Action struct {
@@ -88,7 +54,7 @@ type ActionToSet struct {
 	InSchema                types.Type
 	OutSchema               types.Type
 	Transformation          Transformation
-	Connector               int
+	Connector               string
 	Query                   string
 	Path                    string
 	Sheet                   string
@@ -119,7 +85,7 @@ type ConnectionToAdd struct {
 	Name             string
 	Role             Role
 	Enabled          bool
-	Connector        int
+	Connector        string
 	Strategy         *Strategy
 	WebsiteHost      string
 	EventConnections []int

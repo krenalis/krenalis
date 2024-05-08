@@ -104,7 +104,7 @@ func (c *Chichi) AddDestinationFilesystem(storageDir string) int {
 		Name:      "Filesystem",
 		Role:      Destination,
 		Enabled:   true,
-		Connector: FilesystemConnector,
+		Connector: "Filesystem",
 		UIValues: JSONEncodeUIValues(map[string]any{
 			"Root": storageDir,
 		}),
@@ -116,7 +116,7 @@ func (c *Chichi) AddDestinationPostgreSQL() int {
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
 		Enabled:   true,
-		Connector: PostgreSQLConnector,
+		Connector: "PostgreSQL",
 		UIValues: JSONEncodeUIValues(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
@@ -132,7 +132,7 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 		Name:      name,
 		Role:      role,
 		Enabled:   true,
-		Connector: DummyConnector,
+		Connector: "Dummy",
 		UIValues:  []byte("{}"),
 	}
 	if role == Destination {
@@ -147,7 +147,7 @@ func (c *Chichi) AddDummyWithUIValues(name string, role Role, values map[string]
 		Name:      name,
 		Role:      role,
 		Enabled:   true,
-		Connector: DummyConnector,
+		Connector: "Dummy",
 		UIValues:  JSONEncodeUIValues(values),
 	}
 	if role == Destination {
@@ -162,7 +162,7 @@ func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int) 
 		Name:             name,
 		Role:             Source,
 		Enabled:          true,
-		Connector:        JavaScriptConnector,
+		Connector:        "JavaScript",
 		Strategy:         &defaultStrategy,
 		WebsiteHost:      host,
 		EventConnections: eventConnections,
@@ -174,7 +174,7 @@ func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 		Name:      "Filesystem",
 		Role:      Source,
 		Enabled:   true,
-		Connector: FilesystemConnector,
+		Connector: "Filesystem",
 		UIValues: JSONEncodeUIValues(map[string]any{
 			"Root": storageDir,
 		}),
@@ -186,7 +186,7 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
 		Enabled:   true,
-		Connector: PostgreSQLConnector,
+		Connector: "PostgreSQL",
 		UIValues: JSONEncodeUIValues(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
@@ -273,7 +273,7 @@ func (c *Chichi) IdentifiersSchema() types.Type {
 	return schema
 }
 
-func (c *Chichi) Records(storage int, fileConnector int, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
+func (c *Chichi) Records(storage int, fileConnector string, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	req := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,
@@ -341,7 +341,7 @@ func (c *Chichi) SetWorkspaceIdentifiers(identifiers []string) {
 	c.MustCall("PUT", method, body, nil)
 }
 
-func (c *Chichi) Sheets(storage int, fileConnector int, path string, compression Compression, uiValues json.RawMessage) []string {
+func (c *Chichi) Sheets(storage int, fileConnector string, path string, compression Compression, uiValues json.RawMessage) []string {
 	req := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,

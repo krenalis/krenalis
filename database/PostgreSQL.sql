@@ -2,50 +2,18 @@
 
 CREATE COLLATION case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
 
-CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
 CREATE TYPE action_target AS ENUM ('Events', 'Users', 'Groups');
 
 CREATE TABLE connectors (
-    id SERIAL,
     name varchar(200) NOT NULL DEFAULT '',
-    type connector_type NOT NULL DEFAULT 'App',
     oauth_client_id varchar(500) NOT NULL DEFAULT '',
     oauth_client_secret varchar(500) NOT NULL DEFAULT '',
-    PRIMARY KEY (id)
+    PRIMARY KEY (name)
 );
 
-INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
-    ('HubSpot', 'App', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668'),
-    ('MySQL', 'Database', '', ''),
-    ('Dummy', 'App', '', ''),
-    ('Mailchimp', 'App', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac'),
-    ('CSV', 'File', '', ''),
-    ('SFTP', 'FileStorage', '', ''),
-    ('HTTP', 'FileStorage', '', ''),
-    ('Excel', 'File', '', ''),
-    ('S3', 'FileStorage', '', ''),
-    ('PostgreSQL', 'Database', '', ''),
-    ('Parquet', 'File', '', ''),
-    ('JavaScript', 'Website', '', ''),
-    ('Kafka', 'Stream', '', ''),
-    ('RabbitMQ', 'Stream', '', ''),
-    ('UISample', 'App', '', ''),
-    ('.NET', 'Server', '', ''),
-    ('Klaviyo', 'App', '', ''),
-    ('Google Analytics', 'App', '', ''),
-    ('Filesystem', 'FileStorage', '', ''),
-    ('ClickHouse', 'Database', '', ''),
-    ('JSON', 'File', '', ''),
-    ('Mixpanel', 'App', '', ''),
-    ('Snowflake', 'Database', '', ''),
-    ('Stripe', 'App', '', ''),
-    ('Go', 'Server', '', ''),
-    ('Java', 'Server', '', ''),
-    ('Node.js', 'Server', '', ''),
-    ('PHP', 'Server', '', ''),
-    ('Python', 'Server', '', ''),
-    ('Android', 'Mobile', '', ''),
-    ('Apple', 'Mobile', '', '');
+INSERT INTO connectors (name, oauth_client_id, oauth_client_secret) VALUES
+    ('HubSpot','cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668'),
+    ('Mailchimp', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac');
 
 CREATE TABLE organizations (
     id SERIAL,
@@ -79,6 +47,8 @@ CREATE TABLE workspaces (
 INSERT INTO workspaces (id, organization, name, users_schema, warehouse_type, warehouse_settings)
 VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name": "__id__","type":{"name":"Int","bitSize":32}},{"name": "email","type":{"name":"Text","charLen":300},"nullable":true}]}', NULL, '');
 
+CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
+
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
@@ -96,7 +66,7 @@ CREATE TABLE connections (
     type connector_type NOT NULL,
     role role NOT NULL,
     enabled boolean NOT NULL DEFAULT false,
-    connector integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
+    connector varchar DEFAULT NULL,
     resource integer NOT NULL DEFAULT 0,
     strategy strategy DEFAULT NULL,
     sending_mode sending_mode DEFAULT NULL,
@@ -132,7 +102,7 @@ CREATE TABLE actions (
     transformation_language transformation_language NOT NULL,
     transformation_version varchar(128) NOT NULL DEFAULT '',
     query text NOT NULL DEFAULT '',
-    connector integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
+    connector varchar DEFAULT NULL,
     path varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(31) NOT NULL DEFAULT '',
     compression compression NOT NULL DEFAULT '',
@@ -253,7 +223,7 @@ INSERT INTO members (organization, name, avatar, email, password, created_at) VA
 CREATE TABLE resources (
     id SERIAL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    connector integer NOT NULL REFERENCES connectors ON DELETE CASCADE,
+    connector varchar NOT NULL,
     code varchar(100) NOT NULL,
     access_token varchar(500) NOT NULL DEFAULT '',
     refresh_token varchar(500) NOT NULL DEFAULT '',

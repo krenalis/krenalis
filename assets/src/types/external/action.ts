@@ -56,7 +56,7 @@ interface Action {
 	MatchingProperties: MatchingProperties | null;
 	ExportOnDuplicatedUsers: boolean | null;
 	Compression: Compression;
-	Connector: number;
+	Connector: string;
 }
 
 interface ActionType {
@@ -85,7 +85,7 @@ interface ActionToSet {
 	matchingProperties?: MatchingProperties | null;
 	exportOnDuplicatedUsers?: boolean | null;
 	Compression: Compression;
-	Connector: number;
+	Connector: string;
 	UIValues?: ConnectorValues;
 }
 

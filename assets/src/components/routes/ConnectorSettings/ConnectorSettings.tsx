@@ -61,9 +61,9 @@ const ConnectorSettings = () => {
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
-	let connectorID: number, connectionRole: ConnectionRole, OAuthToken: string;
+	let connectorName: string, connectionRole: ConnectionRole, OAuthToken: string;
 	const url = new URL(document.location.href);
-	connectorID = Number(url.pathname.split('/').pop());
+	connectorName = decodeURIComponent(url.pathname.split('/').pop());
 	const roleParam = url.searchParams.get('role') as ConnectionRole | null | '';
 	if (roleParam == null || roleParam === '') {
 		connectionRole = 'Source';
@@ -78,9 +78,9 @@ const ConnectorSettings = () => {
 	}
 
 	useEffect(() => {
-		const connector = connectors.find((c) => c.id === connectorID);
+		const connector = connectors.find((c) => c.name === connectorName);
 		if (connector.isFile) {
-			redirect(`connectors/file/${connector.id}?role=${connectionRole}`);
+			redirect(`connectors/file/${encodeURIComponent(connector.name)}?role=${connectionRole}`);
 		}
 	}, []);
 
@@ -92,7 +92,7 @@ const ConnectorSettings = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			const connector = connectors.find((c) => c.id === connectorID);
+			const connector = connectors.find((c) => c.name === connectorName);
 			if (connector == null) {
 				setNotFound(true);
 				return;
@@ -117,7 +117,7 @@ const ConnectorSettings = () => {
 			if (connector.hasUI === false) return;
 			let ui: ConnectorUIResponse;
 			try {
-				ui = await api.connectors.ui(selectedWorkspace, connectorID, connectionRole, OAuthToken);
+				ui = await api.connectors.ui(selectedWorkspace, connectorName, connectionRole, OAuthToken);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
@@ -182,7 +182,7 @@ const ConnectorSettings = () => {
 					name: name,
 					role: connectionRole,
 					enabled: true,
-					connector: connectorID,
+					connector: connectorName,
 					strategy: strategy,
 					websiteHost: websiteHost,
 					SendingMode: SendingMode,
@@ -213,7 +213,7 @@ const ConnectorSettings = () => {
 		try {
 			ui = await api.connectors.uiEvent(
 				selectedWorkspace,
-				connectorID,
+				connectorName,
 				eventName,
 				values,
 				connectionRole,
@@ -273,7 +273,7 @@ const ConnectorSettings = () => {
 				name: name,
 				role: connectionRole,
 				enabled: true,
-				connector: connectorID,
+				connector: connectorName,
 				strategy: strategy,
 				websiteHost: websiteHost,
 				SendingMode: SendingMode,

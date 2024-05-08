@@ -23,7 +23,7 @@ import (
 // Database represents the database of a database connection.
 type Database struct {
 	closed      bool
-	connector   int
+	connector   string
 	timeLayouts *state.TimeLayouts
 	inner       chichi.Database
 	err         error
@@ -38,7 +38,7 @@ type Database struct {
 func (connectors *Connectors) Database(connection *state.Connection) *Database {
 	connector := connection.Connector()
 	database := &Database{
-		connector:   connection.Connector().ID,
+		connector:   connection.Connector().Name,
 		timeLayouts: &connector.TimeLayouts,
 	}
 	database.inner, database.err = chichi.RegisteredDatabase(connector.Name).New(&chichi.DatabaseConfig{
@@ -158,7 +158,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	// Check that schema is aligned with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
 	if err != nil {
-		return nil, fmt.Errorf("connector %d has returned invalid columns: %s", database.connector, err)
+		return nil, fmt.Errorf("connector %s has returned invalid columns: %s", database.connector, err)
 	}
 	err = checkSchemaAlignment(action.InSchema, querySchema)
 	if err != nil {

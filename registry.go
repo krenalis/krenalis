@@ -36,6 +36,41 @@ var (
 	}
 )
 
+// Connectors returns the registered connectors as a map from the name to its
+// ConnectorInfo.
+func Connectors() map[string]ConnectorInfo {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	n := len(registry.apps) + len(registry.databases) + len(registry.files) + len(registry.storages) +
+		len(registry.mobiles) + len(registry.servers) + len(registry.streams) + len(registry.websites)
+	connectors := make(map[string]ConnectorInfo, n)
+	for _, c := range registry.apps {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.databases {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.files {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.storages {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.mobiles {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.servers {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.streams {
+		connectors[c.Name] = c
+	}
+	for _, c := range registry.websites {
+		connectors[c.Name] = c
+	}
+	return connectors
+}
+
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if fn is nil, it panics.
 func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {

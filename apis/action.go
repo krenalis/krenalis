@@ -20,7 +20,6 @@ import (
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
-	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/telemetry"
@@ -48,7 +47,7 @@ type Action struct {
 	Filter                  *Filter
 	Transformation          Transformation
 	Query                   *string
-	Connector               int
+	Connector               string
 	Path                    *string
 	Sheet                   *string
 	Compression             Compression
@@ -137,7 +136,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.Query = &query
 	}
 	if c := action.Connector(); c != nil {
-		this.Connector = c.ID
+		this.Connector = c.Name
 	}
 	if action.Path != "" {
 		path := action.Path
@@ -264,7 +263,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
 	if !connector.HasUI {
-		return nil, errors.BadRequest("connector %d does not have a UI", connector.ID)
+		return nil, errors.BadRequest("connector %s does not have a UI", connector.Name)
 	}
 	ui, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
 	if err != nil {
@@ -331,21 +330,18 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	// Validate the connector.
 	actionOnFile := this.action.Connection().Connector().Type == state.FileStorageType
-	if actionOnFile && action.Connector == 0 {
+	if actionOnFile && action.Connector == "" {
 		return errors.BadRequest("actions on file storage connections must have a connector")
 	}
-	if !actionOnFile && action.Connector != 0 {
+	if !actionOnFile && action.Connector != "" {
 		return errors.BadRequest("actions on %v connections cannot have a connector", this.action.Connection().Connector().Type)
 	}
 	var fileConnector *state.Connector
-	if action.Connector != 0 {
-		if action.Connector < 1 || action.Connector > maxInt32 {
-			return errors.BadRequest("connector identifier %d is not valid", action.Connector)
-		}
+	if action.Connector != "" {
 		var ok bool
 		fileConnector, ok = this.apis.state.Connector(action.Connector)
 		if !ok {
-			return errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", action.Connector)
+			return errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", action.Connector)
 		}
 		if fileConnector.Type != state.FileType {
 			return errors.BadRequest("type of the action's connector must be File, got %v", fileConnector.Type)
@@ -416,11 +412,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	// Determine the connector ID, for file actions.
-	var connectorID *int
+	// Determine the connector name, for file actions.
+	var connectorName *string
 	if fileConnector != nil {
-		id := fileConnector.ID
-		connectorID = &id
+		name := fileConnector.Name
+		connectorName = &name
 	}
 
 	if props := action.MatchingProperties; props != nil {
@@ -533,19 +529,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"export_mode = $21, matching_properties_internal = $22, matching_properties_external = $23, "+
 			"export_on_duplicated_users = $24\nWHERE id = $25",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
-			function.Source, function.Language, function.Version, n.Query, connectorID,
+			function.Source, function.Language, function.Version, n.Query, connectorName,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
 			n.IdentityProperty, n.DisplayedProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				switch postgres.ErrConstraintName(err) {
-				case "actions_connector_fkey":
-					err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
-				}
-			}
 			return err
 		}
 		if result.RowsAffected() == 0 {
@@ -720,8 +710,8 @@ type ActionToSet struct {
 	Query string
 
 	// Connector is the connector of the action on file storage connections.
-	// In any other case, must be 0.
-	Connector int
+	// In any other case, must be empty.
+	Connector string
 
 	// Path is the path of the file. It cannot be longer than 1024 runes,
 	// and it is empty for non-file actions.

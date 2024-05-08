@@ -105,7 +105,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Name:   file.action.LastChangeTimeProperty,
 		Format: file.action.LastChangeTimeFormat,
 	}
-	rw := newRecordWriter(file.action.Connector().ID, file.action.InSchema,
+	rw := newRecordWriter(file.action.Connector().Name, file.action.InSchema,
 		file.action.IdentityProperty, lastChangeTimeProperty, file.action.DisplayedProperty,
 		storageLastChangeTime, file.timeLayouts, math.MaxInt)
 	records := &fileRecords{
@@ -361,7 +361,7 @@ func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
 // storageLastChangeTime is the lat change time provided by the storage
 // connector, and it is used in the case when the file columns do not specify a
 // last change time property.
-func newRecordWriter(connector int, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, displayedProperty string, storageLastChangeTime time.Time, layout *state.TimeLayouts, limit int) *recordWriter {
+func newRecordWriter(connector string, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, displayedProperty string, storageLastChangeTime time.Time, layout *state.TimeLayouts, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -389,7 +389,7 @@ func newRecordWriter(connector int, schema types.Type, identityProperty string, 
 
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
-	connector         int
+	connector         string
 	limit             int
 	yield             func(Record) error
 	schema            types.Type
@@ -422,14 +422,14 @@ type recordWriter struct {
 // Columns must be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Columns(columns []types.Property) error {
 	if rw.properties != nil {
-		return fmt.Errorf("connector %d has called Columns twice", rw.connector)
+		return fmt.Errorf("connector %s has called Columns twice", rw.connector)
 	}
 	if len(columns) == 0 {
-		return fmt.Errorf("connector %d has called Columns with an empty columns", rw.connector)
+		return fmt.Errorf("connector %s has called Columns with an empty columns", rw.connector)
 	}
 	fileSchema, err := types.ObjectOf(columns)
 	if err != nil {
-		return fmt.Errorf("connector %d has returned invalid columns: %s", rw.connector, err)
+		return fmt.Errorf("connector %s has returned invalid columns: %s", rw.connector, err)
 	}
 	columnByName := make(map[string]types.Property, len(columns))
 	columnIndex := make(map[string]int, len(columns))
@@ -499,10 +499,10 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 // Record writes a record.
 func (rw *recordWriter) Record(record []any) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling Record", rw.connector)
 	}
 	if len(record) != rw.columns {
-		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
+		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
 	}
 	var err error
 	if rw.yield == nil {
@@ -576,7 +576,7 @@ func (rw *recordWriter) Record(record []any) error {
 // RecordMap writes a record as a map.
 func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.connector)
 	}
 	var err error
 	if rw.yield == nil {
@@ -649,13 +649,13 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 // RecordString writes a record as a string slice.
 func (rw *recordWriter) RecordString(record []string) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling RecordString", rw.connector)
 	}
 	if len(record) != rw.columns {
-		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
+		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
 	}
 	if !rw.textColumnsOnly {
-		return fmt.Errorf("connector %d has called RecordString when there are non-text columns", rw.connector)
+		return fmt.Errorf("connector %s has called RecordString when there are non-text columns", rw.connector)
 	}
 	var err error
 	if rw.yield == nil {

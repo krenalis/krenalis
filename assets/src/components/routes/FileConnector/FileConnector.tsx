@@ -19,14 +19,15 @@ const FileConnector = () => {
 	const location = useLocation();
 
 	const file = useMemo(() => {
-		const f = connectors.find((c) => c.id === Number(params.id));
+		const name = decodeURIComponent(params.name);
+		const f = connectors.find((c) => c.name === name);
 		if (f == null) {
-			handleError(`Connector with id ${params.id} doesn't exist`);
+			handleError(`Connector with name ${name} doesn't exist`);
 			redirect('connectors');
 			return;
 		}
 		return f;
-	}, [params.id]);
+	}, [params.name]);
 
 	const role = useMemo(() => {
 		const r = new URL(document.location.href).searchParams.get('role');
@@ -61,7 +62,7 @@ const FileConnector = () => {
 
 	const onAddActionType = (target: String) => {
 		const id = storages.find((s) => s.id === selectedStorage).id;
-		redirect(`connections/${id}/actions/add/${target}?fileConnector=${file.id}`);
+		redirect(`connections/${id}/actions/add/${target}?fileConnector=${encodeURIComponent(file.name)}`);
 	};
 
 	return (

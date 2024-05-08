@@ -226,7 +226,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	var body struct {
-		FileConnector int
+		FileConnector string
 		Path          string
 		Sheet         string
 		Compression   apis.Compression
@@ -320,7 +320,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	var body struct {
-		FileConnector int
+		FileConnector string
 		Path          string
 		Compression   apis.Compression
 		UIValues      rawJSON

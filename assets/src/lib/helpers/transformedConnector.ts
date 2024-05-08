@@ -3,7 +3,6 @@ import { ActionTarget } from '../../types/external/action';
 import { PLUG_ICON } from '../../constants/icons';
 
 class TransformedConnector {
-	id: number;
 	name: string;
 	sourceDescription: string;
 	destinationDescription: string;
@@ -22,7 +21,6 @@ class TransformedConnector {
 	suggestedDisplayedProperty: string;
 
 	constructor(
-		id: number,
 		name: string,
 		type: ConnectorType,
 		hasSheets: boolean,
@@ -40,7 +38,6 @@ class TransformedConnector {
 		targets: Record<ActionTarget, boolean>,
 		suggestedDisplayeProperty: string,
 	) {
-		this.id = id;
 		this.name = name;
 		this.type = type;
 		this.hasSheets = hasSheets;

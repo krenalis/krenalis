@@ -10,7 +10,7 @@ import { authCodeURLResponse } from '../../../types/external/api';
 import { useLocation } from 'react-router-dom';
 
 const ConnectorsList = () => {
-	const [goToConnectorSettings, setGoToConnectorSettings] = useState<number>(0);
+	const [goToConnectorSettings, setGoToConnectorSettings] = useState<string>('');
 	const [searchTerm, setSearchTerm] = useState<string>('');
 
 	const { redirect, api, handleError, connectors, setTitle } = useContext(AppContext);
@@ -31,8 +31,8 @@ const ConnectorsList = () => {
 	}, [connectionRole]);
 
 	useEffect(() => {
-		if (goToConnectorSettings !== 0) {
-			const connector = connectors.find((c) => c.id === goToConnectorSettings);
+		if (goToConnectorSettings !== '') {
+			const connector = connectors.find((c) => c.name === goToConnectorSettings);
 			if (connector.isFile) {
 				redirect(`connectors/file/${goToConnectorSettings}?role=${connectionRole}`);
 				return;
@@ -41,12 +41,12 @@ const ConnectorsList = () => {
 		}
 	}, [goToConnectorSettings]);
 
-	const authorizeWithOAuth = async (connectorID: number) => {
-		localStorage.setItem('chichi_ui_add_connection_id', String(connectorID));
+	const authorizeWithOAuth = async (connectorName: string) => {
+		localStorage.setItem('chichi_ui_add_connector_name', connectorName);
 		localStorage.setItem('chichi_ui_add_connection_role', connectionRole);
 		let res: authCodeURLResponse;
 		try {
-			res = await api.connectors.authCodeURL(connectorID);
+			res = await api.connectors.authCodeURL(connectorName);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -69,7 +69,7 @@ const ConnectorsList = () => {
 		if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
 			connectorsCards.push(
 				<Card
-					key={c.id}
+					key={c.name}
 					name={c.name}
 					icon={c.icon}
 					type={c.type}
@@ -79,7 +79,9 @@ const ConnectorsList = () => {
 						<SlButton
 							size='medium'
 							variant='default'
-							onClick={c.oAuth ? () => authorizeWithOAuth(c.id) : () => setGoToConnectorSettings(c.id)}
+							onClick={
+								c.oAuth ? () => authorizeWithOAuth(c.name) : () => setGoToConnectorSettings(c.name)
+							}
 							circle
 						>
 							<SlIcon name='plus' />

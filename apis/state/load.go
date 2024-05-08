@@ -38,103 +38,119 @@ func (state *State) load() error {
 		}
 
 		// Read all connectors.
-		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, oauth_client_id, oauth_client_secret FROM connectors", func(rows *postgres.Rows) error {
+		connectors := chichi.Connectors()
+		state.connectors = make(map[string]*Connector, len(connectors))
+		for name, connector := range connectors {
+			c := Connector{}
+			var ct reflect.Type
+			switch connector := connector.(type) {
+			case chichi.AppInfo:
+				c.Name = connector.Name
+				c.Type = AppType
+				c.Targets = ConnectorTargets(connector.Targets)
+				c.SourceDescription = connector.SourceDescription
+				c.DestinationDescription = connector.DestinationDescription
+				c.TermForUsers = connector.TermForUsers
+				c.TermForGroups = connector.TermForGroups
+				switch connector.SendingMode {
+				case chichi.Cloud:
+					mode := Cloud
+					c.SendingMode = &mode
+				case chichi.Device:
+					mode := Device
+					c.SendingMode = &mode
+				case chichi.Combined:
+					mode := Combined
+					c.SendingMode = &mode
+				}
+				c.IdentityIDLabel = connector.IdentityIDLabel
+				c.SuggestedDisplayedProperty = connector.SuggestedDisplayedProperty
+				c.WebhooksPer = WebhooksPer(connector.WebhooksPer)
+				if connector.OAuth.AuthURL != "" {
+					c.OAuth = &OAuth{
+						OAuth: connector.OAuth,
+					}
+				}
+				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			case chichi.DatabaseInfo:
+				c.Name = connector.Name
+				c.Type = DatabaseType
+				c.Targets = UsersFlag | GroupsFlag
+				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
+				c.SampleQuery = connector.SampleQuery
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			case chichi.FileInfo:
+				c.Name = connector.Name
+				c.Type = FileType
+				c.FileExtension = connector.Extension
+				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+				c.HasSheets = ct.Implements(sheetsType)
+			case chichi.FileStorageInfo:
+				c.Name = connector.Name
+				c.Type = FileStorageType
+				c.Targets = UsersFlag | GroupsFlag
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			case chichi.MobileInfo:
+				c.Name = connector.Name
+				c.Type = MobileType
+				c.SourceDescription = connector.SourceDescription
+				c.DestinationDescription = connector.DestinationDescription
+				c.TermForUsers = "users"
+				c.TermForGroups = "groups"
+				c.Targets = EventsFlag | UsersFlag | GroupsFlag
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			case chichi.ServerInfo:
+				c.Name = connector.Name
+				c.Type = ServerType
+				c.SourceDescription = connector.SourceDescription
+				c.DestinationDescription = connector.DestinationDescription
+				c.TermForUsers = "users"
+				c.TermForGroups = "groups"
+				c.Targets = EventsFlag | UsersFlag | GroupsFlag
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			case chichi.StreamInfo:
+				c.Name = connector.Name
+				c.Type = StreamType
+				c.SourceDescription = connector.SourceDescription
+				c.DestinationDescription = connector.DestinationDescription
+				c.Targets = EventsFlag
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			case chichi.WebsiteInfo:
+				c.Name = connector.Name
+				c.Type = WebsiteType
+				c.SourceDescription = connector.SourceDescription
+				c.DestinationDescription = connector.DestinationDescription
+				c.TermForUsers = "users"
+				c.TermForGroups = "groups"
+				c.Targets = EventsFlag | UsersFlag | GroupsFlag
+				c.Icon = connector.Icon
+				ct = connector.ReflectType()
+			}
+			c.HasUI = ct.Implements(uiHandlerType)
+			state.connectors[name] = &c
+		}
+		err = state.db.QueryScan(ctx, "SELECT name, oauth_client_id, oauth_client_secret FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
-				c := Connector{}
-				var oauthClientID, oauthClientSecret string
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &oauthClientID, &oauthClientSecret); err != nil {
+				var name string
+				var clientID, clientSecret string
+				if err := rows.Scan(&name, &clientID, &clientSecret); err != nil {
 					return err
 				}
-				var ct reflect.Type
-				switch c.Type {
-				case AppType:
-					app := chichi.RegisteredApp(c.Name)
-					c.Targets = ConnectorTargets(app.Targets)
-					c.SourceDescription = app.SourceDescription
-					c.DestinationDescription = app.DestinationDescription
-					c.TermForUsers = app.TermForUsers
-					c.TermForGroups = app.TermForGroups
-					switch app.SendingMode {
-					case chichi.Cloud:
-						mode := Cloud
-						c.SendingMode = &mode
-					case chichi.Device:
-						mode := Device
-						c.SendingMode = &mode
-					case chichi.Combined:
-						mode := Combined
-						c.SendingMode = &mode
-					}
-					c.IdentityIDLabel = app.IdentityIDLabel
-					c.SuggestedDisplayedProperty = app.SuggestedDisplayedProperty
-					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
-					if app.OAuth.AuthURL != "" {
-						c.OAuth = &OAuth{
-							OAuth:        app.OAuth,
-							ClientSecret: oauthClientSecret,
-							ClientID:     oauthClientID,
-						}
-					}
-					c.TimeLayouts = TimeLayouts(app.TimeLayouts)
-					c.Icon = app.Icon
-					ct = app.ReflectType()
-				case DatabaseType:
-					database := chichi.RegisteredDatabase(c.Name)
-					c.Targets = UsersFlag | GroupsFlag
-					c.TimeLayouts = TimeLayouts(database.TimeLayouts)
-					c.SampleQuery = database.SampleQuery
-					c.Icon = database.Icon
-					ct = database.ReflectType()
-				case FileType:
-					file := chichi.RegisteredFile(c.Name)
-					c.FileExtension = file.Extension
-					c.TimeLayouts = TimeLayouts(file.TimeLayouts)
-					c.Icon = file.Icon
-					ct = file.ReflectType()
-					c.HasSheets = ct.Implements(sheetsType)
-				case FileStorageType:
-					storage := chichi.RegisteredFileStorage(c.Name)
-					c.Targets = UsersFlag | GroupsFlag
-					c.Icon = storage.Icon
-					ct = storage.ReflectType()
-				case MobileType:
-					mobile := chichi.RegisteredMobile(c.Name)
-					c.SourceDescription = mobile.SourceDescription
-					c.DestinationDescription = mobile.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
-					c.Targets = EventsFlag | UsersFlag | GroupsFlag
-					c.Icon = mobile.Icon
-					ct = mobile.ReflectType()
-				case ServerType:
-					server := chichi.RegisteredServer(c.Name)
-					c.SourceDescription = server.SourceDescription
-					c.DestinationDescription = server.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
-					c.Targets = EventsFlag | UsersFlag | GroupsFlag
-					c.Icon = server.Icon
-					ct = server.ReflectType()
-				case StreamType:
-					stream := chichi.RegisteredStream(c.Name)
-					c.SourceDescription = stream.SourceDescription
-					c.DestinationDescription = stream.DestinationDescription
-					c.Targets = EventsFlag
-					c.Icon = stream.Icon
-					ct = stream.ReflectType()
-				case WebsiteType:
-					website := chichi.RegisteredWebsite(c.Name)
-					c.SourceDescription = website.SourceDescription
-					c.DestinationDescription = website.DestinationDescription
-					c.TermForUsers = "users"
-					c.TermForGroups = "groups"
-					c.Targets = EventsFlag | UsersFlag | GroupsFlag
-					c.Icon = website.Icon
-					ct = website.ReflectType()
+				c, ok := state.connectors[name]
+				if !ok {
+					continue
 				}
-				c.HasUI = ct.Implements(uiHandlerType)
-				state.connectors[c.ID] = &c
+				c.OAuth.ClientID = clientID
+				c.OAuth.ClientSecret = clientSecret
 			}
 			return nil
 		})
@@ -225,13 +241,14 @@ func (state *State) load() error {
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					r := Resource{}
-					var workspaceID, connectorID int
-					if err := rows.Scan(&r.ID, &workspaceID, &connectorID, &r.Code, &r.AccessToken, &r.RefreshToken, &r.ExpiresIn); err != nil {
+					var workspaceID int
+					var connectorName string
+					if err := rows.Scan(&r.ID, &workspaceID, &connectorName, &r.Code, &r.AccessToken, &r.RefreshToken, &r.ExpiresIn); err != nil {
 						return err
 					}
 					r.mu = new(sync.Mutex)
 					r.workspace = state.workspaces[workspaceID]
-					r.connector = state.connectors[connectorID]
+					r.connector = state.connectors[connectorName]
 					r.workspace.resources[r.ID] = &r
 					state.resources[r.ID] = &r
 				}
@@ -247,7 +264,8 @@ func (state *State) load() error {
 			" resource, strategy, sending_mode, website_host, event_connections,"+
 			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
-				var workspaceID, connector, resource int
+				var workspaceID, resource int
+				var connector string
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector,
 					&resource, &c.Strategy, &c.SendingMode, &c.WebsiteHost, &c.EventConnections, &c.Settings, &c.Health,
@@ -323,7 +341,7 @@ func (state *State) load() error {
 					var rawInSchema, rawOutSchema, filter, mapping []byte
 					var function TransformationFunction
 					var matchPropInternal, matchPropExternal []byte
-					var connector *int
+					var connector *string
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,

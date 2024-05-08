@@ -52,7 +52,7 @@ const ActionFile = () => {
 		isEditing,
 	} = useContext(actionContext);
 
-	const fileConnectorRef = useRef<number>(action.Connector);
+	const fileConnectorRef = useRef<string>(action.Connector);
 	const pathInputRef = useRef<any>();
 
 	useEffect(() => {
@@ -70,11 +70,11 @@ const ActionFile = () => {
 		// parameters.
 		const f = new URL(document.location.href).searchParams.get('fileConnector');
 		if (f != null) {
-			const id = Number(f);
-			fileConnectorRef.current = id;
-			const connector = connectors.find((c) => c.id === id);
+			const name = decodeURIComponent(f);
+			fileConnectorRef.current = name;
+			const connector = connectors.find((c) => c.name === name);
 			const a = { ...action };
-			a.Connector = id;
+			a.Connector = name;
 			a.Sheet = connector.hasSheets ? '' : null;
 			setIsFileConnectorLoading(true);
 			setAction(a);
@@ -83,7 +83,7 @@ const ActionFile = () => {
 
 	useEffect(() => {
 		const fetchFields = async () => {
-			const connector = connectors.find((c) => c.id === action.Connector);
+			const connector = connectors.find((c) => c.name === action.Connector);
 			if (connector.hasUI === false) {
 				setFileFields([]);
 				setTimeout(() => setIsFileConnectorLoading(false), 300);
@@ -114,7 +114,7 @@ const ActionFile = () => {
 				}
 			} else {
 				try {
-					ui = await api.connectors.ui(selectedWorkspace, connector.id, connection.role, null);
+					ui = await api.connectors.ui(selectedWorkspace, connector.name, connection.role, null);
 				} catch (err) {
 					setTimeout(() => setIsFileConnectorLoading(false), 300);
 					if (err instanceof NotFoundError) {
@@ -142,24 +142,24 @@ const ActionFile = () => {
 			setTimeout(() => setIsFileConnectorLoading(false), 300);
 		};
 
-		if (action.Connector == 0) {
+		if (action.Connector == '') {
 			return;
 		}
 		fetchFields();
 	}, [fileConnectorRef.current]);
 
 	const { hasSheets, icon, fileExtension } = useMemo(() => {
-		const connector = connectors.find((c) => c.id === action.Connector);
+		const connector = connectors.find((c) => c.name === action.Connector);
 		return { hasSheets: connector?.hasSheets, icon: connector?.icon, fileExtension: connector?.fileExtension };
 	}, [action]);
 
 	const onFileConnectorChange = (e) => {
-		const id = Number(e.target.value);
-		fileConnectorRef.current = id;
-		const connector = connectors.find((c) => c.id === id);
+		const name = e.target.value;
+		fileConnectorRef.current = name;
+		const connector = connectors.find((c) => c.name === name);
 		const a = { ...action };
 		// reset the action.
-		a.Connector = id;
+		a.Connector = name;
 		a.Compression = '';
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
@@ -191,13 +191,13 @@ const ActionFile = () => {
 				value={String(action.Connector)}
 				onSlChange={onFileConnectorChange}
 			>
-				{action.Connector !== 0 && (
+				{action.Connector !== '' && (
 					<div className='action-file__file-connector-logo' slot='prefix'>
 						<LittleLogo icon={icon} />
 					</div>
 				)}
 				{fileConnectors.map((f) => (
-					<SlOption key={f.id} value={String(f.id)}>
+					<SlOption key={f.name} value={f.name}>
 						<div slot='prefix'>
 							<LittleLogo icon={f.icon} />
 						</div>
@@ -219,7 +219,7 @@ const ActionFile = () => {
 					}
 				></SlSpinner>
 			) : (
-				action.Connector !== 0 && (
+				action.Connector !== '' && (
 					<div className='action-file__file-settings'>
 						<FileSettings
 							hasSheets={hasSheets}
