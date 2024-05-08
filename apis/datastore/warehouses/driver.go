@@ -9,7 +9,6 @@ package warehouses
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
@@ -317,67 +315,6 @@ type Record struct {
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
 	Err error
-}
-
-// Row returns a single row as a result of calling QueryRow.
-type Row struct {
-	Row   *postgres.Row
-	Error error
-}
-
-func (row Row) Scan(dest ...any) error {
-	if row.Error != nil {
-		return row.Error
-	}
-	err := row.Row.Scan(dest...)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return err
-		}
-		return Error(err)
-	}
-	return nil
-}
-
-// Rows represents the result of a query. Its methods, on error, return a
-// *DataWarehouseError error.
-type Rows struct {
-	Rows *postgres.Rows
-}
-
-func (rows Rows) Close() {
-	rows.Rows.Close()
-}
-
-func (rows Rows) Err() error {
-	err := rows.Rows.Err()
-	if err != nil {
-		return Error(err)
-	}
-	return nil
-}
-
-func (rows Rows) Next() bool {
-	return rows.Rows.Next()
-}
-
-func (rows Rows) Scan(dest ...any) error {
-	err := rows.Rows.Scan(dest...)
-	if err != nil {
-		return Error(err)
-	}
-	return nil
-}
-
-// Result implements the sql.Result interface but on error it returns a
-// *DataWarehouseError error.
-type Result struct {
-	Result *postgres.Result
-}
-
-func (r Result) RowsAffected() (int64, error) {
-	n := r.Result.RowsAffected()
-	return n, nil
 }
 
 // IsValidIdentifier reports whether name is a valid identifier.
