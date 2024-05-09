@@ -66,11 +66,11 @@ func TestReimport(t *testing.T) {
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
-	assertEq("first  user email", "kbuessen0@example.com", users[0]["email"])
-	assertEq("first  user first name", "Kinsley", users[0]["first_name"])
+	assertEq("first  user email", "aniece2x@example.com", users[0]["email"])
+	assertEq("first  user first name", "Ashil", users[0]["first_name"])
 	assertEq("first  user last name", nil, users[0]["last_name"])
-	assertEq("second user email", "jdebrett9@example.com", users[1]["email"])
-	assertEq("second user first name", "Jerad", users[1]["first_name"])
+	assertEq("second user email", "aquittonden2t@example.com", users[1]["email"])
+	assertEq("second user first name", "Aimil", users[1]["first_name"])
 	assertEq("second user last name", nil, users[1]["last_name"])
 
 	// Change an action that imports users from Dummy, that imports:
@@ -108,11 +108,11 @@ func TestReimport(t *testing.T) {
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
-	assertEq("first  user email", "kbuessen0@example.com", users[0]["email"])
-	assertEq("first  user first name", nil, users[0]["first_name"])     // <- now is nil
-	assertEq("first  user last name", "Buessen", users[0]["last_name"]) // <- now has a value
-	assertEq("second user email", "jdebrett9@example.com", users[1]["email"])
-	assertEq("second user first name", nil, users[1]["first_name"])     // <- now is nil
-	assertEq("second user last name", "Debrett", users[1]["last_name"]) // <- now has a value
+	assertEq("first  user email", "aniece2x@example.com", users[0]["email"])
+	assertEq("first  user first name", nil, users[0]["first_name"])   // <- now is nil
+	assertEq("first  user last name", "Niece", users[0]["last_name"]) // <- now has a value
+	assertEq("second user email", "aquittonden2t@example.com", users[1]["email"])
+	assertEq("second user first name", nil, users[1]["first_name"])        // <- now is nil
+	assertEq("second user last name", "Quittonden", users[1]["last_name"]) // <- now has a value
 
 }

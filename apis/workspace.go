@@ -1363,7 +1363,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		if !types.IsValidPropertyName(order) {
 			return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
 		}
-		orderProperty, ok := propertyByName[order]
+		var ok bool
+		orderProperty, ok = propertyByName[order]
 		if !ok {
 			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
