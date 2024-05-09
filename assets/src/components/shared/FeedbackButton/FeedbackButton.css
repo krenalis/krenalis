@@ -23,6 +23,7 @@
 	border: 1px solid var(--sl-color-neutral-300);
 	pointer-events: all;
 	padding: 0;
+	color: var(--text-primary);
 }
 
 .feedbackTooltip::part(base__popup) {
