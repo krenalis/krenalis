@@ -453,6 +453,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 											: identityPropertyError
 									}
 									size='small'
+									helpText='A property that uniquely identifies a user'
 								/>
 							</div>
 						)}
@@ -477,12 +478,13 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									clearable={action.DisplayedProperty?.length > 0}
 									error={displayedProperty}
 									size='small'
+									helpText='An additional property displayed to distinguish a user'
 								/>
 							)}
 						</div>
 						{(connection.isFileStorage || connection.isDatabase) && (
 							<div className='lastChangeTimeProperty'>
-								<div className='lastChangeTimeProperty'>
+								<div className='lastChangeTime'>
 									<div className='label'>Last change time:</div>
 									<ComboBoxInput
 										comboBoxListRef={lastChangeTimePropertyListRef}
@@ -495,6 +497,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										clearable={action.LastChangeTimeProperty?.length > 0}
 										error={lastChangeTimePropertyError}
 										size='small'
+										helpText='A property with the time of the last modification of a user'
 									/>
 								</div>
 								<div className='format'>

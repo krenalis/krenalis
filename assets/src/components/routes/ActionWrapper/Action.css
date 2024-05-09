@@ -188,7 +188,7 @@
 	display: grid;
 	justify-content: start;
 	gap: 10px;
-	align-items: center;
+	align-items: baseline;
 	grid-template-columns: 150px 350px;
 }
 
