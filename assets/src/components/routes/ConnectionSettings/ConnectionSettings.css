@@ -2,6 +2,12 @@
 	max-width: 1200px;
 }
 
+.connectionSettingsSpinner {
+	display: block;
+	margin: auto;
+	margin-top: 50px;
+}
+
 .connectionSettings sl-tab-group::part(nav) {
 	flex-basis: 250px;
 }
