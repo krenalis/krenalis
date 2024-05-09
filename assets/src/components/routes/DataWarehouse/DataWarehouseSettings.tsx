@@ -8,6 +8,7 @@ import * as icons from '../../../constants/icons';
 import * as variants from '../../../constants/variants';
 import { WarehouseSettings } from '../../../types/external/warehouse';
 import objectKeysToLower from '../../../lib/utils/objectKeysToLower';
+import { UnprocessableError } from '../../../lib/api/errors';
 
 interface DataWarehouseSettingsProps {
 	selectedWarehouse: Warehouse;
@@ -72,6 +73,15 @@ const DataWarehouseSettings = ({
 		try {
 			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, settings);
 		} catch (err) {
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'InvalidWarehouseType') {
+					handleError(
+						'The workspace has already been connected to a different type of data warehouse. Please reload to see the connected data warehouse.',
+					);
+					setIsActionButtonLoading(false);
+					return;
+				}
+			}
 			handleError(err);
 			setIsActionButtonLoading(false);
 			return;
