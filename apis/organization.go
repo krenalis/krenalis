@@ -35,12 +35,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	AuthenticationFailed     errors.Code = "AuthenticationFailed"
-	MemberEmailAlreadyExists errors.Code = "MemberEmailAlreadyExists"
-	CannotSendEmails         errors.Code = "CannotSendEmails"
-)
-
 var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`)
 
 // invitationTokenMaxAge represents the max age of an invitation token (3 days).

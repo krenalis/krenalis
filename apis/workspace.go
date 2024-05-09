@@ -42,24 +42,6 @@ const (
 	maxEventsListenedTo = 1000 // maximum number of processed events listened to.
 )
 
-var (
-	AlreadyConnected         errors.Code = "AlreadyConnected"
-	CurrentlyConnected       errors.Code = "CurrentlyConnected"
-	DataWarehouseFailed      errors.Code = "DataWarehouseFailed"
-	InspectionMode           errors.Code = "InspectionMode"
-	InvalidSchemaChange      errors.Code = "InvalidSchemaChange"
-	InvalidUIValues          errors.Code = "InvalidUIValues"
-	InvalidWarehouseSettings errors.Code = "InvalidWarehouseSettings"
-	InvalidWarehouseType     errors.Code = "InvalidWarehouseType"
-	MaintenanceMode          errors.Code = "MaintenanceMode"
-	NoWarehouse              errors.Code = "NoWarehouse"
-	NotConnected             errors.Code = "NotConnected"
-	OrderNotExist            errors.Code = "OrderNotExist"
-	OrderTypeNotSortable     errors.Code = "OrderTypeNotSortable"
-	PropertyNotExist         errors.Code = "PropertyNotExist"
-	TooManyListeners         errors.Code = "TooManyListeners"
-)
-
 // AddConnection adds a new connection. oAuthToken is an OAuth token returned by
 // the OAuthToken method and must be empty if the connector does not support
 // OAuth authentication.

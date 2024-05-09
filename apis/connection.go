@@ -49,28 +49,6 @@ const (
 	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
 
-const (
-	ConnectionNotExist      errors.Code = "ConnectionNotExist"
-	ConnectorNotExist       errors.Code = "ConnectorNotExist"
-	EventConnectionNotExist errors.Code = "EventConnectionNotExist"
-	EventNotExist           errors.Code = "EventNotExist"
-	EventTypeNotExist       errors.Code = "EventTypeNotExist"
-	FetchSchemaFailed       errors.Code = "FetchSchemaFailed"
-	InvalidPath             errors.Code = "InvalidPath"
-	InvalidPlaceholder      errors.Code = "InvalidPlaceholder"
-	InvalidTable            errors.Code = "InvalidTable"
-	KeyNotExist             errors.Code = "KeyNotExist"
-	LanguageNotSupported    errors.Code = "LanguageNotSupported"
-	NoColumns               errors.Code = "NoColumns"
-	NotCompatibleSchema     errors.Code = "NotCompatibleSchema"
-	ReadFileFailed          errors.Code = "ReadFileFailed"
-	SheetNotExist           errors.Code = "SheetNotExist"
-	TargetAlreadyExist      errors.Code = "TargetAlreadyExist"
-	TooManyKeys             errors.Code = "TooManyKeys"
-	UniqueKey               errors.Code = "UniqueKey"
-	WorkspaceNotExist       errors.Code = "WorkspaceNotExist"
-)
-
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
 type Strategy string
 

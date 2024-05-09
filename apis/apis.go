@@ -43,11 +43,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	TransformationFailed   errors.Code = "TransformationFailed"
-	InvitationTokenExpired errors.Code = "InvitationTokenExpired"
-)
-
 // ValidationError is the interface implemented by validation errors.
 type ValidationError interface {
 	error

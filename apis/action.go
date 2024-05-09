@@ -26,8 +26,6 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-const DatabaseFailed errors.Code = "DatabaseFailed"
-
 // Action represents an action of a connection.
 type Action struct {
 	apis                    *APIs
