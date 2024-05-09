@@ -13,11 +13,13 @@ import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 
 const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<WarehouseType>();
 	const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse>();
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
+	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [hasError, setHasError] = useState<boolean>();
 
 	const { api, handleError, selectedWorkspace } = useContext(appContext);
@@ -30,6 +32,9 @@ const DataWarehouse = () => {
 				setConnectedWarehouse(response.type);
 				setWarehouseSettings(response.settings);
 			} catch (err) {
+				setTimeout(() => {
+					setIsLoading(false);
+				}, 300);
 				if (err.code === 'NotConnected') {
 					setConnectedWarehouse(undefined);
 					return;
@@ -37,6 +42,9 @@ const DataWarehouse = () => {
 				setHasError(true);
 				handleError(err);
 			}
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 300);
 		};
 		fetchWarehouse();
 	}, [selectedWorkspace, selectedWarehouse]);
@@ -44,6 +52,20 @@ const DataWarehouse = () => {
 	// TODO: handle unexpected errors.
 	if (hasError) {
 		return null;
+	}
+
+	if (isLoading) {
+		return (
+			<SlSpinner
+				className='data-warehouse__spinner'
+				style={
+					{
+						fontSize: '3rem',
+						'--track-width': '6px',
+					} as React.CSSProperties
+				}
+			></SlSpinner>
+		);
 	}
 
 	return (

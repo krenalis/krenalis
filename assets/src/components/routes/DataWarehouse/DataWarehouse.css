@@ -3,6 +3,13 @@
 	margin: auto;
 }
 
+.data-warehouse__spinner {
+	display: block;
+	margin: auto;
+	position: relative;
+	top: 50px;
+}
+
 .warehouse-list,
 .warehouse-settings,
 .warehouse-info {
