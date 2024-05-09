@@ -124,12 +124,19 @@ const NewWorkspaceDialog = ({
 
 	const onAddWorkspace = async () => {
 		const privacyRegion = useEuropeRegion ? 'Europe' : '';
+		try {
+			validateWorkspaceName(name);
+		} catch (err) {
+			handleError(err);
+			return;
+		}
 		let id: number;
 		try {
 			const res = await api.workspaces.add(name, privacyRegion);
 			id = res.id;
 		} catch (err) {
 			handleError(err);
+			return;
 		}
 		setIsAddWorkspaceDialogOpen(false);
 		setName('');
@@ -169,6 +176,15 @@ const NewWorkspaceDialog = ({
 			</SlButton>
 		</SlDialog>
 	);
+};
+
+const validateWorkspaceName = (name: string) => {
+	const n = Array.from(name);
+	if (n.length === 0) {
+		throw new Error('Name cannot be empty');
+	} else if (n.length > 100) {
+		throw new Error('Name cannot be longer than 100 characters');
+	}
 };
 
 export default Workspaces;
