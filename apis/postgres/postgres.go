@@ -847,6 +847,11 @@ type Rows struct {
 	pgx.Rows
 }
 
+func (rs *Rows) Close() error {
+	rs.Rows.Close()
+	return nil
+}
+
 func (rs *Rows) Scan(dest ...any) error {
 	return rs.Rows.Scan(dest...)
 }

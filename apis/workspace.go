@@ -25,7 +25,6 @@ import (
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/expr"
-	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/datastore/warehouses/diffschemas"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
@@ -1340,13 +1339,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		where, _ = convertFilterToExpr(filter, ws.UsersSchema)
 	}
-	var orderProperty types.Property
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
 			return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
 		}
-		var ok bool
-		orderProperty, ok = propertyByName[order]
+		orderProperty, ok := propertyByName[order]
 		if !ok {
 			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
@@ -1356,7 +1353,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		orderProperty = types.Property{Name: "__id__", Type: types.Int(32)}
+		order = "__id__"
 	}
 	if first < 0 || first > maxInt32 {
 		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
@@ -1371,14 +1368,13 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		propsPaths = append(propsPaths, types.Path{p})
 	}
 	records, count, err := this.store.Users(ctx, datastore.UsersQuery{
-		Schema:     ws.UsersSchema,
 		Properties: propsPaths,
 		Where:      where,
-		OrderBy:    orderProperty,
+		OrderBy:    order,
 		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
-	})
+	}, ws.UsersSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -1391,7 +1387,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, 0, err
 	}
 	users := []map[string]any{}
-	err = records.For(func(user warehouses.Record) error {
+	err = records.For(func(user datastore.Record) error {
 		if user.Err != nil {
 			return err
 		}
@@ -1436,6 +1432,29 @@ func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
 		return 0, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
 	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
+}
+
+// usersIdentitiesSchema returns the "users_identities" schema.
+func (this *Workspace) usersIdentitiesSchema() types.Type {
+	// Meta properties of the "users_identities" schema.
+	props := []types.Property{
+		{Name: "__identity_key__", Type: types.Int(32)},
+		{Name: "__connection__", Type: types.Int(32)},
+		{Name: "__identity_id__", Type: types.Text()},
+		{Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
+		{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
+		{Name: "__last_change_time__", Type: types.DateTime()},
+		{Name: "__gid__", Type: types.Int(32)},
+	}
+	// Add the properties (which are non meta properties) from the "users"
+	// schema.
+	for _, p := range this.workspace.UsersSchema.Properties() {
+		if isMetaProperty(p.Name) {
+			continue
+		}
+		props = append(props, p)
+	}
+	return types.Object(props)
 }
 
 // ConnectionToAdd represents a connection to add to a workspace.
@@ -1642,23 +1661,14 @@ type identity struct {
 func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, first, limit int) ([]identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	schema := types.Object([]types.Property{
-		{Name: "__connection__", Type: types.Int(32)},
-		{Name: "__identity_id__", Type: types.Text()},
-		{Name: "__last_change_time__", Type: types.DateTime()},
-		{Name: "__gid__", Type: types.Int(32)},
-		{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
-	})
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
 		Properties: []types.Path{{"__connection__"}, {"__identity_id__"},
 			{"__anonymous_ids__"}, {"__last_change_time__"}, {"__displayed_property__"}},
 		Where:   where,
-		OrderBy: types.Property{Name: "__identity_key__", Type: types.Int(32)},
-		Schema:  schema,
+		OrderBy: "__identity_key__",
 		First:   first,
 		Limit:   limit,
-	})
+	}, this.usersIdentitiesSchema())
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -1666,9 +1676,9 @@ func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, firs
 		return nil, 0, err
 	}
 
-	// Create the identities from the records returned by the warehouse.
+	// Create the identities from the records returned by the datastore.
 	var identities []identity
-	err = records.For(func(record warehouses.Record) error {
+	err = records.For(func(record datastore.Record) error {
 		if record.Err != nil {
 			return err
 		}

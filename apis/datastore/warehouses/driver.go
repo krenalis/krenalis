@@ -166,6 +166,11 @@ type Warehouse interface {
 	// method.
 	Merge(ctx context.Context, table MergeTable, rows []map[string]any, deleted map[string]any) error
 
+	// Normalize normalizes a value v returned by the Query method.
+	// In particular, Normalize handles the values obtained by the scan on the
+	// rows returned by the Query method.
+	Normalize(name string, typ types.Type, v any, nullable bool) (any, error)
+
 	// Ping checks the connection to the data warehouse.
 	// In particular, it checks whether the connection to the data warehouse is
 	// active and, if necessary, establishes a new connection.
@@ -192,50 +197,45 @@ type Warehouse interface {
 	// Settings returns the data warehouse settings.
 	Settings() []byte
 
-	// Records returns an iterator over the results of the query.
+	// Query executes a query and returns the results as a Rows.
 	// It also returns an estimated count of the records that would be returned if
 	// First and Limit were not provided in the query.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	//
-	// As a simplification, it is currently assumed that the table schema does not
-	// change in the data warehouse during the execution of this method.
-	Records(ctx context.Context, query RecordsQuery) (Records, int, error)
+	Query(ctx context.Context, query RowQuery) (Rows, int, error)
 }
 
-// RecordsQuery represents the query for the Records method.
+// RecordsQuery represents the query for the Query method.
 
-type RecordsQuery struct {
+type RowQuery struct {
 
-	// ID is the property to return for each record in the Record.ID field.
-	ID types.Property
-
-	// Properties are the properties to return for each record in the
-	// Record.Properties field.
-	Properties []types.Path
+	// Columns are the columns to return for each row.
+	// Always contains at least one column.
+	Columns []string
 
 	// Table is the table from which the records are read.
 	Table string
 
+	// TableColumnsSchema is a schema containing the columns of the table
+	// specified in Table.
+	TableColumnsSchema types.Type
+
 	// Where, when not nil, filters the records to return.
 	Where expr.Expr
 
-	// OrderBy, when provided, is the property for which the returned records
-	// are ordered.
-	OrderBy types.Property
+	// OrderBy, when provided, is the name of the column for which the returned
+	// rows are ordered.
+	OrderBy string
 
-	// OrderDesc, when true and OrderBy is provided, orders the returned records
-	// in descending order instead of ascending order.
+	// OrderDesc, when true and OrderBy is provided, orders the returned rows in
+	// descending order instead of ascending order.
 	OrderDesc bool
 
-	// Schema contains the types of the properties in Properties and Where.
-	Schema types.Type
-
-	// First is the index of the first returned record and must be >= 0.
+	// First is the index of the first returned row and must be >= 0.
 	First int
 
-	// Limit controls how many records should be returned and must be >= 0. If
+	// Limit controls how many rows should be returned and must be >= 0. If
 	// 0, it means that there is no limit.
 	Limit int
 }
@@ -289,32 +289,13 @@ type Identity struct {
 	LastChangeTime    time.Time // in UTC.
 }
 
-// Records is the iterator interface used to iterate over the records read from
-// a data warehouse.
-type Records interface {
-
-	// Close closes the iterator. It is automatically called by the For method
-	// before returning. Close is idempotent and does not impact the result of Err.
+// Rows is the result of a database query. Its cursor starts before the first
+// row of the result set. Use Next to advance from row to row.
+type Rows interface {
 	Close() error
-
-	// Err returns any error encountered during iteration, excluding errors returned
-	// by the yield function, which may have occurred after an explicit or implicit
-	// Close.
 	Err() error
-
-	// For calls the yield function for each record (r) in the sequence. If yield
-	// returns an error, For stops and returns the error. After For completes, it
-	// is also necessary to check the result of Err for any potential errors.
-	For(yield func(Record) error) error
-}
-
-// Record represents a record.
-type Record struct {
-	ID         int            // Identifier.
-	Properties map[string]any // Properties.
-	// Err reports an error that occurred while reading the record.
-	// If Err is not nil, only the ID field is significant.
-	Err error
+	Next() bool
+	Scan(dest ...any) error
 }
 
 // IsValidIdentifier reports whether name is a valid identifier.

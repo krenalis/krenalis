@@ -14,7 +14,6 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/expr"
-	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
@@ -68,7 +67,6 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	records, err := this.store.Events(ctx, datastore.EventsQuery{
 		Properties: propsPaths,
 		Where:      expr.NewBaseExpr("gid", expr.OperatorEqual, this.id),
-		Schema:     schema,
 		Limit:      limit,
 	})
 	if err != nil {
@@ -79,7 +77,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 
 	evs := []map[string]any{}
-	err = records.For(func(record warehouses.Record) error {
+	err = records.For(func(record datastore.Record) error {
 		if record.Err != nil {
 			return err
 		}
@@ -181,11 +179,10 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 
 	// Retrieve the user traits as records.
 	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
-		Schema:     ws.UsersSchema,
 		Properties: properties,
 		Where:      expr.NewBaseExpr("__id__", expr.OperatorEqual, this.id),
 		Limit:      1,
-	})
+	}, ws.UsersSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -198,7 +195,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	var traits map[string]any
-	err = records.For(func(user warehouses.Record) error {
+	err = records.For(func(user datastore.Record) error {
 		if user.Err != nil {
 			return err
 		}

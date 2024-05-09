@@ -39,6 +39,9 @@ const (
 // BaseExpr represents an SQL expression that refers to a property, on which an
 // operator is applied, an eventually an operand, if the operator is binary.
 type BaseExpr struct {
+	// TODO(Gianluca): see the issue
+	// https://github.com/open2b/chichi/issues/727, where we revise the "where"
+	// expressions and the filters.
 	Property string
 	Operator Operator
 	Value    any // may be nil for unary expressions.

@@ -385,8 +385,8 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Records returns an iterator over the results of the query.
-func (warehouse *Snowflake) Records(ctx context.Context, query warehouses.RecordsQuery) (warehouses.Records, int, error) {
+// Query executes a query and returns the results as a Rows.
+func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery) (warehouses.Rows, int, error) {
 	panic("not implemented")
 }
 

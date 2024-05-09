@@ -19,7 +19,6 @@ import (
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/expr"
-	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
@@ -125,9 +124,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	records, _, err := store.Users(ctx, datastore.UsersQuery{
 		Properties: properties,
 		Where:      where,
-		OrderBy:    types.Property{Name: "__id__", Type: types.Int(32)},
-		Schema:     schema,
-	})
+		OrderBy:    "__id__",
+	}, action.Connection().Workspace().UsersSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
@@ -241,7 +239,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		return nil
 	}
 
-	err = records.For(func(user warehouses.Record) error {
+	err = records.For(func(user datastore.Record) error {
 		if user.Err != nil {
 			stats.Failed(statistics.ReceivedStep, user.ID, user.Err)
 			if connector.Type == state.FileStorageType {
@@ -377,7 +375,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 //
 // If the data warehouse is in maintenance mode, it returns the
 // datastore.ErrMaintenanceMode error.
-func (this *Action) resolveExternalIdentities(ctx context.Context, user warehouses.Record) ([]string, error) {
+func (this *Action) resolveExternalIdentities(ctx context.Context, user datastore.Record) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
 	if !ok {

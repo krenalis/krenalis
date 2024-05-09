@@ -17,48 +17,8 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// scanValue implements the sql.Scanner interface to read the database values.
-type scanValue struct {
-	column      types.Property
-	rows        *[][]any
-	columnIndex int
-	columnCount int
-}
-
-// newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []types.Property, rows *[][]any) []any {
-	values := make([]any, len(columns))
-	for i, c := range columns {
-		values[i] = scanValue{
-			column:      c,
-			rows:        rows,
-			columnIndex: i,
-			columnCount: len(columns),
-		}
-	}
-	return values
-}
-
-func (sv scanValue) Scan(src any) error {
-	c := sv.column
-	value, err := normalize(c.Name, c.Type, src, c.Nullable)
-	if err != nil {
-		return err
-	}
-	var row []any
-	if sv.columnIndex == 0 {
-		row = make([]any, sv.columnCount)
-		*sv.rows = append(*sv.rows, row)
-	} else {
-		row = (*sv.rows)[len(*sv.rows)-1]
-	}
-	row[sv.columnIndex] = value
-	return nil
-}
-
-// normalize normalizes a value returned by Snowflake and returns its normalized
-// form. If the value is not valid it returns an error.
-func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
+// Normalize normalizes a value v returned by the Query method.
+func (warehouse *Snowflake) Normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
 	if v == nil {
 		if !nullable {
 			return nil, fmt.Errorf("column %s is non-nullable, but Snowflake returned a NULL value", name)

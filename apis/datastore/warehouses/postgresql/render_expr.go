@@ -24,6 +24,10 @@ import (
 
 // renderExpr renders the expression expr, which refers to the properties in
 // schema, returning a fragment of a query representing a boolean expression.
+//
+// TODO(Gianluca): see the issue
+// https://github.com/open2b/chichi/issues/727, where we revise the
+// "where" expressions and the filters.
 func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 
 	s := strings.Builder{}

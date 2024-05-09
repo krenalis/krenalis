@@ -24,43 +24,89 @@ import (
 
 var errPostgreSQLInvalidData = errors.New("PostgreSQL has returned invalid data")
 
-// scanValue implements the sql.Scanner interface to read the database values.
-type scanValue struct {
-	column      types.Property
-	rows        *[][]any
-	columnIndex int
-	columnCount int
-}
-
-// newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []types.Property, rows *[][]any) []any {
-	values := make([]any, len(columns))
-	for i, c := range columns {
-		values[i] = scanValue{
-			column:      c,
-			rows:        rows,
-			columnIndex: i,
-			columnCount: len(columns),
+// Normalize normalizes a value v returned by the Query method.
+func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
+	if v == nil {
+		if !nullable {
+			return nil, fmt.Errorf("column %s is non-nullable, but PostgreSQL returned a NULL value", name)
 		}
+		return nil, nil
 	}
-	return values
-}
-
-func (sv scanValue) Scan(src any) error {
-	c := sv.column
-	value, err := normalize(c.Name, c.Type, src, c.Nullable)
-	if err != nil {
-		return err
+	switch typ.Kind() {
+	case types.BooleanKind:
+		if _, ok := v.(bool); ok {
+			return v, nil
+		}
+	case types.IntKind:
+		if v, ok := v.(int64); ok {
+			return warehouses.ValidateInt(name, typ, int(v))
+		}
+	case types.FloatKind:
+		if v, ok := v.(float64); ok {
+			return warehouses.ValidateFloat(name, typ, v)
+		}
+	case types.DecimalKind:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateDecimalString(name, typ, v)
+		}
+	case types.DateTimeKind:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateDateTime(name, v)
+		}
+	case types.DateKind:
+		if v, ok := v.(time.Time); ok {
+			return warehouses.ValidateDate(name, v)
+		}
+	case types.TimeKind:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
+		}
+	case types.UUIDKind:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateUUID(name, v)
+		}
+	case types.JSONKind:
+		// Go type is string for both the PostgreSQL types "json" and "jsonb".
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateJSONRaw(name, []byte(v))
+		}
+	case types.InetKind:
+		if v, ok := v.(string); ok {
+			// IP addresses are parsed directly here, without calling the
+			// validation function inside warehouses, because the IP addresses
+			// returned by PostgreSQL include the subnet mask, which must be
+			// removed.
+			rawIP, _, _ := strings.Cut(v, "/") // "127.0.0.1/32" -> "127.0.0.1"
+			ip, err := netip.ParseAddr(rawIP)
+			if err != nil {
+				return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an Inet type", v, name)
+			}
+			return ip.String(), nil
+		}
+	case types.TextKind:
+		if v, ok := v.(string); ok {
+			return warehouses.ValidateText(name, typ, v)
+		}
+	case types.ArrayKind:
+		v, err := scanArray(v)
+		if err != nil {
+			return nil, err
+		}
+		n := len(v)
+		if n < typ.MinItems() || n > typ.MaxItems() {
+			return nil, fmt.Errorf("data warehouse returned an array with %d items for column %s, which is not within the expected range of [%d, %d]",
+				n, name, typ.MinItems(), typ.MaxItems())
+		}
+		t := typ.Elem()
+		for i := 0; i < n; i++ {
+			v[i], err = warehouse.Normalize(name, t, v[i], false)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return v, nil
 	}
-	var row []any
-	if sv.columnIndex == 0 {
-		row = make([]any, sv.columnCount)
-		*sv.rows = append(*sv.rows, row)
-	} else {
-		row = (*sv.rows)[len(*sv.rows)-1]
-	}
-	row[sv.columnIndex] = value
-	return nil
+	return nil, fmt.Errorf("PostgreSQL has returned an unsupported type %T for column %s", v, name)
 }
 
 // scanArray scans an array and returns the values.
@@ -288,90 +334,4 @@ func scanArray(src any) ([]any, error) {
 		return nil, errors.New("unsupported type")
 	}
 	return values, nil
-}
-
-// normalize normalizes a value returned by PostgreSQL and returns its
-// normalized form. If the value is not valid it returns an error.
-func normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
-	if v == nil {
-		if !nullable {
-			return nil, fmt.Errorf("column %s is non-nullable, but PostgreSQL returned a NULL value", name)
-		}
-		return nil, nil
-	}
-	switch typ.Kind() {
-	case types.BooleanKind:
-		if _, ok := v.(bool); ok {
-			return v, nil
-		}
-	case types.IntKind:
-		if v, ok := v.(int64); ok {
-			return warehouses.ValidateInt(name, typ, int(v))
-		}
-	case types.FloatKind:
-		if v, ok := v.(float64); ok {
-			return warehouses.ValidateFloat(name, typ, v)
-		}
-	case types.DecimalKind:
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateDecimalString(name, typ, v)
-		}
-	case types.DateTimeKind:
-		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateDateTime(name, v)
-		}
-	case types.DateKind:
-		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateDate(name, v)
-		}
-	case types.TimeKind:
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
-		}
-	case types.UUIDKind:
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateUUID(name, v)
-		}
-	case types.JSONKind:
-		// Go type is string for both the PostgreSQL types "json" and "jsonb".
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateJSONRaw(name, []byte(v))
-		}
-	case types.InetKind:
-		if v, ok := v.(string); ok {
-			// IP addresses are parsed directly here, without calling the
-			// validation function inside warehouses, because the IP addresses
-			// returned by PostgreSQL include the subnet mask, which must be
-			// removed.
-			rawIP, _, _ := strings.Cut(v, "/") // "127.0.0.1/32" -> "127.0.0.1"
-			ip, err := netip.ParseAddr(rawIP)
-			if err != nil {
-				return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an Inet type", v, name)
-			}
-			return ip.String(), nil
-		}
-	case types.TextKind:
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateText(name, typ, v)
-		}
-	case types.ArrayKind:
-		v, err := scanArray(v)
-		if err != nil {
-			return nil, err
-		}
-		n := len(v)
-		if n < typ.MinItems() || n > typ.MaxItems() {
-			return nil, fmt.Errorf("data warehouse returned an array with %d items for column %s, which is not within the expected range of [%d, %d]",
-				n, name, typ.MinItems(), typ.MaxItems())
-		}
-		t := typ.Elem()
-		for i := 0; i < n; i++ {
-			v[i], err = normalize(name, t, v[i], false)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return v, nil
-	}
-	return nil, fmt.Errorf("PostgreSQL has returned an unsupported type %T for column %s", v, name)
 }

@@ -18,6 +18,7 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 )
@@ -201,22 +202,30 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, 
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
 func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, error) {
+
+	// TODO(Gianluca): check alignment / do normalization here. See the issue
+	// https://github.com/open2b/chichi/issues/728.
+
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
 		return nil, ErrMaintenanceMode
 	}
-	records, _, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
-		Table:      "events",
-		Schema:     query.Schema,
-		Properties: query.Properties,
-		ID:         types.Property{Name: "gid", Type: types.Int(32)},
-		Where:      query.Where,
-		OrderBy:    types.Property{Name: "timestamp", Type: types.DateTime()},
-		OrderDesc:  true,
-		First:      query.First,
-		Limit:      query.Limit,
-	})
-	return records, err
+	q := queryParams{
+		Table:       "events",
+		TableSchema: events.WarehouseSchemaWithGID,
+		IDColumn:    "gid",
+		Properties:  query.Properties,
+		Where:       query.Where,
+		OrderBy:     "timestamp",
+		OrderDesc:   true,
+		First:       query.First,
+		Limit:       query.Limit,
+	}
+	records, _, err := store.records(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
 }
 
 // EventsQuery represents a query for the Events method.
@@ -227,10 +236,10 @@ type EventsQuery struct {
 	Properties []types.Path
 
 	// Where, when not nil, filters the records to return.
+	// TODO(Gianluca): see the issue
+	// https://github.com/open2b/chichi/issues/727, where we revise the "where"
+	// expressions and the filters.
 	Where expr.Expr
-
-	// Schema contains the types of the properties in Properties and Where.
-	Schema types.Type
 
 	// First is the index of the first returned record and must be >= 0.
 	First int
@@ -347,32 +356,36 @@ func (store *Store) SetDestinationUser(ctx context.Context, action int, external
 	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
 }
 
-type Records = warehouses.Records
-
 // Users returns an iterator over the results of the query on the 'users' table
 // of the data warehouse and an estimated count of the users that would be
 // returned if First and Limit were not provided in the query.
 //
+// usersSchema is the schema of the "users" table.
+//
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) Users(ctx context.Context, query UsersQuery) (Records, int, error) {
+func (store *Store) Users(ctx context.Context, query UsersQuery, usersSchema types.Type) (Records, int, error) {
+
+	// TODO(Gianluca): check alignment / do normalization here. See the issue
+	// https://github.com/open2b/chichi/issues/728.
+
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
-	records, count, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
-		Table:      "users",
-		Schema:     query.Schema,
-		Properties: query.Properties,
-		ID:         types.Property{Name: "__id__", Type: types.Int(32)},
-		Where:      query.Where,
-		OrderBy:    query.OrderBy,
-		OrderDesc:  query.OrderDesc,
-		First:      query.First,
-		Limit:      query.Limit,
-	})
-	return records, count, err
+	q := queryParams{
+		Table:       "users",
+		TableSchema: usersSchema,
+		IDColumn:    "__id__",
+		Properties:  query.Properties,
+		Where:       query.Where,
+		OrderBy:     query.OrderBy,
+		OrderDesc:   query.OrderDesc,
+		First:       query.First,
+		Limit:       query.Limit,
+	}
+	return store.records(ctx, q)
 }
 
 // UsersQuery represents a query for the Users method.
@@ -383,18 +396,18 @@ type UsersQuery struct {
 	Properties []types.Path
 
 	// Where, when not nil, filters the records to return.
+	// TODO(Gianluca): see the issue
+	// https://github.com/open2b/chichi/issues/727, where we revise the "where"
+	// expressions and the filters.
 	Where expr.Expr
 
-	// OrderBy, when provided, is the property for which the returned records
-	// are ordered.
-	OrderBy types.Property
+	// OrderBy, when provided, is the name of property for which the returned
+	// records are ordered.
+	OrderBy string
 
 	// OrderDesc, when true and OrderBy is provided, orders the returned records
 	// in descending order instead of ascending order.
 	OrderDesc bool
-
-	// Schema contains the types of the properties in Properties and Where.
-	Schema types.Type
 
 	// First is the index of the first returned record and must be >= 0.
 	First int
@@ -409,26 +422,32 @@ type UsersQuery struct {
 // user identities that would be returned if First and Limit were not provided
 // in the query.
 //
+// usersIdentitiesSchema is the schema of the "users_identities" table.
+//
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQuery) (Records, int, error) {
+func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQuery, usersIdentitiesSchema types.Type) (Records, int, error) {
+
+	// TODO(Gianluca): check alignment / do normalization here. See the issue
+	// https://github.com/open2b/chichi/issues/728.
+
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
-	records, count, err := store.warehouse.Records(ctx, warehouses.RecordsQuery{
-		Table:      "users_identities",
-		Schema:     query.Schema,
-		Properties: query.Properties,
-		ID:         types.Property{Name: "__identity_key__", Type: types.Int(32)},
-		Where:      query.Where,
-		OrderBy:    query.OrderBy,
-		OrderDesc:  query.OrderDesc,
-		First:      query.First,
-		Limit:      query.Limit,
-	})
-	return records, count, err
+	q := queryParams{
+		Table:       "users_identities",
+		TableSchema: usersIdentitiesSchema,
+		IDColumn:    "__identity_key__",
+		Properties:  query.Properties,
+		Where:       query.Where,
+		OrderBy:     query.OrderBy,
+		OrderDesc:   query.OrderDesc,
+		First:       query.First,
+		Limit:       query.Limit,
+	}
+	return store.records(ctx, q)
 }
 
 // UsersIdentitiesQuery represents a query for the Users method.
@@ -439,18 +458,18 @@ type UsersIdentitiesQuery struct {
 	Properties []types.Path
 
 	// Where, when not nil, filters the records to return.
+	// TODO(Gianluca): see the issue
+	// https://github.com/open2b/chichi/issues/727, where we revise the "where"
+	// expressions and the filters.
 	Where expr.Expr
 
-	// OrderBy, when provided, is the property for which the returned records
-	// are ordered.
-	OrderBy types.Property
+	// OrderBy, when provided, is the name of property for which the returned
+	// records are ordered.
+	OrderBy string
 
 	// OrderDesc, when true and OrderBy is provided, orders the returned records
 	// in descending order instead of ascending order.
 	OrderDesc bool
-
-	// Schema contains the types of the properties in Properties and Where.
-	Schema types.Type
 
 	// First is the index of the first returned record and must be >= 0.
 	First int
