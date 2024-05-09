@@ -6,7 +6,7 @@ In this section you will find indications and instructions for getting started w
 
 First of all, you will need:
 
-- PostgreSQL 15 or higher
+- PostgreSQL 13 or higher
 - Linux, Unix, OSX or Windows
 - A data warehouse (currently only PostgreSQL)
 
