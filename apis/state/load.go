@@ -9,6 +9,7 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -264,6 +265,9 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.organization = workspace.organization
 				c.workspace = workspace
 				c.connector = state.connectors[connector]
+				if c.connector == nil {
+					return fmt.Errorf("the %s connector is required but not registered. (Possibly forgotten import?)", connector)
+				}
 				c.actions = map[int]*Action{}
 				if resource > 0 {
 					c.resource = state.resources[resource]
@@ -343,6 +347,9 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					c := state.connections[connectionID]
 					if connector != nil {
 						action.connector = state.connectors[*connector]
+						if action.connector == nil {
+							return fmt.Errorf("the %s connector is required but not registered. (Possibly forgotten import?)", *connector)
+						}
 					}
 					action.mu = new(sync.Mutex)
 					action.connection = c
