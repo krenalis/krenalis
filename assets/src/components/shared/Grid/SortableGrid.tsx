@@ -94,69 +94,44 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 		for (const [i, row] of rows.entries()) {
 			const className = getChildIndexClassname(i, rows.length);
 			if (Array.isArray(row)) {
-				const r = row as NestedGridRows;
-				// TODO(Gianluca): see https://github.com/open2b/chichi/issues/723.
-				// if (row[0].isSortable) {
-				// 	sortableRowComponents.push({
-				// 		id: row[0].dragKey,
-				// 		row: (
-				// 			<GridNestedRows
-				// 				key={i}
-				// 				rows={r}
-				// 				columns={columns}
-				// 				className={`gridNestedRows ${className}`}
-				// 				nesting={1}
-				// 			/>
-				// 		),
-				// 	});
-				// } else {
-				// 	rowComponents.push(
-				// 		<GridNestedRows
-				// 			key={i}
-				// 			rows={r}
-				// 			columns={columns}
-				// 			className={`gridNestedRows ${className}`}
-				// 			nesting={1}
-				// 		/>,
-				// 	);
-				// }
-				sortableRowComponents.push({
-					id: row[0].dragKey,
-					row: (
-						<GridNestedRows
-							key={i}
-							rows={r}
-							columns={columns}
-							className={`gridNestedRows ${className}`}
-							nesting={1}
-						/>
-					),
-				});
+				const component = (
+					<GridNestedRows
+						key={i}
+						rows={row as NestedGridRows}
+						columns={columns}
+						className={`gridNestedRows ${className}`}
+						nesting={1}
+					/>
+				);
+				const isSortable = row[0].dragKey != null && row[0].dragKey !== '';
+				if (isSortable) {
+					sortableRowComponents.push({
+						id: row[0].dragKey,
+						row: component,
+					});
+				} else {
+					rowComponents.push(component);
+				}
 				continue;
 			}
-			const r = row as StandardGridRow;
 			const component = (
 				<GridRow
 					key={i}
-					row={r}
+					row={row as StandardGridRow}
 					columns={columns}
 					className={`gridRow${className ? ' ' + className : ''}`}
 					id={row.id}
 				/>
 			);
-			// TODO(Gianluca): see https://github.com/open2b/chichi/issues/723.
-			// if (row.isSortable) {
-			// 	sortableRowComponents.push({
-			// 		id: row.dragKey,
-			// 		row: component,
-			// 	});
-			// } else {
-			// 	rowComponents.push(component);
-			// }
-			sortableRowComponents.push({
-				id: row.dragKey,
-				row: component,
-			});
+			const isSortable = row.dragKey != null && row.dragKey !== '';
+			if (isSortable) {
+				sortableRowComponents.push({
+					id: row.dragKey,
+					row: component,
+				});
+			} else {
+				rowComponents.push(component);
+			}
 		}
 		return { rowComponents, sortableRowComponents };
 	}, [rows]);

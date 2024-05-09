@@ -418,7 +418,6 @@ const buildRow = (
 	}
 	return {
 		cells: [property.name, typeCell, nullableCell, property.label, buttons],
-		isSortable: property.isEditable ? property.isEditable : false,
 		dragKey: propertyKey,
 		id: propertyKey,
 	};
