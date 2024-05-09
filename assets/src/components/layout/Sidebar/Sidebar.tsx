@@ -239,7 +239,7 @@ const WorkspaceSelector = ({
 				onClick={() => onWorkspaceChange(s.ID)}
 			>
 				<SlIcon name='check-lg' />
-				{s.Name}
+				<div className='workspaceDialogOptionName'>{s.Name}</div>
 			</div>,
 		);
 	}

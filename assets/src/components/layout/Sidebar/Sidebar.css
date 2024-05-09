@@ -69,6 +69,7 @@
 	flex-flow: column;
 	height: 100%;
 	justify-content: center;
+	max-width: 80%;
 }
 
 .sidebar .workspaceSelectorLabel {
@@ -78,6 +79,8 @@
 .sidebar .workspaceSelectorValue {
 	font-size: 14px;
 	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .sidebar .workspaceDialog {
@@ -143,6 +146,12 @@
 .sidebar .workspaceDialog .workspaceDialogOption.selected sl-icon {
 	visibility: visible;
 	opacity: 1;
+}
+
+.sidebar .workspaceDialog .workspaceDialogOptionName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 90%;
 }
 
 .sidebar .workspaceSelector.open .workspaceSelectorArrow {
