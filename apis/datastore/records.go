@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
@@ -98,11 +97,7 @@ func (store *Store) records(ctx context.Context, query queryParams) (Records, in
 	}
 
 	// Determine the columns to query.
-	columns := warehouses.PropertiesToColumns(properties)
-	var columnNames []string
-	for _, c := range columns {
-		columnNames = append(columnNames, c.Name)
-	}
+	columns := propertiesToColumns(properties)
 
 	// If the ID is not already present in the columns, add it.
 	hasID := false
@@ -118,8 +113,7 @@ func (store *Store) records(ctx context.Context, query queryParams) (Records, in
 		if !ok {
 			return nil, 0, fmt.Errorf("ID column %q not found in the schema of the table %q", query.IDColumn, query.Table)
 		}
-		columns = append([]types.Property{id}, columns...)
-		columnNames = append([]string{query.IDColumn}, columnNames...)
+		columns = append([]warehouses.Column{{Name: id.Name, Type: id.Type, Nullable: id.Nullable}}, columns...)
 		properties = append([]types.Property{id}, properties...)
 		// Ensure that the ID is subsequently removed from the properties, as it
 		// is only required by the driver to determine the ID and should not be
@@ -127,12 +121,7 @@ func (store *Store) records(ctx context.Context, query queryParams) (Records, in
 		removeIDFromProps = true
 	}
 
-	// Transform the properties of the table schema to columns.
-	tableColumnsSchema := types.Object(
-		warehouses.PropertiesToColumns(query.TableSchema.Properties()),
-	)
-
-	var where expr.Expr
+	var where warehouses.Expr
 	if query.Filter != nil {
 		var err error
 		where, err = convertFilterToExpr(query.Filter, query.TableSchema)
@@ -141,15 +130,23 @@ func (store *Store) records(ctx context.Context, query queryParams) (Records, in
 		}
 	}
 
+	var orderBy warehouses.Column
+	if query.OrderBy != "" {
+		p, ok := query.TableSchema.Property(query.OrderBy)
+		if !ok {
+			return nil, 0, fmt.Errorf("orderBy property %s does not exist", query.OrderBy)
+		}
+		orderBy = warehouses.Column{Name: p.Name, Type: p.Type, Nullable: p.Nullable}
+	}
+
 	rows, count, err := store.warehouse.Query(ctx, warehouses.RowQuery{
-		Columns:            columnNames,
-		Table:              query.Table,
-		TableColumnsSchema: tableColumnsSchema,
-		Where:              where,
-		OrderBy:            query.OrderBy,
-		OrderDesc:          query.OrderDesc,
-		First:              query.First,
-		Limit:              query.Limit,
+		Columns:   columns,
+		Table:     query.Table,
+		Where:     where,
+		OrderBy:   orderBy,
+		OrderDesc: query.OrderDesc,
+		First:     query.First,
+		Limit:     query.Limit,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -167,7 +164,7 @@ func (store *Store) records(ctx context.Context, query queryParams) (Records, in
 var _ Records = (*records)(nil)
 
 type records struct {
-	columns           []types.Property
+	columns           []warehouses.Column
 	properties        []types.Property
 	rows              warehouses.Rows
 	id                string
@@ -181,7 +178,7 @@ type records struct {
 // newRecords return a new records.
 // It could change the columns slice and the column names.
 // id is the name of the property used as Record.ID.
-func newRecords(rows warehouses.Rows, columns, properties []types.Property, id string, normalize NormalizeFunc, removeIDFromProps bool) (*records, error) {
+func newRecords(rows warehouses.Rows, columns []warehouses.Column, properties []types.Property, id string, normalize NormalizeFunc, removeIDFromProps bool) (*records, error) {
 	records := records{
 		columns:           columns,
 		properties:        properties,
@@ -248,14 +245,14 @@ type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any,
 
 // scanValue implements the sql.Scanner interface to read the database values.
 type scanValue struct {
-	columns   []types.Property
+	columns   []warehouses.Column
 	row       []any
 	normalize NormalizeFunc
 	index     int
 }
 
 // newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []types.Property, row []any, normalize NormalizeFunc) []any {
+func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFunc) []any {
 	values := make([]any, len(columns))
 	value := &scanValue{
 		columns:   columns,

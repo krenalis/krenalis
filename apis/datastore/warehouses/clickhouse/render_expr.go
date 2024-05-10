@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
 
@@ -22,17 +21,17 @@ import (
 
 // renderExpr renders the expression expr, which refers to the properties in
 // schema, returning a fragment of a query representing a boolean expression.
-func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
+func renderExpr(exp warehouses.Expr) (string, error) {
 
 	s := strings.Builder{}
 
 	// Handle MultiExpr expression.
-	if multiExpr, ok := exp.(*expr.MultiExpr); ok {
+	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
 		var op string
 		switch multiExpr.Operator {
-		case expr.LogicalOperatorAnd:
+		case warehouses.LogicalOperatorAnd:
 			op = " AND "
-		case expr.LogicalOperatorOr:
+		case warehouses.LogicalOperatorOr:
 			op = " OR "
 		default:
 			return "", fmt.Errorf("invalid operator %q", multiExpr.Operator)
@@ -41,11 +40,11 @@ func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 			if i > 0 {
 				s.WriteString(op)
 			}
-			_, isMultiExpr := operand.(*expr.MultiExpr)
+			_, isMultiExpr := operand.(*warehouses.MultiExpr)
 			if isMultiExpr {
 				s.WriteByte('(')
 			}
-			e, err := renderExpr(schema, operand)
+			e, err := renderExpr(operand)
 			if err != nil {
 				return "", err
 			}
@@ -58,54 +57,45 @@ func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 	}
 
 	// Handle BaseExpr expressions.
-	baseExpr := exp.(*expr.BaseExpr)
+	baseExpr := exp.(*warehouses.BaseExpr)
+	c := baseExpr.Column
 
 	// Validate the column name.
-	if !warehouses.IsValidIdentifier(baseExpr.Column) {
-		return "", fmt.Errorf("invalid property name %q", baseExpr.Column)
-	}
-
-	column, err := warehouses.PropertyPathToColumn(schema, baseExpr.Column)
-	if err != nil {
-		return "", fmt.Errorf("property %q not found", baseExpr.Column)
+	if !warehouses.IsValidIdentifier(c.Name) {
+		return "", fmt.Errorf("invalid property name %q", c.Name)
 	}
 
 	// Render the column identifier.
 	s.WriteByte('`')
-	s.WriteString(column.Name)
+	s.WriteString(c.Name)
 	s.WriteString("` ")
 
 	// Render the operator and, if necessary, the value.
 	switch baseExpr.Operator {
 	case
-		expr.OperatorEqual,
-		expr.OperatorNotEqual,
-		expr.OperatorGreater,
-		expr.OperatorGreaterEqual,
-		expr.OperatorLess,
-		expr.OperatorLessEqual:
+		warehouses.OperatorEqual,
+		warehouses.OperatorNotEqual,
+		warehouses.OperatorGreater,
+		warehouses.OperatorGreaterEqual,
+		warehouses.OperatorLess,
+		warehouses.OperatorLessEqual:
 
 		switch baseExpr.Operator {
-		case expr.OperatorEqual:
+		case warehouses.OperatorEqual:
 			s.WriteString("= ")
-		case expr.OperatorNotEqual:
+		case warehouses.OperatorNotEqual:
 			s.WriteString("<> ")
-		case expr.OperatorGreater:
+		case warehouses.OperatorGreater:
 			s.WriteString("> ")
-		case expr.OperatorGreaterEqual:
+		case warehouses.OperatorGreaterEqual:
 			s.WriteString(">= ")
-		case expr.OperatorLess:
+		case warehouses.OperatorLess:
 			s.WriteString("< ")
-		case expr.OperatorLessEqual:
+		case warehouses.OperatorLessEqual:
 			s.WriteString("<= ")
 		}
 
-		property, err := schema.PropertyByPath(types.Path{baseExpr.Column})
-		if err != nil {
-			return "", fmt.Errorf("property %q not found", baseExpr.Column)
-		}
-
-		switch k := property.Type.Kind(); k {
+		switch k := c.Type.Kind(); k {
 		case types.BooleanKind:
 			b, ok := baseExpr.Value.(bool)
 			if !ok {
@@ -175,9 +165,9 @@ func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 		default:
 			return "", fmt.Errorf("unexpected column with type %q", k)
 		}
-	case expr.OperatorIsNull:
+	case warehouses.OperatorIsNull:
 		s.WriteString("IS NULL")
-	case expr.OperatorIsNotNull:
+	case warehouses.OperatorIsNotNull:
 		s.WriteString("IS NOT NULL")
 	default:
 		return "", fmt.Errorf("invalid operator %q", baseExpr.Operator)

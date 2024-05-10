@@ -27,7 +27,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	// Build the WHERE expression, if necessary.
 	var whereExpr string
 	if query.Where != nil {
-		whereExpr, err = renderExpr(query.TableColumnsSchema, query.Where)
+		whereExpr, err = renderExpr(query.Where)
 		if err != nil {
 			return nil, 0, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
@@ -56,7 +56,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 			b.WriteString(", ")
 		}
 		b.WriteByte('"')
-		b.WriteString(c)
+		b.WriteString(c.Name)
 		b.WriteByte('"')
 	}
 	b.WriteString(` FROM "`)
@@ -67,9 +67,9 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		b.WriteString(whereExpr)
 	}
 
-	if query.OrderBy != "" {
+	if query.OrderBy.Name != "" {
 		b.WriteString(" ORDER BY \"")
-		b.WriteString(query.OrderBy)
+		b.WriteString(query.OrderBy.Name)
 		b.WriteRune('"')
 		if query.OrderDesc {
 			b.WriteString(" DESC")

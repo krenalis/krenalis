@@ -17,7 +17,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/types"
 
@@ -212,21 +211,17 @@ type RowQuery struct {
 
 	// Columns are the columns to return for each row.
 	// Always contains at least one column.
-	Columns []string
+	Columns []Column
 
 	// Table is the table from which the records are read.
 	Table string
 
-	// TableColumnsSchema is a schema containing the columns of the table
-	// specified in Table.
-	TableColumnsSchema types.Type
-
 	// Where, when not nil, filters the records to return.
-	Where expr.Expr
+	Where Expr
 
-	// OrderBy, when provided, is the name of the column for which the returned
-	// rows are ordered.
-	OrderBy string
+	// OrderBy, when provided, is the column for which the returned rows are
+	// ordered.
+	OrderBy Column
 
 	// OrderDesc, when true and OrderBy is provided, orders the returned rows in
 	// descending order instead of ascending order.
@@ -238,6 +233,13 @@ type RowQuery struct {
 	// Limit controls how many rows should be returned and must be >= 0. If
 	// 0, it means that there is no limit.
 	Limit int
+}
+
+// Column represents a table column.
+type Column struct {
+	Name     string
+	Type     types.Type
+	Nullable bool
 }
 
 // IdentitiesAckFunc is the function called when the writing of one or more user

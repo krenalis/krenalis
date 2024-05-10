@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package datastore
 
 import (
 	"testing"
@@ -89,7 +89,7 @@ func TestPropertiesToColumns(t *testing.T) {
 		{Name: "k_a", Type: typ},
 	}
 
-	got := PropertiesToColumns(properties)
+	got := propertiesToColumns(properties)
 	if len(got) != len(columns) {
 		t.Fatalf("expected %d columns, got %d", len(columns), len(got))
 	}

@@ -11,92 +11,85 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open2b/chichi/apis/datastore/expr"
+	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
 
 	"github.com/shopspring/decimal"
 )
 
 func Test_renderExpr(t *testing.T) {
-	schema := types.Object([]types.Property{
-		{Name: "id", Type: types.Text()},
-		{Name: "count", Type: types.Decimal(5, 0)},
-		{Name: "weight", Type: types.Float(32)},
-		{Name: "timestamp", Type: types.DateTime()},
-		{Name: "values", Type: types.JSON()},
-	})
 	cases := []struct {
-		expr    expr.Expr
+		expr    warehouses.Expr
 		query   string
 		invalid bool
 	}{
 		{
-			expr:  expr.NewBaseExpr("id", expr.OperatorEqual, "qwerty"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "qwerty"),
 			query: `"id" = 'qwerty'`,
 		},
 		{
-			expr:  expr.NewBaseExpr("values", expr.OperatorEqual, map[string]any{"foo": 2, "boo": true}),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OperatorEqual, map[string]any{"foo": 2, "boo": true}),
 			query: `"values" = PARSE_JSON('{"boo":true,"foo":2}')`,
 		},
 		{
-			expr:  expr.NewBaseExpr("weight", expr.OperatorGreaterEqual, 6.5),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OperatorGreaterEqual, 6.5),
 			query: `"weight" >= 6.5`,
 		},
 		{
-			expr:  expr.NewBaseExpr("id", expr.OperatorIsNull, nil),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorIsNull, nil),
 			query: `"id" IS NULL`,
 		},
 		{
-			expr:  expr.NewBaseExpr("id", expr.OperatorIsNotNull, nil),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorIsNotNull, nil),
 			query: `"id" IS NOT NULL`,
 		},
 		{
-			expr:  expr.NewBaseExpr("count", expr.OperatorGreaterEqual, decimal.NewFromInt(3289)),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorGreaterEqual, decimal.NewFromInt(3289)),
 			query: `"count" >= 3289`,
 		},
 		{
-			expr:  expr.NewBaseExpr("timestamp", expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
 			query: `"timestamp" < '1900-01-02 23:32:11.940253'`,
 		},
 		{
-			expr: expr.NewMultiExpr(
-				expr.LogicalOperatorAnd,
-				[]expr.Expr{
-					expr.NewBaseExpr("timestamp", expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC)),
+			expr: warehouses.NewMultiExpr(
+				warehouses.LogicalOperatorAnd,
+				[]warehouses.Expr{
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC)),
 				}),
 			query: `"timestamp" < '1900-01-02 23:32:11.87'`,
 		},
 		{
-			expr: expr.NewMultiExpr(
-				expr.LogicalOperatorAnd,
-				[]expr.Expr{
-					expr.NewBaseExpr("timestamp", expr.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					expr.NewBaseExpr("timestamp", expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+			expr: warehouses.NewMultiExpr(
+				warehouses.LogicalOperatorAnd,
+				[]warehouses.Expr{
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: `"timestamp" > '1700-01-02 23:32:11' AND "timestamp" < '1900-01-02 23:32:11'`,
 		},
 		{
-			expr: expr.NewMultiExpr(
-				expr.LogicalOperatorOr,
-				[]expr.Expr{
-					expr.NewBaseExpr("timestamp", expr.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					expr.NewBaseExpr("timestamp", expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+			expr: warehouses.NewMultiExpr(
+				warehouses.LogicalOperatorOr,
+				[]warehouses.Expr{
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: `"timestamp" > '1700-01-02 23:32:11' OR "timestamp" < '1900-01-02 23:32:11'`,
 		},
 		{
-			expr: expr.NewMultiExpr(
-				expr.LogicalOperatorAnd,
-				[]expr.Expr{
-					expr.NewMultiExpr(expr.LogicalOperatorOr, []expr.Expr{
-						expr.NewBaseExpr("id", expr.OperatorEqual, "abc_42"),
-						expr.NewBaseExpr("id", expr.OperatorEqual, "abc_50"),
-						expr.NewBaseExpr("id", expr.OperatorEqual, "abc_60"),
+			expr: warehouses.NewMultiExpr(
+				warehouses.LogicalOperatorAnd,
+				[]warehouses.Expr{
+					warehouses.NewMultiExpr(warehouses.LogicalOperatorOr, []warehouses.Expr{
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "abc_42"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "abc_50"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "abc_60"),
 					}),
-					expr.NewMultiExpr(expr.LogicalOperatorOr, []expr.Expr{
-						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.NewFromInt(100)),
-						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.NewFromInt(200)),
-						expr.NewBaseExpr("count", expr.OperatorEqual, decimal.NewFromInt(300)),
+					warehouses.NewMultiExpr(warehouses.LogicalOperatorOr, []warehouses.Expr{
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorEqual, decimal.NewFromInt(100)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorEqual, decimal.NewFromInt(200)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorEqual, decimal.NewFromInt(300)),
 					}),
 				}),
 			query: `("id" = 'abc_42' OR "id" = 'abc_50' OR "id" = 'abc_60') AND ("count" = 100 OR "count" = 200 OR "count" = 300)`,
@@ -104,7 +97,7 @@ func Test_renderExpr(t *testing.T) {
 	}
 	for _, cas := range cases {
 		t.Run("", func(t *testing.T) {
-			gotQuery, gotErr := renderExpr(schema, cas.expr)
+			gotQuery, gotErr := renderExpr(cas.expr)
 			if cas.invalid {
 				if gotErr == nil {
 					t.Fatalf("expecting invalid, got query %q", gotQuery)

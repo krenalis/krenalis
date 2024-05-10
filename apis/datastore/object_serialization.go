@@ -5,24 +5,29 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package datastore
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
 )
 
-// PropertiesToColumns returns the columns of properties.
-func PropertiesToColumns(properties []types.Property) []types.Property {
-	columns := make([]types.Property, 0, len(properties))
+// propertiesToColumns returns the columns of properties.
+func propertiesToColumns(properties []types.Property) []warehouses.Column {
+	columns := make([]warehouses.Column, 0, len(properties))
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range PropertiesToColumns(p.Type.Properties()) {
+			for _, column := range propertiesToColumns(p.Type.Properties()) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}
 			continue
 		}
-		columns = append(columns, types.Property{
+		columns = append(columns, warehouses.Column{
 			Name:     p.Name,
 			Type:     p.Type,
 			Nullable: p.Nullable,
@@ -31,19 +36,32 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	return columns
 }
 
-// DeserializeRowAsMap deserializes a row returned by a data warehouse as map.
-// It returns the deserialized row and the remaining row values to read.
-func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
-	values := make(map[string]any, len(properties))
-	for _, p := range properties {
-		if p.Type.Kind() == types.ObjectKind {
-			values[p.Name], row = DeserializeRowAsMap(p.Type.Properties(), row)
-			continue
+// PropertyPathToColumn returns the column for the property path in schema.
+func PropertyPathToColumn(schema types.Type, path string) (column types.Property, err error) {
+	typ := schema
+	var name strings.Builder
+	parts := strings.Split(path, ".")
+	for i, part := range parts {
+		if typ.Kind() != types.ObjectKind {
+			return types.Property{}, errors.New("path refers to a non-object type")
 		}
-		values[p.Name] = row[0]
-		row = row[1:]
+		prop, ok := typ.Property(part)
+		if !ok {
+			return types.Property{}, fmt.Errorf("property %q does not exist", part)
+		}
+		typ = prop.Type
+		if i == 0 {
+			name.WriteString(prop.Name)
+		} else {
+			name.WriteByte('_')
+			name.WriteString(prop.Name)
+		}
 	}
-	return values, row
+	property := types.Property{
+		Name: name.String(),
+		Type: typ,
+	}
+	return property, nil
 }
 
 // SerializeRow serializes a row to be passed to a data warehouse by flattening

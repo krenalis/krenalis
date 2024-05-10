@@ -19,7 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
@@ -520,25 +519,25 @@ func CanBeIdentifier(t types.Type) bool {
 	}
 }
 
-// convertFilterToExpr converts a filter to an expr.Expr expression.
+// convertFilterToExpr converts a filter to a warehouses.Expr expression.
 // schema defines the types of properties referenced within the filter.
-func convertFilterToExpr(filter *state.Filter, schema types.Type) (expr.Expr, error) {
-	op := expr.LogicalOperatorAnd
+func convertFilterToExpr(filter *state.Filter, schema types.Type) (warehouses.Expr, error) {
+	op := warehouses.LogicalOperatorAnd
 	if filter.Logical == "any" {
-		op = expr.LogicalOperatorOr
+		op = warehouses.LogicalOperatorOr
 	}
-	exp := expr.NewMultiExpr(op, make([]expr.Expr, len(filter.Conditions)))
+	exp := warehouses.NewMultiExpr(op, make([]warehouses.Expr, len(filter.Conditions)))
 	for i, cond := range filter.Conditions {
 		property, err := schema.PropertyByPath(strings.Split(cond.Property, "."))
 		if err != nil {
 			return nil, fmt.Errorf("property path %s does not exist", cond.Property)
 		}
-		var op expr.Operator
+		var op warehouses.Operator
 		switch cond.Operator {
 		case "is":
-			op = expr.OperatorEqual
+			op = warehouses.OperatorEqual
 		case "is not":
-			op = expr.OperatorNotEqual
+			op = warehouses.OperatorNotEqual
 		default:
 			return nil, errors.New("invalid operator")
 		}
@@ -577,7 +576,8 @@ func convertFilterToExpr(filter *state.Filter, schema types.Type) (expr.Expr, er
 		default:
 			return nil, fmt.Errorf("unexpected type %s", property.Type)
 		}
-		exp.Operands[i] = expr.NewBaseExpr(cond.Property, op, value)
+		column := warehouses.Column{Name: cond.Property, Type: property.Type, Nullable: property.Nullable}
+		exp.Operands[i] = warehouses.NewBaseExpr(column, op, value)
 	}
 	return exp, nil
 }

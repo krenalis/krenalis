@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package expr
+package warehouses
 
 // Expr represents a subset of SQL expressions.
 type Expr interface {
@@ -39,7 +39,7 @@ const (
 // BaseExpr represents an SQL expression that refers to a property, on which an
 // operator is applied, an eventually an operand, if the operator is binary.
 type BaseExpr struct {
-	Column   string
+	Column   Column
 	Operator Operator
 	Value    any // may be nil for unary expressions.
 }
@@ -49,7 +49,7 @@ func (*BaseExpr) expr() {}
 // NewBaseExpr returns a new BaseExpr expression that applies to the given
 // column with the given operator and value.
 // If the operator is unary, value should be nil.
-func NewBaseExpr(column string, operator Operator, value any) *BaseExpr {
+func NewBaseExpr(column Column, operator Operator, value any) *BaseExpr {
 	return &BaseExpr{Column: column, Operator: operator, Value: value}
 }
 
