@@ -23,7 +23,7 @@ address {
 }
 ```
 
-Properties with type Object are transformed into consecutive columns starting with the same prefix, for example:
+Properties with type Object are transformed into columns starting with the same prefix, for example:
 
 ```
 address_street_name
