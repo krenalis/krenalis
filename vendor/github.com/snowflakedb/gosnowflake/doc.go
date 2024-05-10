@@ -147,6 +147,26 @@ Session-level parameters can also be set by using the SQL command "ALTER SESSION
 
 Alternatively, use OpenWithConfig() function to create a database handle with the specified Config.
 
+# Connection Config
+You can also connect to your warehouse using the connection config. The dbSql library states that when you want to take advantage of driver-specific connection features that aren’t
+available in a connection string. Each driver supports its own set of connection properties, often providing ways to customize the connection request specific to the DBMS
+For example:
+
+	c := &gosnowflake.Config{
+		~your credentials go here~
+	}
+	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, *c)
+	db := sql.OpenDB(connector)
+
+If you are using this method, you dont need to pass a driver name to specify the driver type in which
+you are looking to connect. Since the driver name is not needed, you can optionally bypass driver registration
+on startup. To do this, set `GOSNOWFLAKE_SKIP_REGISTERATION` in your environment. This is useful you wish to
+register multiple verions of the driver.
+
+Note: GOSNOWFLAKE_SKIP_REGISTERATION should not be used if sql.Open() is used as the method
+to connect to the server, as sql.Open will require registration so it can map the driver name
+to the driver type, which in this case is "snowflake" and SnowflakeDriver{}.
+
 # Proxy
 
 The Go Snowflake Driver honors the environment variables HTTP_PROXY, HTTPS_PROXY and NO_PROXY for the forward proxy setting.
@@ -371,11 +391,13 @@ data types. The columns are:
     -------------------------------------------------------------------------------------------------------------------
     BINARY               | []byte                                      | string                 | []byte
     -------------------------------------------------------------------------------------------------------------------
-    ARRAY                | string                                      | string
+    ARRAY [6]            | string / array                              | string / array
     -------------------------------------------------------------------------------------------------------------------
-    OBJECT               | string                                      | string
+    OBJECT [6]           | string / struct                             | string / struct
     -------------------------------------------------------------------------------------------------------------------
     VARIANT              | string                                      | string
+    -------------------------------------------------------------------------------------------------------------------
+    MAP                  | map                                         | map
 
     [1] Converting from a higher precision data type to a lower precision data type via the snowflakeRows.Scan()
     method can lose low bits (lose precision), lose high bits (completely change the value), or result in error.
@@ -392,7 +414,73 @@ data types. The columns are:
     [5] You cannot directly Scan() into the alternative data types via snowflakeRows.Scan(), but can convert to
     those data types by using .Float32()/.String()/.Float64() methods. For an example, see below.
 
+    [6] Arrays and objects can be either semistructured or structured, see more info in section below.
+
 Note: SQL NULL values are converted to Golang nil values, and vice-versa.
+
+## Semistructured and structured types
+
+Snowflake supports two flavours of "structured data" - semistructured and structured.
+Semistructured types are variants, objects and arrays without schema.
+When data is fetched, it's represented as strings and the client is responsible for its interpretation.
+Example table definition:
+
+	CREATE TABLE semistructured (v VARIANT, o OBJECT, a ARRAY)
+
+The data not have any corresponding schema, so values in table may be slightly different.
+
+### Structured types
+
+Structured types differentiate from semistructured types by having specific schema.
+In all rows of the table, values must conform to this schema.
+Example table definition:
+
+	CREATE TABLE structured (o OBJECT(s VARCHAR, i INTEGER), a ARRAY(INTEGER), m MAP(VARCHAR, BOOLEAN))
+
+#### Retrieving structured objects
+
+1. Create a struct, example:
+
+	type simpleObject struct {
+		s string
+		i int32
+	}
+
+2. Implement sql.Scanner interface:
+
+	func (so *simpleObject) Scan(val any) error {
+		st := val.(StructuredObject)
+		var err error
+		if so.s, err = st.GetString("s"); err != nil {
+			return err
+		}
+		if so.i, err = st.GetInt32("i"); err != nil {
+			return err
+		}
+		return nil
+	}
+
+3. Use it in regular scan:
+
+	var res simpleObject
+	err := rows.Scan(&res)
+
+See StructuredObject for all available operations including null support, embedding nested structs, etc.
+
+#### Retrieving structured arrays
+
+Retrieving array of simple types works exactly the same like normal values - using Scan function.
+If you want to scan array of structs, you have to use a helper function ScanArrayOfScanners:
+
+	var res []*simpleObject
+	err := rows.Scan(ScanArrayOfScanners(&res))
+
+#### Retrieving structured maps
+
+# It is very similar to retrieving arrays:
+
+	var res map[string]*simpleObject
+	err := rows.Scan(ScanMapOfScanners(&res))
 
 The following example shows how to retrieve very large values using the math/big
 package. This example retrieves a large INTEGER value to an interface and then

@@ -35,7 +35,7 @@ func (d SnowflakeDriver) OpenWithConfig(ctx context.Context, config Config) (dri
 	if config.Tracing != "" {
 		logger.SetLogLevel(config.Tracing)
 	}
-	logger.Info("OpenWithConfig")
+	logger.WithContext(ctx).Info("OpenWithConfig")
 	sc, err := buildSnowflakeConn(ctx, config)
 	if err != nil {
 		return nil, err
@@ -55,6 +55,16 @@ func runningOnGithubAction() bool {
 	return os.Getenv("GITHUB_ACTIONS") != ""
 }
 
+// GOSNOWFLAKE_SKIP_REGISTERATION is an environment variable which can be set client side to
+// bypass dbSql driver registration. This should not be used if sql.Open() is used as the method
+// to connect to the server, as sql.Open will require registration so it can map the driver name
+// to the driver type, which in this case is "snowflake" and SnowflakeDriver{}. If you wish to call
+// into multiple versions of the driver from one client, this is needed because calling register
+// twice with the same name on init will cause the driver to panic.
+func skipRegisteration() bool {
+	return os.Getenv("GOSNOWFLAKE_SKIP_REGISTERATION") != ""
+}
+
 var logger = CreateDefaultLogger()
 
 func init() {
@@ -66,7 +76,9 @@ func init() {
 			logger.Warn(logMsg)
 		}
 	}
-	sql.Register("snowflake", &SnowflakeDriver{})
+	if !skipRegisteration() {
+		sql.Register("snowflake", &SnowflakeDriver{})
+	}
 	logger.SetLogLevel("error")
 	if runningOnGithubAction() {
 		logger.SetLogLevel("fatal")

@@ -30,6 +30,7 @@ func (sr *snowflakeRestful) processAsync(
 		rows.queryID = respd.Data.QueryID
 		rows.status = QueryStatusInProgress
 		rows.errChannel = make(chan error)
+		rows.ctx = ctx
 		respd.Data.AsyncRows = rows
 	default:
 		return respd, nil
@@ -101,7 +102,6 @@ func (sr *snowflakeRestful) getAsync(
 			if isMultiStmt(&respd.Data) {
 				if err = sc.handleMultiQuery(ctx, respd.Data, rows); err != nil {
 					rows.errChannel <- err
-					close(rows.errChannel)
 					return err
 				}
 			} else {
@@ -109,7 +109,6 @@ func (sr *snowflakeRestful) getAsync(
 			}
 			if err = rows.ChunkDownloader.start(); err != nil {
 				rows.errChannel <- err
-				close(rows.errChannel)
 				return err
 			}
 			rows.errChannel <- nil // mark query status complete

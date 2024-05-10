@@ -4,6 +4,7 @@ package gosnowflake
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -47,13 +48,34 @@ type contextData struct {
 }
 
 type execResponseRowType struct {
-	Name       string `json:"name"`
-	ByteLength int64  `json:"byteLength"`
-	Length     int64  `json:"length"`
-	Type       string `json:"type"`
-	Precision  int64  `json:"precision"`
-	Scale      int64  `json:"scale"`
-	Nullable   bool   `json:"nullable"`
+	Name       string          `json:"name"`
+	Fields     []fieldMetadata `json:"fields"`
+	ByteLength int64           `json:"byteLength"`
+	Length     int64           `json:"length"`
+	Type       string          `json:"type"`
+	Precision  int64           `json:"precision"`
+	Scale      int64           `json:"scale"`
+	Nullable   bool            `json:"nullable"`
+}
+
+func (ex *execResponseRowType) toFieldMetadata() fieldMetadata {
+	return fieldMetadata{
+		ex.Name,
+		ex.Type,
+		int(ex.Scale),
+		ex.Fields,
+	}
+}
+
+type fieldMetadata struct {
+	Name   string          `json:"name"`
+	Type   string          `json:"type"`
+	Scale  int             `json:"scale"`
+	Fields []fieldMetadata `json:"fields"`
+}
+
+func (fm *fieldMetadata) String() string {
+	return fmt.Sprintf("fieldMetadata: %v, %v, %v, %v", fm.Name, fm.Type, fm.Scale, fm.Fields)
 }
 
 type execResponseChunk struct {
