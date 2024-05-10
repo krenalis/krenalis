@@ -25,9 +25,6 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	}
 
 	// Build the WHERE expression, if necessary.
-	// TODO(Gianluca): see the issue
-	// https://github.com/open2b/chichi/issues/727, where we revise the "where"
-	// expressions and the filters.
 	var whereExpr string
 	if query.Where != nil {
 		whereExpr, err = renderExpr(query.TableColumnsSchema, query.Where)
