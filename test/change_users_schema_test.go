@@ -81,4 +81,27 @@ func TestChangeUsersSchema(t *testing.T) {
 		t.Fatalf("expected 12 properties in the \"users\" schema, got %d", n)
 	}
 
+	// Create a schema with two properties that would conflict each other.
+	schema = types.Object(append(file.Schema.Properties(),
+		types.Property{Name: "a_b", Type: types.Text()},
+		types.Property{Name: "a", Type: types.Object([]types.Property{
+			{Name: "b", Type: types.Text()},
+		})},
+	))
+	_, err = c.ChangeUsersSchemaQueriesErr(schema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	const expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"schema contains conflicting properties: two or more properties cannot have the same representation as column \"a_b\""}}`
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+	err = c.ChangeUsersSchemaErr(schema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+
 }
