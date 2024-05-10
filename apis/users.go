@@ -11,9 +11,9 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"strconv"
 
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
@@ -66,8 +66,12 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 	records, err := this.store.Events(ctx, datastore.EventsQuery{
 		Properties: propsPaths,
-		Where:      expr.NewBaseExpr("gid", expr.OperatorEqual, this.id),
-		Limit:      limit,
+		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+			Property: "gid",
+			Operator: "is",
+			Value:    strconv.Itoa(this.id),
+		}}},
+		Limit: limit,
 	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
@@ -95,13 +99,17 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	}
 	if len(evs) == 0 {
 		// Verify that the user exists.
-		where := expr.NewBaseExpr("__gid__", expr.OperatorEqual, this.id)
 		ws := &Workspace{
 			apis:      this.apis,
 			store:     this.store,
 			workspace: this.workspace,
 		}
-		_, count, err := ws.userIdentities(ctx, where, 0, 1)
+		filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+			Property: "__gid__",
+			Operator: "is",
+			Value:    strconv.Itoa(this.id),
+		}}}
+		_, count, err := ws.userIdentities(ctx, filter, 0, 1)
 		if err != nil {
 			return nil, err
 		}
@@ -135,13 +143,17 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	if this.store == nil {
 		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-	where := expr.NewBaseExpr("__gid__", expr.OperatorEqual, this.id)
+	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+		Property: "__gid__",
+		Operator: "is",
+		Value:    strconv.Itoa(this.id),
+	}}}
 	ws := &Workspace{
 		apis:      this.apis,
 		store:     this.store,
 		workspace: this.workspace,
 	}
-	identities, count, err := ws.userIdentities(ctx, where, first, limit)
+	identities, count, err := ws.userIdentities(ctx, filter, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -180,8 +192,12 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	// Retrieve the user traits as records.
 	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
 		Properties: properties,
-		Where:      expr.NewBaseExpr("__id__", expr.OperatorEqual, this.id),
-		Limit:      1,
+		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+			Property: "__id__",
+			Operator: "is",
+			Value:    strconv.Itoa(this.id),
+		}}},
+		Limit: 1,
 	}, ws.UsersSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {

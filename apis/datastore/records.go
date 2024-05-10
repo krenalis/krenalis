@@ -14,6 +14,7 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 )
 
@@ -63,8 +64,8 @@ type queryParams struct {
 	// Record.Properties field.
 	Properties []types.Path
 
-	// Where, when not nil, filters the records to return.
-	Where expr.Expr
+	// Filter, when not nil, filters the records to return.
+	Filter *state.Filter
 
 	// OrderBy, when provided, is the name of property for which the returned
 	// records are ordered.
@@ -131,18 +132,24 @@ func (store *Store) records(ctx context.Context, query queryParams) (Records, in
 		warehouses.PropertiesToColumns(query.TableSchema.Properties()),
 	)
 
+	var where expr.Expr
+	if query.Filter != nil {
+		var err error
+		where, err = convertFilterToExpr(query.Filter, query.TableSchema)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
 	rows, count, err := store.warehouse.Query(ctx, warehouses.RowQuery{
 		Columns:            columnNames,
 		Table:              query.Table,
 		TableColumnsSchema: tableColumnsSchema,
-		// TODO(Gianluca): see the issue
-		// https://github.com/open2b/chichi/issues/727, where we revise the
-		// "where" expressions and the filters.
-		Where:     query.Where,
-		OrderBy:   query.OrderBy,
-		OrderDesc: query.OrderDesc,
-		First:     query.First,
-		Limit:     query.Limit,
+		Where:              where,
+		OrderBy:            query.OrderBy,
+		OrderDesc:          query.OrderDesc,
+		First:              query.First,
+		Limit:              query.Limit,
 	})
 	if err != nil {
 		return nil, 0, err

@@ -26,7 +26,6 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
@@ -895,8 +894,12 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byt
 		store:     this.store,
 		workspace: ws,
 	}
-	where := expr.NewBaseExpr("__connection__", expr.OperatorEqual, this.connection.ID)
-	identities, count, err := apisWs.userIdentities(ctx, where, first, limit)
+	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+		Property: "__connection__",
+		Operator: "is",
+		Value:    strconv.Itoa(this.connection.ID),
+	}}}
+	identities, count, err := apisWs.userIdentities(ctx, filter, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}

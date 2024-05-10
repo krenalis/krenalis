@@ -14,11 +14,9 @@ import (
 	"math"
 	"net/netip"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
@@ -176,67 +174,6 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		properties[i] = path
 	}
 	return properties, nil
-}
-
-// convertFilterToExpr converts a well-formed filter to an expr.Expr expression.
-// schema defines the types of properties referenced within the filter.
-func convertFilterToExpr(filter *Filter, schema types.Type) (expr.Expr, error) {
-	op := expr.LogicalOperatorAnd
-	if filter.Logical == "any" {
-		op = expr.LogicalOperatorOr
-	}
-	exp := expr.NewMultiExpr(op, make([]expr.Expr, len(filter.Conditions)))
-	for i, cond := range filter.Conditions {
-		property, err := schema.PropertyByPath(strings.Split(cond.Property, "."))
-		if err != nil {
-			return nil, fmt.Errorf("property path %s does not exist", cond.Property)
-		}
-		var op expr.Operator
-		switch cond.Operator {
-		case "is":
-			op = expr.OperatorEqual
-		case "is not":
-			op = expr.OperatorNotEqual
-		default:
-			return nil, errors.New("invalid operator")
-		}
-		var value any
-		switch property.Type.Kind() {
-		case types.BooleanKind:
-			value = false
-			if cond.Value == "true" {
-				value = true
-			}
-		case types.IntKind:
-			value, _ = strconv.ParseInt(cond.Value, 10, 64)
-		case types.UintKind:
-			value, _ = strconv.ParseUint(cond.Value, 10, 64)
-		case types.FloatKind:
-			value, _ = strconv.ParseFloat(cond.Value, 64)
-		case types.DecimalKind:
-			value = decimal.RequireFromString(cond.Value)
-		case types.DateTimeKind:
-			value, _ = time.Parse(time.DateTime, cond.Value)
-		case types.DateKind:
-			value, _ = time.Parse(time.DateOnly, cond.Value)
-		case types.TimeKind:
-			value, _ = time.Parse("15:04:05.999999999", cond.Value)
-		case types.YearKind:
-			value, _ = strconv.Atoi(cond.Value)
-		case types.UUIDKind:
-			value, _ = uuid.Parse(cond.Value)
-		case types.JSONKind:
-			value = json.RawMessage(cond.Value)
-		case types.InetKind:
-			value, _ = netip.ParseAddr(cond.Value)
-		case types.TextKind:
-			value = cond.Value
-		default:
-			return nil, fmt.Errorf("unexpected type %s", property.Type)
-		}
-		exp.Operands[i] = expr.NewBaseExpr(cond.Property, op, value)
-	}
-	return exp, nil
 }
 
 // parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as

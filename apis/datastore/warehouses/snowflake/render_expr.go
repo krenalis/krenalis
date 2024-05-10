@@ -68,13 +68,13 @@ func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 	baseExpr := exp.(*expr.BaseExpr)
 
 	// Validate the column name.
-	if !warehouses.IsValidIdentifier(baseExpr.Property) {
-		return "", fmt.Errorf("invalid property name %q", baseExpr.Property)
+	if !warehouses.IsValidIdentifier(baseExpr.Column) {
+		return "", fmt.Errorf("invalid property name %q", baseExpr.Column)
 	}
 
-	column, err := warehouses.PropertyPathToColumn(schema, baseExpr.Property)
+	column, err := warehouses.PropertyPathToColumn(schema, baseExpr.Column)
 	if err != nil {
-		return "", fmt.Errorf("property %q not found", baseExpr.Property)
+		return "", fmt.Errorf("property %q not found", baseExpr.Column)
 	}
 
 	// Render the column identifier.
@@ -106,9 +106,9 @@ func renderExpr(schema types.Type, exp expr.Expr) (string, error) {
 			s.WriteString("<= ")
 		}
 
-		property, err := schema.PropertyByPath(types.Path{baseExpr.Property})
+		property, err := schema.PropertyByPath(types.Path{baseExpr.Column})
 		if err != nil {
-			return "", fmt.Errorf("property %q not found", baseExpr.Property)
+			return "", fmt.Errorf("property %q not found", baseExpr.Column)
 		}
 
 		switch k := property.Type.Kind(); k {

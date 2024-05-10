@@ -24,7 +24,6 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/datastore/warehouses/diffschemas"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
@@ -1328,7 +1327,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
-	var where expr.Expr
+	var stateFilter *state.Filter
 	if filter != nil {
 		_, err := validateFilter(filter, ws.UsersSchema)
 		if err != nil {
@@ -1337,7 +1336,13 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			}
 			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where, _ = convertFilterToExpr(filter, ws.UsersSchema)
+		stateFilter = &state.Filter{
+			Logical:    state.FilterLogical(filter.Logical),
+			Conditions: make([]state.FilterCondition, len(filter.Conditions)),
+		}
+		for i, condition := range filter.Conditions {
+			stateFilter.Conditions[i] = (state.FilterCondition)(condition)
+		}
 	}
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
@@ -1369,7 +1374,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	records, count, err := this.store.Users(ctx, datastore.UsersQuery{
 		Properties: propsPaths,
-		Where:      where,
+		Filter:     stateFilter,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
 		First:      first,
@@ -1658,13 +1663,13 @@ type identity struct {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) userIdentities(ctx context.Context, where expr.Expr, first, limit int) ([]identity, int, error) {
+func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter, first, limit int) ([]identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
 		Properties: []types.Path{{"__connection__"}, {"__identity_id__"},
 			{"__anonymous_ids__"}, {"__last_change_time__"}, {"__displayed_property__"}},
-		Where:   where,
+		Filter:  filter,
 		OrderBy: "__identity_key__",
 		First:   first,
 		Limit:   limit,

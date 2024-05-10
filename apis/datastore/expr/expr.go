@@ -39,10 +39,7 @@ const (
 // BaseExpr represents an SQL expression that refers to a property, on which an
 // operator is applied, an eventually an operand, if the operator is binary.
 type BaseExpr struct {
-	// TODO(Gianluca): see the issue
-	// https://github.com/open2b/chichi/issues/727, where we revise the "where"
-	// expressions and the filters.
-	Property string
+	Column   string
 	Operator Operator
 	Value    any // may be nil for unary expressions.
 }
@@ -50,10 +47,10 @@ type BaseExpr struct {
 func (*BaseExpr) expr() {}
 
 // NewBaseExpr returns a new BaseExpr expression that applies to the given
-// property with the given operand and value.
+// column with the given operator and value.
 // If the operator is unary, value should be nil.
-func NewBaseExpr(property string, operator Operator, value any) *BaseExpr {
-	return &BaseExpr{Property: property, Operator: operator, Value: value}
+func NewBaseExpr(column string, operator Operator, value any) *BaseExpr {
+	return &BaseExpr{Column: column, Operator: operator, Value: value}
 }
 
 // Operator presents a unary or binary operator of a BaseExpr.

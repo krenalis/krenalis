@@ -18,7 +18,6 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/expr"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
@@ -111,19 +110,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		}
 	}
 
-	// Build the where from the filter, if any.
-	var where expr.Expr
-	if action.Filter != nil {
-		where, err = convertActionFilterToExpr(action.Filter, schema)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Read the users.
 	records, _, err := store.Users(ctx, datastore.UsersQuery{
 		Properties: properties,
-		Where:      where,
+		Filter:     action.Filter,
 		OrderBy:    "__id__",
 	}, action.Connection().Workspace().UsersSchema)
 	if err != nil {
