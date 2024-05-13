@@ -445,17 +445,20 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	}
 
 	// Alter the schema on the data warehouse.
-	if len(operations) > 0 {
-		err = this.store.AlterSchema(ctx, operations)
-		if err != nil {
-			if err, ok := err.(*datastore.DataWarehouseError); ok {
-				return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-			}
-			if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
-				return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
-			}
-			return err
+	//
+	// This must also be called even if operations is empty, as it is still
+	// necessary to recreate the views (for example in the case where only the
+	// ordering of properties has been changed).
+	//
+	err = this.store.AlterSchema(ctx, schema, operations)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
 		}
+		if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
+			return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
+		}
+		return err
 	}
 
 	return nil
@@ -501,10 +504,10 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
-	if len(operations) == 0 {
-		return []string{}, nil
-	}
-	queries, err := this.store.AlterSchemaQueries(ctx, operations)
+	schema = types.Object(append([]types.Property{
+		{Name: "__id__", Type: types.Int(32)},
+	}, schema.Properties()...))
+	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)

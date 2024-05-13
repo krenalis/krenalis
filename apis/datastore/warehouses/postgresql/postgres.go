@@ -120,7 +120,7 @@ func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, p
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE action = $1 AND property = $2`, action, propertyValue)
+	rows, err := db.Query(ctx, `SELECT "user" FROM _destinations_users WHERE action = $1 AND property = $2`, action, propertyValue)
 	if err != nil {
 		return nil, warehouses.Error(err)
 	}
@@ -153,7 +153,7 @@ func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, act
 				min("user") AS user1,
 				max("user") as user2,
 				count(*) AS cnt
-			FROM destinations_users
+			FROM _destinations_users
 			WHERE action = $1 
 			GROUP BY property) AS subquery
 		WHERE subquery.cnt > 1
@@ -191,7 +191,7 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property strin
 				min("__id__") AS gid1,
 				max("__id__") as gid2,
 				count(*) AS cnt
-			FROM users
+			FROM _users
 			GROUP BY "` + property + `") AS subquery
 		WHERE subquery.cnt > 1
 		LIMIT 1`
@@ -255,6 +255,15 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	var b strings.Builder
 
+	// Determine the table name.
+	// The table "events" is the only one that doesn't have "_" as a prefix in
+	// the name (as for "users" and "users_identities", they also have the
+	// underscore; it's only the respective views that don't have it).
+	tableName := table.Name
+	if tableName != "events" {
+		tableName = "_" + tableName
+	}
+
 	// Create the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	b.WriteString(`CREATE UNLOGGED TABLE "`)
@@ -266,7 +275,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		b.WriteString(`",`)
 	}
 	b.WriteString(`false AS "$deleted" FROM "`)
-	b.WriteString(table.Name)
+	b.WriteString(tableName)
 	b.WriteString("\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
@@ -310,7 +319,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	// Merge the temporary table's rows with the destination table's rows.
 	b.Reset()
 	b.WriteString(`MERGE INTO "`)
-	b.WriteString(table.Name)
+	b.WriteString(tableName)
 	b.WriteString("\" d\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString("\" s\nON ")
@@ -401,9 +410,9 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	// Delete the orphan user identities, which are the identities that belong
 	// to connections that no longer exist.
 	if len(connections) == 0 {
-		b.WriteString(`DELETE FROM "users_identities"`)
+		b.WriteString(`DELETE FROM "_users_identities"`)
 	} else {
-		b.WriteString(`DELETE FROM "users_identities" WHERE "__connection__" NOT IN (`)
+		b.WriteString(`DELETE FROM "_users_identities" WHERE "__connection__" NOT IN (`)
 		for i, connection := range connections {
 			if i > 0 {
 				b.WriteByte(',')
@@ -440,7 +449,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	// Generate the SQL queries that will perform the users synchronization.
 	usersColumns := warehouses.PropertiesToColumns(usersSchema.Properties())
 	var usersSyncQueries strings.Builder
-	usersSyncQueries.WriteString(`TRUNCATE users; INSERT INTO users (`)
+	usersSyncQueries.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
 	for _, c := range usersColumns {
 		if c.Name == "__id__" {
 			continue
@@ -464,7 +473,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte(',')
 	}
 	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__identity_key__")`)
-	usersSyncQueries.WriteString(" FROM users_identities GROUP BY __cluster__")
+	usersSyncQueries.WriteString(" FROM _users_identities GROUP BY __cluster__")
 
 	// Replace the placeholders in the stored procedure query and run it.
 	query := strings.Replace(storeProcedureQueries, "{{ matching_expr }}", matchingExpr.String(), 1)
@@ -490,7 +499,7 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, "INSERT INTO destinations_users (action, \"user\", property)\n"+
+	_, err = db.Exec(ctx, "INSERT INTO _destinations_users (action, \"user\", property)\n"+
 		"VALUES ($1, $2, $3)\n"+
 		"ON CONFLICT (action, \"user\") DO UPDATE SET property = $3",
 		action, externalUserID, externalProperty)

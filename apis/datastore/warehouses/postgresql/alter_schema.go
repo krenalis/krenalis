@@ -19,9 +19,9 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// AlterSchema alters the users schemas by applying the given operations.
-func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
-	queries, err := alterSchemaQueries(operations)
+// AlterSchema alters the users schema.
+func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
+	queries, err := alterSchemaQueries(usersColumns, operations)
 	if err != nil {
 		return err
 	}
@@ -41,9 +41,9 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, operations []wareh
 	return err
 }
 
-// AlterSchemaQueries returns the queries relative to the given operations.
-func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
-	queries, err := alterSchemaQueries(operations)
+// AlterSchemaQueries returns the queries of a schema altering operation.
+func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+	queries, err := alterSchemaQueries(usersColumns, operations)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func addColumnClause(propertyPath string, column string, colType types.Type, nul
 
 // alterSchemaQueries returns the queries that perform the given operations.
 // operations must contain at least one operation.
-func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 
 	var alterOps []string
 	for _, op := range operations {
@@ -112,24 +112,76 @@ func alterSchemaQueries(operations []warehouses.AlterSchemaOperation) ([]string,
 		}
 	}
 
-	if len(alterOps) == 0 {
-		return []string{}, nil
+	var usersQuery, usersIdsQuery strings.Builder
+	if len(alterOps) > 0 {
+		usersQuery.WriteString(`ALTER TABLE "_users"` + "\n")
+		usersIdsQuery.WriteString(`ALTER TABLE "_users_identities"` + "\n")
+		for i, alter := range alterOps {
+			if i > 0 {
+				usersQuery.WriteString(",\n")
+				usersIdsQuery.WriteString(",\n")
+			}
+			usersQuery.WriteByte('\t')
+			usersIdsQuery.WriteByte('\t')
+			usersQuery.WriteString(alter)
+			usersIdsQuery.WriteString(alter)
+		}
 	}
 
-	var usersQuery, usersIdsQuery strings.Builder
-	usersQuery.WriteString(`ALTER TABLE "users"` + "\n")
-	usersIdsQuery.WriteString(`ALTER TABLE "users_identities"` + "\n")
-	for i, alter := range alterOps {
+	// Create the "users" view.
+	usersView := strings.Builder{}
+	usersView.WriteString(`CREATE VIEW "users" AS SELECT` + "\n")
+	for i, c := range usersColumns {
 		if i > 0 {
-			usersQuery.WriteString(",\n")
-			usersIdsQuery.WriteString(",\n")
+			usersView.WriteString(",\n")
 		}
-		usersQuery.WriteByte('\t')
-		usersIdsQuery.WriteByte('\t')
-		usersQuery.WriteString(alter)
-		usersIdsQuery.WriteString(alter)
+		usersView.WriteRune('\t')
+		usersView.WriteRune('"')
+		usersView.WriteString(c.Name)
+		usersView.WriteRune('"')
 	}
-	queries := []string{usersQuery.String(), usersIdsQuery.String()}
+	usersView.WriteString("\n" + `FROM "_users"`)
+
+	// Create the "users_identities" view.
+	idsView := strings.Builder{}
+	idsView.WriteString(`CREATE VIEW "users_identities" AS SELECT` + "\n")
+	metaProps := []string{"__identity_key__", "__connection__", "__identity_id__",
+		"__displayed_property__", "__anonymous_ids__", "__last_change_time__", "__gid__"}
+	for i, p := range metaProps {
+		if i > 0 {
+			idsView.WriteString(",\n")
+		}
+		idsView.WriteRune('\t')
+		idsView.WriteRune('"')
+		idsView.WriteString(p)
+		idsView.WriteRune('"')
+	}
+	for _, c := range usersColumns {
+		if c.Name == "__id__" {
+			continue
+		}
+		idsView.WriteString(",\n")
+		idsView.WriteRune('\t')
+		idsView.WriteRune('"')
+		idsView.WriteString(c.Name)
+		idsView.WriteRune('"')
+	}
+	idsView.WriteString("\n" + `FROM "_users_identities"`)
+
+	queries := []string{
+		`DROP VIEW "users"`,
+		`DROP VIEW "users_identities"`,
+	}
+	if usersQuery.Len() > 0 {
+		queries = append(queries, usersQuery.String())
+	}
+	if usersIdsQuery.Len() > 0 {
+		queries = append(queries, usersIdsQuery.String())
+	}
+	queries = append(queries,
+		usersView.String(),
+		idsView.String(),
+	)
 
 	return queries, nil
 }

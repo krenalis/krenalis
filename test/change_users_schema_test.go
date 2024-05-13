@@ -48,10 +48,10 @@ func TestChangeUsersSchema(t *testing.T) {
 	}
 
 	// The schema of "tests_users_schema.json" has already been applied by the
-	// tests framework, so there should be no queries to execute.
+	// tests framework.
 	queries := c.ChangeUsersSchemaQueries(file.Schema, file.RePaths)
-	if len(queries) > 0 {
-		t.Fatalf("expected 0 queries, got %d", len(queries))
+	if len(queries) != 6 {
+		t.Fatalf("expected 6 queries, got %d", len(queries))
 	}
 	c.ChangeUsersSchema(file.Schema, file.RePaths) // this should do nothing.
 
@@ -65,14 +65,32 @@ func TestChangeUsersSchema(t *testing.T) {
 		Name: "new_prop", Type: types.Text(),
 	}))
 	queries = c.ChangeUsersSchemaQueries(schema, nil)
-	expectedQueries := []string{
-		"BEGIN;",
-		"ALTER TABLE \"users\"\n\tADD COLUMN \"new_prop\" varchar NOT NULL DEFAULT '';",
-		"ALTER TABLE \"users_identities\"\n\tADD COLUMN \"new_prop\" varchar NOT NULL DEFAULT '';",
+	expectedQueries := []string{"BEGIN;",
+		"DROP VIEW \"users\";",
+		"DROP VIEW \"users_identities\";",
+		"ALTER TABLE \"_users\"\n\tADD COLUMN \"new_prop\" varchar NOT NULL DEFAULT '';",
+		"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"new_prop\" varchar NOT NULL DEFAULT '';",
+		"CREATE VIEW \"users\" AS SELECT\n\t\"__id__\",\n\t\"email\",\n\t\"dummy_id\",\n" +
+			"\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n" +
+			"\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n" +
+			"\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n" +
+			"\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n" +
+			"\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n" +
+			"\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n" +
+			"\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users\";",
+		"CREATE VIEW \"users_identities\" AS SELECT\n\t\"__identity_key__\",\n\t\"__connection__\",\n" +
+			"\t\"__identity_id__\",\n\t\"__displayed_property__\",\n\t\"__anonymous_ids__\",\n" +
+			"\t\"__last_change_time__\",\n\t\"__gid__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n" +
+			"\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n" +
+			"\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n" +
+			"\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n" +
+			"\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n" +
+			"\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n" +
+			"\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users_identities\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
-		t.Fatalf("expected queries %v, got %v", expectedQueries, queries)
+		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
 	c.ChangeUsersSchema(schema, nil)
 

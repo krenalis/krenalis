@@ -77,9 +77,12 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	return store, nil
 }
 
-// AlterSchema alters the users schemas by applying the given operations.
+// AlterSchema alters the users schema.
 //
-// operations must contain at least one operation.
+// usersSchema is the "users" schema to obtain (this parameters is useful for
+// obtaining type information and for creating views), while operations is the
+// set of operations to apply in order to migrate the current schema to
+// usersSchema.
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
@@ -87,18 +90,18 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
-	if len(operations) == 0 {
-		return errors.New("operations cannot be empty")
-	}
+func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
 	store.mustBeOpen()
-	return store.warehouse.AlterSchema(ctx, operations)
+	usersColumns := propertiesToColumns(usersSchema.Properties())
+	return store.warehouse.AlterSchema(ctx, usersColumns, operations)
 }
 
-// AlterSchemaQueries returns the queries that would be executed altering the
-// "users" (and the "users_identities") schema with the given operations.
+// AlterSchemaQueries returns the queries of a schema altering operation.
 //
-// operations must contain at least one operation.
+// usersSchema is the "users" schema to obtain (this parameters is useful for
+// obtaining type information and for creating views), while operations is the
+// set of operations to apply in order to migrate the current schema to
+// usersSchema.
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
@@ -106,12 +109,10 @@ func (store *Store) AlterSchema(ctx context.Context, operations []warehouses.Alt
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
-	if len(operations) == 0 {
-		return nil, errors.New("operations cannot be empty")
-	}
+func (store *Store) AlterSchemaQueries(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
-	return store.warehouse.AlterSchemaQueries(ctx, operations)
+	usersColumns := propertiesToColumns(usersSchema.Properties())
+	return store.warehouse.AlterSchemaQueries(ctx, usersColumns, operations)
 }
 
 // AddEvents adds events to the store.

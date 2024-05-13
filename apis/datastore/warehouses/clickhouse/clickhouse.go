@@ -83,13 +83,13 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	return &ClickHouse{settings: &s}, nil
 }
 
-// AlterSchema alters the users schemas by applying the given operations.
-func (warehouse *ClickHouse) AlterSchema(ctx context.Context, operations []warehouses.AlterSchemaOperation) error {
+// AlterSchema alters the users schema.
+func (warehouse *ClickHouse) AlterSchema(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
 	panic("TODO: not implemented")
 }
 
-// AlterSchemaQueries returns the queries relative to the given operations.
-func (warehouse *ClickHouse) AlterSchemaQueries(ctx context.Context, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+// AlterSchemaQueries returns the queries of a schema altering operation.
+func (warehouse *ClickHouse) AlterSchemaQueries(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	panic("TODO: not implemented")
 }
 

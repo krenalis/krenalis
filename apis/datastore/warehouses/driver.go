@@ -82,9 +82,12 @@ func (e UnsupportedAlterSchemaErr) Error() string {
 // warehouse.
 type Warehouse interface {
 
-	// AlterSchema alters the users schemas by applying the given operations.
+	// AlterSchema alters the users schema.
 	//
-	// operations must contain at least one operation.
+	// usersColumns contains the columns of the "users" table to obtain (this
+	// parameters is useful for obtaining type information and for creating views),
+	// while operations is the set of operations to apply in order to migrate the
+	// current columns to usersColumns.
 	//
 	// If one of the specified operations is not supported by the data warehouse,
 	// for example if a type is not supported, this method returns a
@@ -92,15 +95,14 @@ type Warehouse interface {
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
-	AlterSchema(ctx context.Context, operations []AlterSchemaOperation) error
+	AlterSchema(ctx context.Context, usersColumns []Column, operations []AlterSchemaOperation) error
 
-	// AlterSchemaQueries returns the queries relative to the given operations.
+	// AlterSchemaQueries returns the queries of a schema altering operation.
 	//
-	// In particular, this method returns the queries that would be executed
-	// altering the "users" (and the "users_identities") schema with the given
-	// operations.
-	//
-	// operations must contain at least one operation.
+	// usersColumns contains the columns of the "users" table to obtain (this
+	// parameters is useful for obtaining type information and for creating views),
+	// while operations is the set of operations to apply in order to migrate the
+	// current columns to usersColumns.
 	//
 	// If one of the specified operations is not supported by the data warehouse,
 	// for example if a type is not supported, this method returns a
@@ -108,7 +110,7 @@ type Warehouse interface {
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
-	AlterSchemaQueries(ctx context.Context, operations []AlterSchemaOperation) ([]string, error)
+	AlterSchemaQueries(ctx context.Context, usersColumns []Column, operations []AlterSchemaOperation) ([]string, error)
 
 	// Close closes the warehouse.
 	// It will not allow any new queries to run, and it waits for the current ones

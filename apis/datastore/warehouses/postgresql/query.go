@@ -33,11 +33,20 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		}
 	}
 
+	// Determine the table name.
+	// The table "events" is the only one that doesn't have "_" as a prefix in
+	// the name (as for "users" and "users_identities", they also have the
+	// underscore; it's only the respective views that don't have it).
+	tableName := query.Table
+	if tableName != "events" {
+		tableName = "_" + tableName
+	}
+
 	// Build and execute the COUNT query to determine the count of records.
 	var count int
 	var b strings.Builder
 	b.WriteString(`SELECT COUNT(*) FROM "`)
-	b.WriteString(query.Table)
+	b.WriteString(tableName)
 	b.WriteByte('"')
 	if query.Where != nil {
 		b.WriteString(` WHERE `)
@@ -60,7 +69,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		b.WriteByte('"')
 	}
 	b.WriteString(` FROM "`)
-	b.WriteString(query.Table)
+	b.WriteString(tableName)
 	b.WriteByte('"')
 	if query.Where != nil {
 		b.WriteString(` WHERE `)

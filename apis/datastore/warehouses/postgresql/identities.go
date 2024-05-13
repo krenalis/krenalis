@@ -26,7 +26,7 @@ func (warehouse *PostgreSQL) DeleteConnectionIdentities(ctx context.Context, con
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, `DELETE FROM "users_identities" WHERE "__connection__" = $1`, connection)
+	_, err = db.Exec(ctx, `DELETE FROM "_users_identities" WHERE "__connection__" = $1`, connection)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -119,16 +119,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	var args []any
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
-			query = "SELECT __identity_key__ FROM users_identities WHERE __connection__ = $1" +
+			query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
 				" AND __identity_id__ = '' AND $2 = ANY(__anonymous_ids__) ORDER BY __last_change_time__, __identity_key__"
 			args = []any{connection, anonID}
 		} else {
-			query = "SELECT __identity_key__ FROM users_identities WHERE __connection__ = $1" +
+			query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
 				" AND (__identity_id__ = $2) OR (__identity_id__ = '' AND $3 = ANY(__anonymous_ids__)) ORDER BY __last_change_time__, __identity_key__"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
-		query = "SELECT __identity_key__ FROM users_identities WHERE __connection__ = $1" +
+		query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
 			" AND __identity_id__ = $2 ORDER BY __last_change_time__, __identity_key__"
 		args = []any{connection, id}
 	}
@@ -167,7 +167,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	}
 
 	b := strings.Builder{}
-	b.WriteString("INSERT INTO users_identities (")
+	b.WriteString("INSERT INTO _users_identities (")
 	properties := maps.Keys(newIdentity)
 	for i, name := range properties {
 		if i > 0 {
@@ -210,11 +210,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 
 	// Merge the anonymous IDS.
 	b.Reset()
-	b.WriteString(`UPDATE users_identities SET __anonymous_ids__ = (
+	b.WriteString(`UPDATE _users_identities SET __anonymous_ids__ = (
 		SELECT array_agg(DISTINCT anon_ids.ids) as __anonymous_ids__
 		FROM (
 			SELECT unnest("__anonymous_ids__") as ids
-			FROM users_identities
+			FROM _users_identities
 			WHERE __identity_key__ IN (`)
 	b.WriteString(idsStr.String())
 	b.WriteString(`) AND __anonymous_ids__ IS NOT NULL
@@ -225,11 +225,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		return warehouses.Error(err)
 	}
 
-	// Retrieve the column names of the 'users_identities' table.
+	// Retrieve the column names of the '_users_identities' table.
 	//
 	// TODO(Gianluca): this will be reviewed when optimizing the implementation,
 	// see the issue https://github.com/open2b/chichi/issues/627.
-	rows, err = db.Query(ctx, `SELECT * FROM "users_identities"`)
+	rows, err = db.Query(ctx, `SELECT * FROM "_users_identities"`)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -244,11 +244,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 			continue
 		}
 		b.Reset()
-		b.WriteString(`UPDATE "users_identities" SET "`)
+		b.WriteString(`UPDATE "_users_identities" SET "`)
 		b.WriteString(p)
 		b.WriteString(`" = (SELECT "`)
 		b.WriteString(p)
-		b.WriteString(`" FROM users_identities WHERE "`)
+		b.WriteString(`" FROM _users_identities WHERE "`)
 		b.WriteString(p)
 		b.WriteString(`" IS NOT NULL AND __identity_key__ IN (`) // TODO(Gianluca): is "IS NOT NULL" correct? See the issue https://github.com/open2b/chichi/issues/657.
 		b.WriteString(idsStr.String())
@@ -269,7 +269,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		idsToDelete.WriteString(strconv.Itoa(id))
 	}
 	b.Reset()
-	b.WriteString("DELETE FROM users_identities WHERE __identity_key__ IN (")
+	b.WriteString("DELETE FROM _users_identities WHERE __identity_key__ IN (")
 	b.WriteString(idsToDelete.String())
 	b.WriteByte(')')
 	_, err = db.Exec(ctx, b.String())
