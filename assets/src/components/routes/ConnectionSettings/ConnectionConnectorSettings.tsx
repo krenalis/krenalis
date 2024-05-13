@@ -44,8 +44,8 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 						handleError(
 							'An unexpected error has occurred. Please contact the administrator for more information.',
 						);
+						return;
 					}
-					return;
 				}
 				handleError(err);
 				return;
@@ -104,8 +104,8 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 					handleError(
 						'An unexpected error has occurred. Please contact the administrator for more information',
 					);
+					return;
 				}
-				return;
 			}
 			handleError(err);
 			if (hasConfirmationButton) {

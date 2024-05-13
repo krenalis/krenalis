@@ -106,8 +106,8 @@ const ActionFile = () => {
 							handleError(
 								'An unexpected error has occurred. Please contact the administrator for more information.',
 							);
+							return;
 						}
-						return;
 					}
 					handleError(err);
 					return;
@@ -130,8 +130,8 @@ const ActionFile = () => {
 							handleError(
 								'An unexpected error has occurred. Please contact the administrator for more information.',
 							);
+							return;
 						}
-						return;
 					}
 					handleError(err);
 					return;
