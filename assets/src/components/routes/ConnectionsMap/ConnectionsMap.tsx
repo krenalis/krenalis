@@ -6,11 +6,12 @@ import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import { Link } from '../../shared/Link/Link';
 
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);
 
-	const { redirect, connections, setTitle } = useContext(AppContext);
+	const { connections, setTitle } = useContext(AppContext);
 
 	useLayoutEffect(() => {
 		setTitle('Connections');
@@ -29,18 +30,6 @@ const ConnectionsMap = () => {
 		}, 0);
 	}, []);
 
-	const onAddNewSourceClick = () => {
-		return redirect(`connectors?role=Source`);
-	};
-
-	const onAddNewDestinationClick = () => {
-		return redirect(`connectors?role=Destination`);
-	};
-
-	const onUsersDatabaseClick = () => {
-		return redirect(`users`);
-	};
-
 	const newConnectionID = Number(new URL(document.location.href).searchParams.get('newConnection'));
 	const sources: TransformedConnection[] = [];
 	const destinations: TransformedConnection[] = [];
@@ -55,14 +44,18 @@ const ConnectionsMap = () => {
 		<div className='connectionsMap'>
 			<div className='routeContent'>
 				<div className='buttons'>
-					<SlButton className='addSource' variant='text' onClick={onAddNewSourceClick}>
-						<SlIcon slot='suffix' name='plus-circle' />
-						Add a new source
-					</SlButton>
-					<SlButton className='addDestination' variant='text' onClick={onAddNewDestinationClick}>
-						<SlIcon slot='suffix' name='plus-circle' />
-						Add a new destination
-					</SlButton>
+					<Link path={`connectors?role=Source`}>
+						<SlButton className='addSource' variant='text'>
+							<SlIcon slot='suffix' name='plus-circle' />
+							Add a new source
+						</SlButton>
+					</Link>
+					<Link path={`connectors?role=Destination`}>
+						<SlButton className='addDestination' variant='text'>
+							<SlIcon slot='suffix' name='plus-circle' />
+							Add a new destination
+						</SlButton>
+					</Link>
 				</div>
 				<div className='map'>
 					<div className='sources'>{sourcesBlocks}</div>
@@ -71,10 +64,12 @@ const ConnectionsMap = () => {
 							CDP
 						</div>
 						<div className='databases'>
-							<div className='database users' id='usersDatabase' onClick={onUsersDatabaseClick}>
-								<SlIcon name='database' />
-								<div className='name'>Users</div>
-							</div>
+							<Link path='users'>
+								<div className='database users' id='usersDatabase'>
+									<SlIcon name='database' />
+									<div className='name'>Users</div>
+								</div>
+							</Link>
 							<div className='database events' id='eventsDatabase'>
 								<SlIcon name='database' />
 								<div className='name'>Events</div>

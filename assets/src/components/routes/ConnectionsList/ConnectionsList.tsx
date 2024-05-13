@@ -11,6 +11,7 @@ import { ConnectionRole } from '../../../types/external/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
+import { Link } from '../../shared/Link/Link';
 
 const ConnectionsList = () => {
 	const [connectionsRows, setConnectionsRows] = useState<GridRow[]>([]);
@@ -134,27 +135,18 @@ const ConnectionsList = () => {
 					<div className='noConnection'>
 						<IconWrapper name={role === 'Source' ? 'file-arrow-down' : 'file-arrow-up'} size={40} />
 						<div className='noConnectionText'>You don't have any {role?.toLowerCase()} installed</div>
-						<SlButton
-							variant='primary'
-							onClick={() => {
-								redirect(`connectors?role=${role}`);
-							}}
-						>
-							Add a {role?.toLowerCase()}...
-						</SlButton>
+						<Link path={`connectors?role=${role}`}>
+							<SlButton variant='primary'>Add a {role?.toLowerCase()}...</SlButton>
+						</Link>
 					</div>
 				) : (
 					<>
-						<SlButton
-							variant='text'
-							className='addNewConnection'
-							onClick={() => {
-								redirect(`connectors?role=${role}`);
-							}}
-						>
-							<SlIcon slot='suffix' name='plus-circle' />
-							Add a new {role?.toLowerCase()}
-						</SlButton>
+						<Link path={`connectors?role=${role}`}>
+							<SlButton variant='text' className='addNewConnection'>
+								<SlIcon slot='suffix' name='plus-circle' />
+								Add a new {role?.toLowerCase()}
+							</SlButton>
+						</Link>
 						<Grid columns={connectionsColumns} rows={connectionsRows} />
 					</>
 				)}

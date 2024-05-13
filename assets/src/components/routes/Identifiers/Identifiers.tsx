@@ -16,6 +16,7 @@ import { ObjectType } from '../../../types/external/types';
 import { Identifiers } from '../../../types/external/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import { Link } from '../../shared/Link/Link';
 
 const Identifiers = () => {
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
@@ -23,7 +24,7 @@ const Identifiers = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace, redirect } =
+	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace } =
 		useContext(AppContext);
 
 	const identifiersListRef = useRef(null);
@@ -44,10 +45,6 @@ const Identifiers = () => {
 		};
 		fetchData();
 	}, [selectedWorkspace]);
-
-	const onSeeSchema = () => {
-		redirect('schema');
-	};
 
 	const onSelectIdentifier = (input, value) => {
 		const pos = Number(input.name);
@@ -149,9 +146,11 @@ const Identifiers = () => {
 					<div className='identifiers__no-schema-description'>
 						The current user schema doesn't include any property that can be used as an identifier
 					</div>
-					<SlButton variant='primary' className='identifiers__no-schema-button' onClick={onSeeSchema}>
-						See schema
-					</SlButton>
+					<Link path='schema'>
+						<SlButton variant='primary' className='identifiers__no-schema-button'>
+							See schema
+						</SlButton>
+					</Link>
 				</div>
 			) : (
 				<div>

@@ -1,66 +1,54 @@
-import React, { useContext } from 'react';
-import AppContext from '../../../context/AppContext';
+import React from 'react';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useLocation } from 'react-router-dom';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import { Link } from '../../shared/Link/Link';
 
 interface ConnectionTabsProps {
 	connection: TransformedConnection;
 }
 
 const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
-	const { redirect } = useContext(AppContext);
-
-	const onActionsClick = () => {
-		redirect(`connections/${connection.id}/actions`);
-	};
-
-	const onOverviewClick = () => {
-		redirect(`connections/${connection.id}/overview`);
-	};
-
-	const onEventsClick = () => {
-		redirect(`connections/${connection.id}/events`);
-	};
-
-	const onIdentitiesClick = () => {
-		redirect(`connections/${connection.id}/identities`);
-	};
-
-	const onSettingsClick = () => {
-		redirect(`connections/${connection.id}/settings`);
-	};
-
 	const location = useLocation();
 	const fragments = location.pathname.split('/');
 	const tab = fragments[fragments.length - 1];
 
 	return (
 		<div className='links'>
-			<div className={`link${tab === 'actions' ? ' selected' : ''}`} onClick={onActionsClick}>
-				<SlIcon name='send-exclamation'></SlIcon>
-				Actions
-			</div>
-			<div className={`link${tab === 'overview' ? ' selected' : ''}`} onClick={onOverviewClick}>
-				<SlIcon name='activity'></SlIcon>
-				Overview
-			</div>
-			{(connection.isMobile || connection.isWebsite || connection.isServer || connection.isStream) && (
-				<div className={`link${tab === 'events' ? ' selected' : ''}`} onClick={onEventsClick}>
-					<SlIcon name='play'></SlIcon>
-					Live events
+			<Link path={`connections/${connection.id}/actions`}>
+				<div className={`link${tab === 'actions' ? ' selected' : ''}`}>
+					<SlIcon name='send-exclamation'></SlIcon>
+					Actions
 				</div>
+			</Link>
+			<Link path={`connections/${connection.id}/overview`}>
+				<div className={`link${tab === 'overview' ? ' selected' : ''}`}>
+					<SlIcon name='activity'></SlIcon>
+					Overview
+				</div>
+			</Link>
+			{(connection.isMobile || connection.isWebsite || connection.isServer || connection.isStream) && (
+				<Link path={`connections/${connection.id}/events`}>
+					<div className={`link${tab === 'events' ? ' selected' : ''}`}>
+						<SlIcon name='play'></SlIcon>
+						Live events
+					</div>
+				</Link>
 			)}
 			{connection.hasIdentities && (
-				<div className={`link${tab === 'identities' ? ' selected' : ''}`} onClick={onIdentitiesClick}>
-					<SlIcon name='people'></SlIcon>
-					Identities
-				</div>
+				<Link path={`connections/${connection.id}/identities`}>
+					<div className={`link${tab === 'identities' ? ' selected' : ''}`}>
+						<SlIcon name='people'></SlIcon>
+						Identities
+					</div>
+				</Link>
 			)}
-			<div className={`link${tab === 'settings' ? ' selected' : ''}`} onClick={onSettingsClick}>
-				<SlIcon name='sliders2'></SlIcon>
-				Settings
-			</div>
+			<Link path={`connections/${connection.id}/settings`}>
+				<div className={`link${tab === 'settings' ? ' selected' : ''}`}>
+					<SlIcon name='sliders2'></SlIcon>
+					Settings
+				</div>
+			</Link>
 		</div>
 	);
 };

@@ -13,6 +13,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { TransformedMember, transformMember, validateMemberEmail } from '../../../lib/helpers/transformedMember';
+import { Link } from '../../shared/Link/Link';
 
 const Members = () => {
 	const [isLoadingMembers, setIsLoadingMembers] = useState<boolean>(true);
@@ -20,7 +21,7 @@ const Members = () => {
 	const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<TransformedMember[]>();
 
-	const { setTitle, api, handleError, redirect, member: loggedMember } = useContext(AppContext);
+	const { setTitle, api, handleError, member: loggedMember } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
 
@@ -52,10 +53,6 @@ const Members = () => {
 
 		fetchMembers();
 	}, [isLoadingMembers]);
-
-	const onEditMember = () => {
-		redirect(`members/current`);
-	};
 
 	const onDeleteMember = (id: number) => {
 		pendingDeletedMember.current = id;
@@ -137,9 +134,9 @@ const Members = () => {
 									action={
 										<div className='members__member-actions'>
 											{member.ID === loggedMember.ID && (
-												<SlButton size='small' onClick={onEditMember}>
-													Edit
-												</SlButton>
+												<Link path={'members/current'}>
+													<SlButton size='small'>Edit</SlButton>
+												</Link>
 											)}
 											<SlButton
 												size='small'

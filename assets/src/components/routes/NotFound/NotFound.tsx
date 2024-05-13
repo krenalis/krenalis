@@ -1,15 +1,9 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import './NotFound.css';
-import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import { Link } from '../../shared/Link/Link';
 
 const NotFound = () => {
-	const { redirect } = useContext(AppContext);
-
-	const onGoToConnectionsClick = () => {
-		redirect('connections');
-	};
-
 	return (
 		<div className='notFound'>
 			<div className='routeContent'>
@@ -17,9 +11,11 @@ const NotFound = () => {
 					<div className='icon'></div>
 					<div className='title'>404</div>
 					<div className='description'>The page you searched for does not exist</div>
-					<SlButton className='goBack' size='large' variant='default' onClick={onGoToConnectionsClick}>
-						Go to connections
-					</SlButton>
+					<Link path='connections'>
+						<SlButton className='goBack' size='large' variant='default'>
+							Go to connections
+						</SlButton>
+					</Link>
 				</div>
 			</div>
 		</div>

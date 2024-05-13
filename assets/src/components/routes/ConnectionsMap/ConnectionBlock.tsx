@@ -1,11 +1,11 @@
-import React, { useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import Flex from '../../shared/Flex/Flex';
 import Arrow from '../../shared/Arrow/Arrow';
 import StatusDot from '../../shared/StatusDot/StatusDot';
 import { ArrowAnchor } from '../../../types/internal/app';
-import AppContext from '../../../context/AppContext';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import { Link } from '../../shared/Link/Link';
 
 interface ConnectionBlockProps {
 	connection: TransformedConnection;
@@ -15,8 +15,6 @@ interface ConnectionBlockProps {
 const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 	const [isHovered, setIsHovered] = useState<boolean>(false);
 	const [arrow, setArrow] = useState<ReactNode>();
-
-	const { redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		// Must wait for the block to be painted and styled before proceding
@@ -50,10 +48,6 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		}, 0);
 	}, [c, isHovered]);
 
-	const onClick = () => {
-		redirect(`connections/${c.id}/actions`);
-	};
-
 	const onMouseEnter = () => {
 		setIsHovered(true);
 	};
@@ -64,22 +58,23 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 
 	return (
 		<>
-			<div
-				className={`connectionBlock${isNew ? ' new' : ''}`}
-				id={`${c.id}`}
-				onClick={onClick}
-				onMouseEnter={onMouseEnter}
-				onMouseLeave={onMouseLeave}
-				data-is-hovered={isHovered}
-			>
-				<div className='connectionBlockContent'>
-					<Flex alignItems='center' gap={10}>
-						{getConnectorLogo(c.connector.icon)}
-						<div className='name'>{c.name}</div>
-					</Flex>
-					<StatusDot status={c.status} />
+			<Link path={`connections/${c.id}/actions`}>
+				<div
+					className={`connectionBlock${isNew ? ' new' : ''}`}
+					id={`${c.id}`}
+					onMouseEnter={onMouseEnter}
+					onMouseLeave={onMouseLeave}
+					data-is-hovered={isHovered}
+				>
+					<div className='connectionBlockContent'>
+						<Flex alignItems='center' gap={10}>
+							{getConnectorLogo(c.connector.icon)}
+							<div className='name'>{c.name}</div>
+						</Flex>
+						<StatusDot status={c.status} />
+					</div>
 				</div>
-			</div>
+			</Link>
 			{arrow}
 		</>
 	);

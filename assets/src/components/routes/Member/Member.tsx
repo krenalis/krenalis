@@ -11,6 +11,7 @@ import { MemberAvatar, MemberToSet } from '../../../types/external/api';
 import { toBase64 } from '../../../lib/utils/toBase64';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberToSet } from '../../../lib/helpers/transformedMember';
+import { Link } from '../../shared/Link/Link';
 
 const Member = () => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
@@ -129,10 +130,6 @@ const Member = () => {
 		}, 300);
 	};
 
-	const onCancel = () => {
-		redirect('members');
-	};
-
 	return (
 		<div className='member__content'>
 			<div className='member'>
@@ -180,9 +177,9 @@ const Member = () => {
 					</div>
 				)}
 				<div className='member__buttons'>
-					<SlButton className='member__cancel-button' onClick={onCancel}>
-						Cancel
-					</SlButton>
+					<Link path='members'>
+						<SlButton className='member__cancel-button'>Cancel</SlButton>
+					</Link>
 					<SlButton className='member__save-button' variant='primary' loading={isSaving} onClick={onSave}>
 						Save
 					</SlButton>

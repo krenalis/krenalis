@@ -9,6 +9,7 @@ import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import ListTile from '../../shared/ListTile/ListTile';
+import { Link } from '../../shared/Link/Link';
 
 const FileConnector = () => {
 	const [selectedStorage, setSelectedStorage] = useState<number>();
@@ -56,10 +57,6 @@ const FileConnector = () => {
 		setSelectedStorage(Number(e.target.value));
 	};
 
-	const onCreateStorageClick = () => {
-		redirect(`connectors?role=${role}`);
-	};
-
 	const onAddActionType = (target: String) => {
 		const id = storages.find((s) => s.id === selectedStorage).id;
 		redirect(`connections/${id}/actions/add/${target}?fileConnector=${encodeURIComponent(file.name)}`);
@@ -100,9 +97,9 @@ const FileConnector = () => {
 								Currently there are no {role === 'Source' ? 'sources' : 'destination'} storages
 								available
 							</div>
-							<SlButton variant='neutral' onClick={onCreateStorageClick}>
-								Create one...
-							</SlButton>
+							<Link path={`connectors?role=${role}`}>
+								<SlButton variant='neutral'>Create one...</SlButton>
+							</Link>
 						</div>
 					)}
 					{selectedStorage != null && (

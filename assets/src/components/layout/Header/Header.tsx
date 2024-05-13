@@ -1,9 +1,9 @@
-import React, { ReactNode, useContext } from 'react';
+import React, { ReactNode } from 'react';
 import './Header.css';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
-import AppContext from '../../../context/AppContext';
 import { TransformedMember } from '../../../lib/helpers/transformedMember';
+import { Link } from '../../shared/Link/Link';
 
 interface HeaderProps {
 	title: ReactNode;
@@ -11,16 +11,6 @@ interface HeaderProps {
 }
 
 const Header = ({ title, member }: HeaderProps) => {
-	const { redirect } = useContext(AppContext);
-
-	const onOrganizationClick = () => {
-		redirect('organization');
-	};
-
-	const onMemberClick = () => {
-		redirect(`members/current`);
-	};
-
 	return (
 		<div className='header'>
 			<div className='title'>
@@ -29,13 +19,16 @@ const Header = ({ title, member }: HeaderProps) => {
 			<div className='account'>
 				<IconWrapper name='bell' moat={true}></IconWrapper>
 				<IconWrapper name='question-lg' moat={true}></IconWrapper>
-				<IconWrapper name='building' onClick={onOrganizationClick} moat={true}></IconWrapper>
-				<SlAvatar
-					className='accountAvatar'
-					initials={member.Initials}
-					image={member.Avatar ? `data:${member.Avatar.MimeType};base64, ${member.Avatar.Image}` : ''}
-					onClick={onMemberClick}
-				/>
+				<Link path='organization'>
+					<IconWrapper name='building' moat={true}></IconWrapper>
+				</Link>
+				<Link path='members/current'>
+					<SlAvatar
+						className='accountAvatar'
+						initials={member.Initials}
+						image={member.Avatar ? `data:${member.Avatar.MimeType};base64, ${member.Avatar.Image}` : ''}
+					/>
+				</Link>
 			</div>
 		</div>
 	);

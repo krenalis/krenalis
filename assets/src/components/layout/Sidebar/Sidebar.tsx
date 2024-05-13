@@ -8,6 +8,7 @@ import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';
 import Workspace from '../../../types/external/workspace';
 import { Warehouse } from '../../../types/internal/app';
+import { Link } from '../../shared/Link/Link';
 
 interface sidebarItem {
 	name: string;
@@ -87,40 +88,39 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 		}
 		const isDisabled = warehouse == null && (item.name === 'schema' || item.name === 'users');
 		items.push(
-			<div
-				key={item.name}
-				className={`item${
-					isDisabled
-						? ' disabled'
-						: isSelected
-							? ' selected'
-							: isChildrenSelected
-								? ' isChildrenSelected'
-								: ''
-				}`}
-				onClick={isDisabled ? null : () => redirect(`${item.link}`)}
-			>
-				<SlIcon className='itemIcon' name={item.icon} />
-				<div className='text'>{item.label}</div>
-				{isDisabled && (
-					<SlTooltip content='You must first connect a data warehouse'>
-						<SlIcon className='disabledItemIcon' name='database-exclamation' />
-					</SlTooltip>
-				)}
-			</div>,
+			<Link path={isDisabled ? null : item.link}>
+				<div
+					key={item.name}
+					className={`item${
+						isDisabled
+							? ' disabled'
+							: isSelected
+								? ' selected'
+								: isChildrenSelected
+									? ' isChildrenSelected'
+									: ''
+					}`}
+				>
+					<SlIcon className='itemIcon' name={item.icon} />
+					<div className='text'>{item.label}</div>
+					{isDisabled && (
+						<SlTooltip content='You must first connect a data warehouse'>
+							<SlIcon className='disabledItemIcon' name='database-exclamation' />
+						</SlTooltip>
+					)}
+				</div>
+			</Link>,
 		);
 		if (hasSubItems && (isSelected || isChildrenSelected)) {
 			for (const subItem of item.subItems!) {
 				const isSelected = subItem.name === currentRoute;
 				items.push(
-					<div
-						key={subItem.name}
-						className={`subItem${isSelected ? ' selected' : ''}`}
-						onClick={() => redirect(`${subItem.link}`)}
-					>
-						{subItem.icon && <SlIcon name={subItem.icon} />}
-						<div className='text'>{subItem.label}</div>
-					</div>,
+					<Link path={subItem.link}>
+						<div key={subItem.name} className={`subItem${isSelected ? ' selected' : ''}`}>
+							{subItem.icon && <SlIcon name={subItem.icon} />}
+							<div className='text'>{subItem.label}</div>
+						</div>
+					</Link>,
 				);
 			}
 		}

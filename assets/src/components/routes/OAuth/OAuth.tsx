@@ -4,6 +4,7 @@ import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { Link } from '../../shared/Link/Link';
 
 const errorMessageByOauthErrorCode = {
 	invalid_request:
@@ -84,19 +85,15 @@ const OAuth = () => {
 		}
 	}, [redirectURL]);
 
-	const onGoToConnectionsMapClick = () => {
-		redirect(`connections`);
-	};
-
 	return (
 		<div className='oauth'>
 			{errorMessage !== '' ? (
 				<div className='error'>
 					<SlIcon name='exclamation-circle-fill'></SlIcon>
 					<div className='text'>{errorMessage}</div>
-					<SlButton variant='default' onClick={onGoToConnectionsMapClick}>
-						Go to connections map
-					</SlButton>
+					<Link path='connections'>
+						<SlButton variant='default'>Go to connections map</SlButton>
+					</Link>
 				</div>
 			) : (
 				<div className='loading'>

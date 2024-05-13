@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useContext, useLayoutEffect, useMemo } from 'react';
 import './ConnectorsList.css';
 import Card from '../../shared/Card/Card';
 import AppContext from '../../../context/AppContext';
@@ -8,12 +8,12 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { authCodeURLResponse } from '../../../types/external/api';
 import { useLocation } from 'react-router-dom';
+import { Link } from '../../shared/Link/Link';
 
 const ConnectorsList = () => {
-	const [goToConnectorSettings, setGoToConnectorSettings] = useState<string>('');
 	const [searchTerm, setSearchTerm] = useState<string>('');
 
-	const { redirect, api, handleError, connectors, setTitle } = useContext(AppContext);
+	const { api, handleError, connectors, setTitle } = useContext(AppContext);
 
 	const location = useLocation();
 
@@ -29,17 +29,6 @@ const ConnectorsList = () => {
 	useLayoutEffect(() => {
 		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
-
-	useEffect(() => {
-		if (goToConnectorSettings !== '') {
-			const connector = connectors.find((c) => c.name === goToConnectorSettings);
-			if (connector.isFile) {
-				redirect(`connectors/file/${goToConnectorSettings}?role=${connectionRole}`);
-				return;
-			}
-			redirect(`connectors/${goToConnectorSettings}?role=${connectionRole}`);
-		}
-	}, [goToConnectorSettings]);
 
 	const authorizeWithOAuth = async (connectorName: string) => {
 		localStorage.setItem('chichi_ui_add_connector_name', connectorName);
@@ -76,16 +65,24 @@ const ConnectorsList = () => {
 					description={connectionRole === 'Source' ? c.sourceDescription : c.destinationDescription}
 				>
 					<SlTooltip content={`Add ${c.name}`}>
-						<SlButton
-							size='medium'
-							variant='default'
-							onClick={
-								c.oAuth ? () => authorizeWithOAuth(c.name) : () => setGoToConnectorSettings(c.name)
+						<Link
+							path={
+								c.oAuth
+									? null
+									: c.isFile
+										? `connectors/file/${c.name}?role=${connectionRole}`
+										: `connectors/${c.name}?role=${connectionRole}`
 							}
-							circle
 						>
-							<SlIcon name='plus' />
-						</SlButton>
+							<SlButton
+								size='medium'
+								variant='default'
+								onClick={c.oAuth ? () => authorizeWithOAuth(c.name) : null}
+								circle
+							>
+								<SlIcon name='plus' />
+							</SlButton>
+						</Link>
 					</SlTooltip>
 				</Card>,
 			);

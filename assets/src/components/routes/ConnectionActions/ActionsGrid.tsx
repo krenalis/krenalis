@@ -17,6 +17,7 @@ import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import { Execution } from '../../../types/external/api';
 import { sleep } from '../../../lib/utils/sleep';
+import { Link } from '../../shared/Link/Link';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -30,7 +31,7 @@ interface ActionsGridProps {
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
 	const [runningActions, setRunningActions] = useState<number[]>([]);
-	const { api, handleError, setIsLoadingConnections, redirect } = useContext(AppContext);
+	const { api, handleError, setIsLoadingConnections } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const runButtonRefs = useRef<{
@@ -82,14 +83,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		const errorButton = (
 			<div className='linkToOverview'>
 				Go to{' '}
-				<span
-					className='link'
-					onClick={() =>
-						redirect(`connections/${connection.id}/overview?failed-execution-action=${actionID}`)
-					}
-				>
-					overview
-				</span>{' '}
+				<Link path={`connections/${connection.id}/overview?failed-execution-action=${actionID}`}>
+					<span className='link'>overview</span>
+				</Link>{' '}
 				for details
 			</div>
 		);

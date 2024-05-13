@@ -5,6 +5,7 @@ import TransformedConnection from '../lib/helpers/transformedConnection';
 import { Status, Warehouse } from '../types/internal/app';
 import Workspace from '../types/external/workspace';
 import { TransformedMember } from '../lib/helpers/transformedMember';
+import { SlAlert } from '@shoelace-style/shoelace';
 
 interface AppContext {
 	api: API;
@@ -28,6 +29,7 @@ interface AppContext {
 	title: ReactNode;
 	logout: () => void;
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+	toastRef: React.MutableRefObject<SlAlert>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);

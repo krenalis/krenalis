@@ -156,6 +156,7 @@ const App = () => {
 					title,
 					logout,
 					setIsLoggedIn,
+					toastRef,
 				}}
 			>
 				<Outlet />

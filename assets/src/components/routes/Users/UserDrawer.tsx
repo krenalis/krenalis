@@ -12,6 +12,7 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDateString from '../../../lib/utils/toJSDateString';
+import { Link } from '../../shared/Link/Link';
 
 interface UserDrawerProps {
 	selectedUser: number;
@@ -21,7 +22,7 @@ interface UserDrawerProps {
 const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	const [selectedTab, setSelectedTab] = useState<UserTab>();
 
-	const { connections, workspaces, selectedWorkspace, redirect } = useContext(AppContext);
+	const { connections, workspaces, selectedWorkspace } = useContext(AppContext);
 	const { userIDList, fetchUsers, pagination } = useContext(UsersContext);
 	const { isLoading, traits, events, identities } = useUserDrawer(selectedUser, selectedTab);
 
@@ -97,16 +98,8 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 		setSelectedTab(e.detail.name);
 	};
 
-	const onCustomizeDisplayedProperties = () => {
-		redirect('settings/general');
-	};
-
 	const onClose = () => {
 		setSelectedUser(0);
-	};
-
-	const onConnectionClick = (id: number) => {
-		return redirect(`connections/${id}/actions`);
 	};
 
 	let userImage: any;
@@ -165,9 +158,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 					{userImage == null && userFirstName == null && userLastName == null && userInformation == null && (
 						<div className='user-drawer__customize'>
 							You can customize the displayed properties in the{' '}
-							<span onClick={onCustomizeDisplayedProperties} className='user-drawer__customize-link'>
-								settings
-							</span>
+							<Link path='settings/general'>
+								<span className='user-drawer__customize-link'>settings</span>
+							</Link>
 						</div>
 					)}
 				</div>
@@ -215,12 +208,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								return (
 									<div className='user-drawer__event' key={event.sentAt}>
 										<div className='user-drawer__event-head'>
-											<div
-												className='user-drawer__event-logo'
-												onClick={() => onConnectionClick(source.id)}
-											>
-												{logo}
-											</div>
+											<Link path={`connections/${source.id}/actions`}>
+												<div className='user-drawer__event-logo'>{logo}</div>
+											</Link>
 											<div className='user-drawer__event-type'>{event.type}</div>
 										</div>
 										<div className='user-drawer__event-sent-at'>
@@ -246,20 +236,16 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								const logo = getConnectorLogo(connection.connector.icon);
 								return (
 									<div className='user-drawer__identity' key={identity.LastChangeTime}>
-										<div
-											className='user-drawer__identity-connection-logo'
-											onClick={() => onConnectionClick(connection.id)}
-										>
-											{logo}
-										</div>
+										<Link path={`connections/${connection.id}/actions`}>
+											<div className='user-drawer__identity-connection-logo'>{logo}</div>
+										</Link>
 										<div className='user-drawer__identity-info'>
 											<div className='user-drawer__identity-connection-date'>
-												<div
-													className='user-drawer__identity-connection-name'
-													onClick={() => onConnectionClick(connection.id)}
-												>
-													{connection.name}
-												</div>
+												<Link path={`connections/${connection.id}/actions`}>
+													<div className='user-drawer__identity-connection-name'>
+														{connection.name}
+													</div>
+												</Link>
 												<div className='user-drawer__identity-date'>
 													{new Date(toJSDateString(identity.LastChangeTime)).toLocaleString(
 														'it-IT',
