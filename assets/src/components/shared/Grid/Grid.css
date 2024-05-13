@@ -69,7 +69,7 @@ sl-popup::part(arrow) {
 }
 
 .grid .gridRow .gridCell .cellContent .object {
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 	background-color: var(--sl-color-neutral-100);
 	font-size: 13px;
 	border-radius: 5px;

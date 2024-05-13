@@ -226,7 +226,7 @@
 }
 
 .users-list .user-drawer .user-drawer__trait-object {
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 	background-color: var(--sl-color-neutral-100);
 	width: fit-content;
 	border-radius: 5px;

@@ -5,6 +5,6 @@
 }
 
 .syntax-highlight * {
-	font-family: monospace !important;
+	font-family: 'Source Code Pro', monospace !important;
 	font-size: 13px !important;
 }

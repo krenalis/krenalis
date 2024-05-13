@@ -270,7 +270,7 @@
 }
 
 .action .mappings .mapping .inputProperty::part(base) {
-	font-family: monospace !important;
+	font-family: 'Source Code Pro', monospace !important;
 }
 
 .action .mappings .mapping .inputProperty .propertyIcon {
@@ -533,7 +533,7 @@ inherit the disabled style */
 }
 
 .action .fullscreenTransformation .property .name {
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 	width: fit-content;
 	display: flex;
 	flex-flow: row nowrap;
@@ -545,7 +545,7 @@ inherit the disabled style */
 .action .fullscreenTransformation .property .label {
 	font-size: 13px;
 	opacity: 0.7;
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 	margin-top: -5px;
 	display: block;
 }
@@ -553,7 +553,7 @@ inherit the disabled style */
 .action .fullscreenTransformation .property .type {
 	opacity: 0.7;
 	font-size: 13px;
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 }
 
 .action .fullscreenTransformation .property sl-icon {
@@ -872,12 +872,12 @@ inherit the disabled style */
 
 .action .fullscreenTransformation .outputPanel .outputCode .outputSuccess {
 	white-space: pre;
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 }
 
 .action .fullscreenTransformation .outputPanel .outputCode .outputError {
 	white-space: pre-wrap;
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 	color: var(--sl-color-danger-600);
 }
 
@@ -1013,7 +1013,7 @@ inherit the disabled style */
 .action .completePathError {
 	position: absolute;
 	left: 5px;
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 	font-size: 13px;
 	margin-top: 1px;
 	opacity: 0;

@@ -51,13 +51,13 @@ body,
 *,
 *::before,
 *::after {
-	font-family: 'Inter', sans-serif;
+	font-family: 'DM Sans', sans-serif;
 	box-sizing: border-box;
 	outline-color: var(--color-primary-500);
 }
 
 *::part(base) {
-	font-family: Inter, sans-serif;
+	font-family: 'DM Sans', sans-serif;
 }
 
 div,
@@ -78,7 +78,7 @@ h3,
 h4,
 h5,
 h6 {
-	font-family: 'Inter', sans-serif !important; /* TODO(@Andrea): change to Interstate */
+	font-family: 'DM Sans', sans-serif;
 	font-weight: 400;
 }
 
@@ -95,7 +95,7 @@ p {
 }
 
 code {
-	font-family: monospace;
+	font-family: 'Source Code Pro', monospace;
 }
 
 img,
