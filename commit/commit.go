@@ -8,6 +8,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,6 +20,8 @@ import (
 	"strings"
 	"time"
 )
+
+const expectedDenoVersion = "1.43.3"
 
 func main() {
 
@@ -33,6 +36,9 @@ func main() {
 	flag.Parse()
 
 	start := time.Now()
+
+	// Check if the locally installed Deno version is correct.
+	checkDenoVersion()
 
 	// Find modules and packages in this repository.
 	var modules []string
@@ -142,6 +148,35 @@ func main() {
 	cmd("deno", []string{"test"}, repo, "javascript-sdk", true)
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
+}
+
+func checkDenoVersion() {
+	fmt.Println("Checking the Deno version")
+	cmd := exec.Command("deno", "--version")
+	var stdout bytes.Buffer
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = &stdout
+	err := cmd.Run()
+	if err != nil {
+		fatal("cannot execute the command 'deno --version': %s", err)
+	}
+	firstLine := strings.Split(stdout.String(), "\n")[0]
+	parts := strings.Split(firstLine, " ")
+	if len(parts) < 2 {
+		fatal("unexpected output from 'deno --version': %q", stdout.String())
+	}
+	version := parts[1]
+	if version != expectedDenoVersion {
+		msg := "the version of Deno you have locally does not match the one required by the script 'commit/commit.go':\n" +
+			fmt.Sprintf("the expected Deno version was %s, but the installed is %s.\n", version, expectedDenoVersion) +
+			"This can happen for two reasons: either the version of Deno you have locally is incorrect (or not up-to-date),\n" +
+			"in which case you should upgrade it by running the command:\n" +
+			fmt.Sprintf("\n\tdeno upgrade --version %s\n\n", expectedDenoVersion) +
+			"Alternatively, if the version you have locally is correct and up-to-date,\n" +
+			"you need to update the version specified in the 'commit/commit.go' script."
+		fatal(msg)
+	}
+	fmt.Printf("Locally installed Deno version is correct: %s\n", version)
 }
 
 func cmd(name string, arg []string, repo, moduleDir string, echo bool) {
