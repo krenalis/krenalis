@@ -143,9 +143,9 @@ func main() {
 	// Make the vendor of assets' 'node_modules' directory.
 	cmd("npm", []string{"run", "make-vendor"}, repo, "assets", true)
 
-	// Format and test the files in the 'javascript-sdk' directory.
+	// Format, test and build the files in the 'javascript-sdk' directory.
 	cmd("deno", []string{"fmt"}, repo, "javascript-sdk", true)
-	cmd("deno", []string{"test"}, repo, "javascript-sdk", true)
+	cmd("deno", []string{"task", "build"}, repo, "javascript-sdk", true)
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
