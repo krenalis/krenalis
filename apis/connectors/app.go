@@ -118,13 +118,13 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 }
 
 // Schema returns the app's schema for the provided target. If target is
-// state.Events, eventType represents the type of the event. If the event type
-// does not exist, it returns the ErrEventTypeNotExist error.
+// state.Events, eventType represents the type of the event.
 //
 // For the users and the groups target, the returned schema contains only the
-// properties compatible with the provided role. For the events target, the
+// properties compatible with the app's role. For the events target, the
 // returned schema can be the invalid schema.
 //
+// If the event type does not exist, it returns the ErrEventTypeNotExist error.
 // It panics if the app does not support the provided target.
 func (app *App) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
 	return app.SchemaAsRole(ctx, app.role, target, eventType)
