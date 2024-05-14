@@ -198,7 +198,8 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, 
 	if store.mode == state.Maintenance {
 		return 0, 0, false, ErrMaintenanceMode
 	}
-	return store.warehouse.DuplicatedUsers(ctx, property)
+	column := strings.ReplaceAll(property, ".", "_")
+	return store.warehouse.DuplicatedUsers(ctx, column)
 }
 
 // Events returns an iterator over the results of the query on the 'events'

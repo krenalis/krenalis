@@ -180,7 +180,7 @@ func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, act
 }
 
 // DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
+func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return 0, 0, false, err
@@ -192,7 +192,7 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, property strin
 				max("__id__") as gid2,
 				count(*) AS cnt
 			FROM _users
-			GROUP BY "` + property + `") AS subquery
+			GROUP BY "` + column + `") AS subquery
 		WHERE subquery.cnt > 1
 		LIMIT 1`
 	rows, err := db.Query(ctx, query)

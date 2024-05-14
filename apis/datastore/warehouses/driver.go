@@ -139,13 +139,13 @@ type Warehouse interface {
 	DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error)
 
 	// DuplicatedUsers returns the GIDs of two duplicated users.
-	// Two users are duplicated if they have the same value for the given property;
+	// Two users are duplicated if they have the same value for the given column;
 	// in that case, their GID is returned and 'true'.
 	// If there are no users matching this condition, no GIDs are returned and the
 	// returned boolean is false.
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error)
+	DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error)
 
 	// IdentitiesWriter returns an IdentitiesWriter.
 	// An IdentitiesWriter can be used for writing user identities with the given

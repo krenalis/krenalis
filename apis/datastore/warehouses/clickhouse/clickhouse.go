@@ -122,7 +122,7 @@ func (warehouse *ClickHouse) DuplicatedDestinationUsers(ctx context.Context, act
 }
 
 // DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *ClickHouse) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
+func (warehouse *ClickHouse) DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error) {
 	panic("TODO: not implemented")
 }
 

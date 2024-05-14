@@ -129,7 +129,7 @@ func (warehouse *Snowflake) DuplicatedDestinationUsers(ctx context.Context, acti
 }
 
 // DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
+func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error) {
 	panic("TODO: not implemented")
 }
 
