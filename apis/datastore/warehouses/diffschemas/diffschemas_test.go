@@ -744,6 +744,22 @@ func TestDiff(t *testing.T) {
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
+		{
+			name: "Changing order of properties within Objects",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			expectedOps: []warehouses.AlterSchemaOperation{},
+		},
 	}
 
 	for _, test := range tests {
