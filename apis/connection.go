@@ -160,7 +160,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
 				if err != nil {
-					return nil, err
+					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
 				actionSchemas := &ActionSchemas{
 					In:  users, // don't remove meta properties here, they may be useful in transformations.
@@ -186,7 +186,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
 				if err != nil {
-					return nil, err
+					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
 				actionSchemas := &ActionSchemas{
 					In:  groups, // don't remove meta properties here, they may be useful in transformations.
