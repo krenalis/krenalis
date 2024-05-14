@@ -9,7 +9,7 @@ CREATE TABLE _users_identities (
     
     "__cluster__" serial,
 
-    "email" varchar(300), -- TODO(Gianluca): see https://github.com/open2b/chichi/issues/628.
+    "email" varchar(300),
 
     PRIMARY KEY ("__identity_key__")
 );
