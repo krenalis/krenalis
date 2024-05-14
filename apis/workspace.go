@@ -24,7 +24,7 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/warehouses/diffschemas"
+	"github.com/open2b/chichi/apis/datastore/diffschemas"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events/collector"
