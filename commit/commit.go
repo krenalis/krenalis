@@ -43,9 +43,12 @@ func main() {
 	// Find modules and packages in this repository.
 	var modules []string
 	var packages []string
-	err := filepath.Walk(".", func(path string, _ fs.FileInfo, err error) error {
+	err := filepath.Walk(".", func(path string, fi fs.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		if fi.IsDir() && fi.Name() == "vendor" {
+			return filepath.SkipDir
 		}
 		// Module found.
 		if filepath.Base(path) == "go.mod" {
