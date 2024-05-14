@@ -417,7 +417,6 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	}
 
 	// Add the "__id__" meta property.
-	// TODO(Gianluca): see https://github.com/open2b/chichi/issues/573.
 	schema = types.Object(append([]types.Property{
 		{Name: "__id__", Type: types.Int(32)},
 	}, schema.Properties()...))
