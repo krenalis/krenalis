@@ -80,10 +80,12 @@ func New(conf *chichi.AppConfig) (*Stripe, error) {
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Stripe connector")
 		}
-	}
-	err := c.setupWebhooksEndpoint()
-	if err != nil {
-		return nil, err
+		if c.settings.webhook.secret == "" && conf.SetSettings != nil {
+			err = c.setupWebhooksEndpoint()
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	return &c, nil
 }
@@ -343,10 +345,10 @@ func (stripe *Stripe) saveValues(ctx context.Context, values []byte) error {
 	return nil
 }
 
+// setupWebhooksEndpoint sets up the endpoint for webhooks.
+// It can be called if stripe.settings is not nil and stripe.conf.SetSettings is
+// not nil.
 func (stripe *Stripe) setupWebhooksEndpoint() error {
-	if stripe.conf.SetSettings == nil || stripe.settings.webhook.secret != "" {
-		return nil
-	}
 
 	form := url.Values{
 		"url":              {stripe.conf.WebhookURL},
