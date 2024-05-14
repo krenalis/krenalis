@@ -325,8 +325,8 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		connections[i] = c.ID
 	}
 
-	// Determine the identifiers properties.
-	identifiers := make([]types.Property, len(ws.Identifiers))
+	// Determine the identifiers columns.
+	identifiers := make([]warehouses.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
 		path := strings.Split(ident, ".")
 		identifier, err := ws.UsersSchema.PropertyByPath(path)
@@ -336,10 +336,24 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		if !CanBeIdentifier(identifier.Type) {
 			return fmt.Errorf("identifier %q has a not allowed type %v", identifier.Name, identifier.Type)
 		}
-		identifiers[i] = identifier
+		identifiers[i] = warehouses.Column{
+			Name:     strings.Join(path, "_"),
+			Type:     identifier.Type,
+			Nullable: identifier.Nullable,
+		}
 	}
 
-	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, ws.UsersSchema)
+	// Determine the users columns.
+	var usersColumns []warehouses.Column
+	for _, c := range warehouses.PropertiesToColumns(ws.UsersSchema.Properties()) {
+		usersColumns = append(usersColumns, warehouses.Column{
+			Name:     c.Name,
+			Type:     c.Type,
+			Nullable: c.Nullable,
+		})
+	}
+
+	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersColumns)
 }
 
 // SetDestinationUser sets the destination user for an action.

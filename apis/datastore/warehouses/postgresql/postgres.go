@@ -398,7 +398,7 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
+func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -427,11 +427,10 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	}
 
 	// Generate the SQL matching expression.
-	identifiersColumns := warehouses.PropertiesToColumns(identifiers)
 	var matchingExpr strings.Builder
-	if len(identifiersColumns) > 0 {
+	if len(identifiers) > 0 {
 		matchingExpr.WriteString("matching_func(")
-		for i, ident := range identifiersColumns {
+		for i, ident := range identifiers {
 			if i > 0 {
 				matchingExpr.WriteByte(',')
 			}
@@ -447,7 +446,6 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 	}
 
 	// Generate the SQL queries that will perform the users synchronization.
-	usersColumns := warehouses.PropertiesToColumns(usersSchema.Properties())
 	var usersSyncQueries strings.Builder
 	usersSyncQueries.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
 	for _, c := range usersColumns {

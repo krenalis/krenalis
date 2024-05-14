@@ -391,7 +391,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
+func (warehouse *Snowflake) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
 	panic("not implemented")
 }
 

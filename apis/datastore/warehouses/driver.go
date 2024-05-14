@@ -182,12 +182,12 @@ type Warehouse interface {
 	// connections holds the identifiers of the connections of the workspace and may
 	// be empty to indicate that no connections are present in the workspace.
 	//
-	// Identifiers are the Workspace Identity Resolution identifiers, ordered by
-	// priority.
+	// identifiers are the columns corresponding to the Workspace Identity
+	// Resolution identifiers, ordered by priority.
 	//
-	// usersSchema is the "users" schema, as the "users" table on the data
-	// warehouse is rebuilt by this procedure.
-	RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error
+	// usersColumns holds the columns of the "users" schema, as the "users"
+	// table on the data warehouse is rebuilt by this procedure.
+	RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []Column) error
 
 	// SetDestinationUser sets the destination user for an action.
 	//

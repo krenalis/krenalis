@@ -187,7 +187,7 @@ func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuer
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-func (warehouse *ClickHouse) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers []types.Property, usersSchema types.Type) error {
+func (warehouse *ClickHouse) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
 	panic("TODO: not implemented")
 }
 
