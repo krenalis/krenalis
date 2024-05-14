@@ -152,7 +152,9 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text()},
 				})},
 			}),
-			expectedErr: "cannot add properties to already existent Object properties",
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "x.c", Type: types.Text()},
+			},
 		},
 		{
 			name: "One property dropped at second level",
@@ -206,7 +208,10 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text()},
 				})},
 			}),
-			expectedErr: "cannot add properties to already existent Object properties",
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationAddProperty, Path: "x.c", Type: types.Text()},
+				{Operation: warehouses.OperationDropProperty, Path: "x.b"},
+			},
 		},
 		{
 			name: "Two properties added at first level",

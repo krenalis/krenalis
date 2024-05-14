@@ -392,7 +392,7 @@ const buildRow = (
 		</div>
 	);
 	let typeCell: ReactNode;
-	if (property.type.name === 'Object' && property.isEditable) {
+	if (property.type.name === 'Object') {
 		typeCell = (
 			<div className='schema-edit__editable-object-cell'>
 				{property.type.name}
