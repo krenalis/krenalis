@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package apis
+package datastore
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-func Test_checkConflictingProperties(t *testing.T) {
+func Test_CheckConflictingProperties(t *testing.T) {
 	tests := []struct {
 		schema types.Type
 		err    string
@@ -77,7 +77,7 @@ func Test_checkConflictingProperties(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			gotErr := checkConflictingProperties(test.schema)
+			gotErr := CheckConflictingProperties(test.schema)
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()

@@ -24,7 +24,6 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/datastore/warehouses/diffschemas"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
@@ -408,7 +407,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	current := removeMetaProperties(this.workspace.UsersSchema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema)                       // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 
-	if err := checkConflictingProperties(schema); err != nil {
+	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
 
@@ -497,7 +496,7 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
-	if err := checkConflictingProperties(schema); err != nil {
+	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return nil, errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
@@ -1640,22 +1639,6 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("json: invalid WarehouseMode: %s", m)
 	}
 	*mode = mo
-	return nil
-}
-
-// checkConflictingProperties checks if schema contains conflicting properties,
-// and returns an error in that case.
-// A property conflicts with another if their representation as columns on the
-// data warehouse has the same name.
-func checkConflictingProperties(schema types.Type) error {
-	columns := warehouses.PropertiesToColumns(schema.Properties())
-	names := make(map[string]struct{})
-	for _, c := range columns {
-		if _, ok := names[c.Name]; ok {
-			return fmt.Errorf("two or more properties cannot have the same representation as column %q", c.Name)
-		}
-		names[c.Name] = struct{}{}
-	}
 	return nil
 }
 

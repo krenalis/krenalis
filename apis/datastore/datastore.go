@@ -19,6 +19,7 @@ import (
 	"github.com/open2b/chichi/apis/datastore/warehouses/postgresql"
 	"github.com/open2b/chichi/apis/datastore/warehouses/snowflake"
 	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
 )
 
 type (
@@ -191,4 +192,20 @@ func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehou
 		return snowflake.Open(settings)
 	}
 	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
+}
+
+// CheckConflictingProperties checks if schema contains conflicting properties,
+// and returns an error in that case.
+// A property conflicts with another if their representation as columns on the
+// data warehouse has the same name.
+func CheckConflictingProperties(schema types.Type) error {
+	columns := propertiesToColumns(schema.Properties())
+	names := make(map[string]struct{})
+	for _, c := range columns {
+		if _, ok := names[c.Name]; ok {
+			return fmt.Errorf("two or more properties cannot have the same representation as column %q", c.Name)
+		}
+		names[c.Name] = struct{}{}
+	}
+	return nil
 }
