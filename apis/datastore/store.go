@@ -344,14 +344,7 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the users columns.
-	var usersColumns []warehouses.Column
-	for _, c := range warehouses.PropertiesToColumns(ws.UsersSchema.Properties()) {
-		usersColumns = append(usersColumns, warehouses.Column{
-			Name:     c.Name,
-			Type:     c.Type,
-			Nullable: c.Nullable,
-		})
-	}
+	usersColumns := propertiesToColumns(ws.UsersSchema.Properties())
 
 	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersColumns)
 }
