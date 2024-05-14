@@ -119,7 +119,7 @@ type App interface {
 	// received event, is passed to the connector's EventRequest method.
 	//
 	// If no extra information is needed for the event type, the returned schema is
-	// the invalid type. If the event types does not exist, it returns the
+	// the invalid schema. If the event type does not exist, it returns the
 	// ErrEventTypeNotExist error.
 	Schema(ctx context.Context, target Targets, eventType string) (types.Type, error)
 }
