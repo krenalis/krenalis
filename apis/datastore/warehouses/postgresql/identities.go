@@ -98,7 +98,6 @@ func (iw *identitiesWriter) Write(ctx context.Context, identity warehouses.Ident
 	// after buffering the user identities to be written all together, directly
 	// calls the underlying data warehouse to write. This needs to be optimized
 	// for bulk writing rather than writing individual users.
-	// See the issue https://github.com/open2b/chichi/issues/627.
 	err = writeUserIdentity(ctx, db, identity.Properties, iw.schema, identity.ID,
 		identity.AnonymousID, identity.DisplayedProperty, iw.connection, iw.fromEvent, identity.LastChangeTime)
 	iw.ack(err, []string{identity.ID})
@@ -226,9 +225,6 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	}
 
 	// Retrieve the column names of the '_users_identities' table.
-	//
-	// TODO(Gianluca): this will be reviewed when optimizing the implementation,
-	// see the issue https://github.com/open2b/chichi/issues/627.
 	rows, err = db.Query(ctx, `SELECT * FROM "_users_identities"`)
 	if err != nil {
 		return warehouses.Error(err)
