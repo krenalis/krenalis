@@ -720,6 +720,30 @@ func TestDiff(t *testing.T) {
 			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.g.i", NewPath: "b.e_new_name.g.i"},
 			// },
 		},
+		{
+			name: "Changing order of properties with type Object",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+				{Name: "y", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "y", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+				})},
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+			}),
+			expectedOps: []warehouses.AlterSchemaOperation{},
+		},
 	}
 
 	for _, test := range tests {
