@@ -160,10 +160,6 @@ var WarehouseSchemaWithGID = types.Object(append(
 // Unlike Schema, this one uses the 'snake_case' convention instead of
 // 'camelCase' for property names, as this is the naming convention used for the
 // data warehouse column names.
-//
-// TODO(Gianluca): this definition will probably be rewritten or removed when we
-// implement the changes related to the schemas/properties/columns discussed in
-// the issue https://github.com/open2b/chichi/issues/708.
 var WarehouseSchema = types.Object([]types.Property{
 	{Name: "anonymous_id", Type: types.Text()},
 	{Name: "category", Type: types.Text()},
