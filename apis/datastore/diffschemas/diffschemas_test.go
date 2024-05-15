@@ -711,12 +711,11 @@ func TestDiff(t *testing.T) {
 			rePaths: map[string]any{
 				"b.e_new_name": "b.e",
 			},
-			expectedErr: "renaming of Object properties is currently not supported (see https://github.com/open2b/chichi/issues/691)",
-			// expectedOps: []warehouses.AlterSchemaOperation{
-			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.f", NewPath: "b.e_new_name.f"},
-			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.g.h", NewPath: "b.e_new_name.g.h"},
-			// 	{Operation: warehouses.OperationRenameProperty, Path: "b.e.g.i", NewPath: "b.e_new_name.g.i"},
-			// },
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "b_e_f", NewColumn: "b_e_new_name_f"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b_e_g_h", NewColumn: "b_e_new_name_g_h"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b_e_g_i", NewColumn: "b_e_new_name_g_i"},
+			},
 		},
 		{
 			name: "Changing order of properties with type Object",
