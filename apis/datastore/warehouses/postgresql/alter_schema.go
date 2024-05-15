@@ -57,12 +57,11 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, usersColumn
 
 // addColumnClause returns the PostgreSQL clause "ADD COLUMN" for a column with
 // the given type and nullable constraint.
-// propertyPath is used for error messages.
-func addColumnClause(propertyPath string, column string, colType types.Type, nullable bool) (string, error) {
+func addColumnClause(column string, colType types.Type, nullable bool) (string, error) {
 	var typ, defaultExpr string
 	typ, defaultExpr, ok := typeToPostgresType(colType)
 	if !ok {
-		return "", fmt.Errorf("the type of the property %q is not supported by the PostgreSQL driver", propertyPath)
+		return "", fmt.Errorf("the type of the column %q is not supported by the PostgreSQL driver", column)
 	}
 	var additional string
 	if !nullable {
@@ -136,7 +135,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 					if i > 0 {
 						b.WriteString(",\n\t")
 					}
-					add, err := addColumnClause(op.Column, op.Column, op.Type, op.Nullable)
+					add, err := addColumnClause(op.Column, op.Type, op.Nullable)
 					if err != nil {
 						return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
 					}

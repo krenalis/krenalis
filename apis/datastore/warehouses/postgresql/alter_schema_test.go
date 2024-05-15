@@ -69,7 +69,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the property \"f\" is not supported by the PostgreSQL driver",
+			expectedErr: "unsupported alter schema operation: the type of the column \"f\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Unsupported type at first-level property",
@@ -79,7 +79,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the property \"f\" is not supported by the PostgreSQL driver",
+			expectedErr: "unsupported alter schema operation: the type of the column \"f\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Unsupported type at second-level property",
@@ -90,7 +90,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "x_f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the property \"x_f\" is not supported by the PostgreSQL driver",
+			expectedErr: "unsupported alter schema operation: the type of the column \"x_f\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Enum are not supported",
@@ -100,7 +100,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the property \"a\" is not supported by the PostgreSQL driver",
+			expectedErr: "unsupported alter schema operation: the type of the column \"a\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Add a second level nullable property",
