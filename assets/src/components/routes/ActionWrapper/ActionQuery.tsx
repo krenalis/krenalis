@@ -127,7 +127,7 @@ const ActionQuery = () => {
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'DatabaseFailed' || 'InvalidPlaceholder') {
+				if (err.code === 'DatabaseFailed' || err.code === 'InvalidPlaceholder') {
 					handleError(err);
 				}
 				return;
