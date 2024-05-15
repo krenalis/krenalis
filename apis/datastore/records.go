@@ -38,7 +38,7 @@ type Records interface {
 
 // Record represents a record.
 type Record struct {
-	ID         int            // Identifier.
+	ID         int            // Identifier, whose value must fall within an Int(32).
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
