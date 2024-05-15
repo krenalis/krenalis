@@ -44,40 +44,34 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 	};
 
 	return (
-		<div className='header'>
-			<div className='title'>
-				<div className='actionTitle'>
-					{getConnectorLogo(connection.connector.icon)}
-					<div className='actionName'>
-						{isNameEditable ? (
-							<span className='name'>
-								<SlInput
-									className='nameInput'
-									value={action != null ? action.Name : actionType.Name}
-									onSlInput={onUpdateName}
-								></SlInput>
-								<SlIconButton
-									name='check-lg'
-									label='Confirm'
-									onClick={() => setIsNameEditable(false)}
-								/>
-							</span>
-						) : (
-							<span className='name'>
-								{action != null ? action.Name : actionType.Name}
-								<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
-							</span>
-						)}
-					</div>
-					{!isNameEditable && <div className='actionTypeDescription'>{actionType.Description}</div>}
+		<div className='action__header'>
+			<div className='action__header-title'>
+				{getConnectorLogo(connection.connector.icon)}
+				<div className='action__header-name'>
+					{isNameEditable ? (
+						<span>
+							<SlInput
+								className='action__header-name-input'
+								value={action != null ? action.Name : actionType.Name}
+								onSlInput={onUpdateName}
+							></SlInput>
+							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
+						</span>
+					) : (
+						<span>
+							{action != null ? action.Name : actionType.Name}
+							<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
+						</span>
+					)}
 				</div>
+				{!isNameEditable && <div className='action__header-description'>{actionType.Description}</div>}
 			</div>
-			<div className={`headerButtons${isSaveHidden ? ' hidden' : ''}`}>
-				<SlButton className='cancelAction' variant='default' onClick={onClose}>
+			<div className={`action__header-buttons${isSaveHidden ? ' action__header-buttons--hidden' : ''}`}>
+				<SlButton className='action__header-cancel' variant='default' onClick={onClose}>
 					Cancel
 				</SlButton>
 				<SlButton
-					className='saveAction'
+					className='action__header-save'
 					variant='primary'
 					disabled={isTransformationHidden || isTransformationDisabled}
 					onClick={onSave}

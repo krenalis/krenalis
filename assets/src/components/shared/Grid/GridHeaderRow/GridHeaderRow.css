@@ -1,4 +1,4 @@
-.gridHeaderRow {
+.grid__header-row {
 	display: grid;
 	grid-template-columns: var(--grid-columns);
 }

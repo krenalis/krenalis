@@ -346,14 +346,14 @@ const ConnectorSettings = () => {
 	let eventConnectionsContainer: ReactNode = null;
 	if (isEventConnection(connectionRole, connector.type, connector.targets)) {
 		eventConnectionsContainer = (
-			<div className='eventConnections'>
+			<div className='connector-settings__event-connections'>
 				<EventConnectionSelector
 					eventConnections={eventConnections}
 					setEventConnections={setEventConnections}
 					connections={connections}
 					role={connectionRole}
 					title={
-						<div className='eventConnectionLabel'>
+						<div className='connector-settings__event-connections-label'>
 							Event {connectionRole === 'Source' ? 'destinations' : 'sources'}
 						</div>
 					}
@@ -368,13 +368,13 @@ const ConnectorSettings = () => {
 	}
 
 	return (
-		<div className='connectorSettings'>
-			<div className='routeContent'>
-				<div className='settings'>
-					<div className='basic'>
-						<div className='inputWrapper'>
+		<div className='connector-settings'>
+			<div className='route-content'>
+				<div className='connector-settings__settings'>
+					<div className='connector-settings__basic'>
+						<div className='connector-settings__input'>
 							<SlInput
-								className='name'
+								className='connector-settings__name-field'
 								name='name'
 								value={name}
 								label='Name'
@@ -386,9 +386,9 @@ const ConnectorSettings = () => {
 							/>
 						</div>
 						{showStrategy && (
-							<div className='inputWrapper'>
+							<div className='connector-settings__input'>
 								<SlSelect
-									className='strategy'
+									className='connector-settings__strategy-field'
 									name='strategy'
 									value={strategy || 'AB-C'}
 									label='Strategy'
@@ -405,9 +405,9 @@ const ConnectorSettings = () => {
 							</div>
 						)}
 						{connectionRole !== 'Source' && connector.supportedSendingModes.length > 0 && (
-							<div className='inputWrapper'>
+							<div className='connector-settings__input'>
 								<SlSelect
-									className='mode'
+									className='connector-settings__mode-field'
 									name='mode'
 									value={SendingMode}
 									label='Sending mode'
@@ -417,7 +417,7 @@ const ConnectorSettings = () => {
 										setSendingMode(value);
 									}}
 								>
-									<div className='modeValueIcon' slot='prefix'>
+									<div className='connector-settings__mode-value-icon' slot='prefix'>
 										<SlIcon
 											name={
 												SendingMode === 'Cloud'
@@ -432,7 +432,7 @@ const ConnectorSettings = () => {
 										<SlOption key={m} value={m}>
 											<div slot='prefix'>
 												<SlIcon
-													className='modeIcon'
+													className='connector-settings__mode-icon'
 													name={m === 'Cloud' ? 'cloud' : m === 'Device' ? 'phone' : 'send'}
 												/>
 											</div>
@@ -444,9 +444,9 @@ const ConnectorSettings = () => {
 						)}
 						{c!.type === 'Website' && (
 							<>
-								<div className='inputWrapper'>
+								<div className='connector-settings__input'>
 									<SlInput
-										className='host'
+										className='connector-settings__host-field'
 										name='host'
 										value={websiteHost}
 										placeholder='www.example.com:443'
@@ -474,8 +474,12 @@ const ConnectorSettings = () => {
 					{fieldsToRender.length === 0 && buttonsToRender.length === 0 && (
 						<>
 							{eventConnectionsContainer}
-							<div className='saveWrapper'>
-								<SlButton className='saveButton' variant='primary' onClick={onSave}>
+							<div className='connector-settings__save-wrapper'>
+								<SlButton
+									className='connector-settings__save-button'
+									variant='primary'
+									onClick={onSave}
+								>
 									Save
 								</SlButton>
 							</div>

@@ -172,7 +172,7 @@ const Identifiers = () => {
 										size='small'
 									/>
 									<SlDropdown>
-										<SlButton size='small' className='identifiers-identifier__menu' slot='trigger'>
+										<SlButton size='small' className='identifiers__identifier-menu' slot='trigger'>
 											<SlIcon slot='prefix' name='three-dots'></SlIcon>
 										</SlButton>
 										<SlMenu>
@@ -191,7 +191,7 @@ const Identifiers = () => {
 												Move down
 											</SlMenuItem>
 											<SlMenuItem
-												className='identifiers-mapping__remove'
+												className='identifiers__mapping-remove'
 												onClick={() => removeIdentifier(position)}
 											>
 												<SlIcon slot='prefix' name='trash3' />

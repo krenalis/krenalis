@@ -1,131 +1,110 @@
-.connectionSettings {
+.connection-settings {
 	max-width: 1200px;
 }
 
-.connectionSettingsSpinner {
+.connection-settings__spinner {
 	display: block;
 	margin: auto;
 	margin-top: 50px;
 }
 
-.connectionSettings sl-tab-group::part(nav) {
+.connection-settings sl-tab-group::part(nav) {
 	flex-basis: 250px;
 }
 
-.connectionSettings sl-tab-group::part(body) {
+.connection-settings sl-tab-group::part(body) {
 	overflow: visible;
 }
 
-.connectionSettings sl-tab-group > sl-tab-panel::part(base) {
+.connection-settings sl-tab-group > sl-tab-panel::part(base) {
 	padding-left: 90px;
 }
 
-.connectionSettings .generalSettings .nameField,
-.connectionSettings .generalSettings .enablingField,
-.connectionSettings .generalSettings .strategyField,
-.connectionSettings .generalSettings .modeField,
-.connectionSettings .generalSettings .websiteHostField,
-.connectionSettings .generalSettings .displayedPropertyField {
+.connection-settings__name-field,
+.connection-settings__enabling-field,
+.connection-settings__strategy-field,
+.connection-settings__mode-field,
+.connection-settings__website-host-field {
 	margin-bottom: 30px;
 }
 
-.connectionSettings .generalSettings .nameField {
+.connection-settings__name-field {
 	max-width: 280px;
 }
 
-.connectionSettings .generalSettings .strategyField,
-.connectionSettings .generalSettings .modeField {
+.connection-settings__strategy-field,
+.connection-settings__mode-field {
 	max-width: fit-content;
 }
 
-.connectionSettings .modeField .modeValueIcon {
+.connection-settings__mode-value-icon {
 	display: flex;
 	align-items: center;
 	margin-right: 10px;
 }
 
-.connectionSettings .modeField sl-option[aria-selected='true'] .modeIcon {
+.connection-settings__mode-field sl-option[aria-selected='true'] .connection-settings__mode-icon {
 	color: var(--text-onaccent);
 }
 
-.connectionSettings .modeField sl-option .modeIcon {
+.connection-settings__mode-field sl-option .connection-settings__mode-icon {
 	display: flex;
 	align-items: center;
 }
 
-.connectionSettings .generalSettings .websiteHostField {
+.connection-settings__website-host-field {
 	max-width: 350px;
 }
 
-.connectionSettings .generalSettings .updateButton {
+.connection-settings__update-button {
 	display: block;
 	max-width: 200px;
 	margin-left: auto;
 }
 
-.connectionSettings .panelTitle {
+.connection-settings__panel-title {
 	font-size: 21px;
 	font-weight: 600;
 	margin-bottom: 30px;
 }
 
-.connectionSettings .connector-ui {
-	grid-area: form;
-}
-
-.connectionSettings .keys {
+.connection-settings__keys {
 	margin-bottom: 30px;
 }
 
-.connectionSettings .keys .flex {
+.connection-settings__keys .flex {
 	margin-bottom: 15px;
 }
 
-.connectionSettings .keys .key {
-	border: 1px solid var(--border-primary);
-	height: 40px;
-	display: flex;
-	align-items: center;
-	justify-content: left;
-	padding: 0 20px;
-	font-size: 14px;
-	border-radius: 5px;
-	min-width: 320px;
-}
-
-.connectionSettings .keyCopy {
+.connection-settings__key-copy {
 	display: flex;
 	align-items: center;
 	gap: 5px;
 }
 
-.connectionSettings .keyCopy > sl-input {
+.connection-settings__key-copy > sl-input {
 	width: 400px;
 }
 
-.connectionSettings .keyCopy > sl-input::part(base) {
+.connection-settings__key-copy > sl-input::part(base) {
 	font-size: 14px;
 }
 
-.connectionSettings .clipboardInput {
-	margin-top: 10px;
-}
-
-.connectionSettings .snippetCopy .editorWrapper {
+.connection-settings__snippet-copy .editor-wrapper {
 	margin-top: 10px;
 	width: 100%;
 }
 
-.connectionSettings .snippetCopy .editorWrapper * {
+.connection-settings__snippet-copy .editor-wrapper * {
 	font-size: 14px !important;
 }
 
-.connectionSettings .snippetCopy sl-copy-button {
+.connection-settings__snippet-copy sl-copy-button {
 	margin-top: 20px;
 	width: 100%;
 }
 
-.connectionSettings .snippetCopy sl-copy-button::part(button) {
+.connection-settings__snippet-copy sl-copy-button::part(button) {
 	gap: 8px;
 	background-color: var(--color-primary-600);
 	color: var(--text-onaccent);
@@ -133,14 +112,14 @@
 	margin-left: auto;
 }
 
-.connectionSettings .snippetCopy sl-copy-button::part(button)::after {
+.connection-settings__snippet-copy sl-copy-button::part(button)::after {
 	content: 'Copy';
 }
 
-.connectionSettings .dangerZone .label {
+.connection-settings__danger-zone-label {
 	font-weight: 600;
 }
 
-.connectionSettings .dangerZone .description {
+.connection-settings__danger-zone-description {
 	font-size: 14px;
 }

@@ -1,9 +1,9 @@
-.members__content {
+.members {
 	height: calc(100% - 70px);
 	background-color: var(--bg-gray);
 }
 
-.members {
+.members__content {
 	max-width: 900px;
 	margin: 0px auto;
 	padding: 30px;
@@ -15,42 +15,42 @@
 	margin: 20px auto;
 }
 
-.members .members__title {
+.members__title {
 	display: flex;
 	margin-bottom: 15px;
 	justify-content: space-between;
 	align-items: end;
 }
 
-.members .members__title-text {
+.members__title-text {
 	font-size: 23px;
 	font-weight: 600;
 }
 
-.members .members__member {
+.members__member {
 	margin-bottom: 15px;
 	background-color: var(--bg-primary);
 }
 
-.members .members__member-name {
+.members__member-name {
 	display: flex;
 	gap: 5px;
 }
 
-.members .members__member .tileContent {
+.members__member .list-tile__content {
 	grid-template-columns: 55px 1fr;
 }
 
-.members .members__member .tileIcon sl-avatar::part(base) {
+.members__member .list-tile__icon sl-avatar::part(base) {
 	width: 40px;
 	height: 40px;
 }
 
-.members .members__member:last-child {
+.members__member:last-child {
 	margin-bottom: 0;
 }
 
-.members .members__member .members__member-actions {
+.members__member-actions {
 	display: flex;
 	gap: 15px;
 }

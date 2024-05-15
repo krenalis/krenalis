@@ -4,7 +4,7 @@
 	padding-top: 60px;
 }
 
-.signup .signup__logo {
+.signup__logo {
 	font-size: 12px;
 	background-color: var(--color-primary-600);
 	color: var(--text-onaccent);
@@ -19,20 +19,20 @@
 	margin: auto;
 }
 
-.signup h1 {
+.signup__title {
 	text-align: center;
 	font-weight: 600;
 	margin-bottom: 30px;
 	font-size: 24px;
 }
 
-.signup .signup__name,
-.signup .signup__email,
-.signup .signup__password {
+.signup__name,
+.signup__email,
+.signup__password {
 	margin-bottom: 30px;
 }
 
-.signup sl-button {
+.sign-up__button {
 	display: block;
 	margin-top: 50px;
 }

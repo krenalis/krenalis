@@ -198,7 +198,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 					</div>
 				</SlTabPanel>
 				<SlTabPanel name='events'>
-					<div className={`user-drawer__events${selectedTab === 'events' ? ' selected' : ''}`}>
+					<div
+						className={`user-drawer__events${selectedTab === 'events' ? ' user-drawer__events--selected' : ''}`}
+					>
 						{isLoading ? (
 							spinner
 						) : events && events.length > 0 ? (
@@ -227,7 +229,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 					</div>
 				</SlTabPanel>
 				<SlTabPanel name='identities'>
-					<div className={`user-drawer__identities${selectedTab === 'identities' ? ' selected' : ''}`}>
+					<div
+						className={`user-drawer__identities${selectedTab === 'identities' ? ' user-drawer__identities--selected' : ''}`}
+					>
 						{isLoading ? (
 							spinner
 						) : identities && identities.length > 0 ? (

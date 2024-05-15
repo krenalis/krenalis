@@ -18,13 +18,13 @@ const GridRow = ({ row, columns, className, id }: GridRowProps) => {
 		const alignment = columns[i].alignment;
 		const typedCell = { value: cell, type: type, alignment: alignment };
 		const className = getChildIndexClassname(i, row.cells.length);
-		cellComponents.push(<GridCell key={i} cell={typedCell} className={`gridCell ${className}`} />);
+		cellComponents.push(<GridCell key={i} cell={typedCell} className={`grid__cell ${className}`} />);
 	}
 
 	return (
 		<div
 			key={row.key}
-			className={`${className}${row.onClick ? ' clickable' : ''}${row.selected ? ' selected' : ''}`}
+			className={`${className}${row.onClick ? ' grid__row--clickable' : ''}${row.selected ? ' grid__row--selected' : ''}`}
 			onClick={row.onClick}
 			data-animation={row.animation}
 			data-id={id}

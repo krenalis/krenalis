@@ -16,15 +16,15 @@ const Section = forwardRef<any, SectionProps>(
 		return (
 			<div className={`section${className ? ' ' + className : ''}`} ref={ref}>
 				<Flex justifyContent='space-between' alignItems='center'>
-					<div className='sectionText'>
-						<div className='sectionTitle'>{title}</div>
-						{description && <div className='sectionDescription'>{description}</div>}
+					<div className='section__text'>
+						<div className='section__title'>{title}</div>
+						{description && <div className='section__description'>{description}</div>}
 					</div>
-					<Flex className='sectionActions' justifyContent='end' alignItems='center'>
+					<Flex className='section__actions' justifyContent='end' alignItems='center'>
 						{actions}
 					</Flex>
 				</Flex>
-				<div className={`sectionContent${padded ? ' padded' : ''}`}>{children}</div>
+				<div className={`section__content${padded ? ' section__content--padded' : ''}`}>{children}</div>
 			</div>
 		);
 	},

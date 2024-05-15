@@ -65,12 +65,12 @@ const ConnectionsList = () => {
 		const rows: GridRow[] = [];
 		for (const c of roleConnections) {
 			const cells = [
-				<div className='connectionNameCell'>
+				<div className='connections-list__name-cell'>
 					{getConnectorLogo(c.connector.icon)} {c.name}
 				</div>,
 				c.type,
 				c.connector.name,
-				<div className='connectionStatusCell'>
+				<div className='connections-list__status-cell'>
 					<StatusDot status={c.status} />
 					{c.status.text}
 				</div>,
@@ -95,7 +95,7 @@ const ConnectionsList = () => {
 					for (const ec of fullEventConnections) {
 						connectionLogos.push(<LittleLogo key={String(ec.id)} icon={ec.connector.icon} />);
 					}
-					cells.push(<div className='connectionEventConnectionsCell'>{connectionLogos}</div>);
+					cells.push(<div className='connections-list__event-connections-cell'>{connectionLogos}</div>);
 				} else {
 					cells.push('-');
 				}
@@ -129,12 +129,14 @@ const ConnectionsList = () => {
 	}
 
 	return (
-		<div className='connectionsList'>
-			<div className='routeContent'>
+		<div className='connections-list'>
+			<div className='route-content'>
 				{connectionsRows.length === 0 ? (
-					<div className='noConnection'>
+					<div className='connections-list__no-connection'>
 						<IconWrapper name={role === 'Source' ? 'file-arrow-down' : 'file-arrow-up'} size={40} />
-						<div className='noConnectionText'>You don't have any {role?.toLowerCase()} installed</div>
+						<div className='connections-list__no-connection-text'>
+							You don't have any {role?.toLowerCase()} installed
+						</div>
 						<Link path={`connectors?role=${role}`}>
 							<SlButton variant='primary'>Add a {role?.toLowerCase()}...</SlButton>
 						</Link>
@@ -142,7 +144,7 @@ const ConnectionsList = () => {
 				) : (
 					<>
 						<Link path={`connectors?role=${role}`}>
-							<SlButton variant='text' className='addNewConnection'>
+							<SlButton variant='text' className='connections-list__add-new-connection'>
 								<SlIcon slot='suffix' name='plus-circle' />
 								Add a new {role?.toLowerCase()}
 							</SlButton>

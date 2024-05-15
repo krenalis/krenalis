@@ -1,4 +1,4 @@
-.listTile {
+.list-tile {
 	border: 1px solid var(--sl-color-neutral-200);
 	padding: 18px 25px;
 	border-radius: var(--radius);
@@ -8,12 +8,12 @@
 	align-items: center;
 }
 
-.listTile.disabled {
+.list-tile--disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
 }
 
-.listTile .tileContent {
+.list-tile__content {
 	display: grid;
 	grid-template-columns: 50px 1fr;
 	grid-template-areas:
@@ -22,29 +22,29 @@
 	align-items: center;
 }
 
-.listTile.disabled:hover {
+.list-tile--disabled:hover {
 	background-color: transparent;
 }
 
-.listTile .tileIcon {
+.list-tile__icon {
 	grid-area: icon;
 }
 
-.listTile .tileIcon sl-icon {
+.list-tile__icon sl-icon {
 	font-size: 25px;
 }
 
-.listTile .tileName {
+.list-tile__name {
 	grid-area: name;
 	font-weight: 600;
 	user-select: none;
 }
 
-.listTile .tileDescription {
+.list-tile__description {
 	grid-area: description;
 	font-size: 14px;
 }
 
-.listTile .tileDescription .disablingReason {
+.list-tile__disabling-reason {
 	color: var(--sl-color-danger-600);
 }

@@ -43,16 +43,16 @@ const ActionTypesDialog = ({
 	return (
 		<SlDialog
 			label='Add action'
-			className='actionDialog'
+			className='connection-actions__dialog'
 			onSlAfterHide={() => setIsOpen(false)}
 			open={isOpen}
 			style={{ '--width': '600px' } as React.CSSProperties}
 		>
-			<div className='actionTypes'>
+			<div className='connection-actions__dialog-action-types'>
 				{standardActionTypes}
 				{eventActionTypes.length > 0 && (
 					<>
-						<div className='eventActionTypesTitle'>Events</div>
+						<div className='connection-actions__dialog-event-action-types-title'>Events</div>
 						{eventActionTypes}
 					</>
 				)}

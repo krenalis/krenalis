@@ -44,7 +44,7 @@ const ConnectorInput = ({
 	};
 
 	return (
-		<div className={`connectorInput`}>
+		<div className='connector-input'>
 			<SlInput
 				name={name}
 				value={value}
@@ -57,7 +57,7 @@ const ConnectorInput = ({
 				passwordToggle={type === 'password'}
 				onSlChange={onInputChange}
 			/>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

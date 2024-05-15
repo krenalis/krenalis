@@ -87,7 +87,7 @@ const ComboBoxList = forwardRef<ComboBoxListRef, ComboBoxListProps>(({ items, on
 			tabIndex={-1} // menu items must be selected only via "ArrowDown" key. "Tab" press must instead focus the next input.
 			ref={comboBoxListMenuRef}
 			data-is-combobox-list
-			className='comboBoxList'
+			className='combobox-list'
 			data-isOpen={isOpen}
 			onMouseDown={onMouseDown}
 		>
@@ -229,7 +229,7 @@ const ComboBoxInput = ({
 	}, []);
 
 	return (
-		<div className='comboBoxInput'>
+		<div className='combobox-input'>
 			<SlInput
 				data-is-combobox-input
 				value={value}
@@ -250,11 +250,11 @@ const ComboBoxInput = ({
 			>
 				{children}
 				{error && value !== '' && (
-					<SlIcon className='errorIcon' name='exclamation-circle' slot='prefix'></SlIcon>
+					<SlIcon className='combobox-input__error-icon' name='exclamation-circle' slot='prefix'></SlIcon>
 				)}
-				{caret && <SlIcon className='caretIcon' name='chevron-down' slot='suffix'></SlIcon>}
+				{caret && <SlIcon className='combobox-input__caret-icon' name='chevron-down' slot='suffix'></SlIcon>}
 			</SlInput>
-			{error && <div className='error'>{error}</div>}
+			{error && <div className='combobox-input__error'>{error}</div>}
 		</div>
 	);
 };

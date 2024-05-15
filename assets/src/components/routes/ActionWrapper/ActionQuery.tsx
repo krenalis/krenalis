@@ -151,6 +151,7 @@ const ActionQuery = () => {
 			<Section
 				title='Query'
 				description='The query used to import the data. It must contain the placeholder ${limit}.'
+				className='action__query'
 			>
 				<EditorWrapper
 					language='sql'
@@ -159,7 +160,7 @@ const ActionQuery = () => {
 					value={action.Query!}
 					onChange={onUpdateQuery}
 				></EditorWrapper>
-				<div className='queryButtons'>
+				<div className='action__query-buttons'>
 					<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
 						Preview
 					</SlButton>
@@ -179,7 +180,7 @@ const ActionQuery = () => {
 				</div>
 			</Section>
 			<SlDrawer
-				className='previewDrawer'
+				className='action__query-preview-drawer'
 				label='Query Preview'
 				open={queryPreviewColumns != null && queryPreviewRows != null}
 				onSlAfterShow={() => setShowPreview(true)}

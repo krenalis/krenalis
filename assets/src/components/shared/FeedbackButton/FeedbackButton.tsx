@@ -52,7 +52,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			let className: string;
 			let iconHTML: string;
 			if (feedback === 'confirmation') {
-				className = 'confirm';
+				className = 'feedback-button--confirm';
 				iconHTML = `<sl-icon name='check' />`;
 				button.classList.add(className);
 				button.style.width = `${initialWidth}px`;
@@ -116,7 +116,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 
 		const button = (
 			<SlButton
-				className={`feedbackButton${className != null ? ` ${className}` : ''}`}
+				className={`feedback-button${className != null ? ` ${className}` : ''}`}
 				ref={buttonRef}
 				size={size}
 				onClick={onClick}
@@ -132,19 +132,23 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 
 		return (
 			<SlTooltip
-				className='feedbackTooltip'
+				className='feedback-button__tooltip'
 				open={error !== null ? true : false}
 				trigger='manual'
 				style={{ '--max-width': '400px' } as React.CSSProperties}
 				placement='bottom'
 			>
 				{error !== null && (
-					<div slot='content' className='tooltipContent'>
-						<SlIcon className='closeIcon' name='x-lg' onClick={() => setError(null)} />
+					<div slot='content' className='feedback-button__tooltip-content'>
+						<SlIcon
+							className='feedback-button__tooltip-icon-close'
+							name='x-lg'
+							onClick={() => setError(null)}
+						/>
 						<div>
-							<SlIcon className='errorIcon' name='exclamation-circle' />
+							<SlIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
 						</div>
-						<div className='tooltipError'>{error}</div>
+						<div className='feedback-button__tooltip-error'>{error}</div>
 					</div>
 				)}
 				{button}

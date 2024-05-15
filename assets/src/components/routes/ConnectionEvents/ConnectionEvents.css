@@ -19,20 +19,20 @@
 	}
 }
 
-.connectionEvents {
+.connection-events {
 	display: grid;
 	align-items: start;
 	grid-template-columns: 45% 50%;
 	gap: 50px;
 }
 
-.connectionEvents .events {
+.connection-events__events {
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
 	box-shadow: var(--sl-shadow-large);
 }
 
-.connectionEvents .heading {
+.connection-events__heading {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
@@ -40,22 +40,22 @@
 	border-bottom: 1px solid var(--border-primary);
 }
 
-.connectionEvents .heading .title {
+.connection-events__title {
 	min-height: 100%;
 	display: flex;
 	gap: 10px;
 	align-items: baseline;
 }
 
-.connectionEvents .eventListener .eventList .body {
+.connection-events__event-list-body {
 	max-height: 500px;
 }
 
-.connectionEvents .eventListener .eventList .event {
+.connection-events__event {
 	border-left: 5px solid transparent;
 }
 
-.connectionEvents .eventListener .discarded {
+.connection-events__discarded {
 	padding: 5px;
 	text-align: center;
 	opacity: 0.8;
@@ -68,43 +68,39 @@
 	color: var(--sl-color-neutral-400);
 }
 
-.connectionEvents .eventListener .eventList {
+.connection-events__event-list {
 	min-height: 100%;
 }
 
-.connectionEvents .eventListener .eventList .noEvents {
+.connection-events__no-events {
 	padding: 30px;
 	text-align: center;
 	font-size: 14px;
 	opacity: 0.7;
 }
 
-.connectionEvents .eventListener .eventList .loadingEllipsis > span {
+.connection-events__loading-ellipsis > span {
 	animation: loading-ellipsis 1000ms infinite;
 	animation-fill-mode: both;
 }
 
-.connectionEvents .eventListener .eventList .loadingEllipsis .ellipsis2 {
-	animation-delay: 200ms;
+.connection-events__ellipsis2 {
+	animation-delay: 200ms !important;
 }
 
-.connectionEvents .eventListener .eventList .loadingEllipsis .ellipsis3 {
-	animation-delay: 400ms;
+.connection-events__ellipsis3 {
+	animation-delay: 400ms !important;
 }
 
-.connectionEvents .eventListener .eventList .discarded .count {
-	padding-right: 5px;
-}
-
-.connectionEvents .eventListener .eventList .body {
+.connection-events__event-list-body {
 	overflow: auto;
 }
 
-.connectionEvents .eventListener .eventList .event:first-child {
+.connection-events__event:first-child {
 	border-top: 0;
 }
 
-.connectionEvents .eventListener .eventList .event {
+.connection-events__event {
 	padding: 18px 20px;
 	border-top: 1px solid var(--border-primary);
 	font-size: 13px;
@@ -116,96 +112,80 @@
 	transition: background-color 500ms;
 }
 
-.connectionEvents .eventListener .eventList .event:hover,
-.connectionEvents .eventListener .eventList .event.selected {
+.connection-events__event:hover,
+.connection-events__event--selected {
 	background-color: var(--sl-color-primary-50);
 }
 
-.connectionEvents .eventListener .eventList .event:hover,
-.connectionEvents .eventListener .eventList .event:hover .name,
-.connectionEvents .eventListener .eventList .event:hover .time,
-.connectionEvents .eventListener .eventList .event.selected,
-.connectionEvents .eventListener .eventList .event.selected .name,
-.connectionEvents .eventListener .eventList .event.selected .time {
+.connection-events__event:hover,
+.connection-events__event:hover .connection-events__event-name,
+.connection-events__event:hover .connection-events__event-time,
+.connection-events__event--selected,
+.connection-events__event--selected .connection-events__event-name,
+.connection-events__event--selected .connection-events__event-time {
 	color: var(--sl-color-primary-950);
 }
 
-.connectionEvents .eventListener .eventList .event.selected:last-child {
+.connection-events__event--selected:last-child {
 	border-bottom-left-radius: var(--radius);
 }
 
-.connectionEvents .eventListener .eventList .event .name {
+.connection-events__event-name {
 	font-weight: 600;
 }
 
-.connectionEvents .eventListener .eventList .event .time {
+.connection-events__event-time {
 	width: 100%;
 	text-align: right;
 }
 
-.connectionEvents .eventListener .eventList .event .runButton {
-	font-size: 21px;
-	color: var(--sl-color-primary-700);
-	visibility: hidden;
-}
-
-.connectionEvents .eventListener .eventList .event:hover .runButton,
-.connectionEvents .eventListener .eventList .event.selected .runButton {
-	visibility: visible;
-}
-
-.connectionEvents .eventListener .eventList .event .runButton::part(base) {
-	padding: 0;
-	padding-left: 5px;
-}
-
-.connectionEvents .eventListener .eventList .event .error {
+.connection-events__event-error {
 	min-width: 17px;
 	display: flex;
 	align-items: center;
 }
 
-.connectionEvents .eventListener .eventList .event .error sl-icon {
+.connection-events__event-error sl-icon {
 	font-size: 17px;
 }
 
-.connectionEvents .eventListener .eventList .event .error sl-icon.iconError {
+.connection-events__event-error .connection-events__error-icon {
 	color: var(--sl-color-danger-600);
 }
 
-.connectionEvents .eventListener .eventList .event .error sl-icon.iconSuccess {
+.connection-events__event-error .connection-events__success-icon {
 	color: var(--sl-color-success-600);
 }
 
-.connectionEvents .panel {
+.connection-events__panel {
 	border: 1px solid var(--border-primary);
 	border-radius: var(--radius);
 	min-height: 585px;
 	padding: 30px;
 }
 
-.connectionEvents .panel.unselected {
+.connection-events__panel--unselected {
 	display: flex;
 	justify-content: center;
 	align-items: center;
 }
 
-.connectionEvents .panel .selectEventMessage {
+.connection-events__select-event-message {
 	width: 350px;
 	text-align: center;
 }
 
-.connectionEvents .panel .selectEventMessage .title {
+.connection-events__select-event-title {
 	font-size: 19px;
 	margin-top: 8px;
 	margin-bottom: 3px;
 }
 
-.connectionEvents .panel .selectEventMessage .description {
+.connection-events__select-event-description {
 	font-size: 14px;
 	opacity: 0.7;
 }
 
-.connectionEvents .panel .fullEvent {
+.connection-events__full-event {
 	animation: events-fade-in 500ms;
 }

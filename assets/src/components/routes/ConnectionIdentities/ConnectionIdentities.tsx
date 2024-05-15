@@ -9,7 +9,7 @@ const ConnectionIdentities = () => {
 	const { isLoading, identityProperties, identitiesRows } = useConnectionIdentities();
 
 	return (
-		<div className={`connection-identities${isLoading ? ' loading' : ''}`}>
+		<div className={`connection-identities${isLoading ? ' connection-identities--loading' : ''}`}>
 			{isLoading ? (
 				<SlSpinner
 					style={

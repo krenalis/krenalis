@@ -1,50 +1,50 @@
-.file-connector .file-connector__content {
+.file-connector__content {
 	max-width: 600px;
 	margin: 30px auto;
 }
 
-.file-connector .file-connector__storage {
+.file-connector__storage {
 	max-width: 400px;
 }
 
-.file-connector .file-connector__storage-logo {
+.file-connector__storage-logo {
 	margin-right: 8px;
 }
 
-.file-connector .file-connector__storage sl-option::part(label) {
+.file-connector__storage sl-option::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
-.file-connector .file-connector__storage-logo .littleLogo svg,
-.file-connector .file-connector__storage sl-option .littleLogo svg {
+.file-connector__storage-logo .little-logo svg,
+.file-connector__storage sl-option .little-logo svg {
 	height: 18px;
 }
 
-.file-connector .file-connector__no-storage {
+.file-connector__no-storage {
 	display: flex;
 	align-items: center;
 	gap: 20px;
 }
 
-.file-connector .file-connector__action-types {
+.file-connector__action-types {
 	margin-top: 50px;
 }
 
-.file-connector .file-connector__action-type {
+.file-connector__action-type {
 	max-width: 600px;
 	margin: auto;
 	border-bottom: 0;
 	border-radius: 0;
 }
 
-.file-connector .file-connector__action-type:first-child {
+.file-connector__action-type:first-child {
 	border-top-left-radius: var(--radius);
 	border-top-right-radius: var(--radius);
 }
 
-.file-connector .file-connector__action-type:last-child {
+.file-connector__action-type:last-child {
 	margin-bottom: 0;
 	border-bottom: 1px solid var(--sl-color-neutral-200);
 	border-bottom-left-radius: var(--radius);

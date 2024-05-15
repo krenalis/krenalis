@@ -4,7 +4,7 @@
 	padding: 30px;
 }
 
-.general-settings .general-settings__title {
+.general-settings__title {
 	font-size: 23px;
 	font-weight: 600;
 	margin-bottom: 15px;
@@ -14,52 +14,54 @@
 	font-weight: 400;
 }
 
-.general-settings .general-settings__use-europe-region {
+.general-settings__use-europe-region {
 	margin-top: 25px;
 	margin-bottom: 15px;
 }
 
-.general-settings .general-settings__use-europe-region > span {
+.general-settings__use-europe-region > span {
 	font-size: 13px;
 	opacity: 0.8;
 }
 
-.general-settings .general-settings__displayed-properties {
+.general-settings__displayed-properties {
 	margin: 30px 0 50px 0;
 }
 
-.general-settings .propertiesItemName {
+.general-settings .schema-combobox-item {
 	font-size: 14px;
 	font-weight: 600;
 }
 
-.general-settings .propertiesItemType {
+.general-settings .schema-combobox-item__name,
+.general-settings .schema-combobox-item__type {
 	font-size: 13px;
 	opacity: 0.7;
+	font-weight: 400;
 }
 
-.general-settings .general-settings__displayed-properties-title {
+.general-settings__displayed-properties-title {
 	font-size: 18px;
 	font-weight: 600;
 }
 
-.general-settings .general-settings__displayed-properties-description {
+.general-settings__displayed-properties-description {
 	margin-bottom: 25px;
 }
 
-.general-settings .general-settings__displayed-properties-fields {
+.general-settings__displayed-properties-fields {
 	max-width: 70%;
 }
 
-.general-settings .general-settings__displayed-properties-fields .comboBoxInput {
+.general-settings__displayed-properties-fields .combobox-input {
 	margin-bottom: 35px;
 }
 
-.general-settings .general-settings__displayed-image {
+.general-settings__displayed-image {
 	margin-top: 5px;
 }
 
-.general-settings .general-settings__save-workspace-button {
+.general-settings__save-workspace-button {
 	display: block;
 	max-width: 200px;
 	margin-left: auto;
@@ -70,11 +72,11 @@
 	margin-bottom: 40px;
 }
 
-.general-settings .general-settings__deletion-title {
+.general-settings__deletion-title {
 	font-weight: 600;
 }
 
-.general-settings .general-settings__deletion-description-and-button {
+.general-settings__deletion-description-and-button {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;

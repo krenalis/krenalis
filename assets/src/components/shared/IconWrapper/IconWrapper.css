@@ -1,4 +1,4 @@
-.iconWrapper {
+.icon-wrapper {
 	--outer-padding: 7px;
 	display: flex;
 	justify-content: center;
@@ -6,13 +6,13 @@
 	padding: var(--outer-padding);
 }
 
-.iconWrapper.moat {
+.icon-wrapper--moat {
 	background-color: var(--bg-gray);
 	border-radius: calc(var(--radius) + var(--outer-padding));
 	box-shadow: inset var(--sl-shadow-small);
 }
 
-.iconWrapper .innerWrapper {
+.icon-wrapper__inner-wrapper {
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -23,6 +23,6 @@
 	box-shadow: var(--sl-shadow-small);
 }
 
-.iconWrapper sl-icon {
+.icon-wrapper sl-icon {
 	font-size: var(--icon-size);
 }

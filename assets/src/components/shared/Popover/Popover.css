@@ -19,7 +19,7 @@
 	min-height: 30px;
 }
 
-.popover.open {
+.popover--open {
 	left: 0px;
 	opacity: 1;
 }

@@ -1,46 +1,46 @@
-.alertDialog::part(panel) {
+.alert-dialog::part(panel) {
 	position: relative;
 	padding: 35px 40px;
 }
 
-.alertDialog::part(title) {
+.alert-dialog::part(title) {
 	padding: 0;
 	display: none;
 }
 
-.alertDialog::part(header) {
+.alert-dialog::part(header) {
 	position: absolute;
 	right: 0;
 	top: 10px;
 }
 
-.alertDialog::part(body) {
+.alert-dialog::part(body) {
 	padding: 0;
 	overflow: visible;
 }
 
-.alertDialog .alertIcon {
+.alert-dialog__icon {
 	font-size: 30px;
 	text-align: center;
 }
 
-.alertDialog .alertIcon sl-icon {
+.alert-dialog__icon sl-icon {
 	color: var(--alert-color);
 }
 
-.alertDialog .alertTitle {
+.alert-dialog__title {
 	text-align: center;
 	padding: 0 20px;
 	font-weight: 600;
 	font-size: 18px;
 }
 
-.alertDialog .alertContent {
+.alert-dialog__content {
 	padding: 15px 0 30px 0;
 	text-align: center;
 }
 
-.alertDialog .alertActions {
+.alert-dialog__actions {
 	display: flex;
 	justify-content: center;
 	gap: 15px;

@@ -33,17 +33,17 @@
 	opacity: 0;
 }
 
-.fullscreen.isOpen {
+.fullscreen--open {
 	opacity: 1;
 }
 
-.fullscreen.isLoading {
+.fullscreen--loading {
 	display: flex;
 	justify-content: center;
 	align-items: center;
 }
 
-.fullscreen.isLoading sl-spinner {
+.fullscreen--loading sl-spinner {
 	position: relative;
 	top: -50px;
 }

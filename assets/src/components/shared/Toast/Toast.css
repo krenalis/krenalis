@@ -5,7 +5,7 @@
 	z-index: 999999 !important;
 }
 
-.sl-toast-stack sl-alert::part(base) {
+.toast::part(base) {
 	position: relative;
 	left: calc(280px / 2); /* center the toast based on the sidebar width. TODO: use a CSS variable */
 	color: var(--text-onaccent);
@@ -13,31 +13,16 @@
 	box-shadow: 2px 1px 19px 0px #00000060;
 }
 
-.sl-toast-stack sl-alert.isFullscreen::part(base) {
+.toast--fullscreen::part(base) {
 	left: 0;
 }
 
-.sl-toast-stack sl-alert::part(icon) {
+.toast::part(icon) {
 	color: var(--text-onaccent);
 	align-items: start;
 	padding-top: 1.25rem;
 }
 
-.sl-toast-stack sl-alert::part(close-button__base) {
+.toast::part(close-button__base) {
 	color: var(--text-onaccent);
-}
-
-.statusAction {
-	font-weight: 600;
-	font-size: 13px;
-	cursor: pointer;
-	border: 2px solid var(--text-onaccent);
-	border-radius: 5px;
-	text-align: center;
-	padding: 5px 15px;
-	width: max-content;
-	margin-left: auto;
-	margin-top: 10px;
-	background-color: transparent;
-	display: block;
 }

@@ -84,7 +84,7 @@ const ActionTable = () => {
 
 	return (
 		<Section title='Table' description='The name of the table of the database'>
-			<div className='actionTable'>
+			<div className='action__table'>
 				<SlInput value={action.Table} onSlInput={onUpdateTable} />
 				<FeedbackButton
 					ref={tableConfirmationButtonRef}

@@ -4,7 +4,7 @@
 	min-height: calc(100vh - 70px);
 }
 
-.oauth .loading {
+.oauth__loading {
 	max-width: 800px;
 	margin: auto;
 	background-color: var(--bg-primary);
@@ -17,11 +17,11 @@
 	margin-top: 20px;
 }
 
-.oauth .loading .text {
+.oauth__loading-text {
 	margin-bottom: 20px;
 }
 
-.oauth .error {
+.oauth__error {
 	max-width: 800px;
 	margin: auto;
 	background-color: var(--bg-primary);
@@ -34,11 +34,11 @@
 	margin-top: 20px;
 }
 
-.oauth .error > sl-icon {
+.oauth__error > sl-icon {
 	font-size: 35px;
 	color: var(--sl-color-danger-600);
 }
 
-.oauth .error .text {
+.oauth__error-text {
 	margin: 15px 0 25px 0;
 }

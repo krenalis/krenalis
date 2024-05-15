@@ -10,14 +10,14 @@
 	border: 1px solid var(--sl-color-neutral-200);
 }
 
-.card .logo > svg {
+.card__logo > svg {
 	max-height: 70px;
 	width: auto;
 	padding: 5px;
 	margin: 0 auto 30px auto;
 }
 
-.card .logo > .unknownLogo {
+.card__unknown-logo {
 	background-color: var(--bg-gray);
 	color: var(--text-primary);
 	width: 60px;
@@ -30,20 +30,20 @@
 	font-size: 22px;
 }
 
-.card .name {
+.card__name {
 	font-weight: 600;
 }
 
-.card .type {
+.card__type {
 	margin-top: 10px;
 }
 
-.card .description {
+.card__description {
 	margin-top: 10px;
 	font-size: 15px;
 	opacity: 0.9;
 }
 
-.card .body {
+.card__body {
 	margin-top: 15px;
 }

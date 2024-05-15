@@ -42,7 +42,7 @@ const ConnectionSnippet = () => {
 	return (
 		<>
 			<div>Embed the snippet in your website to start sending events:</div>
-			<div className='snippetCopy'>
+			<div className='connection-settings__snippet-copy'>
 				<EditorWrapper
 					name='snippetEditor'
 					language='html'

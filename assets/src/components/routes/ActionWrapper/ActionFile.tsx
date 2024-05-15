@@ -184,15 +184,15 @@ const ActionFile = () => {
 	}
 
 	return (
-		<Section title={`File`} className='action-file' description='The settings of the file' padded>
+		<Section title={`File`} className='action__file' description='The settings of the file' padded>
 			<SlSelect
 				label='Type'
-				className='action-file__file-connector'
+				className='action__file-connector'
 				value={String(action.Connector)}
 				onSlChange={onFileConnectorChange}
 			>
 				{action.Connector !== '' && (
-					<div className='action-file__file-connector-logo' slot='prefix'>
+					<div className='action__file-connector-logo' slot='prefix'>
 						<LittleLogo icon={icon} />
 					</div>
 				)}
@@ -220,7 +220,7 @@ const ActionFile = () => {
 				></SlSpinner>
 			) : (
 				action.Connector !== '' && (
-					<div className='action-file__file-settings'>
+					<div className='action__file-settings'>
 						<FileSettings
 							hasSheets={hasSheets}
 							fileExtension={fileExtension}
@@ -431,7 +431,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		const a = { ...action };
 		a.Sheet = '';
 		setAction(a);
-		sheetsSelectRef.current.classList.add('hideListbox'); // prevent the listbox from flashing.
+		sheetsSelectRef.current.classList.add('action__file-sheets--hide-list-box'); // prevent the listbox from flashing.
 		setSheets({});
 		setAreSheetsLoading(true);
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
@@ -451,7 +451,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				} else {
 					handleError(err);
 				}
-				sheetsSelectRef.current.classList.remove('hideListbox');
+				sheetsSelectRef.current.classList.remove('action__file-sheets--hide-list-box');
 				setHasSheetsError(true);
 				setAreSheetsLoading(false);
 			}, 300);
@@ -467,7 +467,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				i++;
 			}
 			setSheets(sheets);
-			sheetsSelectRef.current.classList.remove('hideListbox');
+			sheetsSelectRef.current.classList.remove('action__file-sheets--hide-list-box');
 			setTimeout(() => {
 				sheetsSelectRef.current.show();
 			});
@@ -614,9 +614,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 
 	return (
 		<div>
-			<div className='pathInputWrapper'>
+			<div className='action__file-path-wrapper'>
 				<SlInput
-					className='pathInput'
+					className='action__file-path'
 					name='path'
 					value={action.Path!}
 					type='text'
@@ -624,9 +624,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					placeholder={`${actionType.Target.toLowerCase()}.${fileExtension}`}
 					ref={pathInputRef}
 				>
-					<div className='pathInputLabel' slot='label'>
-						<div className='pathInputLabelText'>Path</div>
-						<div className='pathInputLabelDescription'>
+					<div className='action__file-path-label' slot='label'>
+						<div className='action__file-path-text'>Path</div>
+						<div className='action__file-path-description'>
 							The path of the file.
 							{connection.role == 'Destination'
 								? ' You can use the ${now}, ${today} and ${unix} placeholders.'
@@ -634,17 +634,23 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 						</div>
 					</div>
 				</SlInput>
-				<div className={`completePathError${completePathError !== '' ? ' visible' : ''}`}>
+				<div
+					className={`action__file-complete-path-error${completePathError !== '' ? ' action__file-complete-path-error--visible' : ''}`}
+				>
 					{completePathError}
 				</div>
-				<div className={`completePath${completePath !== '' ? ' visible' : ''}`}>{completePath}</div>
+				<div
+					className={`action__file-complete-path${completePath !== '' ? ' action__file-complete-path--visible' : ''}`}
+				>
+					{completePath}
+				</div>
 			</div>
 			{hasSheets &&
 				(connection.role === 'Source' ? (
-					<div className='sheetsSelectWrapper'>
+					<div className='action__file-sheets-wrapper'>
 						<SlSelect
 							onSlFocus={onSheetsLoad}
-							className='sheetsSelect'
+							className='action__file-sheets'
 							ref={sheetsSelectRef}
 							name='sheet'
 							value={
@@ -681,7 +687,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					</div>
 				) : (
 					<SlInput
-						className='sheetsInput'
+						className='action__file-sheets-input'
 						name='input'
 						value={action.Sheet!}
 						label='Sheet'
@@ -690,7 +696,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					/>
 				))}
 			<SlSelect
-				className='action-file__compression'
+				className='action__file-compression'
 				name='compression'
 				value={action.Compression}
 				label='Compression'
@@ -705,7 +711,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<ConnectorUI fields={fieldsToRender} values={values} onChange={onFieldChange} />
 			)}
 			{isImport && (
-				<div className='fileButtons'>
+				<div className='action__file-buttons'>
 					<SlButton variant='neutral' size='small' onClick={onFilePreview}>
 						Preview
 					</SlButton>
@@ -725,7 +731,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				</div>
 			)}
 			<SlDrawer
-				className='previewDrawer'
+				className='action__file-preview-drawer'
 				label='File Preview'
 				open={filePreviewColumns != null && filePreviewRows != null}
 				onSlAfterShow={() => setShowFilePreviewContent(true)}

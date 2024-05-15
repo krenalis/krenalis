@@ -38,7 +38,7 @@ const ConnectorSelect = ({
 	};
 
 	return (
-		<div className='connectorSelect'>
+		<div className='connector-select'>
 			<SlSelect
 				label={label}
 				value={value}
@@ -55,7 +55,7 @@ const ConnectorSelect = ({
 					);
 				})}
 			</SlSelect>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

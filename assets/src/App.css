@@ -279,13 +279,13 @@ sl-dialog::part(body) {
 
 /* || Content */
 
-.app .routeContent {
+.app .route-content {
 	padding: 30px;
 	background-color: var(--bg-gray);
 	min-height: calc(100vh - 70px);
 }
 
-.app .routeContent.connection {
+.app .route-content--connection {
 	min-height: calc(100vh - 140px);
 }
 
@@ -315,9 +315,9 @@ sl-split-panel sl-icon[slot='divider'] {
 	border: 1px solid var(--border-primary);
 }
 
-/* || Global spinner */
+/* || App spinner */
 
-.globalSpinner {
+.app-spinner {
 	position: absolute;
 	left: 50%;
 	top: 50%;
@@ -333,10 +333,4 @@ sl-split-panel sl-icon[slot='divider'] {
 	100% {
 		opacity: 1;
 	}
-}
-
-/* Little logo */
-
-.littleLogo {
-	pointer-events: none;
 }

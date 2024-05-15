@@ -23,8 +23,8 @@ const ConnectionsMap = () => {
 		setTimeout(() => {
 			setDatabaseArrows(
 				<>
-					<Arrow start='centralLogo' end='usersDatabase' startAnchor='bottom' endAnchor='top' />
-					<Arrow start='centralLogo' end='eventsDatabase' startAnchor='bottom' endAnchor='top' />
+					<Arrow start='central-logo' end='users-database' startAnchor='bottom' endAnchor='top' />
+					<Arrow start='central-logo' end='events-database' startAnchor='bottom' endAnchor='top' />
 				</>,
 			);
 		}, 0);
@@ -41,43 +41,49 @@ const ConnectionsMap = () => {
 	const destinationsBlocks = getConnectionsBlocks(destinations, newConnectionID);
 
 	return (
-		<div className='connectionsMap'>
-			<div className='routeContent'>
-				<div className='buttons'>
+		<div className='connections-map'>
+			<div className='route-content'>
+				<div className='connections-map__buttons'>
 					<Link path={`connectors?role=Source`}>
-						<SlButton className='addSource' variant='text'>
+						<SlButton className='connections-map__add-source' variant='text'>
 							<SlIcon slot='suffix' name='plus-circle' />
 							Add a new source
 						</SlButton>
 					</Link>
 					<Link path={`connectors?role=Destination`}>
-						<SlButton className='addDestination' variant='text'>
+						<SlButton className='connections-map__add-destination' variant='text'>
 							<SlIcon slot='suffix' name='plus-circle' />
 							Add a new destination
 						</SlButton>
 					</Link>
 				</div>
-				<div className='map'>
-					<div className='sources'>{sourcesBlocks}</div>
-					<div className='main'>
-						<div className='centralLogo' id='centralLogo'>
+				<div className='connections-map__map'>
+					<div className='connections-map__sources'>{sourcesBlocks}</div>
+					<div className='connections-map__main'>
+						<div className='connections-map__central-logo' id='central-logo'>
 							CDP
 						</div>
-						<div className='databases'>
+						<div className='connections-map__databases'>
 							<Link path='users'>
-								<div className='database users' id='usersDatabase'>
+								<div
+									className='connections-map__database connections-map__database--users'
+									id='users-database'
+								>
 									<SlIcon name='database' />
-									<div className='name'>Users</div>
+									<div className='connections-map__database-name'>Users</div>
 								</div>
 							</Link>
-							<div className='database events' id='eventsDatabase'>
+							<div
+								className='connections-map__database connections-map__database--events'
+								id='events-database'
+							>
 								<SlIcon name='database' />
-								<div className='name'>Events</div>
+								<div className='connections-map__database-name'>Events</div>
 							</div>
 						</div>
 						{databaseArrows}
 					</div>
-					<div className='destinations'>{destinationsBlocks}</div>
+					<div className='connections-map__destinations'>{destinationsBlocks}</div>
 				</div>
 			</div>
 		</div>

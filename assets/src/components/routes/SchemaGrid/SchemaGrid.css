@@ -1,18 +1,18 @@
-.schema-grid .schema-grid__toolbar {
+.schema-grid__toolbar {
 	display: flex;
 	justify-content: space-between;
 }
 
-.schema-grid .schema-grid__expansion-buttons {
+.schema-grid__expansion-buttons {
 	display: flex;
 	gap: 15px;
 }
 
-.schema-grid .schema-grid__expansion-buttons sl-icon {
+.schema-grid__expansion-buttons sl-icon {
 	font-size: 16px;
 }
 
-.schema-grid .schema-grid__edit-button::part(base) {
+.schema-grid__edit-button::part(base) {
 	min-width: 150px;
 }
 
@@ -22,12 +22,12 @@
 	box-shadow: none;
 }
 
-.schema-grid > .grid .noRows,
-.schema-grid > .grid .loading {
+.schema-grid > .grid .grid__no-rows,
+.schema-grid > .grid .grid__loading {
 	background-color: var(--bg-gray);
 }
 
-.schema-grid > .grid .gridHeaderRow {
+.schema-grid > .grid .grid__header-row {
 	position: sticky;
 	top: 0;
 	border-bottom: 1px solid var(--sl-color-neutral-200);

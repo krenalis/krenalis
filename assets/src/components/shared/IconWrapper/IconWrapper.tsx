@@ -12,13 +12,13 @@ interface IconWrapperProps {
 const IconWrapper = ({ name, size, moat, onClick }: IconWrapperProps) => {
 	return (
 		<div
-			className={`iconWrapper${moat ? ' moat' : ''}`}
+			className={`icon-wrapper${moat ? ' icon-wrapper--moat' : ''}`}
 			style={
 				{ '--icon-size': size ? `${size}px` : '16px', cursor: onClick ? 'pointer' : '' } as React.CSSProperties
 			}
 			onClick={onClick}
 		>
-			<div className='innerWrapper'>
+			<div className='icon-wrapper__inner-wrapper'>
 				<SlIcon name={name}></SlIcon>
 			</div>
 		</div>

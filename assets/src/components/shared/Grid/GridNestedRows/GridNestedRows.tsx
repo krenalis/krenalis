@@ -23,7 +23,7 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 					key={i}
 					rows={r}
 					columns={columns}
-					className='gridNestedRows children'
+					className='grid__nested-rows grid__nested-rows--children'
 					nesting={nesting + 1}
 				/>,
 			);
@@ -34,18 +34,19 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 				rowComponent = (
 					<Fragment key={i}>
 						<SlIcon
-							className='expand'
+							className='grid__row-expand'
 							name='caret-right-fill'
 							onClick={() => {
 								setIsExpanded(!isExpanded);
 							}}
 						></SlIcon>
-
-						<GridRow row={r} columns={columns} className='gridRow parent' id={r.id} />
+						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' id={r.id} />
 					</Fragment>
 				);
 			} else {
-				rowComponent = <GridRow key={i} row={r} columns={columns} className='gridRow children' id={r.id} />;
+				rowComponent = (
+					<GridRow key={i} row={r} columns={columns} className='grid__row grid__row--children' id={r.id} />
+				);
 			}
 			rowComponents.push(rowComponent);
 		}
@@ -55,7 +56,7 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 	const childrenIndentation = 50 + 30 * nesting + 'px'; // takes the incremented indentation.
 	return (
 		<div
-			className={`${className}${isExpanded ? ' expanded' : ''}`}
+			className={`${className}${isExpanded ? ' grid__nested-rows--expanded' : ''}`}
 			style={
 				{
 					'--parent-indentation': parentIndentation,

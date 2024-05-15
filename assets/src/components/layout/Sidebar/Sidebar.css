@@ -13,7 +13,7 @@
 	background-color: var(--bg-primary);
 }
 
-.sidebar .items {
+.sidebar__items {
 	margin-top: 0;
 	height: 100%;
 	width: 100%;
@@ -25,11 +25,11 @@
 	border-right: 1px solid var(--sl-color-neutral-200);
 }
 
-.sidebar .items > div {
+.sidebar__items > div {
 	width: 100%;
 }
 
-.sidebar .logo .image {
+.sidebar__logo-image {
 	font-size: 12px;
 	background-color: var(--color-primary-600);
 	color: var(--text-onaccent);
@@ -44,7 +44,7 @@
 	margin: auto;
 }
 
-.sidebar .workspaceSelector {
+.workspace-selector {
 	user-select: none;
 	position: relative;
 	width: 100%;
@@ -59,12 +59,12 @@
 	border-top: 1px solid var(--border-primary);
 }
 
-.sidebar .workspaceSelectorArrow {
+.workspace-selector__arrow {
 	font-size: 14px;
 	transition: transform 0.3s;
 }
 
-.sidebar .workspaceSelectorText {
+.workspace-selector__text {
 	display: flex;
 	flex-flow: column;
 	height: 100%;
@@ -72,18 +72,18 @@
 	max-width: 80%;
 }
 
-.sidebar .workspaceSelectorLabel {
+.workspace-selector__label {
 	font-size: 13px;
 }
 
-.sidebar .workspaceSelectorValue {
+.workspace-selector__value {
 	font-size: 14px;
 	font-weight: 600;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.sidebar .workspaceDialog {
+.workspace-selector__dialog {
 	position: absolute;
 	visibility: hidden;
 	opacity: 0;
@@ -101,11 +101,11 @@
 	cursor: default;
 }
 
-.sidebar .workspaceDialog .workspaceDialogSearch::part(input)::placeholder {
+.workspace-selector__dialog-search::part(input)::placeholder {
 	color: var(--sl-color-neutral-400);
 }
 
-.sidebar .workspaceDialog .workspaceDialogViewAll {
+.workspace-selector__dialog-view-all {
 	color: var(--sl-color-primary-600);
 	font-weight: 600;
 	margin-top: 10px;
@@ -117,11 +117,11 @@
 	cursor: pointer;
 }
 
-.sidebar .workspaceDialog .workspaceDialogViewAll sl-icon {
+.workspace-selector__dialog-view-all sl-icon {
 	color: var(--sl-color-primary-600);
 }
 
-.sidebar .workspaceDialog .workspaceDialogOption {
+.workspace-selector__dialog-option {
 	display: flex;
 	align-items: center;
 	gap: 5px;
@@ -130,11 +130,11 @@
 	transition: opacity 0.3s;
 }
 
-.sidebar .workspaceDialog .workspaceDialogOption:hover {
+.workspace-selector__dialog-option:hover {
 	opacity: 1;
 }
 
-.sidebar .workspaceDialog .workspaceDialogOption sl-icon {
+.workspace-selector__dialog-option sl-icon {
 	visibility: hidden;
 	opacity: 0;
 	transition:
@@ -143,27 +143,27 @@
 	color: var(--sl-color-primary-600);
 }
 
-.sidebar .workspaceDialog .workspaceDialogOption.selected sl-icon {
+.workspace-selector__dialog-option--selected sl-icon {
 	visibility: visible;
 	opacity: 1;
 }
 
-.sidebar .workspaceDialog .workspaceDialogOptionName {
+.workspace-selector__dialog-option-name {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	max-width: 90%;
 }
 
-.sidebar .workspaceSelector.open .workspaceSelectorArrow {
+.workspace-selector--open .workspace-selector__arrow {
 	transform: rotate(-90deg);
 }
 
-.sidebar .workspaceSelector.open .workspaceDialog {
+.workspace-selector--open .workspace-selector__dialog {
 	visibility: visible;
 	opacity: 1;
 }
 
-.sidebar .item {
+.sidebar__item {
 	position: relative;
 	cursor: pointer;
 	display: flex;
@@ -180,48 +180,48 @@
 	border-left: 4px solid transparent;
 }
 
-.sidebar .item.disabled {
+.sidebar__item--disabled {
 	cursor: default;
 }
 
-.sidebar .item.disabled .itemIcon,
-.sidebar .item.disabled .text {
+.sidebar__item--disabled .sidebar__item-icon,
+.sidebar__item--disabled .sidebar__item-text {
 	opacity: 0.5;
 }
 
-.sidebar .item.disabled .disabledItemIcon {
+.sidebar__item--disabled .sidebar__item-disabled-icon {
 	color: var(--sl-color-danger-600);
 	font-size: 14px;
 }
 
-.sidebar .item.disabled:hover {
+.sidebar__item--disabled:hover {
 	background-color: transparent;
 }
 
-.sidebar .item.selected {
+.sidebar__item--selected {
 	background-color: var(--sl-color-neutral-50);
 	border-left: 4px solid var(--color-primary-500);
 }
 
-.sidebar .item.isChildrenSelected sl-icon,
-.sidebar .item.isChildrenSelected .text {
+.sidebar__item--isChildrenSelected sl-icon,
+.sidebar__item--isChildrenSelected .sidebar__item-text {
 	color: var(--sl-color-primary-500);
 }
 
-.sidebar .item:hover {
+.sidebar__item:hover {
 	background-color: var(--sl-color-neutral-50);
 }
 
-.sidebar .item sl-icon {
+.sidebar__item sl-icon {
 	font-size: 25px;
 }
 
-.sidebar .item .text {
+.sidebar__item .sidebar__item-text {
 	font-size: 14px;
 	font-weight: 600;
 }
 
-.sidebar .subItem {
+.sidebar__sub-item {
 	position: relative;
 	cursor: pointer;
 	display: flex;
@@ -233,12 +233,12 @@
 	user-select: none;
 }
 
-.sidebar .subItem.selected > sl-icon,
-.sidebar .subItem.selected > .text {
+.sidebar__sub-item--selected > sl-icon,
+.sidebar__sub-item--selected > .sidebar__sub-item-text {
 	color: var(--color-primary-500);
 }
 
-.sidebar .subItem .text {
+.sidebar__sub-item-text {
 	font-size: 13px;
 	font-weight: 600;
 }

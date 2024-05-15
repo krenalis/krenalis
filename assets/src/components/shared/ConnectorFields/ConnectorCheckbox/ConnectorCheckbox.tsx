@@ -24,11 +24,11 @@ const ConnectorCheckbox = ({ name, label, error, val, onChange }: ConnectorCheck
 	};
 
 	return (
-		<div className='connectorCheckbox'>
+		<div className='connector-checkbox'>
 			<SlCheckbox name={name} onSlChange={onCheckboxChange} checked={value}>
 				{label}
 			</SlCheckbox>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

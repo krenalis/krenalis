@@ -10,15 +10,18 @@ interface StatusDotProps {
 
 const StatusDot = ({ status }: StatusDotProps) => {
 	return (
-		<div className='statusDot'>
+		<div className='status-dot'>
 			{status.text != null ? (
 				<SlTooltip content={status.text}>
-					<div className='hoverArea'>
-						<SlIcon className={status.variant} name='circle-fill'></SlIcon>
+					<div className='status-dot__hover-area'>
+						<SlIcon
+							className={`status-dot__icon status-dot__icon--${status.variant}`}
+							name='circle-fill'
+						></SlIcon>
 					</div>
 				</SlTooltip>
 			) : (
-				<SlIcon className={status.variant} name='circle-fill'></SlIcon>
+				<SlIcon className={`status-dot__icon status-dot__icon--${status.variant}`} name='circle-fill'></SlIcon>
 			)}
 		</div>
 	);

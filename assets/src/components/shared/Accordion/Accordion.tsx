@@ -10,7 +10,7 @@ interface AccordionProps {
 
 const Accordion = ({ className, isOpen, summary, details }: AccordionProps) => {
 	return (
-		<div className={`accordion${isOpen ? ' open' : ''}${className ? ' ' + className : ''}`}>
+		<div className={`accordion${isOpen ? ' accordion--open' : ''}${className ? ' ' + className : ''}`}>
 			<div className='accordion__summary'>{summary}</div>
 			<div className='accordion__details'>{details}</div>
 		</div>

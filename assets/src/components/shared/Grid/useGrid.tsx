@@ -21,9 +21,9 @@ const useGrid = (
 		for (let i = 0; i < columns.length; i++) {
 			widthsOfColumn[i] = [];
 		}
-		const rowElements = gridRef.current.querySelectorAll('.gridHeaderRow, .gridRow');
+		const rowElements = gridRef.current.querySelectorAll('.grid__header-row, .grid__row');
 		for (const r of rowElements) {
-			const contents = r.querySelectorAll('.cellContent');
+			const contents = r.querySelectorAll('.grid__cell-content');
 			for (const [i, c] of contents.entries()) {
 				if (c instanceof HTMLElement) {
 					widthsOfColumn[i].push(c.offsetWidth);

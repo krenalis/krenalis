@@ -24,39 +24,39 @@
 	background: transparent;
 }
 
-.grid .gridHeaderRow {
+.grid__header-row {
 	background-color: var(--bg-gray);
 	border-top-left-radius: 10px;
 	border-top-right-radius: 10px;
 }
 
-.grid .gridHeaderCell {
+.grid__header-cell {
 	font-weight: 600;
 }
 
-.grid .gridHeaderCell,
-.grid .gridCell {
+.grid__header-cell,
+.grid__cell {
 	background-color: var(--bg-primary);
 	padding: 15px 0;
 }
 
-.grid .gridHeaderCell .cellContent {
+.grid__cell-content {
 	display: flex;
 	align-items: center;
 	gap: 7px;
 }
 
-.grid .gridHeaderCell .cellContent .gridHeaderExplanationIcon {
+.grid__header-explanation-icon {
 	color: var(--sl-color-neutral-500);
 }
 
-.grid .gridHeaderCell .cellContent .gridHeaderExplanationTooltip::part(body) {
+.grid__header-explanation-tooltip::part(body) {
 	background-color: var(--sl-color-primary-500);
 	padding: 12px;
 	font-size: 13px;
 }
 
-.grid .gridHeaderCell .cellContent .gridHeaderExplanationTooltip::part(base__arrow) {
+.grid__header-explanation-tooltip::part(base__arrow) {
 	background-color: var(--sl-color-primary-500);
 }
 
@@ -64,11 +64,11 @@ sl-popup::part(arrow) {
 	background-color: var(--sl-color-primary-500);
 }
 
-.grid .gridRow.selected .gridCell {
+.grid__row--selected .grid__cell {
 	background-color: var(--sl-color-primary-50) !important;
 }
 
-.grid .gridRow .gridCell .cellContent .object {
+.grid__cell-content-object {
 	font-family: 'Source Code Pro', monospace;
 	background-color: var(--sl-color-neutral-100);
 	font-size: 13px;
@@ -77,94 +77,94 @@ sl-popup::part(arrow) {
 	transition: background-color 0.3s;
 }
 
-.grid .gridRow.selected .gridCell .object {
+.grid__row--selected .grid__cell-content-object {
 	background-color: var(--sl-color-primary-100);
 }
 
-.grid .cellContent {
+.grid__cell-content {
 	padding: 0 20px;
 	width: fit-content;
 }
 
-.grid .gridHeaderCell.center .cellContent,
-.grid .gridHeaderCell.header-center .cellContent,
-.grid .gridCell.center .cellContent {
+.grid__header-cell.grid__cell--center .grid__cell-content,
+.grid__header-cell.grid__cell--header-center .grid__cell-content,
+.grid__cell.grid__cell--center .grid__cell-content {
 	margin: auto;
 }
 
-.grid .gridHeaderCell.right .cellContent,
-.grid .gridHeaderCell.header-right .cellContent,
-.grid .gridCell.right .cellContent {
+.grid__header-cell.grid__cell--right .grid__cell-content,
+.grid__header-cell.grid__cell--header-right .grid__cell-content,
+.grid__cell.grid__cell--right .grid__cell-content {
 	margin-left: auto;
 }
 
-.grid .gridHeaderCell.right .cellContent,
-.grid .gridCell.right .cellContent {
+.grid__header-cell.grid__cell--right .grid__cell-content,
+.grid__cell.grid__cell--right .grid__cell-content {
 	margin-left: auto;
 }
 
-.grid .gridHeaderCell {
+.grid__header-cell {
 	font-size: 13px;
 	background-color: var(--bg-gray);
 }
 
-.grid .gridHeaderCell.first .cellContent,
-.grid .gridHeaderCell.empty .cellContent {
+.grid__header-cell.grid-el--first .grid__cell-content,
+.grid__header-cell--empty .grid__cell-content {
 	border-left: 0;
 }
 
-.grid .gridHeaderCell.first {
+.grid__header-cell.grid-el--first {
 	border-top-left-radius: var(--radius);
 }
 
-.grid .gridHeaderCell.last {
+.grid__header-cell.grid-el--last {
 	border-top-right-radius: var(--radius);
 }
 
-.grid .gridCell {
+.grid__cell {
 	font-size: 13px;
 }
 
-.grid.column-border .gridHeaderCell {
+.grid--show-column-border .grid__header-cell {
 	border-right: 1px solid var(--border-primary);
 }
 
-.grid.row-border .gridHeaderCell {
+.grid--show-row-border .grid__header-cell {
 	border-bottom: 1px solid var(--border-primary);
 }
 
-.grid.column-border .gridCell {
+.grid--show-column-border .grid__cell {
 	border-right: 1px solid var(--border-primary);
 }
 
-.grid.row-border .gridRow .gridCell {
+.grid--show-row-border .grid__row .grid__cell {
 	border-bottom: 1px solid var(--border-primary);
 }
 
-.grid .gridRow.last {
+.grid__row.grid-el--last {
 	border-bottom-left-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);
 }
 
-.grid .gridRow,
-.grid .gridRow .gridCell {
+.grid__row,
+.grid__row .grid__cell {
 	transition: background-color 0.3s;
 }
 
-.grid .gridRow.clickable:hover,
-.grid .gridRow.clickable:hover .gridCell {
+.grid__row--clickable:hover,
+.grid__row--clickable:hover .grid__cell {
 	background-color: var(--bg-gray);
 }
 
-.grid .gridRow.last .gridCell.first {
+.grid__row.grid-el--last .grid__cell.grid-el--first {
 	border-bottom-left-radius: var(--radius);
 }
 
-.grid .gridRow.last .gridCell.last {
+.grid__row.grid-el--last .grid__cell.grid-el--last {
 	border-bottom-right-radius: var(--radius);
 }
 
-.grid .noRows {
+.grid__no-rows {
 	color: var(--sl-color-neutral-400);
 	display: flex;
 	flex-flow: column;
@@ -173,57 +173,58 @@ sl-popup::part(arrow) {
 	justify-content: center;
 }
 
-.grid .noRows sl-icon {
+.grid__no-rows sl-icon {
 	color: var(--sl-color-neutral-400);
 	font-size: 25px;
 }
 
-.grid .noRows,
-.grid .loading {
+.grid__no-rows,
+.grid__loading {
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
 	text-align: center;
 	padding: 120px 30px 170px 30px;
 }
 
-.grid.sortableGrid .gridHeaderRow,
-.grid.sortableGrid .gridRow {
+.grid--sortable .grid__header-row,
+.grid--sortable .grid__row {
 	padding-left: 30px;
 }
 
-.grid.sortableGrid .gridNestedRows .expand {
+.grid--sortable .grid__nested-rows .grid__row-expand {
 	left: calc(var(--parent-indentation) + 30px);
 }
 
-.grid.sortableGrid .gridNestedRows .gridRow.children::before {
+.grid--sortable .grid__nested-rows .grid__row--children::before {
 	left: calc(var(--children-indentation) + 30px);
 }
 
-.grid.sortableGrid .sortableRows .gridRow,
-.grid.sortableGrid .sortableRows .gridRow .gridCell {
+.grid--sortable .grid__sortable-rows .grid__row,
+.grid--sortable .grid__sortable-rows .grid__row .grid__cell {
 	background-color: var(--sl-color-primary-50);
 	font-weight: 500;
 }
 
-.grid.sortableGrid .sortableRows .gridNestedRows .gridRow.children,
-.grid.sortableGrid .sortableRows .gridNestedRows .gridRow.children .gridCell,
-.grid.sortableGrid .sortableRows .gridNestedRows .gridNestedRows .gridRow.parent,
-.grid.sortableGrid .sortableRows .gridNestedRows .gridNestedRows .gridRow.parent .gridCell {
+.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__row--children,
+.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__row--children .grid__cell,
+.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__nested-rows .grid__row--parent,
+.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__nested-rows .grid__row--parent .grid__cell {
 	background-color: var(--sl-color-primary-100) !important;
 	font-weight: 500 !important;
 }
 
-.grid.sortableGrid .sortableRows .gridNestedRows.expanded > .gridRow.parent,
-.grid.sortableGrid .sortableRows .gridNestedRows > .children:last-child {
+.grid--sortable .grid__sortable-rows .grid__nested-rows--expanded > .grid__row--parent,
+.grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__row--children:last-child,
+.grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__nested-rows--children:last-child {
 	border-top: 0 !important;
 	border-bottom: 0 !important;
 }
 
-.grid.sortableGrid .draggable-wrapper {
+.grid--sortable .draggable-wrapper {
 	position: relative;
 }
 
-.grid.sortableGrid .draggable-wrapper__handle {
+.grid--sortable .draggable-wrapper__handle {
 	background-color: transparent;
 	border: 0;
 	font-size: 21px;
@@ -238,14 +239,14 @@ sl-popup::part(arrow) {
 	z-index: 10;
 }
 
-.grid.sortableGrid .draggable-wrapper__handle sl-icon {
+.grid--sortable .draggable-wrapper__handle sl-icon {
 	color: var(--sl-color-primary-600);
 	position: absolute;
 	top: 50%;
 	transform: translateY(-50%);
 }
 
-.grid.sortableGrid .overlay-row {
+.grid--sortable .overlay-row {
 	cursor: grabbing;
 	display: flex;
 	background-color: var(--sl-color-primary-50);
@@ -258,19 +259,19 @@ sl-popup::part(arrow) {
 	border: 1px solid var(--sl-color-primary-200);
 }
 
-.grid.sortableGrid .overlay-row__handle {
+.grid--sortable .overlay-row__handle {
 	background-color: transparent;
 	border: 0;
 	font-size: 21px;
 	cursor: grabbing;
 }
 
-.grid.sortableGrid .overlay-row__handle sl-icon {
+.grid--sortable .overlay-row__handle sl-icon {
 	color: var(--sl-color-primary-600);
 	display: block;
 	height: 100%;
 }
 
-.grid.sortableGrid .overlay-row__name {
+.grid--sortable .overlay-row__name {
 	color: var(--sl-color-primary-600);
 }

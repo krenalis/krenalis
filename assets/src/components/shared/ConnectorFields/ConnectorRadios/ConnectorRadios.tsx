@@ -27,7 +27,7 @@ const ConnectorRadios = ({ name, label, options, error, val, onChange }: Connect
 	};
 
 	return (
-		<div className='connectorRadios'>
+		<div className='connector-radios'>
 			<SlRadioGroup value={value} label={label} name={name} onSlChange={onRadioGroupChange}>
 				{options.map((opt, _) => {
 					return (
@@ -37,7 +37,7 @@ const ConnectorRadios = ({ name, label, options, error, val, onChange }: Connect
 					);
 				})}
 			</SlRadioGroup>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

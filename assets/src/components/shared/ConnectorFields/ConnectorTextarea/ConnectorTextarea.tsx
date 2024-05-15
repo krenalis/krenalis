@@ -40,7 +40,7 @@ const ConnectorTextarea = ({
 	};
 
 	return (
-		<div className='connectorTextarea'>
+		<div className='connector-textarea'>
 			<SlTextarea
 				name={name}
 				value={value}
@@ -52,7 +52,7 @@ const ConnectorTextarea = ({
 				maxlength={maxlength !== 0 ? maxlength : undefined}
 				onSlChange={onTextAreaChange}
 			/>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

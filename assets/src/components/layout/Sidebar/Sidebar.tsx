@@ -91,21 +91,21 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 			<Link path={isDisabled ? null : item.link}>
 				<div
 					key={item.name}
-					className={`item${
+					className={`sidebar__item${
 						isDisabled
-							? ' disabled'
+							? ' sidebar__item--disabled'
 							: isSelected
-								? ' selected'
+								? ' sidebar__item--selected'
 								: isChildrenSelected
-									? ' isChildrenSelected'
+									? ' sidebar__item--isChildrenSelected'
 									: ''
 					}`}
 				>
-					<SlIcon className='itemIcon' name={item.icon} />
-					<div className='text'>{item.label}</div>
+					<SlIcon className='sidebar__item-icon' name={item.icon} />
+					<div className='sidebar__item-text'>{item.label}</div>
 					{isDisabled && (
 						<SlTooltip content='You must first connect a data warehouse'>
-							<SlIcon className='disabledItemIcon' name='database-exclamation' />
+							<SlIcon className='sidebar__item-disabled-icon' name='database-exclamation' />
 						</SlTooltip>
 					)}
 				</div>
@@ -116,9 +116,12 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 				const isSelected = subItem.name === currentRoute;
 				items.push(
 					<Link path={subItem.link}>
-						<div key={subItem.name} className={`subItem${isSelected ? ' selected' : ''}`}>
+						<div
+							key={subItem.name}
+							className={`sidebar__sub-item${isSelected ? ' sidebar__sub-item--selected' : ''}`}
+						>
 							{subItem.icon && <SlIcon name={subItem.icon} />}
-							<div className='text'>{subItem.label}</div>
+							<div className='sidebar__sub-item-text'>{subItem.label}</div>
 						</div>
 					</Link>,
 				);
@@ -128,10 +131,10 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 
 	return (
 		<div className='sidebar'>
-			<div className='items'>
-				<div className='top'>
-					<div className='logo'>
-						<div className='image'>Logo</div>
+			<div className='sidebar__items'>
+				<div className='sidebar__top'>
+					<div className='sidebar__logo'>
+						<div className='sidebar__logo-image'>Logo</div>
 					</div>
 					<WorkspaceSelector
 						setSelectedWorkspace={setSelectedWorkspace}
@@ -142,10 +145,10 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 					/>
 					{items}
 				</div>
-				<div className='bottom'>
-					<div className='item' onClick={onLogout}>
+				<div className='sidebar__bottom'>
+					<div className='sidebar__item' onClick={onLogout}>
 						<SlIcon name='box-arrow-left' />
-						<div className='text'>Logout</div>
+						<div className='sidebar__item-text'>Logout</div>
 					</div>
 				</div>
 			</div>
@@ -173,9 +176,9 @@ const WorkspaceSelector = ({
 
 	useEffect(() => {
 		const handleWorkspaceClick = (e) => {
-			const isInWorkspaceDialog = e.target.closest('.workspaceDialog') != null;
+			const isInWorkspaceDialog = e.target.closest('.workspace-selector__dialog') != null;
 			if (!isInWorkspaceDialog) {
-				const isInWorkspaceSelector = e.target.closest('.workspaceSelector') != null;
+				const isInWorkspaceSelector = e.target.closest('.workspace-selector') != null;
 				if (!isInWorkspaceSelector) {
 					setIsOpen(false);
 				}
@@ -193,7 +196,7 @@ const WorkspaceSelector = ({
 	};
 
 	const onWorkspaceSelectorClick = (e) => {
-		const isInWorkspaceDialog = e.target.closest('.workspaceDialog') != null;
+		const isInWorkspaceDialog = e.target.closest('.workspace-selector__dialog') != null;
 		if (!isInWorkspaceDialog) {
 			setIsOpen(!isOpen);
 		}
@@ -235,25 +238,30 @@ const WorkspaceSelector = ({
 		options.push(
 			<div
 				key={s.ID}
-				className={`workspaceDialogOption${s.ID === selectedWorkspace ? ' selected' : ''}`}
+				className={`workspace-selector__dialog-option${s.ID === selectedWorkspace ? ' workspace-selector__dialog-option--selected' : ''}`}
 				onClick={() => onWorkspaceChange(s.ID)}
 			>
 				<SlIcon name='check-lg' />
-				<div className='workspaceDialogOptionName'>{s.Name}</div>
+				<div className='workspace-selector__dialog-option-name'>{s.Name}</div>
 			</div>,
 		);
 	}
 
 	return (
-		<div className={`workspaceSelector${isOpen ? ' open' : ''}`} onClick={onWorkspaceSelectorClick}>
-			<div className='workspaceSelectorText'>
-				<div className='workspaceSelectorLabel'>Workspace</div>
-				<div className='workspaceSelectorValue'>{workspaces.find((w) => w.ID === selectedWorkspace).Name}</div>
+		<div
+			className={`workspace-selector${isOpen ? ' workspace-selector--open' : ''}`}
+			onClick={onWorkspaceSelectorClick}
+		>
+			<div className='workspace-selector__text'>
+				<div className='workspace-selector__label'>Workspace</div>
+				<div className='workspace-selector__value'>
+					{workspaces.find((w) => w.ID === selectedWorkspace).Name}
+				</div>
 			</div>
-			<SlIcon name='chevron-down' className='workspaceSelectorArrow' />
-			<div className='workspaceDialog'>
+			<SlIcon name='chevron-down' className='workspace-selector__arrow' />
+			<div className='workspace-selector__dialog'>
 				<SlInput
-					className='workspaceDialogSearch'
+					className='workspace-selector__dialog-search'
 					value={searchTerm}
 					size='small'
 					placeholder='Search workspace'
@@ -262,7 +270,7 @@ const WorkspaceSelector = ({
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
 				{options}
-				<div className='workspaceDialogViewAll' onClick={onViewAllWorkspaces}>
+				<div className='workspace-selector__dialog-view-all' onClick={onViewAllWorkspaces}>
 					All workspaces
 					<SlIcon name='arrow-right-short' />
 				</div>

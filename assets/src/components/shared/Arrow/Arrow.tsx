@@ -21,7 +21,7 @@ interface ArrowProps {
 
 const Arrow = ({ start, end, startAnchor, endAnchor, dashness, color, isNew }: ArrowProps) => {
 	return (
-		<div className={`arrow${isNew ? ' new' : ''}`}>
+		<div className={`arrow${isNew ? ' arrow--new' : ''}`}>
 			<Xarrow
 				start={start}
 				end={end}

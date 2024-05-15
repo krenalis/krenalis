@@ -34,8 +34,8 @@ const Workspaces = () => {
 	});
 
 	return (
-		<div className='workspace-list__content'>
-			<div className='workspace-list'>
+		<div className='workspace-list'>
+			<div className='workspace-list__content'>
 				<div className='workspace-list__title-and-button'>
 					<p className='workspace-list__title'>Select a workspace</p>
 					{workspaces.length > 0 && (

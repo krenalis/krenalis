@@ -24,11 +24,11 @@ const ConnectorSwitch = ({ name, label, error, val, onChange }: ConnectorSwitchP
 	};
 
 	return (
-		<div className='connectorSwitch'>
+		<div className='connector-switch'>
 			<SlSwitch name={name} onSlChange={onSwitchChange} checked={value}>
 				{label}
 			</SlSwitch>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

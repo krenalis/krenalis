@@ -93,11 +93,11 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 
 	return (
 		<>
-			<div className='keys'>
+			<div className='connection-settings__keys'>
 				{keys.map((key) => {
 					return (
 						<Flex key={key} alignItems='center' gap={30}>
-							<div className='keyCopy'>
+							<div className='connection-settings__key-copy'>
 								<SlInput readonly value={key} />
 								<SlCopyButton value={key} />
 							</div>

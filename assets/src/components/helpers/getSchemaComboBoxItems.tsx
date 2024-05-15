@@ -73,17 +73,17 @@ const computeItems = (flatSchema: TransformedMapping) => {
 		items.push({
 			content: (
 				<Fragment key={propertyName}>
-					<div className='propertiesItemName'>
+					<div className='schema-combobox-item'>
 						{flatSchema[propertyName].label != null && flatSchema[propertyName].label !== '' ? (
 							<>
-								<div className='label'>{flatSchema[propertyName].label}</div>
-								<div className='name'>{propertyName}</div>
+								<div className='schema-combobox-item__label'>{flatSchema[propertyName].label}</div>
+								<div className='schema-combobox-item__name'>{propertyName}</div>
 							</>
 						) : (
 							propertyName
 						)}
 					</div>
-					<div className='propertiesItemType'>{typ}</div>
+					<div className='schema-combobox-item__type'>{typ}</div>
 				</Fragment>
 			),
 			term: propertyName,

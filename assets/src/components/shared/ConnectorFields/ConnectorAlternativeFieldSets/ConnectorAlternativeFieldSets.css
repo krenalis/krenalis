@@ -1,35 +1,18 @@
-.connectorAlternativeFieldSets {
+.connector-alternative-fieldsets {
 	margin-top: 50px;
 }
 
-.connectorAlternativeFieldSets .label {
+.connector-alternative-fieldsets__label {
 	font-weight: 600;
 	margin-bottom: 10px;
 }
 
-.connectorAlternativeFieldSets sl-select {
+.connector-alternative-fieldsets sl-select {
 	position: relative;
 	z-index: 10;
 }
 
-.connectorAlternativeFieldSets .selectedFields {
-	background-color: var(--bg-gray);
-	padding: 25px 35px 32px 35px;
-	border-bottom-left-radius: 5px;
-	border-bottom-right-radius: 5px;
-	margin: 10px 7px;
-	border-radius: 5px;
-}
-
-.connectorAlternativeFieldSets .selectedFields > * {
-	margin-bottom: 20px;
-}
-
-.connectorAlternativeFieldSets .selectedFields > *:last-child {
-	margin-bottom: 0;
-}
-
-.connectorAlternativeFieldSets .helpText {
+.connector-alternative-fieldsets__help-text {
 	font-size: 15px;
 	opacity: 0.5;
 	text-align: center;

@@ -1,18 +1,18 @@
-.connectorsList sl-breadcrumb::part(base) {
+.connectors-list sl-breadcrumb::part(base) {
 	justify-content: center;
 }
 
-.connectorsList .routeContent {
+.connectors-list .route-content {
 	margin: auto;
 }
 
-.connectorsList .searchBar {
+.connectors-list__search-bar {
 	max-width: 1200px;
 	margin: auto;
 	margin-bottom: 30px;
 }
 
-.connectorsList .connectors {
+.connectors-list__connectors {
 	margin: auto;
 	max-width: 1200px;
 	display: flex;
@@ -21,11 +21,11 @@
 	gap: 30px;
 }
 
-.connectorsList .connectors .card {
+.connectors-list__connectors .card {
 	width: calc(33.333333% - 20px);
 }
 
-.connectorsList .connectors .noConnector {
+.connectors-list__no-connector {
 	text-align: center;
 	width: 100%;
 	display: flex;
@@ -38,44 +38,6 @@
 	opacity: 0.7;
 }
 
-.connectorsList .connectors .noConnector sl-icon {
+.connectors-list__no-connector sl-icon {
 	font-size: 30px;
-}
-
-.connectorsList sl-dialog::part(body) {
-	padding: 10px 30px 20px 30px;
-}
-
-.connectorsList sl-dialog .no-storage {
-	text-align: center;
-	padding-bottom: 15px;
-}
-
-.connectorsList sl-dialog .storage {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 15px;
-}
-
-.connectorsList sl-dialog .storage sl-button::part(base) {
-	border-radius: 100%;
-	width: 35px;
-	height: 35px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-}
-
-.connectorsList sl-dialog .websiteInfo {
-	padding: 0 10px 20px 10px;
-}
-
-.connectorsList sl-dialog .websiteInfo .hostInput {
-	margin-bottom: 20px;
-}
-
-.connectorsList sl-dialog .websiteInfo .addWebsite {
-	display: block;
-	margin: 30px auto 0 auto;
 }

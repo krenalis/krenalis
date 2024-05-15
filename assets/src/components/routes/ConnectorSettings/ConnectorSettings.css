@@ -1,4 +1,4 @@
-.connectorSettings .settings {
+.connector-settings__settings {
 	max-width: 900px;
 	margin: auto;
 	padding: 0;
@@ -6,64 +6,52 @@
 	padding-right: 30px;
 }
 
-.connectorSettings .basic .inputWrapper {
+.connector-settings__basic .connector-settings__input {
 	margin-bottom: 30px;
 }
 
-.connectorSettings .basic .switchWrapper {
-	margin: 50px 0;
-}
-
-.connectorSettings sl-select.strategy,
-.connectorSettings sl-select.mode {
+.connector-settings__strategy-field,
+.connector-settings__mode-field {
 	max-width: fit-content;
 }
 
-.connectorSettings sl-select.mode .modeValueIcon {
+.connector-settings__mode-value-icon {
 	display: flex;
 	align-items: center;
 	margin-right: 10px;
 }
 
-.connectorSettings sl-select.mode sl-option[aria-selected='true'] .modeIcon {
+.connector-settings__mode-field sl-option[aria-selected='true'] .connector-settings__mode-icon {
 	color: var(--text-onaccent);
 }
 
-.connectorSettings sl-select.mode sl-option .modeIcon {
+.connector-settings__mode-field sl-option .connector-settings__mode-icon {
 	display: flex;
 	align-items: center;
 }
 
-.connectorSettings sl-input.name {
+.connector-settings__name-field {
 	max-width: 280px;
-}
-
-.connectorSettings sl-input.displayedPropertyName {
-	max-width: 500px;
-}
-
-.connectorSettings sl-input.name,
-.connectorSettings sl-input.displayedPropertyName {
 	padding-top: 2em;
 }
 
-.connectorSettings sl-input.host {
+.connector-settings__host-field {
 	max-width: 350px;
 }
 
-.connectorSettings .eventConnections {
+.connector-settings__event-connections {
 	margin-bottom: 50px;
 }
 
-.connectorSettings .eventConnectionLabel {
+.connector-settings__event-connections-label {
 	font-weight: 600;
 }
 
-.connectorSettings .saveWrapper {
+.connector-settings__save-wrapper {
 	text-align: center;
 }
 
-.connectorSettings .saveButton {
+.connector-settings__save-button {
 	min-width: 180px;
 	display: inline-block;
 }

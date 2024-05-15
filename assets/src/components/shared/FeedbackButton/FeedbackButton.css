@@ -1,24 +1,23 @@
-.feedbackButton {
+.feedback-button {
 	display: flex;
 	justify-content: center;
 	align-items: center;
 }
 
-.feedbackButton::part(label) {
+.feedback-button::part(label) {
 	transition: transform var(--scale-animation-duration);
 	will-change: transform;
 }
 
-.feedbackButton.confirm::part(label),
-.feedbackButton.error::part(label) {
+.feedback-button--confirm::part(label) {
 	transform: scale(1.8);
 }
 
-.feedbackTooltip::part(base) {
+.feedback-button__tooltip::part(base) {
 	background-color: var(--sl-color-neutral-300);
 }
 
-.feedbackTooltip::part(body) {
+.feedback-button__tooltip::part(body) {
 	background-color: var(--bg-gray);
 	border: 1px solid var(--sl-color-neutral-300);
 	pointer-events: all;
@@ -26,12 +25,12 @@
 	color: var(--text-primary);
 }
 
-.feedbackTooltip::part(base__popup) {
+.feedback-button__tooltip::part(base__popup) {
 	pointer-events: all;
 	box-shadow: var(--sl-shadow-x-large);
 }
 
-.feedbackTooltip::part(base__arrow) {
+.feedback-button__tooltip::part(base__arrow) {
 	background-color: var(--bg-gray);
 	border: 1px solid var(--sl-color-neutral-300);
 	z-index: 10;
@@ -39,7 +38,7 @@
 	border-bottom: 0;
 }
 
-.feedbackTooltip .tooltipContent {
+.feedback-button__tooltip-content {
 	font-size: 12px;
 	padding: 30px;
 	position: relative;
@@ -49,47 +48,36 @@
 	overflow: auto;
 }
 
-.feedbackTooltip .tooltipContent sl-button {
+.feedback-button__tooltip-content sl-button {
 	display: block;
 	margin-top: 8px;
 }
 
-.feedbackTooltip .tooltipContent sl-button::part(base) {
+.feedback-button__tooltip-content sl-button::part(base) {
 	height: unset;
 	min-height: unset;
 	line-height: unset;
 	padding: 2px 0;
 }
 
-.feedbackTooltip .tooltipContent sl-button::part(label) {
+.feedback-button__tooltip-content sl-button::part(label) {
 	font-size: 11px;
 }
 
-.feedbackTooltip .tooltipContent .errorIcon {
+.feedback-button__tooltip-content .feedback-button__tooltip-icon-error {
 	color: var(--sl-color-danger-500);
 	position: relative;
 	top: 4px;
 	font-size: 16px;
 }
 
-.feedbackTooltip .tooltipContent > .closeIcon {
+.feedback-button__tooltip-icon-close {
 	position: absolute;
 	right: 12px;
 	top: 10px;
 	cursor: pointer;
 }
 
-.feedbackTooltip .tooltipContent .tooltipError {
+.feedback-button__tooltip-error {
 	user-select: text;
-}
-
-.feedbackTooltip .tooltipContent .linkToOverview {
-	margin-top: 5px;
-}
-
-.feedbackTooltip .tooltipContent .linkToOverview .link {
-	color: var(--sl-color-primary-500);
-	text-decoration: underline;
-	cursor: pointer;
-	font-weight: 600;
 }

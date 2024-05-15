@@ -1,11 +1,11 @@
-.connectorColorPicker {
+.connector-color-picker {
 	display: flex;
 	align-items: center;
 	gap: 12px;
 	margin: 50px auto !important;
 }
 
-.connectorColorPicker .label {
+.connector-color-picker__label {
 	font-size: var(--sl-input-font-size-medium);
 	font-weight: var(--sl-input-font-weight);
 	color: var(--sl-input-color);

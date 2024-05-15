@@ -99,19 +99,21 @@ const ConnectionActions = () => {
 
 	return (
 		<>
-			<div className='connectionActions'>
+			<div className='connection-actions'>
 				{connection.actions!.length === 0 ? (
-					<div className='noAction'>
+					<div className='connection-actions__no-action'>
 						<IconWrapper name='send-exclamation' size={40} />
-						<div className='description'>Add an action to {connection.description}</div>
-						<div className='actionTypes'>
+						<div className='connection-actions__no-action-description'>
+							Add an action to {connection.description}
+						</div>
+						<div className='connection-actions__no-action-action-types'>
 							{connection.actionTypes.map((actionType) => (
 								<ListTile
 									key={actionType.Name}
 									icon={getConnectorLogo(connection.connector.icon)}
 									name={actionType.Name}
 									description={actionType.Description}
-									className='actionType'
+									className='connection-actions__action-type'
 									action={
 										<SlButton
 											size='small'

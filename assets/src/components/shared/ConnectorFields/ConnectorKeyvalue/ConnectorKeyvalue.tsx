@@ -78,7 +78,7 @@ const ConnectorKeyValue = ({
 	};
 
 	const onKeyChange = (_, key, e) => {
-		const id = Number(e.currentTarget.closest('.keyValueRow').dataset.id);
+		const id = Number(e.currentTarget.closest('.connector-keyvalue__row').dataset.id);
 		const updated = rows.map((r) => {
 			if (r.id === id) {
 				return { ...r, key: key };
@@ -89,7 +89,7 @@ const ConnectorKeyValue = ({
 	};
 
 	const onValueChange = (_, value, e) => {
-		const id = Number(e.currentTarget.closest('.keyValueRow').dataset.id);
+		const id = Number(e.currentTarget.closest('.connector-keyvalue__row').dataset.id);
 		const updated = rows.map((r) => {
 			if (r.id === id) {
 				return { ...r, value: value };
@@ -102,34 +102,40 @@ const ConnectorKeyValue = ({
 	const keyValueRows: ReactNode[] = [];
 	for (const r of rows) {
 		keyValueRows.push(
-			<div className='keyValueRow' data-id={r.id} key={r.id}>
+			<div className='connector-keyvalue__row' data-id={r.id} key={r.id}>
 				<KeyContext.Provider value={{ value: r.key, onChange: onKeyChange }}>
-					<div className='key cell'>
+					<div className='connector-keyvalue__cell'>
 						<ConnectorField field={keyComponent} />
 					</div>
 				</KeyContext.Provider>
 				<ValueContext.Provider value={{ value: r.value, onChange: onValueChange }}>
-					<div className='value cell'>
+					<div className='connector-keyvalue__cell'>
 						<ConnectorField field={valueComponent} />
 					</div>
 				</ValueContext.Provider>
-				{r.id !== 1 && <SlIcon className='removeRow' name='trash3' onClick={() => onRemoveRowClick(r.id)} />}
+				{r.id !== 1 && (
+					<SlIcon
+						className='connector-keyvalue__remove-row'
+						name='trash3'
+						onClick={() => onRemoveRowClick(r.id)}
+					/>
+				)}
 			</div>,
 		);
 	}
 
 	return (
-		<div className='connectorKeyValue'>
-			<div className='label'>{label}</div>
-			<div className='keyValueGrid'>
-				<div className='keyValueRow labels'>
-					<div className='keyLabel'>{keyLabel}</div>
-					<div className='valueLabel'>{valueLabel}</div>
+		<div className='connector-keyvalue'>
+			<div className='connector-keyvalue__label'>{label}</div>
+			<div className='connector-keyvalue__grid'>
+				<div className='connector-keyvalue__row'>
+					<div className='connector-keyvalue__key-label'>{keyLabel}</div>
+					<div className='connector-keyvalue__value-label'>{valueLabel}</div>
 				</div>
 				{keyValueRows}
 			</div>
-			<SlIcon className='addRow' onClick={onAddRowClick} name='plus-circle' />
-			{error !== '' && <div className='error'>{error}</div>}
+			<SlIcon className='connector-keyvalue__add-row' onClick={onAddRowClick} name='plus-circle' />
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

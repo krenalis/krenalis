@@ -55,7 +55,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 
 	if (isLoading) {
 		return (
-			<div className='action isLoading'>
+			<div className='action action--loading'>
 				<SlSpinner
 					style={
 						{
@@ -104,7 +104,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		>
 			<div className='action'>
 				<ActionHeader onClose={onClose} />
-				<div className='body'>
+				<div className='action__body'>
 					{actionType!.Fields.includes('Filter') && <ActionFilters />}
 					{actionType!.Fields.includes('Query') && <ActionQuery />}
 					{actionType!.Fields.includes('File') && <ActionFile />}

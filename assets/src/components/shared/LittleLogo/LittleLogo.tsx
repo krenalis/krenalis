@@ -8,11 +8,11 @@ interface LittleLogoProps {
 const LittleLogo = ({ icon }: LittleLogoProps) => {
 	let logo: string;
 	if (icon === '') {
-		logo = `<div class='unknownLogo'>?</div>`;
+		logo = `<div class='unknown-logo'>?</div>`;
 	} else {
 		logo = icon;
 	}
-	return <div className='littleLogo' dangerouslySetInnerHTML={{ __html: logo }}></div>;
+	return <div className='little-logo' dangerouslySetInnerHTML={{ __html: logo }}></div>;
 };
 
 export default LittleLogo;

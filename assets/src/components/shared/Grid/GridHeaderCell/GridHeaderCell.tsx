@@ -12,12 +12,14 @@ interface GridHeaderCellProps {
 
 const GridHeaderCell = ({ value, alignment, explanation, className }: GridHeaderCellProps) => {
 	return (
-		<div className={`${className}${value === '' ? ' empty' : ''}${alignment != null ? ` ${alignment}` : ''}`}>
-			<div className='cellContent'>
+		<div
+			className={`${className}${value === '' ? ' grid__header-cell--empty' : ''}${alignment != null ? ` grid__cell--${alignment}` : ''}`}
+		>
+			<div className='grid__cell-content'>
 				{value}
 				{explanation && (
-					<SlTooltip className='gridHeaderExplanationTooltip' content={explanation} placement='top'>
-						<SlIcon className='gridHeaderExplanationIcon' name='info-circle-fill' />
+					<SlTooltip className='grid__header-explanation-tooltip' content={explanation} placement='top'>
+						<SlIcon className='grid__header-explanation-icon' name='info-circle-fill' />
 					</SlTooltip>
 				)}
 			</div>

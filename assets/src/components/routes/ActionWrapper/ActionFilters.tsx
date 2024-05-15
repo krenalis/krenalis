@@ -29,7 +29,7 @@ const ActionFilters = () => {
 
 	const onRemoveCondition = (e) => {
 		const a = { ...action };
-		const id = e.currentTarget.closest('.condition').dataset.id;
+		const id = e.currentTarget.closest('.action__filters-condition').dataset.id;
 		a.Filter!.Conditions.splice(id, 1);
 		if (a.Filter!.Conditions.length === 0) {
 			a.Filter = null;
@@ -39,7 +39,7 @@ const ActionFilters = () => {
 
 	const onUpdateConditionFragment = (e) => {
 		const a = { ...action };
-		const id = e.target.closest('.condition').dataset.id;
+		const id = e.target.closest('.action__filters-condition').dataset.id;
 		const fragment = e.target.dataset.fragment;
 		let value: string;
 		if (fragment === 'Operator') {
@@ -53,7 +53,7 @@ const ActionFilters = () => {
 
 	const onSelectConditionListItem = (input, value) => {
 		const a = { ...action };
-		const id = input.closest('.condition').dataset.id;
+		const id = input.closest('.action__filters-condition').dataset.id;
 		a.Filter!.Conditions[id]['Property'] = value;
 		setAction(a);
 	};
@@ -78,7 +78,7 @@ const ActionFilters = () => {
 					comboBoxListRef={conditionListRef}
 					onInput={onUpdateConditionFragment}
 					value={condition.Property}
-					className='property'
+					className='action__filters-property'
 					size='small'
 					data-fragment='Property'
 				/>
@@ -87,7 +87,7 @@ const ActionFilters = () => {
 				<SlSelect
 					data-fragment='Operator'
 					size='small'
-					className='operator'
+					className='action__filters-operator'
 					value={Object.keys(operatorOptions).find((key) => operatorOptions[key] === condition.Operator)}
 					onSlChange={onUpdateConditionFragment}
 				>
@@ -102,17 +102,22 @@ const ActionFilters = () => {
 				<SlInput
 					data-fragment='Value'
 					size='small'
-					className='value'
+					className='action__filters-value'
 					value={condition.Value}
 					onSlInput={onUpdateConditionFragment}
 				/>
 			);
 			conditions.push(
-				<div key={i} className='condition' data-id={i}>
+				<div key={i} className='action__filters-condition' data-id={i}>
 					{conditionInput}
 					{operatorSelect}
 					{valueInput}
-					<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
+					<SlButton
+						className='action__filters-remove-condition'
+						size='small'
+						variant='danger'
+						onClick={onRemoveCondition}
+					>
 						Remove
 					</SlButton>
 				</div>,
@@ -121,10 +126,15 @@ const ActionFilters = () => {
 	}
 
 	return (
-		<Section title='Filter' description='The filters that define the action' padded={true}>
+		<Section
+			className='action__filters'
+			title='Filter'
+			description='The filters that define the action'
+			padded={true}
+		>
 			{conditions.length > 1 && (
 				<SlSelect
-					className='logical'
+					className='action__filters-logical'
 					size='small'
 					value={action.Filter!.Logical}
 					onSlChange={onSwitchFilterLogical}
@@ -139,7 +149,7 @@ const ActionFilters = () => {
 				items={getSchemaComboboxItems(actionType.InputSchema)}
 				onSelect={onSelectConditionListItem}
 			/>
-			<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
+			<SlButton className='action__filters-add-condition' size='small' variant='neutral' onClick={onAddCondition}>
 				Add new condition
 			</SlButton>
 		</Section>

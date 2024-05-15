@@ -27,7 +27,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			arrowEndAnchor = c.isSource ? 'left' : 'right';
 		} else {
 			arrowStart = `${c.id}`;
-			arrowEnd = 'centralLogo';
+			arrowEnd = 'central-logo';
 			arrowStartAnchor = c.isSource ? 'right' : 'left';
 			arrowEndAnchor = c.isSource ? 'left' : 'right';
 		}
@@ -60,16 +60,16 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		<>
 			<Link path={`connections/${c.id}/actions`}>
 				<div
-					className={`connectionBlock${isNew ? ' new' : ''}`}
+					className={`connection-block${isNew ? ' connection-block--new' : ''}`}
 					id={`${c.id}`}
 					onMouseEnter={onMouseEnter}
 					onMouseLeave={onMouseLeave}
 					data-is-hovered={isHovered}
 				>
-					<div className='connectionBlockContent'>
+					<div className='connection-block__content'>
 						<Flex alignItems='center' gap={10}>
 							{getConnectorLogo(c.connector.icon)}
-							<div className='name'>{c.name}</div>
+							<div className='connection-block__name'>{c.name}</div>
 						</Flex>
 						<StatusDot status={c.status} />
 					</div>

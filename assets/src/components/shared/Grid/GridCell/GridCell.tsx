@@ -40,9 +40,9 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 	}
 
 	return (
-		<div className={`${className}${cell.alignment != null ? ` ${cell.alignment}` : ''}`}>
-			<div className='cellContent'>
-				{cell.type === 'Object' ? <span className='object'> {value}</span> : value}
+		<div className={`${className}${cell.alignment != null ? ` grid__cell--${cell.alignment}` : ''}`}>
+			<div className='grid__cell-content'>
+				{cell.type === 'Object' ? <span className='grid__cell-content-object'> {value}</span> : value}
 			</div>
 		</div>
 	);

@@ -25,7 +25,7 @@ const Fullscreen = ({ onClose, isLoading, children }: FullscreenProps) => {
 	return (
 		<FullscreenContext.Provider value={{ closeFullscreen }}>
 			<div
-				className={`fullscreen${isOpen ? ' isOpen' : ''}${isLoading ? ' isLoading' : ''}`}
+				className={`fullscreen${isOpen ? ' fullscreen--open' : ''}${isLoading ? ' fullscreen--loading' : ''}`}
 				style={{ animation: `${isOpen ? 'fullscreenFadeIn' : 'fullscreenFadeOut'} .3s` }}
 				onAnimationEnd={onAnimationEnd}
 			>

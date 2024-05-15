@@ -60,15 +60,15 @@ const Login = () => {
 
 	return (
 		<div className='login'>
-			<div className='container'>
-				<div className='heading'>
+			<div className='login__container'>
+				<div className='login__heading'>
 					<h1>Sign-in to your account</h1>
 				</div>
-				<form className='loginForm' onSubmit={onLogin}>
+				<form className='login__form' onSubmit={onLogin}>
 					{/* Using standard inputs instead of Shoelace inputs as a workaround for Shoelace issue #269 */}
 					<input
 						type='email'
-						id='emailInput'
+						className='login__email'
 						inputMode='email'
 						onInput={onEmailChange}
 						name='email'
@@ -78,7 +78,7 @@ const Login = () => {
 					/>
 					<input
 						type='password'
-						id='passwordInput'
+						className='login__password'
 						onInput={onPaswordChange}
 						name='password'
 						value={password}
@@ -86,7 +86,7 @@ const Login = () => {
 						minLength={8}
 						required
 					/>
-					<SlButton className='loginButton' type='submit' variant='primary' loading={isLoading}>
+					<SlButton className='login__button' type='submit' variant='primary' loading={isLoading}>
 						Login
 					</SlButton>
 				</form>

@@ -91,7 +91,7 @@ const EventConnectionSelector = ({
 							<div className='event-connection-selector__head-description'>{description}</div>
 						</div>
 						{hasSelectableConnections && (
-							<SlDropdown className={`event-connection-selector__dropdown`}>
+							<SlDropdown className='event-connection-selector__dropdown'>
 								<SlButton slot='trigger' caret>
 									<SlIcon slot='prefix' name='plus' />
 									Add {role === 'Source' ? 'destination' : 'source'}...

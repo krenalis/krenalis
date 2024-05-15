@@ -52,14 +52,14 @@ const ActionMatchingProperties = () => {
 			description='The properties used to identify and match the resources'
 			padded={true}
 		>
-			<div className='matchingProperties'>
+			<div className='action__matching-properties'>
 				<ComboBoxInput
 					comboBoxListRef={internalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}
 					value={action.MatchingProperties!.Internal}
 					label='Golden record property'
 					data-type='Internal'
-					className='inputProperty'
+					className='action__mapping-input-property'
 					caret={true}
 					error={internalPropertyError}
 				></ComboBoxInput>
@@ -68,7 +68,7 @@ const ActionMatchingProperties = () => {
 					items={getSchemaComboboxItems(actionType.InputMatchingSchema)}
 					onSelect={onSelectMatchingProperties}
 				/>
-				<div className='equal'>=</div>
+				<div className='action__matching-properties-equal'>=</div>
 				<ComboBoxInput
 					comboBoxListRef={externalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}

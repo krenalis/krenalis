@@ -27,7 +27,7 @@ const ConnectorRange = ({ name, label, helpText, min, max, step, error, val, onC
 	};
 
 	return (
-		<div className='connectorRange'>
+		<div className='connector-range'>
 			<SlRange
 				name={name}
 				value={value}
@@ -38,7 +38,7 @@ const ConnectorRange = ({ name, label, helpText, min, max, step, error, val, onC
 				step={step}
 				onSlChange={onRangeChange}
 			/>
-			{error !== '' && <div className='error'>{error}</div>}
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

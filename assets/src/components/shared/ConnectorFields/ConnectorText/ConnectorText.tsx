@@ -8,9 +8,9 @@ interface ConnectorTextProps {
 
 const ConnectorText = ({ label, text }: ConnectorTextProps) => {
 	return (
-		<div className='connectorText'>
-			<div className='label'>{label}</div>
-			<div className='text'>{text}</div>
+		<div className='connector-text'>
+			<div className='connector-text__label'>{label}</div>
+			<div className='connector-text__text'>{text}</div>
 		</div>
 	);
 };

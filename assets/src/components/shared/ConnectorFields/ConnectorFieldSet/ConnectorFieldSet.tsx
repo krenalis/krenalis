@@ -35,7 +35,7 @@ const ConnectorFieldSet = ({ name, fields, val, onChange }: ConnectorFieldSetPro
 	for (const [i, f] of fields.entries()) fieldSet.push(<ConnectorField key={i} field={f} />);
 
 	return (
-		<div className='connectorFieldSet'>
+		<div className='connector-fieldsets'>
 			<FieldSetContext.Provider value={{ values: values, onChange: onFieldChange }}>
 				{fieldSet}
 			</FieldSetContext.Provider>

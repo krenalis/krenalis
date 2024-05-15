@@ -14,22 +14,28 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 	const tab = fragments[fragments.length - 1];
 
 	return (
-		<div className='links'>
+		<div className='connection-wrapper__links'>
 			<Link path={`connections/${connection.id}/actions`}>
-				<div className={`link${tab === 'actions' ? ' selected' : ''}`}>
+				<div
+					className={`connection-wrapper__link${tab === 'actions' ? ' connection-wrapper__link--selected' : ''}`}
+				>
 					<SlIcon name='send-exclamation'></SlIcon>
 					Actions
 				</div>
 			</Link>
 			<Link path={`connections/${connection.id}/overview`}>
-				<div className={`link${tab === 'overview' ? ' selected' : ''}`}>
+				<div
+					className={`connection-wrapper__link${tab === 'overview' ? ' connection-wrapper__link--selected' : ''}`}
+				>
 					<SlIcon name='activity'></SlIcon>
 					Overview
 				</div>
 			</Link>
 			{(connection.isMobile || connection.isWebsite || connection.isServer || connection.isStream) && (
 				<Link path={`connections/${connection.id}/events`}>
-					<div className={`link${tab === 'events' ? ' selected' : ''}`}>
+					<div
+						className={`connection-wrapper__link${tab === 'events' ? ' connection-wrapper__link--selected' : ''}`}
+					>
 						<SlIcon name='play'></SlIcon>
 						Live events
 					</div>
@@ -37,14 +43,18 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 			)}
 			{connection.hasIdentities && (
 				<Link path={`connections/${connection.id}/identities`}>
-					<div className={`link${tab === 'identities' ? ' selected' : ''}`}>
+					<div
+						className={`connection-wrapper__link${tab === 'identities' ? ' connection-wrapper__link--selected' : ''}`}
+					>
 						<SlIcon name='people'></SlIcon>
 						Identities
 					</div>
 				</Link>
 			)}
 			<Link path={`connections/${connection.id}/settings`}>
-				<div className={`link${tab === 'settings' ? ' selected' : ''}`}>
+				<div
+					className={`connection-wrapper__link${tab === 'settings' ? ' connection-wrapper__link--selected' : ''}`}
+				>
 					<SlIcon name='sliders2'></SlIcon>
 					Settings
 				</div>

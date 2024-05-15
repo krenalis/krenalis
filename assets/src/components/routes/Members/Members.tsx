@@ -79,8 +79,8 @@ const Members = () => {
 
 	if (isLoadingMembers) {
 		return (
-			<div className='members__content'>
-				<div className='members'>
+			<div className='members'>
+				<div className='members__content'>
 					<SlSpinner
 						style={
 							{
@@ -94,8 +94,8 @@ const Members = () => {
 		);
 	} else {
 		return (
-			<div className='members__content'>
-				<div className='members'>
+			<div className='members'>
+				<div className='members__content'>
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
 						<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>

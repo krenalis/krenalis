@@ -15,7 +15,7 @@ const GridHeaderRow = ({ columns }: GridHeaderRowProps) => {
 		gridHeaderCells.push(
 			<GridHeaderCell
 				key={column.name}
-				className={`gridHeaderCell ${className}`}
+				className={`grid__header-cell ${className}`}
 				value={column.name}
 				alignment={column.alignment}
 				explanation={column.explanation}
@@ -23,7 +23,7 @@ const GridHeaderRow = ({ columns }: GridHeaderRowProps) => {
 		);
 	}
 
-	return <div className='gridHeaderRow'>{gridHeaderCells}</div>;
+	return <div className='grid__header-row'>{gridHeaderCells}</div>;
 };
 
 export default GridHeaderRow;

@@ -8,7 +8,7 @@
 	height: 70px;
 }
 
-.header .title {
+.header__title {
 	grid-area: title;
 	font-size: 17px;
 	display: flex;
@@ -16,22 +16,18 @@
 	gap: 15px;
 }
 
-.header .title .goBackIcon {
-	cursor: pointer;
-}
-
-.header .account {
+.header__account {
 	display: flex;
 	align-items: center;
 	gap: 10px;
 	grid-area: account;
 }
 
-.header .account sl-avatar {
+.header__account-avatar {
 	cursor: pointer;
 }
 
-.header .account sl-avatar::part(base) {
+.header__account-avatar::part(base) {
 	width: 40px;
 	height: 40px;
 	font-size: 18px;

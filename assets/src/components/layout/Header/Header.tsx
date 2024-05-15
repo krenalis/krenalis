@@ -13,10 +13,10 @@ interface HeaderProps {
 const Header = ({ title, member }: HeaderProps) => {
 	return (
 		<div className='header'>
-			<div className='title'>
+			<div className='header__title'>
 				<span>{title}</span>
 			</div>
-			<div className='account'>
+			<div className='header__account'>
 				<IconWrapper name='bell' moat={true}></IconWrapper>
 				<IconWrapper name='question-lg' moat={true}></IconWrapper>
 				<Link path='organization'>
@@ -24,7 +24,7 @@ const Header = ({ title, member }: HeaderProps) => {
 				</Link>
 				<Link path='members/current'>
 					<SlAvatar
-						className='accountAvatar'
+						className='header__account-avatar'
 						initials={member.Initials}
 						image={member.Avatar ? `data:${member.Avatar.MimeType};base64, ${member.Avatar.Image}` : ''}
 					/>

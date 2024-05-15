@@ -21,11 +21,11 @@ const LinkedConnectionBlocks = ({
 
 	return (
 		<div
-			className={`linkedConnectionBlocks${` ${primaryColumn}`}${
-				hasSecondaryConnections ? ' hasSecondaryConnections' : ''
+			className={`linked-connection-block linked-connection-block--${primaryColumn}${
+				hasSecondaryConnections ? ' linked-connection-block--has-secondary-connections' : ''
 			}`}
 		>
-			<div className='primaryConnection'>
+			<div className='linked-connection-block__primary-connections'>
 				<ConnectionBlock
 					connection={primaryConnection}
 					isNew={primaryConnection.id === newConnection}
@@ -33,7 +33,7 @@ const LinkedConnectionBlocks = ({
 			</div>
 			{hasSecondaryConnections && (
 				<>
-					<div className='secondaryConnections'>
+					<div className='linked-connection-block__secondary-connections'>
 						{secondaryConnections.map((c) => (
 							<ConnectionBlock key={c.id} connection={c} isNew={c.id === newConnection}></ConnectionBlock>
 						))}

@@ -25,27 +25,27 @@
 	margin: 50px auto 0 auto;
 }
 
-.identifiers .comboBoxInput sl-input .errorIcon {
+.identifiers .combobox-input sl-input .combobox-input__error-icon {
 	font-size: 9px;
 }
 
-.identifiers .propertiesItemName {
+.identifiers .schema-combobox-item {
 	font-size: 14px;
 	font-weight: 600;
 }
 
-.identifiers .propertiesItemName .name {
+.identifiers .schema-combobox-item__name {
 	font-weight: 400;
 	font-size: 13px;
 	opacity: 0.7;
 }
 
-.identifiers .propertiesItemType {
+.identifiers .schema-combobox-item__type {
 	font-size: 13px;
 	opacity: 0.7;
 }
 
-.identifiers .identifiers__identifier {
+.identifiers__identifier {
 	margin-bottom: 20px;
 	display: flex;
 	justify-content: space-between;
@@ -53,18 +53,18 @@
 	align-items: center;
 }
 
-.identifiers .identifiers__identifier .comboBoxInput {
+.identifiers__identifier .combobox-input {
 	width: 100%;
 }
 
-.identifiers .identifiers__add {
+.identifiers__add {
 	display: block;
 	width: max-content;
 	margin: auto;
 	margin-bottom: 20px;
 }
 
-.identifiers .identifiers__identifier-position {
+.identifiers__identifier-position {
 	background-color: var(--sl-color-neutral-400);
 	color: var(--text-onaccent);
 	width: 25px;

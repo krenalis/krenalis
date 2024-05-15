@@ -1,4 +1,4 @@
-.comboBoxList {
+.combobox-list {
 	visibility: hidden;
 	opacity: 0;
 	transform: scale(0.75);
@@ -13,7 +13,7 @@
 	box-shadow: var(--sl-shadow-medium);
 }
 
-.comboBoxList[data-isOpen='true'] {
+.combobox-list[data-isOpen='true'] {
 	visibility: visible;
 	opacity: 1;
 	transform: scale(1);
@@ -21,28 +21,28 @@
 	height: auto;
 }
 
-.comboBoxInput {
+.combobox-input {
 	position: relative;
 }
 
-.comboBoxInput .error {
+.combobox-input__error {
 	position: absolute;
 	font-size: 11px;
 	color: var(--sl-color-danger-500);
 	margin-top: 2px;
 }
 
-.comboBoxInput .errorIcon {
+.combobox-input__error-icon {
 	color: var(--sl-color-danger-500);
 	font-size: 12px;
 }
 
-.comboBoxInput sl-input .caretIcon {
+.combobox-input sl-input .combobox-input__caret-icon {
 	will-change: transform;
 	transition: transform 0.2s;
 	pointer-events: none;
 }
 
-.comboBoxInput sl-menu ~ sl-input .caretIcon {
+.combobox-input sl-menu ~ sl-input .combobox-input__caret-icon {
 	transform: rotate(-180deg);
 }

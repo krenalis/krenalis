@@ -16,7 +16,7 @@ const Card = ({ icon, name, type, description, children }: CardProps) => {
 	useEffect(() => {
 		let logo: string;
 		if (icon == null || icon === '') {
-			logo = `<div class='unknownLogo'>?</div>`;
+			logo = `<div class='card__unknown-logo'>?</div>`;
 		} else {
 			logo = icon;
 		}
@@ -27,17 +27,17 @@ const Card = ({ icon, name, type, description, children }: CardProps) => {
 
 	return (
 		<div className='card'>
-			<div className='top'>
-				<div className='logo' ref={logoRef}></div>
-				<div className='name'>{name}</div>
+			<div className='card__top'>
+				<div className='card__logo' ref={logoRef}></div>
+				<div className='card__name'>{name}</div>
 				{type && (
-					<SlBadge className='type' variant='neutral'>
+					<SlBadge className='card__type' variant='neutral'>
 						{type}
 					</SlBadge>
 				)}
-				<div className='description'>{description}</div>
+				<div className='card__description'>{description}</div>
 			</div>
-			<div className='body'>{children}</div>
+			<div className='card__body'>{children}</div>
 		</div>
 	);
 };

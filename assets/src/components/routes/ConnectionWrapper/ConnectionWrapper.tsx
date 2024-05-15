@@ -15,20 +15,17 @@ const ConnectionWrapper = () => {
 	useEffect(() => {
 		setTitle(
 			<Flex alignItems='baseline' gap={10}>
-				<span style={{ position: 'relative', top: '3px' }}>
-					{getConnectorLogo(connection.connector.icon)}
-					{}
-				</span>
-				<div className='text'>{connection.name}</div>
+				<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(connection.connector.icon)}</span>
+				<div>{connection.name}</div>
 				<StatusDot status={connection.status} />
 			</Flex>,
 		);
 	}, [connection]);
 
 	return (
-		<div className='connectionWrapper'>
+		<div className='connection-wrapper'>
 			<ConnectionTabs connection={connection} />
-			<div className='routeContent connection'>
+			<div className='route-content route-content--connection'>
 				<Outlet />
 			</div>
 		</div>

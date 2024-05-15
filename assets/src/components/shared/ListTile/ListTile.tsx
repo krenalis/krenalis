@@ -24,18 +24,18 @@ const ListTile = ({
 }: ListTileProps) => {
 	return (
 		<div
-			className={`listTile${className ? ' ' + className : ''}${disabled ? ' disabled' : ''}`}
+			className={`list-tile${className ? ' ' + className : ''}${disabled ? ' list-tile--disabled' : ''}`}
 			onClick={disabled ? null : onClick}
 			style={
 				onClick && !disabled ? { cursor: 'pointer' } : onClick && disabled ? { cursor: 'not-allowed' } : null
 			}
 		>
-			<div className='tileContent'>
-				<div className='tileIcon'>{icon}</div>
-				<div className='tileName'>{name}</div>
-				<div className='tileDescription'>
+			<div className='list-tile__content'>
+				<div className='list-tile__icon'>{icon}</div>
+				<div className='list-tile__name'>{name}</div>
+				<div className='list-tile__description'>
 					{description}
-					{disablingReason && <div className='disablingReason'>{disablingReason}</div>}
+					{disablingReason && <div className='list-tile__disabling-reason'>{disablingReason}</div>}
 				</div>
 			</div>
 			{!disabled && action}

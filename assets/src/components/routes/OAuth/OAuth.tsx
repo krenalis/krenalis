@@ -88,16 +88,16 @@ const OAuth = () => {
 	return (
 		<div className='oauth'>
 			{errorMessage !== '' ? (
-				<div className='error'>
+				<div className='oauth__error'>
 					<SlIcon name='exclamation-circle-fill'></SlIcon>
-					<div className='text'>{errorMessage}</div>
+					<div className='oauth__error-text'>{errorMessage}</div>
 					<Link path='connections'>
 						<SlButton variant='default'>Go to connections map</SlButton>
 					</Link>
 				</div>
 			) : (
-				<div className='loading'>
-					<div className='text'>Finalizing the OAuth authentication...</div>
+				<div className='oauth__loading'>
+					<div className='oauth__loading-text'>Finalizing the OAuth authentication...</div>
 					<SlSpinner
 						style={
 							{

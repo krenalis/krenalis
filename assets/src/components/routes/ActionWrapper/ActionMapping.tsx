@@ -427,14 +427,14 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	);
 
 	return (
-		<div className={`action-mapping${isTransformationDisabled ? ' disabled' : ''}`} ref={ref}>
+		<div className={`action__mapping${isTransformationDisabled ? ' action__mapping--disabled' : ''}`} ref={ref}>
 			{hasSpecialProperties && (
 				<Section title='Special properties' padded={true}>
-					<div className='specialProperties'>
+					<div className='action__mapping-special-properties'>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='identityProperty'>
-								<div className='label'>
-									Identity<span className='asterisk'>*</span>:
+							<div className='action__mapping-identity-property'>
+								<div className='action__mapping-special-properties-label'>
+									Identity<span className='action__mapping-special-properties-asterisk'>*</span>:
 								</div>
 								<ComboBoxInput
 									comboBoxListRef={identityPropertyListRef}
@@ -442,7 +442,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									value={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
 									name='identityProperty'
 									disabled={isTransformationDisabled || identityPropertyList.length === 0}
-									className='inputProperty'
+									className='action__mapping-input-property'
 									caret={true}
 									clearable={action.IdentityProperty?.length > 0}
 									error={
@@ -457,8 +457,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								/>
 							</div>
 						)}
-						<div className='displayedProperty'>
-							<div className='label'>Displayed:</div>
+						<div className='action__mapping-displayed-property'>
+							<div className='action__mapping-special-properties-label'>Displayed:</div>
 							{connection.isEventBased ? (
 								<SlInput
 									onSlInput={onUpdateDisplayedProperty}
@@ -473,7 +473,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									value={action.DisplayedProperty}
 									name='displayedProperty'
 									disabled={isTransformationDisabled}
-									className='inputProperty'
+									className='action__mapping-input-property'
 									caret={true}
 									clearable={action.DisplayedProperty?.length > 0}
 									error={displayedProperty}
@@ -483,16 +483,16 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 							)}
 						</div>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='lastChangeTimeProperty'>
-								<div className='lastChangeTime'>
-									<div className='label'>Last change time:</div>
+							<div className='action__mapping-last-change-time-property'>
+								<div className='action__mapping-last-change-time'>
+									<div className='action__mapping-special-properties-label'>Last change time:</div>
 									<ComboBoxInput
 										comboBoxListRef={lastChangeTimePropertyListRef}
 										onInput={onUpdateLastChangeTimeProperty}
 										value={action.LastChangeTimeProperty!}
 										name='lastChangeTimeProperty'
 										disabled={isTransformationDisabled}
-										className='inputProperty'
+										className='action__mapping-input-property'
 										caret={true}
 										clearable={action.LastChangeTimeProperty?.length > 0}
 										error={lastChangeTimePropertyError}
@@ -500,9 +500,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										helpText='A property with the time of the last modification of a user'
 									/>
 								</div>
-								<div className='format'>
-									<div className='lastChangeTimeFormat'>
-										<div className='label'>Format:</div>
+								<div className='action__mapping-last-change-format-property'>
+									<div className='action__mapping-last-change-format'>
+										<div className='action__mapping-special-properties-label'>Format:</div>
 										<SlSelect
 											onSlChange={onChangeLastChangeTimeFormat}
 											value={
@@ -530,7 +530,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										</SlSelect>
 									</div>
 									{needFormat && isCustomLastChangeTimeFormatSelected && (
-										<div className='lastChangeTimeCustomFormat'>
+										<div className='action__mapping-last-change-custom-format'>
 											<SlInput
 												onSlInput={onInputLastChangeTimeCustomFormat}
 												value={action.LastChangeTimeFormat}
@@ -552,7 +552,6 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 				title='Transformation'
 				description='The relation between the event properties and the action type properties'
 				padded={false}
-				className={mode}
 			>
 				{box}
 				<FullscreenTransformation
@@ -740,7 +739,7 @@ const TransformationBox = ({
 			mappings.push(
 				<div
 					key={k}
-					className='mapping'
+					className='action__mapping-mapping'
 					data-key={k}
 					style={
 						{
@@ -754,27 +753,27 @@ const TransformationBox = ({
 						value={action.Transformation.Mapping[k].value}
 						name={k}
 						disabled={isTransformationDisabled || action.Transformation.Mapping[k].disabled === true}
-						className='inputProperty'
+						className='action__mapping-input-property'
 						size='small'
 						error={action.Transformation.Mapping[k].error}
 						autocompleteExpressions={true}
 					>
 						{action.Transformation.Mapping[k].required && (
-							<div className='propertyIcon' slot='prefix'>
+							<div className='action__mapping-property-icon' slot='prefix'>
 								<SlTooltip content='Required' hoist>
-									<SlIcon name='asterisk' className='isRequiredIcon' />
+									<SlIcon name='asterisk' className='action__mapping-property-icon-required' />
 								</SlTooltip>
 							</div>
 						)}
 						{workspace.Identifiers.includes(k) && (
-							<div className='propertyIcon' slot='prefix'>
+							<div className='action__mapping-property-icon' slot='prefix'>
 								<SlTooltip content='Used as identifier' hoist>
-									<SlIcon name='person-check' className='isIdentifierIcon' />
+									<SlIcon name='person-check' className='action__mapping-property-identifier' />
 								</SlTooltip>
 							</div>
 						)}
 					</ComboBoxInput>
-					<div className='arrow'>
+					<div className='action__mapping-mapping-arrow'>
 						<SlIcon name='arrow-right' />
 					</div>
 					<SlInput
@@ -784,32 +783,30 @@ const TransformationBox = ({
 						value={k}
 						type='text'
 						name={k}
-						className={`outputProperty${
-							action.Transformation.Mapping![k].indentation! > 0 ? ' indented' : ''
+						className={`action__mapping-output-property${
+							action.Transformation.Mapping![k].indentation! > 0
+								? ' action__mapping-output-property--indented'
+								: ''
 						}`}
 					/>
 				</div>,
 			);
 		}
-		body = (
-			<div className='mappings'>
-				<div>{mappings}</div>
-			</div>
-		);
+		body = <div className='action__mapping-mappings'>{mappings}</div>;
 	} else {
 		const isTransformationLanguageDeprecated = !transformationLanguages.includes(selectedLanguage);
 		body = (
-			<div className='transformation'>
+			<div className='action__mapping-transformation'>
 				<EditorWrapper
 					language={selectedLanguage}
 					height={400}
 					name='actionTransformationEditor'
 					value={action.Transformation!.Function.Source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
-					className='minimizedTransformation'
+					className='action__mapping-transformation-minimized'
 				/>
 				{isTransformationLanguageDeprecated && (
-					<SlAlert variant='danger' className='languageDeprecatedAlert' open>
+					<SlAlert variant='danger' className='action__mapping-language-deprecated' open>
 						<SlIcon slot='icon' name='exclamation-circle' />
 						{selectedLanguage} is not supported anymore
 					</SlAlert>
@@ -821,7 +818,7 @@ const TransformationBox = ({
 	return (
 		<div
 			className={`transformation-box${' transformation-box--' + mode}${
-				isFullscreenAnimating ? ' is-fullscreen-animating' : ''
+				isFullscreenAnimating ? ' transformation-box--is-fullscreen-animating' : ''
 			}`}
 		>
 			<div className='transformation-box__header'>
@@ -1040,7 +1037,7 @@ const FullscreenTransformation = ({
 		let el: Element;
 		if (selectedSample == null) {
 			// sample has been closed.
-			el = document.querySelector('.sample.lastExecuted');
+			el = document.querySelector('.fullscreen-transformation__sample--last-executed');
 			if (el == null) {
 				// sample has been closed directly by a click on its heading and
 				// not because another sample has been executed.
@@ -1048,10 +1045,12 @@ const FullscreenTransformation = ({
 			}
 		} else {
 			// sample has been closed because another sample has been opened.
-			el = document.querySelector('.sample.open');
+			el = document.querySelector('.fullscreen-transformation__sample--open');
 		}
 		const accordion = el.closest('.accordion');
-		const panel = document.querySelector('.leftPanel .inputPanel .panelContent');
+		const panel = document.querySelector(
+			'.fullscreen-transformation__input-panel .fullscreen-transformation__panel-content',
+		);
 
 		setTimeout(() => {
 			const isVisible = isElementVisibleInLeftPanel(accordion, panel);
@@ -1065,7 +1064,7 @@ const FullscreenTransformation = ({
 		let el: Element;
 		if (selectedEvent == null) {
 			// event has been closed.
-			el = document.querySelector('.event.lastExecuted');
+			el = document.querySelector('.fullscreen-transformation__event--last-executed');
 			if (el == null) {
 				// event has been closed directly by a click on its heading and
 				// not because another event has been executed.
@@ -1073,10 +1072,12 @@ const FullscreenTransformation = ({
 			}
 		} else {
 			// event has been closed because another event has been opened.
-			el = document.querySelector('.event.open');
+			el = document.querySelector('.fullscreen-transformation__event--open');
 		}
 		const accordion = el.closest('.accordion');
-		const panel = document.querySelector('.leftPanel .inputPanel .panelContent');
+		const panel = document.querySelector(
+			'.fullscreen-transformation__input-panel .fullscreen-transformation__panel-content',
+		);
 
 		setTimeout(() => {
 			const isVisible = isElementVisibleInLeftPanel(accordion, panel);
@@ -1292,7 +1293,7 @@ const FullscreenTransformation = ({
 	let inputPanelContent: ReactNode = null;
 	if (isInputSchemaSelected) {
 		inputPanelContent = (
-			<div className='panelSchema'>
+			<div className='fullscreen-transformation__panel-schema'>
 				{inputSchema.properties.map((p) => {
 					if (p.type.name === 'Object') {
 						return (
@@ -1311,7 +1312,7 @@ const FullscreenTransformation = ({
 		);
 	} else if (samples) {
 		inputPanelContent = (
-			<div className='samples'>
+			<div className='fullscreen-transformation__samples'>
 				{Array.from(samples.entries()).map(([i, s]) => {
 					const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
 					const isLastExecuted =
@@ -1322,17 +1323,19 @@ const FullscreenTransformation = ({
 							isOpen={isOpen}
 							summary={
 								<div
-									className={`sample${isOpen ? ' open' : ''}${isLastExecuted ? ' lastExecuted' : ''}`}
+									className={`fullscreen-transformation__sample${isOpen ? ' fullscreen-transformation__sample--open' : ''}${isLastExecuted ? ' fullscreen-transformation__sample--last-executed' : ''}`}
 									onClick={(e) => onSampleClick(e, s)}
 								>
-									<div className='sampleName'>
+									<div className='fullscreen-transformation__sample-name'>
 										{actionType.Target === 'Users' ? (
 											<>
 												{idIdentifier.current && (
-													<div className='sampleID'>{s[idIdentifier.current].value}</div>
+													<div className='fullscreen-transformation__sample-id'>
+														{s[idIdentifier.current].value}
+													</div>
 												)}
 												<div>
-													<div className='sampleFullName'>
+													<div className='fullscreen-transformation__sample-full-name'>
 														{firstNameIdentifier.current && lastNameIdentifier.current
 															? s[firstNameIdentifier.current].value +
 																' ' +
@@ -1340,7 +1343,7 @@ const FullscreenTransformation = ({
 															: `Sample ${i}`}
 													</div>
 													{emailIdentifier.current && (
-														<div className='sampleEmail'>
+														<div className='fullscreen-transformation__sample-email'>
 															{s[emailIdentifier.current].value}
 														</div>
 													)}
@@ -1350,7 +1353,7 @@ const FullscreenTransformation = ({
 											''
 										)}
 									</div>
-									<div className='executeButton'>
+									<div className='fullscreen-transformation__execute-button'>
 										<SlIconButton
 											disabled={isExecuting}
 											name='play-circle'
@@ -1363,7 +1366,7 @@ const FullscreenTransformation = ({
 								</div>
 							}
 							details={
-								<div className='sampleSource'>
+								<div className='fullscreen-transformation__sample-source'>
 									<SyntaxHighlight>{JSON.stringify(normalizeSample(s), null, 4)}</SyntaxHighlight>
 								</div>
 							}
@@ -1374,10 +1377,16 @@ const FullscreenTransformation = ({
 		);
 	} else if (connection.isDatabase && connection.isSource) {
 		inputPanelContent = (
-			<div className='queryExecution'>
+			<div className='fullscreen-transformation__query-execution'>
 				<SlIcon name='database-down' />
-				<p className='queryExecutionText'>Execute the query to retrieve the samples</p>
-				<SlButton className='queryExecutionButton' variant='primary' onClick={onQuery}>
+				<p className='fullscreen-transformation__query-execution-text'>
+					Execute the query to retrieve the samples
+				</p>
+				<SlButton
+					className='fullscreen-transformation__query-execution-button'
+					variant='primary'
+					onClick={onQuery}
+				>
 					Execute the query
 				</SlButton>
 			</div>
@@ -1385,16 +1394,16 @@ const FullscreenTransformation = ({
 	} else if (connection.isApp && connection.isDestination && actionType.Target === 'Events') {
 		const reversedEvents: EventListenerEvent[] = [...events].reverse();
 		inputPanelContent = (
-			<div className='eventListener'>
-				<div className='eventList'>
-					<div className='body'>
+			<div className='fullscreen-transformation__event-listener'>
+				<div className='fullscreen-transformation__event-listener-list'>
+					<div className='fullscreen-transformation__event-listener-body'>
 						{events.length === 0 && (
-							<div className='noEvents'>
+							<div className='fullscreen-transformation__event-listener-no-event'>
 								Listening for new events{' '}
-								<span className='loadingEllipsis'>
-									<span className='ellipsis1'>.</span>
-									<span className='ellipsis2'>.</span>
-									<span className='ellipsis3'>.</span>
+								<span className='fullscreen-transformation__event-listener-loading-ellipsis'>
+									<span className='fullscreen-transformation__event-listener-ellipsis1'>.</span>
+									<span className='fullscreen-transformation__event-listener-ellipsis2'>.</span>
+									<span className='fullscreen-transformation__event-listener-ellipsis3'>.</span>
 								</span>
 							</div>
 						)}
@@ -1409,15 +1418,17 @@ const FullscreenTransformation = ({
 									isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
 									summary={
 										<div
-											className={`event${isOpen ? ' open' : ''}${
-												isLastExecuted ? ' lastExecuted' : ''
+											className={`fullscreen-transformation__event${isOpen ? ' fullscreen-transformation__event--open' : ''}${
+												isLastExecuted ? ' fullscreen-transformation__event--last-executed' : ''
 											}`}
 											onClick={(evt) => onEventClick(evt, e)}
 										>
-											<div className='name'>{e.type}</div>
-											<div className='time'>{new Date(e.time).toLocaleString()}</div>
+											<div className='fullscreen-transformation__event-name'>{e.type}</div>
+											<div className='fullscreen-transformation__event-time'>
+												{new Date(e.time).toLocaleString()}
+											</div>
 											<SlIconButton
-												className='runButton'
+												className='fullscreen-transformation__event-run'
 												name='play-circle'
 												onClick={(evt) => {
 													onExecuteEvent(e);
@@ -1427,7 +1438,7 @@ const FullscreenTransformation = ({
 										</div>
 									}
 									details={
-										<div className='eventSource'>
+										<div className='fullscreen-transformation__event-source'>
 											<SyntaxHighlight>{e.source}</SyntaxHighlight>
 										</div>
 									}
@@ -1440,21 +1451,25 @@ const FullscreenTransformation = ({
 		);
 	} else {
 		inputPanelContent = (
-			<div className='noSample'>
+			<div className='fullscreen-transformation__no-sample'>
 				<SlIcon name='x-lg' />
-				<p className='noSampleText'>This connection cannot retrieve samples to test the transformation</p>
+				<p className='fullscreen-transformation__no-sample-text'>
+					This connection cannot retrieve samples to test the transformation
+				</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className={`fullscreenTransformation${isFullscreenTransformationOpen ? ' isOpen' : ''}`}>
+		<div
+			className={`fullscreen-transformation${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
+		>
 			<SlSplitPanel style={{ '--min': '10px', '--max': '800px' } as React.CSSProperties}>
-				<div className='leftPanel' slot='start'>
+				<div className='fullscreen-transformation__left-panel' slot='start'>
 					<SlSplitPanel style={{ '--min': '10px', '--max': 'calc(100% - 10px)' } as React.CSSProperties}>
-						<div className='inputPanel' slot='start'>
-							<div className='panelTitleWrapper'>
-								<div className='panelTitle'>{InputPanelTitle}</div>
+						<div className='fullscreen-transformation__input-panel' slot='start'>
+							<div className='fullscreen-transformation__panel-title-wrapper'>
+								<div className='fullscreen-transformation__panel-title'>{InputPanelTitle}</div>
 								<SlButtonGroup>
 									<SlButton
 										size='small'
@@ -1472,11 +1487,11 @@ const FullscreenTransformation = ({
 									</SlButton>
 								</SlButtonGroup>
 							</div>
-							<div className='panelContent'>{inputPanelContent}</div>
+							<div className='fullscreen-transformation__panel-content'>{inputPanelContent}</div>
 						</div>
-						<div className='outputPanel' slot='end'>
-							<div className='panelTitleWrapper'>
-								<div className='panelTitle'>{OutputPanelTitle}</div>
+						<div className='fullscreen-transformation__output-panel' slot='end'>
+							<div className='fullscreen-transformation__panel-title-wrapper'>
+								<div className='fullscreen-transformation__panel-title'>{OutputPanelTitle}</div>
 								<SlButtonGroup>
 									<SlButton
 										size='small'
@@ -1496,9 +1511,9 @@ const FullscreenTransformation = ({
 									</SlButton>
 								</SlButtonGroup>
 							</div>
-							<div className='panelContent'>
+							<div className='fullscreen-transformation__panel-content'>
 								{isOutputSchemaSelected ? (
-									<div className='panelSchema'>
+									<div className='fullscreen-transformation__panel-schema'>
 										{outputSchema.properties.map((p) => {
 											if (p.type.name === 'Object') {
 												return (
@@ -1530,14 +1545,17 @@ const FullscreenTransformation = ({
 										}
 									></SlSpinner>
 								) : output !== '' || outputError !== '' ? (
-									<div className='outputCode'>
+									<div className='fullscreen-transformation__output-code'>
 										<SlTooltip content='Clear' placement='left' onClick={onClear}>
-											<SlIconButton className='clearButton' name='x-lg' />
+											<SlIconButton
+												className='fullscreen-transformation__output-clear'
+												name='x-lg'
+											/>
 										</SlTooltip>
 										{outputError !== '' ? (
-											<div className='outputError'>{outputError}</div>
+											<div className='fullscreen-transformation__output-error'>{outputError}</div>
 										) : (
-											<div className='outputSuccess'>
+											<div className='fullscreen-transformation__output-success'>
 												{connection.isApp &&
 												connection.isDestination &&
 												actionType.Target === 'Events' ? (
@@ -1549,9 +1567,9 @@ const FullscreenTransformation = ({
 										)}
 									</div>
 								) : (
-									<div className='outputPlaceholder'>
+									<div className='fullscreen-transformation__output-placeholder'>
 										<SlIcon name='play-circle' />
-										<p className='outputPlaceholderText'>
+										<p className='fullscreen-transformation__output-placeholder-text'>
 											Run the transformation on a sample to see the resulting output
 										</p>
 									</div>
@@ -1560,8 +1578,8 @@ const FullscreenTransformation = ({
 						</div>
 					</SlSplitPanel>
 				</div>
-				<div className='rightPanel' slot='end'>
-					<div slot='start' className='editorPanel'>
+				<div className='fullscreen-transformation__right-panel' slot='end'>
+					<div slot='start' className='fullscreen-transformation__editor-panel'>
 						{body}
 					</div>
 				</div>
@@ -1588,11 +1606,11 @@ const TransformationNestedProperties = ({
 	const typ = property.type as ObjectType;
 	return (
 		<div
-			className={`property${isExpanded ? ' expand' : ''}${
-				property.label != null && property.label !== '' ? ' hasLabel' : ''
+			className={`fullscreen-transformation__property${isExpanded ? ' fullscreen-transformation__property--expand' : ''}${
+				property.label != null && property.label !== '' ? ' fullscreen-transformation__property--has-label' : ''
 			}`}
 		>
-			<div className='parentProperty'>
+			<div className='fullscreen-transformation__parent-property'>
 				<SlIcon
 					name='caret-right-fill'
 					onClick={() => {
@@ -1601,7 +1619,7 @@ const TransformationNestedProperties = ({
 				/>
 				<TransformationProperty property={property} language={language} isParent={true} />
 			</div>
-			<div className='subProperties'>
+			<div className='fullscreen-transformation__sub-properties'>
 				{isExpanded &&
 					typ.properties.map((p) => {
 						if (p.type.name === 'Object') {
@@ -1649,29 +1667,31 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 	}
 
 	return (
-		<div className={isParent ? '' : 'property'}>
-			<div className='name'>
+		<div className={isParent ? '' : 'fullscreen-transformation__property'}>
+			<div className='fullscreen-transformation__property-name'>
 				{isIdentifier && (
 					<SlTooltip content='Used as identifier'>
-						<SlIcon className='identifierIcon' name='person-check' />
+						<SlIcon className='fullscreen-transformation__property-identifier-icon' name='person-check' />
 					</SlTooltip>
 				)}
 				{property.required && (
 					<SlTooltip content='Required'>
-						<SlIcon className='requiredIcon' name='asterisk' />
+						<SlIcon className='fullscreen-transformation__property-required-icon' name='asterisk' />
 					</SlTooltip>
 				)}
 				{property.name}
 				<SlCopyButton
-					className='copyProperty'
+					className='fullscreen-transformation__property-copy'
 					value={property.name}
 					copyLabel='Click to copy'
 					successLabel='✓ Copied'
 					errorLabel='Copying to clipboard is not supported by your browser'
 				/>
 			</div>
-			{property.label != null && property.label !== '' && <span className='label'>{property.label}</span>}
-			<div className='type'>
+			{property.label != null && property.label !== '' && (
+				<span className='fullscreen-transformation__property-label'>{property.label}</span>
+			)}
+			<div className='fullscreen-transformation__property-type'>
 				{language === ''
 					? property.type.name
 					: language === 'Python'

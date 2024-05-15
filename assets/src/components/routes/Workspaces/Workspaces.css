@@ -1,9 +1,9 @@
-.workspace-list__content {
+.workspace-list {
 	height: 100%;
 	background-color: var(--bg-gray);
 }
 
-.workspace-list {
+.workspace-list__content {
 	max-width: 700px;
 	margin: auto;
 	padding: 30px;
@@ -55,17 +55,4 @@
 .workspace-list__new-workspace-add-workspace-button {
 	display: block;
 	margin: auto;
-}
-
-.workspace-list__skeleton:first-of-type {
-	margin-top: 15px;
-}
-
-.workspace-list__skeleton {
-	margin-bottom: 15px;
-}
-
-.workspace-list__skeleton::part(indicator) {
-	height: 40px;
-	border-radius: 15px;
 }

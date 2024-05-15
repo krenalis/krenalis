@@ -83,7 +83,7 @@ const ConnectionOverview = () => {
 			const hasFailedExecution = params.has('failed-execution-action');
 			if (hasFailedExecution) {
 				setTimeout(() => {
-					const executionsListElement = document.querySelector('.executionsWrapper');
+					const executionsListElement = document.querySelector('.connection-overview__executions');
 					executionsListElement.scrollIntoView({ behavior: 'smooth' });
 				}, 500);
 			}
@@ -93,7 +93,7 @@ const ConnectionOverview = () => {
 
 	if (isLoading) {
 		return (
-			<div className='connectionOverview loading'>
+			<div className='connection-overview--loading'>
 				<SlSpinner
 					style={
 						{
@@ -110,7 +110,7 @@ const ConnectionOverview = () => {
 	for (const exec of executions) {
 		const errorCell = (
 			<div
-				className={`cell error${exec.Error !== '' ? ' hasError' : ''}`}
+				className={`connection-overview__cell-error${exec.Error !== '' ? ' connection-overview__cell-error--has-error' : ''}`}
 				onClick={() => {
 					setSelectedExecution(exec);
 				}}
@@ -123,13 +123,19 @@ const ConnectionOverview = () => {
 	}
 
 	return (
-		<div className='connectionOverview'>
+		<div className='connection-overview'>
 			{hasExecutions ? (
 				<>
 					{c.role === 'Source' && (
-						<div className='chart'>
-							<Flex className='chartHead' justifyContent='space-between' alignItems='baseline'>
-								<div className='title'>User identities ingested by {c.name} in the last 24 hours</div>
+						<div className='connection-overview__chart'>
+							<Flex
+								className='connection-overview__cart-head'
+								justifyContent='space-between'
+								alignItems='baseline'
+							>
+								<div className='connection-overview__cart-title'>
+									User identities ingested by {c.name} in the last 24 hours
+								</div>
 							</Flex>
 							<BarChart width={1400} height={350} data={userStats}>
 								<CartesianGrid strokeDasharray='3 3' />
@@ -140,8 +146,10 @@ const ConnectionOverview = () => {
 							</BarChart>
 						</div>
 					)}
-					<div className='executionsWrapper'>
-						<div className='title'>{c.role === 'Source' ? 'Imports' : 'Exports'}</div>
+					<div className='connection-overview__executions'>
+						<div className='connection-overview__executions-title'>
+							{c.role === 'Source' ? 'Imports' : 'Exports'}
+						</div>
 						<Grid
 							columns={EXECUTIONS_COLUMNS}
 							rows={rows}
@@ -150,13 +158,15 @@ const ConnectionOverview = () => {
 					</div>
 				</>
 			) : (
-				<div className='nothingToShow'>Currently there is nothing to show for connection {c.name}</div>
+				<div className='connection-overview__nothing-to-show'>
+					Currently there is nothing to show for connection {c.name}
+				</div>
 			)}
 			<SlDialog
 				open={selectedExecution !== null}
 				style={{ '--width': '600px' } as React.CSSProperties}
 				onSlAfterHide={() => setSelectedExecution(null)}
-				className='selectedErrorDialog'
+				className='connection-overview__selected-error-dialog'
 				label={selectedExecution ? `${c.role === 'Source' ? 'Import' : 'Export'} ${selectedExecution.ID}` : ''}
 			>
 				{selectedExecution ? selectedExecution.Error : ''}

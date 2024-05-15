@@ -69,13 +69,13 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 			return {
 				expandRow: (id: string) => {
 					const row = gridRef.current.querySelector(`[data-id="${id}"]`);
-					const parent = row.closest('.gridNestedRows');
+					const parent = row.closest('.grid__nested-rows');
 					if (parent == null) {
 						return;
 					}
-					const isExpanded = parent.classList.contains('expanded');
+					const isExpanded = parent.classList.contains('grid__nested-rows--expanded');
 					if (!isExpanded) {
-						const expandIcon = parent.querySelector('sl-icon.expand');
+						const expandIcon = parent.querySelector('.grid__row-expand');
 						expandIcon.click();
 					}
 				},
@@ -99,7 +99,7 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 						key={i}
 						rows={row as NestedGridRows}
 						columns={columns}
-						className={`gridNestedRows ${className}`}
+						className={`grid__nested-rows ${className}`}
 						nesting={1}
 					/>
 				);
@@ -119,7 +119,7 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 					key={i}
 					row={row as StandardGridRow}
 					columns={columns}
-					className={`gridRow${className ? ' ' + className : ''}`}
+					className={`grid__row${className ? ' ' + className : ''}`}
 					id={row.id}
 				/>
 			);
@@ -152,12 +152,12 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 	return (
 		<div
 			ref={gridRef}
-			className='grid sortableGrid'
+			className='grid grid--sortable'
 			style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
 		>
 			<GridHeaderRow columns={columns} />
 			{rowComponents}
-			<div className='sortableRows'>
+			<div className='grid__sortable-rows'>
 				<DndContext
 					sensors={sensors}
 					collisionDetection={closestCenter}

@@ -81,10 +81,10 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		runButtonRefs.current[actionID].current!.load();
 		const startTime = new Date().getTime();
 		const errorButton = (
-			<div className='linkToOverview'>
+			<div className='connection-actions__link-to-overview'>
 				Go to{' '}
 				<Link path={`connections/${connection.id}/overview?failed-execution-action=${actionID}`}>
-					<span className='link'>overview</span>
+					<span className='connection-actions__link'>overview</span>
 				</Link>{' '}
 				for details
 			</div>
@@ -185,9 +185,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			throw Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
 		}
 		const nameCell = (
-			<div className='actionName'>
-				<div className='name'>{a.Name}</div>
-				<div className='description'>{linkedActionType.Description}</div>
+			<div className='connection-actions__action-name'>
+				<div className='connection-actions__action-name-name'>{a.Name}</div>
+				<div className='connection-actions__action-name-description'>{linkedActionType.Description}</div>
 			</div>
 		);
 		const conditionsCell: ReactNode[] = [];
@@ -204,7 +204,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		}
 		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
 		const actionsCell = (
-			<div className='actionButtons'>
+			<div className='connection-actions__buttons'>
 				{(a.Target === 'Users' || a.Target === 'Groups') && isActionExecutionSupported && (
 					<>
 						<SlDropdown>
@@ -212,7 +212,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								<SlIcon slot='prefix' name='clock' />
 								Schedule: {a.SchedulePeriod}
 							</SlButton>
-							<SlMenu className='schedulerOptions'>
+							<SlMenu className='connection-actions__scheduler-options'>
 								<SlRadioGroup
 									size='small'
 									onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
@@ -230,7 +230,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						</SlDropdown>
 						<FeedbackButton
 							ref={runButtonRefs.current[a.ID]}
-							className='runButton'
+							className='connection-actions__run-button'
 							size='small'
 							onClick={() => executeAction(a.ID)}
 							loading={runningActions.includes(a.ID)}
@@ -244,7 +244,12 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				<SlButton variant='default' size='small' onClick={() => onEditClick(a)}>
 					Edit...
 				</SlButton>
-				<SlButton className='removeAction' variant='danger' size='small' onClick={() => onRemoveAction(a.ID)}>
+				<SlButton
+					className='connection-actions__remove-action'
+					variant='danger'
+					size='small'
+					onClick={() => onRemoveAction(a.ID)}
+				>
 					Remove
 				</SlButton>
 			</div>

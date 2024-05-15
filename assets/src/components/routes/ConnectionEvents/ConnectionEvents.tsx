@@ -32,16 +32,18 @@ const ConnectionEvents = () => {
 	if (selectedEvent !== null) {
 		const fullEventMessage = selectedEvent.source!;
 		rightPanel = (
-			<div className='fullEvent'>
+			<div className='connection-events__full-event'>
 				<SyntaxHighlight>{fullEventMessage}</SyntaxHighlight>
 			</div>
 		);
 	} else {
 		rightPanel = (
-			<div className='selectEventMessage'>
+			<div className='connection-events__select-event-message'>
 				<IconWrapper size={40} name='cursor'></IconWrapper>
-				<div className='title'>Click on one event</div>
-				<div className='description'>Select one of the events from the events list to see its full message</div>
+				<div className='connection-events__select-event-title'>Click on one event</div>
+				<div className='connection-events__select-event-description'>
+					Select one of the events from the events list to see its full message
+				</div>
 			</div>
 		);
 	}
@@ -49,30 +51,30 @@ const ConnectionEvents = () => {
 	const reversedEvents: EventListenerEvent[] = [...events].reverse();
 
 	return (
-		<div className='connectionEvents'>
-			<div className='events'>
-				<div className='heading'>
-					<div className='title'>
+		<div className='connection-events'>
+			<div className='connection-events__events'>
+				<div className='connection-events__heading'>
+					<div className='connection-events__title'>
 						<IconWrapper name='activity' moat />
-						<div className='text'>Live events</div>
+						<div className='connection-events__text'>Live events</div>
 					</div>
 				</div>
-				<div className='eventListener'>
+				<div className='connection-events__event-listener'>
 					{discarded > 0 && (
-						<div className='discarded'>
-							<span className='count'>{discarded}</span>
-							<span className='text'>discarded</span>
+						<div className='connection-events__discarded'>
+							<span className='connection-events__discarded-count'>{discarded}</span>
+							<span className='connection-events__discarded-text'>discarded</span>
 						</div>
 					)}
-					<div className='eventList'>
-						<div className='body'>
+					<div className='connection-events__event-list'>
+						<div className='connection-events__event-list-body'>
 							{events.length === 0 && (
-								<div className='noEvents'>
+								<div className='connection-events__no-events'>
 									Listening for new events{' '}
-									<span className='loadingEllipsis'>
-										<span className='ellipsis1'>.</span>
-										<span className='ellipsis2'>.</span>
-										<span className='ellipsis3'>.</span>
+									<span className='connection-events__loading-ellipsis'>
+										<span className='connection-events__ellipsis1'>.</span>
+										<span className='connection-events__ellipsis2'>.</span>
+										<span className='connection-events__ellipsis3'>.</span>
 									</span>
 								</div>
 							)}
@@ -80,27 +82,34 @@ const ConnectionEvents = () => {
 								return (
 									<div
 										key={e.id}
-										className={`event${
-											selectedEvent && selectedEvent.id === e.id ? ' selected' : ''
+										className={`connection-events__event${
+											selectedEvent && selectedEvent.id === e.id
+												? ' connection-events__event--selected'
+												: ''
 										}`}
 										onClick={() => onEventClick(e)}
 									>
-										<div className='error'>
+										<div className='connection-events__event-error'>
 											{e.err !== '' ? (
 												<SlTooltip content={e.err} placement='top' hoist>
 													<SlIcon
-														className='iconError'
+														className='connection-events__error-icon'
 														name='exclamation-circle-fill'
 													></SlIcon>
 												</SlTooltip>
 											) : (
 												<SlTooltip content='No error' placement='top' hoist>
-													<SlIcon className='iconSuccess' name='check-circle-fill'></SlIcon>
+													<SlIcon
+														className='connection-events__success-icon'
+														name='check-circle-fill'
+													></SlIcon>
 												</SlTooltip>
 											)}
 										</div>
-										<div className='name'>{e.type}</div>
-										<div className='time'>{new Date(e.time).toLocaleString()}</div>
+										<div className='connection-events__event-name'>{e.type}</div>
+										<div className='connection-events__event-time'>
+											{new Date(e.time).toLocaleString()}
+										</div>
 									</div>
 								);
 							})}
@@ -108,7 +117,11 @@ const ConnectionEvents = () => {
 					</div>
 				</div>
 			</div>
-			<div className={`panel${selectedEvent !== null ? ' selected' : ' unselected'}`}>{rightPanel}</div>
+			<div
+				className={`connection-events__panel${selectedEvent !== null ? ' connection-events__panel--selected' : ' connection-events__panel--unselected'}`}
+			>
+				{rightPanel}
+			</div>
 		</div>
 	);
 };

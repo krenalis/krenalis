@@ -64,7 +64,7 @@ const FileConnector = () => {
 
 	return (
 		<div className='file-connector'>
-			<div className='routeContent'>
+			<div className='route-content'>
 				<div className='file-connector__content'>
 					{storages.length > 0 ? (
 						<div className='file-connector__storage'>

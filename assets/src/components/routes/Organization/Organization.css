@@ -1,9 +1,9 @@
-.organization__content {
+.organization {
 	height: calc(100% - 70px);
 	background-color: var(--bg-gray);
 }
 
-.organization {
+.organization__content {
 	max-width: 900px;
 	margin: 0px auto;
 	padding: 30px;

@@ -63,15 +63,15 @@ const EditorWrapper = ({
 
 	return (
 		<div
-			className={`editorWrapper${className ? ' ' + className : ''}${hideGutter ? ' hideGutter' : ''}`}
+			className={`editor-wrapper${className ? ' ' + className : ''}${hideGutter ? ' editor-wrapper--hide-gutter' : ''}`}
 			onClick={onClick}
 		>
 			{showHeading && (
-				<div className='heading'>
-					<div className='logoAndLanguage'>
-						<span className='languageLogo'>{languageLogo}</span>
+				<div className='editor-wrapper__heading'>
+					<div className='editor-wrapper__logo-and-language'>
+						<span className='editor-wrapper__language-logo'>{languageLogo}</span>
 						{languageChoices ? (
-							<SlDropdown className='switchEditorLanguageDropdown' ref={languageDropdownRef}>
+							<SlDropdown className='editor-wrapper__switch-language-dropdown' ref={languageDropdownRef}>
 								<SlButton slot='trigger' variant='text' size='small' caret>
 									{language}
 								</SlButton>
@@ -84,13 +84,16 @@ const EditorWrapper = ({
 								</SlMenu>
 							</SlDropdown>
 						) : (
-							<span className='language'>{language}</span>
+							<span className='editor-wrapper__language'>{language}</span>
 						)}
 					</div>
-					<div className='actions'>{actions}</div>
+					<div className='editor-wrapper__actions'>{actions}</div>
 				</div>
 			)}
-			<div className='editor' style={{ width: width ? `${width}px` : '', height: height ? `${height}px` : '' }}>
+			<div
+				className='editor-wrapper__editor'
+				style={{ width: width ? `${width}px` : '', height: height ? `${height}px` : '' }}
+			>
 				<Editor
 					key={key}
 					value={value}

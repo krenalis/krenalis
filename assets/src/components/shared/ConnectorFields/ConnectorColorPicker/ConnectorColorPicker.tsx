@@ -24,10 +24,10 @@ const ConnectorColorPicker = ({ name, label, error, val, onChange }: ConnectorCo
 	};
 
 	return (
-		<div className='connectorColorPicker'>
+		<div className='connector-color-picker'>
 			<SlColorPicker value={value} name={name} label={label} onSlChange={onColorPickerChange} />
-			<div className='label'>{label}</div>
-			{error !== '' && <div className='error'>{error}</div>}
+			<div className='connector-color-picker__label'>{label}</div>
+			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);
 };

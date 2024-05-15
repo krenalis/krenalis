@@ -29,15 +29,15 @@ const AlertDialog = ({ variant, isOpen, onClose, title, actions, children }: Ale
 
 	return (
 		<SlDialog
-			className={`alertDialog${isFullscreen ? ' fullscreen' : ''}`}
+			className={`alert-dialog${isFullscreen ? ' alert-dialog--fullscreen' : ''}`}
 			open={isOpen}
 			onSlAfterHide={onClose}
 			style={{ '--alert-color': color, '--width': '600px' } as React.CSSProperties}
 		>
-			<div className='alertIcon'>{icon}</div>
-			<div className='alertTitle'>{title}</div>
-			<div className='alertContent'>{children}</div>
-			<div className='alertActions'>{actions}</div>
+			<div className='alert-dialog__icon'>{icon}</div>
+			<div className='alert-dialog__title'>{title}</div>
+			<div className='alert-dialog__content'>{children}</div>
+			<div className='alert-dialog__actions'>{actions}</div>
 		</SlDialog>
 	);
 };

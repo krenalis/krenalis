@@ -6,26 +6,26 @@
 	align-items: center;
 }
 
-.login .container {
+.login__container {
 	width: 500px;
 	transform: translateY(-80px);
 }
 
-.login .container .heading {
+.login__heading {
 	text-align: center;
 }
 
-.login .container .heading h1 {
+.login__heading h1 {
 	font-weight: 600;
 	margin-top: 0;
 }
 
-.login .container .loginForm {
+.login__form {
 	display: flex;
 	flex-flow: column;
 }
 
-.login .container .loginForm input {
+.login__form input {
 	flex: 1 1 auto;
 	font-family: inherit;
 	font-weight: inherit;
@@ -50,22 +50,22 @@
 		var(--sl-transition-fast) background-color;
 }
 
-.login .container .loginForm input:hover {
+.login__form input:hover {
 	background-color: var(--sl-input-background-color-hover);
 	border-color: var(--sl-input-border-color-hover);
 }
 
-.login .container #emailInput {
-	border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
-	border-bottom: 0;
+.login__email {
+	border-bottom-left-radius: 0 !important;
+	border-bottom-right-radius: 0 !important;
+	border-bottom: 0 !important;
 }
 
-.login .container #passwordInput {
-	border-top-left-radius: 0;
-	border-top-right-radius: 0;
+.login__password {
+	border-top-left-radius: 0 !important;
+	border-top-right-radius: 0 !important;
 }
 
-.login .container .loginForm .loginButton {
+.login__button {
 	margin-top: 30px;
 }

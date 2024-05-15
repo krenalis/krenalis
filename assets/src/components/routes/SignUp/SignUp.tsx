@@ -131,7 +131,7 @@ const SignUp = () => {
 				onSlInput={onPasswordChange}
 				passwordToggle
 			/>
-			<SlButton variant='primary' onClick={onSignUp} loading={isLoading}>
+			<SlButton className='signup__button' variant='primary' onClick={onSignUp} loading={isLoading}>
 				Sign up
 			</SlButton>
 		</div>

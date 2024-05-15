@@ -45,21 +45,21 @@ const Grid = forwardRef<GridRef, GridProps>(
 			() => {
 				return {
 					expand: () => {
-						const nestedRows = gridRef.current.querySelectorAll('.gridNestedRows');
+						const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
 						for (const r of nestedRows) {
-							const isExpanded = r.classList.contains('expanded');
+							const isExpanded = r.classList.contains('grid__nested-rows--expanded');
 							if (!isExpanded) {
-								const expandIcon = r.querySelector('sl-icon.expand');
+								const expandIcon = r.querySelector('.grid__row-expand');
 								expandIcon.click();
 							}
 						}
 					},
 					collapse: () => {
-						const nestedRows = gridRef.current.querySelectorAll('.gridNestedRows');
+						const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
 						for (const r of nestedRows) {
-							const isExpanded = r.classList.contains('expanded');
+							const isExpanded = r.classList.contains('grid__nested-rows--expanded');
 							if (isExpanded) {
-								const expandIcon = r.querySelector('sl-icon.expand');
+								const expandIcon = r.querySelector('.grid__row-expand');
 								expandIcon.click();
 							}
 						}
@@ -84,7 +84,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 							key={i}
 							rows={r}
 							columns={columns}
-							className={`gridNestedRows ${className}`}
+							className={`grid__nested-rows ${className}`}
 							nesting={1}
 						/>,
 					);
@@ -96,7 +96,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						key={i}
 						row={r}
 						columns={columns}
-						className={`gridRow${className ? ' ' + className : ''}`}
+						className={`grid__row${className ? ' ' + className : ''}`}
 					/>,
 				);
 			}
@@ -106,11 +106,11 @@ const Grid = forwardRef<GridRef, GridProps>(
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${showColumnBorder ? ' column-border' : ''}${showRowBorder ? ' row-border' : ''}`}
+				className={`grid${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}`}
 				style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
 			>
 				{isLoading ? (
-					<div className='loading'>
+					<div className='grid__loading'>
 						<SlSpinner
 							style={
 								{
@@ -126,12 +126,12 @@ const Grid = forwardRef<GridRef, GridProps>(
 						{rowComponents.length > 0 ? (
 							rowComponents
 						) : noRowsMessage ? (
-							<div className='noRows'>
+							<div className='grid__no-rows'>
 								<SlIcon name='exclamation-circle'></SlIcon>
 								{noRowsMessage}
 							</div>
 						) : (
-							<div className='noRows'>
+							<div className='grid__no-rows'>
 								<SlIcon name='exclamation-circle'></SlIcon>
 								No rows to show
 							</div>

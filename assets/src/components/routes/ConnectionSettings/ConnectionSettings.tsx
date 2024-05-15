@@ -68,7 +68,7 @@ const ConnectionSettings = () => {
 	if (isLoading) {
 		return (
 			<SlSpinner
-				className='connectionSettingsSpinner'
+				className='connection-settings__spinner'
 				style={
 					{
 						fontSize: '3rem',
@@ -80,13 +80,13 @@ const ConnectionSettings = () => {
 	}
 
 	return (
-		<div className='connectionSettings'>
+		<div className='connection-settings'>
 			<SlTabGroup onSlTabShow={onTabShow} placement='start'>
 				<SlTab slot='nav' panel='general'>
 					General
 				</SlTab>
 				<SlTabPanel name='general'>
-					<div className='panelTitle'>General</div>
+					<div className='connection-settings__panel-title'>General</div>
 					<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
 				</SlTabPanel>
 
@@ -96,7 +96,9 @@ const ConnectionSettings = () => {
 							{c.isSource ? 'Event Destinations' : 'Event Sources'}
 						</SlTab>
 						<SlTabPanel name='event-connections'>
-							<div className='panelTitle'>{c.isSource ? 'Event Destinations' : 'Event Sources'}</div>
+							<div className='connection-settings__panel-title'>
+								{c.isSource ? 'Event Destinations' : 'Event Sources'}
+							</div>
 							<EventConnections connection={c} isShown={isEventConnectionsPanelShown} />
 						</SlTabPanel>
 					</>
@@ -108,7 +110,7 @@ const ConnectionSettings = () => {
 							Snippet
 						</SlTab>
 						<SlTabPanel name='snippet'>
-							<div className='panelTitle'>Snippet</div>
+							<div className='connection-settings__panel-title'>Snippet</div>
 							<ConnectionSnippet />
 						</SlTabPanel>
 					</>
@@ -120,7 +122,7 @@ const ConnectionSettings = () => {
 							{c.type} Settings
 						</SlTab>
 						<SlTabPanel name='connection'>
-							<div className='panelTitle'>{c.type} Settings</div>
+							<div className='connection-settings__panel-title'>{c.type} Settings</div>
 							<ConnectionConnectorSettings connection={c} />
 						</SlTabPanel>
 					</>
@@ -132,7 +134,7 @@ const ConnectionSettings = () => {
 							API Keys
 						</SlTab>
 						<SlTabPanel name='keys'>
-							<div className='panelTitle'>API keys</div>
+							<div className='connection-settings__panel-title'>API keys</div>
 							<ConnectionKeys connection={c} />
 						</SlTabPanel>
 					</>

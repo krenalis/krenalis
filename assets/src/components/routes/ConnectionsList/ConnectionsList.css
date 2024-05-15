@@ -1,53 +1,45 @@
-.connectionsList {
-}
-
-.connectionsList .connectionsListSpinner {
-	display: block;
-	margin: 0 auto;
-}
-
-.connectionsList .noConnection {
+.connections-list__no-connection {
 	margin-top: 30px;
 	text-align: center;
 }
 
-.connectionsList .noConnection .noConnectionText {
+.connections-list__no-connection-text {
 	max-width: 500px;
 	margin: auto;
 	margin-bottom: 15px;
 }
 
-.connectionsList .addNewConnection {
+.connections-list__add-new-connection {
 	margin-bottom: 10px;
 }
 
-.connectionsList .connectionNameCell {
+.connections-list__name-cell {
 	display: flex;
 	gap: 10px;
 	align-items: center;
 }
 
-.connectionsList .connectionNameCell svg {
+.connections-list__name-cell svg {
 	height: 21px;
 }
 
-.connectionsList .connectionStatusCell {
+.connections-list__status-cell {
 	display: flex;
 	gap: 10px;
 	align-items: center;
 }
 
-.connectionsList .connectionEventConnectionsCell {
+.connections-list__event-connections-cell {
 	display: flex;
 	gap: 10px;
 	align-items: center;
 }
 
-.connectionsList .connectionEventConnectionsCell .littleLogo svg {
+.connections-list__event-connections-cell .little-logo svg {
 	height: 21px;
 }
 
-.connectionsList .statusDot .hoverArea {
+.connections-list .status-dot__hover-area {
 	width: unset;
 	height: unset;
 }

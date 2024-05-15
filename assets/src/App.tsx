@@ -122,7 +122,7 @@ const App = () => {
 	) {
 		content = (
 			<SlSpinner
-				className='globalSpinner'
+				className='app-spinner'
 				style={
 					{
 						fontSize: '5rem',

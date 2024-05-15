@@ -7,7 +7,7 @@ interface PopoverProps {
 }
 
 const Popover = ({ isOpen, content }: PopoverProps) => {
-	return <div className={`popover${isOpen ? ' open' : ''}`}>{content}</div>;
+	return <div className={`popover${isOpen ? ' popover--open' : ''}`}>{content}</div>;
 };
 
 export { Popover };

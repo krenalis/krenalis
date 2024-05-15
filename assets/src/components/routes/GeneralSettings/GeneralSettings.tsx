@@ -262,7 +262,7 @@ const GeneralSettings = () => {
 						<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
 						<FeedbackButton
 							ref={deleteButtonRef}
-							className='general-settings__deletion-button'
+							className='general-settings__alert-deletion-button'
 							variant='danger'
 							onClick={onDeleteConfirmation}
 							animationDuration={CONFIRM_ANIMATION_DURATION}

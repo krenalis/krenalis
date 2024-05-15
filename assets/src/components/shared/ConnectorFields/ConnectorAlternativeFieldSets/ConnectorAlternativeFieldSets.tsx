@@ -55,8 +55,8 @@ const ConnectorAlternativeFieldSets = ({
 	);
 
 	return (
-		<div className='connectorAlternativeFieldSets'>
-			<div className='label'>{label}</div>
+		<div className='connector-alternative-fieldsets'>
+			<div className='connector-alternative-fieldsets__label'>{label}</div>
 			<SlSelect value={selected} onSlChange={onSelectChange}>
 				{sets.map((s) => (
 					<SlOption key={s.Name} value={s.Name}>
@@ -65,7 +65,7 @@ const ConnectorAlternativeFieldSets = ({
 				))}
 			</SlSelect>
 			{fieldSet}
-			<div className='helpText'>{helpText}</div>
+			<div className='connector-alternative-fieldsets__help-text'>{helpText}</div>
 		</div>
 	);
 };

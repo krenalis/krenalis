@@ -13,8 +13,8 @@ const Organization = () => {
 	}, []);
 
 	return (
-		<div className='organization__content'>
-			<div className='organization'>
+		<div className='organization'>
+			<div className='organization__content'>
 				<p className='organization__title'>Organization</p>
 				<Link path='members'>
 					<ListTile

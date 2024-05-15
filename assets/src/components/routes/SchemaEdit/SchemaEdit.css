@@ -1,4 +1,4 @@
-.schema-edit .schema-edit__header {
+.schema-edit__header {
 	position: sticky;
 	top: 0;
 	left: 0;
@@ -13,26 +13,26 @@
 	height: 90px;
 }
 
-.schema-edit .schema-edit__header-title {
+.schema-edit__header-title {
 	font-size: 18px;
 }
 
-.schema-edit .schema-edit__header-buttons {
+.schema-edit__header-buttons {
 	display: flex;
 	align-items: center;
 	justify-content: end;
 	gap: 20px;
 }
 
-.schema-edit .schema-edit__header-cancel-button::part(base) {
+.schema-edit__header-cancel-button::part(base) {
 	min-width: 150px;
 }
 
-.schema-edit .schema-edit__header-apply-button::part(base) {
+.schema-edit__header-apply-button::part(base) {
 	min-width: 200px;
 }
 
-.schema-edit .schema-edit__content {
+.schema-edit__content {
 	padding: 30px 40px;
 	margin: auto;
 }
@@ -41,24 +41,24 @@
 	background-color: transparent;
 }
 
-.schema-edit .gridNestedRows .expand {
+.schema-edit .grid__nested-rows .grid__row-expand {
 	top: 30px;
 }
 
-.schema-edit .gridNestedRows .gridRow.children::before {
+.schema-edit .grid__nested-rows .grid__row--children::before {
 	top: 5px;
 }
 
-.schema-edit .schema-edit__property-buttons {
+.schema-edit__property-buttons {
 	display: flex;
 	gap: 10px;
 }
 
-.schema-edit .schema-edit__add-property {
+.schema-edit__add-property {
 	margin-top: 30px;
 }
 
-.schema-edit .schema-edit__editable-object-cell {
+.schema-edit__editable-object-cell {
 	display: flex;
 	gap: 10px;
 	align-items: center;
@@ -68,17 +68,21 @@
 	padding-left: 0;
 }
 
-.schema-edit .schema-edit__queries.schema-edit__queries--loading::part(body) {
+.schema-edit__queries::part(panel) {
+	max-height: calc(100% - 40%);
+}
+
+.schema-edit__queries--loading::part(body) {
 	text-align: center;
 }
 
-.schema-edit .schema-edit__queries-preview {
+.schema-edit__queries-preview {
 	background-color: var(--bg-gray);
 	padding: 15px;
 	border-radius: var(--radius);
 }
 
-.schema-edit .schema-edit__queries-buttons {
+.schema-edit__queries-buttons {
 	margin-top: 30px;
 	display: flex;
 	justify-content: end;

@@ -1,26 +1,26 @@
-.connectionOverview.loading {
+.connection-overview--loading {
 	text-align: center;
 	padding-top: 50px;
 }
 
-.connectionOverview .chart .chartHead {
+.connection-overview__cart-head {
 	max-width: 1350px;
 	margin: auto;
 	margin-bottom: 20px;
 }
 
-.connectionOverview .chart .title {
+.connection-overview__cart-title {
 	font-size: 17px;
 }
 
-.connectionOverview .chart .recharts-wrapper {
+.connection-overview__chart .recharts-wrapper {
 	margin: auto;
 	position: relative;
 	left: -20px;
 	margin-bottom: 80px;
 }
 
-.connectionOverview .executionsWrapper .title {
+.connection-overview__executions-title {
 	max-width: 1400px;
 	margin: auto;
 	margin-bottom: 20px;
@@ -28,12 +28,18 @@
 	font-size: 17px;
 }
 
-.connectionOverview .grid {
+.connection-overview .grid {
 	max-width: 1350px;
 	margin: auto;
 }
 
-.connectionOverview .nothingToShow {
+.connection-overview__nothing-to-show {
 	text-align: center;
 	font-size: 17px;
+}
+
+.connection-overview__cell-error--has-error {
+	color: var(--sl-color-danger-500);
+	font-weight: 600;
+	cursor: pointer;
 }

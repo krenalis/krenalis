@@ -1,28 +1,28 @@
-.member__content {
+.member {
 	height: calc(100% - 70px);
 	background-color: var(--bg-gray);
 }
 
-.member {
+.member__content {
 	max-width: 900px;
 	margin: 0px auto;
 	padding: 30px;
 	animation: fade-in-entrance 0.5s;
 }
 
-.member .member__avatar,
-.member .member__name,
-.member .member__email,
-.member .member__password {
+.member__avatar,
+.member__name,
+.member__email,
+.member__password {
 	margin-bottom: 30px;
 }
 
-.member .member__name > sl-input,
-.member .member__email > sl-input {
+.member__name > sl-input,
+.member__email > sl-input {
 	max-width: 400px;
 }
 
-.member .member__avatar-box {
+.member__avatar-box {
 	display: flex;
 	align-items: start;
 	gap: 30px;
@@ -30,18 +30,18 @@
 	margin-bottom: 15px;
 }
 
-.member .member__avatar-box sl-avatar::part(base) {
+.member__avatar-box sl-avatar::part(base) {
 	width: 60px;
 	height: 60px;
 }
 
-.member .member__avatar-label {
+.member__avatar-label {
 	font-weight: 600;
 	padding-bottom: 5px;
 }
 
-.member .member__add-avatar,
-.member .member__remove-avatar {
+.member__add-avatar,
+.member__remove-avatar {
 	max-width: 150px;
 	background-color: var(--bg-gray);
 	color: var(--sl-color-neutral-700);
@@ -52,55 +52,55 @@
 	cursor: pointer;
 }
 
-.member .member__remove-avatar {
+.member__remove-avatar {
 	margin-top: 10px;
 	background-color: var(--sl-color-danger-500);
 	color: var(--text-onaccent);
 	border: 0;
 }
 
-.member .member__avatar-box img {
+.member__avatar-box img {
 	max-height: 180px;
 	width: auto;
 	border-radius: 5px;
 }
 
-.member .member__avatar-box input[type='file'] {
+.member__avatar-box input[type='file'] {
 	display: none;
 }
 
-.member .member__password {
+.member__password {
 	display: flex;
 	align-items: end;
 	gap: 15px;
 	max-width: 400px;
 }
 
-.member .member__password > sl-input {
+.member__password > sl-input {
 	width: 100%;
 }
 
-.member .member__error {
+.member__error {
 	color: var(--sl-color-danger-600);
 	display: flex;
 	align-items: center;
 	gap: 7px;
 }
 
-.member .member__error sl-icon {
+.member__error sl-icon {
 	color: var(--sl-color-danger-600);
 }
 
-.member .member__buttons {
+.member__buttons {
 	display: flex;
 	justify-content: end;
 	gap: 15px;
 }
 
-.member .member__cancel-button {
+.member__cancel-button {
 	min-width: 150px;
 }
 
-.member .member__save-button {
+.member__save-button {
 	min-width: 200px;
 }

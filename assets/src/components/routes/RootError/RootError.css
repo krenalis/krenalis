@@ -23,6 +23,6 @@
 	font-size: 18px;
 }
 
-.root-error .iconWrapper sl-icon {
+.root-error .icon-wrapper sl-icon {
 	color: var(--sl-color-primary-500);
 }

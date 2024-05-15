@@ -105,10 +105,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		connection.role === 'Source' && (connection.type === 'Mobile' || connection.type === 'Website');
 
 	return (
-		<div className='generalSettings'>
+		<div className='connection-settings__general-settings'>
 			<SlInput
 				label='Name'
-				className='nameField'
+				className='connection-settings__name-field'
 				value={connectionToSet.name}
 				onSlChange={onNameChange}
 				maxlength={100}
@@ -118,7 +118,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				<SlSelect
 					value={connectionToSet.strategy}
 					label='Strategy'
-					className='strategyField'
+					className='connection-settings__strategy-field'
 					onSlChange={onStrategyChange}
 				>
 					<SlOption value='AB-C'>AB-C</SlOption>
@@ -132,10 +132,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				<SlSelect
 					value={connectionToSet.SendingMode}
 					label='Sending mode'
-					className='modeField'
+					className='connection-settings__mode-field'
 					onSlChange={onModeChange}
 				>
-					<div className='modeValueIcon' slot='prefix'>
+					<div className='connection-settings__mode-value-icon' slot='prefix'>
 						<SlIcon
 							name={
 								connectionToSet.SendingMode === 'Cloud'
@@ -150,7 +150,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 						<SlOption key={m} value={m}>
 							<div slot='prefix'>
 								<SlIcon
-									className='modeIcon'
+									className='connection-settings__mode-icon'
 									name={m === 'Cloud' ? 'cloud' : m === 'Device' ? 'phone' : 'send'}
 								/>
 							</div>
@@ -163,28 +163,39 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			{connection.type === 'Website' && (
 				<SlInput
 					label='Website host'
-					className='websiteHostField'
+					className='connection-settings__website-host-field'
 					value={connectionToSet.websiteHost}
 					onSlChange={onWebsitehostChange}
 				/>
 			)}
 
-			<SlSwitch className='enablingField' onSlChange={onSwitchChange} checked={connectionToSet.enabled}>
+			<SlSwitch
+				className='connection-settings__enabling-field'
+				onSlChange={onSwitchChange}
+				checked={connectionToSet.enabled}
+			>
 				Enable connection
 			</SlSwitch>
 
-			<SlButton className='updateButton' variant='primary' loading={isSaving} onClick={onSave}>
+			<SlButton
+				className='connection-settings__update-button'
+				variant='primary'
+				loading={isSaving}
+				onClick={onSave}
+			>
 				Save
 			</SlButton>
 
 			<SlDivider />
 
-			<DangerZone className='dangerZone'>
-				<div className='label'>Delete the connection</div>
+			<DangerZone className='connection-settings__danger-zone-field'>
+				<div className='connection-settings__danger-zone-label'>Delete the connection</div>
 				<Flex justifyContent='space-between' alignItems='baseline'>
-					<div className='description'>Delete permanently the connection</div>
+					<div className='connection-settings__danger-zone-description'>
+						Delete permanently the connection
+					</div>
 					<SlButton
-						className='deleteButton'
+						className='connection-settings__danger-zone-delete-button'
 						variant='danger'
 						onClick={() => setAskDeletionConfirmation(true)}
 					>

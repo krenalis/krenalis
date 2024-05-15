@@ -14,7 +14,12 @@ const Toast = forwardRef<any, ToastProps>(({ status, isFullscreen }, ref) => {
 		return <SlAlert ref={ref} variant='neutral' closable></SlAlert>;
 	}
 	return (
-		<SlAlert className={isFullscreen ? 'isFullscreen' : ''} ref={ref} variant={status.variant} closable>
+		<SlAlert
+			className={`toast${isFullscreen ? ' toast--fullscreen' : ''}`}
+			ref={ref}
+			variant={status.variant}
+			closable
+		>
 			<SlIcon slot='icon' name={status.icon} />
 			<b>{status.text}</b>
 		</SlAlert>

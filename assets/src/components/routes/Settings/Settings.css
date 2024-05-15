@@ -1,9 +1,9 @@
-.settings__content {
+.settings {
 	min-height: calc(100% - 70px);
 	background-color: var(--bg-gray);
 }
 
-.settings {
+.settings__content {
 	max-width: 900px;
 	margin: 0px auto;
 	padding: 30px;

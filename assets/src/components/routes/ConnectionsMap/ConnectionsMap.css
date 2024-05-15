@@ -1,14 +1,14 @@
-.connectionsMap {
+.connections-map {
 	position: relative;
 }
 
-.connectionsMap .buttons {
+.connections-map__buttons {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 }
 
-.connectionsMap .map {
+.connections-map__map {
 	display: grid;
 	grid-template-columns: 450px 1fr 450px;
 	grid-template-areas: 'sources main destinations';
@@ -18,44 +18,44 @@
 }
 
 @media (max-width: 1580px) {
-	.connectionsMap .map {
+	.connections-map__map {
 		grid-template-columns: 400px 1fr 400px;
 	}
 }
 
 @media (max-width: 1480px) {
-	.connectionsMap .map {
+	.connections-map__map {
 		grid-template-columns: 350px 1fr 350px;
 	}
 }
 
 @media (max-width: 1380px) {
-	.connectionsMap .map {
+	.connections-map__map {
 		grid-template-columns: 300px 1fr 300px;
 	}
 }
 
 @media (max-width: 1280px) {
-	.connectionsMap .map {
+	.connections-map__map {
 		grid-template-columns: 250px 1fr 250px;
 	}
 }
 
 @media (max-width: 1180px) {
-	.connectionsMap .map {
+	.connections-map__map {
 		grid-template-columns: 200px 1fr 200px;
 	}
 }
 
-.connectionsMap .map .sources {
+.connections-map__sources {
 	grid-area: sources;
 }
 
-.connectionsMap .map .main {
+.connections-map__main {
 	grid-area: main;
 }
 
-.connectionsMap .map .main .centralLogo {
+.connections-map__central-logo {
 	width: 130px;
 	height: 130px;
 	margin: auto;
@@ -87,7 +87,7 @@
 	}
 }
 
-.connectionsMap .map .main .databases {
+.connections-map__databases {
 	margin-top: 100px;
 	display: flex;
 	align-items: start;
@@ -95,7 +95,7 @@
 	gap: 100px;
 }
 
-.connectionsMap .map .main .databases .database {
+.connections-map__database {
 	text-align: center;
 	display: flex;
 	justify-content: center;
@@ -106,29 +106,29 @@
 	position: relative;
 }
 
-.connectionsMap .map .main .databases .database.users {
+.connections-map__database--users {
 	cursor: pointer;
 }
 
-.connectionsMap .map .main .databases .database sl-icon {
+.connections-map__database sl-icon {
 	font-size: 40px;
 	margin-bottom: 15px;
 	color: var(--sl-color-neutral-400);
 }
 
-.connectionsMap .map .main .databases .database .name {
+.connections-map__database-name {
 	color: var(--sl-color-neutral-600);
 }
 
-.connectionsMap .map .destinations {
+.connections-map__destinations {
 	grid-area: destinations;
 }
 
-.connectionsMap .map .connectionBlock {
+.connection-block {
 	margin-bottom: 30px;
 }
 
-.connectionsMap .connectionBlock {
+.connection-block {
 	background-color: var(--bg-primary);
 	padding: 20px;
 	border-radius: var(--radius);
@@ -146,7 +146,7 @@
 	will-change: transform;
 }
 
-.connectionsMap .connectionBlock[data-is-hovered='true'] {
+.connection-block[data-is-hovered='true'] {
 	border: 1px dashed var(--sl-color-primary-600);
 	background-color: var(--sl-color-primary-50);
 }
@@ -160,53 +160,53 @@
 	}
 }
 
-.connectionsMap .connectionBlockContent {
+.connection-block__content {
 	width: 100%;
 	display: grid;
 	align-items: center;
 	grid-template-columns: calc(100% - 15px) 15px;
 }
 
-.connectionsMap .connectionBlock.new {
+.connection-block--new {
 	animation: connection-block-fade-in 1000ms;
 	animation-fill-mode: both;
 }
 
-.connectionsMap .connectionBlock .name {
+.connection-block__name {
 	transform: translateY(1px);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	text-wrap: nowrap;
 }
 
-.connectionsMap .connectionBlock .statusDot {
+.connection-block .status-dot {
 	display: flex;
 	justify-content: end;
 }
 
-.connectionsMap .connectionBlock .statusDot .hoverArea {
+.connection-block .status-dot__hover-area {
 	width: 15px;
 	height: 15px;
 }
 
-.connectionsMap .linkedConnectionBlocks.hasSecondaryConnections {
+.linked-connection-block--has-secondary-connections {
 	display: grid;
 	grid-template-columns: 45% 10% 45%;
 	align-items: center;
 }
 
-.connectionsMap .linkedConnectionBlocks.hasSecondaryConnections.left {
+.linked-connection-block--has-secondary-connections.linked-connection-block--left {
 	grid-template-areas: 'primary arrow secondary';
 }
 
-.connectionsMap .linkedConnectionBlocks.hasSecondaryConnections.right {
+.linked-connection-block--has-secondary-connections.linked-connection-block--right {
 	grid-template-areas: 'secondary arrow primary';
 }
 
-.connectionsMap .linkedConnectionBlocks.hasSecondaryConnections .primaryConnection {
+.linked-connection-block--has-secondary-connections .linked-connection-block__primary-connections {
 	grid-area: primary;
 }
 
-.connectionsMap .linkedConnectionBlocks.hasSecondaryConnections .secondaryConnections {
+.linked-connection-block--has-secondary-connections .linked-connection-block__secondary-connections {
 	grid-area: secondary;
 }

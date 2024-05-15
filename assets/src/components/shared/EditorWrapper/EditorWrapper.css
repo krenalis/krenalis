@@ -1,16 +1,16 @@
-.editorWrapper {
+.editor-wrapper {
 	border-radius: 20px;
 	background-color: var(--bg-primary);
 	box-shadow: var(--sl-shadow-small);
 	border: 1px solid var(--sl-color-neutral-200);
 }
 
-.editorWrapper * {
+.editor-wrapper * {
 	font-family: 'Source Code Pro', monospace !important;
 	font-size: 15px !important;
 }
 
-.editorWrapper .heading {
+.editor-wrapper__heading {
 	background-color: var(--bg-gray);
 	border-radius: 20px;
 	padding: 18px 30px 15px 30px;
@@ -26,49 +26,49 @@
 	gap: 10px;
 }
 
-.editorWrapper .heading .logoAndLanguage {
+.editor-wrapper__logo-and-language {
 	display: flex;
 	align-items: center;
 	gap: 10px;
 }
 
-.editorWrapper .heading .languageLogo > img {
+.editor-wrapper__language-logo > img {
 	max-width: 25px;
 }
 
-.editorWrapper .heading .language {
+.editor-wrapper__language {
 	font-weight: 600;
 }
 
-.editorWrapper .switchEditorLanguageDropdown sl-button::part(label),
-.editorWrapper .switchEditorLanguageDropdown sl-button::part(caret) {
+.editor-wrapper__switch-language-dropdown sl-button::part(label),
+.editor-wrapper__switch-language-dropdown sl-button::part(caret) {
 	color: var(--sl-color-neutral-600);
 }
 
-.editorWrapper .editor {
+.editor-wrapper__editor {
 	padding: 20px 20px 20px 10px;
 }
 
-.editorWrapper.hideGutter .editor {
+.editor-wrapper--hide-gutter .editor-wrapper__editor {
 	padding: 20px 25px;
 }
 
-.editorWrapper .decorationsOverviewRuler {
+.editor-wrapper .decorationsOverviewRuler {
 	border-radius: 5px;
 }
 
-.editorWrapper .scrollbar .slider {
+.editor-wrapper .scrollbar .slider {
 	border-radius: 5px;
 }
 
-.editorWrapper .line-numbers {
+.editor-wrapper .line-numbers {
 	color: var(--sl-color-neutral-800) !important;
 	opacity: 0.8;
 	user-select: none;
 	font-size: 16px !important;
 }
 
-.editorWrapper .line-numbers.active-line-number {
+.editor-wrapper .line-numbers.active-line-number {
 	color: var(--sl-color-primary-600) !important;
 	opacity: 1;
 }

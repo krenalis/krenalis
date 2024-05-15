@@ -90,21 +90,21 @@ const ConnectorsList = () => {
 	}
 
 	return (
-		<div className='connectorsList'>
-			<div className='routeContent'>
+		<div className='connectors-list'>
+			<div className='route-content'>
 				<SlInput
-					className='searchBar'
+					className='connectors-list__search-bar'
 					value={searchTerm}
 					onSlInput={onSearchTermUpdate}
 					placeholder='Search for a connector...'
 				>
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
-				<div className='connectors'>
+				<div className='connectors-list__connectors'>
 					{connectorsCards.length > 0 ? (
 						connectorsCards
 					) : (
-						<div className='noConnector'>
+						<div className='connectors-list__no-connector'>
 							<SlIcon name='exclamation-circle' />
 							Nothing found
 						</div>

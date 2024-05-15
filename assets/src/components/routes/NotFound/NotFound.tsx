@@ -5,14 +5,14 @@ import { Link } from '../../shared/Link/Link';
 
 const NotFound = () => {
 	return (
-		<div className='notFound'>
-			<div className='routeContent'>
-				<div className='box'>
-					<div className='icon'></div>
-					<div className='title'>404</div>
-					<div className='description'>The page you searched for does not exist</div>
+		<div className='not-found'>
+			<div className='route-content'>
+				<div className='not-found__box'>
+					<div className='not-found__icon'></div>
+					<div className='not-found__title'>404</div>
+					<div className='not-found__description'>The page you searched for does not exist</div>
 					<Link path='connections'>
-						<SlButton className='goBack' size='large' variant='default'>
+						<SlButton className='not-found__go-back' size='large' variant='default'>
 							Go to connections
 						</SlButton>
 					</Link>

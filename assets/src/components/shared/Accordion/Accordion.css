@@ -7,7 +7,7 @@
 		opacity 0.2s;
 }
 
-.accordion.open .accordion__details {
+.accordion--open .accordion__details {
 	max-height: 100vh;
 	opacity: 1;
 	transition:

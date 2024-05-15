@@ -131,8 +131,8 @@ const Member = () => {
 	};
 
 	return (
-		<div className='member__content'>
-			<div className='member'>
+		<div className='member'>
+			<div className='member__content'>
 				<div className='member__name'>
 					<SlInput label='Name' value={name} onSlInput={onUpdateName} />
 				</div>
