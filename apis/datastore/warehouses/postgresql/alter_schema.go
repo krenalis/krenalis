@@ -75,98 +75,120 @@ func addColumnClause(propertyPath string, column string, colType types.Type, nul
 // operations must contain at least one operation.
 func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 
-	var alterOps []string
+	// The operations are performed in this order:
+	//
+	// (1) DROP VIEW.
+	// (2) DROP columns.
+	// (3) RENAME columns (each in its own ALTER TABLE, see the PostgreSQL syntax for ALTER TABLE).
+	// (4) ADD columns.
+	// (5) CREATE VIEW.
+
+	var queries []string
+
+	// DROP VIEW.
+	queries = append(queries, "DROP VIEW \"users\"")
+	queries = append(queries, "DROP VIEW \"users_identities\"")
+
+	// ALTER TABLE ... DROP COLUMN.
+	{
+		var toDrop []string
+		for _, op := range operations {
+			if op.Operation == warehouses.OperationDropColumn {
+				toDrop = append(toDrop, op.Column)
+			}
+		}
+		if len(toDrop) > 0 {
+			for _, table := range []string{"_users", "_users_identities"} {
+				b := strings.Builder{}
+				b.WriteString("ALTER TABLE \"" + table + "\"\n\t")
+				for i, c := range toDrop {
+					if i > 0 {
+						b.WriteString(",\n\t")
+					}
+					b.WriteString(`DROP COLUMN "` + c + `"`)
+				}
+				queries = append(queries, b.String())
+			}
+		}
+	}
+
+	// ALTER TABLE ... RENAME COLUMN.
+	// ALTER TABLE ... DROP COLUMN.
 	for _, op := range operations {
-		switch op.Operation {
-
-		case warehouses.OperationAddColumn:
-			add, err := addColumnClause(op.Column, op.Column, op.Type, op.Nullable)
-			if err != nil {
-				return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
-			}
-			alterOps = append(alterOps, add)
-
-		case warehouses.OperationDropColumn:
-			alterOps = append(alterOps, `DROP COLUMN "`+op.Column+`"`)
-
-		case warehouses.OperationRenameColumn:
-			alterOps = append(alterOps, `RENAME COLUMN "`+op.Column+`" TO "`+op.NewColumn+`"`)
-
-		default:
-			return nil, fmt.Errorf("unexpected operation %v", op)
+		if op.Operation == warehouses.OperationRenameColumn {
+			queries = append(queries, `ALTER TABLE "_users"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
+			queries = append(queries, `ALTER TABLE "_users_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
 		}
 	}
 
-	var usersQuery, usersIdsQuery strings.Builder
-	if len(alterOps) > 0 {
-		usersQuery.WriteString(`ALTER TABLE "_users"` + "\n")
-		usersIdsQuery.WriteString(`ALTER TABLE "_users_identities"` + "\n")
-		for i, alter := range alterOps {
+	// ALTER TABLE ... ADD COLUMN.
+	{
+		var toAdd []warehouses.AlterSchemaOperation
+		for _, op := range operations {
+			if op.Operation == warehouses.OperationAddColumn {
+				toAdd = append(toAdd, op)
+			}
+		}
+		if len(toAdd) > 0 {
+			for _, table := range []string{"_users", "_users_identities"} {
+				b := strings.Builder{}
+				b.WriteString("ALTER TABLE \"" + table + "\"\n\t")
+				for i, op := range toAdd {
+					if i > 0 {
+						b.WriteString(",\n\t")
+					}
+					add, err := addColumnClause(op.Column, op.Column, op.Type, op.Nullable)
+					if err != nil {
+						return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
+					}
+					b.WriteString(add)
+				}
+				queries = append(queries, b.String())
+			}
+		}
+	}
+
+	// CREATE VIEW "users".
+	{
+		b := strings.Builder{}
+		b.WriteString(`CREATE VIEW "users" AS SELECT` + "\n")
+		for i, c := range usersColumns {
 			if i > 0 {
-				usersQuery.WriteString(",\n")
-				usersIdsQuery.WriteString(",\n")
+				b.WriteString(",\n")
 			}
-			usersQuery.WriteByte('\t')
-			usersIdsQuery.WriteByte('\t')
-			usersQuery.WriteString(alter)
-			usersIdsQuery.WriteString(alter)
+			b.WriteString("\t\"")
+			b.WriteString(c.Name)
+			b.WriteRune('"')
 		}
+		b.WriteString("\n" + `FROM "_users"`)
+		queries = append(queries, b.String())
 	}
 
-	// Create the "users" view.
-	usersView := strings.Builder{}
-	usersView.WriteString(`CREATE VIEW "users" AS SELECT` + "\n")
-	for i, c := range usersColumns {
-		if i > 0 {
-			usersView.WriteString(",\n")
+	// CREATE VIEW "users_identities"
+	{
+		b := strings.Builder{}
+		b.WriteString(`CREATE VIEW "users_identities" AS SELECT` + "\n")
+		metaProps := []string{"__identity_key__", "__connection__", "__identity_id__",
+			"__displayed_property__", "__anonymous_ids__", "__last_change_time__", "__gid__"}
+		for i, p := range metaProps {
+			if i > 0 {
+				b.WriteString(",\n")
+			}
+			b.WriteString("\t\"")
+			b.WriteString(p)
+			b.WriteRune('"')
 		}
-		usersView.WriteRune('\t')
-		usersView.WriteRune('"')
-		usersView.WriteString(c.Name)
-		usersView.WriteRune('"')
-	}
-	usersView.WriteString("\n" + `FROM "_users"`)
-
-	// Create the "users_identities" view.
-	idsView := strings.Builder{}
-	idsView.WriteString(`CREATE VIEW "users_identities" AS SELECT` + "\n")
-	metaProps := []string{"__identity_key__", "__connection__", "__identity_id__",
-		"__displayed_property__", "__anonymous_ids__", "__last_change_time__", "__gid__"}
-	for i, p := range metaProps {
-		if i > 0 {
-			idsView.WriteString(",\n")
+		for _, c := range usersColumns {
+			if c.Name == "__id__" {
+				continue
+			}
+			b.WriteString(",\n\t\"")
+			b.WriteString(c.Name)
+			b.WriteRune('"')
 		}
-		idsView.WriteRune('\t')
-		idsView.WriteRune('"')
-		idsView.WriteString(p)
-		idsView.WriteRune('"')
+		b.WriteString("\n" + `FROM "_users_identities"`)
+		queries = append(queries, b.String())
 	}
-	for _, c := range usersColumns {
-		if c.Name == "__id__" {
-			continue
-		}
-		idsView.WriteString(",\n")
-		idsView.WriteRune('\t')
-		idsView.WriteRune('"')
-		idsView.WriteString(c.Name)
-		idsView.WriteRune('"')
-	}
-	idsView.WriteString("\n" + `FROM "_users_identities"`)
-
-	queries := []string{
-		`DROP VIEW "users"`,
-		`DROP VIEW "users_identities"`,
-	}
-	if usersQuery.Len() > 0 {
-		queries = append(queries, usersQuery.String())
-	}
-	if usersIdsQuery.Len() > 0 {
-		queries = append(queries, usersIdsQuery.String())
-	}
-	queries = append(queries,
-		usersView.String(),
-		idsView.String(),
-	)
 
 	return queries, nil
 }
