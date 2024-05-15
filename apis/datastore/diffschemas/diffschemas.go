@@ -124,9 +124,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			newNameOf[oldName] = addedName
 			operations = append(operations, warehouses.AlterSchemaOperation{
-				Operation: warehouses.OperationRenameProperty,
-				Path:      oldPath,
-				NewPath:   appendPath(path, addedName),
+				Operation: warehouses.OperationRenameColumn,
+				Column:    pathToColumn(oldPath),
+				NewColumn: pathToColumn(appendPath(path, addedName)),
 			})
 			continue
 		}
@@ -137,12 +137,23 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		if containsNullableObject(p) {
 			return nil, fmt.Errorf("nullable properties with type Object are not supported")
 		}
-		operations = append(operations, warehouses.AlterSchemaOperation{
-			Operation: warehouses.OperationAddProperty,
-			Path:      appendPath(path, addedName),
-			Type:      p.Type,
-			Nullable:  p.Nullable,
-		})
+		if p.Type.Kind() == types.ObjectKind {
+			for _, c := range propertiesToColumns(p.Type.Properties()) {
+				operations = append(operations, warehouses.AlterSchemaOperation{
+					Operation: warehouses.OperationAddColumn,
+					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
+					Type:      c.Type,
+					Nullable:  c.Nullable,
+				})
+			}
+		} else {
+			operations = append(operations, warehouses.AlterSchemaOperation{
+				Operation: warehouses.OperationAddColumn,
+				Column:    pathToColumn(appendPath(path, addedName)),
+				Type:      p.Type,
+				Nullable:  p.Nullable,
+			})
+		}
 	}
 
 	// Iterate over DroppedNames.
@@ -170,14 +181,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		if droppedProp.Type.Kind() == types.ObjectKind {
 			for _, p := range propertyPaths(droppedProp.Type) {
 				operations = append(operations, warehouses.AlterSchemaOperation{
-					Operation: warehouses.OperationDropProperty,
-					Path:      appendPath(path, appendPath(droppedName, p)),
+					Operation: warehouses.OperationDropColumn,
+					Column:    pathToColumn(appendPath(path, appendPath(droppedName, p))),
 				})
 			}
 		} else {
 			operations = append(operations, warehouses.AlterSchemaOperation{
-				Operation: warehouses.OperationDropProperty,
-				Path:      appendPath(path, droppedName),
+				Operation: warehouses.OperationDropColumn,
+				Column:    pathToColumn(appendPath(path, droppedName)),
 			})
 		}
 	}
@@ -195,15 +206,27 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		if v, ok := rePaths[keptPath]; ok && v == nil {
 			operations = append(operations,
 				warehouses.AlterSchemaOperation{
-					Operation: warehouses.OperationDropProperty,
-					Path:      keptPath,
-				},
-				warehouses.AlterSchemaOperation{
-					Operation: warehouses.OperationAddProperty,
-					Path:      keptPath,
-					Type:      newProp.Type,
-					Nullable:  newProp.Nullable,
+					Operation: warehouses.OperationDropColumn,
+					Column:    pathToColumn(keptPath),
 				})
+			if newProp.Type.Kind() == types.ObjectKind {
+				for _, c := range propertiesToColumns(newProp.Type.Properties()) {
+					operations = append(operations, warehouses.AlterSchemaOperation{
+						Operation: warehouses.OperationAddColumn,
+						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
+						Type:      c.Type,
+						Nullable:  c.Nullable,
+					})
+				}
+			} else {
+				operations = append(operations,
+					warehouses.AlterSchemaOperation{
+						Operation: warehouses.OperationAddColumn,
+						Column:    pathToColumn(keptPath),
+						Type:      newProp.Type,
+						Nullable:  newProp.Nullable,
+					})
+			}
 			continue
 		}
 
@@ -212,8 +235,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
 			operations = append(operations, warehouses.AlterSchemaOperation{
-				Operation: warehouses.OperationDropProperty,
-				Path:      keptPath,
+				Operation: warehouses.OperationDropColumn,
+				Column:    pathToColumn(keptPath),
 			})
 			if !oldProp.Type.EqualTo(newProp.Type) {
 				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
@@ -226,9 +249,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
 			operations = append(operations, warehouses.AlterSchemaOperation{
-				Operation: warehouses.OperationRenameProperty,
-				Path:      oldPath,
-				NewPath:   keptPath,
+				Operation: warehouses.OperationRenameColumn,
+				Column:    pathToColumn(oldPath),
+				NewColumn: pathToColumn(keptPath),
 			})
 			continue
 		}
@@ -341,4 +364,33 @@ func validPropertyForDiff(p types.Property) error {
 		return errors.New("property cannot be 'required'")
 	}
 	return nil
+}
+
+// pathToColumn returns the column name relative to the given path.
+func pathToColumn(path string) string {
+	return strings.ReplaceAll(path, ".", "_")
+}
+
+// propertiesToColumns returns the columns of properties.
+func propertiesToColumns(properties []types.Property) []warehouses.Column {
+
+	// NOTE: keep in sync with the copy of this function in the package
+	// "datastore".
+
+	columns := make([]warehouses.Column, 0, len(properties))
+	for _, p := range properties {
+		if p.Type.Kind() == types.ObjectKind {
+			for _, column := range propertiesToColumns(p.Type.Properties()) {
+				column.Name = p.Name + "_" + column.Name
+				columns = append(columns, column)
+			}
+			continue
+		}
+		columns = append(columns, warehouses.Column{
+			Name:     p.Name,
+			Type:     p.Type,
+			Nullable: p.Nullable,
+		})
+	}
+	return columns
 }

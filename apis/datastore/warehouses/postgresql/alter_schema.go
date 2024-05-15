@@ -77,35 +77,20 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 
 	var alterOps []string
 	for _, op := range operations {
-		column := propertyPathToColumn(op.Path)
 		switch op.Operation {
 
-		case warehouses.OperationAddProperty:
-			// Objects.
-			if op.Type.Kind() == types.ObjectKind {
-				properties := op.Type.Properties()
-				columns := warehouses.PropertiesToColumns(properties)
-				for _, col := range columns {
-					add, err := addColumnClause(op.Path, column+"_"+col.Name, col.Type, col.Nullable)
-					if err != nil {
-						return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
-					}
-					alterOps = append(alterOps, add)
-				}
-				continue
-			}
-			add, err := addColumnClause(op.Path, column, op.Type, op.Nullable)
+		case warehouses.OperationAddColumn:
+			add, err := addColumnClause(op.Column, op.Column, op.Type, op.Nullable)
 			if err != nil {
 				return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
 			}
 			alterOps = append(alterOps, add)
 
-		case warehouses.OperationDropProperty:
-			alterOps = append(alterOps, `DROP COLUMN "`+column+`"`)
+		case warehouses.OperationDropColumn:
+			alterOps = append(alterOps, `DROP COLUMN "`+op.Column+`"`)
 
-		case warehouses.OperationRenameProperty:
-			newColumn := propertyPathToColumn(op.NewPath)
-			alterOps = append(alterOps, `RENAME COLUMN "`+column+`" TO "`+newColumn+`"`)
+		case warehouses.OperationRenameColumn:
+			alterOps = append(alterOps, `RENAME COLUMN "`+op.Column+`" TO "`+op.NewColumn+`"`)
 
 		default:
 			return nil, fmt.Errorf("unexpected operation %v", op)
@@ -286,8 +271,4 @@ func typeToPostgresType(t types.Type) (string, string, bool) {
 		return "", "", false
 	}
 	return "", "", false
-}
-
-func propertyPathToColumn(path string) string {
-	return strings.ReplaceAll(path, ".", "_")
 }

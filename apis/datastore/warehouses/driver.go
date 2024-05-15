@@ -28,10 +28,10 @@ import (
 // "users_identities") schema.
 type AlterSchemaOperation struct {
 	Operation OperationType
-	Path      string     // For "Add", "Drop" and "Rename" operations.
-	Type      types.Type // For "Add" operations.
+	Column    string     // For "Add", "Drop" and "Rename" operations.
+	Type      types.Type // For "Add" operations. Object properties are expanded into single "Add" operations, so Type can never have kind Object.
 	Nullable  bool       // For "Add" operations.
-	NewPath   string     // For "Rename" operations.
+	NewColumn string     // For "Rename" operations.
 }
 
 // MergeTable represents a table in which rows will be merged.
@@ -46,19 +46,19 @@ type MergeTable struct {
 type OperationType int
 
 const (
-	OperationAddProperty OperationType = iota + 1
-	OperationDropProperty
-	OperationRenameProperty
+	OperationAddColumn OperationType = iota + 1
+	OperationDropColumn
+	OperationRenameColumn
 )
 
 func (op OperationType) String() string {
 	switch op {
-	case OperationAddProperty:
-		return "AddProperty"
-	case OperationDropProperty:
-		return "DropProperty"
-	case OperationRenameProperty:
-		return "RenameProperty"
+	case OperationAddColumn:
+		return "AddColumn"
+	case OperationDropColumn:
+		return "DropColumn"
+	case OperationRenameColumn:
+		return "RenameColumn"
 	default:
 		return fmt.Sprintf("<invalid OperationType = %d>", int(op))
 	}

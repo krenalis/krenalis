@@ -28,7 +28,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "a", Type: types.Text()},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar NOT NULL DEFAULT ''",
@@ -41,7 +41,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "f", Type: types.Float(64)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64)},
+				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"f\" double precision NOT NULL DEFAULT 0",
@@ -54,7 +54,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "f", Type: types.Float(64)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64)},
+				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"f\" double precision NOT NULL DEFAULT 0",
@@ -67,7 +67,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "f", Type: types.Float(64).AsReal()},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64).AsReal()},
+				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
 			},
 			expectedErr: "unsupported alter schema operation: the type of the property \"f\" is not supported by the PostgreSQL driver",
 		},
@@ -77,7 +77,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "f", Type: types.Float(64).AsReal()},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "f", Type: types.Float(64).AsReal()},
+				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
 			},
 			expectedErr: "unsupported alter schema operation: the type of the property \"f\" is not supported by the PostgreSQL driver",
 		},
@@ -88,9 +88,9 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "x_f", Type: types.Float(64).AsReal()},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x.f", Type: types.Float(64).AsReal()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the property \"x.f\" is not supported by the PostgreSQL driver",
+			expectedErr: "unsupported alter schema operation: the type of the property \"x_f\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Enum are not supported",
@@ -98,7 +98,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},
 			},
 			expectedErr: "unsupported alter schema operation: the type of the property \"a\" is not supported by the PostgreSQL driver",
 		},
@@ -107,12 +107,12 @@ func Test_alterSchemaQueries(t *testing.T) {
 			usersColumns: []warehouses.Column{
 				{Name: "a", Type: types.Text()},
 				{Name: "b", Type: types.Text()},
+				{Name: "x_a", Type: types.Text(), Nullable: false},
+				{Name: "x_a", Type: types.Text(), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text(), Nullable: false},
-					{Name: "b", Type: types.Text(), Nullable: true},
-				})},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text(), Nullable: false},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Text(), Nullable: true},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"x_a\" varchar NOT NULL DEFAULT '',\n\tADD COLUMN \"x_b\" varchar",
@@ -126,7 +126,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "a", Type: types.Array(types.Text())},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Array(types.Text())},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar[] NOT NULL DEFAULT '{}'",
@@ -140,7 +140,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text(), Nullable: true},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text(), Nullable: true},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar",
@@ -155,10 +155,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "x_b", Type: types.Int(32)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Int(32)},
-				})},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"x_a\" varchar NOT NULL DEFAULT '',\n\tADD COLUMN \"x_b\" integer NOT NULL DEFAULT 0",
@@ -173,8 +171,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "b", Type: types.Int(32)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
-				{Operation: warehouses.OperationAddProperty, Path: "b", Type: types.Int(32)},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar NOT NULL DEFAULT '',\n\tADD COLUMN \"b\" integer NOT NULL DEFAULT 0",
@@ -187,7 +185,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "b", Type: types.Int(32)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tDROP COLUMN \"a\"",
@@ -200,8 +198,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "z", Type: types.Int(32)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
-				{Operation: warehouses.OperationDropProperty, Path: "b"},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationDropColumn, Column: "b"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
@@ -214,7 +212,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "b", Type: types.Int(32)},
 			},
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "a", NewPath: "b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tRENAME COLUMN \"a\" TO \"b\"",
@@ -241,21 +239,21 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			name: "Test many types",
 			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "b", Type: types.Boolean()},
-				{Operation: warehouses.OperationAddProperty, Path: "i16", Type: types.Int(16)},
-				{Operation: warehouses.OperationAddProperty, Path: "i32", Type: types.Int(32)},
-				{Operation: warehouses.OperationAddProperty, Path: "i64", Type: types.Int(64)},
-				{Operation: warehouses.OperationAddProperty, Path: "f32", Type: types.Float(32)},
-				{Operation: warehouses.OperationAddProperty, Path: "f64", Type: types.Float(64)},
-				{Operation: warehouses.OperationAddProperty, Path: "dec", Type: types.Decimal(3, 1)},
-				{Operation: warehouses.OperationAddProperty, Path: "dt", Type: types.DateTime()},
-				{Operation: warehouses.OperationAddProperty, Path: "d", Type: types.Date()},
-				{Operation: warehouses.OperationAddProperty, Path: "t", Type: types.Time()},
-				{Operation: warehouses.OperationAddProperty, Path: "u", Type: types.UUID()},
-				{Operation: warehouses.OperationAddProperty, Path: "j", Type: types.JSON()},
-				{Operation: warehouses.OperationAddProperty, Path: "t", Type: types.Text()},
-				{Operation: warehouses.OperationAddProperty, Path: "at", Type: types.Array(types.Text())},
-				{Operation: warehouses.OperationAddProperty, Path: "ai32", Type: types.Array(types.Int(32))},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Boolean()},
+				{Operation: warehouses.OperationAddColumn, Column: "i16", Type: types.Int(16)},
+				{Operation: warehouses.OperationAddColumn, Column: "i32", Type: types.Int(32)},
+				{Operation: warehouses.OperationAddColumn, Column: "i64", Type: types.Int(64)},
+				{Operation: warehouses.OperationAddColumn, Column: "f32", Type: types.Float(32)},
+				{Operation: warehouses.OperationAddColumn, Column: "f64", Type: types.Float(64)},
+				{Operation: warehouses.OperationAddColumn, Column: "dec", Type: types.Decimal(3, 1)},
+				{Operation: warehouses.OperationAddColumn, Column: "dt", Type: types.DateTime()},
+				{Operation: warehouses.OperationAddColumn, Column: "d", Type: types.Date()},
+				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.Time()},
+				{Operation: warehouses.OperationAddColumn, Column: "u", Type: types.UUID()},
+				{Operation: warehouses.OperationAddColumn, Column: "j", Type: types.JSON()},
+				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "at", Type: types.Array(types.Text())},
+				{Operation: warehouses.OperationAddColumn, Column: "ai32", Type: types.Array(types.Int(32))},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"" +

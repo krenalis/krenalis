@@ -42,8 +42,8 @@ func TestDiff(t *testing.T) {
 				"lastName": "firstName",
 			},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "lastName"},
-				{Operation: warehouses.OperationRenameProperty, Path: "firstName", NewPath: "lastName"},
+				{Operation: warehouses.OperationDropColumn, Column: "lastName"},
+				{Operation: warehouses.OperationRenameColumn, Column: "firstName", NewColumn: "lastName"},
 			},
 		},
 		{
@@ -63,8 +63,8 @@ func TestDiff(t *testing.T) {
 				"x.lastName": "x.firstName",
 			},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "x.lastName"},
-				{Operation: warehouses.OperationRenameProperty, Path: "x.firstName", NewPath: "x.lastName"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_lastName"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_firstName", NewColumn: "x_lastName"},
 			},
 		},
 		{
@@ -121,7 +121,7 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Text()},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "b", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Text()},
 			},
 		},
 		{
@@ -134,7 +134,7 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "b", Type: types.Int(32), Nullable: true},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32), Nullable: true},
 			},
 		},
 		{
@@ -153,7 +153,7 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x.c", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_c", Type: types.Text()},
 			},
 		},
 		{
@@ -172,7 +172,7 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "x.c"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_c"},
 			},
 		},
 		{
@@ -191,7 +191,7 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"x.c": "x.b"},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "x.b", NewPath: "x.c"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_b", NewColumn: "x_c"},
 			},
 		},
 		{
@@ -209,8 +209,8 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x.c", Type: types.Text()},
-				{Operation: warehouses.OperationDropProperty, Path: "x.b"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_c", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "x_b"},
 			},
 		},
 		{
@@ -226,8 +226,8 @@ func TestDiff(t *testing.T) {
 				{Name: "d", Type: types.Text()},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "c", Type: types.Text()},
-				{Operation: warehouses.OperationAddProperty, Path: "d", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "c", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "d", Type: types.Text()},
 			},
 		},
 		{
@@ -242,7 +242,7 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Text()},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "c"},
+				{Operation: warehouses.OperationDropColumn, Column: "c"},
 			},
 		},
 		{
@@ -256,8 +256,8 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text()},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "b"},
-				{Operation: warehouses.OperationDropProperty, Path: "c"},
+				{Operation: warehouses.OperationDropColumn, Column: "b"},
+				{Operation: warehouses.OperationDropColumn, Column: "c"},
 			},
 		},
 		{
@@ -279,8 +279,8 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Text()},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "b", Type: types.Text()},
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
 			},
 		},
 		{
@@ -293,7 +293,7 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"b": "a"},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "a", NewPath: "b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 		},
 		{
@@ -330,8 +330,8 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"c": "a", "d": "b"},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "a", NewPath: "c"},
-				{Operation: warehouses.OperationRenameProperty, Path: "b", NewPath: "d"},
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "c"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b", NewColumn: "d"},
 			},
 		},
 		{
@@ -344,8 +344,8 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Int(32)},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -358,8 +358,8 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{
@@ -376,8 +376,8 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"x.a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "x.a"},
-				{Operation: warehouses.OperationAddProperty, Path: "x.a", Type: types.Int(32)},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -422,7 +422,7 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"b2": "b"},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "b", NewPath: "b2"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b", NewColumn: "b2"},
 			},
 		},
 		{
@@ -445,7 +445,7 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"x.b2": "x.b"},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "x.b", NewPath: "x.b2"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_b", NewColumn: "x_b2"},
 			},
 		},
 		{
@@ -491,9 +491,9 @@ func TestDiff(t *testing.T) {
 				"z2":  "z",
 			},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "z", NewPath: "z2"},
-				{Operation: warehouses.OperationDropProperty, Path: "x.a"},
-				{Operation: warehouses.OperationAddProperty, Path: "x.a", Type: types.Int(32)},
+				{Operation: warehouses.OperationRenameColumn, Column: "z", NewColumn: "z2"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -518,10 +518,10 @@ func TestDiff(t *testing.T) {
 				"z2":  "z",
 			},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationRenameProperty, Path: "z", NewPath: "z2"},
-				{Operation: warehouses.OperationDropProperty, Path: "y.a"},
-				{Operation: warehouses.OperationDropProperty, Path: "x.a"},
-				{Operation: warehouses.OperationAddProperty, Path: "x.a", Type: types.Int(32)},
+				{Operation: warehouses.OperationRenameColumn, Column: "z", NewColumn: "z2"},
+				{Operation: warehouses.OperationDropColumn, Column: "y_a"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -541,10 +541,10 @@ func TestDiff(t *testing.T) {
 				{Name: "v", Type: types.Text()},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "x.a"},
-				{Operation: warehouses.OperationDropProperty, Path: "x.b"},
-				{Operation: warehouses.OperationDropProperty, Path: "y.c"},
-				{Operation: warehouses.OperationDropProperty, Path: "y.d"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "y_c"},
+				{Operation: warehouses.OperationDropColumn, Column: "y_d"},
 			},
 		},
 		{
@@ -560,10 +560,8 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddProperty, Path: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
-				})},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Text()},
 			},
 		},
 		{
@@ -656,8 +654,8 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{
@@ -672,8 +670,8 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationDropProperty, Path: "a"},
-				{Operation: warehouses.OperationAddProperty, Path: "a", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{

@@ -18,6 +18,10 @@ import (
 
 // propertiesToColumns returns the columns of properties.
 func propertiesToColumns(properties []types.Property) []warehouses.Column {
+
+	// NOTE: keep in sync with the copy of this function in the package
+	// "diffschemas".
+
 	columns := make([]warehouses.Column, 0, len(properties))
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
