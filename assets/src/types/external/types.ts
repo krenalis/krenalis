@@ -1,7 +1,3 @@
-// TODO: Placholder can even contain a map in the case of MapTypes. Currently
-// this is not handled.
-type Placeholder = string | null;
-
 type Role = 'Both' | 'Source' | 'Destination';
 
 type TypeName =
@@ -30,7 +26,7 @@ interface Property {
 	name: string;
 	label: string;
 	description: string;
-	placeholder: Placeholder;
+	placeholder: string;
 	role: Role;
 	type: Type;
 	required: boolean;
@@ -157,7 +153,6 @@ export type {
 	DecimalType,
 	FloatType,
 	Role,
-	Placeholder,
 	TypeName,
 	IntBitSize,
 	FloatBitSize,

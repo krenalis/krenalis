@@ -13,8 +13,6 @@ import (
 	"math"
 	"regexp"
 	"testing"
-
-	"golang.org/x/exp/maps"
 )
 
 func TestBitSize(t *testing.T) {
@@ -667,29 +665,8 @@ func sameProperty(p1, p2 Property) error {
 	if p1.Description != p2.Description {
 		return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)
 	}
-	switch ph1 := p1.Placeholder.(type) {
-	case nil:
-		if p2.Placeholder != nil {
-			return fmt.Errorf("expected property placeholder nil, got a %T value", p2.Placeholder)
-		}
-	case string:
-		ph2, ok := p2.Placeholder.(string)
-		if !ok {
-			return fmt.Errorf("expected property placeholder with string type, got %T", p2.Placeholder)
-		}
-		if ph1 != ph2 {
-			return fmt.Errorf("expected property placeholder %q, got %q", p1.Placeholder, p2.Placeholder)
-		}
-	case map[string]string:
-		ph2, ok := p2.Placeholder.(map[string]string)
-		if !ok {
-			return fmt.Errorf("expected property placeholder with map[string]string type, got %T", p2.Placeholder)
-		}
-		if !maps.Equal(ph1, ph2) {
-			return fmt.Errorf("expected property placeholder %#v, got %#v", ph1, ph2)
-		}
-	default:
-		return fmt.Errorf("expected property placeholder %q, got a %T value", p1.Placeholder, p2.Placeholder)
+	if p1.Placeholder != p2.Placeholder {
+		return fmt.Errorf("expected property placeholder %q, got %q", p1.Placeholder, p2.Placeholder)
 	}
 	if p1.Role != p2.Role {
 		return fmt.Errorf("expected property key 'role' with value %s, got %s", p1.Role, p2.Role)

@@ -30,18 +30,16 @@ func TestPropertySerialization(t *testing.T) {
 		},
 		{
 			Property: Property{Name: "a", Type: Text()},
-			Expected: `{"name":"a","label":"","description":"","placeholder":null,` +
-				`"type":{"name":"Text"},"nullable":false}`,
+			Expected: `{"name":"a","label":"","description":"","type":{"name":"Text"},"nullable":false}`,
 		},
 		{
 			Property: Property{Name: "a", Label: "a label", Type: Text()},
-			Expected: `{"name":"a","label":"a label","description":"","placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+			Expected: `{"name":"a","label":"a label","description":"","type":{"name":"Text"},"nullable":false}`,
 		},
 		{
 			Property: Property{Name: "a", Label: "a label",
 				Description: "some description", Type: Text()},
-			Expected: `{"name":"a","label":"a label","description":"some description",` +
-				`"placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+			Expected: `{"name":"a","label":"a label","description":"some description","type":{"name":"Text"},"nullable":false}`,
 		},
 		{
 			Property: Property{
@@ -137,13 +135,11 @@ func TestPropertyDeserialization(t *testing.T) {
 			Err:  "unexpected end of JSON input",
 		},
 		{
-			JSON: `{"name":"a","label":"","description":"","placeholder":null,` +
-				`"type":{"name":"Text"},"nullable":false}`,
+			JSON:     `{"name":"a","label":"","description":"","type":{"name":"Text"},"nullable":false}`,
 			Property: Property{Name: "a", Type: Text()},
 		},
 		{
-			JSON: `{"name":"a","label":"","description":"","placeholder":null,` +
-				`"type":{"name":"Int","bitSize":32},"nullable":false}`,
+			JSON:     `{"name":"a","label":"","description":"","type":{"name":"Int","bitSize":32},"nullable":false}`,
 			Property: Property{Name: "a", Type: Int(32)},
 		},
 		{
@@ -175,11 +171,11 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 		Property Property
 	}{
 		{
-			`{"name":"Apple","label":"","description":"","placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+			`{"name":"Apple","label":"","description":"","type":{"name":"Text"},"nullable":false}`,
 			Property{Name: "Apple", Type: Text()},
 		},
 		{
-			`{"name":"Apple","label":"A label","description":"Some description...","placeholder":null,"type":{"name":"Text"},"nullable":false}`,
+			`{"name":"Apple","label":"A label","description":"Some description...","type":{"name":"Text"},"nullable":false}`,
 			Property{Name: "Apple", Label: "A label", Description: "Some description...", Type: Text()},
 		},
 	}
@@ -271,20 +267,17 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","placeholder":null,"type":{"name":"Text"},"nullable":false},{"name":"size","label":"","description":"","placeholder":null,"type":{"name":"Decimal"},"nullable":false}]}`,
+			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","type":{"name":"Text"},"nullable":false},{"name":"size","label":"","description":"","type":{"name":"Decimal"},"nullable":false}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","placeholder":null,"type":{"name":"Text"},"nullable":true}]}`,
+			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","type":{"name":"Text"},"nullable":true}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text(), Nullable: true}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"birthday","label":"","description":"","placeholder":null,"type":{"name":"Date"},"nullable":false}]}`,
+			Data: `{"name":"Object","properties":[{"name":"birthday","label":"","description":"","type":{"name":"Date"},"nullable":false}]}`,
 			Type: Object([]Property{{Name: "birthday", Type: Date()}}),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"birthday","label":"","description":"","placeholder":"mm/dd/yyyy","type":{"name":"Date"},"nullable":false}]}`,
 			Type: Object([]Property{{Name: "birthday", Placeholder: "mm/dd/yyyy", Type: Date()}}),
-		}, {
-			Data: `{"name":"Object","properties":[{"name":"values","label":"","description":"","placeholder":{"a":"1","b":"2"},"type":{"name":"Map","valueType":{"name":"Int","bitSize":32}},"nullable":false}]}`,
-			Type: Object([]Property{{Name: "values", Placeholder: map[string]string{"a": "1", "b": "2"}, Type: Map(Int(32))}}),
 		},
 	}
 	for _, test := range tests {

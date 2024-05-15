@@ -15,13 +15,11 @@ import (
 	"io"
 	"math"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
-	"golang.org/x/exp/maps"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -266,25 +264,9 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	_ = marshalString(b, p.Label)
 	b.WriteString(`,"description":`)
 	_ = marshalString(b, p.Description)
-	switch ph := p.Placeholder.(type) {
-	case nil:
-		b.WriteString(`,"placeholder":null`)
-	case string:
+	if p.Placeholder != "" {
 		b.WriteString(`,"placeholder":`)
-		_ = marshalString(b, ph)
-	case map[string]string:
-		b.WriteString(`,"placeholder":{`)
-		keys := maps.Keys(ph)
-		slices.Sort(keys)
-		for i, k := range keys {
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			_ = marshalString(b, k)
-			b.WriteByte(':')
-			_ = marshalString(b, ph[k])
-		}
-		b.WriteByte('}')
+		_ = marshalString(b, p.Placeholder)
 	}
 	b.WriteString(`,"type":`)
 	marshalType(b, p.Type)
@@ -1011,38 +993,11 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 			if hasPlaceholder {
 				return Property{}, errors.New("repeated 'placeholder' key")
 			}
-			switch tok.(type) {
-			case nil:
-			case string:
-				p.Placeholder = tok
-			case json.Delim:
-				if tok != json.Delim('{') {
-					return Property{}, errors.New("unexpected value for property placeholder")
-				}
-				placeholder := map[string]string{}
-				for {
-					tok, err = dec.Token()
-					if err != nil {
-						return Property{}, err
-					}
-					if tok == json.Delim('}') {
-						break
-					}
-					k := tok.(string)
-					tok, err = dec.Token()
-					if err != nil {
-						return Property{}, err
-					}
-					v, ok := tok.(string)
-					if !ok {
-						return Property{}, errors.New("unexpected value for property placeholder")
-					}
-					placeholder[k] = v
-				}
-				p.Placeholder = placeholder
-			default:
+			p.Placeholder, ok = tok.(string)
+			if !ok {
 				return Property{}, errors.New("unexpected value for property placeholder")
 			}
+			hasPlaceholder = true
 		case "required":
 			if hasRequired {
 				return Property{}, errors.New("repeated 'required' key")
@@ -1072,11 +1027,6 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 	}
 	if !p.Type.Valid() {
 		return Property{}, errors.New("missing property type")
-	}
-	if hasPlaceholder {
-		if _, ok := p.Placeholder.(map[string]string); ok && p.Type.Kind() != MapKind {
-			return Property{}, errors.New("invalid placeholder value")
-		}
 	}
 
 	return p, nil

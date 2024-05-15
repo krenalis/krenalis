@@ -354,7 +354,7 @@ func propertyPaths(obj types.Type) []string {
 // validPropertyForDiff validates the fields of the property p, determining if
 // their value is allowed in a schema on which the diff must be calculated.
 func validPropertyForDiff(p types.Property) error {
-	if p.Placeholder != nil {
+	if p.Placeholder != "" {
 		return errors.New("property cannot have a placeholder")
 	}
 	if p.Role != types.BothRole {

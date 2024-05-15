@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
-import Type, { ObjectType, Placeholder, Role, TypeName } from '../../../types/external/types';
+import Type, { ObjectType, Role, TypeName } from '../../../types/external/types';
 import { SortableGridRow, GridColumn } from '../../../types/componentTypes/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -25,7 +25,7 @@ interface PropertyToEdit {
 	name?: string;
 	label?: string;
 	description?: string;
-	placeholder?: Placeholder;
+	placeholder?: string;
 	role?: Role;
 	type?: Type | null;
 	required?: boolean;
@@ -115,7 +115,7 @@ const useSchemaEdit = (
 			nullable: property.nullable,
 			label: property.label,
 			description: property.description,
-			placeholder: null,
+			placeholder: '',
 			role: 'Both',
 			required: false,
 			isEditable: true,
