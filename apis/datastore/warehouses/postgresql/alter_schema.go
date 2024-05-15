@@ -113,7 +113,6 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 	}
 
 	// ALTER TABLE ... RENAME COLUMN.
-	// ALTER TABLE ... DROP COLUMN.
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
 			queries = append(queries, `ALTER TABLE "_users"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
