@@ -148,10 +148,19 @@ const ComboBoxInput = ({
 	const onKeyUpRef = useRef<any>();
 	const previousListSiblingRef = useRef<any>();
 	const lastValue = useRef<string>(value);
+	const inputRef = useRef<any>();
 
 	useEffect(() => {
 		lastValue.current = value;
-	}, [value]);
+		if (inputRef.current) {
+			// Disable password managers autofill.
+			const input = inputRef.current.shadowRoot.querySelector('input');
+			input.setAttribute('data-1p-ignore', '');
+			input.setAttribute('data-bwignore', '');
+			input.setAttribute('data-form-type', 'other');
+			input.setAttribute('data-lpignore', 'true');
+		}
+	}, [value, inputRef.current]);
 
 	const onKeyUp = (e) => {
 		if (e.key === 'Escape') {
@@ -231,6 +240,7 @@ const ComboBoxInput = ({
 	return (
 		<div className='combobox-input'>
 			<SlInput
+				ref={inputRef}
 				data-is-combobox-input
 				value={value}
 				name={name}
