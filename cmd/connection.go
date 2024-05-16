@@ -47,6 +47,15 @@ func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Reques
 	return c.ActionSchemas(r.Context(), target, eventType)
 }
 
+// ActionTypes returns the action types of a connection.
+func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	return c.ActionTypes(r.Context())
+}
+
 // AddAction adds an action.
 func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -379,7 +388,7 @@ func (connection connection) connection(r *http.Request) (*apis.Connection, erro
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Connection(r.Context(), id)
+	return ws.Connection(id)
 }
 
 func (connection connection) connection2(r *http.Request) (int, error) {

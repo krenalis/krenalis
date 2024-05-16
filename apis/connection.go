@@ -79,9 +79,8 @@ type Connection struct {
 	ActionsCount     int
 	Health           Health
 
-	// ActionTypes and Actions are populated only by the (*Workspace).Connection method.
-	ActionTypes *[]ActionType `json:",omitempty"`
-	Actions     *[]Action     `json:",omitempty"`
+	// Actions is populated only by the (*Workspace).Connection method.
+	Actions *[]Action `json:",omitempty"`
 }
 
 // Action returns the action with identifier id of the connection.
@@ -281,6 +280,184 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	}
 
 	panic("unreachable code")
+}
+
+// ActionType represents an action type.
+type ActionType struct {
+	Name        string
+	Description string
+	Target      Target
+	EventType   *string
+}
+
+// ActionTypes returns the action types for the connection.
+//
+// Refer to the specifications in the file "apis/Actions.md" for more details.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
+func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
+	var actionTypes []ActionType
+	c := this.connection
+	connector := c.Connector()
+	targets := connector.Targets
+	if targets.Contains(state.Users) {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.AppType:
+			var name, description string
+			if c.Role == state.Source {
+				name = "Import " + connector.TermForUsers
+				description = "Import the " + connector.TermForUsers
+				if connector.TermForUsers != "users" {
+					description += " as users"
+				}
+				description += " from " + connector.Name
+			} else {
+				name = "Export " + connector.TermForUsers
+				description = "Export the users "
+				if connector.TermForUsers != "users" {
+					description += " as " + connector.TermForUsers
+				}
+				description += " to " + connector.Name
+			}
+			at := ActionType{
+				Name:        name,
+				Description: description,
+				Target:      Users,
+			}
+			actionTypes = append(actionTypes, at)
+		case
+			state.DatabaseType,
+			state.FileStorageType:
+			var name, description string
+			if c.Role == state.Source {
+				name = "Import users"
+				description = "Import the users from " + connector.Name
+			} else {
+				name = "Export users"
+				description = "Export the users to " + connector.Name
+			}
+			at := ActionType{
+				Name:        name,
+				Description: description,
+				Target:      Users,
+			}
+			actionTypes = append(actionTypes, at)
+		case
+			state.MobileType,
+			state.ServerType,
+			state.WebsiteType:
+			if c.Role == state.Source {
+				at := ActionType{
+					Name:        "Import users",
+					Description: "Import users from the events of the " + connector.Name,
+					Target:      Users,
+				}
+				actionTypes = append(actionTypes, at)
+			}
+		}
+	}
+	if targets.Contains(state.Groups) {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.AppType:
+			var name, description string
+			if c.Role == state.Source {
+				name = "Import " + connector.TermForGroups
+				description = "Import the " + connector.TermForGroups
+				if connector.TermForGroups != "groups" {
+					description += " as groups"
+				}
+				description += " from " + connector.Name
+			} else {
+				name = "Export " + connector.TermForGroups
+				description = "Export the groups "
+				if connector.TermForGroups != "groups" {
+					description += " as " + connector.TermForGroups
+				}
+				description += " to " + connector.Name
+			}
+			at := ActionType{
+				Name:        name,
+				Description: description,
+				Target:      Groups,
+			}
+			actionTypes = append(actionTypes, at)
+		case
+			state.DatabaseType,
+			state.FileStorageType:
+			var name, description string
+			if c.Role == state.Source {
+				name = "Import groups"
+				description = "Import the groups from " + connector.Name
+			} else {
+				name = "Export groups"
+				description = "Export the groups to " + connector.Name
+			}
+			at := ActionType{
+				Name:        name,
+				Description: description,
+				Target:      Groups,
+			}
+			actionTypes = append(actionTypes, at)
+		case
+			state.MobileType,
+			state.ServerType,
+			state.WebsiteType:
+			if c.Role == state.Source {
+				at := ActionType{
+					Name:        "Import groups",
+					Description: "Import groups from the events of the " + connector.Name,
+					Target:      Groups,
+				}
+				actionTypes = append(actionTypes, at)
+			}
+		}
+	}
+	if targets.Contains(state.Events) {
+		switch typ := c.Connector().Type; typ {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			if c.Role == state.Source {
+				description := "Import events from the "
+				switch typ {
+				case state.MobileType:
+					description += "mobile app"
+				case state.ServerType:
+					description += "server"
+				case state.WebsiteType:
+					description += "website"
+				}
+				at := ActionType{
+					Name:        "Import events",
+					Description: description,
+					Target:      Events,
+				}
+				actionTypes = slices.Insert(actionTypes, 0, at)
+			}
+		case state.AppType:
+			if c.Role == state.Destination {
+				eventTypes, err := this.app().EventTypes(ctx)
+				if err != nil {
+					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+				}
+				for _, et := range eventTypes {
+					id := et.ID
+					actionTypes = append(actionTypes, ActionType{
+						Name:        et.Name,
+						Description: et.Description,
+						Target:      Events,
+						EventType:   &id,
+					})
+				}
+			}
+		}
+	}
+	if actionTypes == nil {
+		actionTypes = []ActionType{}
+	}
+	return actionTypes, nil
 }
 
 // AddAction adds action to the connection returning the identifier of the
@@ -1686,184 +1863,6 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 		return types.Type{}, err
 	}
 	return schema, nil
-}
-
-// ActionType represents an action type.
-type ActionType struct {
-	Name        string
-	Description string
-	Target      Target
-	EventType   *string
-}
-
-// actionTypes returns the action types for the connection.
-//
-// Refer to the specifications in the file "apis/Actions.md" for more details.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
-	var actionTypes []ActionType
-	c := this.connection
-	connector := c.Connector()
-	targets := connector.Targets
-	if targets.Contains(state.Users) {
-		switch typ := c.Connector().Type; typ {
-		case
-			state.AppType:
-			var name, description string
-			if c.Role == state.Source {
-				name = "Import " + connector.TermForUsers
-				description = "Import the " + connector.TermForUsers
-				if connector.TermForUsers != "users" {
-					description += " as users"
-				}
-				description += " from " + connector.Name
-			} else {
-				name = "Export " + connector.TermForUsers
-				description = "Export the users "
-				if connector.TermForUsers != "users" {
-					description += " as " + connector.TermForUsers
-				}
-				description += " to " + connector.Name
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      Users,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.DatabaseType,
-			state.FileStorageType:
-			var name, description string
-			if c.Role == state.Source {
-				name = "Import users"
-				description = "Import the users from " + connector.Name
-			} else {
-				name = "Export users"
-				description = "Export the users to " + connector.Name
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      Users,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.MobileType,
-			state.ServerType,
-			state.WebsiteType:
-			if c.Role == state.Source {
-				at := ActionType{
-					Name:        "Import users",
-					Description: "Import users from the events of the " + connector.Name,
-					Target:      Users,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		}
-	}
-	if targets.Contains(state.Groups) {
-		switch typ := c.Connector().Type; typ {
-		case
-			state.AppType:
-			var name, description string
-			if c.Role == state.Source {
-				name = "Import " + connector.TermForGroups
-				description = "Import the " + connector.TermForGroups
-				if connector.TermForGroups != "groups" {
-					description += " as groups"
-				}
-				description += " from " + connector.Name
-			} else {
-				name = "Export " + connector.TermForGroups
-				description = "Export the groups "
-				if connector.TermForGroups != "groups" {
-					description += " as " + connector.TermForGroups
-				}
-				description += " to " + connector.Name
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      Groups,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.DatabaseType,
-			state.FileStorageType:
-			var name, description string
-			if c.Role == state.Source {
-				name = "Import groups"
-				description = "Import the groups from " + connector.Name
-			} else {
-				name = "Export groups"
-				description = "Export the groups to " + connector.Name
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      Groups,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.MobileType,
-			state.ServerType,
-			state.WebsiteType:
-			if c.Role == state.Source {
-				at := ActionType{
-					Name:        "Import groups",
-					Description: "Import groups from the events of the " + connector.Name,
-					Target:      Groups,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		}
-	}
-	if targets.Contains(state.Events) {
-		switch typ := c.Connector().Type; typ {
-		case state.MobileType, state.ServerType, state.WebsiteType:
-			if c.Role == state.Source {
-				description := "Import events from the "
-				switch typ {
-				case state.MobileType:
-					description += "mobile app"
-				case state.ServerType:
-					description += "server"
-				case state.WebsiteType:
-					description += "website"
-				}
-				at := ActionType{
-					Name:        "Import events",
-					Description: description,
-					Target:      Events,
-				}
-				actionTypes = slices.Insert(actionTypes, 0, at)
-			}
-		case state.AppType:
-			if c.Role == state.Destination {
-				eventTypes, err := this.app().EventTypes(ctx)
-				if err != nil {
-					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-				}
-				for _, et := range eventTypes {
-					id := et.ID
-					actionTypes = append(actionTypes, ActionType{
-						Name:        et.Name,
-						Description: et.Description,
-						Target:      Events,
-						EventType:   &id,
-					})
-				}
-			}
-		}
-	}
-	if actionTypes == nil {
-		actionTypes = []ActionType{}
-	}
-	return actionTypes, nil
 }
 
 // app returns the app of the connection.

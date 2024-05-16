@@ -91,6 +91,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"GET    /api/workspaces/{workspace}":                                                             organization.Workspace,
 		"GET    /api/workspaces/{workspace}/connections":                                                 workspace.Connections,
 		"GET    /api/workspaces/{workspace}/connections/{connection}":                                    workspace.Connection,
+		"GET    /api/workspaces/{workspace}/connections/{connection}/action-types":                       connection.ActionTypes,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/schemas/Events/{eventType}": connection.ActionSchemas,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   connection.Action,

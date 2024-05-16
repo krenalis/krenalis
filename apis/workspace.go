@@ -642,9 +642,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 // Connection returns the connection with identifier id of the workspace.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-// If an error occurred fetching the schema, it returns an
-// errors.UnprocessableError error with code FetchSchemaFailed.
-func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
+func (this *Workspace) Connection(id int) (*Connection, error) {
 	this.apis.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
@@ -674,12 +672,6 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Health:           Health(c.Health),
 	}
 
-	// Set the action types.
-	ts, err := connection.actionTypes(ctx)
-	if err != nil {
-		return nil, err
-	}
-	connection.ActionTypes = &ts
 	// Set the actions.
 	actions := c.Actions()
 	a := make([]Action, len(actions))

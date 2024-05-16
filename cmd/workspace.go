@@ -156,7 +156,7 @@ func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (a
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Connection(r.Context(), id)
+	return ws.Connection(id)
 }
 
 // Connections returns the connections of a workspace.
