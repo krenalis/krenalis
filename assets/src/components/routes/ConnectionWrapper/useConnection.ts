@@ -15,12 +15,6 @@ const useConnection = () => {
 
 	useEffect(() => {
 		const fetchConnection = async () => {
-			const providedConnection = connections.find((c) => c.id === Number(params.id));
-			if (providedConnection == null) {
-				setIsLoading(false);
-				showNotFound();
-				return;
-			}
 			let fetchedConnection: Connection;
 			try {
 				fetchedConnection = await api.workspaces.connections.get(Number(params.id));
@@ -30,6 +24,10 @@ const useConnection = () => {
 					return;
 				}
 				handleError(err);
+				return;
+			}
+			const providedConnection = connections.find((c) => c.id === Number(params.id));
+			if (providedConnection == null) {
 				return;
 			}
 			// enrich the transformed connection with the additional
