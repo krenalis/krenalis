@@ -274,8 +274,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) 
 		Fields: []chichi.Component{
 			&chichi.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
-		Values:  values,
-		Buttons: []chichi.Button{{Event: "save", Text: "Save", Variant: "primary"}},
+		Values: values,
 	}
 
 	return ui, nil

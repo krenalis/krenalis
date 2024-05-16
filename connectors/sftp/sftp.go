@@ -142,7 +142,6 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*chic
 		Values: values,
 		Buttons: []chichi.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
-			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 

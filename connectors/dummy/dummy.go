@@ -276,8 +276,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*
 		Fields: []chichi.Component{
 			&chichi.Checkbox{Name: "LargeDataset", Label: "Enable the full dataset of users (1000 users instead of 10)", Role: chichi.Source},
 		},
-		Values:  values,
-		Buttons: []chichi.Button{{Event: "save", Text: "Save", Variant: "primary"}},
+		Values: values,
 	}
 
 	return ui, nil

@@ -180,9 +180,6 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi
 			&chichi.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

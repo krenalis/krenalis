@@ -379,9 +379,6 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*c
 			&chichi.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

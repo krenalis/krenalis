@@ -260,76 +260,59 @@ const ConnectorSettings = () => {
 		setValues((prevValues) => ({ ...prevValues, [name]: value }));
 	};
 
-	const onSave = async () => {
-		try {
-			validateConnectorSettings(values, fields);
-		} catch (err) {
-			handleError(err);
-			return;
-		}
-		let id: number;
-		try {
-			const connection: ConnectionToAdd = {
-				name: name,
-				role: connectionRole,
-				enabled: true,
-				connector: connectorName,
-				strategy: strategy,
-				websiteHost: websiteHost,
-				SendingMode: SendingMode,
-				uiValues: values,
-				eventConnections: eventConnections,
-			};
-			id = await api.workspaces.addConnection(connection, OAuthToken);
-		} catch (err) {
-			if (err instanceof UnprocessableError) {
-				if (err.code === 'ConnectorNotExist') {
-					redirect('connectors');
-				}
-			}
-			handleError(err);
-			return;
-		}
-		setNewConnectionID(id);
-		setIsLoadingConnections(true);
-		return;
-	};
-
 	const fieldsToRender: ReactNode[] = [];
 	for (const f of fields) {
 		fieldsToRender.push(<ConnectorField key={f.Label} field={f} />);
 	}
 
+	let hasSaveButton = false;
 	const buttonsToRender: ReactNode[] = [];
-	for (const [i, b] of buttons.entries()) {
-		if (b.Confirm) {
-			buttonsToRender.push(
-				<FeedbackButton
-					key={b.Event}
-					variant={b.Variant}
-					onClick={async () => {
-						await onActionClick(b.Event, i);
-					}}
-					ref={(ref) => {
-						confirmationButtonsRef.current[i] = ref!;
-					}}
-				>
-					{b.Text}
-				</FeedbackButton>,
-			);
-		} else {
-			buttonsToRender.push(
-				<SlButton
-					key={b.Event}
-					variant={b.Variant}
-					onClick={async () => {
-						await onActionClick(b.Event);
-					}}
-				>
-					{b.Text}
-				</SlButton>,
-			);
+	if (buttons) {
+		for (const [i, b] of buttons.entries()) {
+			hasSaveButton = b.Event === 'save';
+			if (b.Confirm) {
+				buttonsToRender.push(
+					<FeedbackButton
+						key={b.Event}
+						variant={b.Variant}
+						onClick={async () => {
+							await onActionClick(b.Event, i);
+						}}
+						ref={(ref) => {
+							confirmationButtonsRef.current[i] = ref!;
+						}}
+					>
+						{b.Text}
+					</FeedbackButton>,
+				);
+			} else {
+				buttonsToRender.push(
+					<SlButton
+						key={b.Event}
+						variant={b.Variant}
+						onClick={async () => {
+							await onActionClick(b.Event);
+						}}
+					>
+						{b.Text}
+					</SlButton>,
+				);
+			}
 		}
+	}
+
+	if (!hasSaveButton) {
+		buttonsToRender.push(
+			<div className='connector-settings__save-wrapper'>
+				<SlButton
+					className='connector-settings__save-button'
+					variant='primary'
+					onClick={() => onActionClick('save')}
+				>
+					Save
+				</SlButton>
+			</div>,
+		);
 	}
 
 	if (notFound) {
@@ -461,7 +444,7 @@ const ConnectorSettings = () => {
 							</>
 						)}
 					</div>
-					{(fieldsToRender.length > 0 || buttonsToRender.length > 0) && (
+					{fieldsToRender.length > 0 ? (
 						<ConnectorUI
 							fields={fieldsToRender}
 							buttons={buttonsToRender}
@@ -470,19 +453,10 @@ const ConnectorSettings = () => {
 						>
 							{eventConnectionsContainer}
 						</ConnectorUI>
-					)}
-					{fieldsToRender.length === 0 && buttonsToRender.length === 0 && (
+					) : (
 						<>
 							{eventConnectionsContainer}
-							<div className='connector-settings__save-wrapper'>
-								<SlButton
-									className='connector-settings__save-button'
-									variant='primary'
-									onClick={onSave}
-								>
-									Save
-								</SlButton>
-							</div>
+							{buttonsToRender}
 						</>
 					)}
 				</div>

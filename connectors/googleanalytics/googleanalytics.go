@@ -177,9 +177,6 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (
 			&chichi.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

@@ -198,9 +198,6 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*chich
 			&chichi.Switch{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: chichi.Destination},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

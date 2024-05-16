@@ -123,9 +123,6 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 			},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

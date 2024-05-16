@@ -150,9 +150,6 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*chich
 			&chichi.Input{Name: "Bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

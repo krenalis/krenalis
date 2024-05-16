@@ -149,9 +149,6 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chich
 			},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
 	}
 
 	return ui, nil

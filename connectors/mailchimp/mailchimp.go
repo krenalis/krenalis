@@ -468,8 +468,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (
 		Fields: []chichi.Component{
 			&chichi.Select{Name: "List", Label: "List", Options: options},
 		},
-		Values:  values,
-		Buttons: []chichi.Button{{Event: "save", Text: "Save", Variant: "primary"}},
+		Values: values,
 	}
 
 	return ui, nil

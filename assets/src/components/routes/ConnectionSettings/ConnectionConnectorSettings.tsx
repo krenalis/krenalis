@@ -145,36 +145,48 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		fieldsToRender.push(<ConnectorField key={i} field={f} />);
 	}
 
+	let hasSaveButton = false;
 	const buttonsToRender: ReactNode[] = [];
-	for (const [i, b] of buttons.entries()) {
-		if (b.Confirm) {
-			buttonsToRender.push(
-				<FeedbackButton
-					key={b.Event}
-					variant={b.Variant}
-					onClick={async () => {
-						await onActionClick(b.Event, i);
-					}}
-					ref={(ref) => {
-						confirmationButtonsRef.current[i] = ref!;
-					}}
-				>
-					{b.Text}
-				</FeedbackButton>,
-			);
-		} else {
-			buttonsToRender.push(
-				<SlButton
-					key={b.Event}
-					variant={b.Variant}
-					onClick={async () => {
-						await onActionClick(b.Event);
-					}}
-				>
-					{b.Text}
-				</SlButton>,
-			);
+	if (buttons) {
+		for (const [i, b] of buttons.entries()) {
+			hasSaveButton = b.Event === 'save';
+			if (b.Confirm) {
+				buttonsToRender.push(
+					<FeedbackButton
+						key={b.Event}
+						variant={b.Variant}
+						onClick={async () => {
+							await onActionClick(b.Event, i);
+						}}
+						ref={(ref) => {
+							confirmationButtonsRef.current[i] = ref!;
+						}}
+					>
+						{b.Text}
+					</FeedbackButton>,
+				);
+			} else {
+				buttonsToRender.push(
+					<SlButton
+						key={b.Event}
+						variant={b.Variant}
+						onClick={async () => {
+							await onActionClick(b.Event);
+						}}
+					>
+						{b.Text}
+					</SlButton>,
+				);
+			}
 		}
+	}
+
+	if (!hasSaveButton) {
+		buttonsToRender.push(
+			<SlButton variant='primary' onClick={() => onActionClick('save')}>
+				Save
+			</SlButton>,
+		);
 	}
 
 	return <ConnectorUI fields={fieldsToRender} buttons={buttonsToRender} values={values} onChange={onFieldChange} />;
