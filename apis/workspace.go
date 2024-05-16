@@ -407,6 +407,10 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	current := removeMetaProperties(this.workspace.UsersSchema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema)                       // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 
+	if err := checkAllowedTypesUsersSchema(schema); err != nil {
+		return errors.BadRequest("not allowed type in schema: %s", err)
+	}
+
 	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
@@ -495,6 +499,9 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
+	if err := checkAllowedTypesUsersSchema(schema); err != nil {
+		return nil, errors.BadRequest("not allowed type in schema: %s", err)
+	}
 	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return nil, errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
@@ -1768,6 +1775,44 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 	count = max(len(identities), count)
 
 	return identities, count, nil
+}
+
+// checkAllowedTypesUsersSchema checks the given users schema and returns error
+// in case it contains properties which are not allowed in data warehouse users
+// schemas.
+func checkAllowedTypesUsersSchema(schema types.Type) error {
+	for _, p := range schema.Properties() {
+		if p.Placeholder != "" {
+			return errors.New("property cannot specify a placeholder")
+		}
+		if p.Role != types.BothRole {
+			return errors.New("property cannot specify a role")
+		}
+		if p.Required {
+			return errors.New("property cannot be 'required'")
+		}
+		switch p.Type.Kind() {
+		// Array types cannot have items of type Array, Object, or Map.
+		// Map types cannot have values of type Array, Object, or Map.
+		case types.ArrayKind, types.MapKind:
+			k := p.Type.Elem().Kind()
+			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
+				return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), k)
+			}
+		// Properties with type Object cannot be "nullable", as this would lead
+		// to confusion and representation issues regarding type and values in
+		// various data warehouses.
+		case types.ObjectKind:
+			if p.Nullable {
+				return errors.New("property with type Object cannot be nullable")
+			}
+			err := checkAllowedTypesUsersSchema(p.Type)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func validateRePaths(rePaths map[string]any) error {

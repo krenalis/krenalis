@@ -8,7 +8,6 @@
 package diffschemas
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -26,6 +25,12 @@ import (
 // as their value. Any property path which does not refer to changed properties
 // is ignored.
 //
+// The Diff function assumes that both the oldSchema and newSchema comply with
+// the requirements of data warehouse schemas and that they do not contain
+// unsupported types or properties; however, they may contain properties and
+// types that are invalid for specific data warehouses; related errors will then
+// be returned by the drivers.
+//
 // In case the difference between old schema and new schema cannot be computed,
 // an error is returned.
 func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]warehouses.AlterSchemaOperation, error) {
@@ -39,17 +44,11 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 	oldPropsByName := map[string]types.Property{}
 	for _, p := range oldSchema.Properties() {
-		if err := validPropertyForDiff(p); err != nil {
-			return nil, fmt.Errorf("old schema is not valid for diff: %s", err)
-		}
 		oldPropsByName[p.Name] = p
 	}
 
 	newPropsByName := map[string]types.Property{}
 	for _, p := range newSchema.Properties() {
-		if err := validPropertyForDiff(p); err != nil {
-			return nil, fmt.Errorf("new schema is not valid for diff: %s", err)
-		}
 		newPropsByName[p.Name] = p
 	}
 
@@ -141,9 +140,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// New properties, whose name did not already exist in the schema.
 		// They do not appear in "rePaths".
 		p := newPropsByName[addedName]
-		if containsNullableObject(p) {
-			return nil, fmt.Errorf("nullable properties with type Object are not supported")
-		}
 		if p.Type.Kind() == types.ObjectKind {
 			for _, c := range propertiesToColumns(p.Type.Properties()) {
 				operations = append(operations, warehouses.AlterSchemaOperation{
@@ -302,23 +298,6 @@ func appendPath(path, name string) string {
 	return path + "." + name
 }
 
-// containsNullableObject reports whether p, or one of its sub-properties, have
-// type Object and are nullable.
-func containsNullableObject(p types.Property) bool {
-	if p.Type.Kind() != types.ObjectKind {
-		return false
-	}
-	if p.Nullable {
-		return true
-	}
-	for _, subP := range p.Type.Properties() {
-		if containsNullableObject(subP) {
-			return true
-		}
-	}
-	return false
-}
-
 // difference returns set1 - set2.
 func difference(set1, set2 []string) []string {
 	m := make(map[string]struct{}, len(set2))
@@ -363,21 +342,6 @@ func propertyPaths(obj types.Type) []string {
 		}
 	}
 	return paths
-}
-
-// validPropertyForDiff validates the fields of the property p, determining if
-// their value is allowed in a schema on which the diff must be calculated.
-func validPropertyForDiff(p types.Property) error {
-	if p.Placeholder != "" {
-		return errors.New("property cannot have a placeholder")
-	}
-	if p.Role != types.BothRole {
-		return errors.New("property cannot specify a role")
-	}
-	if p.Required {
-		return errors.New("property cannot be 'required'")
-	}
-	return nil
 }
 
 // pathToColumn returns the column name relative to the given path.
