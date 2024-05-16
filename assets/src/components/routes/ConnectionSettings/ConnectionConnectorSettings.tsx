@@ -149,8 +149,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	const buttonsToRender: ReactNode[] = [];
 	if (buttons) {
 		for (const [i, b] of buttons.entries()) {
-			hasSaveButton = b.Event === 'save';
-			if (b.Confirm) {
+			if (b.Event !== 'save') {
 				buttonsToRender.push(
 					<FeedbackButton
 						key={b.Event}
@@ -166,6 +165,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 					</FeedbackButton>,
 				);
 			} else {
+				hasSaveButton = true;
 				buttonsToRender.push(
 					<SlButton
 						key={b.Event}

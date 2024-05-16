@@ -122,7 +122,7 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*chi
 		},
 		Values: values,
 		Buttons: []chichi.Button{
-			{Event: "test", Text: "Test Connection", Variant: "neutral", Confirm: true},
+			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
 

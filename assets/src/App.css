@@ -149,11 +149,6 @@ sl-button > a {
 	height: 100%;
 }
 
-sl-button[size='medium']:not([circle]) sl-icon {
-	position: relative;
-	bottom: 1px;
-}
-
 sl-alert[variant='primary'] > *,
 sl-alert[variant='neutral'] > *,
 sl-alert[variant='danger'] > *,
