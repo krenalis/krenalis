@@ -88,30 +88,32 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 
 	// Determine the properties to select from the data warehouse.
-	var properties []types.Path
+	var properties []string
 	if action.Transformation.Mapping != nil {
-		properties = transformer.Properties()
+		pp := transformer.Properties()
 		if action.MatchingProperties != nil {
 			internal := action.MatchingProperties.Internal
 			var found bool
-			for _, path := range properties {
+			for _, path := range pp {
 				if len(path) == 1 && path[0] == internal {
 					found = true
 					break
 				}
 			}
 			if !found {
-				properties = append(properties, types.Path{internal})
+				pp = append(pp, types.Path{internal})
 			}
 		}
-	} else {
-		for _, p := range schema.PropertiesNames() {
-			properties = append(properties, types.Path{p})
+		properties = make([]string, len(pp))
+		for i, p := range pp {
+			properties[i] = p.String()
 		}
+	} else {
+		properties = schema.PropertiesNames()
 	}
 
 	// Read the users.
-	records, _, err := store.Users(ctx, datastore.UsersQuery{
+	records, err := store.UserRecords(ctx, datastore.Query{
 		Properties: properties,
 		Filter:     action.Filter,
 		OrderBy:    "__id__",

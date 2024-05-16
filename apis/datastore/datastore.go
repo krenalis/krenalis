@@ -62,6 +62,7 @@ func New(st *state.State) *Datastore {
 		store: map[int]*Store{},
 	}
 	ds.state.AddListener(ds.onSetWarehouse)
+	ds.state.AddListener(ds.onSetWorkspaceUsersSchema)
 	for _, organization := range st.Organizations() {
 		for _, ws := range organization.Workspaces() {
 			if ws.Warehouse == nil {
@@ -148,6 +149,18 @@ func (ds *Datastore) Store(workspace int) *Store {
 func (ds *Datastore) mustBeOpen() {
 	if ds.closed.Load() {
 		panic("apis/datastore is closed")
+	}
+}
+
+func (ds *Datastore) onSetWorkspaceUsersSchema(n state.SetWorkspaceUsersSchema) {
+	ds.mu.Lock()
+	store, ok := ds.store[n.Workspace]
+	ds.mu.Unlock()
+	if ok {
+		store.columnByProperty.mu.Lock()
+		store.columnByProperty.user = columnByProperty(n.UsersSchema)
+		store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
+		store.columnByProperty.mu.Unlock()
 	}
 }
 

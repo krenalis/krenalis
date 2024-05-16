@@ -1379,18 +1379,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Read the users.
-	propsPaths := []types.Path{}
-	for _, p := range properties {
-		propsPaths = append(propsPaths, types.Path{p})
-	}
-	records, count, err := this.store.Users(ctx, datastore.UsersQuery{
-		Properties: propsPaths,
+	users, count, err := this.store.Users(ctx, datastore.Query{
+		Properties: properties,
 		Filter:     stateFilter,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
-	}, ws.UsersSchema)
+	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -1402,25 +1398,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		return nil, types.Type{}, 0, err
 	}
-	users := []map[string]any{}
-	err = records.For(func(user datastore.Record) error {
-		if user.Err != nil {
-			return err
-		}
-		users = append(users, user.Properties)
-		return nil
-	})
-	if err != nil {
-		return nil, types.Type{}, 0, err
-	}
-	if err = records.Err(); err != nil {
-		return nil, types.Type{}, 0, err
-	}
-
-	// Since the count is an estimate, being counted separately from the actual
-	// number of users returned, ensure to not return a value lower than the
-	// actually returned number of users.
-	count = max(len(users), count)
 
 	// Create the schema to return, with only the requested properties.
 	requestedProperties := make([]types.Property, len(properties))
@@ -1448,29 +1425,6 @@ func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
 		return 0, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
 	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
-}
-
-// usersIdentitiesSchema returns the "users_identities" schema.
-func (this *Workspace) usersIdentitiesSchema() types.Type {
-	// Meta properties of the "users_identities" schema.
-	props := []types.Property{
-		{Name: "__identity_key__", Type: types.Int(32)},
-		{Name: "__connection__", Type: types.Int(32)},
-		{Name: "__identity_id__", Type: types.Text()},
-		{Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
-		{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "__last_change_time__", Type: types.DateTime()},
-		{Name: "__gid__", Type: types.Int(32)},
-	}
-	// Add the properties (which are non meta properties) from the "users"
-	// schema.
-	for _, p := range this.workspace.UsersSchema.Properties() {
-		if isMetaProperty(p.Name) {
-			continue
-		}
-		props = append(props, p)
-	}
-	return types.Object(props)
 }
 
 // ConnectionToAdd represents a connection to add to a workspace.
@@ -1662,7 +1616,7 @@ type identity struct {
 	LastChangeTime    time.Time
 }
 
-// userIdentities returns the users identities matching the "where" expression,
+// userIdentities returns the users identities matching the provided filter
 // and an estimate of their count without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
@@ -1677,14 +1631,13 @@ type identity struct {
 func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter, first, limit int) ([]identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	records, count, err := this.store.UserIdentities(ctx, datastore.UsersIdentitiesQuery{
-		Properties: []types.Path{{"__connection__"}, {"__identity_id__"},
-			{"__anonymous_ids__"}, {"__last_change_time__"}, {"__displayed_property__"}},
-		Filter:  filter,
-		OrderBy: "__identity_key__",
-		First:   first,
-		Limit:   limit,
-	}, this.usersIdentitiesSchema())
+	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
+		Properties: []string{"__connection__", "__identity_id__", "__anonymous_ids__", "__last_change_time__", "__displayed_property__"},
+		Filter:     filter,
+		OrderBy:    "__identity_key__",
+		First:      first,
+		Limit:      limit,
+	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -1694,23 +1647,21 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 
 	// Create the identities from the records returned by the datastore.
 	var identities []identity
-	err = records.For(func(record datastore.Record) error {
-		if record.Err != nil {
-			return err
-		}
+
+	for _, record := range records {
 
 		// Retrieve the connection.
-		connID := record.Properties["__connection__"].(int)
+		connID := record["__connection__"].(int)
 		conn, ok := this.apis.state.Connection(connID)
 		if !ok {
 			// The connection for this user identity no longer exists, so skip
 			// this identity.
-			return nil
+			continue
 		}
 
 		// Determine the value for the identity ID, which may be the empty
 		// string for identities incoming from anonymous events.
-		identityID := record.Properties["__identity_id__"].(string)
+		identityID := record["__identity_id__"].(string)
 
 		// Determine the label for the Identity ID, except for the case of
 		// "anonymous identities", which are identities imported from anonymous
@@ -1730,13 +1681,13 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			case state.MobileType, state.ServerType, state.WebsiteType:
 				identityIDLabel = "User ID"
 			default:
-				return fmt.Errorf("unexpected connector type %v", c.Type)
+				return nil, 0, fmt.Errorf("unexpected connector type %v", c.Type)
 			}
 		}
 
 		// Determine the anonymous IDs.
 		var anonIDs []string
-		if ids, ok := record.Properties["__anonymous_ids__"].([]any); ok {
+		if ids, ok := record["__anonymous_ids__"].([]any); ok {
 			anonIDs = make([]string, len(ids))
 			for i := range ids {
 				anonIDs[i] = ids[i].(string)
@@ -1744,10 +1695,10 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		}
 
 		// Determine the last change time.
-		lastChangeTime := record.Properties["__last_change_time__"].(time.Time)
+		lastChangeTime := record["__last_change_time__"].(time.Time)
 
 		// Determine the displayed property.
-		displayedProperty := record.Properties["__displayed_property__"].(string)
+		displayedProperty := record["__displayed_property__"].(string)
 
 		identities = append(identities, identity{
 			Connection: connID,
@@ -1760,13 +1711,6 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			LastChangeTime:    lastChangeTime,
 		})
 
-		return nil
-	})
-	if err != nil {
-		return nil, 0, err
-	}
-	if err = records.Err(); err != nil {
-		return nil, 0, err
 	}
 
 	// Since the count is an estimate, being counted separately from the actual

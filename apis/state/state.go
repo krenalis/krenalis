@@ -64,6 +64,7 @@ type State struct {
 		SetConnectionSettings   []func(SetConnectionSettings)
 		SetWarehouse            []func(SetWarehouse)
 		SetWorkspace            []func(SetWorkspace)
+		SetWorkspaceUsersSchema []func(SetWorkspaceUsersSchema)
 	}
 	close struct {
 		ctx       context.Context

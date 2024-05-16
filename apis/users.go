@@ -18,7 +18,6 @@ import (
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
 )
 
 // User represents a user.
@@ -48,30 +47,22 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		return nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	ws := this.workspace
-
 	// Verify that the workspace has a data warehouse.
 	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-
-	// Read the event schema's properties.
-	schema := events.WarehouseSchema
-	properties := schema.Properties()
 
 	// Retrieve the events records.
-	propsPaths := make([]types.Path, len(properties))
-	for i, p := range properties {
-		propsPaths[i] = types.Path{p.Name}
-	}
-	records, err := this.store.Events(ctx, datastore.EventsQuery{
-		Properties: propsPaths,
+	evs, err := this.store.Events(ctx, datastore.Query{
+		Properties: events.Schema.PropertiesNames(),
 		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 			Property: "gid",
 			Operator: "is",
 			Value:    strconv.Itoa(this.id),
 		}}},
-		Limit: limit,
+		OrderBy:   "timestamp",
+		OrderDesc: true,
+		Limit:     limit,
 	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
@@ -79,37 +70,17 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		}
 		return nil, err
 	}
-
-	evs := []map[string]any{}
-	err = records.For(func(record datastore.Record) error {
-		if record.Err != nil {
-			return err
-		}
-		// Convert "snake_case" property names (used in the data warehouse) to
-		// "camelCase" (used in the exposed events).
-		convertEventPropertyCase(record.Properties)
-		evs = append(evs, record.Properties)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err = records.Err(); err != nil {
-		return nil, err
-	}
 	if len(evs) == 0 {
 		// Verify that the user exists.
-		ws := &Workspace{
-			apis:      this.apis,
-			store:     this.store,
-			workspace: this.workspace,
-		}
-		filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
-			Property: "__gid__",
-			Operator: "is",
-			Value:    strconv.Itoa(this.id),
-		}}}
-		_, count, err := ws.userIdentities(ctx, filter, 0, 1)
+		_, count, err := this.store.Users(ctx, datastore.Query{
+			Properties: []string{"__id__"},
+			Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+				Property: "__id__",
+				Operator: "is",
+				Value:    strconv.Itoa(this.id),
+			}}},
+			Limit: 1,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -117,6 +88,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 			return nil, errors.NotFound("user %d does not exist", this.id)
 		}
 	}
+
 	return encoding.MarshalSlice(events.Schema, evs)
 }
 
@@ -183,22 +155,19 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	// Determine the properties to select.
-	properties := []types.Path{}
-	for _, p := range ws.UsersSchema.PropertiesNames() {
-		properties = append(properties, types.Path{p})
-	}
+	properties := this.workspace.UsersSchema.PropertiesNames()
+	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+		Property: "__id__",
+		Operator: "is",
+		Value:    strconv.Itoa(this.id),
+	}}}
 
-	// Retrieve the user traits as records.
-	records, _, err := this.store.Users(ctx, datastore.UsersQuery{
+	// Retrieve the user traits.
+	records, _, err := this.store.Users(ctx, datastore.Query{
 		Properties: properties,
-		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
-			Property: "__id__",
-			Operator: "is",
-			Value:    strconv.Itoa(this.id),
-		}}},
-		Limit: 1,
-	}, ws.UsersSchema)
+		Filter:     filter,
+		Limit:      1,
+	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -210,62 +179,9 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		}
 		return nil, err
 	}
-	var traits map[string]any
-	err = records.For(func(user datastore.Record) error {
-		if user.Err != nil {
-			return err
-		}
-		traits = user.Properties
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err = records.Err(); err != nil {
-		return nil, err
-	}
-	if traits == nil {
+	if len(records) == 0 {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
 
-	return encoding.Marshal(ws.UsersSchema, traits)
-}
-
-// convertEventPropertyCase converts the case of the event property names from
-// "snake_case" (used in the data warehouse) to "camelCase" (used in the event
-// exposed via HTTP or in the action).
-func convertEventPropertyCase(event map[string]any) {
-
-	// Anonymous ID.
-	event["anonymousId"] = event["anonymous_id"]
-	delete(event, "anonymous_id")
-
-	context := event["context"].(map[string]any)
-
-	// Context > Device.
-	device := context["device"].(map[string]any)
-	device["advertisingId"] = device["advertising_id"]
-	delete(device, "advertising_id")
-	device["adTrackingEnabled"] = device["ad_tracking_enabled"]
-	delete(device, "ad_tracking_enabled")
-
-	// Context > User agent.
-	context["userAgent"] = context["user_agent"]
-	delete(context, "user_agent")
-
-	// Group ID.
-	event["groupId"] = event["group_id"]
-	delete(event, "group_id")
-
-	// Message ID.
-	event["messageId"] = event["message_id"]
-	delete(event, "message_id")
-
-	// Received at.
-	event["receivedAt"] = event["received_at"]
-	delete(event, "received_at")
-
-	// User ID.
-	event["userId"] = event["user_id"]
-	delete(event, "user_id")
+	return encoding.Marshal(ws.UsersSchema, records[0])
 }

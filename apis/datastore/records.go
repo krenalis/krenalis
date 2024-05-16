@@ -13,7 +13,6 @@ import (
 	"fmt"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 )
 
@@ -45,150 +44,71 @@ type Record struct {
 	Err error
 }
 
-// queryParams holds information to pass to the 'records' method.
-type queryParams struct {
+// records executes a query on the data warehouse and returns a Records iterator
+// to iterate on the resulting records. schema is the schema of the properties
+// in Properties and Filter of query, and columnByProperty is the mapping from
+// the path of a property to the relative column.
+func (store *Store) records(ctx context.Context, query Query, schema types.Type, columnByProperty map[string]warehouses.Column) (Records, error) {
 
-	// Table is the table to query.
-	Table string
-
-	// TableSchema is the schema with the properties of the table specified in
-	// Table.
-	TableSchema types.Type
-
-	// IDColumn is the name of the column which contains the ID returned in the
-	// records. It cannot be the empty string.
-	IDColumn string
-
-	// Properties are the properties to return for each record in the
-	// Record.Properties field.
-	Properties []types.Path
-
-	// Filter, when not nil, filters the records to return.
-	Filter *state.Filter
-
-	// OrderBy, when provided, is the name of property for which the returned
-	// records are ordered.
-	OrderBy string
-
-	// OrderDesc, when true and OrderBy is provided, orders the returned records
-	// in descending order instead of ascending order.
-	OrderDesc bool
-
-	// First is the index of the first returned record and must be >= 0.
-	First int
-
-	// Limit controls how many records should be returned and must be >= 0. If
-	// 0, it means that there is no limit.
-	Limit int
-}
-
-// records performs a query on the store and return its result as a Records
-// iterator.
-func (store *Store) records(ctx context.Context, query queryParams) (Records, int, error) {
-
-	// Determine the properties.
-	var properties []types.Property
-	for _, path := range query.Properties {
-		p, ok := query.TableSchema.Property(path[0])
-		if !ok {
-			return nil, 0, fmt.Errorf("property %q not found in the schema of the table %q", path[0], query.Table)
-		}
-		properties = append(properties, p)
+	if err := checkSchemaAlignment(schema, columnByProperty); err != nil {
+		return nil, err
 	}
 
-	// Determine the columns to query.
-	columns := propertiesToColumns(properties)
-
-	// If the ID is not already present in the columns, add it.
-	hasID := false
-	for _, c := range columns {
-		if c.Name == query.IDColumn {
-			hasID = true
-			break
-		}
-	}
-	removeIDFromProps := false
-	if !hasID {
-		id, ok := query.TableSchema.Property(query.IDColumn)
-		if !ok {
-			return nil, 0, fmt.Errorf("ID column %q not found in the schema of the table %q", query.IDColumn, query.Table)
-		}
-		columns = append([]warehouses.Column{{Name: id.Name, Type: id.Type, Nullable: id.Nullable}}, columns...)
-		properties = append([]types.Property{id}, properties...)
-		// Ensure that the ID is subsequently removed from the properties, as it
-		// is only required by the driver to determine the ID and should not be
-		// returned.
-		removeIDFromProps = true
-	}
+	columns, explode := columnsFromProperties(query.Properties, columnByProperty)
+	columns = append(columns, columnByProperty[query.id])
 
 	var where warehouses.Expr
 	if query.Filter != nil {
 		var err error
-		where, err = convertFilterToExpr(query.Filter, query.TableSchema)
+		where, err = exprFromFilter(query.Filter, columnByProperty)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 	}
 
 	var orderBy warehouses.Column
+	var orderDesc bool
 	if query.OrderBy != "" {
-		p, ok := query.TableSchema.Property(query.OrderBy)
+		var ok bool
+		orderBy, ok = columnByProperty[query.OrderBy]
 		if !ok {
-			return nil, 0, fmt.Errorf("orderBy property %s does not exist", query.OrderBy)
+			return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
 		}
-		orderBy = warehouses.Column{Name: p.Name, Type: p.Type, Nullable: p.Nullable}
+		orderDesc = query.OrderDesc
 	}
 
-	rows, count, err := store.warehouse.Query(ctx, warehouses.RowQuery{
+	rows, _, err := store.warehouse.Query(ctx, warehouses.RowQuery{
 		Columns:   columns,
-		Table:     query.Table,
+		Table:     query.table,
 		Where:     where,
 		OrderBy:   orderBy,
-		OrderDesc: query.OrderDesc,
+		OrderDesc: orderDesc,
 		First:     query.First,
 		Limit:     query.Limit,
 	})
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	records, err := newRecords(rows, columns, properties,
-		query.IDColumn, store.warehouse.Normalize, removeIDFromProps)
-	if err != nil {
-		return nil, 0, err
+	records := &records{
+		columns:   columns,
+		explode:   explode,
+		rows:      rows,
+		normalize: store.warehouse.Normalize,
 	}
 
-	return records, count, err
+	return records, err
 }
 
 var _ Records = (*records)(nil)
 
 type records struct {
-	columns           []warehouses.Column
-	properties        []types.Property
-	rows              warehouses.Rows
-	id                string
-	dst               []any
-	err               error
-	closed            bool
-	normalize         NormalizeFunc
-	removeIDFromProps bool
-}
-
-// newRecords return a new records.
-// It could change the columns slice and the column names.
-// id is the name of the property used as Record.ID.
-func newRecords(rows warehouses.Rows, columns []warehouses.Column, properties []types.Property, id string, normalize NormalizeFunc, removeIDFromProps bool) (*records, error) {
-	records := records{
-		columns:           columns,
-		properties:        properties,
-		rows:              rows,
-		id:                id,
-		dst:               make([]any, len(columns)),
-		normalize:         normalize,
-		removeIDFromProps: removeIDFromProps,
-	}
-	return &records, nil
+	columns   []warehouses.Column
+	explode   explodeRowFunc
+	rows      warehouses.Rows
+	err       error
+	closed    bool
+	normalize NormalizeFunc
 }
 
 func (r *records) Close() error {
@@ -210,25 +130,17 @@ func (r *records) For(yield func(Record) error) error {
 		return nil
 	}
 	defer r.Close()
+	last := len(r.columns) - 1
 	row := make([]any, len(r.columns))
 	values := newScanValues(r.columns, row, r.normalize)
 	for r.rows.Next() {
 		if err := r.rows.Scan(values...); err != nil {
 			r.err = err
-			return nil
 		}
-		var record Record
-		props, _ := warehouses.DeserializeRowAsMap(r.properties, row)
-		id, ok := props[r.id].(int)
-		if !ok {
-			r.err = fmt.Errorf("row has no integer ID %q", r.id)
-			return nil
+		record := Record{
+			ID:         row[last].(int),
+			Properties: r.explode(row),
 		}
-		record.ID = id
-		if r.removeIDFromProps {
-			delete(props, r.id)
-		}
-		record.Properties = props
 		if err := yield(record); err != nil {
 			return err
 		}
@@ -274,4 +186,37 @@ func (sv *scanValue) Scan(src any) error {
 	sv.row[sv.index] = value
 	sv.index = (sv.index + 1) % len(sv.columns)
 	return nil
+}
+
+// SchemaError represents an error with a schema.
+type SchemaError struct {
+	Msg string
+}
+
+func (err *SchemaError) Error() string {
+	return err.Msg
+}
+
+// checkSchemaAlignment checks whether schema is aligned with the properties and
+// types of columnByProperty. It returns a *SchemaError error if it is not
+// aligned. It panics if a schema is not valid.
+func checkSchemaAlignment(schema types.Type, columnByProperty map[string]warehouses.Column) error {
+	var err error
+	// for _, p := range types.Walk(schema) { ... }
+	types.Walk(schema)(func(path string, p types.Property) bool {
+		if p.Type.Kind() == types.ObjectKind {
+			return true
+		}
+		c, ok := columnByProperty[path]
+		if !ok {
+			err = &SchemaError{Msg: fmt.Sprintf(`%q property no longer exists`, path)}
+			return false
+		}
+		if !p.Type.EqualTo(c.Type) {
+			err = &SchemaError{Msg: fmt.Sprintf(`type of the %q property has been changed from %s to %s`, path, c.Type, p.Type)}
+			return false
+		}
+		return true
+	})
+	return err
 }

@@ -9,23 +9,16 @@ package datastore
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/netip"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
-
-	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // ErrInspectionMode is returned by Store methods when they cannot execute due
@@ -36,10 +29,55 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
+// Query represents a query on a table of a data warehouse.
+type Query struct {
+
+	// table is the table to query.
+	table string
+
+	// id is the path of a property whose value is returned in the 'Record.ID'
+	// field. The property must have type Int(32) and cannot be nullable. It is
+	// meaningful only if the method executing the query returns a Records
+	// iterator.
+	id string
+
+	// count retrieves the total number of rows that match the filter,
+	// irrespective of the first and limit parameters. It is meaningful only if
+	// the method has a count return parameter.
+	count bool
+
+	// Properties are the paths of the properties to return. It cannot be empty
+	// and cannot contain overlapped paths.
+	Properties []string
+
+	// Filter, when not nil, filters the records to return.
+	Filter *state.Filter
+
+	// OrderBy, when non-empty, is the path of property for which the returned
+	// rows are ordered.
+	OrderBy string
+
+	// OrderDesc, when true and OrderBy is provided, orders the returned records
+	// in descending order instead of ascending order.
+	OrderDesc bool
+
+	// First is the index of the first returned record and must be >= 0.
+	First int
+
+	// Limit controls how many rows should be returned and must be >= 0. If 0,
+	// it means that there is no limit.
+	Limit int
+}
+
 type Store struct {
-	ds        *Datastore
-	workspace int
-	warehouse warehouses.Warehouse
+	ds               *Datastore
+	workspace        int
+	warehouse        warehouses.Warehouse
+	columnByProperty struct {
+		mu       sync.Mutex
+		user     map[string]warehouses.Column
+		identity map[string]warehouses.Column
+	}
 	mode      state.WarehouseMode
 	mu        sync.Mutex // for the events field
 	events    []map[string]any
@@ -60,6 +98,8 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
+	store.columnByProperty.user = columnByProperty(ws.UsersSchema)
+	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	if ws.Warehouse.Mode == state.Normal {
 		go func() {
 			ticker := time.NewTicker(flushEventsQueueTimeout)
@@ -202,55 +242,19 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, 
 	return store.warehouse.DuplicatedUsers(ctx, column)
 }
 
-// Events returns an iterator over the results of the query on the 'events'
-// table of the data warehouse, ordered from the most recent to the oldest.
+// Events returns the events according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) Events(ctx context.Context, query EventsQuery) (Records, error) {
-
-	// TODO(Gianluca): check alignment / do normalization here. See the issue
-	// https://github.com/open2b/chichi/issues/728.
-
+func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
 		return nil, ErrMaintenanceMode
 	}
-	q := queryParams{
-		Table:       "events",
-		TableSchema: events.WarehouseSchemaWithGID,
-		IDColumn:    "gid",
-		Properties:  query.Properties,
-		Filter:      query.Filter,
-		OrderBy:     "timestamp",
-		OrderDesc:   true,
-		First:       query.First,
-		Limit:       query.Limit,
-	}
-	records, _, err := store.records(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	return records, nil
-}
-
-// EventsQuery represents a query for the Events method.
-type EventsQuery struct {
-
-	// Properties are the properties to return for each record in the
-	// Record.Properties field.
-	Properties []types.Path
-
-	// Filter, when not nil, filters the records to return.
-	Filter *state.Filter
-
-	// First is the index of the first returned record and must be >= 0.
-	First int
-
-	// Limit controls how many records should be returned and must be >= 0. If
-	// 0, it means that there is no limit.
-	Limit int
+	query.table = "events"
+	records, _, err := store.query(ctx, query, eventColumnByProperty)
+	return records, err
 }
 
 type IdentitiesWriter = warehouses.IdentitiesWriter
@@ -367,121 +371,51 @@ func (store *Store) SetDestinationUser(ctx context.Context, action int, external
 	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
 }
 
-// Users returns an iterator over the results of the query on the 'users' table
-// of the data warehouse and an estimated count of the users that would be
-// returned if First and Limit were not provided in the query.
-//
-// usersSchema is the schema of the "users" table.
+// Users returns the users according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) Users(ctx context.Context, query UsersQuery, usersSchema types.Type) (Records, int, error) {
-
-	// TODO(Gianluca): check alignment / do normalization here. See the issue
-	// https://github.com/open2b/chichi/issues/728.
-
+func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
-	q := queryParams{
-		Table:       "users",
-		TableSchema: usersSchema,
-		IDColumn:    "__id__",
-		Properties:  query.Properties,
-		Filter:      query.Filter,
-		OrderBy:     query.OrderBy,
-		OrderDesc:   query.OrderDesc,
-		First:       query.First,
-		Limit:       query.Limit,
-	}
-	return store.records(ctx, q)
+	query.table = "users"
+	query.count = true
+	return store.query(ctx, query, store.userColumnByProperty())
 }
 
-// UsersQuery represents a query for the Users method.
-type UsersQuery struct {
-
-	// Properties are the properties to return for each record in the
-	// Record.Properties field.
-	Properties []types.Path
-
-	// Filter, when not nil, filters the records to return.
-	Filter *state.Filter
-
-	// OrderBy, when provided, is the name of property for which the returned
-	// records are ordered.
-	OrderBy string
-
-	// OrderDesc, when true and OrderBy is provided, orders the returned records
-	// in descending order instead of ascending order.
-	OrderDesc bool
-
-	// First is the index of the first returned record and must be >= 0.
-	First int
-
-	// Limit controls how many records should be returned and must be >= 0. If
-	// 0, it means that there is no limit.
-	Limit int
-}
-
-// UserIdentities returns an iterator over the results of the query on the
-// 'users_identities' table of the data warehouse and an estimated count of the
-// user identities that would be returned if First and Limit were not provided
-// in the query.
+// UserRecords returns an iterator over the users, according to the provided
+// query. schema is the expected schema of the provided properties to retrive.
 //
-// usersIdentitiesSchema is the schema of the "users_identities" table.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If the schema, which must be valid, does not
+// conform to the users schema, it returns a *SchemaError error. If an error
+// occurs with the data warehouse, it returns a *DataWarehouseError error.
+func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (Records, error) {
+	store.mustBeOpen()
+	if store.mode == state.Maintenance {
+		return nil, ErrMaintenanceMode
+	}
+	query.table = "users"
+	query.id = "__id__"
+	return store.records(ctx, query, schema, store.userColumnByProperty())
+}
+
+// UserIdentities returns the user identities according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) UserIdentities(ctx context.Context, query UsersIdentitiesQuery, usersIdentitiesSchema types.Type) (Records, int, error) {
-
-	// TODO(Gianluca): check alignment / do normalization here. See the issue
-	// https://github.com/open2b/chichi/issues/728.
-
+func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
 	if store.mode == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
-	q := queryParams{
-		Table:       "users_identities",
-		TableSchema: usersIdentitiesSchema,
-		IDColumn:    "__identity_key__",
-		Properties:  query.Properties,
-		Filter:      query.Filter,
-		OrderBy:     query.OrderBy,
-		OrderDesc:   query.OrderDesc,
-		First:       query.First,
-		Limit:       query.Limit,
-	}
-	return store.records(ctx, q)
-}
-
-// UsersIdentitiesQuery represents a query for the Users method.
-type UsersIdentitiesQuery struct {
-
-	// Properties are the properties to return for each record in the
-	// Record.Properties field.
-	Properties []types.Path
-
-	// Filter, when not nil, filters the records to return.
-	Filter *state.Filter
-
-	// OrderBy, when provided, is the name of property for which the returned
-	// records are ordered.
-	OrderBy string
-
-	// OrderDesc, when true and OrderBy is provided, orders the returned records
-	// in descending order instead of ascending order.
-	OrderDesc bool
-
-	// First is the index of the first returned record and must be >= 0.
-	First int
-
-	// Limit controls how many records should be returned and must be >= 0. If
-	// 0, it means that there is no limit.
-	Limit int
+	query.table = "users_identities"
+	query.count = true
+	return store.query(ctx, query, store.identityColumnByProperty())
 }
 
 // close closes the store.
@@ -511,82 +445,87 @@ func (store *Store) mustBeOpen() {
 	}
 }
 
-// CanBeIdentifier reports whether a property with type t can be used as
-// identifier in the Workspace Identity Resolution.
-func CanBeIdentifier(t types.Type) bool {
-	switch t.Kind() {
-	case types.IntKind,
-		types.UintKind,
-		types.UUIDKind,
-		types.InetKind,
-		types.TextKind:
-		return true
-	case types.DecimalKind:
-		return t.Scale() == 0
-	default:
-		return false
-	}
+// identityColumnByProperty returns the map from properties to columns for the
+// identity schema.
+func (store *Store) identityColumnByProperty() map[string]warehouses.Column {
+	store.columnByProperty.mu.Lock()
+	columns := store.columnByProperty.identity
+	store.columnByProperty.mu.Unlock()
+	return columns
 }
 
-// convertFilterToExpr converts a filter to a warehouses.Expr expression.
-// schema defines the types of properties referenced within the filter.
-func convertFilterToExpr(filter *state.Filter, schema types.Type) (warehouses.Expr, error) {
-	op := warehouses.LogicalOperatorAnd
-	if filter.Logical == "any" {
-		op = warehouses.LogicalOperatorOr
-	}
-	exp := warehouses.NewMultiExpr(op, make([]warehouses.Expr, len(filter.Conditions)))
-	for i, cond := range filter.Conditions {
-		property, err := schema.PropertyByPath(strings.Split(cond.Property, "."))
+// query executes the provided query on the data warehouse and returns an
+// iterator over the results and an estimated count of the rows that would be
+// returned if First and Limit of query were not provided.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
+func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]warehouses.Column) ([]map[string]any, int, error) {
+
+	columns, explode := columnsFromProperties(query.Properties, columnByProperty)
+
+	var where warehouses.Expr
+	if query.Filter != nil {
+		var err error
+		where, err = exprFromFilter(query.Filter, columnByProperty)
 		if err != nil {
-			return nil, fmt.Errorf("property path %s does not exist", cond.Property)
+			return nil, 0, err
 		}
-		var op warehouses.Operator
-		switch cond.Operator {
-		case "is":
-			op = warehouses.OperatorEqual
-		case "is not":
-			op = warehouses.OperatorNotEqual
-		default:
-			return nil, errors.New("invalid operator")
-		}
-		var value any
-		switch property.Type.Kind() {
-		case types.BooleanKind:
-			value = false
-			if cond.Value == "true" {
-				value = true
-			}
-		case types.IntKind:
-			value, _ = strconv.Atoi(cond.Value)
-		case types.UintKind:
-			v, _ := strconv.ParseUint(cond.Value, 10, 64)
-			value = uint(v)
-		case types.FloatKind:
-			value, _ = strconv.ParseFloat(cond.Value, 64)
-		case types.DecimalKind:
-			value = decimal.RequireFromString(cond.Value)
-		case types.DateTimeKind:
-			value, _ = time.Parse(time.DateTime, cond.Value)
-		case types.DateKind:
-			value, _ = time.Parse(time.DateOnly, cond.Value)
-		case types.TimeKind:
-			value, _ = time.Parse("15:04:05.999999999", cond.Value)
-		case types.YearKind:
-			value, _ = strconv.Atoi(cond.Value)
-		case types.UUIDKind:
-			value, _ = uuid.Parse(cond.Value)
-		case types.JSONKind:
-			value = json.RawMessage(cond.Value)
-		case types.InetKind:
-			value, _ = netip.ParseAddr(cond.Value)
-		case types.TextKind:
-			value = cond.Value
-		default:
-			return nil, fmt.Errorf("unexpected type %s", property.Type)
-		}
-		column := warehouses.Column{Name: cond.Property, Type: property.Type, Nullable: property.Nullable}
-		exp.Operands[i] = warehouses.NewBaseExpr(column, op, value)
 	}
-	return exp, nil
+
+	var orderBy warehouses.Column
+	var orderDesc bool
+	if query.OrderBy != "" {
+		var ok bool
+		orderBy, ok = columnByProperty[query.OrderBy]
+		if !ok {
+			return nil, 0, fmt.Errorf("property path %s does not exist", query.OrderBy)
+		}
+		orderDesc = query.OrderDesc
+	}
+
+	rows, count, err := store.warehouse.Query(ctx, warehouses.RowQuery{
+		Columns:   columns,
+		Table:     query.table,
+		Where:     where,
+		OrderBy:   orderBy,
+		OrderDesc: orderDesc,
+		First:     query.First,
+		Limit:     query.Limit,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	records := make([]map[string]any, 0)
+
+	defer rows.Close()
+	row := make([]any, len(columns))
+	values := newScanValues(columns, row, store.warehouse.Normalize)
+	for rows.Next() {
+		if err := rows.Scan(values...); err != nil {
+			return nil, 0, err
+		}
+		records = append(records, explode(row))
+	}
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	// Since the count is an estimate, being counted separately from the actual
+	// number of record returned, ensure to not return a value lower than the
+	// actually returned number of users.
+	count = max(len(records), count)
+
+	return records, count, nil
+}
+
+// userColumnByProperty returns the map from properties to columns for the user
+// schema.
+func (store *Store) userColumnByProperty() map[string]warehouses.Column {
+	store.columnByProperty.mu.Lock()
+	columns := store.columnByProperty.user
+	store.columnByProperty.mu.Unlock()
+	return columns
 }

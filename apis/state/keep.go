@@ -54,6 +54,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
 	case func(SetWorkspace):
 		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
+	case func(schema SetWorkspaceUsersSchema):
+		state.listeners.SetWorkspaceUsersSchema = append(state.listeners.SetWorkspaceUsersSchema, l)
 	default:
 		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
 	}
@@ -1142,6 +1144,9 @@ func (state *State) setWorkspaceUsersSchema(n notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.UsersSchema = e.UsersSchema
 	})
+	for _, listener := range state.listeners.SetWorkspaceUsersSchema {
+		listener(e)
+	}
 }
 
 // addEventConnection adds id to connections. It returns a copy of connections

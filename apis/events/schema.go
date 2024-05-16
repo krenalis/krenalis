@@ -147,13 +147,6 @@ var Schema = types.Object([]types.Property{
 	{Name: "userId", Type: types.Text()},
 })
 
-// WarehouseSchemaWithGID is like WarehouseSchema but has the "gid" as first
-// property, so it is a schema suitable for reading from the data warehouse.
-var WarehouseSchemaWithGID = types.Object(append(
-	[]types.Property{{Name: "gid", Type: types.Int(32)}},
-	WarehouseSchema.Properties()...,
-))
-
 // WarehouseSchema is the events schema for writing events on the data
 // warehouse.
 //
