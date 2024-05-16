@@ -14,7 +14,7 @@ import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import { Link } from '../../shared/Link/Link';
 
 const ConnectionsList = () => {
-	const [connectionsRows, setConnectionsRows] = useState<GridRow[]>([]);
+	const [connectionsRows, setConnectionsRows] = useState<GridRow[]>();
 	const [connectionsColumns, setConnectionColumns] = useState<GridColumn[]>([]);
 	const [role, setRole] = useState<ConnectionRole>();
 
