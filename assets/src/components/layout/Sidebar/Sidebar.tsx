@@ -88,9 +88,8 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 		}
 		const isDisabled = warehouse == null && (item.name === 'schema' || item.name === 'users');
 		items.push(
-			<Link path={isDisabled ? null : item.link}>
+			<Link path={isDisabled ? null : item.link} key={item.name}>
 				<div
-					key={item.name}
 					className={`sidebar__item${
 						isDisabled
 							? ' sidebar__item--disabled'
@@ -115,11 +114,8 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 			for (const subItem of item.subItems!) {
 				const isSelected = subItem.name === currentRoute;
 				items.push(
-					<Link path={subItem.link}>
-						<div
-							key={subItem.name}
-							className={`sidebar__sub-item${isSelected ? ' sidebar__sub-item--selected' : ''}`}
-						>
+					<Link path={subItem.link} key={subItem.name}>
+						<div className={`sidebar__sub-item${isSelected ? ' sidebar__sub-item--selected' : ''}`}>
 							{subItem.icon && <SlIcon name={subItem.icon} />}
 							<div className='sidebar__sub-item-text'>{subItem.label}</div>
 						</div>
