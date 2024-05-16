@@ -1,4 +1,6 @@
-# Change the "users" schema
+# Changing Users Schema
+
+The user schema associated with a newly created workspace contains only one property, `email`. This schema should be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Chichi.
 
 ## How to change the users schema
 
