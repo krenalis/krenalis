@@ -117,7 +117,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			return types.Type{}, false, ""
 		}
 		// Skip the timezone if present.
-		if s, ok := trimComma(s); ok {
+		if s, ok = trimComma(s); ok {
 			_, s, ok = parseString(s)
 			if !ok {
 				return types.Type{}, false, ""

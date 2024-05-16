@@ -687,9 +687,7 @@ func serializeProperties(properties []string) string {
 	if !hasLastChange {
 		plist = append(plist, "members.last_changed")
 	}
-	for _, p := range properties {
-		plist = append(plist, p)
-	}
+	plist = append(plist, properties...)
 	return strings.Join(plist, ",")
 }
 

@@ -46,6 +46,9 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 // DeleteMember deletes a member of an organization.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, o, err := organization.credentials(r)
+	if err != nil {
+		return nil, err
+	}
 	member, err := organization.member(r)
 	if err != nil {
 		return nil, err

@@ -74,7 +74,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	if err != nil {
 		return err
 	}
-	_, err = fi.Seek(io.SeekStart, 0)
+	_, err = fi.Seek(0, io.SeekStart)
 	if err != nil {
 		return err
 	}

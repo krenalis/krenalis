@@ -221,6 +221,7 @@ func (s *apisServer) credentials(r *http.Request) (*apis.Member, *apis.Organizat
 		if _, ok := err.(*errors.NotFoundError); ok {
 			return nil, nil, loginRequiredError
 		}
+		return nil, nil, err
 	}
 
 	// Get the member.
