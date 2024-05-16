@@ -1136,6 +1136,15 @@ func (t Type) Properties() []Property {
 	return slices.Clone(t.vl.([]Property))
 }
 
+// NumProperties returns the count of properties in t.
+// Panics if t is not an Object type.
+func (t Type) NumProperties() int {
+	if t.kind != ObjectKind {
+		panic("cannot get the properties of a non-Object type")
+	}
+	return len(t.vl.([]Property))
+}
+
 // PropertiesNames returns the names of the properties of the Object t.
 // Panics if t is not an Object type.
 func (t Type) PropertiesNames() []string {
@@ -1203,6 +1212,74 @@ func (t Type) EqualTo(t2 Type) bool {
 		return ok && vl1.String() == vl2.String()
 	}
 	panic("unreachable code")
+}
+
+// Seq2 represents a sequence of K and V values.
+type Seq2[K, V any] func(yield func(K, V) bool)
+
+// Properties returns an iterator over the child properties of t.
+// It panics if t is not an Object.
+func Properties(t Type) Seq2[int, Property] {
+	if t.kind != ObjectKind {
+		panic("cannot iterate over a non-Object type")
+	}
+	return func(yield func(i int, property Property) bool) {
+		pp := t.vl.([]Property)
+		for i := 0; i < len(pp); i++ {
+			if !yield(i, pp[i]) {
+				return
+			}
+		}
+	}
+}
+
+// Walk returns an iterator over all the properties in t in a depth-first order.
+//
+// For example:
+//
+//	Walk(func(path string, p Property) bool {
+//	    fmt.Printf("%s: %s\n", path, p.Type.Kind)
+//	    return true
+//	})
+//
+// If a property "x" has type Array(Object) or Map(Object) and the object has
+// the property "y", its path is "x.y".
+//
+// It panics if t is not an Object.
+func Walk(t Type) Seq2[string, Property] {
+	if t.kind != ObjectKind {
+		panic("cannot iterate over a non-Object type")
+	}
+	return func(yield func(path string, property Property) bool) {
+		type entry struct {
+			base string
+			prop *Property
+		}
+		properties := t.vl.([]Property)
+		n := len(properties)
+		pp := make([]entry, n)
+		for i := 0; i < n; i++ {
+			pp[i].prop = &properties[n-1-i]
+		}
+		for len(pp) > 0 {
+			var e entry
+			n := len(pp)
+			e, pp = pp[n-1], pp[:n-1]
+			t := e.prop.Type
+			for t.kind == MapKind || t.kind == ArrayKind {
+				t = t.Elem()
+			}
+			if t.kind == ObjectKind {
+				properties := t.vl.([]Property)
+				for i := len(properties) - 1; i >= 0; i-- {
+					pp = append(pp, entry{base: e.base + e.prop.Name + ".", prop: &properties[i]})
+				}
+			}
+			if !yield(e.base+e.prop.Name, *e.prop) {
+				return
+			}
+		}
+	}
 }
 
 // normalizedUTF8 returns s as a normalized UTF-8 encoded string.

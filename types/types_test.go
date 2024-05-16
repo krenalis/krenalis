@@ -486,6 +486,100 @@ func Test_ParsePropertyPath(t *testing.T) {
 
 }
 
+func Test_NumProperties(t *testing.T) {
+	properties := []Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Text()},
+		{Name: "c", Type: Text()},
+	}
+	if got := Object(properties).NumProperties(); len(properties) != got {
+		t.Errorf("expected %d, got %d", len(properties), got)
+	}
+}
+
+func Test_Properties(t *testing.T) {
+	properties := []Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "c", Type: Boolean()},
+	}
+	iter := Properties(Object(properties))
+	var i = 0
+	iter(func(k int, p Property) bool {
+		if k != i {
+			t.Fatalf("expected i=%d, got i=%d", i, k)
+		}
+		if err := sameProperty(p, properties[i]); err != nil {
+			t.Fatal(err)
+		}
+		i++
+		return true
+	})
+}
+
+func Test_Walk(t *testing.T) {
+	properties := []Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "c", Type: Array(Text())},
+		{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))},
+	}
+	type entry struct {
+		path     string
+		property Property
+	}
+	iterations := []entry{
+		{"a", Property{Name: "a", Type: Text()}},
+		{"b", Property{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})}},
+		{"b.x", Property{Name: "x", Type: Text()}},
+		{"c", Property{Name: "c", Type: Array(Text())}},
+		{"d", Property{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))}},
+		{"d.x", Property{Name: "x", Type: Map(Boolean())}},
+		{"d.y", Property{Name: "y", Type: Map(Object([]Property{
+			{Name: "a", Type: Text()},
+			{Name: "b", Type: Int(32)},
+		}))}},
+		{"d.y.a", Property{Name: "a", Type: Text()}},
+		{"d.y.b", Property{Name: "b", Type: Int(32)}},
+		{"d.z", Property{Name: "z", Type: Text()}},
+	}
+	walk := Walk(Object(properties))
+	var i = 0
+	walk(func(path string, p Property) bool {
+		if i > len(iterations) {
+			t.Fatalf("expected %d iterations, got %d", len(iterations), i)
+		}
+		if path != iterations[i].path {
+			t.Fatalf("expected path %q, got %q", iterations[i].path, path)
+		}
+		if err := sameProperty(p, iterations[i].property); err != nil {
+			t.Fatal(err)
+		}
+		i++
+		return true
+	})
+}
+
 // sameType reports whether t1 and t2 are the same type. It compares t2 against
 // t1.
 func sameType(t1, t2 Type) error {
