@@ -3,7 +3,7 @@ import './ConnectionOverview.css';
 import Flex from '../../shared/Flex/Flex';
 import Grid from '../../shared/Grid/Grid';
 import AppContext from '../../../context/AppContext';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import { NotFoundError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';

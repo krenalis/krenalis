@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { NotFoundError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import AppContext from '../../../context/AppContext';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import { SNIPPET } from '../../../constants/javascriptSnippet';

@@ -1,7 +1,7 @@
 import React, { useState, useContext, ReactNode } from 'react';
 import './ConnectionEvents.css';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import SyntaxHighlight from '../../shared/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../types/internal/app';

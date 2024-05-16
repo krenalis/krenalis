@@ -8,7 +8,6 @@ import ConnectorSettings from './components/routes/ConnectorSettings/ConnectorSe
 import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
 import ConnectionsList from './components/routes/ConnectionsList/ConnectionsList';
 import ConnectionWrapper from './components/routes/ConnectionWrapper/ConnectionWrapper';
-import { ConnectionProvider } from './context/providers/ConnectionProvider';
 import RootError from './components/routes/RootError/RootError';
 import { Users } from './components/routes/Users/Users';
 import SchemaGrid from './components/routes/SchemaGrid/SchemaGrid';
@@ -52,28 +51,23 @@ const router = createBrowserRouter([
 					{ path: 'connections/sources', element: <ConnectionsList /> },
 					{ path: 'connections/destinations', element: <ConnectionsList /> },
 					{
-						element: <ConnectionProvider />,
+						path: 'connections/:id',
+						element: <ConnectionWrapper />,
 						children: [
 							{
-								path: 'connections/:id',
-								element: <ConnectionWrapper />,
+								path: 'actions',
+								element: <ConnectionActions />,
 								children: [
-									{
-										path: 'actions',
-										element: <ConnectionActions />,
-										children: [
-											{ path: 'edit/:action', element: <ActionWrapper /> },
-											{ path: 'add/event/:eventType', element: <ActionWrapper /> },
-											{ path: 'add/event', element: <ActionWrapper /> },
-											{ path: 'add/:actionTarget', element: <ActionWrapper /> },
-										],
-									},
-									{ path: 'overview', element: <ConnectionOverview /> },
-									{ path: 'events', element: <ConnectionEvents /> },
-									{ path: 'settings', element: <ConnectionSettings /> },
-									{ path: 'identities', element: <ConnectionIdentities /> },
+									{ path: 'edit/:action', element: <ActionWrapper /> },
+									{ path: 'add/event/:eventType', element: <ActionWrapper /> },
+									{ path: 'add/event', element: <ActionWrapper /> },
+									{ path: 'add/:actionTarget', element: <ActionWrapper /> },
 								],
 							},
+							{ path: 'overview', element: <ConnectionOverview /> },
+							{ path: 'events', element: <ConnectionEvents /> },
+							{ path: 'settings', element: <ConnectionSettings /> },
+							{ path: 'identities', element: <ConnectionIdentities /> },
 						],
 					},
 					{ path: 'connections', element: <ConnectionsMap /> },

@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react
 import Grid from '../../shared/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/helpers/transformedAction';
 import AppContext from '../../../context/AppContext';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import { UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';

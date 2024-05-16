@@ -1,17 +1,12 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import AppContext from '../AppContext';
-import { NotFoundError } from '../../lib/api/errors';
-import { Outlet, useParams } from 'react-router-dom';
-import { Connection } from '../../types/external/connection';
-import TransformedConnection from '../../lib/helpers/transformedConnection';
+import { useState, useContext, useEffect } from 'react';
+import AppContext from '../../../context/AppContext';
+import { useParams } from 'react-router-dom';
+import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import { Connection } from '../../../types/external/connection';
+import { NotFoundError } from '../../../lib/api/errors';
 
-interface ConnectionContextInterface {
-	connection: TransformedConnection;
-}
-
-const ConnectionContext = createContext<ConnectionContextInterface>({} as ConnectionContextInterface);
-
-const ConnectionProvider = () => {
+const useConnection = () => {
+	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [connection, setConnection] = useState<TransformedConnection>();
 
 	const { api, handleError, showNotFound, connections } = useContext(AppContext);
@@ -22,6 +17,7 @@ const ConnectionProvider = () => {
 		const fetchConnection = async () => {
 			const providedConnection = connections.find((c) => c.id === Number(params.id));
 			if (providedConnection == null) {
+				setIsLoading(false);
 				showNotFound();
 				return;
 			}
@@ -42,19 +38,14 @@ const ConnectionProvider = () => {
 			connection.actionTypes = fetchedConnection.ActionTypes;
 			connection.actions = fetchedConnection.Actions;
 			setConnection(connection);
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 300);
 		};
 		fetchConnection();
 	}, [connections, params.id]);
 
-	if (connection == null) {
-		return null;
-	}
-
-	return (
-		<ConnectionContext.Provider value={{ connection }}>
-			<Outlet />
-		</ConnectionContext.Provider>
-	);
+	return { isLoading, connection };
 };
 
-export { ConnectionProvider, ConnectionContext };
+export { useConnection };

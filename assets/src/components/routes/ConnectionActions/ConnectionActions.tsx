@@ -6,7 +6,7 @@ import ActionsGrid from './ActionsGrid';
 import ListTile from '../../shared/ListTile/ListTile';
 import ActionTypesDialog from './ActionTypesDialog';
 import AppContext from '../../../context/AppContext';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import { Outlet } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';

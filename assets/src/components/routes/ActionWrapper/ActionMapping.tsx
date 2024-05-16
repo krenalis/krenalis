@@ -50,7 +50,7 @@ import Type, { ObjectType, Property } from '../../../types/external/types';
 import extractSpecialProperties from '../../../lib/utils/extractSpecialProperties';
 import { EventListenerEvent, Sample } from '../../../types/internal/app';
 import { UnprocessableError } from '../../../lib/api/errors';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../types/external/workspace';
 import { ActionToSet, TransformationFunction } from '../../../types/external/action';
 import { debounceWithAbort } from '../../../lib/utils/debounce';

@@ -26,7 +26,7 @@ import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
 import ConnectorFieldInterface from '../../../types/external/ui';
 import { redirect } from 'react-router-dom';
-import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import ConnectionContext from '../../../context/ConnectionContext';
 import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
 import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
