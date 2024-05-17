@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
 import Toast from './components/shared/Toast/Toast';
-import * as variants from './constants/variants';
 import * as icons from './constants/icons';
 import { Status } from './types/internal/app';
 import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
@@ -51,7 +50,7 @@ const App = () => {
 		toastRef.current.hide();
 		setTimeout(() => {
 			setStatus({
-				variant: variants.DANGER,
+				variant: 'danger',
 				icon: icons.EXCLAMATION,
 				text: err instanceof Error ? err.message : err,
 			});

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './Identifiers.css';
 import Section from '../../shared/Section/Section';
-import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
@@ -115,7 +114,7 @@ const Identifiers = () => {
 		setIsLoadingWorkspaces(true);
 		setTimeout(() => {
 			setIsSaving(false);
-			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Identifiers saved successfully' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'Identifiers saved successfully' });
 		}, 500);
 	};
 

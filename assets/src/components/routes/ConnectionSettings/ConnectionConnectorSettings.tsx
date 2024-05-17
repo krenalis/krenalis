@@ -3,7 +3,6 @@ import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
 import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import AppContext from '../../../context/AppContext';
-import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -117,7 +116,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			confirmationButton!.stop();
 		}
 		if (eventName === 'save') {
-			showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'The connection settings have been saved' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'The connection settings have been saved' });
 			return;
 		}
 		if (ui == null) {

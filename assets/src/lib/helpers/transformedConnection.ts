@@ -1,4 +1,3 @@
-import * as variants from '../../constants/variants';
 import {
 	Connection,
 	Health,
@@ -10,10 +9,11 @@ import {
 } from '../../types/external/connection';
 import { Action, ActionTarget, ActionType } from '../../types/external/action';
 import TransformedConnector from './transformedConnector';
+import { Variant } from '../../types/internal/app';
 
 interface ConnectionStatus {
 	text: string;
-	variant: string;
+	variant: Variant | '';
 }
 
 class TransformedConnection {
@@ -174,17 +174,17 @@ const getConnectionFullConnector = (
 
 const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 	if (!connection.Enabled) {
-		return { text: 'Disabled', variant: variants.NEUTRAL };
+		return { text: 'Disabled', variant: 'neutral' };
 	} else {
 		switch (connection.Health) {
 			case 'Healthy':
-				return { text: 'Working properly', variant: variants.SUCCESS };
+				return { text: 'Working properly', variant: 'success' };
 			case 'NoRecentData':
-				return { text: 'No recent Data', variant: variants.DANGER };
+				return { text: 'No recent Data', variant: 'danger' };
 			case 'RecentError':
-				return { text: 'Recent error', variant: variants.DANGER };
+				return { text: 'Recent error', variant: 'danger' };
 			case 'AccessDenied':
-				return { text: 'Access denied', variant: variants.DANGER };
+				return { text: 'Access denied', variant: 'danger' };
 			default:
 				return { text: '', variant: '' };
 		}
