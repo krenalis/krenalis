@@ -1,6 +1,6 @@
 import { ConnectorType, SendingMode, WebhooksPer } from '../../types/external/connector';
 import { ActionTarget } from '../../types/external/action';
-import { PLUG_ICON } from '../../constants/icons';
+import * as icons from '../../constants/icons';
 
 class TransformedConnector {
 	name: string;
@@ -42,7 +42,7 @@ class TransformedConnector {
 		this.type = type;
 		this.hasSheets = hasSheets;
 		this.hasUI = hasUI;
-		this.icon = icon ? icon : PLUG_ICON;
+		this.icon = icon ? icon : icons.PLUG;
 		this.fileExtension = fileExtension;
 		this.sampleQuery = sampleQuery;
 		this.webhooksPer = webhooksPer;
