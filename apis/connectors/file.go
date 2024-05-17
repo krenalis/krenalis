@@ -619,9 +619,6 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				rd.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
-		if err := rw.yield(rd); err != nil {
-			return yieldError{err: err}
-		}
 		// Parse the displayed property.
 		if rd.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.name]
@@ -637,6 +634,9 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 					rd.DisplayedProperty = s
 				}
 			}
+		}
+		if err := rw.yield(rd); err != nil {
+			return yieldError{err: err}
 		}
 	}
 	rw.limit--
