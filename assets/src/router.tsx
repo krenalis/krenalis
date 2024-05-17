@@ -1,5 +1,5 @@
 import React from 'react';
-import { uiBasePath } from './constants/path';
+import { UI_BASE_PATH } from './constants/path';
 import App from './App';
 import AppLayout from './components/routes/AppLayout/AppLayout';
 import Login from './components/routes/Login/Login';
@@ -35,7 +35,7 @@ import { SchemaEditWrapper } from './components/routes/SchemaEdit/SchemaEditWrap
 
 const router = createBrowserRouter([
 	{
-		path: uiBasePath,
+		path: UI_BASE_PATH,
 		element: <App />,
 		errorElement: <RootError />,
 		children: [

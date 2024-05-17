@@ -1,4 +1,4 @@
-const rawTransformationFunctions = {
+const RAW_TRANSFORMATION_FUNCTIONS = {
 	JavaScript: `const transform = ($parameterName) => {
     return {}
 }`,
@@ -9,4 +9,4 @@ const rawTransformationFunctions = {
 
 const CONFIRM_ANIMATION_DURATION = 1200;
 
-export { rawTransformationFunctions, CONFIRM_ANIMATION_DURATION };
+export { RAW_TRANSFORMATION_FUNCTIONS, CONFIRM_ANIMATION_DURATION };

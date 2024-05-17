@@ -1,6 +1,6 @@
 import { useEffect, useContext, useState } from 'react';
 import AppContext from '../../../context/AppContext';
-import { uiBasePath } from '../../../constants/path';
+import { UI_BASE_PATH } from '../../../constants/path';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserProperty, UserPagination } from '../../../types/internal/user';
 import { ObjectType } from '../../../types/external/types';
@@ -107,7 +107,7 @@ const useUsers = () => {
 			setTimeout(() => {
 				setIsLoading(false);
 				if (err instanceof NotFoundError) {
-					redirect(uiBasePath);
+					redirect(UI_BASE_PATH);
 					handleError('The workspace does not exist anymore');
 					return;
 				}

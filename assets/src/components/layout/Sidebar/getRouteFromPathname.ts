@@ -1,4 +1,4 @@
-import { uiBasePath } from '../../../constants/path';
+import { UI_BASE_PATH } from '../../../constants/path';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 const getRouteFromPathname = (route: string, connections: TransformedConnection[]): string => {
@@ -7,7 +7,7 @@ const getRouteFromPathname = (route: string, connections: TransformedConnection[
 		fragments.includes('connections') ||
 		fragments.includes('connectors') ||
 		fragments.includes('oauth') ||
-		route === uiBasePath;
+		route === UI_BASE_PATH;
 
 	let currentRoute = '';
 	if (isConnectionsRelated) {

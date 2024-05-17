@@ -4,7 +4,7 @@ import Toast from './components/shared/Toast/Toast';
 import * as icons from './constants/icons';
 import { Status } from './types/internal/app';
 import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
-import { uiBasePath, signUpPath } from './constants/path';
+import { UI_BASE_PATH, SIGN_UP_PATH } from './constants/path';
 import AppContext from './context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
@@ -59,19 +59,19 @@ const App = () => {
 	};
 
 	const showNotFound = () => {
-		return navigate(`${uiBasePath}not-found`);
+		return navigate(`${UI_BASE_PATH}not-found`);
 	};
 
 	const redirect = (url: string) => {
 		if (toastRef.current) {
 			toastRef.current.hide();
 		}
-		const redirectURL = `${uiBasePath}${url}`;
+		const redirectURL = `${UI_BASE_PATH}${url}`;
 		if (redirectURL === location.pathname) {
 			setIsLoadingState(true);
 			return;
 		}
-		return navigate(`${uiBasePath}${url}`);
+		return navigate(`${UI_BASE_PATH}${url}`);
 	};
 
 	const {
@@ -91,7 +91,7 @@ const App = () => {
 	} = useApp(handleError, redirect, logout, location);
 
 	useEffect(() => {
-		if (!isLoggedIn && location.pathname !== uiBasePath && !location.pathname.startsWith(signUpPath)) {
+		if (!isLoggedIn && location.pathname !== UI_BASE_PATH && !location.pathname.startsWith(SIGN_UP_PATH)) {
 			redirect('');
 		}
 	}, [isLoggedIn, location]);
@@ -117,7 +117,7 @@ const App = () => {
 	let content: ReactNode;
 	if (
 		isLoadingState ||
-		(!isLoggedIn && location.pathname !== uiBasePath && !location.pathname.startsWith(signUpPath))
+		(!isLoggedIn && location.pathname !== UI_BASE_PATH && !location.pathname.startsWith(SIGN_UP_PATH))
 	) {
 		content = (
 			<SlSpinner

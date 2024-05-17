@@ -14,7 +14,7 @@ import {
 	flattenSchema,
 	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
-import { rawTransformationFunctions } from './Action.constants';
+import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
 import Section from '../../shared/Section/Section';
@@ -203,7 +203,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		const isLanguageChanged = !isTransformationUndefined && a.Transformation.Function.Language !== selectedLanguage;
 		if (isTransformationUndefined || isLanguageChanged) {
 			a.Transformation.Function = {
-				Source: rawTransformationFunctions[selectedLanguage].replace(
+				Source: RAW_TRANSFORMATION_FUNCTIONS[selectedLanguage].replace(
 					'$parameterName',
 					defaultTransformationParameterByTarget[actionType.Target],
 				),
@@ -706,7 +706,7 @@ const TransformationBox = ({
 			} else {
 				a.Transformation.Mapping = null;
 				a.Transformation.Function = {
-					Source: rawTransformationFunctions[pendingMode.current].replace(
+					Source: RAW_TRANSFORMATION_FUNCTIONS[pendingMode.current].replace(
 						'$parameterName',
 						defaultTransformationParameterByTarget[actionType.Target],
 					),

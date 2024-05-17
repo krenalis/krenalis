@@ -1,4 +1,4 @@
-const uiBasePath = '/ui/';
-const signUpPath = '/ui/sign-up';
+const UI_BASE_PATH = '/ui/';
+const SIGN_UP_PATH = '/ui/sign-up';
 
-export { uiBasePath, signUpPath };
+export { UI_BASE_PATH, SIGN_UP_PATH };

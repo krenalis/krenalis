@@ -1,7 +1,7 @@
 import './Link.css';
 import React, { ReactNode, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { uiBasePath } from '../../../constants/path';
+import { UI_BASE_PATH } from '../../../constants/path';
 import AppContext from '../../../context/AppContext';
 
 interface LinkProps {
@@ -25,7 +25,7 @@ const Link = ({ children, path, onRedirect }: LinkProps) => {
 		if (toastRef?.current) {
 			toastRef.current.hide();
 		}
-		if (`${uiBasePath}${path}` === location.pathname) {
+		if (`${UI_BASE_PATH}${path}` === location.pathname) {
 			setIsLoadingState(true);
 			e.preventDefault();
 			return;
@@ -37,7 +37,7 @@ const Link = ({ children, path, onRedirect }: LinkProps) => {
 	}
 
 	return (
-		<RouterLink to={`${uiBasePath}${path}`} onClick={onClick}>
+		<RouterLink to={`${UI_BASE_PATH}${path}`} onClick={onClick}>
 			{children}
 		</RouterLink>
 	);
