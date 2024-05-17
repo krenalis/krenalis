@@ -26,6 +26,7 @@ import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 import { isEventConnection } from '../../../lib/helpers/transformedConnection';
 import { EventConnectionSelector } from '../../shared/EventConnectionSelector/EventConnectionSelector';
+import * as icons from '../../../constants/icons';
 
 const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
 
@@ -246,7 +247,7 @@ const ConnectorSettings = () => {
 			return;
 		}
 		if (ui.Alert != null) {
-			showStatus({ variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message });
+			showStatus({ variant: ui.Alert.Variant, icon: icons.EXCLAMATION, text: ui.Alert.Message });
 		}
 		if (ui.Fields != null) {
 			setFields(ui.Fields);
