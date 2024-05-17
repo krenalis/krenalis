@@ -18,7 +18,7 @@ interface ActionContext {
 	isImport: boolean;
 	isTransformationFunctionSupported: boolean;
 	onClose: () => void;
-	mappingSectionRef: React.MutableRefObject<any>;
+	transformationSectionRef: React.MutableRefObject<any>;
 	isTransformationHidden: boolean;
 	isTransformationDisabled: boolean;
 	isSaveButtonLoading: boolean;

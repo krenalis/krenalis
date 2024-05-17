@@ -17,7 +17,7 @@ const ActionTable = () => {
 		setAction,
 		actionType,
 		setActionType,
-		mappingSectionRef,
+		transformationSectionRef,
 		setIsTableChanged,
 		isTransformationDisabled,
 	} = useContext(ActionContext);
@@ -72,8 +72,8 @@ const ActionTable = () => {
 			a.Transformation.Mapping = flattenSchema(schema);
 			setAction(a);
 			setTimeout(() => {
-				const top = mappingSectionRef.current!.getBoundingClientRect().top;
-				mappingSectionRef.current!.closest('.fullscreen').scrollBy({
+				const top = transformationSectionRef.current!.getBoundingClientRect().top;
+				transformationSectionRef.current!.closest('.fullscreen').scrollBy({
 					top: top - 130,
 					left: 0,
 					behavior: 'smooth',

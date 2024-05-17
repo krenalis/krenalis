@@ -65,7 +65,7 @@ interface TransformedMatchingProperties {
 type ActionTypeField =
 	| 'DisplayedProperty'
 	| 'Filter'
-	| 'Mapping'
+	| 'Transformation'
 	| 'MatchingProperties'
 	| 'ExportOnDuplicatedUsers'
 	| 'ExportMode'
@@ -642,7 +642,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 			connection.role === 'Source' &&
 			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
 	) {
-		fields.push('Mapping');
+		fields.push('Transformation');
 	}
 	if (
 		connection.type === 'App' &&

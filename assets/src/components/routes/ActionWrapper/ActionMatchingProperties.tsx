@@ -59,7 +59,7 @@ const ActionMatchingProperties = () => {
 					value={action.MatchingProperties!.Internal}
 					label='Golden record property'
 					data-type='Internal'
-					className='action__mapping-input-property'
+					className='action__transformation-input-property'
 					caret={true}
 					error={internalPropertyError}
 				></ComboBoxInput>

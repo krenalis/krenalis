@@ -29,7 +29,7 @@ const ActionQuery = () => {
 		setAction,
 		actionType,
 		setActionType,
-		mappingSectionRef,
+		transformationSectionRef,
 		setIsQueryChanged,
 		isTransformationDisabled,
 		isEditing,
@@ -97,8 +97,8 @@ const ActionQuery = () => {
 			actionTyp.InputSchema = res.Schema;
 			setActionType(actionTyp);
 			setTimeout(() => {
-				const top = mappingSectionRef.current.getBoundingClientRect().top;
-				mappingSectionRef.current.closest('.fullscreen').scrollBy({
+				const top = transformationSectionRef.current.getBoundingClientRect().top;
+				transformationSectionRef.current.closest('.fullscreen').scrollBy({
 					top: top - 130,
 					left: 0,
 					behavior: 'smooth',

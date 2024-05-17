@@ -1,7 +1,7 @@
 import React, { useState, useContext, useRef, ReactNode } from 'react';
 import './Action.css';
 import ActionHeader from './ActionHeader';
-import ActionMapping from './ActionMapping';
+import ActionTransformation from './ActionTransformation';
 import ActionFile from './ActionFile';
 import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
@@ -22,7 +22,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const { connection } = useContext(ConnectionContext);
 	const { closeFullscreen } = useContext(FullscreenContext)!;
 
-	const mappingSectionRef = useRef<ReactNode>();
+	const transformationSectionRef = useRef<ReactNode>();
 
 	const onClose = () => {
 		closeFullscreen();
@@ -87,7 +87,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				isImport,
 				isTransformationFunctionSupported,
 				onClose,
-				mappingSectionRef,
+				transformationSectionRef,
 				isTransformationHidden,
 				isTransformationDisabled,
 				isSaveButtonLoading,
@@ -112,8 +112,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
 					{actionType!.Fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
-					{actionType!.Fields.includes('Mapping') && !isTransformationHidden && (
-						<ActionMapping ref={mappingSectionRef} />
+					{actionType!.Fields.includes('Transformation') && !isTransformationHidden && (
+						<ActionTransformation ref={transformationSectionRef} />
 					)}
 				</div>
 			</div>

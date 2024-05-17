@@ -261,7 +261,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		actionType,
 		setActionType,
 		isImport,
-		mappingSectionRef,
+		transformationSectionRef,
 		setIsFileChanged,
 		setIsFileConnectorChanged,
 		isFileConnectorChanged,
@@ -564,8 +564,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			setActionType(actionTyp);
 			setIsFileConnectorChanged(false);
 			setTimeout(() => {
-				const top = mappingSectionRef.current!.getBoundingClientRect().top;
-				mappingSectionRef.current!.closest('.fullscreen').scrollBy({
+				const top = transformationSectionRef.current!.getBoundingClientRect().top;
+				transformationSectionRef.current!.closest('.fullscreen').scrollBy({
 					top: top - 130,
 					left: 0,
 					behavior: 'smooth',

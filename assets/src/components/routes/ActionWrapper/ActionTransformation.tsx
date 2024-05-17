@@ -69,7 +69,7 @@ const lastChangeTimeFormats = {
 	excel: 'Excel',
 };
 
-const ActionMapping = forwardRef<any>((_, ref) => {
+const ActionTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
@@ -427,14 +427,18 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 	);
 
 	return (
-		<div className={`action__mapping${isTransformationDisabled ? ' action__mapping--disabled' : ''}`} ref={ref}>
+		<div
+			className={`action__transformation${isTransformationDisabled ? ' action__transformation--disabled' : ''}`}
+			ref={ref}
+		>
 			{hasSpecialProperties && (
 				<Section title='Special properties' padded={true}>
-					<div className='action__mapping-special-properties'>
+					<div className='action__transformation-special-properties'>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='action__mapping-identity-property'>
-								<div className='action__mapping-special-properties-label'>
-									Identity<span className='action__mapping-special-properties-asterisk'>*</span>:
+							<div className='action__transformation-identity-property'>
+								<div className='action__transformation-special-properties-label'>
+									Identity
+									<span className='action__transformation-special-properties-asterisk'>*</span>:
 								</div>
 								<ComboBoxInput
 									comboBoxListRef={identityPropertyListRef}
@@ -442,7 +446,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									value={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
 									name='identityProperty'
 									disabled={isTransformationDisabled || identityPropertyList.length === 0}
-									className='action__mapping-input-property'
+									className='action__transformation-input-property'
 									caret={true}
 									clearable={action.IdentityProperty?.length > 0}
 									error={
@@ -457,8 +461,8 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 								/>
 							</div>
 						)}
-						<div className='action__mapping-displayed-property'>
-							<div className='action__mapping-special-properties-label'>Displayed:</div>
+						<div className='action__transformation-displayed-property'>
+							<div className='action__transformation-special-properties-label'>Displayed:</div>
 							{connection.isEventBased ? (
 								<SlInput
 									onSlInput={onUpdateDisplayedProperty}
@@ -473,7 +477,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 									value={action.DisplayedProperty}
 									name='displayedProperty'
 									disabled={isTransformationDisabled}
-									className='action__mapping-input-property'
+									className='action__transformation-input-property'
 									caret={true}
 									clearable={action.DisplayedProperty?.length > 0}
 									error={displayedProperty}
@@ -483,16 +487,18 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 							)}
 						</div>
 						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='action__mapping-last-change-time-property'>
-								<div className='action__mapping-last-change-time'>
-									<div className='action__mapping-special-properties-label'>Last change time:</div>
+							<div className='action__transformation-last-change-time-property'>
+								<div className='action__transformation-last-change-time'>
+									<div className='action__transformation-special-properties-label'>
+										Last change time:
+									</div>
 									<ComboBoxInput
 										comboBoxListRef={lastChangeTimePropertyListRef}
 										onInput={onUpdateLastChangeTimeProperty}
 										value={action.LastChangeTimeProperty!}
 										name='lastChangeTimeProperty'
 										disabled={isTransformationDisabled}
-										className='action__mapping-input-property'
+										className='action__transformation-input-property'
 										caret={true}
 										clearable={action.LastChangeTimeProperty?.length > 0}
 										error={lastChangeTimePropertyError}
@@ -500,9 +506,9 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										helpText='A property with the time of the last modification of a user'
 									/>
 								</div>
-								<div className='action__mapping-last-change-format-property'>
-									<div className='action__mapping-last-change-format'>
-										<div className='action__mapping-special-properties-label'>Format:</div>
+								<div className='action__transformation-last-change-format-property'>
+									<div className='action__transformation-last-change-format'>
+										<div className='action__transformation-special-properties-label'>Format:</div>
 										<SlSelect
 											onSlChange={onChangeLastChangeTimeFormat}
 											value={
@@ -530,7 +536,7 @@ const ActionMapping = forwardRef<any>((_, ref) => {
 										</SlSelect>
 									</div>
 									{needFormat && isCustomLastChangeTimeFormatSelected && (
-										<div className='action__mapping-last-change-custom-format'>
+										<div className='action__transformation-last-change-custom-format'>
 											<SlInput
 												onSlInput={onInputLastChangeTimeCustomFormat}
 												value={action.LastChangeTimeFormat}
@@ -739,7 +745,7 @@ const TransformationBox = ({
 			mappings.push(
 				<div
 					key={k}
-					className='action__mapping-mapping'
+					className='action__transformation-mapping'
 					data-key={k}
 					style={
 						{
@@ -753,27 +759,30 @@ const TransformationBox = ({
 						value={action.Transformation.Mapping[k].value}
 						name={k}
 						disabled={isTransformationDisabled || action.Transformation.Mapping[k].disabled === true}
-						className='action__mapping-input-property'
+						className='action__transformation-input-property'
 						size='small'
 						error={action.Transformation.Mapping[k].error}
 						autocompleteExpressions={true}
 					>
 						{action.Transformation.Mapping[k].required && (
-							<div className='action__mapping-property-icon' slot='prefix'>
+							<div className='action__transformation-property-icon' slot='prefix'>
 								<SlTooltip content='Required' hoist>
-									<SlIcon name='asterisk' className='action__mapping-property-icon-required' />
+									<SlIcon name='asterisk' className='action__transformation-property-icon-required' />
 								</SlTooltip>
 							</div>
 						)}
 						{workspace.Identifiers.includes(k) && (
-							<div className='action__mapping-property-icon' slot='prefix'>
+							<div className='action__transformation-property-icon' slot='prefix'>
 								<SlTooltip content='Used as identifier' hoist>
-									<SlIcon name='person-check' className='action__mapping-property-identifier' />
+									<SlIcon
+										name='person-check'
+										className='action__transformation-property-identifier'
+									/>
 								</SlTooltip>
 							</div>
 						)}
 					</ComboBoxInput>
-					<div className='action__mapping-mapping-arrow'>
+					<div className='action__transformation-mapping-arrow'>
 						<SlIcon name='arrow-right' />
 					</div>
 					<SlInput
@@ -783,30 +792,30 @@ const TransformationBox = ({
 						value={k}
 						type='text'
 						name={k}
-						className={`action__mapping-output-property${
+						className={`action__transformation-output-property${
 							action.Transformation.Mapping![k].indentation! > 0
-								? ' action__mapping-output-property--indented'
+								? ' action__transformation-output-property--indented'
 								: ''
 						}`}
 					/>
 				</div>,
 			);
 		}
-		body = <div className='action__mapping-mappings'>{mappings}</div>;
+		body = <div className='action__transformation-mappings'>{mappings}</div>;
 	} else {
 		const isTransformationLanguageDeprecated = !transformationLanguages.includes(selectedLanguage);
 		body = (
-			<div className='action__mapping-transformation'>
+			<div className='action__transformation-function'>
 				<EditorWrapper
 					language={selectedLanguage}
 					height={400}
 					name='actionTransformationEditor'
 					value={action.Transformation!.Function.Source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
-					className='action__mapping-transformation-minimized'
+					className='action__transformation-function-minimized'
 				/>
 				{isTransformationLanguageDeprecated && (
-					<SlAlert variant='danger' className='action__mapping-language-deprecated' open>
+					<SlAlert variant='danger' className='action__transformation-language-deprecated' open>
 						<SlIcon slot='icon' name='exclamation-circle' />
 						{selectedLanguage} is not supported anymore
 					</SlAlert>
@@ -1816,4 +1825,4 @@ function removeTrailingS(str: string) {
 	return str;
 }
 
-export default ActionMapping;
+export default ActionTransformation;
