@@ -171,7 +171,7 @@ func checkDenoVersion() {
 	version := parts[1]
 	if version != expectedDenoVersion {
 		msg := "the version of Deno you have locally does not match the one required by the script 'commit/commit.go':\n" +
-			fmt.Sprintf("the expected Deno version was %s, but the installed is %s.\n", version, expectedDenoVersion) +
+			fmt.Sprintf("the expected Deno version was %s, but the installed is %s.\n", expectedDenoVersion, version) +
 			"This can happen for two reasons: either the version of Deno you have locally is incorrect (or not up-to-date),\n" +
 			"in which case you should upgrade it by running the command:\n" +
 			fmt.Sprintf("\n\tdeno upgrade --version %s\n\n", expectedDenoVersion) +
