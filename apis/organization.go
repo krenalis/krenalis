@@ -466,6 +466,10 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
 	}
+	if ws.Warehouse != nil {
+		mode := WarehouseMode(ws.Warehouse.Mode)
+		workspace.WarehouseMode = &mode
+	}
 	return &workspace, nil
 }
 
@@ -486,6 +490,10 @@ func (this *Organization) Workspaces() []*Workspace {
 			Identifiers:         ws.Identifiers,
 			PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 			DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
+		}
+		if ws.Warehouse != nil {
+			mode := WarehouseMode(ws.Warehouse.Mode)
+			workspace.WarehouseMode = &mode
 		}
 		infos[i] = &workspace
 	}

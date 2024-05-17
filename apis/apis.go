@@ -762,6 +762,7 @@ type Workspace struct {
 	Name                string
 	UsersSchema         types.Type
 	Identifiers         []string
+	WarehouseMode       *WarehouseMode
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
 }
