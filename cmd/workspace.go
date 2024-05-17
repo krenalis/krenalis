@@ -133,12 +133,13 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	body := struct {
 		Type     apis.WarehouseType
 		Settings rawJSON
+		Mode     apis.WarehouseMode
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeWarehouseSettings(r.Context(), body.Type, body.Settings)
+	err = ws.ChangeWarehouseSettings(r.Context(), body.Type, body.Mode, body.Settings)
 	return nil, err
 }
 

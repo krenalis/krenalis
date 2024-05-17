@@ -575,8 +575,8 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// ChangeWarehouseSettings changes the settings of the data warehouse for the
-// workspace.
+// ChangeWarehouseSettings changes the mode and the settings of the data
+// warehouse for the workspace.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
@@ -586,8 +586,14 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 //     of a different type,
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
+func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte) error {
 	this.apis.mustBeOpen()
+
+	switch mode {
+	case Normal, Inspection, Maintenance:
+	default:
+		return errors.BadRequest("mode %d is not valid", mode)
+	}
 
 	ws := this.workspace
 	if this.store == nil {
@@ -617,14 +623,14 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     ws.Warehouse.Type,
-			Mode:     ws.Warehouse.Mode,
+			Mode:     state.WarehouseMode(mode),
 			Settings: settings,
 		},
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
-			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3 AND warehouse_type = $4",
+			n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
 		if err != nil {
 			return err
 		}
