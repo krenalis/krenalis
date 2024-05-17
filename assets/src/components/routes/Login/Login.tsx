@@ -8,7 +8,7 @@ const Login = () => {
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout } = useContext(AppContext);
+	const { api, handleError, setIsLoadingState, setIsLoggedIn, logout } = useContext(AppContext);
 
 	useEffect(() => {
 		const removeCookieAndLogout = async () => {
@@ -40,7 +40,7 @@ const Login = () => {
 		if (authError) {
 			setIsLoading(false);
 			if (authError === 'AuthenticationFailed') {
-				showStatus({ variant: 'danger', icon: 'lock', text: 'Your email or password are incorrect' });
+				handleError('Your email or password are incorrect');
 				return;
 			}
 			return;

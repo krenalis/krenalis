@@ -6,7 +6,6 @@ import NotFound from '../NotFound/NotFound';
 import Flex from '../../shared/Flex/Flex';
 import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
-import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -121,7 +120,7 @@ const ConnectorSettings = () => {
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
-					showStatus(statuses.connectorDoesNotExistAnymore);
+					handleError('The connector does not exist anymore');
 					return;
 				}
 				if (err instanceof UnprocessableError) {

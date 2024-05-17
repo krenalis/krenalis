@@ -2,7 +2,6 @@ import { useEffect, useContext, useState } from 'react';
 import { AddEventListenerResponse, EventListenerEventsResponse } from '../types/external/api';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
-import statuses from '../constants/statuses';
 import { EventListenerEvent } from '../types/internal/app';
 
 const useEventListener = (
@@ -14,7 +13,7 @@ const useEventListener = (
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
 	const [eventID, setEventID] = useState<number>(1);
 
-	const { api, handleError, showStatus, redirect } = useContext(AppContext);
+	const { api, handleError, redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		if (isListenerNotFound) {
@@ -32,10 +31,10 @@ const useEventListener = (
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExists') {
 						redirect('connections');
-						showStatus(statuses.connectionDoesNotExistAnymore);
+						handleError('The connection does not exist anymore');
 					}
 					if (err.code === 'TooManyListeners') {
-						showStatus(statuses.tooManyListeners);
+						handleError('Please note that the number of event listeners allowed has been exceeded');
 					}
 					return;
 				}

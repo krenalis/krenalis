@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import Flex from '../../shared/Flex/Flex';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import statuses from '../../../constants/statuses';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
@@ -15,7 +14,7 @@ interface KeysProps {
 const ConnectionKeys = ({ connection: c }: KeysProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
 
-	const { api, showStatus, handleError, redirect, setIsLoadingConnections } = useContext(AppContext);
+	const { api, handleError, redirect, setIsLoadingConnections } = useContext(AppContext);
 
 	useEffect(() => {
 		const fetchKeys = async () => {
@@ -25,7 +24,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
-					showStatus(statuses.connectionDoesNotExistAnymore);
+					handleError('The connection does not exist anymore');
 					return;
 				}
 				handleError(err);
@@ -44,12 +43,12 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
-				showStatus(statuses.connectionDoesNotExistAnymore);
+				handleError('The connection does not exist anymore');
 				return;
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'TooManyKeys') {
-					showStatus(statuses.tooManyKeys);
+					handleError('The maximum number of keys has been reached');
 				}
 				return;
 			}
@@ -67,12 +66,12 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
-				showStatus(statuses.connectionDoesNotExistAnymore);
+				handleError('The connection does not exist anymore');
 				return;
 			}
 			if (err instanceof UnprocessableError && err.code !== 'KeyNotExist') {
 				if (err.code === 'UniqueKey') {
-					showStatus(statuses.uniqueKey);
+					handleError('The last key cannot be deleted');
 				}
 				return;
 			}

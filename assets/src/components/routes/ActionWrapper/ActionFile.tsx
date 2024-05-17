@@ -5,9 +5,6 @@ import Grid from '../../shared/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { UnprocessableError, NotFoundError, BadRequestError } from '../../../lib/api/errors';
-import statuses from '../../../constants/statuses';
-import * as variants from '../../../constants/variants';
-import * as icons from '../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -37,7 +34,7 @@ import { Popover } from '../../shared/Popover/Popover';
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
 
-	const { connectors, api, selectedWorkspace, showStatus, handleError } = useContext(AppContext);
+	const { connectors, api, selectedWorkspace, handleError } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 	const {
 		action,
@@ -98,7 +95,7 @@ const ActionFile = () => {
 					setTimeout(() => setIsFileConnectorLoading(false), 300);
 					if (err instanceof NotFoundError) {
 						redirect('connectors');
-						showStatus(statuses.connectorDoesNotExistAnymore);
+						handleError('The connector does not exist anymore');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -119,7 +116,7 @@ const ActionFile = () => {
 					setTimeout(() => setIsFileConnectorLoading(false), 300);
 					if (err instanceof NotFoundError) {
 						redirect('connectors');
-						showStatus(statuses.connectorDoesNotExistAnymore);
+						handleError('The connector does not exist anymore');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -251,7 +248,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const [filePreviewRows, setFilePreviewRows] = useState<GridRow[] | null>(null);
 	const [showFilePreviewContent, setShowFilePreviewContent] = useState<boolean>(false);
 
-	const { showStatus, handleError, api } = useContext(AppContext);
+	const { handleError, api } = useContext(AppContext);
 	const {
 		connection,
 		action,
@@ -590,7 +587,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
 					case 'ReadFileFailed':
-						showStatus({ variant: variants.DANGER, icon: icons.INVALID_INSERTED_VALUE, text: err.message });
+						handleError(err.message);
 						break;
 					default:
 						handleError(err);

@@ -1,6 +1,5 @@
 import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { NotFoundError } from '../../../lib/api/errors';
-import statuses from '../../../constants/statuses';
 import ConnectionContext from '../../../context/ConnectionContext';
 import AppContext from '../../../context/AppContext';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
@@ -10,7 +9,7 @@ import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
 const ConnectionSnippet = () => {
 	const [keys, setKeys] = useState<string[]>([]);
 
-	const { api, showStatus, handleError, redirect } = useContext(AppContext);
+	const { api, handleError, redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
 	useEffect(() => {
@@ -21,7 +20,7 @@ const ConnectionSnippet = () => {
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
-					showStatus(statuses.connectionDoesNotExistAnymore);
+					handleError('The connection does not exist anymore');
 					return;
 				}
 				handleError(err);

@@ -5,7 +5,6 @@ import Grid from '../../shared/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { NotFoundError } from '../../../lib/api/errors';
-import statuses from '../../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -27,7 +26,7 @@ const ConnectionOverview = () => {
 	const [selectedExecution, setSelectedExecution] = useState<Execution>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { api, showStatus, handleError, redirect } = useContext(AppContext);
+	const { api, handleError, redirect } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
 	useEffect(() => {
@@ -49,7 +48,7 @@ const ConnectionOverview = () => {
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
-					showStatus(statuses.connectionDoesNotExistAnymore);
+					handleError('The connection does not exist anymore');
 					stopLoading();
 					return;
 				}

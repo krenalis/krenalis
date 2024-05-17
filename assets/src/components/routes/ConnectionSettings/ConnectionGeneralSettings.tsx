@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import statuses from '../../../constants/statuses';
 import { NotFoundError } from '../../../lib/api/errors';
 import DangerZone from '../../shared/DangerZone/DangerZone';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
@@ -31,7 +30,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, redirect, setIsLoadingConnections } = useContext(AppContext);
+	const { api, handleError, redirect, setIsLoadingConnections } = useContext(AppContext);
 
 	const onNameChange = (e) => {
 		const value = e.target.value;
@@ -73,7 +72,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
-				showStatus(statuses.connectionDoesNotExistAnymore);
+				handleError('The connection does not exist anymore');
 				return;
 			}
 			handleError(err);

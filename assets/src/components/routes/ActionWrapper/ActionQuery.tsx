@@ -3,7 +3,6 @@ import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
 import Grid from '../../shared/Grid/Grid';
 import Section from '../../shared/Section/Section';
 import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
-import statuses from '../../../constants/statuses';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import ActionContext from '../../../context/ActionContext';
@@ -22,7 +21,7 @@ const ActionQuery = () => {
 	const [queryPreviewRows, setQueryPreviewRows] = useState<GridRow[] | null>(null);
 	const [showPreview, setShowPreview] = useState<boolean>(false);
 
-	const { redirect, handleError, showStatus, api } = useContext(AppContext);
+	const { redirect, handleError, api } = useContext(AppContext);
 	const {
 		connection,
 		action,
@@ -123,7 +122,7 @@ const ActionQuery = () => {
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
-				showStatus(statuses.connectionDoesNotExistAnymore);
+				handleError('The connection does not exist anymore');
 				return;
 			}
 			if (err instanceof UnprocessableError) {

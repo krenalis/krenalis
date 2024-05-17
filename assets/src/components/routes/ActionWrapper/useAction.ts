@@ -9,7 +9,6 @@ import {
 	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
 import AppContext from '../../../context/AppContext';
-import statuses from '../../../constants/statuses';
 import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/helpers/transformedConnection';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../../../types/external/action';
@@ -43,7 +42,7 @@ const useAction = (
 	const [isFileConnectorChanged, setIsFileConnectorChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 
-	const { api, handleError, redirect, connectors, showStatus } = useContext(AppContext);
+	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
 
 	const isEditing = providedAction != null;
@@ -116,7 +115,7 @@ const useAction = (
 						} catch (err) {
 							if (err instanceof NotFoundError) {
 								redirect('connectors');
-								showStatus(statuses.connectorDoesNotExistAnymore);
+								handleError('The connector does not exist anymore');
 								return;
 							}
 							if (err instanceof UnprocessableError) {

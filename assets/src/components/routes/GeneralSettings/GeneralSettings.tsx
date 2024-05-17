@@ -142,11 +142,7 @@ const GeneralSettings = () => {
 					setTimeout(() => {
 						deleteButtonRef.current!.stop();
 						setIsDeleteConfirmationDialogOpen(false);
-						showStatus({
-							variant: 'danger',
-							icon: icons.EXCLAMATION,
-							text: 'You must disconnect the data warehouse first',
-						});
+						handleError('You must disconnect the data warehouse first');
 					}, CONFIRM_ANIMATION_DURATION);
 					return;
 				}
