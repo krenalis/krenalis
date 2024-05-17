@@ -13,7 +13,7 @@ import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.j
 import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
-import { useApp } from './hooks/useApp';
+import { useApp } from './useApp';
 import { LoginRequiredError } from './lib/api/errors';
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/dist/');
