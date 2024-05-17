@@ -253,6 +253,7 @@ type fileRecords struct {
 	rc     io.ReadCloser
 	sheet  string
 	inner  chichi.File
+	last   bool
 	err    error
 	closed bool
 }
@@ -273,29 +274,35 @@ func (r *fileRecords) Err() error {
 	return r.err
 }
 
-func (r *fileRecords) For(yield func(Record) error) error {
-	if r.closed {
-		r.err = errors.New("connectors: For called on a closed Records")
-		return nil
+func (r *fileRecords) Last() bool {
+	return r.last
+}
+
+func (r *fileRecords) Seq() Seq[Record] {
+	return func(yield func(Record) bool) {
+		if r.closed {
+			r.err = errors.New("connectors: For called on a closed Records")
+			return
+		}
+		defer func() {
+			_ = r.Close()
+			if r.err == nil && r.rw.properties == nil {
+				r.err = ErrNoColumns
+			}
+		}()
+		r.rw.yield = yield
+		err := r.inner.Read(r.ctx, r.rc, r.sheet, r.rw)
+		if r.rw.record.Properties != nil || r.rw.record.Err != nil {
+			r.last = true
+			r.rw.yield(r.rw.record)
+		}
+		if err != nil && err != errRecordStop {
+			if err == chichi.ErrSheetNotExist {
+				err = ErrSheetNotExist
+			}
+			r.err = err
+		}
 	}
-	defer func() {
-		_ = r.Close()
-		if r.err == nil && r.rw.properties == nil {
-			r.err = ErrNoColumns
-		}
-	}()
-	r.rw.yield = yield
-	err := r.inner.Read(r.ctx, r.rc, r.sheet, r.rw)
-	if err != nil && err != errRecordStop {
-		if err, ok := err.(yieldError); ok {
-			return err.err
-		}
-		if err == chichi.ErrSheetNotExist {
-			err = ErrSheetNotExist
-		}
-		r.err = err
-	}
-	return nil
 }
 
 var (
@@ -391,7 +398,8 @@ func newRecordWriter(connector string, schema types.Type, identityProperty strin
 type recordWriter struct {
 	connector         string
 	limit             int
-	yield             func(Record) error
+	record            Record
+	yield             func(Record) bool
 	schema            types.Type
 	properties        []types.Property // schema's properties, or the file's columns if a schema has not been provided
 	columnIndexOf     map[int]int      // map a property index in the schema to the corresponding file's column
@@ -516,38 +524,45 @@ func (rw *recordWriter) Record(record []any) error {
 		}
 		rw.records = append(rw.records, rd)
 	} else {
+		if rw.record.Properties != nil || rw.record.Err != nil {
+			if !rw.yield(rw.record) {
+				rw.record.Properties = nil
+				rw.record.Err = nil
+				return errRecordStop
+			}
+		}
 		// Call the rw.write function to store the record.
-		rd := Record{Properties: map[string]any{}}
+		rw.record = Record{Properties: map[string]any{}}
 		for i, c := range rw.properties {
 			j := rw.columnIndexOf[i]
 			value, err := normalize(c.Name, c.Type, record[j], c.Nullable, rw.timeLayouts)
 			if err != nil {
-				rd.Err = err
+				rw.record.Err = err
 				break
 			}
-			rd.Properties[c.Name] = value
+			rw.record.Properties[c.Name] = value
 		}
 		// Parse the identity property.
-		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
 		if err != nil {
-			if rd.Err != nil {
-				rd.Err = err
+			if rw.record.Err != nil {
+				rw.record.Err = err
 			}
 		}
 		// Parse the last change time property.
-		if rd.Err == nil {
+		if rw.record.Err == nil {
 			if rw.lastChangeTimeProperty.name != "" {
 				ts := record[rw.lastChangeTimeProperty.index]
-				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+				rw.record.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 				if err != nil {
-					rd.Err = err
+					rw.record.Err = err
 				}
 			} else {
-				rd.LastChangeTime = rw.storageLastChangeTime
+				rw.record.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
 		// Parse the displayed property.
-		if rd.Err == nil && rw.displayedProperty.name != "" {
+		if rw.record.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.index]
 			c := rw.displayedProperty.column
 			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
@@ -558,12 +573,9 @@ func (rw *recordWriter) Record(record []any) error {
 				if err != nil {
 					slog.Warn("invalid displayed property value", "err", err)
 				} else {
-					rd.DisplayedProperty = s
+					rw.record.DisplayedProperty = s
 				}
 			}
-		}
-		if err := rw.yield(rd); err != nil {
-			return yieldError{err: err}
 		}
 	}
 	rw.limit--
@@ -590,37 +602,44 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		}
 		rw.records = append(rw.records, rd)
 	} else {
+		if rw.record.Properties != nil || rw.record.Err != nil {
+			if !rw.yield(rw.record) {
+				rw.record.Properties = nil
+				rw.record.Err = nil
+				return errRecordStop
+			}
+		}
 		// Call the rw.write function to store the record.
-		rd := Record{Properties: record}
+		rw.record = Record{Properties: record}
 		for _, c := range rw.properties {
 			value, err := normalize(c.Name, c.Type, record[c.Name], c.Nullable, rw.timeLayouts)
 			if err != nil {
-				rd.Err = err
+				rw.record.Err = err
 				break
 			}
-			rd.Properties[c.Name] = value
+			rw.record.Properties[c.Name] = value
 		}
 		// Parse the identity property.
-		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
 		if err != nil {
-			if rd.Err != nil {
-				rd.Err = err
+			if rw.record.Err != nil {
+				rw.record.Err = err
 			}
 		}
 		// Parse the last change time property.
-		if rd.Err == nil {
+		if rw.record.Err == nil {
 			if rw.lastChangeTimeProperty.name != "" {
 				ts := record[rw.lastChangeTimeProperty.name]
-				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+				rw.record.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 				if err != nil {
-					rd.Err = err
+					rw.record.Err = err
 				}
 			} else {
-				rd.LastChangeTime = rw.storageLastChangeTime
+				rw.record.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
 		// Parse the displayed property.
-		if rd.Err == nil && rw.displayedProperty.name != "" {
+		if rw.record.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.name]
 			c := rw.displayedProperty.column
 			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
@@ -631,12 +650,9 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				if err != nil {
 					slog.Warn("invalid displayed property value", "err", err)
 				} else {
-					rd.DisplayedProperty = s
+					rw.record.DisplayedProperty = s
 				}
 			}
-		}
-		if err := rw.yield(rd); err != nil {
-			return yieldError{err: err}
 		}
 	}
 	rw.limit--
@@ -670,39 +686,46 @@ func (rw *recordWriter) RecordString(record []string) error {
 		}
 		rw.records = append(rw.records, rd)
 	} else {
+		if rw.record.Properties != nil || rw.record.Err != nil {
+			if !rw.yield(rw.record) {
+				rw.record.Properties = nil
+				rw.record.Err = nil
+				return errRecordStop
+			}
+		}
 		// Call the rw.write function to store the record.
-		rd := Record{Properties: make(map[string]any, len(rw.properties))}
+		rw.record = Record{Properties: make(map[string]any, len(rw.properties))}
 		for i, c := range rw.properties {
 			j := rw.columnIndexOf[i]
 			value := record[j]
 			err = validateStringProperty(c, value)
 			if err != nil {
-				rd.Err = err
+				rw.record.Err = err
 				break
 			}
-			rd.Properties[c.Name] = value
+			rw.record.Properties[c.Name] = value
 		}
 		// Parse the identity property.
-		rd.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
 		if err != nil {
-			if rd.Err != nil {
-				rd.Err = err
+			if rw.record.Err != nil {
+				rw.record.Err = err
 			}
 		}
 		// Parse the last change time property.
-		if rd.Err == nil {
+		if rw.record.Err == nil {
 			if rw.lastChangeTimeProperty.name != "" {
 				ts := record[rw.lastChangeTimeProperty.index]
-				rd.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+				rw.record.LastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 				if err != nil {
-					rd.Err = err
+					rw.record.Err = err
 				}
 			} else {
-				rd.LastChangeTime = rw.storageLastChangeTime
+				rw.record.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
 		// Parse the displayed property.
-		if rd.Err == nil && rw.displayedProperty.name != "" {
+		if rw.record.Err == nil && rw.displayedProperty.name != "" {
 			v := record[rw.displayedProperty.index]
 			c := rw.displayedProperty.column
 			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
@@ -713,12 +736,9 @@ func (rw *recordWriter) RecordString(record []string) error {
 				if err != nil {
 					slog.Warn("invalid displayed property value", "err", err)
 				} else {
-					rd.DisplayedProperty = s
+					rw.record.DisplayedProperty = s
 				}
 			}
-		}
-		if err := rw.yield(rd); err != nil {
-			return yieldError{err: err}
 		}
 	}
 	rw.limit--

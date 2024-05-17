@@ -16,6 +16,9 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
+// Seq represents a sequence of V values.
+type Seq[V any] func(yield func(V) bool)
+
 // Records is the iterator interface used to iterate over the records read from
 // a data warehouse.
 type Records interface {
@@ -29,10 +32,12 @@ type Records interface {
 	// Close.
 	Err() error
 
-	// For calls the yield function for each record (r) in the sequence. If yield
-	// returns an error, For stops and returns the error. After For completes, it
+	// Last reports whether the last record has been read.
+	Last() bool
+
+	// Seq returns an iterator to iterate over the records. After Seq completes, it
 	// is also necessary to check the result of Err for any potential errors.
-	For(yield func(Record) error) error
+	Seq() Seq[Record]
 }
 
 // Record represents a record.
@@ -104,11 +109,12 @@ var _ Records = (*records)(nil)
 
 type records struct {
 	columns   []warehouses.Column
+	normalize NormalizeFunc
 	explode   explodeRowFunc
 	rows      warehouses.Rows
+	last      bool
 	err       error
 	closed    bool
-	normalize NormalizeFunc
 }
 
 func (r *records) Close() error {
@@ -124,31 +130,47 @@ func (r *records) Err() error {
 	return r.err
 }
 
-func (r *records) For(yield func(Record) error) error {
-	if r.closed {
-		r.err = errors.New("for called on a closed Query")
-		return nil
-	}
-	defer r.Close()
-	last := len(r.columns) - 1
-	row := make([]any, len(r.columns))
-	values := newScanValues(r.columns, row, r.normalize)
-	for r.rows.Next() {
-		if err := r.rows.Scan(values...); err != nil {
+func (r *records) Last() bool {
+	return r.last
+}
+
+func (r *records) Seq() Seq[Record] {
+	return func(yield func(Record) bool) {
+		if r.closed {
+			r.err = errors.New("Seq called on a closed Query")
+			return
+		}
+		defer r.Close()
+		var record Record
+		last := len(r.columns) - 1
+		row := make([]any, len(r.columns))
+		values := newScanValues(r.columns, row, r.normalize)
+		for r.rows.Next() {
+			if record.Properties != nil || record.Err != nil {
+				if !yield(record) {
+					return
+				}
+			}
+			if err := r.rows.Scan(values...); err != nil {
+				record = Record{Err: r.err}
+				continue
+			}
+			record = Record{
+				ID:         row[last].(int),
+				Properties: r.explode(row),
+			}
+		}
+		if record.Properties != nil || record.Err != nil {
+			r.last = true
+			if !yield(record) {
+				return
+			}
+		}
+		if err := r.rows.Err(); err != nil {
 			r.err = err
 		}
-		record := Record{
-			ID:         row[last].(int),
-			Properties: r.explode(row),
-		}
-		if err := yield(record); err != nil {
-			return err
-		}
+		return
 	}
-	if err := r.rows.Err(); err != nil {
-		r.err = err
-	}
-	return nil
 }
 
 // NormalizeFunc is a function type representing the normalization function

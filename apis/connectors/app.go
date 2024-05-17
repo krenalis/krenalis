@@ -277,6 +277,7 @@ type appRecords struct {
 	cursor            state.Cursor
 	appName           string
 	inner             chichi.App
+	last              bool
 	err               error
 	closed            bool
 	displayedProperty types.Property
@@ -291,122 +292,135 @@ func (r *appRecords) Err() error {
 	return r.err
 }
 
-func (r *appRecords) For(yield func(Record) error) error {
+func (r *appRecords) Last() bool {
+	return r.last
+}
 
-	if r.closed {
-		r.err = errors.New("connectors: For called on a closed Records")
-		return nil
-	}
+func (r *appRecords) Seq() Seq[Record] {
 
-	cursor := chichi.Cursor{
-		ID:             r.cursor.ID,
-		LastChangeTime: r.cursor.LastChangeTime,
-	}
+	return func(yield func(Record) bool) {
 
-	properties := types.Properties(r.schema)
-	names := make([]string, len(properties))
-	propertyByName := make(map[string]*types.Property, len(properties))
-	for i, p := range properties {
-		names[i] = p.Name
-		propertyByName[p.Name] = &p
-	}
-
-	if r.displayedProperty.Name != "" && !slices.Contains(names, r.displayedProperty.Name) {
-		names = append(names, r.displayedProperty.Name)
-	}
-
-	for {
-
-		// Retrieve the users.
-		users, next, err := r.inner.(chichi.AppRecords).Records(r.ctx, chichi.Users, names, cursor)
-		eof := err == io.EOF
-		if err != nil && !eof {
-			r.err = err
-			return nil
-		}
-		if len(users) == 0 {
-			if !eof {
-				r.err = fmt.Errorf("%s returned zero users but did not return io.EOF", r.appName)
-				return nil
-			}
-			if next != "" {
-				r.err = fmt.Errorf("%s returned zero users but returned a non-empty next value", r.appName)
-			}
-			return nil
+		if r.closed {
+			r.err = errors.New("connectors: For called on a closed Records")
+			return
 		}
 
-		// Normalize the returned users.
-		for _, appUser := range users {
+		cursor := chichi.Cursor{
+			ID:             r.cursor.ID,
+			LastChangeTime: r.cursor.LastChangeTime,
+		}
 
-			user := Record{
-				ID:           appUser.ID,
-				Associations: appUser.Associations,
+		properties := types.Properties(r.schema)
+		names := make([]string, len(properties))
+		propertyByName := make(map[string]*types.Property, len(properties))
+		for i, p := range properties {
+			names[i] = p.Name
+			propertyByName[p.Name] = &p
+		}
+
+		if r.displayedProperty.Name != "" && !slices.Contains(names, r.displayedProperty.Name) {
+			names = append(names, r.displayedProperty.Name)
+		}
+
+		for {
+
+			// Retrieve the users.
+			users, next, err := r.inner.(chichi.AppRecords).Records(r.ctx, chichi.Users, names, cursor)
+			eof := err == io.EOF
+			if err != nil && !eof {
+				r.err = err
+				return
 			}
+			if len(users) == 0 {
+				if !eof {
+					r.err = fmt.Errorf("%s returned zero users but did not return io.EOF", r.appName)
+					return
+				}
+				if next != "" {
+					r.err = fmt.Errorf("%s returned zero users but returned a non-empty next value", r.appName)
+				}
+				return
+			}
+			last := len(users) - 1
 
-			// Read the displayed property.
-			if r.displayedProperty.Name != "" {
-				for p, v := range appUser.Properties {
-					if p == r.displayedProperty.Name {
-						normalizedValue, err := normalize(r.displayedProperty.Name, r.displayedProperty.Type, v, r.displayedProperty.Nullable, r.timeLayouts)
-						if err != nil {
-							slog.Warn("displayed property value cannot be normalized", "err", err)
+			// Normalize the returned users.
+
+			for i, appUser := range users {
+
+				user := Record{
+					ID:           appUser.ID,
+					Associations: appUser.Associations,
+				}
+
+				// Read the displayed property.
+				if r.displayedProperty.Name != "" {
+					for p, v := range appUser.Properties {
+						if p == r.displayedProperty.Name {
+							normalizedValue, err := normalize(r.displayedProperty.Name, r.displayedProperty.Type, v, r.displayedProperty.Nullable, r.timeLayouts)
+							if err != nil {
+								slog.Warn("displayed property value cannot be normalized", "err", err)
+								break
+							}
+							user.DisplayedProperty, err = displayedPropertyToString(normalizedValue)
+							if err != nil {
+								slog.Warn("invalid displayed property value", "err", err)
+								break
+							}
 							break
 						}
-						user.DisplayedProperty, err = displayedPropertyToString(normalizedValue)
-						if err != nil {
-							slog.Warn("invalid displayed property value", "err", err)
-							break
-						}
+					}
+				}
+
+				// Read the properties.
+				user.Properties = make(map[string]any, len(properties))
+				for _, p := range properties {
+					value, ok := appUser.Properties[p.Name]
+					if !ok {
+						user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
 						break
 					}
+					value, err = normalize(p.Name, p.Type, value, p.Nullable, r.timeLayouts)
+					if err != nil {
+						user.Err = err
+						break
+					}
+					user.Properties[p.Name] = value
 				}
-			}
-
-			// Read the properties.
-			user.Properties = make(map[string]any, len(properties))
-			for _, p := range properties {
-				value, ok := appUser.Properties[p.Name]
-				if !ok {
-					user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
-					break
-				}
-				value, err = normalize(p.Name, p.Type, value, p.Nullable, r.timeLayouts)
-				if err != nil {
-					user.Err = err
-					break
-				}
-				user.Properties[p.Name] = value
-			}
-			if len(user.Properties) != len(properties) {
-				// Users method of the connector is permitted to return more properties
-				// than those requested, so if necessary, remove those that are not
-				// requested.
-				for name := range user.Properties {
-					if _, ok := propertyByName[name]; !ok {
-						delete(propertyByName, name)
+				if len(user.Properties) != len(properties) {
+					// Users method of the connector is permitted to return more properties
+					// than those requested, so if necessary, remove those that are not
+					// requested.
+					for name := range user.Properties {
+						if _, ok := propertyByName[name]; !ok {
+							delete(propertyByName, name)
+						}
 					}
 				}
+
+				// Read the last change time.
+				user.LastChangeTime = appUser.LastChangeTime.UTC()
+				if err = validateTimestamp(user.LastChangeTime); err != nil {
+					return
+				}
+
+				r.last = i == last
+
+				if !yield(user) {
+					return
+				}
+
 			}
 
-			// Read the last change time.
-			user.LastChangeTime = appUser.LastChangeTime.UTC()
-			if err = validateTimestamp(user.LastChangeTime); err != nil {
-				return err
+			if eof {
+				return
 			}
 
-			if err := yield(user); err != nil {
-				return err
-			}
+			user := users[last]
+			cursor.ID = user.ID
+			cursor.LastChangeTime = user.LastChangeTime
+			cursor.Next = next
+
 		}
-
-		if eof {
-			return nil
-		}
-
-		last := users[len(users)-1]
-		cursor.ID = last.ID
-		cursor.LastChangeTime = last.LastChangeTime
-		cursor.Next = next
 
 	}
 

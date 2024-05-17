@@ -34,6 +34,9 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// Seq represents a sequence of V values.
+type Seq[V any] func(yield func(V) bool)
+
 // SchemaError represents an error with a schema.
 type SchemaError struct {
 	Msg string
@@ -80,10 +83,12 @@ type Records interface {
 	// Close.
 	Err() error
 
-	// For calls the yield function for each record (r) in the sequence. If yield
-	// returns an error, For stops and returns the error. After For completes, it
+	// Last reports whether the last record has been read.
+	Last() bool
+
+	// Seq returns an iterator to iterate over the records. After Seq completes, it
 	// is also necessary to check the result of Err for any potential errors.
-	For(yield func(Record) error) error
+	Seq() Seq[Record]
 }
 
 // AckFunc is the function called when a write of one or more records
@@ -392,16 +397,6 @@ func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
 	}
 	b.WriteString(s)
 	return b.String(), nil
-}
-
-// yieldError is an error returned by the yield function of Records when
-// iterating over records.
-type yieldError struct {
-	err error
-}
-
-func (err yieldError) Error() string {
-	return err.err.Error()
 }
 
 // checkSchemaAlignment checks whether the schema t1 is aligned with t2 and

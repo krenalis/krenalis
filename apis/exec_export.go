@@ -177,70 +177,19 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
-	// processUsers does a bach processing of users.
-	processUsers := func(users []userToProcess) error {
+	for user := range records.Seq() {
 
-		if transformer == nil {
-			for _, user := range users {
-				record := connectors.Record{
-					Properties: user.Properties,
-				}
-				if ok := writer.Write(ctx, user.GID, record); !ok {
-					return writer.Close(ctx)
-				}
-			}
-			return nil
-		}
-
-		// Transform the users.
-		clear(values)
-		values = values[0:len(users)]
-		for i, user := range users {
-			values[i] = user.Properties
-		}
-		results, err := transformer.TransformValues(ctx, values)
-		if err != nil {
-			if err, ok := err.(transformers.FunctionExecutionError); ok {
-				return actionExecutionError{err}
-			}
-			return err
-		}
-		for i, result := range results {
-			user := users[i]
-			if result.Err != nil {
-				if _, ok := result.Err.(ValidationError); ok {
-					stats.Passed(statistics.TransformedStep)
-					stats.Failed(statistics.OutputValidatedStep, user.GID, err)
-					continue
-				}
-				stats.Failed(statistics.TransformedStep, user.GID, err)
-				continue
-			}
-			user.Properties = result.Value
-			stats.Passed(statistics.TransformedStep)
-			stats.Passed(statistics.OutputValidatedStep)
-			record := connectors.Record{
-				ID:         user.ID,
-				Properties: user.Properties,
-			}
-			if ok := writer.Write(ctx, user.GID, record); !ok {
-				return writer.Close(ctx)
-			}
-		}
-
-		return nil
-	}
-
-	err = records.For(func(user datastore.Record) error {
 		if user.Err != nil {
 			stats.Failed(statistics.ReceivedStep, user.ID, user.Err)
 			if connector.Type == state.FileStorageType {
 				return err
 			}
-			return nil
+			continue
 		}
+
 		stats.Passed(statistics.ReceivedStep)
 		stats.Passed(statistics.InputValidatedStep)
+
 		var id string
 		if connector.Type == state.AppType {
 			// Resolve the external identities.
@@ -255,7 +204,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			mode := *this.action.ExportMode
 			existsOnApp := len(ids) > 0
 			if (mode == state.CreateOnly && existsOnApp) || (mode == state.UpdateOnly && !existsOnApp) {
-				return nil
+				continue
 			}
 			for _, id := range ids {
 				users = append(users, userToProcess{
@@ -271,30 +220,69 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				Properties: user.Properties,
 			})
 		}
-		if len(users) == 100 {
-			err := processUsers(users)
+
+		// Does a bach processing of users.
+		if len(users) == 100 || records.Last() {
+
+			if transformer == nil {
+				for _, user := range users {
+					record := connectors.Record{
+						Properties: user.Properties,
+					}
+					if ok := writer.Write(ctx, user.GID, record); !ok {
+						return writer.Close(ctx)
+					}
+				}
+				clear(users)
+				users = users[0:0]
+				continue
+			}
+
+			// Transform the users.
+			clear(values)
+			values = values[0:len(users)]
+			for i, user := range users {
+				values[i] = user.Properties
+			}
+			results, err := transformer.TransformValues(ctx, values)
 			if err != nil {
+				if err, ok := err.(transformers.FunctionExecutionError); ok {
+					return actionExecutionError{err}
+				}
 				return err
+			}
+			for i, result := range results {
+				user := users[i]
+				if result.Err != nil {
+					if _, ok := result.Err.(ValidationError); ok {
+						stats.Passed(statistics.TransformedStep)
+						stats.Failed(statistics.OutputValidatedStep, user.GID, err)
+						continue
+					}
+					stats.Failed(statistics.TransformedStep, user.GID, err)
+					continue
+				}
+				user.Properties = result.Value
+				stats.Passed(statistics.TransformedStep)
+				stats.Passed(statistics.OutputValidatedStep)
+				record := connectors.Record{
+					ID:         user.ID,
+					Properties: user.Properties,
+				}
+				if ok := writer.Write(ctx, user.GID, record); !ok {
+					return writer.Close(ctx)
+				}
 			}
 			clear(users)
 			users = users[0:0]
+
 		}
-		return nil
-	})
-	if err != nil {
-		return err
+
 	}
 	if err = records.Err(); err != nil {
 		return actionExecutionError{err}
 	}
 
-	// Process the remaining users.
-	if len(users) > 0 {
-		err = processUsers(users)
-		if err != nil {
-			return err
-		}
-	}
 	users = nil
 
 	if writer2, ok := writer.(connectors.CommittableWriter); ok {
@@ -328,7 +316,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	defer records.Close()
 
 	// Importing users from a destination to match identities for the export.
-	err = records.For(func(user connectors.Record) error {
+	for user := range records.Seq() {
 
 		if user.Err != nil {
 			return actionExecutionError{user.Err}
@@ -349,10 +337,6 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 			return actionExecutionError{err}
 		}
 
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 	if err = records.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}

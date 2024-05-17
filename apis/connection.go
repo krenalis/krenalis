@@ -777,20 +777,17 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	var last connectors.Record
 	users := make([]map[string]any, 0, 100)
 
-	errBreak := errors.New("break")
-	err = records.For(func(user connectors.Record) error {
+	for user := range records.Seq() {
 		if user.Err != nil {
-			return user.Err
+			return nil, "", user.Err
 		}
-		last = user
 		users = append(users, user.Properties)
-		if len(users) == 100 {
-			return errBreak
+		if records.Last() {
+			last = user
 		}
-		return nil
-	})
-	if err != nil && err != errBreak {
-		return nil, "", err
+		if len(users) == 100 {
+			break
+		}
 	}
 	if err = records.Err(); err != nil {
 		return nil, "", err

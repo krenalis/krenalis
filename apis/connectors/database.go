@@ -337,6 +337,7 @@ type databaseRecords struct {
 	lastChangeTimeFormat string
 	displayedProperty    types.Property
 	timeLayouts          *state.TimeLayouts
+	last                 bool
 	err                  error
 	closed               bool
 }
@@ -377,49 +378,63 @@ func (r *databaseRecords) Err() error {
 	return r.err
 }
 
-func (r *databaseRecords) For(yield func(Record) error) error {
-	if r.closed {
-		r.err = errors.New("connectors: For called on a closed Records")
-		return nil
-	}
-	defer r.Close()
-	for r.rows.Next() {
-		record := Record{
-			Properties: make(map[string]any, len(r.propertyOf)),
+func (r *databaseRecords) Last() bool {
+	return r.last
+}
+
+func (r *databaseRecords) Seq() Seq[Record] {
+	return func(yield func(Record) bool) {
+		if r.closed {
+			r.err = errors.New("connectors: For called on a closed Records")
+			return
 		}
-		for i, c := range r.columns {
-			p := r.propertyOf[c.Name]
-			if c.Name == r.displayedProperty.Name {
-				// This is necessary as the displayed property is not
-				// necessarily included in "propertyOf"; even if it is, the type
-				// of its property must be taken from the query.
-				p = r.displayedProperty
+		var record Record
+		defer r.Close()
+		for r.rows.Next() {
+			if record.Properties != nil || record.Err != nil {
+				if !yield(record) {
+					return
+				}
 			}
-			r.dst[i] = recordsScanValue{
-				property:             p,
-				record:               &record,
-				identityProperty:     r.identityProperty,
-				lastChangeTime:       r.lastChangeTime,
-				lastChangeTimeFormat: r.lastChangeTimeFormat,
-				displayedProperty:    r.displayedProperty,
-				timeLayouts:          r.timeLayouts,
+			record = Record{
+				Properties: make(map[string]any, len(r.propertyOf)),
+			}
+			for i, c := range r.columns {
+				p := r.propertyOf[c.Name]
+				if c.Name == r.displayedProperty.Name {
+					// This is necessary as the displayed property is not
+					// necessarily included in "propertyOf"; even if it is, the type
+					// of its property must be taken from the query.
+					p = r.displayedProperty
+				}
+				r.dst[i] = recordsScanValue{
+					property:             p,
+					record:               &record,
+					identityProperty:     r.identityProperty,
+					lastChangeTime:       r.lastChangeTime,
+					lastChangeTimeFormat: r.lastChangeTimeFormat,
+					displayedProperty:    r.displayedProperty,
+					timeLayouts:          r.timeLayouts,
+				}
+			}
+			if err := r.rows.Scan(r.dst...); err != nil {
+				r.err = err
+				return
+			}
+			if record.LastChangeTime.IsZero() {
+				record.LastChangeTime = time.Now().UTC()
 			}
 		}
-		if err := r.rows.Scan(r.dst...); err != nil {
+		if record.Properties != nil || record.Err != nil {
+			r.last = true
+			if !yield(record) {
+				return
+			}
+		}
+		if err := r.rows.Err(); err != nil {
 			r.err = err
-			return nil
-		}
-		if record.LastChangeTime.IsZero() {
-			record.LastChangeTime = time.Now().UTC()
-		}
-		if err := yield(record); err != nil {
-			return err
 		}
 	}
-	if err := r.rows.Err(); err != nil {
-		r.err = err
-	}
-	return nil
 }
 
 // recordsScanValue implements the sql.Scanner interface to read the database

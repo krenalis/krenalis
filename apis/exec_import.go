@@ -70,6 +70,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 		records, err = database.Records(ctx, action, replacer)
 	case state.FileStorageType:
 		records, err = this.file().Records(ctx)
+	default:
+		return fmt.Errorf("invalid connector type %s", connector.Type)
 	}
 	if err != nil {
 		if err, ok := err.(*connectors.SchemaError); ok {
@@ -104,97 +106,91 @@ func (this *Action) importUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
-	// processUsers does a batch processing of users.
-	processUsers := func(users []connectors.Record) error {
-
-		// Transform the users.
-		values = values[0:len(users)]
-		for i, user := range users {
-			values[i] = user.Properties
-		}
-		results, err := transformer.TransformValues(ctx, values)
-		if err != nil {
-			if err, ok := err.(transformers.FunctionExecutionError); ok {
-				return actionExecutionError{err}
-			}
-			return err
-		}
-
-		// Set the identities into the data warehouse.
-		for i, result := range results {
-			user := users[i]
-			if result.Err != nil {
-				if _, ok := result.Err.(ValidationError); ok {
-					stats.Passed(statistics.TransformedStep)
-					stats.Failed(statistics.OutputValidatedStep, 0, err)
-					continue
-				}
-				stats.Failed(statistics.TransformedStep, 0, err)
-				continue
-			}
-			user.Properties = result.Value
-			stats.Passed(statistics.TransformedStep)
-			stats.Passed(statistics.OutputValidatedStep)
-			ok := iw.Write(ctx, warehouses.Identity{
-				ID:                user.ID,
-				Properties:        user.Properties,
-				LastChangeTime:    user.LastChangeTime,
-				DisplayedProperty: user.DisplayedProperty,
-			})
-			if !ok {
-				err := iw.Close(ctx)
-				return actionExecutionError{err}
-			}
-		}
-		err = iw.Close(ctx)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
-		// Update the connection stats.
-		err = this.connection.updateConnectionsStats(ctx, len(users))
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
-		// Set the user cursor.
-		if connector.Type == state.AppType {
-			last := users[len(users)-1]
-			err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, LastChangeTime: last.LastChangeTime})
-			if err != nil {
-				return actionExecutionError{err}
-			}
-		}
-
-		return nil
-	}
-
 	// Read the users.
-	err = records.For(func(user connectors.Record) error {
+	for user := range records.Seq() {
+
 		if user.Err != nil {
 			if _, ok := user.Err.(ValidationError); ok {
 				stats.Passed(statistics.ReceivedStep)
 				stats.Failed(statistics.InputValidatedStep, 0, err)
-				return nil
+				continue
 			}
 			stats.Failed(statistics.ReceivedStep, 0, err)
-			return nil
+			continue
 		}
+
 		stats.Passed(statistics.ReceivedStep)
 		stats.Passed(statistics.InputValidatedStep)
+
 		users = append(users, user)
-		if len(users) == 100 {
-			err := processUsers(users)
+
+		// Does a batch processing of users.
+		if len(users) == 100 || records.Last() {
+
+			// Transform the users.
+			values = values[0:len(users)]
+			for i, user := range users {
+				values[i] = user.Properties
+			}
+			results, err := transformer.TransformValues(ctx, values)
 			if err != nil {
+				if err, ok := err.(transformers.FunctionExecutionError); ok {
+					return actionExecutionError{err}
+				}
 				return err
 			}
+
+			// Set the identities into the data warehouse.
+			for i, result := range results {
+				user := users[i]
+				if result.Err != nil {
+					if _, ok := result.Err.(ValidationError); ok {
+						stats.Passed(statistics.TransformedStep)
+						stats.Failed(statistics.OutputValidatedStep, 0, err)
+						continue
+					}
+					stats.Failed(statistics.TransformedStep, 0, err)
+					continue
+				}
+				user.Properties = result.Value
+				stats.Passed(statistics.TransformedStep)
+				stats.Passed(statistics.OutputValidatedStep)
+				ok := iw.Write(ctx, warehouses.Identity{
+					ID:                user.ID,
+					Properties:        user.Properties,
+					LastChangeTime:    user.LastChangeTime,
+					DisplayedProperty: user.DisplayedProperty,
+				})
+				if !ok {
+					err := iw.Close(ctx)
+					return actionExecutionError{err}
+				}
+			}
+			err = iw.Close(ctx)
+			if err != nil {
+				return actionExecutionError{err}
+			}
+
+			// Update the connection stats.
+			err = this.connection.updateConnectionsStats(ctx, len(users))
+			if err != nil {
+				return actionExecutionError{err}
+			}
+
+			// Set the user cursor.
+			if connector.Type == state.AppType {
+				last := users[len(users)-1]
+				err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, LastChangeTime: last.LastChangeTime})
+				if err != nil {
+					return actionExecutionError{err}
+				}
+			}
+
 			clear(users)
 			users = users[0:0]
+
 		}
-		return nil
-	})
-	if err != nil {
-		return err
+
 	}
 	if err = records.Err(); err != nil {
 		if err == connectors.ErrSheetNotExist {
@@ -203,13 +199,6 @@ func (this *Action) importUsers(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	// Process the remaining users.
-	if len(users) > 0 {
-		err = processUsers(users)
-		if err != nil {
-			return err
-		}
-	}
 	users = nil
 
 	// Run the Workspace Identity Resolution.
