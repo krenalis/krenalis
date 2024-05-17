@@ -22,6 +22,9 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// Seq2 represents a sequence of K and V values.
+type Seq2[K, V any] func(yield func(K, V) bool)
+
 // InvalidPropertyNameError is returned by ObjectOf when a property name is not
 // valid.
 type InvalidPropertyNameError struct {
@@ -1127,13 +1130,20 @@ func (t Type) Property(name string) (Property, bool) {
 	return Property{}, false
 }
 
-// Properties returns the properties of the Object type t.
-// Panics if t is not an Object type.
-func (t Type) Properties() []Property {
+// Properties returns an iterator over the properties of t.
+// It panics if t is not an Object.
+func (t Type) Properties() Seq2[int, Property] {
 	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
+		panic("cannot iterate over a non-Object type")
 	}
-	return slices.Clone(t.vl.([]Property))
+	return func(yield func(i int, property Property) bool) {
+		pp := t.vl.([]Property)
+		for i := 0; i < len(pp); i++ {
+			if !yield(i, pp[i]) {
+				return
+			}
+		}
+	}
 }
 
 // NumProperties returns the count of properties in t.
@@ -1214,23 +1224,13 @@ func (t Type) EqualTo(t2 Type) bool {
 	panic("unreachable code")
 }
 
-// Seq2 represents a sequence of K and V values.
-type Seq2[K, V any] func(yield func(K, V) bool)
-
-// Properties returns an iterator over the child properties of t.
-// It panics if t is not an Object.
-func Properties(t Type) Seq2[int, Property] {
+// Properties returns the properties of the Object type t.
+// Panics if t is not an Object type.
+func Properties(t Type) []Property {
 	if t.kind != ObjectKind {
-		panic("cannot iterate over a non-Object type")
+		panic("cannot get the properties of a non-Object type")
 	}
-	return func(yield func(i int, property Property) bool) {
-		pp := t.vl.([]Property)
-		for i := 0; i < len(pp); i++ {
-			if !yield(i, pp[i]) {
-				return
-			}
-		}
-	}
+	return slices.Clone(t.vl.([]Property))
 }
 
 // Walk returns an iterator over all the properties in t in a depth-first order.

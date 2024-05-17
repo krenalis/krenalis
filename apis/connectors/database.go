@@ -175,7 +175,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	}
 
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, action.InSchema.Properties(), identityProperty,
+	records = newDatabaseRecords(rows, columns, types.Properties(action.InSchema), identityProperty,
 		lastChangeTimeProperty, action.LastChangeTimeFormat, displayedProperty, database.timeLayouts)
 	return records, nil
 }
@@ -188,7 +188,7 @@ func (database *Database) Writer(table string, schema types.Type, ack AckFunc) (
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}}, schema.Properties()...)
+	columns := append([]types.Property{{Name: "id", Type: types.Int(32)}}, types.Properties(schema)...)
 	w := databaseWriter{
 		ack:     ack,
 		table:   table,

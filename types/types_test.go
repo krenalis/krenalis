@@ -498,6 +498,7 @@ func Test_NumProperties(t *testing.T) {
 }
 
 func Test_Properties(t *testing.T) {
+
 	properties := []Property{
 		{Name: "a", Type: Text()},
 		{Name: "b", Type: Object([]Property{
@@ -505,9 +506,10 @@ func Test_Properties(t *testing.T) {
 		})},
 		{Name: "c", Type: Boolean()},
 	}
-	iter := Properties(Object(properties))
-	var i = 0
-	iter(func(k int, p Property) bool {
+
+	// Properties method.
+	i := 0
+	for k, p := range Object(properties).Properties() {
 		if k != i {
 			t.Fatalf("expected i=%d, got i=%d", i, k)
 		}
@@ -515,8 +517,20 @@ func Test_Properties(t *testing.T) {
 			t.Fatal(err)
 		}
 		i++
-		return true
-	})
+	}
+
+	// Properties function.
+	i = 0
+	for k, p := range Properties(Object(properties)) {
+		if k != i {
+			t.Fatalf("expected i=%d, got i=%d", i, k)
+		}
+		if err := sameProperty(p, properties[i]); err != nil {
+			t.Fatal(err)
+		}
+		i++
+	}
+
 }
 
 func Test_Walk(t *testing.T) {

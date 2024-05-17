@@ -212,7 +212,7 @@ func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehou
 // A property conflicts with another if their representation as columns on the
 // data warehouse has the same name.
 func CheckConflictingProperties(schema types.Type) error {
-	columns := propertiesToColumns(schema.Properties())
+	columns := propertiesToColumns(types.Properties(schema))
 	names := make(map[string]struct{})
 	for _, c := range columns {
 		if _, ok := names[c.Name]; ok {

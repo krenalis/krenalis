@@ -201,22 +201,17 @@ func (err *SchemaError) Error() string {
 // types of columnByProperty. It returns a *SchemaError error if it is not
 // aligned. It panics if a schema is not valid.
 func checkSchemaAlignment(schema types.Type, columnByProperty map[string]warehouses.Column) error {
-	var err error
-	// for _, p := range types.Walk(schema) { ... }
-	types.Walk(schema)(func(path string, p types.Property) bool {
+	for path, p := range types.Walk(schema) {
 		if p.Type.Kind() == types.ObjectKind {
-			return true
+			continue
 		}
 		c, ok := columnByProperty[path]
 		if !ok {
-			err = &SchemaError{Msg: fmt.Sprintf(`%q property no longer exists`, path)}
-			return false
+			return &SchemaError{Msg: fmt.Sprintf(`%q property no longer exists`, path)}
 		}
 		if !p.Type.EqualTo(c.Type) {
-			err = &SchemaError{Msg: fmt.Sprintf(`type of the %q property has been changed from %s to %s`, path, c.Type, p.Type)}
-			return false
+			return &SchemaError{Msg: fmt.Sprintf(`type of the %q property has been changed from %s to %s`, path, c.Type, p.Type)}
 		}
-		return true
-	})
-	return err
+	}
+	return nil
 }

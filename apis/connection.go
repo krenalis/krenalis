@@ -2177,7 +2177,7 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 // removeMetaProperties removes the properties considered meta properties by the
 // data warehouses from the schema, and returns it as a new schema.
 func removeMetaProperties(schema types.Type) types.Type {
-	props := schema.Properties()
+	props := types.Properties(schema)
 	noMetaProps := make([]types.Property, 0, len(props))
 	for _, p := range props {
 		if isMetaProperty(p.Name) {

@@ -423,7 +423,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	// Add the "__id__" meta property.
 	schema = types.Object(append([]types.Property{
 		{Name: "__id__", Type: types.Int(32)},
-	}, schema.Properties()...))
+	}, types.Properties(schema)...))
 
 	// Update the database and send the notification.
 	n := state.SetWorkspaceUsersSchema{
@@ -511,7 +511,7 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	}
 	schema = types.Object(append([]types.Property{
 		{Name: "__id__", Type: types.Int(32)},
-	}, schema.Properties()...))
+	}, types.Properties(schema)...))
 	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {

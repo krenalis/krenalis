@@ -182,15 +182,13 @@ func exprFromFilter(filter *state.Filter, columnFromProperty map[string]warehous
 // corresponding column is named "a_b_c".
 func columnByProperty(schema types.Type) map[string]warehouses.Column {
 	columnByProperty := map[string]warehouses.Column{}
-	// for path, p := range types.Walk(schema) { ... }
-	types.Walk(schema)(func(path string, p types.Property) bool {
+	for path, p := range types.Walk(schema) {
 		if p.Type.Kind() == types.ObjectKind {
-			return true
+			continue
 		}
 		name := strings.ReplaceAll(path, ".", "_")
 		columnByProperty[path] = warehouses.Column{Name: name, Type: p.Type, Nullable: p.Nullable}
-		return true
-	})
+	}
 	return columnByProperty
 }
 

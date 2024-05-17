@@ -25,7 +25,7 @@ func propertiesToColumns(properties []types.Property) []warehouses.Column {
 	columns := make([]warehouses.Column, 0, len(properties))
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range propertiesToColumns(p.Type.Properties()) {
+			for _, column := range propertiesToColumns(types.Properties(p.Type)) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}

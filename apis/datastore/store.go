@@ -132,7 +132,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // error.
 func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
 	store.mustBeOpen()
-	usersColumns := propertiesToColumns(usersSchema.Properties())
+	usersColumns := propertiesToColumns(types.Properties(usersSchema))
 	return store.warehouse.AlterSchema(ctx, usersColumns, operations)
 }
 
@@ -151,7 +151,7 @@ func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, ope
 // error.
 func (store *Store) AlterSchemaQueries(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
-	usersColumns := propertiesToColumns(usersSchema.Properties())
+	usersColumns := propertiesToColumns(types.Properties(usersSchema))
 	return store.warehouse.AlterSchemaQueries(ctx, usersColumns, operations)
 }
 
@@ -349,7 +349,7 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the users columns.
-	usersColumns := propertiesToColumns(ws.UsersSchema.Properties())
+	usersColumns := propertiesToColumns(types.Properties(ws.UsersSchema))
 
 	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersColumns)
 }

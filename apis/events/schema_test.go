@@ -15,7 +15,7 @@ import (
 
 func Test_SchemaWithoutGID(t *testing.T) {
 
-	props := Schema.Properties()
+	props := types.Properties(Schema)
 	if len(props) != 15 {
 		t.Fatalf("expecting 15 properties, got %d", len(props))
 	}
@@ -24,7 +24,7 @@ func Test_SchemaWithoutGID(t *testing.T) {
 
 func Test_SchemaWithGID(t *testing.T) {
 
-	props := SchemaWithGID.Properties()
+	props := types.Properties(SchemaWithGID)
 	if len(props) != 16 {
 		t.Fatalf("expecting 16 properties, got %d", len(props))
 	}

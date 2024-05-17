@@ -150,7 +150,7 @@ func (file *File) Writer(ctx context.Context, schema types.Type, ack AckFunc, pa
 	if err != nil {
 		return nil, err
 	}
-	columns := schema.Properties()
+	columns := types.Properties(schema)
 	records := make(chan fileRecord, 100)
 	result := make(chan error, 1)
 	writeCtx, cancelWrite := context.WithCancel(context.Background())
@@ -481,7 +481,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if err != nil {
 			return err
 		}
-		rw.properties = rw.schema.Properties()
+		rw.properties = types.Properties(rw.schema)
 		rw.columnIndexOf = make(map[int]int, len(rw.properties))
 		for i, c := range rw.properties {
 			rw.columnIndexOf[i] = columnIndex[c.Name]

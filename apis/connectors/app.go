@@ -303,7 +303,7 @@ func (r *appRecords) For(yield func(Record) error) error {
 		LastChangeTime: r.cursor.LastChangeTime,
 	}
 
-	properties := r.schema.Properties()
+	properties := types.Properties(r.schema)
 	names := make([]string, len(properties))
 	propertyByName := make(map[string]*types.Property, len(properties))
 	for i, p := range properties {
@@ -461,7 +461,7 @@ func verifySchemaCompatibilityForSendEvents(t1, t2 types.Type) error {
 	if !t1.Valid() || !t2.Valid() {
 		switch {
 		case t1.Valid():
-			properties := t1.Properties()
+			properties := types.Properties(t1)
 			return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, properties[0].Name)}
 		case t2.Valid():
 			for _, p2 := range t2.Properties() {

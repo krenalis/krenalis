@@ -16,7 +16,7 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	columns := make([]types.Property, 0, len(properties))
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range PropertiesToColumns(p.Type.Properties()) {
+			for _, column := range PropertiesToColumns(types.Properties(p.Type)) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}
@@ -37,7 +37,7 @@ func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any
 	values := make(map[string]any, len(properties))
 	for _, p := range properties {
 		if p.Type.Kind() == types.ObjectKind {
-			values[p.Name], row = DeserializeRowAsMap(p.Type.Properties(), row)
+			values[p.Name], row = DeserializeRowAsMap(types.Properties(p.Type), row)
 			continue
 		}
 		values[p.Name] = row[0]
