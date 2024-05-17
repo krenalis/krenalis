@@ -7,22 +7,22 @@ import {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
-} from '../lib/helpers/transformedAction';
-import AppContext from '../context/AppContext';
-import statuses from '../constants/statuses';
-import TransformedConnection, { getActionTypeFromConnection } from '../lib/helpers/transformedConnection';
-import { NotFoundError, UnprocessableError } from '../lib/api/errors';
-import { Action, ActionToSet, ActionType } from '../types/external/action';
+} from '../../../lib/helpers/transformedAction';
+import AppContext from '../../../context/AppContext';
+import statuses from '../../../constants/statuses';
+import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/helpers/transformedConnection';
+import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
+import { Action, ActionToSet, ActionType } from '../../../types/external/action';
 import {
 	ActionSchemasResponse,
 	ExecQueryResponse,
 	RecordsResponse,
 	ConnectorUIResponse,
 	ConnectorValues,
-} from '../types/external/api';
-import { ObjectType } from '../types/external/types';
-import { sleep } from '../lib/utils/sleep';
-import { FullscreenContext } from '../context/FullscreenContext';
+} from '../../../types/external/api';
+import { ObjectType } from '../../../types/external/types';
+import { sleep } from '../../../lib/utils/sleep';
+import { FullscreenContext } from '../../../context/FullscreenContext';
 
 const useAction = (
 	connection: TransformedConnection,

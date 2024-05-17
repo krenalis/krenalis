@@ -9,7 +9,7 @@ import ActionExportMode from './ActionExportMode';
 import ActionExportOnDuplicatedUsers from './ActionExportOnDuplicatedUsers';
 import ActionMatchingProperties from './ActionMatchingProperties';
 import ActionTable from './ActionTable';
-import { useAction } from '../../../hooks/useActionData';
+import { useAction } from './useActionData';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import ActionContext from '../../../context/ActionContext';
