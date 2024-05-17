@@ -152,15 +152,25 @@ const ComboBoxInput = ({
 
 	useEffect(() => {
 		lastValue.current = value;
-		if (inputRef.current) {
-			// Disable password managers autofill.
-			const input = inputRef.current.shadowRoot.querySelector('input');
-			input.setAttribute('data-1p-ignore', '');
-			input.setAttribute('data-bwignore', '');
-			input.setAttribute('data-form-type', 'other');
-			input.setAttribute('data-lpignore', 'true');
-		}
 	}, [value, inputRef.current]);
+
+	useEffect(() => {
+		// Disable password managers autofill.
+		if (inputRef.current) {
+			// Add a delay to ensure that the shadow DOM is fully loaded.
+			setTimeout(() => {
+				const input = inputRef.current.shadowRoot.querySelector('input');
+				if (input == null) {
+					return;
+				}
+				input.setAttribute('data-1p-ignore', '');
+				input.setAttribute('data-bwignore', '');
+				input.setAttribute('data-form-type', 'other');
+				input.setAttribute('data-lpignore', 'true');
+				return;
+			}, 100);
+		}
+	}, [inputRef.current]);
 
 	const onKeyUp = (e) => {
 		if (e.key === 'Escape') {
