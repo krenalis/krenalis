@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { GridColumn, GridRow as GridRowType } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow as GridRowType } from './Grid.types';
 
 const useGrid = (
 	gridRef: React.MutableRefObject<any>,

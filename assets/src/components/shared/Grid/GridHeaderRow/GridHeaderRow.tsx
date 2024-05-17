@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import './GridHeaderRow.css';
 import GridHeaderCell from '../GridHeaderCell/GridHeaderCell';
 import getChildIndexClassname from '../../../../lib/utils/getChildIndexClassname';
-import { GridColumn } from '../../../../types/componentTypes/Grid.types';
+import { GridColumn } from '../Grid.types';
 
 interface GridHeaderRowProps {
 	columns: GridColumn[];

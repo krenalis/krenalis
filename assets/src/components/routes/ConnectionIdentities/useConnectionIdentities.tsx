@@ -3,7 +3,7 @@ import AppContext from '../../../context/AppContext';
 import { ConnectionIdentitiesResponse } from '../../../types/external/api';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
-import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
 import { UserIdentity } from '../../../types/external/user';
 
 const useConnectionIdentities = () => {

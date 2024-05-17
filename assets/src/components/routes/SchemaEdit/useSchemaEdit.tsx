@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
 import Type, { ObjectType, Role, TypeName } from '../../../types/external/types';
-import { SortableGridRow, GridColumn } from '../../../types/componentTypes/Grid.types';
+import { SortableGridRow, GridColumn } from '../../shared/Grid/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';

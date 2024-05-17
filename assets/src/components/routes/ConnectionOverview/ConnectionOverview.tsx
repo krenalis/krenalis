@@ -10,7 +10,7 @@ import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { ConnectionStats } from '../../../types/external/connection';
-import { GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridRow } from '../../shared/Grid/Grid.types';
 import { Execution } from '../../../types/external/api';
 
 const EXECUTIONS_COLUMNS = [

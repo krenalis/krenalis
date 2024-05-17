@@ -1,12 +1,7 @@
 import React, { ReactNode, forwardRef, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
-import {
-	GridRow as GridRowType,
-	GridColumn,
-	NestedGridRows,
-	StandardGridRow,
-} from '../../../types/componentTypes/Grid.types';
+import { GridRow as GridRowType, GridColumn, NestedGridRows, StandardGridRow } from './Grid.types';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useGrid } from './useGrid';

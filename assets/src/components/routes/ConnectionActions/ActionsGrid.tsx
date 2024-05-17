@@ -13,7 +13,7 @@ import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import { Action, ActionType } from '../../../types/external/action';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
-import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
 import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
 import { Execution } from '../../../types/external/api';
 import { sleep } from '../../../lib/utils/sleep';

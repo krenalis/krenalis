@@ -8,7 +8,7 @@ import PasswordToggle from '../../shared/PasswordToggle/PasswordToggle';
 import { WarehouseSettings, WarehouseType } from '../../../types/external/warehouse';
 import Grid from '../../shared/Grid/Grid';
 import * as icons from '../../../constants/icons';
-import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';

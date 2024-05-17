@@ -22,7 +22,7 @@ import {
 	SheetsResponse,
 	ConnectorUIResponse,
 } from '../../../types/external/api';
-import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
 import ConnectorFieldInterface from '../../../types/external/ui';
 import { redirect } from 'react-router-dom';

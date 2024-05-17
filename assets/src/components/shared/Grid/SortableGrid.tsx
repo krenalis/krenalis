@@ -1,7 +1,7 @@
 import React, { ReactNode, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
-import { GridColumn, NestedGridRows, StandardGridRow, SortableGridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, NestedGridRows, StandardGridRow, SortableGridRow } from './Grid.types';
 import { useGrid } from './useGrid';
 import getChildIndexClassname from '../../../lib/utils/getChildIndexClassname';
 import GridNestedRows from './GridNestedRows/GridNestedRows';

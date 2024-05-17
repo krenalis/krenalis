@@ -1,7 +1,7 @@
 import React, { useState, ReactNode, Fragment } from 'react';
 import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
-import { NestedGridRows, GridColumn } from '../../../../types/componentTypes/Grid.types';
+import { NestedGridRows, GridColumn } from '../Grid.types';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface GridNestedRowsProps {

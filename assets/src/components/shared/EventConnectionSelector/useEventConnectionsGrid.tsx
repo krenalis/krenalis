@@ -1,5 +1,5 @@
 import React, { useContext, useMemo } from 'react';
-import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
+import { GridColumn, GridRow } from '../Grid/Grid.types';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
