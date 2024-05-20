@@ -70,12 +70,12 @@ func (this *Action) exec(ctx context.Context) {
 
 	var err error
 
-	if this.connection.store == nil {
-		err = actionExecutionError{fmt.Errorf("workspace %d does not have a data warehouse", connection.Workspace().ID)}
-	} else if this.Target == Groups {
+	if this.Target == Groups {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else if !this.isLanguageSupported() {
 		err = actionExecutionError{fmt.Errorf("%s transformation language is not supported", this.Transformation.Function.Language)}
+	} else if this.connection.store == nil {
+		err = actionExecutionError{fmt.Errorf("workspace %d does not have a data warehouse", connection.Workspace().ID)}
 	} else {
 		if connection.Role == state.Source {
 			err = this.importUsers(ctx)

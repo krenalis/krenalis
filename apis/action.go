@@ -281,6 +281,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
 // It returns an errors.UnprocessableError error with code
+//
 //   - ConnectionDisabled, if the connection is disabled.
 //   - ExecutionInProgress, if the action is already in progress.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
@@ -295,10 +296,6 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	if _, ok := this.action.Execution(); ok {
 		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
-	if this.connection.store == nil {
-		ws := c.Workspace()
-		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
-	}
 	if t := this.action.Target; t != state.Users && t != state.Groups {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
@@ -306,6 +303,10 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	case state.AppType, state.DatabaseType, state.FileStorageType:
 	default:
 		return errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
+	}
+	if this.connection.store == nil {
+		ws := c.Workspace()
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 	return this.addExecution(ctx, reimport)
 }
