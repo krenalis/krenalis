@@ -284,6 +284,8 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 //
 //   - ConnectionDisabled, if the connection is disabled.
 //   - ExecutionInProgress, if the action is already in progress.
+//   - InspectionMode, if the data warehouse is in inspection mode.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	this.apis.mustBeOpen()
@@ -307,6 +309,12 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	if this.connection.store == nil {
 		ws := c.Workspace()
 		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+	}
+	switch this.connection.store.Mode() {
+	case state.Inspection:
+		return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+	case state.Maintenance:
+		return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
 	return this.addExecution(ctx, reimport)
 }
