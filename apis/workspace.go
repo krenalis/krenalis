@@ -635,7 +635,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 		return errors.Unprocessable(InvalidWarehouseType, "workspace %d is connected with a %s data warehouse, not %s", ws.ID, ws.Warehouse.Type, typ)
 	}
 
-	settings, err := this.organization.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -643,7 +643,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 		return err
 	}
 
-	err = this.organization.apis.datastore.PingWarehouse(ctx, ws.Warehouse.Type, settings)
+	err = this.apis.datastore.PingWarehouse(ctx, ws.Warehouse.Type, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
@@ -784,7 +784,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
 	}
 
-	settings, err := this.organization.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1307,7 +1307,7 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 //   - InvalidWarehouseSettings, if the settings are not valid.
 func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
-	err := this.organization.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
+	err := this.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	switch err := err.(type) {
 	case *datastore.SettingsError:
 		return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
