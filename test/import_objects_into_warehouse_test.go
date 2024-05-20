@@ -58,7 +58,7 @@ def transform(user: dict) -> dict:
 
 	// Check if the users have been imported - and then returned - correctly.
 
-	users, _, count := c.Users([]string{"email", "ios"}, "", 0, 1)
+	users, _, count := c.Users([]string{"email", "ios"}, "email", 0, 1)
 
 	// Validate the users count.
 	const expectedTotalCount = 10
@@ -68,10 +68,10 @@ def transform(user: dict) -> dict:
 
 	// Validate the users.
 	expectedUsers := []map[string]any{
-		{"email": "kbuessen0@example.com",
+		{"email": "aniece2x@example.com",
 			"ios": map[string]any{
-				"id":         "kbuessen0@example.com-id",
-				"idfa":       "kbuessen0@example.com-idfa",
+				"id":         "aniece2x@example.com-id",
+				"idfa":       "aniece2x@example.com-idfa",
 				"push_token": nil},
 		},
 	}
