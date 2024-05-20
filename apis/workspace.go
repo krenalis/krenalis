@@ -40,6 +40,37 @@ const (
 	maxEventsListenedTo = 1000 // maximum number of processed events listened to.
 )
 
+// Workspace represents a workspace.
+type Workspace struct {
+	apis                *APIs
+	organization        *Organization
+	store               *datastore.Store
+	workspace           *state.Workspace
+	ID                  int
+	Name                string
+	UsersSchema         types.Type
+	Identifiers         []string
+	WarehouseMode       *WarehouseMode
+	PrivacyRegion       PrivacyRegion
+	DisplayedProperties DisplayedProperties
+}
+
+// PrivacyRegion represents a privacy region.
+type PrivacyRegion string
+
+const (
+	PrivacyRegionNotSpecified PrivacyRegion = ""
+	PrivacyRegionEurope       PrivacyRegion = "Europe"
+)
+
+// DisplayedProperties represents the displayed properties.
+type DisplayedProperties struct {
+	Image       string
+	FirstName   string
+	LastName    string
+	Information string
+}
+
 // AddConnection adds a new connection. oAuthToken is an OAuth token returned by
 // the OAuthToken method and must be empty if the connector does not support
 // OAuth authentication.

@@ -752,21 +752,6 @@ func isValidInvitationToken(token string) bool {
 	return err == nil
 }
 
-// Workspace represents a workspace.
-type Workspace struct {
-	apis                *APIs
-	organization        *Organization
-	store               *datastore.Store
-	workspace           *state.Workspace
-	ID                  int
-	Name                string
-	UsersSchema         types.Type
-	Identifiers         []string
-	WarehouseMode       *WarehouseMode
-	PrivacyRegion       PrivacyRegion
-	DisplayedProperties DisplayedProperties
-}
-
 type OrganizationSort int
 
 const (
@@ -779,20 +764,4 @@ func (s OrganizationSort) String() string {
 		return "name"
 	}
 	panic("invalid organization sort")
-}
-
-// PrivacyRegion represents a privacy region.
-type PrivacyRegion string
-
-const (
-	PrivacyRegionNotSpecified PrivacyRegion = ""
-	PrivacyRegionEurope       PrivacyRegion = "Europe"
-)
-
-// DisplayedProperties represents the displayed properties.
-type DisplayedProperties struct {
-	Image       string
-	FirstName   string
-	LastName    string
-	Information string
 }
