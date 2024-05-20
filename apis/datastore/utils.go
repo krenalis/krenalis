@@ -20,7 +20,6 @@ import (
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
-	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
 
@@ -161,14 +160,12 @@ func exprFromFilter(filter *state.Filter, columnFromProperty map[string]warehous
 			value, _ = time.Parse("15:04:05.999999999", cond.Value)
 		case types.YearKind:
 			value, _ = strconv.Atoi(cond.Value)
-		case types.UUIDKind:
-			value, _ = uuid.Parse(cond.Value)
+		case types.UUIDKind, types.TextKind:
+			value = cond.Value
 		case types.JSONKind:
 			value = json.RawMessage(cond.Value)
 		case types.InetKind:
 			value, _ = netip.ParseAddr(cond.Value)
-		case types.TextKind:
-			value = cond.Value
 		default:
 			return nil, fmt.Errorf("unexpected type %s", column.Type)
 		}
