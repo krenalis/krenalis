@@ -431,9 +431,6 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	if schema.Kind() != types.ObjectKind {
 		return errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
 	}
-	if this.store == nil {
-		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
-	}
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
@@ -451,6 +448,10 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	operations, err := diffschemas.Diff(current, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
+	}
+
+	if this.store == nil {
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 
 	// Add the "__id__" meta property.
@@ -529,9 +530,6 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	if err := validateRePaths(rePaths); err != nil {
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
 	}
-	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
-	}
 	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 	schema = removeMetaProperties(schema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
@@ -544,6 +542,9 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
+	}
+	if this.store == nil {
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 	schema = types.Object(append([]types.Property{
 		{Name: "__id__", Type: types.Int(32)},
@@ -1360,11 +1361,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	ws := this.workspace
 
-	// Verify that the workspace has a data warehouse.
-	if this.store == nil {
-		return nil, types.Type{}, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
-	}
-
 	// Validate the arguments.
 	if len(properties) == 0 {
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
@@ -1422,6 +1418,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, types.Type{}, 0, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	// Verify that the workspace has a data warehouse.
+	if this.store == nil {
+		return nil, types.Type{}, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
 	// Read the users.
