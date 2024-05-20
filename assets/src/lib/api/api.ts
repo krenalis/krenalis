@@ -18,7 +18,7 @@ import {
 } from '../../types/external/action';
 import { UI_BASE_PATH } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
-import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
+import { WarehouseMode, WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
 import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from '../../types/external/workspace';
 import {
 	ConnectorUIResponse,
@@ -572,9 +572,16 @@ class Workspaces {
 		return await call(`${this.apiURL}/warehouse/settings`, http.GET);
 	};
 
-	changeWarehouseSettings = async (type: WarehouseType, settings: any): Promise<void> => {
+	changeWarehouseMode = async (mode: WarehouseMode): Promise<void> => {
+		return await call(`${this.apiURL}/warehouse/mode`, http.PUT, {
+			Mode: mode,
+		});
+	};
+
+	changeWarehouseSettings = async (type: WarehouseType, mode: WarehouseMode, settings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/settings`, http.PUT, {
 			Type: type,
+			Mode: mode,
 			Settings: settings,
 		});
 	};
@@ -586,9 +593,10 @@ class Workspaces {
 		});
 	};
 
-	connectWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
+	connectWarehouse = async (warehouseType: WarehouseType, mode: WarehouseMode, settings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse`, http.POST, {
 			Type: warehouseType,
+			Mode: mode,
 			Settings: settings,
 		});
 	};

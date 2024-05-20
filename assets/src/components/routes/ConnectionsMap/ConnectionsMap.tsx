@@ -5,13 +5,14 @@ import { getConnectionsBlocks } from './ConnectionsMap.helpers';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import { Link } from '../../shared/Link/Link';
 
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);
 
-	const { connections, setTitle } = useContext(AppContext);
+	const { connections, setTitle, workspaces, selectedWorkspace } = useContext(AppContext);
 
 	useLayoutEffect(() => {
 		setTitle('Connections');
@@ -39,6 +40,8 @@ const ConnectionsMap = () => {
 	}
 	const sourcesBlocks = getConnectionsBlocks(sources, newConnectionID);
 	const destinationsBlocks = getConnectionsBlocks(destinations, newConnectionID);
+
+	const warehouseMode = workspaces.find((w) => w.ID === selectedWorkspace).WarehouseMode;
 
 	return (
 		<div className='connections-map'>
@@ -69,7 +72,22 @@ const ConnectionsMap = () => {
 									className='connections-map__database connections-map__database--users'
 									id='users-database'
 								>
-									<SlIcon name='database' />
+									{warehouseMode === 'Normal' ? (
+										<SlTooltip content='The warehouse is in Normal mode (full read and write access)'>
+											<SlIcon name='database' />
+										</SlTooltip>
+									) : warehouseMode === 'Inspection' ? (
+										<SlTooltip content='The warehouse is in Inspection mode (read-only for data inspection)'>
+											<SlIcon name='database-lock' />
+										</SlTooltip>
+									) : (
+										<SlTooltip
+											content='The warehouse is in Maintenance mode (init and alter schema
+											operations only)'
+										>
+											<SlIcon name='database-gear' />
+										</SlTooltip>
+									)}
 									<div className='connections-map__database-name'>Users</div>
 								</div>
 							</Link>

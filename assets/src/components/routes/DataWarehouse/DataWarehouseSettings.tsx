@@ -1,36 +1,46 @@
 import React, { useContext, useState, useLayoutEffect } from 'react';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
-import { WarehouseSettings } from '../../../types/external/warehouse';
+import { WarehouseMode, WarehouseSettings } from '../../../types/external/warehouse';
 import objectKeysToLower from '../../../lib/utils/objectKeysToLower';
 import { UnprocessableError } from '../../../lib/api/errors';
 
 interface DataWarehouseSettingsProps {
 	selectedWarehouse: Warehouse;
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
+	currentMode: WarehouseMode | undefined;
 	currentSettings: WarehouseSettings | undefined;
 }
 
 const DataWarehouseSettings = ({
 	selectedWarehouse,
 	setSelectedWarehouse,
+	currentMode,
 	currentSettings,
 }: DataWarehouseSettingsProps) => {
+	const [mode, setMode] = useState<WarehouseMode>(currentMode || 'Normal');
 	const [settings, setSettings] = useState<Record<string, any> | undefined>(objectKeysToLower(currentSettings));
 	const [isPingLoading, setIsPingLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
-	const { setTitle, api, handleError, showStatus, setIsLoadingState } = useContext(appContext);
+	const { setTitle, api, handleError, showStatus, setIsLoadingState, setIsLoadingWorkspaces } =
+		useContext(appContext);
 
 	useLayoutEffect(() => {
 		setTitle(`${selectedWarehouse.label} settings`);
 	}, []);
 
 	const onCancelClick = () => setSelectedWarehouse(null);
+
+	const onChangeMode = (e) => {
+		setMode(e.target.value);
+	};
 
 	const onPing = async () => {
 		const timeout = setTimeout(() => setIsPingLoading(true), 300);
@@ -54,7 +64,7 @@ const DataWarehouseSettings = ({
 	const onConnect = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.connectWarehouse(selectedWarehouse.label, settings);
+			await api.workspaces.connectWarehouse(selectedWarehouse.label, mode, settings);
 		} catch (err) {
 			handleError(err);
 			setIsActionButtonLoading(false);
@@ -70,7 +80,7 @@ const DataWarehouseSettings = ({
 	const onSave = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, settings);
+			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, mode, settings);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'InvalidWarehouseType') {
@@ -88,6 +98,7 @@ const DataWarehouseSettings = ({
 		setTimeout(() => {
 			setIsActionButtonLoading(false);
 			setSelectedWarehouse(null);
+			setIsLoadingWorkspaces(true);
 		}, 500);
 	};
 
@@ -107,6 +118,30 @@ const DataWarehouseSettings = ({
 				) : (
 					<SnowflakeSettings setSettings={setSettings} settings={settings} />
 				)}
+				<SlSelect label='Mode' className='warehouse-settings__mode' value={mode} onSlChange={onChangeMode}>
+					<SlOption value='Normal'>
+						<div className='warehouse-settings__mode-title'>Normal</div>
+						<div className='warehouse-settings__mode-description'>
+							{' '}
+							<span className='warehouse-settings__mode-separator'>-</span> Full read and write access
+						</div>
+					</SlOption>
+					<SlOption value='Inspection'>
+						<div className='warehouse-settings__mode-title'>Inspection</div>
+						<div className='warehouse-settings__mode-description'>
+							{' '}
+							<span className='warehouse-settings__mode-separator'>-</span> Read-only for data inspection
+						</div>
+					</SlOption>
+					<SlOption value='Maintenance'>
+						<div className='warehouse-settings__mode-title'>Maintenance</div>
+						<div className='warehouse-settings__mode-description'>
+							{' '}
+							<span className='warehouse-settings__mode-separator'>-</span> Init and alter schema
+							operations only
+						</div>
+					</SlOption>
+				</SlSelect>
 			</div>
 
 			<div className='warehouse-settings__buttons'>

@@ -1,4 +1,5 @@
 import { Identifiers } from './identifiers';
+import { WarehouseMode } from './warehouse';
 
 type PrivacyRegion = 'Europe' | '';
 
@@ -15,6 +16,7 @@ interface Workspace {
 	Identifiers: Identifiers;
 	PrivacyRegion: PrivacyRegion;
 	DisplayedProperties: DisplayedProperties;
+	WarehouseMode: WarehouseMode;
 }
 
 interface AddWorkspaceResponse {

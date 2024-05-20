@@ -5,7 +5,7 @@ import { Warehouse, warehouses } from './DataWarehouse.helpers';
 import ListTile from '../../shared/ListTile/ListTile';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import PasswordToggle from '../../shared/PasswordToggle/PasswordToggle';
-import { WarehouseSettings, WarehouseType } from '../../../types/external/warehouse';
+import { WarehouseMode, WarehouseSettings, WarehouseType } from '../../../types/external/warehouse';
 import Grid from '../../shared/Grid/Grid';
 import * as icons from '../../../constants/icons';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
@@ -14,6 +14,8 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<WarehouseType>();
@@ -22,7 +24,7 @@ const DataWarehouse = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [hasError, setHasError] = useState<boolean>();
 
-	const { api, handleError, selectedWorkspace } = useContext(appContext);
+	const { api, handleError, selectedWorkspace, workspaces } = useContext(appContext);
 
 	useEffect(() => {
 		const fetchWarehouse = async () => {
@@ -68,18 +70,22 @@ const DataWarehouse = () => {
 		);
 	}
 
+	const warehouseMode = workspaces.find((w) => w.ID === selectedWorkspace).WarehouseMode;
+
 	return (
 		<div className='data-warehouse'>
 			{selectedWarehouse ? (
 				<DataWarehouseSettings
 					selectedWarehouse={selectedWarehouse}
 					setSelectedWarehouse={setSelectedWarehouse}
+					currentMode={warehouseMode}
 					currentSettings={warehouseSettings}
 				/>
 			) : connectedWarehouse ? (
 				<WarehouseInfo
 					warehouseName={connectedWarehouse}
 					warehouseSettings={warehouseSettings!}
+					warehouseMode={warehouseMode}
 					setConnectedWarehouse={setConnectedWarehouse}
 					setSelectedWarehouse={setSelectedWarehouse}
 					setWarehouseSettings={setWarehouseSettings}
@@ -94,6 +100,7 @@ const DataWarehouse = () => {
 interface WarehouseInfoProps {
 	warehouseName: string;
 	warehouseSettings: WarehouseSettings;
+	warehouseMode: WarehouseMode;
 	setConnectedWarehouse: React.Dispatch<React.SetStateAction<WarehouseType | undefined>>;
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
 	setWarehouseSettings: React.Dispatch<React.SetStateAction<WarehouseSettings | undefined>>;
@@ -111,6 +118,7 @@ const warehouseInfoColumns: GridColumn[] = [
 const WarehouseInfo = ({
 	warehouseName,
 	warehouseSettings,
+	warehouseMode,
 	setConnectedWarehouse,
 	setSelectedWarehouse,
 	setWarehouseSettings,
@@ -118,8 +126,18 @@ const WarehouseInfo = ({
 	const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState<boolean>(false);
 	const [isDisconnectButtonLoading, setIsDisconnectButtonLoading] = useState<boolean>(false);
 	const [isInitWarehouseLoading, setIsInitWarehouseLoading] = useState<boolean>(false);
+	const [isWarehouseModeLoading, setIsWarehouseModeLoading] = useState<boolean>(false);
+	const [warehouseModeToSet, setWarehouseModeToSet] = useState<WarehouseMode | ''>('');
 
-	const { api, handleError, setIsLoadingState, showStatus } = useContext(appContext);
+	const { api, handleError, setIsLoadingState, setIsLoadingWorkspaces, showStatus } = useContext(appContext);
+
+	useEffect(() => {
+		if (isWarehouseModeLoading) {
+			setTimeout(() => {
+				setIsWarehouseModeLoading(false);
+			}, 300);
+		}
+	}, [warehouseMode]);
 
 	const warehouse = warehouses.find((w) => w.label === warehouseName)!;
 
@@ -141,6 +159,23 @@ const WarehouseInfo = ({
 
 	const onChange = () => {
 		setSelectedWarehouse(warehouse);
+	};
+
+	const onChangeMode = async (e) => {
+		setWarehouseModeToSet(e.target.value);
+	};
+
+	const onConfirmChangeMode = async () => {
+		setIsWarehouseModeLoading(true);
+		try {
+			await api.workspaces.changeWarehouseMode(warehouseModeToSet as WarehouseMode);
+		} catch (err) {
+			setIsWarehouseModeLoading(false);
+			handleError(err);
+			return;
+		}
+		setIsLoadingWorkspaces(true);
+		setWarehouseModeToSet('');
 	};
 
 	const onDisconnectConfirmation = async () => {
@@ -189,10 +224,46 @@ const WarehouseInfo = ({
 					</div>
 					<div className='warehouse-info__name'>{warehouse.label}</div>
 				</div>
-				<SlButton className='warehouse-info__init' onClick={onInitWarehouse} loading={isInitWarehouseLoading}>
-					<SlIcon slot='prefix' name='database-up' />
-					Init warehouse
-				</SlButton>
+				<div className='warehouse-info__mode-init'>
+					<SlSelect
+						className='warehouse-info__mode'
+						value={isWarehouseModeLoading ? '' : warehouseMode}
+						onSlChange={onChangeMode}
+						disabled={isWarehouseModeLoading}
+					>
+						{isWarehouseModeLoading && <SlSpinner slot='prefix'></SlSpinner>}
+						<SlOption value='Normal'>
+							<div className='warehouse-info__mode-title'>Normal</div>
+							<div className='warehouse-info__mode-description'>
+								{' '}
+								<span className='warehouse-info__mode-separator'>-</span> Full read and write access
+							</div>
+						</SlOption>
+						<SlOption value='Inspection'>
+							<div className='warehouse-info__mode-title'>Inspection</div>
+							<div className='warehouse-info__mode-description'>
+								{' '}
+								<span className='warehouse-info__mode-separator'>-</span> Read-only for data inspection
+							</div>
+						</SlOption>
+						<SlOption value='Maintenance'>
+							<div className='warehouse-info__mode-title'>Maintenance</div>
+							<div className='warehouse-info__mode-description'>
+								{' '}
+								<span className='warehouse-info__mode-separator'>-</span> Init and alter schema
+								operations only
+							</div>
+						</SlOption>
+					</SlSelect>
+					<SlButton
+						className='warehouse-info__init'
+						onClick={onInitWarehouse}
+						loading={isInitWarehouseLoading}
+					>
+						<SlIcon slot='prefix' name='database-up' />
+						Init warehouse
+					</SlButton>
+				</div>
 			</div>
 			<div className='warehouse-info__settings'>
 				<Grid rows={rows} columns={warehouseInfoColumns} />
@@ -205,6 +276,27 @@ const WarehouseInfo = ({
 					Disconnect
 				</SlButton>
 			</div>
+			<AlertDialog
+				variant='danger'
+				isOpen={warehouseModeToSet !== ''}
+				onClose={() => setWarehouseModeToSet('')}
+				title='Are you sure?'
+				actions={
+					<>
+						<SlButton onClick={() => setWarehouseModeToSet('')} disabled={isWarehouseModeLoading}>
+							Cancel
+						</SlButton>
+						<SlButton variant='primary' onClick={onConfirmChangeMode} loading={isWarehouseModeLoading}>
+							Put in {warehouseModeToSet} mode
+						</SlButton>
+					</>
+				}
+			>
+				<p>
+					Changing the warehouse mode alters the types of operations that can be performed on the data
+					warehouse
+				</p>
+			</AlertDialog>
 			<AlertDialog
 				variant='danger'
 				isOpen={isConfirmationDialogOpen}

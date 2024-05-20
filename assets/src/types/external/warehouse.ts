@@ -1,5 +1,7 @@
 type WarehouseType = 'BigQuery' | 'ClickHouse' | 'PostgreSQL' | 'Redshift' | 'Snowflake';
 
+type WarehouseMode = 'Normal' | 'Inspection' | 'Maintenance';
+
 type WarehouseSettings = Record<string, any>;
 
 interface WarehouseResponse {
@@ -7,4 +9,4 @@ interface WarehouseResponse {
 	settings: WarehouseSettings;
 }
 
-export type { WarehouseType, WarehouseSettings, WarehouseResponse };
+export type { WarehouseType, WarehouseMode, WarehouseSettings, WarehouseResponse };

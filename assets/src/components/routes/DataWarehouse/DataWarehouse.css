@@ -53,7 +53,7 @@
 .warehouse-settings__info,
 .warehouse-info__info {
 	display: flex;
-	gap: 10px;
+	gap: 80px;
 	align-items: center;
 	margin-bottom: 30px;
 }
@@ -70,6 +70,35 @@
 	align-items: center;
 }
 
+.warehouse-info__mode-init {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+	width: 100%;
+	justify-content: end;
+}
+
+.warehouse-info__mode {
+	width: 100%;
+}
+
+.warehouse-info__mode sl-option::part(checked-icon) {
+	padding-left: 5px;
+	padding-right: 12px;
+}
+
+.warehouse-info__mode-title {
+	font-weight: 600;
+}
+
+.warehouse-info__mode-separator {
+	display: none;
+}
+
+.warehouse-info__mode-description {
+	font-size: 13px;
+}
+
 .warehouse-settings__back-button {
 	font-size: 23px;
 }
@@ -80,6 +109,27 @@
 
 .warehouse-settings__settings > * {
 	margin-bottom: 30px;
+}
+
+.warehouse-settings__mode {
+	font-size: 14px;
+}
+
+.warehouse-settings__mode sl-option::part(checked-icon) {
+	padding-left: 5px;
+	padding-right: 12px;
+}
+
+.warehouse-settings__mode-title {
+	font-weight: 600;
+}
+
+.warehouse-settings__mode-separator {
+	display: none;
+}
+
+.warehouse-settings__mode-description {
+	font-size: 13px;
 }
 
 .warehouse-settings__buttons {
