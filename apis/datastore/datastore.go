@@ -62,6 +62,7 @@ func New(st *state.State) *Datastore {
 		store: map[int]*Store{},
 	}
 	ds.state.AddListener(ds.onSetWarehouse)
+	ds.state.AddListener(ds.onSetWarehouseMode)
 	ds.state.AddListener(ds.onSetWorkspaceUsersSchema)
 	for _, organization := range st.Organizations() {
 		for _, ws := range organization.Workspaces() {
@@ -165,8 +166,30 @@ func (ds *Datastore) onSetWorkspaceUsersSchema(n state.SetWorkspaceUsersSchema) 
 }
 
 func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
+	// Change the data warehouse mode of the current store.
+	if n.Warehouse != nil {
+		ds.mu.Lock()
+		store := ds.store[n.Workspace]
+		ds.mu.Unlock()
+		if store != nil {
+			store.mu.Lock()
+			store.mode = n.Warehouse.Mode
+			store.mu.Unlock()
+		}
+	}
+	// Replace the current store with a new store.
 	ws, _ := ds.state.Workspace(n.Workspace)
 	go ds.setStore(ws)
+}
+
+func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) {
+	// Change the data warehouse mode.
+	ds.mu.Lock()
+	store := ds.store[n.Workspace]
+	ds.mu.Unlock()
+	store.mu.Lock()
+	store.mode = n.Mode
+	store.mu.Unlock()
 }
 
 func (ds *Datastore) setStore(ws *state.Workspace) {

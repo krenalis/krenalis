@@ -78,8 +78,8 @@ type Store struct {
 		user     map[string]warehouses.Column
 		identity map[string]warehouses.Column
 	}
+	mu        sync.Mutex // for mode and events fields
 	mode      state.WarehouseMode
-	mu        sync.Mutex // for the events field
 	events    []map[string]any
 	closed    atomic.Bool
 	runningIR chan struct{} // prevents concurrent executions of the Workspace Identity Resolution.
@@ -133,7 +133,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // returns a *DataWarehouseError error.
 func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
 	store.mustBeOpen()
-	if store.mode == state.Inspection {
+	if store.Mode() == state.Inspection {
 		return ErrInspectionMode
 	}
 	usersColumns := propertiesToColumns(types.Properties(usersSchema))
@@ -165,7 +165,7 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, usersSchema types.Ty
 // ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error.
 func (store *Store) AddEvents(events []map[string]any) error {
-	switch store.mode {
+	switch store.Mode() {
 	case state.Inspection:
 		return ErrInspectionMode
 	case state.Maintenance:
@@ -186,7 +186,7 @@ func (store *Store) AddEvents(events []map[string]any) error {
 // returns a *DataWarehouseError error.
 func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection int) error {
 	store.mustBeOpen()
-	switch store.mode {
+	switch store.Mode() {
 	case state.Inspection:
 		return ErrInspectionMode
 	case state.Maintenance:
@@ -205,7 +205,7 @@ func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection i
 // returns a *DataWarehouseError error.
 func (store *Store) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return nil, ErrMaintenanceMode
 	}
 	return store.warehouse.DestinationUsers(ctx, action, propertyValue)
@@ -223,7 +223,7 @@ func (store *Store) DestinationUsers(ctx context.Context, action int, propertyVa
 // returns a *DataWarehouseError error.
 func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return "", "", false, ErrMaintenanceMode
 	}
 	return store.warehouse.DuplicatedDestinationUsers(ctx, action)
@@ -239,7 +239,7 @@ func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) 
 // returns a *DataWarehouseError error.
 func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return 0, 0, false, ErrMaintenanceMode
 	}
 	column := strings.ReplaceAll(property, ".", "_")
@@ -253,7 +253,7 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, 
 // returns a *DataWarehouseError error.
 func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return nil, ErrMaintenanceMode
 	}
 	query.table = "events"
@@ -274,7 +274,7 @@ type IdentitiesWriter = warehouses.IdentitiesWriter
 // ErrMaintenanceMode error.
 func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) (IdentitiesWriter, error) {
 	store.mustBeOpen()
-	switch store.mode {
+	switch store.Mode() {
 	case state.Inspection:
 		return nil, ErrInspectionMode
 	case state.Maintenance:
@@ -291,10 +291,18 @@ func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, con
 // returns a *DataWarehouseError error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
-	if store.mode == state.Inspection {
+	if store.Mode() == state.Inspection {
 		return ErrInspectionMode
 	}
 	return store.warehouse.Init(ctx)
+}
+
+// Mode returns the data warehouse mode.
+func (store *Store) Mode() state.WarehouseMode {
+	store.mu.Lock()
+	mode := store.mode
+	store.mu.Unlock()
+	return mode
 }
 
 // RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
@@ -304,7 +312,7 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 // ErrMaintenanceMode error.
 func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 
-	switch store.mode {
+	switch store.Mode() {
 	case state.Inspection:
 		return ErrInspectionMode
 	case state.Maintenance:
@@ -369,7 +377,7 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 // returns a *DataWarehouseError error.
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
-	switch store.mode {
+	switch store.Mode() {
 	case state.Inspection:
 		return ErrInspectionMode
 	case state.Maintenance:
@@ -385,7 +393,7 @@ func (store *Store) SetDestinationUser(ctx context.Context, action int, external
 // returns a *DataWarehouseError error.
 func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
 	query.table = "users"
@@ -402,7 +410,7 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 // occurs with the data warehouse, it returns a *DataWarehouseError error.
 func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (Records, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return nil, ErrMaintenanceMode
 	}
 	query.table = "users"
@@ -417,7 +425,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 // returns a *DataWarehouseError error.
 func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
-	if store.mode == state.Maintenance {
+	if store.Mode() == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
 	query.table = "users_identities"

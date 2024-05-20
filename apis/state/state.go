@@ -63,6 +63,7 @@ type State struct {
 		SetConnection           []func(SetConnection)
 		SetConnectionSettings   []func(SetConnectionSettings)
 		SetWarehouse            []func(SetWarehouse)
+		SetWarehouseMode        []func(SetWarehouseMode)
 		SetWorkspace            []func(SetWorkspace)
 		SetWorkspaceUsersSchema []func(SetWorkspaceUsersSchema)
 	}

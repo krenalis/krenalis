@@ -52,6 +52,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
 	case func(SetWarehouse):
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
+	case func(SetWarehouseMode):
+		state.listeners.SetWarehouseMode = append(state.listeners.SetWarehouseMode, l)
 	case func(SetWorkspace):
 		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
 	case func(schema SetWorkspaceUsersSchema):
@@ -1107,6 +1109,9 @@ func (state *State) setWarehouseMode(n notification) {
 			Settings: w.Warehouse.Settings,
 		}
 	})
+	for _, listener := range state.listeners.SetWarehouseMode {
+		listener(e)
+	}
 }
 
 // SetWorkspace is the event sent when the name, the privacy region and the
