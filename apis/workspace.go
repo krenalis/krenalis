@@ -387,9 +387,11 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 // is ignored.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - NoWarehouse, if the workspace does not have a data warehouse.
-//   - InvalidSchemaChange, if the schema change is invalid.
+//
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InspectionMode, if the data warehouse is in inspection mode.
+//   - InvalidSchemaChange, if the schema change is invalid.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type, rePaths map[string]any) error {
 	this.apis.mustBeOpen()
 	if !schema.Valid() {
@@ -454,6 +456,9 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	//
 	err = this.store.AlterSchema(ctx, schema, operations)
 	if err != nil {
+		if err == datastore.ErrInspectionMode {
+			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		}
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
 		}
@@ -889,18 +894,25 @@ func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - NotConnected, if the workspace is not connected to a data warehouse
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InspectionMode. if the data warehouse is in inspection mode.
+//   - NotConnected, if the workspace is not connected to a data warehouse
 func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
 	err := this.store.InitWarehouse(ctx)
-	if err, ok := err.(*datastore.DataWarehouseError); ok {
-		return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
+	if err != nil {
+		if err == datastore.ErrInspectionMode {
+			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		}
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 // RunIdentityResolution runs the Workspace Identity Resolution on the
@@ -908,9 +920,10 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NotConnected, if the workspace is not connected to a data warehouse
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	if this.store == nil {

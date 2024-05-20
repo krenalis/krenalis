@@ -128,10 +128,14 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // for example if a type is not supported, this method returns a
 // UnsupportedSchemaChangeErr error.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
 	store.mustBeOpen()
+	if store.mode == state.Inspection {
+		return ErrInspectionMode
+	}
 	usersColumns := propertiesToColumns(types.Properties(usersSchema))
 	return store.warehouse.AlterSchema(ctx, usersColumns, operations)
 }
@@ -282,11 +286,14 @@ func (store *Store) IdentitiesWriter(ctx context.Context, schema types.Type, con
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 //
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// If the data warehouse is in inspection mode, it returns the
+// ErrInspectionMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
+	if store.mode == state.Inspection {
+		return ErrInspectionMode
+	}
 	return store.warehouse.Init(ctx)
 }
 
