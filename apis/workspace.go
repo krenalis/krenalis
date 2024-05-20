@@ -896,7 +896,7 @@ func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - InspectionMode. if the data warehouse is in inspection mode.
-//   - NotConnected, if the workspace is not connected to a data warehouse
+//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	if this.store == nil {
@@ -923,7 +923,7 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NotConnected, if the workspace is not connected to a data warehouse
+//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	if this.store == nil {

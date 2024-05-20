@@ -98,26 +98,27 @@ func newScheduler(apis *APIs) *scheduler {
 					actions := sc.actions[i][j]
 					sc.mu.Unlock()
 					for _, action := range actions {
-						if sc.toExecute(action) {
-							connection := action.Connection()
-							store := apis.datastore.Store(connection.Workspace().ID)
-							c := &Connection{apis: apis, connection: connection, store: store}
-							a := &Action{apis: apis, action: action, connection: c}
-							sc.close.Add(1)
-							go func() {
-								defer sc.close.Done()
-								err := a.addExecution(sc.close.ctx, false)
-								if err != nil {
-									if _, ok := err.(*errors.NotFoundError); ok {
-										return
-									}
-									if _, ok := err.(*errors.UnprocessableError); ok {
-										return
-									}
-									slog.Debug("cannot add execution for action", "action", a.ID, "err", err)
-								}
-							}()
+						if !sc.toExecute(action) {
+							continue
 						}
+						connection := action.Connection()
+						store := apis.datastore.Store(connection.Workspace().ID)
+						c := &Connection{apis: apis, connection: connection, store: store}
+						a := &Action{apis: apis, action: action, connection: c}
+						sc.close.Add(1)
+						go func() {
+							defer sc.close.Done()
+							err := a.addExecution(sc.close.ctx, false)
+							if err != nil {
+								if _, ok := err.(*errors.NotFoundError); ok {
+									return
+								}
+								if _, ok := err.(*errors.UnprocessableError); ok {
+									return
+								}
+								slog.Debug("cannot add execution for action", "action", a.ID, "err", err)
+							}
+						}()
 					}
 				}
 			case <-sc.close.shutdown:
@@ -205,7 +206,7 @@ func (sc *scheduler) toExecute(action *state.Action) bool {
 		return false
 	}
 	ws := c.Workspace()
-	if ws.Warehouse == nil {
+	if wh := ws.Warehouse; wh == nil || wh.Mode != state.Normal {
 		return false
 	}
 	if _, ok := action.Execution(); ok {
