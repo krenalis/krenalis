@@ -50,15 +50,16 @@
 	gap: 15px;
 }
 
-.warehouse-settings__info,
-.warehouse-info__info {
+.warehouse-settings__info {
 	display: flex;
-	gap: 80px;
+	gap: 10px;
 	align-items: center;
 	margin-bottom: 30px;
 }
 
 .warehouse-info__info {
+	display: flex;
+	gap: 80px;
 	align-items: end;
 	justify-content: space-between;
 	margin-bottom: 20px;
