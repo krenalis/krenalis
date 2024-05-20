@@ -174,8 +174,8 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		}
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
-			return nil, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
+			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse connection is failed: %w", err.Err)
 		}
 		return nil, err
 	}

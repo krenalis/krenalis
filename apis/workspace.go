@@ -401,7 +401,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 		return errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
 	}
 	if this.store == nil {
-		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", this.workspace.ID)
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
@@ -499,7 +499,7 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
 	}
 	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", this.workspace.ID)
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 	users := this.workspace.UsersSchema
 	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
@@ -1323,7 +1323,7 @@ func (this *Workspace) User(id int) (*User, error) {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoWarehouse, if the workspace does not have a data store.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
@@ -1333,9 +1333,9 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	ws := this.workspace
 
-	// Verify that the workspace has a data store.
+	// Verify that the workspace has a data warehouse.
 	if this.store == nil {
-		return nil, types.Type{}, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", ws.ID)
+		return nil, types.Type{}, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
 	// Validate the arguments.
@@ -1412,8 +1412,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
-			return nil, types.Type{}, 0, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
+			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
+			return nil, types.Type{}, 0, errors.Unprocessable(DataWarehouseFailed, "data warehouse connection is failed: %w", err.Err)
 		}
 		return nil, types.Type{}, 0, err
 	}
