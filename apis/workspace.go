@@ -549,18 +549,14 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
 
-	n := state.SetWarehouse{
+	n := state.SetWarehouseMode{
 		Workspace: ws.ID,
-		Warehouse: &state.Warehouse{
-			Type:     ws.Warehouse.Type,
-			Mode:     state.WarehouseMode(mode),
-			Settings: ws.Warehouse.Settings,
-		},
+		Mode:      state.WarehouseMode(mode),
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_type IS NOT NULL",
-			n.Warehouse.Mode, n.Workspace)
+			n.Mode, n.Workspace)
 		if err != nil {
 			return err
 		}

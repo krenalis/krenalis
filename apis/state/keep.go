@@ -142,6 +142,8 @@ func (state *State) keepState() {
 			state.setResource(n)
 		case "SetWarehouse":
 			state.setWarehouse(n)
+		case "SetWarehouseMode":
+			state.setWarehouseMode(n)
 		case "SetWorkspace":
 			state.setWorkspace(n)
 		case "SetWorkspaceIdentifiers":
@@ -1083,6 +1085,28 @@ func (state *State) setWarehouse(n notification) {
 	for _, listener := range state.listeners.SetWarehouse {
 		listener(e)
 	}
+}
+
+// SetWarehouseMode is the event sent when the mode of a data warehouse is
+// changed.
+type SetWarehouseMode struct {
+	Workspace int
+	Mode      WarehouseMode
+}
+
+// setWarehouseMode sets the mode of a data warehouse.
+func (state *State) setWarehouseMode(n notification) {
+	e := SetWarehouseMode{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.Warehouse = &Warehouse{
+			Type:     w.Warehouse.Type,
+			Mode:     e.Mode,
+			Settings: w.Warehouse.Settings,
+		}
+	})
 }
 
 // SetWorkspace is the event sent when the name, the privacy region and the
