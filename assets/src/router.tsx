@@ -1,6 +1,6 @@
 import React from 'react';
 import { UI_BASE_PATH } from './constants/paths';
-import App from './App';
+import App from './components/routes/App/App';
 import AppLayout from './components/routes/AppLayout/AppLayout';
 import Login from './components/routes/Login/Login';
 import ConnectorsList from './components/routes/ConnectorsList/ConnectorsList';

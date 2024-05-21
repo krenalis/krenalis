@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
-import API from './lib/api/api';
-import TransformedConnector from './lib/helpers/transformedConnector';
-import { Connector } from './types/external/connector';
+import API from '../../../lib/api/api';
+import TransformedConnector from '../../../lib/helpers/transformedConnector';
+import { Connector } from '../../../types/external/connector';
 import TransformedConnection, {
 	getConnectionFullConnector,
 	getConnectionStatus,
 	getConnectionDescription,
 	getFileStorageConnections,
-} from './lib/helpers/transformedConnection';
+} from '../../../lib/helpers/transformedConnection';
 import { Location } from 'react-router-dom';
-import { UI_BASE_PATH } from './constants/paths';
-import { Connection } from './types/external/connection';
-import Workspace from './types/external/workspace';
-import { Warehouse } from './types/internal/app';
-import { WarehouseResponse } from './types/external/warehouse';
-import { Member } from './types/external/api';
-import { NotFoundError } from './lib/api/errors';
-import { TransformedMember, transformMember } from './lib/helpers/transformedMember';
+import { UI_BASE_PATH } from '../../../constants/paths';
+import { Connection } from '../../../types/external/connection';
+import Workspace from '../../../types/external/workspace';
+import { Warehouse } from '../../../types/internal/app';
+import { WarehouseResponse } from '../../../types/external/warehouse';
+import { Member } from '../../../types/external/api';
+import { NotFoundError } from '../../../lib/api/errors';
+import { TransformedMember, transformMember } from '../../../lib/helpers/transformedMember';
 
 const useApp = (
 	handleError: (err: Error | string) => void,

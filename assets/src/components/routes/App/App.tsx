@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
-import Toast from './components/shared/Toast/Toast';
-import * as icons from './constants/icons';
-import { Status } from './types/internal/app';
-import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
-import { UI_BASE_PATH, SIGN_UP_PATH } from './constants/paths';
-import AppContext from './context/AppContext';
+import Toast from '../../shared/Toast/Toast';
+import * as icons from '../../../constants/icons';
+import { Status } from '../../../types/internal/app';
+import { FULLSCREEN_PATTERNS } from '../../../lib/helpers/navigation';
+import { UI_BASE_PATH, SIGN_UP_PATH } from '../../../constants/paths';
+import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
@@ -13,7 +13,7 @@ import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
-import { LoginRequiredError } from './lib/api/errors';
+import { LoginRequiredError } from '../../../lib/api/errors';
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/dist/');
 
