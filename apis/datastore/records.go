@@ -14,6 +14,8 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // Seq represents a sequence of V values.
@@ -42,7 +44,7 @@ type Records interface {
 
 // Record represents a record.
 type Record struct {
-	ID         int            // Identifier, whose value must fall within an Int(32).
+	ID         uuid.UUID      // Identifier.
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -155,8 +157,13 @@ func (r *records) Seq() Seq[Record] {
 				record = Record{Err: err}
 				continue
 			}
+			id, err := uuid.Parse(row[last].(string))
+			if err != nil {
+				record = Record{Err: fmt.Errorf("id is not a valid UUID: %s", err)}
+				continue
+			}
 			record = Record{
-				ID:         row[last].(int),
+				ID:         id,
 				Properties: r.explode(row),
 			}
 		}

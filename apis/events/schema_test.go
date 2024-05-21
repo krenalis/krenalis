@@ -33,8 +33,8 @@ func Test_SchemaWithGID(t *testing.T) {
 	if gid.Name != "gid" {
 		t.Fatalf("name of first property should be \"gid\", got %q", gid.Name)
 	}
-	if !gid.Type.EqualTo(types.Int(32)) {
-		t.Fatalf("type of first property should be %s, got %s", types.Int(32), gid.Type)
+	if !gid.Type.EqualTo(types.UUID()) {
+		t.Fatalf("type of first property should be %s, got %s", types.UUID(), gid.Type)
 	}
 
 }

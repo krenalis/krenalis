@@ -8,11 +8,11 @@
 package test
 
 import (
-	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 )
@@ -101,9 +101,12 @@ func Test_UsersIdentities(t *testing.T) {
 
 	for _, user := range users {
 
-		id, _ := user["__id__"].(json.Number).Int64()
+		id, err := uuid.Parse(user["__id__"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		identities, count := c.UserIdentities(int(id), 0, 1000)
+		identities, count := c.UserIdentities(id, 0, 1000)
 
 		if count != 1 && count != 2 {
 			t.Fatalf("expecting 'count' to be 1 or 2, got %d", count)
@@ -158,13 +161,13 @@ func Test_UsersIdentities(t *testing.T) {
 	// Additional test: test that a call to '/identities' for an user which does not exist
 	// returns a NotFound error.
 	{
-		url := "/api/workspaces/1/users/12345/identities"
+		url := "/api/workspaces/1/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities"
 		err := c.Call("GET", url, nil, nil)
 		if err == nil {
 			t.Fatalf("expecting error, got nothing")
 		}
 		errorMsg := err.Error()
-		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user 12345 does not exist"}}`
+		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user 7682c2a8-d85d-458b-9bd8-dc57cc12575a does not exist"}}`
 		if expectedErr != errorMsg {
 			t.Fatalf("expected error %q, got %q", expectedErr, errorMsg)
 		}

@@ -17,6 +17,8 @@ import (
 
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/backoff"
+
+	"github.com/google/uuid"
 )
 
 const numSteps = 7
@@ -234,7 +236,7 @@ type ActionCollector struct {
 }
 
 // Failed increases the failed count for the provided step.
-func (stats *ActionCollector) Failed(step ActionStep, gid int, err error) {
+func (stats *ActionCollector) Failed(step ActionStep, gid uuid.UUID, err error) {
 	stats.mu.Lock()
 	stats.failed[step]++
 	stats.mu.Unlock()

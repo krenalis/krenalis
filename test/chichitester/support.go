@@ -20,6 +20,7 @@ import (
 	"github.com/open2b/chichi/backoff"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/analytics-go/v3"
 )
 
@@ -392,21 +393,21 @@ func (c *Chichi) TableSchema(conn int, table string) types.Type {
 	return schema
 }
 
-func (c *Chichi) UserEvents(user int) []map[string]any {
+func (c *Chichi) UserEvents(user uuid.UUID) []map[string]any {
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/users/%d/events", c.ws, user)
+	method := fmt.Sprintf("/api/workspaces/%d/users/%s/events", c.ws, user)
 	c.MustCall("GET", method, nil, &response)
 	return response.Events
 }
 
-func (c *Chichi) UserIdentities(user int, first, limit int) ([]UserIdentity, int) {
+func (c *Chichi) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentity, int) {
 	var response struct {
 		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/users/%d/identities?first=%d&limit=%d", c.ws, user, first, limit)
+	method := fmt.Sprintf("/api/workspaces/%d/users/%s/identities?first=%d&limit=%d", c.ws, user, first, limit)
 	c.MustCall("GET", method, nil, &response)
 	return response.Identities, response.Count
 }

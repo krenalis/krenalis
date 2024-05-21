@@ -11,7 +11,7 @@ import "github.com/open2b/chichi/types"
 
 // SchemaWithGID is the schema of an event which includes the GID property.
 var SchemaWithGID = types.Object(append(
-	[]types.Property{{Name: "gid", Type: types.Int(32)}},
+	[]types.Property{{Name: "gid", Type: types.UUID()}},
 	types.Properties(Schema)...,
 ))
 

@@ -11,8 +11,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
@@ -25,7 +25,7 @@ type User struct {
 	apis      *APIs
 	workspace *state.Workspace
 	store     *datastore.Store
-	id        int
+	id        uuid.UUID
 }
 
 // Events returns the events of the user, ordered from the most recent to the
@@ -58,7 +58,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 			Property: "gid",
 			Operator: "is",
-			Value:    strconv.Itoa(this.id),
+			Value:    this.id.String(),
 		}}},
 		OrderBy:   "timestamp",
 		OrderDesc: true,
@@ -77,7 +77,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 			Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 				Property: "__id__",
 				Operator: "is",
-				Value:    strconv.Itoa(this.id),
+				Value:    this.id.String(),
 			}}},
 			Limit: 1,
 		})
@@ -85,7 +85,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 			return nil, err
 		}
 		if count == 0 {
-			return nil, errors.NotFound("user %d does not exist", this.id)
+			return nil, errors.NotFound("user %s does not exist", this.id)
 		}
 	}
 
@@ -118,7 +118,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 		Property: "__gid__",
 		Operator: "is",
-		Value:    strconv.Itoa(this.id),
+		Value:    this.id.String(),
 	}}}
 	ws := &Workspace{
 		apis:      this.apis,
@@ -130,7 +130,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 		return nil, 0, err
 	}
 	if identities == nil {
-		return nil, 0, errors.NotFound("user %d does not exist", this.id)
+		return nil, 0, errors.NotFound("user %s does not exist", this.id)
 	}
 	data, err := json.Marshal(identities)
 	return data, count, err
@@ -159,7 +159,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 		Property: "__id__",
 		Operator: "is",
-		Value:    strconv.Itoa(this.id),
+		Value:    this.id.String(),
 	}}}
 
 	// Retrieve the user traits.
@@ -180,7 +180,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	if len(records) == 0 {
-		return nil, errors.NotFound("user %d does not exist", this.id)
+		return nil, errors.NotFound("user %s does not exist", this.id)
 	}
 
 	return encoding.Marshal(ws.UsersSchema, records[0])

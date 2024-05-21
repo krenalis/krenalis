@@ -9,13 +9,13 @@ package test
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 
@@ -189,18 +189,18 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Retrieve the GID of "kbuessen0@example.com".
-	var kBuessenGid int
+	var kBuessenGid uuid.UUID
 	for _, user := range users {
 		if user["email"] == "kbuessen0@example.com" {
-			gid, err := user["__id__"].(json.Number).Int64()
+			gid, err := uuid.Parse(user["__id__"].(string))
 			if err != nil {
 				t.Fatal(err)
 			}
-			kBuessenGid = int(gid)
+			kBuessenGid = gid
 			break
 		}
 	}
-	if kBuessenGid == 0 {
+	if kBuessenGid == (uuid.UUID{}) {
 		t.Fatalf("user with email %q not found", "kbuessen0@example.com")
 	}
 
@@ -213,7 +213,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	// Validate the identities.
 	identities, count := c.UserIdentities(kBuessenGid, 0, 1000)
 	if count != 3 {
-		t.Fatalf("expecting user %d to have 3 identities associated, got %d", kBuessenGid, count)
+		t.Fatalf("expecting user %s to have 3 identities associated, got %d", kBuessenGid, count)
 	}
 	assertEqualIdentity := func(got, expected chichitester.UserIdentity) {
 		if !reflect.DeepEqual(got, expected) {

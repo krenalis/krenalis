@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/connectors/httpclient"
 	"github.com/open2b/chichi/apis/state"
@@ -255,7 +256,7 @@ func (w *appWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
+func (w *appWriter) Write(ctx context.Context, gid uuid.UUID, record Record) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
@@ -265,7 +266,7 @@ func (w *appWriter) Write(ctx context.Context, gid int, record Record) bool {
 	} else {
 		err = w.records.Update(ctx, w.target, record.ID, record.Properties)
 	}
-	w.ack(err, []int{gid})
+	w.ack(err, []uuid.UUID{gid})
 	return true
 }
 

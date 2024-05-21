@@ -22,6 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
@@ -209,7 +210,7 @@ func (w *fileWriter) Commit(ctx context.Context) error {
 	return err
 }
 
-func (w *fileWriter) Write(ctx context.Context, gid int, record Record) bool {
+func (w *fileWriter) Write(ctx context.Context, gid uuid.UUID, record Record) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
@@ -326,7 +327,7 @@ func newRecordReader(columns []types.Property, records <-chan fileRecord, ack Ac
 }
 
 type fileRecord struct {
-	gid    int
+	gid    uuid.UUID
 	record []any
 }
 
@@ -339,8 +340,8 @@ type recordReader struct {
 
 // Ack acknowledges the processing of the record with the given GID.
 // err is the error occurred processing the record, if any.
-func (rr *recordReader) Ack(gid int, err error) {
-	rr.ack(err, []int{gid})
+func (rr *recordReader) Ack(gid uuid.UUID, err error) {
+	rr.ack(err, []uuid.UUID{gid})
 }
 
 // Columns returns the columns of the records.
@@ -348,17 +349,17 @@ func (rr *recordReader) Columns() []types.Property {
 	return rr.columns
 }
 
-// Record returns the next record as a slice of any. It returns nil and io.EOF
-// if there are no more records.
-func (rr *recordReader) Record(ctx context.Context) (int, []any, error) {
+// Record returns the next record as a slice of any. It returns uuid.UUID{}, nil
+// and io.EOF if there are no more records.
+func (rr *recordReader) Record(ctx context.Context) (uuid.UUID, []any, error) {
 	select {
 	case r, ok := <-rr.records:
 		if !ok {
-			return 0, nil, io.EOF
+			return uuid.UUID{}, nil, io.EOF
 		}
 		return r.gid, r.record, nil
 	case <-ctx.Done():
-		return 0, nil, ctx.Err()
+		return uuid.UUID{}, nil, ctx.Err()
 	}
 }
 

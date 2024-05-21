@@ -15,6 +15,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
@@ -221,11 +222,11 @@ func (w *databaseWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *databaseWriter) Write(ctx context.Context, gid int, record Record) bool {
+func (w *databaseWriter) Write(ctx context.Context, gid uuid.UUID, record Record) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
-	record.Properties["id"] = gid
+	record.Properties["id"] = gid.String()
 	// Append the row.
 	w.rows = append(w.rows, record.Properties)
 	// Upsert the rows.
@@ -239,9 +240,9 @@ func (w *databaseWriter) Write(ctx context.Context, gid int, record Record) bool
 // records.
 func (w *databaseWriter) upsert(ctx context.Context) {
 	err := w.inner.Upsert(ctx, w.table, w.rows, w.columns)
-	gids := make([]int, len(w.rows))
+	gids := make([]uuid.UUID, len(w.rows))
 	for i, row := range w.rows {
-		gids[i] = row["id"].(int)
+		gids[i] = uuid.MustParse(row["id"].(string))
 	}
 	w.ack(err, gids)
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))

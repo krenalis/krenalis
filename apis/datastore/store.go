@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
@@ -237,10 +238,10 @@ func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) 
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) DuplicatedUsers(ctx context.Context, property string) (int, int, bool, error) {
+func (store *Store) DuplicatedUsers(ctx context.Context, property string) (uuid.UUID, uuid.UUID, bool, error) {
 	store.mustBeOpen()
 	if store.Mode() == state.Maintenance {
-		return 0, 0, false, ErrMaintenanceMode
+		return uuid.UUID{}, uuid.UUID{}, false, ErrMaintenanceMode
 	}
 	column := strings.ReplaceAll(property, ".", "_")
 	return store.warehouse.DuplicatedUsers(ctx, column)

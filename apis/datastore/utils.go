@@ -202,7 +202,7 @@ func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column)
 		"__displayed_property__": {Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
 		"__anonymous_ids__":      {Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
 		"__last_change_time__":   {Name: "__last_change_time__", Type: types.DateTime()},
-		"__gid__":                {Name: "__gid__", Type: types.Int(32)},
+		"__gid__":                {Name: "__gid__", Type: types.UUID()},
 	}
 	for property, column := range userColumnByProperty {
 		if !isMetaProperty(property) {

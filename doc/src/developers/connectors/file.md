@@ -172,13 +172,13 @@ The `Write` method takes an `io.Writer` as an argument to write the contents of 
 type RecordReader interface {
 
 	// Ack acknowledges the processing of the record with the given GID.
-	Ack(gid int, err error)
+	Ack(gid uuid.UUID, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
 	// Record returns the next record as a slice of any with its GID.
-	Record(ctx context.Context) (gid int, record []any, err error)
+	Record(ctx context.Context) (gid uuid.UUID, record []any, err error)
 }
 ```
 

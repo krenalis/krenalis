@@ -17,6 +17,7 @@ import (
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/analytics-go/v3"
 )
 
@@ -126,27 +127,28 @@ func TestEvents(t *testing.T) {
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)
 	}
-	var userGID int64
+	var userGID uuid.UUID
 	for _, user := range users {
 		email, _ := user["email"].(string)
 		if email == eventUserEmail {
-			userGID, _ = user["__id__"].(json.Number).Int64()
-			if userGID <= 0 {
-				t.Fatalf("invalid user GID %d", userGID)
+			var err error
+			userGID, err = uuid.Parse(user["__id__"].(string))
+			if err != nil {
+				t.Fatalf("invalid user GID: %s", err)
 			}
 			break
 		}
 	}
-	if userGID == 0 {
+	if userGID == (uuid.UUID{}) {
 		t.Fatalf("user with email %q not found", eventUserEmail)
 	}
 	t.Logf("user imported from event has GID %d", userGID)
 
 	// Retrieve the first event for the user.
 	var event map[string]any
-	events := c.UserEvents(int(userGID))
+	events := c.UserEvents(userGID)
 	if len(events) != expectedEventsCount {
-		t.Fatalf("expecting %d events for user %d, got %d", expectedEventsCount, userGID, len(events))
+		t.Fatalf("expecting %d events for user %s, got %d", expectedEventsCount, userGID, len(events))
 	}
 	event = events[0] // most recent event.
 

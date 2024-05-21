@@ -29,6 +29,7 @@ import (
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/itchyny/timefmt-go"
 	"github.com/relvacode/iso8601"
 	"github.com/shopspring/decimal"
@@ -95,9 +96,7 @@ type Records interface {
 // terminates. The parameter err represents the error that occurred while
 // writing the records, if any, and ids represents the identifiers of the
 // records.
-//
-// TODO: ids should be []string if ids represents the data warehouse identifiers.
-type AckFunc func(err error, ids []int)
+type AckFunc func(err error, ids []uuid.UUID)
 
 // Writer is the interface implemented by app, database, and file connectors to
 // write records.
@@ -122,7 +121,7 @@ type Writer interface {
 	// The ack function is invoked even if Write returns false.
 	//
 	// It panics if called on a closed writer.
-	Write(ctx context.Context, gid int, record Record) bool
+	Write(ctx context.Context, gid uuid.UUID, record Record) bool
 }
 
 // CommittableWriter is the interface implemented by writers that support

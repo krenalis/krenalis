@@ -145,7 +145,7 @@ type Warehouse interface {
 	// returned boolean is false.
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error)
+	DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error)
 
 	// IdentitiesWriter returns an IdentitiesWriter.
 	// An IdentitiesWriter can be used for writing user identities with the given

@@ -13,6 +13,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
@@ -86,7 +87,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		for _, id := range ids {
 			if err != nil {
 				_ = id // TODO: see https://github.com/open2b/chichi/issues/456.
-				stats.Failed(statistics.ImportedStep, 0, err)
+				stats.Failed(statistics.ImportedStep, uuid.UUID{}, err)
 				return
 			}
 			stats.Passed(statistics.ImportedStep)
@@ -112,10 +113,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if user.Err != nil {
 			if _, ok := user.Err.(ValidationError); ok {
 				stats.Passed(statistics.ReceivedStep)
-				stats.Failed(statistics.InputValidatedStep, 0, err)
+				stats.Failed(statistics.InputValidatedStep, uuid.UUID{}, err)
 				continue
 			}
-			stats.Failed(statistics.ReceivedStep, 0, err)
+			stats.Failed(statistics.ReceivedStep, uuid.UUID{}, err)
 			continue
 		}
 
@@ -146,10 +147,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 				if result.Err != nil {
 					if _, ok := result.Err.(ValidationError); ok {
 						stats.Passed(statistics.TransformedStep)
-						stats.Failed(statistics.OutputValidatedStep, 0, err)
+						stats.Failed(statistics.OutputValidatedStep, uuid.UUID{}, err)
 						continue
 					}
-					stats.Failed(statistics.TransformedStep, 0, err)
+					stats.Failed(statistics.TransformedStep, uuid.UUID{}, err)
 					continue
 				}
 				user.Properties = result.Value

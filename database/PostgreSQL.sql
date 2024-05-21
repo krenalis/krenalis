@@ -34,7 +34,7 @@ CREATE TABLE workspaces (
 );
 
 INSERT INTO workspaces (id, organization, name, users_schema, warehouse_type, warehouse_settings)
-VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name": "__id__","type":{"name":"Int","bitSize":32}},{"name": "email","type":{"name":"Text","charLen":300},"nullable":true}]}', NULL, '');
+VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name": "__id__","type":{"name":"UUID"}},{"name": "email","type":{"name":"Text","charLen":300},"nullable":true}]}', NULL, '');
 
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
 

@@ -58,6 +58,17 @@ The resulting user of the workspace will be:
 |-------|------|-------------|
 | a@b   | John | 20          |
 
+## User GIDs
+
+A GID is a UUID that uniquely identifies a user at a certain point in time.
+
+During the **Workspace Identity Resolution**, a user's GID **is retained unless**:
+
+- the users **has been merged** with other users
+- the users **has been split** into two or more users
+
+In these cases, the GID of the original user is deleted, and one or more new GIDs are created in its place.
+
 ## Association between events and users
 
 From the same connection which receives events, can both be imported users and events, using different actions. The Workspace Identity Resolution, as mentioned before, also associated events to the users of the workspace.

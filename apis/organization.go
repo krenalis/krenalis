@@ -135,7 +135,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 // It must be kept in sync with the SQL script that initializes the data
 // warehouse.
 var defaultUsersSchema = types.Object([]types.Property{
-	{Name: "__id__", Type: types.Int(32)},
+	{Name: "__id__", Type: types.UUID()},
 	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
 })
 

@@ -13,6 +13,8 @@ import (
 
 	"github.com/open2b/chichi/apis"
 	"github.com/open2b/chichi/apis/errors"
+
+	"github.com/google/uuid"
 )
 
 type user struct {
@@ -84,12 +86,26 @@ func (user user) user(r *http.Request) (*apis.User, error) {
 		return nil, err
 	}
 	v := r.PathValue("user")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseUUID(v)
+	if !ok {
 		return nil, errors.NotFound("")
 	}
 	return ws.User(id)
+}
+
+// parseUUID parses an UUID in the form:
+//
+//	xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+//
+// in case insensitive manner. If the UUID is not in that form, uuid.UUID{} and
+// false are returned.
+func parseUUID(s string) (uuid.UUID, bool) {
+	if len(s) != 36 {
+		return uuid.UUID{}, false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.UUID{}, false
+	}
+	return id, true
 }

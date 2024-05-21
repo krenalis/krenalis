@@ -1841,8 +1841,8 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	var hasID bool
 	for i, column := range columns {
 		if column.Name == "id" {
-			if column.Type.Kind() != types.IntKind {
-				return types.Type{}, errors.Unprocessable(InvalidTable, "column \"id\" of table %q is not a signed 32 bit integer", table)
+			if column.Type.Kind() != types.UUIDKind {
+				return types.Type{}, errors.Unprocessable(InvalidTable, "column \"id\" of table %q is not a UUID", table)
 			}
 			columns = slices.Delete(columns, i, i+1)
 			hasID = true
@@ -1850,7 +1850,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 		}
 	}
 	if !hasID {
-		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q does not have a signed 32-bit integer column named \"id\"", table)
+		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q does not have a UUID column named \"id\"", table)
 	}
 	if len(columns) == 0 {
 		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q only has the \"id\" column and no additional columns", table)

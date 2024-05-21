@@ -22,6 +22,8 @@ import (
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // exportUsers exports the users for the action.
@@ -65,7 +67,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				return actionExecutionError{fmt.Errorf("cannot look for duplicated users on data warehouse: %s", err)}
 			}
 			if ok {
-				return actionExecutionError{fmt.Errorf("there are two users (%d and %d)"+
+				return actionExecutionError{fmt.Errorf("there are two users (%s and %s)"+
 					" with the same value for the internal matching property %q",
 					u1, u2, action.MatchingProperties.Internal)}
 			}
@@ -116,7 +118,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	records, err := store.UserRecords(ctx, datastore.Query{
 		Properties: properties,
 		Filter:     action.Filter,
-		OrderBy:    "__id__",
+		OrderBy:    properties[0], // What should be the sorting property? See https://github.com/open2b/chichi/issues/757.
 	}, action.Connection().Workspace().UsersSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
@@ -135,7 +137,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	var writer connectors.Writer
 
-	ack := func(err error, gids []int) {
+	ack := func(err error, gids []uuid.UUID) {
 		for _, gid := range gids {
 			if err != nil {
 				stats.Failed(statistics.ExportStep, gid, err)
@@ -167,7 +169,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	defer writer.Close(ctx)
 
 	type userToProcess struct {
-		GID        int
+		GID        uuid.UUID
 		ID         string
 		Properties map[string]any
 	}

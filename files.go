@@ -13,6 +13,8 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/google/uuid"
+
 	"github.com/open2b/chichi/types"
 )
 
@@ -83,7 +85,7 @@ type RecordReader interface {
 
 	// Ack acknowledges the processing of the record with the given GID.
 	// err is the error occurred processing the record, if any.
-	Ack(gid int, err error)
+	Ack(gid uuid.UUID, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
@@ -93,7 +95,7 @@ type RecordReader interface {
 	//
 	// After a record has been read and processed, the caller should call Ack
 	// to acknowledge the processing of the record.
-	Record(ctx context.Context) (gid int, record []any, err error)
+	Record(ctx context.Context) (gid uuid.UUID, record []any, err error)
 }
 
 // A RecordWriter interface is used by file connectors to write read records.

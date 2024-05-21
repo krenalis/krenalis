@@ -22,6 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/diffschemas"
@@ -456,7 +457,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 
 	// Add the "__id__" meta property.
 	schema = types.Object(append([]types.Property{
-		{Name: "__id__", Type: types.Int(32)},
+		{Name: "__id__", Type: types.UUID()},
 	}, types.Properties(schema)...))
 
 	// Update the database and send the notification.
@@ -547,7 +548,7 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 	schema = types.Object(append([]types.Property{
-		{Name: "__id__", Type: types.Int(32)},
+		{Name: "__id__", Type: types.UUID()},
 	}, types.Properties(schema)...))
 	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
 	if err != nil {
@@ -1320,11 +1321,8 @@ func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, set
 
 // User returns the user with identifier id of the workspace. If the user does
 // not exist, the error is deferred until methods of *User are called.
-func (this *Workspace) User(id int) (*User, error) {
+func (this *Workspace) User(id uuid.UUID) (*User, error) {
 	this.apis.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("user identifier %d is not valid", id)
-	}
 	return &User{
 		apis:      this.apis,
 		workspace: this.workspace,

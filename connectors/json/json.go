@@ -19,6 +19,8 @@ import (
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // Connector icon.
@@ -209,7 +211,7 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
 	var record []any
-	var gid int
+	var gid uuid.UUID
 	var comma bool
 	b := make([]byte, 0, 4096)
 	if s.Indent {

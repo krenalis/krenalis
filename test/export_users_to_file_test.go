@@ -181,16 +181,16 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 
 		expected := `email,first_name,last_name,gender
-kbuessen0@example.com,Kinsley,Buessen,male
-jdebrett9@example.com,Jerad,Debrett,male
-emoakes2r@example.com,Edyth,Moakes,male
-lwhitesonrr@example.com,Leann,Whiteson,male
-sattestone2s@example.com,Susanne,Atte-Stone,male
+aniece2x@example.com,Ashil,Niece,male
 aquittonden2t@example.com,Aimil,Quittonden,male
-tbrayson2u@example.com,Teodora,Brayson,male
 csifflett2v@example.com,Cristiano,Sifflett,male
+emoakes2r@example.com,Edyth,Moakes,male
+jdebrett9@example.com,Jerad,Debrett,male
+kbuessen0@example.com,Kinsley,Buessen,male
+lwhitesonrr@example.com,Leann,Whiteson,male
 mpordal2w@example.com,Mona,Pordal,male
-aniece2x@example.com,Ashil,Niece,male` + "\n"
+sattestone2s@example.com,Susanne,Atte-Stone,male
+tbrayson2u@example.com,Teodora,Brayson,male` + "\n"
 
 		if !bytes.EqualFold([]byte(expected), content) {
 			t.Fatalf("expecting content %q, got %q", expected, string(content))

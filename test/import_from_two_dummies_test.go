@@ -8,9 +8,9 @@
 package test
 
 import (
-	"encoding/json"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 )
@@ -93,11 +93,14 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every user now should have just one identity associated.
 	totalUsers := 0
 	for _, user := range users {
-		id, _ := user["__id__"].(json.Number).Int64()
-		_, count := c.UserIdentities(int(id), 0, 100)
+		id, err := uuid.Parse(user["__id__"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, count := c.UserIdentities(id, 0, 100)
 		const expectedCount = 1
 		if expectedCount != count {
-			t.Fatalf("expecting %d identities for user %d, got %d", count, id, count)
+			t.Fatalf("expecting %d identities for user %s, got %d", count, id, count)
 		}
 		totalUsers++
 	}
@@ -120,11 +123,14 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every user now should have two identities associated.
 	totalUsers = 0
 	for _, user := range users {
-		id, _ := user["__id__"].(json.Number).Int64()
-		_, count := c.UserIdentities(int(id), 0, 100)
+		id, err := uuid.Parse(user["__id__"].(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, count := c.UserIdentities(id, 0, 100)
 		const expectedCount = 2
 		if expectedCount != count {
-			t.Fatalf("expecting %d identities for user %d, got %d", count, id, count)
+			t.Fatalf("expecting %d identities for user %s, got %d", count, id, count)
 		}
 		totalUsers++
 	}

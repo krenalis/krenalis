@@ -2,7 +2,7 @@
 
 CREATE TABLE events
 (
-    `gid` Int32 DEFAULT 0,
+    `gid` UUID,
     `anonymousId` String,
     `category` String,
     `context_app_name` String,

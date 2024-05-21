@@ -23,6 +23,7 @@ import (
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -180,16 +181,16 @@ func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, act
 }
 
 // DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error) {
+func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error) {
 	db, err := warehouse.connection()
 	if err != nil {
-		return 0, 0, false, err
+		return uuid.UUID{}, uuid.UUID{}, false, err
 	}
 	query := `SELECT gid1, gid2
 		FROM (
 			SELECT
-				min("__id__") AS gid1,
-				max("__id__") as gid2,
+				min("__id__"::text) AS gid1,
+				max("__id__"::text) as gid2,
 				count(*) AS cnt
 			FROM _users
 			GROUP BY "` + column + `") AS subquery
@@ -197,21 +198,21 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string)
 		LIMIT 1`
 	rows, err := db.Query(ctx, query)
 	if err != nil {
-		return 0, 0, false, warehouses.Error(err)
+		return uuid.UUID{}, uuid.UUID{}, false, warehouses.Error(err)
 	}
 	defer rows.Close()
-	var gid1, gid2 int
+	var gid1, gid2 uuid.UUID
 	var found bool
 	for rows.Next() {
 		err := rows.Scan(&gid1, &gid2)
 		if err != nil {
-			return 0, 0, false, warehouses.Error(err)
+			return uuid.UUID{}, uuid.UUID{}, false, warehouses.Error(err)
 		}
 		found = true
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return 0, 0, false, warehouses.Error(err)
+		return uuid.UUID{}, uuid.UUID{}, false, warehouses.Error(err)
 	}
 	return gid1, gid2, found, nil
 }
@@ -457,7 +458,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`"__identity_keys__"`)
+	usersSyncQueries.WriteString(`"__identity_keys__", "__id__"`)
 	usersSyncQueries.WriteString(") SELECT\n")
 	for _, c := range usersColumns {
 		if c.Name == "__id__" {
@@ -470,8 +471,41 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__identity_key__")`)
-	usersSyncQueries.WriteString(" FROM _users_identities GROUP BY __cluster__")
+	// Write the "__identity_keys__" column.
+	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__identity_key__"), `)
+	// Write the "__id__" column.
+	// If all GIDs are the same - ignoring the NULL ones, which refer to new
+	// identities - then take the common value as the user's GID; otherwise, if
+	// we are in a situation where a previously split user is now merged, in
+	// this case, create a new random GID. If the identities are all new, also
+	// in this case, create a new random GID.
+	usersSyncQueries.WriteString(`COALESCE(
+		CASE
+			WHEN COUNT(DISTINCT "__gid__") FILTER ( WHERE "__gid__" IS NOT NULL ) = 1
+				THEN MAX("__gid__"::text)::uuid
+			ELSE gen_random_uuid()
+		END,
+		gen_random_uuid()
+	)`)
+	usersSyncQueries.WriteString(" FROM _users_identities GROUP BY __cluster__; ")
+
+	// If two users who were previously one are split, they will end up having
+	// the same GID, which is incorrect. So this query, in that situation,
+	// replaces the GID of both users with new random GIDs.
+	usersSyncQueries.WriteString(`UPDATE "_users" u
+		SET
+			"__id__" = gen_random_uuid()
+		WHERE
+			"u"."__id__" IN (
+				SELECT
+					"u2"."__id__"
+				FROM
+					"_users" "u2"
+				GROUP BY
+					"u2"."__id__"
+				HAVING
+					COUNT(*) > 1
+	)`)
 
 	// Replace the placeholders in the stored procedure query and run it.
 	query := strings.Replace(storeProcedureQueries, "{{ matching_expr }}", matchingExpr.String(), 1)

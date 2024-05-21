@@ -9,9 +9,9 @@ package test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 
@@ -77,13 +77,13 @@ func TestUsersIdentitiesFromEvents(t *testing.T) {
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d user(s), got %d", expectedUsersCount, count)
 	}
-	var userGID int64
 	for _, user := range users {
 		email, _ := user["email"].(string)
 		if email == eventUserEmail {
-			userGID, _ = user["__id__"].(json.Number).Int64()
-			if userGID <= 0 {
-				t.Fatalf("invalid user GID %d", userGID)
+			var err error
+			_, err = uuid.Parse(user["__id__"].(string))
+			if err != nil {
+				t.Fatal(err)
 			}
 			break
 		}

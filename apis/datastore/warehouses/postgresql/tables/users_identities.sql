@@ -5,7 +5,7 @@ CREATE TABLE _users_identities (
     "__displayed_property__" varchar(40) NOT NULL DEFAULT '',
     "__anonymous_ids__" text[],
     "__last_change_time__" timestamp NOT NULL,
-    "__gid__" int NOT NULL DEFAULT 0,
+    "__gid__" uuid,
     
     "__cluster__" serial,
 

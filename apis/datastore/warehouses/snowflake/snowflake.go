@@ -25,6 +25,7 @@ import (
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -129,7 +130,7 @@ func (warehouse *Snowflake) DuplicatedDestinationUsers(ctx context.Context, acti
 }
 
 // DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, column string) (int, int, bool, error) {
+func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error) {
 	panic("TODO: not implemented")
 }
 
