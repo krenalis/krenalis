@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { UserPagination, UserProperty } from '../types/internal/user';
+import { UserProperty, UserPagination } from '../components/routes/Users/Users.types';
 
 interface UsersContext {
 	users: Record<string, any>[];

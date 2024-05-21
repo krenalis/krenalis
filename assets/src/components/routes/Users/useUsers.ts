@@ -2,7 +2,7 @@ import { useEffect, useContext, useState } from 'react';
 import AppContext from '../../../context/AppContext';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { UserProperty, UserPagination } from '../../../types/internal/user';
+import { UserProperty, UserPagination } from './Users.types';
 import { ObjectType } from '../../../types/external/types';
 import { FindUsersResponse } from '../../../types/external/api';
 

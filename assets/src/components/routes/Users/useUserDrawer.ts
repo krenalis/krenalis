@@ -2,7 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import AppContext from '../../../context/AppContext';
 import { UserEventsResponse, UserIdentitiesResponse, userTraitsResponse } from '../../../types/external/api';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { UserTab } from '../../../types/internal/user';
+import { UserTab } from './Users.types';
 import { UserEvent, UserIdentity } from '../../../types/external/user';
 
 const useUserDrawer = (id: number, selectedTab: UserTab) => {

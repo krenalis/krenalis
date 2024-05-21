@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
-import { UserProperty } from '../../../types/internal/user';
+import { UserProperty } from './Users.types';
 
 const useUsersGrid = (
 	users: Record<string, any>[],

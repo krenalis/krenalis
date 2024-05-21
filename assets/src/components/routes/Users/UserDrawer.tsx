@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, Fragment, useMemo } from 'react';
 import { useUserDrawer } from './useUserDrawer';
-import { UserTab } from '../../../types/internal/user';
+import { UserTab } from './Users.types';
 import AppContext from '../../../context/AppContext';
 import UsersContext from '../../../context/UsersContext';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';

@@ -12,7 +12,7 @@ import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import { UserDrawer } from './UserDrawer';
 import { useUsersGrid } from './useUsersGrid';
-import { UserProperty } from '../../../types/internal/user';
+import { UserProperty } from './Users.types';
 import AppContext from '../../../context/AppContext';
 
 const UsersList = () => {
