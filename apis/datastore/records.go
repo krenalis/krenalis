@@ -152,7 +152,7 @@ func (r *records) Seq() Seq[Record] {
 				}
 			}
 			if err := r.rows.Scan(values...); err != nil {
-				record = Record{Err: r.err}
+				record = Record{Err: err}
 				continue
 			}
 			record = Record{
