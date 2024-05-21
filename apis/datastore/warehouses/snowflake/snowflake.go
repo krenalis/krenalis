@@ -33,9 +33,8 @@ import (
 var _ warehouses.Warehouse = &Snowflake{}
 
 type Snowflake struct {
-	mu       sync.Mutex // for the db and closed fields
+	mu       sync.Mutex // for the db field
 	db       *sql.DB
-	closed   bool
 	settings *sfSettings
 }
 
@@ -98,16 +97,13 @@ func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, usersColumns
 	panic("TODO: not implemented")
 }
 
-// Close closes the warehouse.
+// Close closes the data warehouse.
 func (warehouse *Snowflake) Close() error {
-	var err error
-	warehouse.mu.Lock()
-	if warehouse.db != nil {
-		err = warehouse.db.Close()
-		warehouse.db = nil
-		warehouse.closed = true
+	if warehouse.db == nil {
+		return nil
 	}
-	warehouse.mu.Unlock()
+	err := warehouse.db.Close()
+	warehouse.db = nil
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -407,16 +403,10 @@ func (warehouse *Snowflake) Settings() []byte {
 	return s
 }
 
-// connection returns the database connection.
+// connection returns the Snowflake connection.
 func (warehouse *Snowflake) connection() (*sql.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
-	if warehouse.closed {
-		return nil, errors.New("warehouse is closed")
-	}
-	if warehouse.settings == nil {
-		return nil, errors.New("there are no settings")
-	}
 	if warehouse.db != nil {
 		return warehouse.db, nil
 	}

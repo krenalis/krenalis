@@ -43,9 +43,8 @@ var (
 var _ warehouses.Warehouse = &ClickHouse{}
 
 type ClickHouse struct {
-	mu       sync.Mutex // for the conn and closed fields
+	mu       sync.Mutex // for the conn field
 	conn     chDriver.Conn
-	closed   bool
 	settings *chSettings
 }
 
@@ -94,16 +93,13 @@ func (warehouse *ClickHouse) AlterSchemaQueries(ctx context.Context, usersColumn
 	panic("TODO: not implemented")
 }
 
-// Close closes the warehouse.
+// Close closes the data warehouse.
 func (warehouse *ClickHouse) Close() error {
-	var err error
-	warehouse.mu.Lock()
-	if warehouse.conn != nil {
-		err = warehouse.conn.Close()
-		warehouse.conn = nil
-		warehouse.closed = true
+	if warehouse.conn == nil {
+		return nil
 	}
-	warehouse.mu.Unlock()
+	err := warehouse.conn.Close()
+	warehouse.conn = nil
 	return err
 }
 
@@ -192,16 +188,10 @@ func (warehouse *ClickHouse) RunWorkspaceIdentityResolution(ctx context.Context,
 	panic("TODO: not implemented")
 }
 
-// connection returns the database connection.
+// connection returns the ClickHouse connection.
 func (warehouse *ClickHouse) connection() (clickhouse.Conn, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
-	if warehouse.closed {
-		return nil, errors.New("warehouse is closed")
-	}
-	if warehouse.settings == nil {
-		return nil, errors.New("there are no settings")
-	}
 	if warehouse.conn != nil {
 		return warehouse.conn, nil
 	}

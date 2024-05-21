@@ -29,9 +29,8 @@ type Records interface {
 	// before returning. Close is idempotent and does not impact the result of Err.
 	Close() error
 
-	// Err returns any error encountered during iteration, excluding errors returned
-	// by the yield function, which may have occurred after an explicit or implicit
-	// Close.
+	// Err returns any error encountered during iteration which may have occurred
+	// after an explicit or implicit Close.
 	Err() error
 
 	// Last reports whether the last record has been read.

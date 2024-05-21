@@ -282,7 +282,8 @@ func (apis *APIs) AddOrganization(ctx context.Context, name string) (int, error)
 	return id, nil
 }
 
-// Close closes the APIs.
+// Close closes the APIs. When Close is called, no other calls to API's methods
+// should be in progress and no other shall be made.
 // It panics if it has already been called.
 func (apis *APIs) Close() {
 	if apis.closed.Swap(true) {

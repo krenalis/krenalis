@@ -84,7 +84,8 @@ func New(st *state.State) *Datastore {
 	return ds
 }
 
-// Close closes the datastore.
+// Close closes the datastore. When Close is called, no other calls to
+// datastore's methods should be in progress and no other shall be made.
 // It panics if it has already been called.
 func (ds *Datastore) Close() {
 	if ds.closed.Swap(true) {

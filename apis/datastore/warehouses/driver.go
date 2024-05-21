@@ -112,9 +112,8 @@ type Warehouse interface {
 	// *warehouses.DataWarehouseError error.
 	AlterSchemaQueries(ctx context.Context, usersColumns []Column, operations []AlterSchemaOperation) ([]string, error)
 
-	// Close closes the warehouse.
-	// It will not allow any new queries to run, and it waits for the current ones
-	// to finish.
+	// Close closes the data warehouse. When Close is called, no other calls to
+	// data warehouse's methods are in progress and no more will be made.
 	Close() error
 
 	// DeleteConnectionIdentities deletes the identities of a connection.

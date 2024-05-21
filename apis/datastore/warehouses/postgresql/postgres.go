@@ -11,7 +11,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -47,9 +46,8 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 type PostgreSQL struct {
-	mu       sync.Mutex // for the db and closed fields
+	mu       sync.Mutex // for the db field
 	db       *postgres.DB
-	closed   bool
 	settings *psSettings
 }
 
@@ -103,15 +101,13 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	return &PostgreSQL{settings: &s}, nil
 }
 
-// Close closes the warehouse.
+// Close closes the data warehouse.
 func (warehouse *PostgreSQL) Close() error {
-	warehouse.mu.Lock()
-	if warehouse.db != nil {
-		warehouse.db.Close()
-		warehouse.db = nil
-		warehouse.closed = true
+	if warehouse.db == nil {
+		return nil
 	}
-	warehouse.mu.Unlock()
+	warehouse.db.Close()
+	warehouse.db = nil
 	return nil
 }
 
@@ -547,16 +543,10 @@ func (warehouse *PostgreSQL) Settings() []byte {
 	return s
 }
 
-// connection returns the database connection.
+// connection returns the PostgreSQL connection.
 func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
-	if warehouse.closed {
-		return nil, errors.New("warehouse is closed")
-	}
-	if warehouse.settings == nil {
-		return nil, errors.New("there are no settings")
-	}
 	if warehouse.db != nil {
 		return warehouse.db, nil
 	}
