@@ -325,8 +325,8 @@ class Analytics {
 		}
 	}
 
-	// reset is like the public reset method, but it differs in that it does not
-	// reset the Anonymous ID and does not end the session if 'all' is false.
+	// reset is similar to the public reset method, but if 'all' is false, it
+	// does not reset the Anonymous ID and does not end the session.
 	#reset(all) {
 		this.#storage.setUserId()
 		this.#storage.setGroupId()
