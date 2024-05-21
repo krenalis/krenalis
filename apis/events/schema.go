@@ -9,13 +9,6 @@ package events
 
 import "github.com/open2b/chichi/types"
 
-// SchemaWithUserGID is the schema of an event which includes the user GID
-// property.
-var SchemaWithUserGID = types.Object(append(
-	[]types.Property{{Name: "user", Type: types.UUID()}},
-	types.Properties(Schema)...,
-))
-
 // Schema is the schema of an event. It does not include the user GID property.
 var Schema = types.Object([]types.Property{
 	{Name: "anonymousId", Type: types.Text()},
