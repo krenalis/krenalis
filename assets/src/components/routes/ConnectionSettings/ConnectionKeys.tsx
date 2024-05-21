@@ -49,6 +49,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'TooManyKeys') {
 					handleError('The maximum number of keys has been reached');
+					return;
 				}
 			}
 			handleError(err);
@@ -71,6 +72,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'UniqueKey') {
 					handleError('The last key cannot be deleted');
+					return;
 				}
 			}
 			if (err.code === 'KeyNotExist') {

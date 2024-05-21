@@ -43,6 +43,7 @@ const DataWarehouse = () => {
 				}
 				setHasError(true);
 				handleError(err);
+				return;
 			}
 			setTimeout(() => {
 				setIsLoading(false);

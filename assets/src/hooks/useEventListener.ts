@@ -32,9 +32,11 @@ const useEventListener = (
 					if (err.code === 'ConnectionNotExists') {
 						redirect('connections');
 						handleError('The connection does not exist anymore');
+						return;
 					}
 					if (err.code === 'TooManyListeners') {
 						handleError('Please note that the number of event listeners allowed has been exceeded');
+						return;
 					}
 				}
 				handleError(err);

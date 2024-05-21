@@ -51,6 +51,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 			localStorage.setItem('chichi_ui_users_tab', selectedTab);
 		} catch (err) {
 			console.error(`cannot write the user tab preference on local storage: ${err}`);
+			return;
 		}
 	}, [selectedTab]);
 
