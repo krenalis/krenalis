@@ -1,5 +1,5 @@
 CREATE TABLE _users (
-    "__id__" uuid NOT NULL DEFAULT gen_random_uuid(),
+    "__id__" uuid,
     "__identity_keys__" int [],
     
     "email" varchar(300)
