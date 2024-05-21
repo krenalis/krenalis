@@ -4,7 +4,7 @@ import Toast from './components/shared/Toast/Toast';
 import * as icons from './constants/icons';
 import { Status } from './types/internal/app';
 import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
-import { UI_BASE_PATH, SIGN_UP_PATH } from './constants/path';
+import { UI_BASE_PATH, SIGN_UP_PATH } from './constants/paths';
 import AppContext from './context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';

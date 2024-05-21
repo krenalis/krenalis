@@ -1,7 +1,7 @@
 import './Link.css';
 import React, { ReactNode, useContext } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { UI_BASE_PATH } from '../../../constants/path';
+import { UI_BASE_PATH } from '../../../constants/paths';
 import AppContext from '../../../context/AppContext';
 
 interface LinkProps {

@@ -16,7 +16,7 @@ import {
 	ExpressionToBeExtracted,
 	Transformation,
 } from '../../types/external/action';
-import { UI_BASE_PATH } from '../../constants/path';
+import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from '../../types/external/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
 import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from '../../types/external/workspace';

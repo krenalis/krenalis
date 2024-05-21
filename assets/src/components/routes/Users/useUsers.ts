@@ -1,6 +1,6 @@
 import { useEffect, useContext, useState } from 'react';
 import AppContext from '../../../context/AppContext';
-import { UI_BASE_PATH } from '../../../constants/path';
+import { UI_BASE_PATH } from '../../../constants/paths';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserProperty, UserPagination } from '../../../types/internal/user';
 import { ObjectType } from '../../../types/external/types';

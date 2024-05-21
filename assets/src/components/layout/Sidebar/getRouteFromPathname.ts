@@ -1,4 +1,4 @@
-import { UI_BASE_PATH } from '../../../constants/path';
+import { UI_BASE_PATH } from '../../../constants/paths';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 const getRouteFromPathname = (route: string, connections: TransformedConnection[]): string => {

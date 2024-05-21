@@ -9,7 +9,7 @@ import TransformedConnection, {
 	getFileStorageConnections,
 } from './lib/helpers/transformedConnection';
 import { Location } from 'react-router-dom';
-import { UI_BASE_PATH } from './constants/path';
+import { UI_BASE_PATH } from './constants/paths';
 import { Connection } from './types/external/connection';
 import Workspace from './types/external/workspace';
 import { Warehouse } from './types/internal/app';

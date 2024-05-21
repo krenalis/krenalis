@@ -1,5 +1,5 @@
 import React from 'react';
-import { UI_BASE_PATH } from './constants/path';
+import { UI_BASE_PATH } from './constants/paths';
 import App from './App';
 import AppLayout from './components/routes/AppLayout/AppLayout';
 import Login from './components/routes/Login/Login';
