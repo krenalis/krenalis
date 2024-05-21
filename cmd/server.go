@@ -8,7 +8,6 @@
 package cmd
 
 import (
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -238,41 +237,4 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	return nil
-}
-
-// acceptsGzipCompression reports whether the HTTP request accepts a gzip
-// compressed response.
-func acceptsGzipCompression(req *http.Request) bool {
-	for _, encodings := range req.Header["Accept-Encoding"] {
-		for _, enc := range strings.Split(encodings, ",") {
-			if e := strings.TrimSpace(enc); e == "gzip" || e == "x-gzip" {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// fileServer is an HTTP handler that handles file with gzip compression.
-type fileServer string
-
-func (dir fileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if acceptsGzipCompression(r) {
-		w.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-		w = &gzipResponseWriter{w, gz}
-	}
-	http.FileServer(http.Dir(dir)).ServeHTTP(w, r)
-}
-
-// gzipResponseWriter is a wrapper for http.ResponseWriter that writes
-// compressed data.
-type gzipResponseWriter struct {
-	http.ResponseWriter
-	writer *gzip.Writer
-}
-
-func (rw *gzipResponseWriter) Write(b []byte) (int, error) {
-	return rw.writer.Write(b)
 }
