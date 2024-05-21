@@ -50,7 +50,6 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 				if (err.code === 'TooManyKeys') {
 					handleError('The maximum number of keys has been reached');
 				}
-				return;
 			}
 			handleError(err);
 			return;

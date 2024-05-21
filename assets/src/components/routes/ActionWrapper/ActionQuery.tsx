@@ -4,7 +4,7 @@ import Grid from '../../shared/Grid/Grid';
 import Section from '../../shared/Section/Section';
 import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
-import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
+import { NotFoundError } from '../../../lib/api/errors';
 import ActionContext from '../../../context/ActionContext';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -123,12 +123,6 @@ const ActionQuery = () => {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				handleError('The connection does not exist anymore');
-				return;
-			}
-			if (err instanceof UnprocessableError) {
-				if (err.code === 'DatabaseFailed' || err.code === 'InvalidPlaceholder') {
-					handleError(err);
-				}
 				return;
 			}
 			handleError(err);
