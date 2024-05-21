@@ -115,9 +115,9 @@ AS $$
     WHERE
         "_users_identities"."__identity_key__" = ANY ("_users"."__identity_keys__");
 
-    -- Update the GID of the events.
-    UPDATE "events" SET "gid" = null;
-    UPDATE "events" SET "gid" = "_users_identities"."__gid__"
+    -- Update the user GID of the events.
+    UPDATE "events" SET "user" = null;
+    UPDATE "events" SET "user" = "_users_identities"."__gid__"
     FROM "_users_identities" WHERE
         "events"."source" = "_users_identities"."__connection__"
             AND

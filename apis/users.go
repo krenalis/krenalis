@@ -56,7 +56,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	evs, err := this.store.Events(ctx, datastore.Query{
 		Properties: events.Schema.PropertiesNames(),
 		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
-			Property: "gid",
+			Property: "user",
 			Operator: "is",
 			Value:    this.id.String(),
 		}}},

@@ -172,7 +172,7 @@ func (store *Store) flushEvents(events []map[string]any) {
 
 // eventColumnByProperty maps each event property to the corresponding column.
 var eventColumnByProperty = map[string]warehouses.Column{
-	"gid":                              {Name: "gid", Type: types.UUID()},
+	"user":                             {Name: "user", Type: types.UUID()},
 	"anonymousId":                      {Name: "anonymous_id", Type: types.Text()},
 	"category":                         {Name: "category", Type: types.Text()},
 	"context.app.name":                 {Name: "context_app_name", Type: types.Text()},
