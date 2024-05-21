@@ -18,7 +18,7 @@ const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
 			await api.workspaces.connections.addEventConnection(connection.id, id);
 		} catch (err) {
 			handleError(err);
-			throw err;
+			return;
 		}
 		setIsLoadingConnections(true);
 	};
@@ -28,7 +28,7 @@ const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
 			await api.workspaces.connections.removeEventConnection(connection.id, id);
 		} catch (err) {
 			handleError(err);
-			throw err;
+			return;
 		}
 		setIsLoadingConnections(true);
 	};
