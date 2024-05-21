@@ -58,7 +58,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	c.ExecQueryTestDatabase(ctx, `
 		CREATE TABLE test_export_to_db
 			(
-				id uuid NOT NULL DEFAULT gen_random_uuid(),
+				id uuid,
 				email text NOT NULL DEFAULT '',
 				full_name text NOT NULL DEFAULT '',
 				PRIMARY KEY (id)
