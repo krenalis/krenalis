@@ -7,10 +7,10 @@ const validateConnectorSettings = (values: ConnectorValues, fields: ConnectorFie
 			const value = values[key];
 			const n = Number(value);
 			if (isNaN(n)) {
-				throw `${key} must be a valid number`;
+				throw new Error(`${key} must be a valid number`);
 			}
 			if (!Number.isSafeInteger(n)) {
-				throw `${key} must be a valid integer`;
+				throw new Error(`${key} must be a valid integer`);
 			}
 		}
 	}

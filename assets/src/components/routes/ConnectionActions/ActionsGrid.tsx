@@ -182,7 +182,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			if (a.EventType === t.EventType) linkedActionType = t;
 		}
 		if (linkedActionType == null) {
-			throw Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
+			throw new Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
 		}
 		const nameCell = (
 			<div className='connection-actions__action-name'>

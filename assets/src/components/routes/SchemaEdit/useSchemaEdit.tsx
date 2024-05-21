@@ -82,10 +82,10 @@ const useSchemaEdit = (
 				if (p.indentation === property.indentation) {
 					if (p.indentation > 0) {
 						if (p.root === property.root) {
-							throw `Property "${property.name}" already exists`;
+							throw new Error(`Property "${property.name}" already exists`);
 						}
 					} else {
-						throw `Property "${property.name}" already exists`;
+						throw new Error(`Property "${property.name}" already exists`);
 					}
 				}
 			}
@@ -147,10 +147,10 @@ const useSchemaEdit = (
 					if (p.indentation === property.indentation) {
 						if (p.indentation > 0) {
 							if (p.root === property.root) {
-								throw `Property "${property.name}" already exists`;
+								throw new Error(`Property "${property.name}" already exists`);
 							}
 						} else {
-							throw `Property "${property.name}" already exists`;
+							throw new Error(`Property "${property.name}" already exists`);
 						}
 					}
 				}

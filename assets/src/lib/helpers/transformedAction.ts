@@ -372,7 +372,7 @@ const transformInActionToSet = async (
 				continue;
 			}
 			if (v.error && v.error !== '') {
-				throw `Please fix the errors in the mapping`;
+				throw new Error(`Please fix the errors in the mapping`);
 			}
 			const property = flattenedOutputSchema![k];
 			const fullProperty = property.full;
@@ -426,7 +426,7 @@ const transformInActionToSet = async (
 		const internal = action.MatchingProperties.Internal;
 		const external = action.MatchingProperties.External;
 		if (internal === '' || external === '') {
-			throw 'Matching properties cannot be empty';
+			throw new Error('Matching properties cannot be empty');
 		}
 
 		const flattenedInputMatchingSchema = flattenSchema(actionType.InputMatchingSchema);
@@ -434,11 +434,11 @@ const transformInActionToSet = async (
 
 		const doesInternalExist = flattenedInputMatchingSchema[internal] != null;
 		if (!doesInternalExist) {
-			throw `Matching property "${internal}" does not exist`;
+			throw new Error(`Matching property "${internal}" does not exist`);
 		}
 		const doesExternalExist = flattenedOutputMatchingSchema[external] != null;
 		if (!doesExternalExist) {
-			throw `Matching property "${external}" does not exist`;
+			throw new Error(`Matching property "${external}" does not exist`);
 		}
 
 		const fullExternalProperty = actionType.OutputMatchingSchema.properties.find((p) => p.name === external);
@@ -458,13 +458,13 @@ const transformInActionToSet = async (
 	let lastChangeTimeFormat: string | undefined;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
 		if (action.IdentityProperty == null || action.IdentityProperty === '') {
-			throw 'User identifier cannot be empty';
+			throw new Error('User identifier cannot be empty');
 		}
 		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.IdentityProperty) !== -1;
 		if (!isAlreadyInSchema) {
 			const identityProperty = flattenedInputSchema[action.IdentityProperty];
 			if (identityProperty == null) {
-				throw 'User identifier must be a valid property';
+				throw new Error('User identifier must be a valid property');
 			}
 			inSchema.properties.push(identityProperty.full);
 		}
@@ -475,7 +475,7 @@ const transformInActionToSet = async (
 			if (!isAlreadyInSchema) {
 				const lastChangeTimeProperty = flattenedInputSchema[action.LastChangeTimeProperty];
 				if (lastChangeTimeProperty == null) {
-					throw 'LastChangeTimeProperty must be a valid property';
+					throw new Error('LastChangeTimeProperty must be a valid property');
 				}
 				inSchema.properties.push(lastChangeTimeProperty.full);
 			}
@@ -511,7 +511,7 @@ const transformInActionToSet = async (
 			if (!isPropertyAlreadyInSchema) {
 				const property = flattenedInputSchema[propertyName];
 				if (property == null) {
-					throw 'Filter property must be a valid property';
+					throw new Error('Filter property must be a valid property');
 				}
 				inSchema.properties.push(property.full);
 			}
@@ -525,14 +525,14 @@ const transformInActionToSet = async (
 	if (action.Sheet != null) {
 		const s = action.Sheet;
 		if (s.length < 1 || s.length > 31) {
-			throw 'Sheet must be in range [1, 31]';
+			throw new Error('Sheet must be in range [1, 31]');
 		}
 		if (s.startsWith("'") || s.endsWith("'")) {
-			throw 'Sheet must not start or end with a single quote';
+			throw new Error('Sheet must not start or end with a single quote');
 		}
 		const forbiddenChars = /[*\/:?[\]\\]/;
 		if (forbiddenChars.test(s)) {
-			throw 'Sheet must be valid';
+			throw new Error('Sheet must be valid');
 		}
 	}
 
@@ -693,7 +693,7 @@ const doesLastChangeTimePropertyNeedFormat = (lastChangeTimeProperty: string, sc
 
 const validateCustomLastChangeTimeFormat = (format: string) => {
 	if (format === '') {
-		throw 'Last change time format cannot be empty';
+		throw new Error('Last change time format cannot be empty');
 	}
 	if (Array.from(format).length > 64) {
 		throw new Error('Last change time format is longer than 64 characters');
