@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import './GridHeaderRow.css';
 import GridHeaderCell from '../GridHeaderCell/GridHeaderCell';
-import getChildIndexClassname from '../../../../lib/utils/getChildIndexClassname';
+import { getChildIndexClassname } from '../Grid.helpers';
 import { GridColumn } from '../Grid.types';
 
 interface GridHeaderRowProps {

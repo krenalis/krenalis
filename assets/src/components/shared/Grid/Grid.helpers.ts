@@ -15,4 +15,4 @@ const getChildIndexClassname = (i: number, listLength: number) => {
 	return className.trim();
 };
 
-export default getChildIndexClassname;
+export { getChildIndexClassname };

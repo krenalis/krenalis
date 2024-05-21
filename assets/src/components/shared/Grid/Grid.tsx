@@ -5,7 +5,7 @@ import { GridRow as GridRowType, GridColumn, NestedGridRows, StandardGridRow } f
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
-import getChildIndexClassname from '../../../lib/utils/getChildIndexClassname';
+import { getChildIndexClassname } from './Grid.helpers';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
 

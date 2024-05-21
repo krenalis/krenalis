@@ -3,7 +3,7 @@ import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import { GridColumn, NestedGridRows, StandardGridRow, SortableGridRow } from './Grid.types';
 import { useGrid } from './useGrid';
-import getChildIndexClassname from '../../../lib/utils/getChildIndexClassname';
+import { getChildIndexClassname } from './Grid.helpers';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
