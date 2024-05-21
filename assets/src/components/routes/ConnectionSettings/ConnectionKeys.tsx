@@ -68,18 +68,18 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 				handleError('The connection does not exist anymore');
 				return;
 			}
-			if (err instanceof UnprocessableError && err.code !== 'KeyNotExist') {
+			if (err instanceof UnprocessableError) {
 				if (err.code === 'UniqueKey') {
 					handleError('The last key cannot be deleted');
 				}
+			}
+			if (err.code === 'KeyNotExist') {
+				// if the error code is 'KeyNotExist', let the key be
+				// removed from the UI without showing errors.
 				return;
 			}
-			if (err.code !== 'KeyNotExist') {
-				handleError(err);
-				return;
-			}
-			// if the error code is 'KeyNotExist', const the key be removed from
-			// the UI without showing errors.
+			handleError(err);
+			return;
 		}
 		const ks: string[] = [];
 		for (const k of keys) {
