@@ -21,7 +21,7 @@ Here are some common scenarios when you might want to use a track call:
 To make a track call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a track call in the following way:
 
 ```javascript
-chichianalytics.track('Product Viewed', {
+chichiAnalytics.track('Product Viewed', {
 	productId: 'ABC123',
 	category: 'Electronics'
 });

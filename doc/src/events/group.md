@@ -19,7 +19,7 @@ For best results, it is recommended to make a group call in the following scenar
 To make a group call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a group call in the following way:
 
 ```javascript
-chichianalytics.group('84s76y49tb28v1jxq', {
+chichiAnalytics.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",
 	industry: "Technology",
 	employeeCount: 100

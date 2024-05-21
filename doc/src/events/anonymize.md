@@ -15,7 +15,7 @@ To safeguard user privacy and adhere to data protection regulations, it is advis
 To make an anonymize call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make an anonymize call in the following way:
 
 ```javascript
-chichianalytics.anonymize();
+chichiAnalytics.anonymize();
 ```
 
 The following is an example of how the previous anonymize call would appear in Chichi once received and processed:

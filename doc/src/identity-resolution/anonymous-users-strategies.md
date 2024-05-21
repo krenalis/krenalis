@@ -27,7 +27,7 @@ The AC-B strategy unifies the anonymous user data before login and after logout,
 To implement a specific strategy, you need to set the strategy option when loading a Chichi SDK. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser:
 
 ```javascript
-chichianalytics.load(writeKey, endpoint, { strategy: 'AB-C' });
+chichiAnalytics.load(writeKey, endpoint, { strategy: 'AB-C' });
 ```
 
 Then, use the [`identify`](../events/identify.md) call when the user logs in and the [`anonymize`](../events/anonymize.md) call when the user logs out. You can customize different strategies for various devices or situations based on your requirements. Refer to the SDK documentation for more details on how to implement these strategies in your application.

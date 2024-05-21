@@ -429,7 +429,7 @@ It returns the Anonymous ID, if called after `Analytics` is ready.
 #### Example
 
 ```javascript
-chichianalytics.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
+chichiAnalytics.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
 ```
 
 ## getSessionId

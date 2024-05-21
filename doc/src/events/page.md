@@ -15,7 +15,7 @@ To make a page call, you can use a Chichi SDK. Refer to its documentation for mo
 For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a page call (apart from the automatic page call triggered by the snippet on page load) in the following way:
 
 ```javascript
-chichianalytics.page('Product View', {
+chichiAnalytics.page('Product View', {
 	productId: 308263,
 });
 ```
