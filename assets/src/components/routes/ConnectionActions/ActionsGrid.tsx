@@ -15,7 +15,7 @@ import { Action, ActionType } from '../../../lib/api/types/action';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { Execution } from '../../../lib/api/types/responses';
-import { sleep } from '../../../lib/utils/sleep';
+import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];

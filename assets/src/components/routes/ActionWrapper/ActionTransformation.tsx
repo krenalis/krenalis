@@ -53,7 +53,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
 import { ActionToSet, TransformationFunction } from '../../../lib/api/types/action';
-import { debounceWithAbort } from '../../../lib/utils/debounce';
+import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
 
 const defaultTransformationParameterByTarget = {

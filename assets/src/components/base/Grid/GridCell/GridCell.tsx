@@ -1,7 +1,7 @@
 import React from 'react';
 import './GridCell.css';
 import { GridCell as GridCellInterface } from '../Grid.types';
-import toJSDateString from '../../../../lib/utils/toJSDateString';
+import toJSDateString from '../../../../utils/toJSDateString';
 
 interface GridCellProps {
 	cell: GridCellInterface;

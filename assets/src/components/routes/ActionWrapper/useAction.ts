@@ -20,7 +20,7 @@ import {
 	ConnectorValues,
 } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
-import { sleep } from '../../../lib/utils/sleep';
+import { sleep } from '../../../utils/sleep';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 
 const useAction = (
