@@ -1,10 +1,10 @@
 import React, { useContext, useLayoutEffect, ReactNode } from 'react';
 import './Settings.css';
-import ListTile from '../../shared/ListTile/ListTile';
+import ListTile from '../../base/ListTile/ListTile';
 import { Outlet, useLocation } from 'react-router-dom';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const Settings = () => {
 	const { setTitle } = useContext(appContext);

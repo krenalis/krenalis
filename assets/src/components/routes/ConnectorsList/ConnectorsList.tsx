@@ -1,6 +1,6 @@
 import React, { useState, useContext, useLayoutEffect, useMemo } from 'react';
 import './ConnectorsList.css';
-import Card from '../../shared/Card/Card';
+import Card from '../../base/Card/Card';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -8,7 +8,7 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { authCodeURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const ConnectorsList = () => {
 	const [searchTerm, setSearchTerm] = useState<string>('');

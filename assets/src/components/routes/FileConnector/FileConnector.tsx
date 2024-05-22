@@ -5,11 +5,11 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { useParams, useLocation } from 'react-router-dom';
-import LittleLogo from '../../shared/LittleLogo/LittleLogo';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import ListTile from '../../shared/ListTile/ListTile';
-import { Link } from '../../shared/Link/Link';
+import ListTile from '../../base/ListTile/ListTile';
+import { Link } from '../../base/Link/Link';
 
 const FileConnector = () => {
 	const [selectedStorage, setSelectedStorage] = useState<number>();

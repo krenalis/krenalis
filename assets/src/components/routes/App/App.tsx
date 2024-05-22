@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
-import Toast from '../../shared/Toast/Toast';
+import Toast from '../../base/Toast/Toast';
 import * as icons from '../../../constants/icons';
 import { Status } from './App.types';
 import { FULLSCREEN_PATTERNS } from '../../../lib/helpers/navigation';

@@ -1,7 +1,7 @@
 import React from 'react';
 import ConnectionBlock from './ConnectionBlock';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import { ArrowAnchor } from '../../shared/Arrow/Arrow.types';
+import { ArrowAnchor } from '../../base/Arrow/Arrow.types';
 
 interface LinkedConnectionBlocksProps {
 	primaryConnection: TransformedConnection;

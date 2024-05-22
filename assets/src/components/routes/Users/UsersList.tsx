@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react';
 import * as icons from '../../../constants/icons';
 import UsersContext from '../../../context/UsersContext';
-import Toolbar from '../../layout/Toolbar/Toolbar';
-import Grid from '../../shared/Grid/Grid';
+import Toolbar from '../../base/Toolbar/Toolbar';
+import Grid from '../../base/Grid/Grid';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';

@@ -1,8 +1,8 @@
 import React, { useState, useContext, useLayoutEffect, useEffect, useRef } from 'react';
 import './Members.css';
 import AppContext from '../../../context/AppContext';
-import ListTile from '../../shared/ListTile/ListTile';
-import AlertDialog from '../../shared/AlertDialog/AlertDialog';
+import ListTile from '../../base/ListTile/ListTile';
+import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Member } from '../../../lib/api/types/responses';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
@@ -13,7 +13,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { TransformedMember, transformMember, validateMemberEmail } from '../../../lib/helpers/transformedMember';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const Members = () => {
 	const [isLoadingMembers, setIsLoadingMembers] = useState<boolean>(true);

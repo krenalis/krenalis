@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './Identifiers.css';
-import Section from '../../shared/Section/Section';
+import Section from '../../base/Section/Section';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
-import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
+import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -14,8 +14,8 @@ import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Identifiers } from '../../../lib/api/types/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
-import IconWrapper from '../../shared/IconWrapper/IconWrapper';
-import { Link } from '../../shared/Link/Link';
+import IconWrapper from '../../base/IconWrapper/IconWrapper';
+import { Link } from '../../base/Link/Link';
 
 const Identifiers = () => {
 	const [identifiers, setIdentifiers] = useState<Identifiers>();

@@ -1,7 +1,7 @@
 import React from 'react';
 import './NotFound.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const NotFound = () => {
 	return (

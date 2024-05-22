@@ -15,11 +15,11 @@ import {
 	transformInActionToSet,
 } from '../../../lib/helpers/transformedAction';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
-import AlertDialog from '../../shared/AlertDialog/AlertDialog';
-import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
-import Section from '../../shared/Section/Section';
-import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
-import Accordion from '../../shared/Accordion/Accordion';
+import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
+import Section from '../../base/Section/Section';
+import EditorWrapper from '../../base/EditorWrapper/EditorWrapper';
+import Accordion from '../../base/Accordion/Accordion';
 import useEventListener from '../../../hooks/useEventListener';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
@@ -35,7 +35,7 @@ import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SyntaxHighlight from '../../shared/SyntaxHighlight/SyntaxHighlight';
+import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import {
 	AppUsersResponse,
 	EventPreviewResponse,

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext, useRef, useLayoutEffect } from 'react';
 import './ConnectionActions.css';
-import Flex from '../../shared/Flex/Flex';
-import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import Flex from '../../base/Flex/Flex';
+import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import ActionsGrid from './ActionsGrid';
-import ListTile from '../../shared/ListTile/ListTile';
+import ListTile from '../../base/ListTile/ListTile';
 import ActionTypesDialog from './ActionTypesDialog';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';

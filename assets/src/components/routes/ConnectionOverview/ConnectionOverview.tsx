@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './ConnectionOverview.css';
-import Flex from '../../shared/Flex/Flex';
-import Grid from '../../shared/Grid/Grid';
+import Flex from '../../base/Flex/Flex';
+import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { NotFoundError } from '../../../lib/api/errors';
@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { ConnectionStats } from '../../../lib/api/types/connection';
-import { GridRow } from '../../shared/Grid/Grid.types';
+import { GridRow } from '../../base/Grid/Grid.types';
 import { Execution } from '../../../lib/api/types/responses';
 
 const EXECUTIONS_COLUMNS = [

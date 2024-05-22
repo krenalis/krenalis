@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
-import UnknownLogo from '../shared/UnknownLogo/UnknownLogo';
-import LittleLogo from '../shared/LittleLogo/LittleLogo';
+import UnknownLogo from '../base/UnknownLogo/UnknownLogo';
+import LittleLogo from '../base/LittleLogo/LittleLogo';
 
 const getConnectorLogo = (connectorIcon: string) => {
 	let logo: ReactNode;

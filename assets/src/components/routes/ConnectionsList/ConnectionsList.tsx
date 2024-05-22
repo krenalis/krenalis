@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useContext, ReactNode } from 'react';
 import './ConnectionsList.css';
-import IconWrapper from '../../shared/IconWrapper/IconWrapper';
-import Grid from '../../shared/Grid/Grid';
-import StatusDot from '../../shared/StatusDot/StatusDot';
+import IconWrapper from '../../base/IconWrapper/IconWrapper';
+import Grid from '../../base/Grid/Grid';
+import StatusDot from '../../base/StatusDot/StatusDot';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import LittleLogo from '../../shared/LittleLogo/LittleLogo';
-import { Link } from '../../shared/Link/Link';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { Link } from '../../base/Link/Link';
 
 const ConnectionsList = () => {
 	const [connectionsRows, setConnectionsRows] = useState<GridRow[]>();

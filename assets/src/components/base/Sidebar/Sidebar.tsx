@@ -8,7 +8,7 @@ import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from '../../routes/App/App.types';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../Link/Link';
 
 interface sidebarItem {
 	name: string;

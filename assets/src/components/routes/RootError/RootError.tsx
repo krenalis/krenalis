@@ -1,6 +1,6 @@
 import React from 'react';
 import './RootError.css';
-import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import IconWrapper from '../../base/IconWrapper/IconWrapper';
 
 const RootError = () => {
 	return (

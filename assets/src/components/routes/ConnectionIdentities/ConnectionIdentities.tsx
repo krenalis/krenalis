@@ -2,8 +2,8 @@ import React from 'react';
 import './ConnectionIdentities.css';
 import { useConnectionIdentities } from './useConnectionIdentities';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import Grid from '../../shared/Grid/Grid';
-import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import Grid from '../../base/Grid/Grid';
+import IconWrapper from '../../base/IconWrapper/IconWrapper';
 
 const ConnectionIdentities = () => {
 	const { isLoading, identityProperties, identitiesRows } = useConnectionIdentities();

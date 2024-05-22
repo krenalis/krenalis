@@ -1,6 +1,6 @@
 import React, { useRef, useContext, ReactNode } from 'react';
-import Section from '../../shared/Section/Section';
-import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
+import Section from '../../base/Section/Section';
+import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import ActionContext from '../../../context/ActionContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';

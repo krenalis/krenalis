@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import AppContext from '../../../context/AppContext';
-import { EventConnectionSelector } from '../../shared/EventConnectionSelector/EventConnectionSelector';
+import { EventConnectionSelector } from '../../base/EventConnectionSelector/EventConnectionSelector';
 
 interface EventConnectionProps {
 	connection: TransformedConnection;

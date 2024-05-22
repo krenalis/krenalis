@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import Section from '../../shared/Section/Section';
+import Section from '../../base/Section/Section';
 import ActionContext from '../../../context/ActionContext';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 

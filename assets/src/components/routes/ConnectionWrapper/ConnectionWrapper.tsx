@@ -1,7 +1,7 @@
 import React, { useContext, useEffect } from 'react';
 import './ConnectionWrapper.css';
-import Flex from '../../shared/Flex/Flex';
-import StatusDot from '../../shared/StatusDot/StatusDot';
+import Flex from '../../base/Flex/Flex';
+import StatusDot from '../../base/StatusDot/StatusDot';
 import ConnectionContext from '../../../context/ConnectionContext';
 import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';

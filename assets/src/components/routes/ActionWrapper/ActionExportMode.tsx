@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import Section from '../../shared/Section/Section';
+import Section from '../../base/Section/Section';
 import { EXPORT_MODE_OPTIONS } from '../../../lib/helpers/transformedAction';
 import ActionContext from '../../../context/ActionContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';

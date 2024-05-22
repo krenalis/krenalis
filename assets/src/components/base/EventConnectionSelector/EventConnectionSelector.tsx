@@ -8,7 +8,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
-import LittleLogo from '../../shared/LittleLogo/LittleLogo';
+import LittleLogo from '../LittleLogo/LittleLogo';
 import Grid from '../Grid/Grid';
 
 interface ConnectionSelectorProps {

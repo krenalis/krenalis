@@ -1,13 +1,13 @@
 import React, { useContext, useRef } from 'react';
 import './SchemaGrid.css';
-import Grid from '../../shared/Grid/Grid';
+import Grid from '../../base/Grid/Grid';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { SchemaContext } from '../../../context/SchemaContext';
 import { useSchemaGrid } from './useSchemaGrid';
 import { Outlet } from 'react-router-dom';
 import AppContext from '../../../context/AppContext';
-import Toolbar from '../../layout/Toolbar/Toolbar';
+import Toolbar from '../../base/Toolbar/Toolbar';
 
 const SchemaGrid = () => {
 	const { redirect } = useContext(AppContext);

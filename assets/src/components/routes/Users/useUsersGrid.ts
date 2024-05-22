@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { UserProperty } from './Users.types';
 
 const useUsersGrid = (

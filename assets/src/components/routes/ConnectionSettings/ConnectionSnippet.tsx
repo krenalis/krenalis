@@ -4,7 +4,7 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import AppContext from '../../../context/AppContext';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import { SNIPPET } from '../../../constants/javascriptSnippet';
-import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
+import EditorWrapper from '../../base/EditorWrapper/EditorWrapper';
 
 const ConnectionSnippet = () => {
 	const [keys, setKeys] = useState<string[]>([]);

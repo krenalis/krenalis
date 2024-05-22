@@ -3,8 +3,8 @@ import './SchemaEdit.css';
 import { SchemaContext } from '../../../context/SchemaContext';
 import { PropertyToRemove, PropertyToEdit, useSchemaEdit } from './useSchemaEdit';
 import { PropertyDialog } from './PropertyDialog';
-import SortableGrid from '../../shared/Grid/SortableGrid';
-import AlertDialog from '../../shared/AlertDialog/AlertDialog';
+import SortableGrid from '../../base/Grid/SortableGrid';
+import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -12,7 +12,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, newPropertyToEdit } from './SchemaEdit.helpers';
 import { TypeName } from '../../../lib/api/types/types';
 import { FullscreenContext } from '../../../context/FullscreenContext';
-import SyntaxHighlight from '../../shared/SyntaxHighlight/SyntaxHighlight';
+import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 
 const SchemaEdit = () => {
 	const [propertyToEdit, setPropertyToEdit] = useState<PropertyToEdit | null>(null);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import Flex from '../../shared/Flex/Flex';
+import Flex from '../../base/Flex/Flex';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';

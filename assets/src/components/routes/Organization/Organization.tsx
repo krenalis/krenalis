@@ -1,9 +1,9 @@
 import React, { useContext, useLayoutEffect } from 'react';
 import './Organization.css';
-import ListTile from '../../shared/ListTile/ListTile';
+import ListTile from '../../base/ListTile/ListTile';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const Organization = () => {
 	const { setTitle } = useContext(AppContext);

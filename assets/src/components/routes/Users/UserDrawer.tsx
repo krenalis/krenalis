@@ -12,7 +12,7 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDateString from '../../../lib/utils/toJSDateString';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 interface UserDrawerProps {
 	selectedUser: number;

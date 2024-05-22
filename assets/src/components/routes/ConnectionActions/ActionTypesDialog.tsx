@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import ListTile from '../../shared/ListTile/ListTile';
+import ListTile from '../../base/ListTile/ListTile';
 import { ActionType } from '../../../lib/api/types/action';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';

@@ -10,7 +10,7 @@ import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
 import { toBase64 } from '../../../lib/utils/toBase64';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberToSet } from '../../../lib/helpers/transformedMember';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const Member = () => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useContext, useEffect } from 'react';
-import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
-import Grid from '../../shared/Grid/Grid';
-import Section from '../../shared/Section/Section';
-import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
+import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
+import Grid from '../../base/Grid/Grid';
+import Section from '../../base/Section/Section';
+import EditorWrapper from '../../base/EditorWrapper/EditorWrapper';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import { NotFoundError } from '../../../lib/api/errors';
 import ActionContext from '../../../context/ActionContext';
@@ -10,9 +10,9 @@ import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
-import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ExecQueryResponse } from '../../../lib/api/types/responses';
-import { Popover } from '../../shared/Popover/Popover';
+import { Popover } from '../../base/Popover/Popover';
 
 const queryMaxSize = 16777215;
 

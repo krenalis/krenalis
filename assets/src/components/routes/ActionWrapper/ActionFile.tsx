@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useRef, useMemo, ReactNode } from 'react';
-import Section from '../../shared/Section/Section';
-import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
-import Grid from '../../shared/Grid/Grid';
+import Section from '../../base/Section/Section';
+import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
+import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { UnprocessableError, NotFoundError, BadRequestError } from '../../../lib/api/errors';
@@ -19,17 +19,17 @@ import {
 	SheetsResponse,
 	ConnectorUIResponse,
 } from '../../../lib/api/types/responses';
-import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
 import ConnectorFieldInterface from '../../../lib/api/types/ui';
 import { redirect } from 'react-router-dom';
 import ConnectionContext from '../../../context/ConnectionContext';
-import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
-import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
-import LittleLogo from '../../shared/LittleLogo/LittleLogo';
+import ConnectorField from '../../base/ConnectorFields/ConnectorField';
+import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import actionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
-import { Popover } from '../../shared/Popover/Popover';
+import { Popover } from '../../base/Popover/Popover';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);

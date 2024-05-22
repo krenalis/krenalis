@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import Action from './Action';
-import Fullscreen from '../../shared/Fullscreen/Fullscreen';
+import Fullscreen from '../../base/Fullscreen/Fullscreen';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { useParams, useLocation, useOutletContext } from 'react-router-dom';

@@ -1,9 +1,9 @@
 import React, { ReactNode } from 'react';
 import './Header.css';
-import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import IconWrapper from '../IconWrapper/IconWrapper';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import { TransformedMember } from '../../../lib/helpers/transformedMember';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '..//Link/Link';
 
 interface HeaderProps {
 	title: ReactNode;

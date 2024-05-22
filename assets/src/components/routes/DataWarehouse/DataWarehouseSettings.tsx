@@ -3,7 +3,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import LittleLogo from '../../shared/LittleLogo/LittleLogo';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';

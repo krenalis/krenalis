@@ -1,13 +1,13 @@
 import React, { useState, useContext, useEffect, useLayoutEffect, ReactNode } from 'react';
 import './ConnectionsMap.css';
-import Arrow from '../../shared/Arrow/Arrow';
+import Arrow from '../../base/Arrow/Arrow';
 import { getConnectionsBlocks } from './ConnectionsMap.helpers';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);

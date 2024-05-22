@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import Grid from '../../shared/Grid/Grid';
+import Grid from '../../base/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/helpers/transformedAction';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -12,11 +12,11 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import { Action, ActionType } from '../../../lib/api/types/action';
-import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
-import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
+import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { Execution } from '../../../lib/api/types/responses';
 import { sleep } from '../../../lib/utils/sleep';
-import { Link } from '../../shared/Link/Link';
+import { Link } from '../../base/Link/Link';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 

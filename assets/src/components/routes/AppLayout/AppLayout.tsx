@@ -1,8 +1,8 @@
 import React, { useContext } from 'react';
 import './AppLayout.css';
 import AppContext from '../../../context/AppContext';
-import Sidebar from '../../layout/Sidebar/Sidebar';
-import Header from '../../layout/Header/Header';
+import Sidebar from '../../base/Sidebar/Sidebar';
+import Header from '../../base/Header/Header';
 import { Outlet } from 'react-router-dom';
 
 const AppLayout = () => {

@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import Fullscreen from '../../shared/Fullscreen/Fullscreen';
+import Fullscreen from '../../base/Fullscreen/Fullscreen';
 import AppContext from '../../../context/AppContext';
 import { SchemaEdit } from './SchemaEdit';
 import { SchemaContext } from '../../../context/SchemaContext';

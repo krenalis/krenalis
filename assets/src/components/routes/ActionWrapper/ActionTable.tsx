@@ -1,13 +1,13 @@
 import React, { useContext, useRef, useEffect } from 'react';
-import Section from '../../shared/Section/Section';
-import FeedbackButton from '../../shared/FeedbackButton/FeedbackButton';
+import Section from '../../base/Section/Section';
+import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
-import { Popover } from '../../shared/Popover/Popover';
+import { Popover } from '../../base/Popover/Popover';
 
 const ActionTable = () => {
 	const { handleError, api } = useContext(AppContext);

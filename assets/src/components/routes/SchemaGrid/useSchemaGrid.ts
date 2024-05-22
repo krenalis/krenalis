@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { ObjectType, Property } from '../../../lib/api/types/types';
-import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 
 const SCHEMA_COLUMNS: GridColumn[] = [

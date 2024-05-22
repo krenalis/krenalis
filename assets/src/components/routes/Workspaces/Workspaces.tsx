@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import './Workspaces.css';
-import ListTile from '../../shared/ListTile/ListTile';
+import ListTile from '../../base/ListTile/ListTile';
 import API from '../../../lib/api/api';
 import Workspace from '../../../lib/api/types/workspace';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';

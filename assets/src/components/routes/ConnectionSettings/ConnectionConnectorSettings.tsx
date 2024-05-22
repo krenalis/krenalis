@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext, useRef, ReactNode } from 'react';
-import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
-import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
+import ConnectorField from '../../base/ConnectorFields/ConnectorField';
+import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import AppContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
-import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
+import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';

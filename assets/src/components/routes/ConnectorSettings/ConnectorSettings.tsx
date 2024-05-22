@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import './ConnectorSettings.css';
-import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
-import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
+import ConnectorField from '../../base/ConnectorFields/ConnectorField';
+import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import NotFound from '../NotFound/NotFound';
-import Flex from '../../shared/Flex/Flex';
-import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
+import Flex from '../../base/Flex/Flex';
+import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -24,7 +24,7 @@ import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 import { isEventConnection } from '../../../lib/helpers/transformedConnection';
-import { EventConnectionSelector } from '../../shared/EventConnectionSelector/EventConnectionSelector';
+import { EventConnectionSelector } from '../../base/EventConnectionSelector/EventConnectionSelector';
 import * as icons from '../../../constants/icons';
 
 const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];

@@ -1,7 +1,7 @@
 import React, { Fragment } from 'react';
 import { TransformedMapping, flattenSchema } from '../../lib/helpers/transformedAction';
 import { ObjectType } from '../../lib/api/types/types';
-import { ComboboxItem } from '../shared/ComboBox/ComboBox.types';
+import { ComboboxItem } from '../base/ComboBox/ComboBox.types';
 
 const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
