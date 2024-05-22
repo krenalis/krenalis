@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import './ConnectorUI.css';
 import { ConnectorUIContext } from '../../../context/ConnectorUIContext';
-import { ConnectorValues } from '../../../types/external/api';
+import { ConnectorValues } from '../../../lib/api/types/responses';
 
 interface ConnectorUIProps {
 	fields: ReactNode[];

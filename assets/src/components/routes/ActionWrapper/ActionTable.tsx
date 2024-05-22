@@ -5,7 +5,7 @@ import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import { ObjectType } from '../../../types/external/types';
+import { ObjectType } from '../../../lib/api/types/types';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';
 import { Popover } from '../../shared/Popover/Popover';
 

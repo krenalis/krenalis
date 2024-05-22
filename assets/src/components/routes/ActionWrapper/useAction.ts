@@ -11,15 +11,15 @@ import {
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/helpers/transformedConnection';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { Action, ActionToSet, ActionType } from '../../../types/external/action';
+import { Action, ActionToSet, ActionType } from '../../../lib/api/types/action';
 import {
 	ActionSchemasResponse,
 	ExecQueryResponse,
 	RecordsResponse,
 	ConnectorUIResponse,
 	ConnectorValues,
-} from '../../../types/external/api';
-import { ObjectType } from '../../../types/external/types';
+} from '../../../lib/api/types/responses';
+import { ObjectType } from '../../../lib/api/types/types';
 import { sleep } from '../../../lib/utils/sleep';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 

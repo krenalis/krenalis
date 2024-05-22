@@ -2,9 +2,9 @@ import { useState, useContext, useEffect } from 'react';
 import AppContext from '../../../context/AppContext';
 import { useParams } from 'react-router-dom';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import { Connection } from '../../../types/external/connection';
+import { Connection } from '../../../lib/api/types/connection';
 import { NotFoundError } from '../../../lib/api/errors';
-import { ActionType } from '../../../types/external/action';
+import { ActionType } from '../../../lib/api/types/action';
 
 const useConnection = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react';
 import { FieldSetContext } from '../../../../context/FieldSetContext';
 import ConnectorField from '../ConnectorField';
 import './ConnectorFieldSet.css';
-import ConnectorFieldInterface from '../../../../types/external/ui';
+import ConnectorFieldInterface from '../../../../lib/api/types/ui';
 
 interface ConnectorFieldSetProps {
 	name: string;

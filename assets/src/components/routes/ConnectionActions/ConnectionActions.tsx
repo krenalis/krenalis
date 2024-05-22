@@ -11,7 +11,7 @@ import { Outlet } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import { Action, ActionType } from '../../../types/external/action';
+import { Action, ActionType } from '../../../lib/api/types/action';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 
 const ConnectionActions = () => {

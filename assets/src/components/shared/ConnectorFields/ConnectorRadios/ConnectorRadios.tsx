@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './ConnectorRadios.css';
 import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
-import { FieldOption } from '../../../../types/external/ui';
+import { FieldOption } from '../../../../lib/api/types/ui';
 
 interface ConnectorRadiosProps {
 	name: string;

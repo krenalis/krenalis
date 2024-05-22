@@ -5,7 +5,8 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { ComboboxItem, Size } from '../../../types/internal/app';
+import { Size } from '../../routes/App/App.types';
+import { ComboboxItem } from './ComboBox.types';
 import { autocompleteExpression } from './ComboBox.helpers';
 
 interface ComboBoxListProps {

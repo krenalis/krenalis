@@ -4,7 +4,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlButtonType from '@shoelace-style/shoelace/dist/components/button/button.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { Size, Variant } from '../../../types/internal/app';
+import { Size, Variant } from '../../routes/App/App.types';
 
 interface FeedbackButtonProps {
 	children: ReactNode;

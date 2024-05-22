@@ -11,7 +11,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
-import { ExecQueryResponse } from '../../../types/external/api';
+import { ExecQueryResponse } from '../../../lib/api/types/responses';
 import { Popover } from '../../shared/Popover/Popover';
 
 const queryMaxSize = 16777215;

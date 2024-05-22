@@ -3,8 +3,8 @@ import AppContext from '../../../context/AppContext';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserProperty, UserPagination } from './Users.types';
-import { ObjectType } from '../../../types/external/types';
-import { FindUsersResponse } from '../../../types/external/api';
+import { ObjectType } from '../../../lib/api/types/types';
+import { FindUsersResponse } from '../../../lib/api/types/responses';
 
 const DEFAULT_USER_LIMIT = 15;
 

@@ -1,5 +1,5 @@
 import { Action, ActionType } from './action';
-import { ConnectorValues } from './api';
+import { ConnectorValues } from './responses';
 
 type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
 

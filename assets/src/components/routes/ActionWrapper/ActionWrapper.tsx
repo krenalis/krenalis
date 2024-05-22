@@ -4,7 +4,7 @@ import Fullscreen from '../../shared/Fullscreen/Fullscreen';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { useParams, useLocation, useOutletContext } from 'react-router-dom';
-import { Action as ActionInterface, ActionType } from '../../../types/external/action';
+import { Action as ActionInterface, ActionType } from '../../../lib/api/types/action';
 
 const ActionWrapper = () => {
 	const [selectedActionType, setSelectedActionType] = useState<ActionType>();

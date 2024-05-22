@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './ConnectorAlternativeFieldSets.css';
 import ConnectorFieldSet from '../ConnectorFieldSet/ConnectorFieldSet';
-import ConnectorField from '../../../../types/external/ui';
+import ConnectorField from '../../../../lib/api/types/ui';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 

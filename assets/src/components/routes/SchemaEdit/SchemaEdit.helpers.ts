@@ -1,4 +1,4 @@
-import Type, { ObjectType, Property, Role } from '../../../types/external/types';
+import Type, { ObjectType, Property, Role } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
 
 interface EditableProperty {

@@ -6,7 +6,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import { authCodeURLResponse } from '../../../types/external/api';
+import { authCodeURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import { Link } from '../../shared/Link/Link';
 

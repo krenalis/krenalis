@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import API from '../../../lib/api/api';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import { Connector } from '../../../types/external/connector';
+import { Connector } from '../../../lib/api/types/connector';
 import TransformedConnection, {
 	getConnectionFullConnector,
 	getConnectionStatus,
@@ -10,11 +10,11 @@ import TransformedConnection, {
 } from '../../../lib/helpers/transformedConnection';
 import { Location } from 'react-router-dom';
 import { UI_BASE_PATH } from '../../../constants/paths';
-import { Connection } from '../../../types/external/connection';
-import Workspace from '../../../types/external/workspace';
-import { Warehouse } from '../../../types/internal/app';
-import { WarehouseResponse } from '../../../types/external/warehouse';
-import { Member } from '../../../types/external/api';
+import { Connection } from '../../../lib/api/types/connection';
+import Workspace from '../../../lib/api/types/workspace';
+import { Warehouse } from './App.types';
+import { WarehouseResponse } from '../../../lib/api/types/warehouse';
+import { Member } from '../../../lib/api/types/responses';
 import { NotFoundError } from '../../../lib/api/errors';
 import { TransformedMember, transformMember } from '../../../lib/helpers/transformedMember';
 

@@ -1,4 +1,4 @@
-import { Member, MemberAvatar, MemberToSet } from '../../types/external/api';
+import { Member, MemberAvatar, MemberToSet } from '../api/types/responses';
 
 interface TransformedMember {
 	ID: number;

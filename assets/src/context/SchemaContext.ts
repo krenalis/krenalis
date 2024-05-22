@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { ObjectType } from '../types/external/types';
+import { ObjectType } from '../lib/api/types/types';
 
 interface SchemaContextType {
 	schema: ObjectType;

@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 import TransformedConnection from '../lib/helpers/transformedConnection';
 import { TransformedAction, TransformedActionType } from '../lib/helpers/transformedAction';
-import { ConnectorValues } from '../types/external/api';
+import { ConnectorValues } from '../lib/api/types/responses';
 
 interface ActionContext {
 	mode: 'mappings' | 'transformation' | '';

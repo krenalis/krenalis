@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import './Toast.css';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { Status } from '../../../types/internal/app';
+import { Status } from '../../routes/App/App.types';
 
 interface ToastProps {
 	status: Status | null;

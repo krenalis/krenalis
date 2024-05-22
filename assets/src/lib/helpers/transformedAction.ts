@@ -9,10 +9,10 @@ import {
 	MatchingProperties,
 	SchedulePeriod,
 	TransformationFunction,
-} from '../../types/external/action';
-import { Filter, ConnectorValues } from '../../types/external/api';
-import { Compression } from '../../types/external/connection';
-import { FloatType, IntType, ObjectType, Property, UintType } from '../../types/external/types';
+} from '../api/types/action';
+import { Filter, ConnectorValues } from '../api/types/responses';
+import { Compression } from '../api/types/connection';
+import { FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection from './transformedConnection';
 

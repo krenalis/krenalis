@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react';
 import Flex from '../../shared/Flex/Flex';
 import Arrow from '../../shared/Arrow/Arrow';
 import StatusDot from '../../shared/StatusDot/StatusDot';
-import { ArrowAnchor } from '../../../types/internal/app';
+import { ArrowAnchor } from '../../shared/Arrow/Arrow.types';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import { Link } from '../../shared/Link/Link';

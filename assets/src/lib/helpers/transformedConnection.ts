@@ -6,10 +6,10 @@ import {
 	Compression,
 	Strategy,
 	SendingMode,
-} from '../../types/external/connection';
-import { Action, ActionTarget, ActionType } from '../../types/external/action';
+} from '../api/types/connection';
+import { Action, ActionTarget, ActionType } from '../api/types/action';
 import TransformedConnector from './transformedConnector';
-import { Variant } from '../../types/internal/app';
+import { Variant } from '../../components/routes/App/App.types';
 
 interface ConnectionStatus {
 	text: string;

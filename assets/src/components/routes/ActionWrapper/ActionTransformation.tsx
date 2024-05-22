@@ -1,5 +1,5 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
-import { checkIfPropertyExists, updateMappingProperty } from './Action.helpers';
+import { checkIfPropertyExists, updateMappingProperty, extractSpecialProperties } from './Action.helpers';
 import {
 	getDisplayedPropertyComboboxItems,
 	getSchemaComboboxItems,
@@ -44,15 +44,15 @@ import {
 	RecordsResponse,
 	TransformationLanguagesResponse,
 	TransformDataResponse,
-} from '../../../types/external/api';
+} from '../../../lib/api/types/responses';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
-import Type, { ObjectType, Property } from '../../../types/external/types';
-import extractSpecialProperties from '../../../lib/utils/extractSpecialProperties';
-import { EventListenerEvent, Sample } from '../../../types/internal/app';
+import Type, { ObjectType, Property } from '../../../lib/api/types/types';
+import { EventListenerEvent } from '../../../hooks/useEventListener';
+import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
-import Workspace from '../../../types/external/workspace';
-import { ActionToSet, TransformationFunction } from '../../../types/external/action';
+import Workspace from '../../../lib/api/types/workspace';
+import { ActionToSet, TransformationFunction } from '../../../lib/api/types/action';
 import { debounceWithAbort } from '../../../lib/utils/debounce';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
 

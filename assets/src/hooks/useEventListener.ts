@@ -1,8 +1,16 @@
 import { useEffect, useContext, useState } from 'react';
-import { AddEventListenerResponse, EventListenerEventsResponse } from '../types/external/api';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
-import { EventListenerEvent } from '../types/internal/app';
+import { ObservedEvent, AddEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
+
+interface EventListenerEvent {
+	id: number;
+	err: string;
+	type: string;
+	time: string;
+	source: string;
+	full: ObservedEvent;
+}
 
 const useEventListener = (
 	connectionID: number,
@@ -93,3 +101,4 @@ const useEventListener = (
 };
 
 export default useEventListener;
+export { EventListenerEvent };

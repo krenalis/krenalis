@@ -6,8 +6,8 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';
-import Workspace from '../../../types/external/workspace';
-import { Warehouse } from '../../../types/internal/app';
+import Workspace from '../../../lib/api/types/workspace';
+import { Warehouse } from '../../routes/App/App.types';
 import { Link } from '../../shared/Link/Link';
 
 interface sidebarItem {

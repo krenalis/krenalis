@@ -11,11 +11,10 @@ import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
-import { Action, ActionType } from '../../../types/external/action';
-import { ShoelaceEventTarget } from '../../../types/internal/app';
+import { Action, ActionType } from '../../../lib/api/types/action';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
 import FeedbackButton, { FeedbackButtonRef } from '../../shared/FeedbackButton/FeedbackButton';
-import { Execution } from '../../../types/external/api';
+import { Execution } from '../../../lib/api/types/responses';
 import { sleep } from '../../../lib/utils/sleep';
 import { Link } from '../../shared/Link/Link';
 
@@ -146,8 +145,8 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		runButtonRefs.current[actionID].current!.confirm();
 	};
 
-	const onSchedulerPeriodChange = async (e: Event, actionID: number) => {
-		const target = e.currentTarget as ShoelaceEventTarget;
+	const onSchedulerPeriodChange = async (e: any, actionID: number) => {
+		const target = e.currentTarget;
 		const period = SCHEDULE_PERIODS[target.value];
 		try {
 			await api.workspaces.connections.setActionSchedulePeriod(connection.id, actionID, period);

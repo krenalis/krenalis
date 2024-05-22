@@ -1,25 +1,13 @@
 import call from './call';
 import * as http from './http';
-import Type, { Property, ObjectType } from '../../types/external/types';
-import {
-	Connection,
-	ConnectionRole,
-	ConnectionToAdd,
-	ConnectionStats,
-	ConnectionToSet,
-} from '../../types/external/connection';
-import { Identifiers } from '../../types/external/identifiers';
-import {
-	ActionTarget,
-	SchedulePeriod,
-	ActionToSet,
-	ExpressionToBeExtracted,
-	Transformation,
-} from '../../types/external/action';
+import Type, { Property, ObjectType } from './types/types';
+import { Connection, ConnectionRole, ConnectionToAdd, ConnectionStats, ConnectionToSet } from './types/connection';
+import { Identifiers } from './types/identifiers';
+import { ActionTarget, SchedulePeriod, ActionToSet, ExpressionToBeExtracted, Transformation } from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
-import { Connector } from '../../types/external/connector';
-import { WarehouseMode, WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
-import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from '../../types/external/workspace';
+import { Connector } from './types/connector';
+import { WarehouseMode, WarehouseResponse, WarehouseType } from './types/warehouse';
+import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from './types/workspace';
 import {
 	ConnectorUIResponse,
 	ConnectorValues,
@@ -48,7 +36,7 @@ import {
 	ConnectionIdentitiesResponse,
 	ChangeUsersSchemaQueriesResponse,
 	RePaths,
-} from '../../types/external/api';
+} from './types/responses';
 
 class API {
 	apiURL: string;

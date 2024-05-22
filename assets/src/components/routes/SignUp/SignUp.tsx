@@ -5,7 +5,7 @@ import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { MemberInvitationResponse } from '../../../types/external/api';
+import { MemberInvitationResponse } from '../../../lib/api/types/responses';
 
 const SignUp = () => {
 	const [invitedEmail, setInvitedEmail] = useState<string>('');

@@ -1,4 +1,4 @@
-import Type, { ArrayType, TextType, IntType, UintType, FloatType } from '../../types/external/types';
+import Type, { ArrayType, TextType, IntType, UintType, FloatType } from '../../lib/api/types/types';
 
 const enrichPropertyType = (type: Type) => {
 	let typeName: string = type.name;

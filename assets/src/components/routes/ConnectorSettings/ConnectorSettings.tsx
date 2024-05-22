@@ -18,11 +18,10 @@ import {
 	ConnectionToAdd,
 	SendingMode as SendingModeType,
 	Strategy,
-} from '../../../types/external/connection';
-import { ConnectorUIResponse, ConnectorValues } from '../../../types/external/api';
-import ConnectorFieldInterface, { ConnectorButton } from '../../../types/external/ui';
+} from '../../../lib/api/types/connection';
+import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';
+import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 import { isEventConnection } from '../../../lib/helpers/transformedConnection';
 import { EventConnectionSelector } from '../../shared/EventConnectionSelector/EventConnectionSelector';
@@ -363,7 +362,7 @@ const ConnectorSettings = () => {
 								label='Name'
 								type='text'
 								onSlChange={(e) => {
-									const target = e.currentTarget as ShoelaceEventTarget;
+									const target = e.currentTarget;
 									setName(target!.value);
 								}}
 							/>
@@ -376,7 +375,7 @@ const ConnectorSettings = () => {
 									value={strategy || 'AB-C'}
 									label='Strategy'
 									onSlChange={(e) => {
-										const target = e.currentTarget as ShoelaceEventTarget;
+										const target = e.currentTarget;
 										const value = target.value as Strategy;
 										setStrategy(value);
 									}}
@@ -395,7 +394,7 @@ const ConnectorSettings = () => {
 									value={SendingMode}
 									label='Sending mode'
 									onSlChange={(e) => {
-										const target = e.currentTarget as ShoelaceEventTarget;
+										const target = e.currentTarget;
 										const value = target.value as SendingModeType;
 										setSendingMode(value);
 									}}
@@ -436,7 +435,7 @@ const ConnectorSettings = () => {
 										label='Host'
 										type='text'
 										onSlChange={(e) => {
-											const target = e.currentTarget as ShoelaceEventTarget;
+											const target = e.currentTarget;
 											setWebsiteHost(target.value);
 										}}
 									/>

@@ -12,7 +12,7 @@ import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import { isEventConnection } from '../../../lib/helpers/transformedConnection';
 import { EventConnections } from './EventConnections';
-import { ConnectorUIResponse } from '../../../types/external/api';
+import { ConnectorUIResponse } from '../../../lib/api/types/responses';
 
 const ConnectionSettings = () => {
 	const [isDeleted, setIsDeleted] = useState<boolean>(false);

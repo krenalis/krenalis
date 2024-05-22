@@ -4,7 +4,7 @@ import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import ConnectionContext from '../../../context/ConnectionContext';
 import SyntaxHighlight from '../../shared/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
-import { EventListenerEvent } from '../../../types/internal/app';
+import { EventListenerEvent } from '../../../hooks/useEventListener';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 

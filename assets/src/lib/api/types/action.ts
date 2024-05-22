@@ -1,4 +1,4 @@
-import { Filter, ConnectorValues } from './api';
+import { Filter, ConnectorValues } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType, Property } from './types';
 

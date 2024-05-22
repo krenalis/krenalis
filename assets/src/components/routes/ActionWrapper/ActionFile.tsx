@@ -18,10 +18,10 @@ import {
 	RecordsResponse,
 	SheetsResponse,
 	ConnectorUIResponse,
-} from '../../../types/external/api';
+} from '../../../lib/api/types/responses';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
 import TransformedConnector from '../../../lib/helpers/transformedConnector';
-import ConnectorFieldInterface from '../../../types/external/ui';
+import ConnectorFieldInterface from '../../../lib/api/types/ui';
 import { redirect } from 'react-router-dom';
 import ConnectionContext from '../../../context/ConnectionContext';
 import ConnectorField from '../../shared/ConnectorFields/ConnectorField';

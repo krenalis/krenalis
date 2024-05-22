@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import AppContext from '../../../context/AppContext';
-import { ObjectType } from '../../../types/external/types';
+import { ObjectType } from '../../../lib/api/types/types';
 
 const useSchema = () => {
 	const [isLoadingSchema, setIsLoadingSchema] = useState<boolean>(true);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
 import Toast from '../../shared/Toast/Toast';
 import * as icons from '../../../constants/icons';
-import { Status } from '../../../types/internal/app';
+import { Status } from './App.types';
 import { FULLSCREEN_PATTERNS } from '../../../lib/helpers/navigation';
 import { UI_BASE_PATH, SIGN_UP_PATH } from '../../../constants/paths';
 import AppContext from '../../../context/AppContext';

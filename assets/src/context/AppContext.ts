@@ -2,8 +2,9 @@ import React, { createContext, ReactNode } from 'react';
 import API from '../lib/api/api';
 import TransformedConnector from '../lib/helpers/transformedConnector';
 import TransformedConnection from '../lib/helpers/transformedConnection';
-import { Status, Warehouse } from '../types/internal/app';
-import Workspace from '../types/external/workspace';
+import { Status } from '../components/routes/App/App.types';
+import { Warehouse } from '../components/routes/App/App.types';
+import Workspace from '../lib/api/types/workspace';
 import { TransformedMember } from '../lib/helpers/transformedMember';
 import { SlAlert } from '@shoelace-style/shoelace';
 

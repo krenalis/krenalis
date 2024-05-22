@@ -7,7 +7,7 @@ import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
-import { WarehouseMode, WarehouseSettings } from '../../../types/external/warehouse';
+import { WarehouseMode, WarehouseSettings } from '../../../lib/api/types/warehouse';
 import objectKeysToLower from '../../../lib/utils/objectKeysToLower';
 import { UnprocessableError } from '../../../lib/api/errors';
 

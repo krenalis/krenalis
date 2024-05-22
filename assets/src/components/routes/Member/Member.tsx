@@ -6,7 +6,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
-import { MemberAvatar, MemberToSet } from '../../../types/external/api';
+import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
 import { toBase64 } from '../../../lib/utils/toBase64';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberToSet } from '../../../lib/helpers/transformedMember';

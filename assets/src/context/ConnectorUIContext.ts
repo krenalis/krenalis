@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { ConnectorValues } from '../types/external/api';
+import { ConnectorValues } from '../lib/api/types/responses';
 
 interface ConnectorUIContextType {
 	values: ConnectorValues;

@@ -3,7 +3,7 @@ import './Members.css';
 import AppContext from '../../../context/AppContext';
 import ListTile from '../../shared/ListTile/ListTile';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
-import { Member } from '../../../types/external/api';
+import { Member } from '../../../lib/api/types/responses';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';

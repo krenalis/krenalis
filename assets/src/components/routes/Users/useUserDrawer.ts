@@ -1,9 +1,9 @@
 import { useState, useContext, useEffect } from 'react';
 import AppContext from '../../../context/AppContext';
-import { UserEventsResponse, UserIdentitiesResponse, userTraitsResponse } from '../../../types/external/api';
+import { UserEventsResponse, UserIdentitiesResponse, userTraitsResponse } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserTab } from './Users.types';
-import { UserEvent, UserIdentity } from '../../../types/external/user';
+import { UserEvent, UserIdentity } from '../../../lib/api/types/user';
 
 const useUserDrawer = (id: number, selectedTab: UserTab) => {
 	const [traits, setTraits] = useState<Map<string, any>>();

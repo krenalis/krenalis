@@ -11,7 +11,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { UnprocessableError } from '../../../lib/api/errors';
-import { ObjectType } from '../../../types/external/types';
+import { ObjectType } from '../../../lib/api/types/types';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import { flattenSchema } from '../../../lib/helpers/transformedAction';

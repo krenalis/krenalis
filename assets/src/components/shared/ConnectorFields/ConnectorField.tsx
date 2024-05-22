@@ -14,7 +14,7 @@ import ConnectorRange from './ConnectorRange/ConnectorRange';
 import ConnectorSwitch from './ConnectorSwitch/ConnectorSwitch';
 import ConnectorText from './ConnectorText/ConnectorText';
 import ConnectorAlternativeFieldSets from './ConnectorAlternativeFieldSets/ConnectorAlternativeFieldSets';
-import ConnectorFieldInterface from '../../../types/external/ui';
+import ConnectorFieldInterface from '../../../lib/api/types/ui';
 
 interface ConnectorFieldProps {
 	field: ConnectorFieldInterface;

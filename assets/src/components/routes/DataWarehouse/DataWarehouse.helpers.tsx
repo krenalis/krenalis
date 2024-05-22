@@ -1,4 +1,4 @@
-import { WarehouseType } from '../../../types/external/warehouse';
+import { WarehouseType } from '../../../lib/api/types/warehouse';
 
 interface Warehouse {
 	icon: string;

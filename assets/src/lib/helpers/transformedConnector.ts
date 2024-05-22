@@ -1,5 +1,5 @@
-import { ConnectorType, SendingMode, WebhooksPer } from '../../types/external/connector';
-import { ActionTarget } from '../../types/external/action';
+import { ConnectorType, SendingMode, WebhooksPer } from '../api/types/connector';
+import { ActionTarget } from '../api/types/action';
 import * as icons from '../../constants/icons';
 
 class TransformedConnector {

@@ -1,6 +1,6 @@
 import React from 'react';
 import './Arrow.css';
-import { ArrowAnchor } from '../../../types/internal/app';
+import { ArrowAnchor } from './Arrow.types';
 import Xarrow from 'react-xarrows';
 
 interface ArrowProps {

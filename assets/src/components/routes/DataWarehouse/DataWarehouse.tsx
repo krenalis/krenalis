@@ -5,7 +5,7 @@ import { Warehouse, warehouses } from './DataWarehouse.helpers';
 import ListTile from '../../shared/ListTile/ListTile';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import PasswordToggle from '../../shared/PasswordToggle/PasswordToggle';
-import { WarehouseMode, WarehouseSettings, WarehouseType } from '../../../types/external/warehouse';
+import { WarehouseMode, WarehouseSettings, WarehouseType } from '../../../lib/api/types/warehouse';
 import Grid from '../../shared/Grid/Grid';
 import * as icons from '../../../constants/icons';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';

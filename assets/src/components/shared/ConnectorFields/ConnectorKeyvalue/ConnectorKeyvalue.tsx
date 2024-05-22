@@ -4,7 +4,7 @@ import ConnectorField from '../ConnectorField';
 import { KeyContext } from '../../../../context/KeyContext';
 import { ValueContext } from '../../../../context/ValueContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import ConnectorFieldInterface from '../../../../types/external/ui';
+import ConnectorFieldInterface from '../../../../lib/api/types/ui';
 
 type KeyValueValue = '' | Record<string, any>;
 

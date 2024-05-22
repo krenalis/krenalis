@@ -8,9 +8,9 @@ import { NotFoundError } from '../../../lib/api/errors';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import { ConnectionStats } from '../../../types/external/connection';
+import { ConnectionStats } from '../../../lib/api/types/connection';
 import { GridRow } from '../../shared/Grid/Grid.types';
-import { Execution } from '../../../types/external/api';
+import { Execution } from '../../../lib/api/types/responses';
 
 const EXECUTIONS_COLUMNS = [
 	{ name: 'ID' },

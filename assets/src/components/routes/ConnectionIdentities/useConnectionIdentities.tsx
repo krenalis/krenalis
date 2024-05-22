@@ -1,10 +1,10 @@
 import React, { ReactNode, useContext, useEffect, useState, useMemo } from 'react';
 import AppContext from '../../../context/AppContext';
-import { ConnectionIdentitiesResponse } from '../../../types/external/api';
+import { ConnectionIdentitiesResponse } from '../../../lib/api/types/responses';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { GridColumn, GridRow } from '../../shared/Grid/Grid.types';
-import { UserIdentity } from '../../../types/external/user';
+import { UserIdentity } from '../../../lib/api/types/user';
 
 const useConnectionIdentities = () => {
 	const [identities, setIdentities] = useState<UserIdentity[]>();

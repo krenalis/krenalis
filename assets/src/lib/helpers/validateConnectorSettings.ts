@@ -1,5 +1,5 @@
-import { ConnectorValues } from '../../types/external/api';
-import ConnectorField, { InputField } from '../../types/external/ui';
+import { ConnectorValues } from '../api/types/responses';
+import ConnectorField, { InputField } from '../api/types/ui';
 
 const validateConnectorSettings = (values: ConnectorValues, fields: ConnectorField[]) => {
 	for (const key in values) {

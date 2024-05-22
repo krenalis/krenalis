@@ -7,8 +7,8 @@ import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../shared/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
-import { ConnectorUIResponse, ConnectorValues } from '../../../types/external/api';
-import ConnectorFieldInterface, { ConnectorButton } from '../../../types/external/ui';
+import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';
+import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
 
 interface FormProps {

@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
-import Type, { ObjectType, Role, TypeName } from '../../../types/external/types';
+import Type, { ObjectType, Role, TypeName } from '../../../lib/api/types/types';
 import { SortableGridRow, GridColumn } from '../../shared/Grid/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';
-import { ChangeUsersSchemaQueriesResponse, RePaths } from '../../../types/external/api';
+import { ChangeUsersSchemaQueriesResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { SortableGridRef } from '../../shared/Grid/SortableGrid';
