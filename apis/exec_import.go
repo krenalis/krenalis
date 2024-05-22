@@ -13,13 +13,14 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
+
+	"github.com/google/uuid"
 )
 
 // importUsers imports the users of the action.
