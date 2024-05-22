@@ -68,6 +68,10 @@ func (transformer *Transformer) Properties() []types.Path {
 // conform to the input schema. If a validation error occurs during the
 // transformation, it returns an error implementing ValidationError of apis.
 //
+// If the evaluation of an expression results in a void value, the corresponding
+// property will not be present in the returned value. If all evaluations of the
+// expression result in a void value, an empty map is returned.
+//
 // For function transformers, it returns the ErrFunctionNotExist error if the
 // function does not exist, and a FunctionExecutionError error if an error
 // occurs during function execution.

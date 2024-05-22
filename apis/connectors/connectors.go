@@ -120,6 +120,8 @@ type Writer interface {
 	// function is invoked with a non-nil error and the record's ID as arguments.
 	// The ack function is invoked even if Write returns false.
 	//
+	// record must contain at least one property.
+	//
 	// It panics if called on a closed writer.
 	Write(ctx context.Context, gid uuid.UUID, record Record) bool
 }

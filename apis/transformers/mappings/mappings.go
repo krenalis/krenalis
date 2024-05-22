@@ -309,8 +309,11 @@ func (mapping *Mapping) Properties() []types.Path {
 
 // Transform transforms value, that must conform to the expression's source
 // schema, and returns the result that conforms to the expression's output
-// schema. If the evaluation of an expression results in a void value, the
-// corresponding property will not be present in the returned value.
+// schema.
+//
+// If the evaluation of an expression results in a void value, the corresponding
+// property will not be present in the returned value. If all evaluations of the
+// expression result in a void value, an empty map is returned.
 //
 // If the resulting value cannot be converted to the destination type, it
 // returns an error value implementing the ValidationError interface of apis.

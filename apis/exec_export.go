@@ -264,9 +264,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 					stats.Failed(statistics.TransformedStep, user.GID, err)
 					continue
 				}
-				user.Properties = result.Value
 				stats.Passed(statistics.TransformedStep)
 				stats.Passed(statistics.OutputValidatedStep)
+				if len(result.Value) == 0 {
+					continue
+				}
+				user.Properties = result.Value
 				record := connectors.Record{
 					ID:         user.ID,
 					Properties: user.Properties,
