@@ -139,6 +139,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		case types.TimeKind:
 			_, valid = parseTime(cond.Value)
 		case types.YearKind:
+			valid = true
 			for i := range len(cond.Value) {
 				if cond.Value[i] < '0' || cond.Value[i] > '9' {
 					valid = false
