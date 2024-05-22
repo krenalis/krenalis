@@ -1,26 +1,26 @@
 # Anonymous Users Strategies
 
-The anonymous users strategies determine how anonymous users are unified with each other and with non-anonymous users.
+The strategies for anonymous users determine how they are unified with each other and with non-anonymous users.
 
-Let's consider the following scenario. A user interacts with a device anonymously; let's call this period of time **A**. Then, the user logs in and continues to interact, but this time in a non-anonymous manner; let's call this period **B**. Afterward, the user logs out and continues to interact, but again in an anonymous manner; let's call this period **C**.
+Consider the following scenario: a user interacts with a device anonymously during period **A**. Then, the user logs in and continues to interact, this time in a non-anonymous manner during period **B**. Subsequently, the user logs out and resumes interacting anonymously during period **C**.
 
-There will be one user in each of the three time periods, anonymous for A and C, and non-anonymous for B. The strategy determines which user will be unified with another.
+In each of the three time periods, there will be one user, anonymous for periods A and C, and non-anonymous for period B. The strategy determines which user is unified with another.
 
 ### AB-C Strategy
 
-The AB-C strategy unifies the anonymous user from A with the non-anonymous user from B. This strategy allows all data collected during the initial anonymous navigation to be unified with the data of the non-anonymous user as soon as they log in. From logout onward, however, the collected anonymous data is maintained in a separate anonymous user.
+The AB-C strategy unifies the anonymous user from period A with the non-anonymous user from period B. This strategy allows all data collected during the initial anonymous navigation to be unified with the data of the non-anonymous user as soon as they log in. However, from logout onward, a new session is started, the Anonymous ID is changed, and consequently, the collected anonymous data is maintained in a separate anonymous user.
 
 ### ABC Strategy
 
-The ABC strategy unifies the anonymous users from A and C with the non-anonymous user from B. This strategy allows all data collected during anonymous navigation before login and after logout to be unified with the data of the non-anonymous user.
+The ABC strategy unifies the anonymous user from period A with the non-anonymous user from period B. From logout onward, the collected anonymous data is maintained in a separate anonymous user. However, unlike the AB-C strategy, the session and the Anonymous ID remain the same.
 
 ### A-B-C Strategy
 
-The A-B-C strategy never unifies the users. Consequently, there will be two anonymous users and one non-anonymous user.
+The A-B-C strategy never unifies the users. Consequently, there will be two anonymous users and one non-anonymous user. These users have different sessions and different Anonymous IDs.
 
 ### AC-B Strategy
 
-The AC-B strategy unifies the anonymous user data before login and after logout, keeping it separate from the non-anonymous user who has logged in.
+The AC-B strategy unifies the anonymous user data before login and after logout, keeping it separate from the non-anonymous user who has logged in. Thus, the non-anonymous user has a different session and Anonymous ID than the unified anonymous user.
 
 ## Implement a Strategy
 
