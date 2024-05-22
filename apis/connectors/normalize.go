@@ -441,10 +441,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		valid = valid && types.MinYear <= v && v <= types.MaxYear
 	case types.UUIDKind:
 		if s, ok := src.(string); ok {
-			if v, err := uuid.Parse(s); err == nil {
-				value = v.String()
-				valid = true
-			}
+			value, valid = parseUUID(s)
 		}
 	case types.JSONKind:
 		if !validJSON(src) {
@@ -698,6 +695,20 @@ func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 		return time.Unix(0, int64(n)), true
 	}
 	return time.Time{}, false
+}
+
+// parseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// and returns it in the canonical form without uppercase letters. The boolean
+// return value reports whether s is a UUID in the standard form.
+func parseUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
 }
 
 // validJSON reports whether src is a valid JSON value as returned by a

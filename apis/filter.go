@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/netip"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -151,8 +152,8 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 				valid = err != nil && types.MinYear <= year && year <= types.MaxYear
 			}
 		case types.UUIDKind:
-			err := uuid.Validate(cond.Value)
-			valid = err != nil
+			// Accept only the UUID standard form "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" without uppercase letters.
+			valid = len(cond.Value) == 36 && uuid.Validate(cond.Value) == nil && strings.ToLower(cond.Value) == cond.Value
 		case types.JSONKind:
 			valid = json.Valid(json.RawMessage(cond.Value))
 		case types.InetKind:
