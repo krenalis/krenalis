@@ -4,7 +4,7 @@ import Arrow from '../../base/Arrow/Arrow';
 import StatusDot from '../../base/StatusDot/StatusDot';
 import { ArrowAnchor } from '../../base/Arrow/Arrow.types';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 
 interface ConnectionBlockProps {

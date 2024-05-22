@@ -14,7 +14,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import { ObjectType } from '../../../lib/api/types/types';
 import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
-import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { flattenSchema } from '../../../lib/core/action';
 import { checkDisplayedProperty } from './GeneralSettings.helpers';
 
 const GeneralSettings = () => {

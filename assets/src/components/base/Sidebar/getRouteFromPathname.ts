@@ -1,5 +1,5 @@
 import { UI_BASE_PATH } from '../../../constants/paths';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 
 const getRouteFromPathname = (route: string, connections: TransformedConnection[]): string => {
 	const fragments = route.split('/');

@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
 import { EventConnectionSelector } from '../../base/EventConnectionSelector/EventConnectionSelector';
 

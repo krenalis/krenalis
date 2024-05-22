@@ -12,7 +12,7 @@ import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { TransformedMember, transformMember, validateMemberEmail } from '../../../lib/helpers/transformedMember';
+import { TransformedMember, transformMember, validateMemberEmail } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
 
 const Members = () => {

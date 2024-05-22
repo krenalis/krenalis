@@ -12,7 +12,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import TransformedConnector from '../../../lib/helpers/transformedConnector';
+import TransformedConnector from '../../../lib/core/connector';
 import {
 	ConnectionRole,
 	ConnectionToAdd,
@@ -22,8 +22,8 @@ import {
 import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
-import { isEventConnection } from '../../../lib/helpers/transformedConnection';
+import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
+import { isEventConnection } from '../../../lib/core/connection';
 import { EventConnectionSelector } from '../../base/EventConnectionSelector/EventConnectionSelector';
 import * as icons from '../../../constants/icons';
 

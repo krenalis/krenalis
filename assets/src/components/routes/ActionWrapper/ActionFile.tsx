@@ -20,7 +20,7 @@ import {
 	ConnectorUIResponse,
 } from '../../../lib/api/types/responses';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import TransformedConnector from '../../../lib/helpers/transformedConnector';
+import TransformedConnector from '../../../lib/core/connector';
 import ConnectorFieldInterface from '../../../lib/api/types/ui';
 import { redirect } from 'react-router-dom';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -28,7 +28,7 @@ import ConnectorField from '../../base/ConnectorFields/ConnectorField';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import actionContext from '../../../context/ActionContext';
-import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
 
 const ActionFile = () => {

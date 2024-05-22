@@ -2,7 +2,7 @@ import React from 'react';
 import './StatusDot.css';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { ConnectionStatus } from '../../../lib/helpers/transformedConnection';
+import { ConnectionStatus } from '../../../lib/core/connection';
 
 interface StatusDotProps {
 	status: ConnectionStatus;

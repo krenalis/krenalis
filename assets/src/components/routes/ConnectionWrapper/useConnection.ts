@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from 'react';
 import AppContext from '../../../context/AppContext';
 import { useParams } from 'react-router-dom';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import { Connection } from '../../../lib/api/types/connection';
 import { NotFoundError } from '../../../lib/api/errors';
 import { ActionType } from '../../../lib/api/types/action';

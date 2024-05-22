@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 
 interface KeysProps {
 	connection: TransformedConnection;

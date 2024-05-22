@@ -14,7 +14,7 @@ import { Filter, ConnectorValues } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
 import API from '../api/api';
-import TransformedConnection from './transformedConnection';
+import TransformedConnection from './connection';
 
 const SCHEDULE_PERIODS = {
 	5: '5m',

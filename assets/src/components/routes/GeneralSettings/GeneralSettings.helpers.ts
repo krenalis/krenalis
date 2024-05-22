@@ -1,4 +1,4 @@
-import { TransformedMapping } from '../../../lib/helpers/transformedAction';
+import { TransformedMapping } from '../../../lib/core/action';
 
 const checkDisplayedProperty = (property: string, schema: TransformedMapping): string => {
 	if (schema == null || property === '') {

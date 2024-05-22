@@ -7,9 +7,9 @@ import {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
-} from '../../../lib/helpers/transformedAction';
+} from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
-import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/helpers/transformedConnection';
+import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/core/connection';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../../../lib/api/types/action';
 import {

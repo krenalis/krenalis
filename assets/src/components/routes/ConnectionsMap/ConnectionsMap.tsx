@@ -6,7 +6,7 @@ import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 
 const ConnectionsMap = () => {

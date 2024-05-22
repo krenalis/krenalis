@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import LinkedConnectionBlocks from './LinkedConnectionBlocks';
 import ConnectionBlock from './ConnectionBlock';
-import TransformedConnection, { getFileStorageConnections } from '../../../lib/helpers/transformedConnection';
+import TransformedConnection, { getFileStorageConnections } from '../../../lib/core/connection';
 
 const getConnectionsBlocks = (connections: TransformedConnection[], newConnectionID: number) => {
 	const blocks: ReactNode[] = [];

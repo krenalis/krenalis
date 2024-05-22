@@ -1,7 +1,7 @@
 import './EventConnectionSelector.css';
 import React, { ReactNode, useMemo } from 'react';
 import { useEventConnectionsGrid } from './useEventConnectionsGrid';
-import TransformedConnection, { isEventConnection } from '../../../lib/helpers/transformedConnection';
+import TransformedConnection, { isEventConnection } from '../../../lib/core/connection';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';

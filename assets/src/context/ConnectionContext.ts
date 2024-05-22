@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import TransformedConnection from '../lib/helpers/transformedConnection';
+import TransformedConnection from '../lib/core/connection';
 
 interface ConnectionContextType {
 	connection: TransformedConnection;

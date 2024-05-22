@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import AppContext from '../../../context/AppContext';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import { NotFoundError } from '../../../lib/api/errors';
 import DangerZone from '../../base/DangerZone/DangerZone';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';

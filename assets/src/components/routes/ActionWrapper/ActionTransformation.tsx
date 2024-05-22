@@ -13,7 +13,7 @@ import {
 	doesLastChangeTimePropertyNeedFormat,
 	flattenSchema,
 	transformInActionToSet,
-} from '../../../lib/helpers/transformedAction';
+} from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
@@ -54,7 +54,7 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
 import { ActionToSet, TransformationFunction } from '../../../lib/api/types/action';
 import { debounceWithAbort } from '../../../lib/utils/debounce';
-import TransformedConnector from '../../../lib/helpers/transformedConnector';
+import TransformedConnector from '../../../lib/core/connector';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',

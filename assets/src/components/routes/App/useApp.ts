@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import API from '../../../lib/api/api';
-import TransformedConnector from '../../../lib/helpers/transformedConnector';
+import TransformedConnector from '../../../lib/core/connector';
 import { Connector } from '../../../lib/api/types/connector';
 import TransformedConnection, {
 	getConnectionFullConnector,
 	getConnectionStatus,
 	getConnectionDescription,
 	getFileStorageConnections,
-} from '../../../lib/helpers/transformedConnection';
+} from '../../../lib/core/connection';
 import { Location } from 'react-router-dom';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import { Connection } from '../../../lib/api/types/connection';
@@ -16,7 +16,7 @@ import { Warehouse } from './App.types';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
 import { Member } from '../../../lib/api/types/responses';
 import { NotFoundError } from '../../../lib/api/errors';
-import { TransformedMember, transformMember } from '../../../lib/helpers/transformedMember';
+import { TransformedMember, transformMember } from '../../../lib/core/member';
 
 const useApp = (
 	handleError: (err: Error | string) => void,

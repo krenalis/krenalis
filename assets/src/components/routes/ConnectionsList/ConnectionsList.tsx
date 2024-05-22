@@ -9,7 +9,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Link } from '../../base/Link/Link';
 

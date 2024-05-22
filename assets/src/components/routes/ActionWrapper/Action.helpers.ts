@@ -1,4 +1,4 @@
-import { TransformedAction, TransformedMapping } from '../../../lib/helpers/transformedAction';
+import { TransformedAction, TransformedMapping } from '../../../lib/core/action';
 import { SpecialProperties } from './Action.types';
 
 const updateMappingProperty = (action: TransformedAction, name: string, value: string, error: string) => {

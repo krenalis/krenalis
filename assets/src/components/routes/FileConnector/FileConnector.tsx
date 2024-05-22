@@ -6,7 +6,7 @@ import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { useParams, useLocation } from 'react-router-dom';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import ListTile from '../../base/ListTile/ListTile';
 import { Link } from '../../base/Link/Link';

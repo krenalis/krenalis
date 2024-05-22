@@ -6,10 +6,10 @@ import AppContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
-import { validateConnectorSettings } from '../../../lib/helpers/validateConnectorSettings';
+import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 
 interface FormProps {
 	connection: TransformedConnection;

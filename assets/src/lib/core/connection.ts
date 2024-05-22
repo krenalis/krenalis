@@ -8,7 +8,7 @@ import {
 	SendingMode,
 } from '../api/types/connection';
 import { Action, ActionTarget, ActionType } from '../api/types/action';
-import TransformedConnector from './transformedConnector';
+import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
 
 interface ConnectionStatus {

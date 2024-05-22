@@ -3,7 +3,7 @@ import Section from '../../base/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import ActionContext from '../../../context/ActionContext';
-import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { flattenSchema } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
 
 const ActionMatchingProperties = () => {

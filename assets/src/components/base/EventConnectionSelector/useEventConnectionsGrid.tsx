@@ -1,6 +1,6 @@
 import React, { useContext, useMemo } from 'react';
 import { GridColumn, GridRow } from '../Grid/Grid.types';
-import TransformedConnection from '../../../lib/helpers/transformedConnection';
+import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';

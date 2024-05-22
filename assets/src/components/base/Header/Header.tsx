@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import './Header.css';
 import IconWrapper from '../IconWrapper/IconWrapper';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
-import { TransformedMember } from '../../../lib/helpers/transformedMember';
+import { TransformedMember } from '../../../lib/core/member';
 import { Link } from '..//Link/Link';
 
 interface HeaderProps {

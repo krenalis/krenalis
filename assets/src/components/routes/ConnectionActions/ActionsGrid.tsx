@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import Grid from '../../base/Grid/Grid';
-import { SCHEDULE_PERIODS } from '../../../lib/helpers/transformedAction';
+import { SCHEDULE_PERIODS } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { UnprocessableError } from '../../../lib/api/errors';

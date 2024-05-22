@@ -1,11 +1,11 @@
 import React, { createContext, ReactNode } from 'react';
 import API from '../lib/api/api';
-import TransformedConnector from '../lib/helpers/transformedConnector';
-import TransformedConnection from '../lib/helpers/transformedConnection';
+import TransformedConnector from '../lib/core/connector';
+import TransformedConnection from '../lib/core/connection';
 import { Status } from '../components/routes/App/App.types';
 import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
-import { TransformedMember } from '../lib/helpers/transformedMember';
+import { TransformedMember } from '../lib/core/member';
 import { SlAlert } from '@shoelace-style/shoelace';
 
 interface AppContext {
