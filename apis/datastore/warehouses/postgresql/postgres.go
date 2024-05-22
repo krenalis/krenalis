@@ -237,7 +237,7 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted []any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -245,7 +245,6 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	}
 
 	tableSchema := types.Object(table.Properties)
-	primaryKeysSchema := types.Object(table.PrimaryKeys)
 
 	columns := warehouses.PropertiesToColumns(table.Properties)
 	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
@@ -305,8 +304,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			columnNames[i] = c.Name
 		}
 		columnNames[len(columnNames)-1] = "$deleted"
-		deletedSlice := serializeRowToSlice(deleted, primaryKeysSchema, primaryKeysColumns)
-		rowSrc := newCopyForDeleteFrom(len(primaryKeysColumns), deletedSlice)
+		rowSrc := newCopyForDeleteFrom(len(primaryKeysColumns), deleted)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
 			return warehouses.Error(err)

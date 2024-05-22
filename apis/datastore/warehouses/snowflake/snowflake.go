@@ -141,7 +141,7 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
+func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted []any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -149,7 +149,6 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	}
 
 	tableSchema := types.Object(table.Properties)
-	primaryKeysSchema := types.Object(table.PrimaryKeys)
 
 	columns := warehouses.PropertiesToColumns(table.Properties)
 	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
@@ -168,11 +167,10 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	// Serialize the deleted rows in CSV format.
 	var deletedCSV io.Reader
 	if len(deleted) > 0 {
-		deletedSlice := serializeRowToSlice(deleted, primaryKeysSchema, primaryKeysColumns)
 		n := len(primaryKeysColumns)
 		rows := make([][]any, 0, len(deleted)/n)
 		for i := 0; i < len(deleted); i += n {
-			rows = append(rows, deletedSlice[i:i+n])
+			rows = append(rows, deleted[i:i+n])
 		}
 		var err error
 		deletedCSV, err = serializeRowsToCSV(primaryKeysColumns, rows, true)

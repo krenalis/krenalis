@@ -150,7 +150,7 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *ClickHouse) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted map[string]any) error {
+func (warehouse *ClickHouse) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted []any) error {
 	return errors.New("not implemented yet")
 }
 
