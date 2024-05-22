@@ -3,7 +3,7 @@ import './App.css';
 import Toast from '../../base/Toast/Toast';
 import * as icons from '../../../constants/icons';
 import { Status } from './App.types';
-import { FULLSCREEN_PATTERNS } from '../../../lib/helpers/navigation';
+import { FULLSCREEN_PATHS } from '../../../constants/paths';
 import { UI_BASE_PATH, SIGN_UP_PATH } from '../../../constants/paths';
 import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
@@ -104,8 +104,8 @@ const App = () => {
 			setIsFullscreen(true);
 			return;
 		}
-		for (const pattern of FULLSCREEN_PATTERNS) {
-			const match = matchPath(pattern, location.pathname);
+		for (const path of FULLSCREEN_PATHS) {
+			const match = matchPath(path, location.pathname);
 			if (match != null) {
 				setTimeout(() => setIsFullscreen(true), 200);
 				return;
