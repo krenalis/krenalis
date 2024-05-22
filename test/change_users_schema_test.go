@@ -110,7 +110,29 @@ func TestChangeUsersSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	const expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"schema contains conflicting properties: two or more properties cannot have the same representation as column \"a_b\""}}`
+	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"schema contains conflicting properties: two or more properties cannot have the same representation as column \"a_b\""}}`
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+	err = c.ChangeUsersSchemaErr(schema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+
+	// Create a schema with a non-null property.
+	schema = types.Object(append(types.Properties(file.Schema),
+		types.Property{Name: "a", Type: types.Object([]types.Property{
+			{Name: "b", Type: types.Text(), Nullable: false},
+		})},
+	))
+	_, err = c.ChangeUsersSchemaQueriesErr(schema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"not allowed type in schema: property with type Text must be nullable"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
