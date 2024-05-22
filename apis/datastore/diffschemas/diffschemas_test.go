@@ -32,11 +32,11 @@ func TestDiff(t *testing.T) {
 		{
 			name: "First level property drop and rename",
 			fromSchema: types.Object([]types.Property{
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
+				{Name: "firstName", Type: types.Text(), Nullable: true},
+				{Name: "lastName", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "lastName", Type: types.Text()},
+				{Name: "lastName", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{
 				"lastName": "firstName",
@@ -50,13 +50,13 @@ func TestDiff(t *testing.T) {
 			name: "Second level property drop and rename",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "firstName", Type: types.Text()},
-					{Name: "lastName", Type: types.Text()},
+					{Name: "firstName", Type: types.Text(), Nullable: true},
+					{Name: "lastName", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "lastName", Type: types.Text()},
+					{Name: "lastName", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			rePaths: map[string]any{
@@ -70,11 +70,11 @@ func TestDiff(t *testing.T) {
 		{
 			name: "First level property drop and rename, but its type has changed",
 			fromSchema: types.Object([]types.Property{
-				{Name: "firstName", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
+				{Name: "firstName", Type: types.Text(), Nullable: true},
+				{Name: "lastName", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "lastName", Type: types.Text().WithCharLen(10)},
+				{Name: "lastName", Type: types.Text().WithCharLen(10), Nullable: true},
 			}),
 			rePaths: map[string]any{
 				"lastName": "firstName",
@@ -84,41 +84,41 @@ func TestDiff(t *testing.T) {
 		{
 			name: "No changes",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "Changes in labels are not influent",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Label: "old label"},
+				{Name: "a", Type: types.Text(), Label: "old label", Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Label: "new label"},
+				{Name: "a", Type: types.Text(), Label: "new label", Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "Changes in descriptions are not influent",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Description: "old description"},
+				{Name: "a", Type: types.Text(), Description: "old description", Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Description: "new description"},
+				{Name: "a", Type: types.Text(), Description: "new description", Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "One property added at first level (type Text)",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Text()},
@@ -127,29 +127,29 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One property added at first level (type Int(32), Nullable)",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32), Nullable: true},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 		},
 		{
 			name: "One property added at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
+					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -160,15 +160,15 @@ func TestDiff(t *testing.T) {
 			name: "One property dropped at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
+					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -179,14 +179,14 @@ func TestDiff(t *testing.T) {
 			name: "One property renamed at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			rePaths: map[string]any{"x.c": "x.b"},
@@ -198,14 +198,14 @@ func TestDiff(t *testing.T) {
 			name: "One property dropped and one created at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -216,14 +216,14 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Two properties added at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
-				{Name: "d", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
+				{Name: "d", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "c", Type: types.Text()},
@@ -233,13 +233,13 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One property dropped at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationDropColumn, Column: "c"},
@@ -248,12 +248,12 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Two properties dropped at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationDropColumn, Column: "b"},
@@ -263,20 +263,20 @@ func TestDiff(t *testing.T) {
 		{
 			name: "First level property type mismatch",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Int(64)},
+				{Name: "a", Type: types.Int(64), Nullable: true},
 			}),
 			expectedErr: `error on property "a": type changes are not supported`,
 		},
 		{
 			name: "One property added, one dropped at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "b", Type: types.Text()},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Text()},
@@ -286,10 +286,10 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One property renamed at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "b", Type: types.Text()},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"b": "a"},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -299,34 +299,23 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One property renamed at first level, and also its name is changed",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "b", Type: types.Int(32)},
+				{Name: "b", Type: types.Int(32), Nullable: true},
 			}),
 			rePaths:     map[string]any{"b": "a"},
 			expectedErr: `error on property "a" (renamed to "b"): type changes are not supported`,
 		},
 		{
-			name: "One property renamed at first level, and also its nullability is changed",
-			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Int(32), Nullable: true},
-			}),
-			toSchema: types.Object([]types.Property{
-				{Name: "b", Type: types.Int(32), Nullable: false},
-			}),
-			rePaths:     map[string]any{"b": "a"},
-			expectedErr: `error on property "a" (renamed to "b"): nullability changes are not supported`,
-		},
-		{
 			name: "Two properties renamed at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "c", Type: types.Text()},
-				{Name: "d", Type: types.Text()},
+				{Name: "c", Type: types.Text(), Nullable: true},
+				{Name: "d", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"c": "a", "d": "b"},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -337,10 +326,10 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One property removed and then added again (with another type) at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Int(32)},
+				{Name: "a", Type: types.Int(32), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -351,10 +340,10 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One property removed and then added again (with the same type) at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -366,12 +355,12 @@ func TestDiff(t *testing.T) {
 			name: "One property removed and then added again (with another type) at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Int(32)},
+					{Name: "a", Type: types.Int(32), Nullable: true},
 				})},
 			}),
 			rePaths: map[string]any{"x.a": nil},
@@ -383,42 +372,42 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Property order is changed at first level (total of two properties), no renamings",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "b", Type: types.Text()},
-				{Name: "a", Type: types.Text()},
+				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "Property order is changed at first level (total of three properties), no renamings",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
 		{
 			name: "Property order is changed at first level, with renamings",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
-				{Name: "d", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
+				{Name: "d", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "b2", Type: types.Text()},
-				{Name: "d", Type: types.Text()},
-				{Name: "c", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "b2", Type: types.Text(), Nullable: true},
+				{Name: "d", Type: types.Text(), Nullable: true},
+				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"b2": "b"},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -429,18 +418,18 @@ func TestDiff(t *testing.T) {
 			name: "Property order is changed at second level, with renamings",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b2", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b2", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
+					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			rePaths: map[string]any{"x.b2": "x.b"},
@@ -449,42 +438,18 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Changes in first level property nullability",
-			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Nullable: false},
-			}),
-			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Nullable: true},
-			}),
-			expectedErr: `error on property "a": nullability changes are not supported`,
-		},
-		{
-			name: "Changes in second level property nullability",
+			name: "Comprehensive test 1",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
+				{Name: "z", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text(), Nullable: false},
+					{Name: "a", Type: types.Int(32), Nullable: true},
 				})},
-			}),
-			expectedErr: `error on property "x.a": nullability changes are not supported`,
-		},
-		{
-			name: "Comprehensive test 1",
-			fromSchema: types.Object([]types.Property{
-				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-				})},
-				{Name: "z", Type: types.Text()},
-			}),
-			toSchema: types.Object([]types.Property{
-				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Int(32)},
-				})},
-				{Name: "z2", Type: types.Text()},
+				{Name: "z2", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{
 				"x.a": nil,
@@ -500,18 +465,18 @@ func TestDiff(t *testing.T) {
 			name: "Comprehensive test 2",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
 				{Name: "y", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
-				{Name: "z", Type: types.Text()},
+				{Name: "z", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Int(32)},
+					{Name: "a", Type: types.Int(32), Nullable: true},
 				})},
-				{Name: "z2", Type: types.Text()},
+				{Name: "z2", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{
 				"x.a": nil,
@@ -527,18 +492,18 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Dropping of Object properties",
 			fromSchema: types.Object([]types.Property{
-				{Name: "v", Type: types.Text()},
+				{Name: "v", Type: types.Text(), Nullable: true},
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 				{Name: "y", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "v", Type: types.Text()},
+				{Name: "v", Type: types.Text(), Nullable: true},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
@@ -550,13 +515,13 @@ func TestDiff(t *testing.T) {
 		{
 			name: "One non-nullable Object added at first level",
 			fromSchema: types.Object([]types.Property{
-				{Name: "c", Type: types.Text()},
+				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "c", Type: types.Text()},
+				{Name: "c", Type: types.Text(), Nullable: true},
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -567,20 +532,20 @@ func TestDiff(t *testing.T) {
 		{
 			name: "https://github.com/open2b/chichi/issues/693 (1)",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 				})},
-				{Name: "e", Type: types.Text()},
+				{Name: "e", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "b", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 				})},
-				{Name: "e", Type: types.Text()},
-				{Name: "a", Type: types.Text()},
+				{Name: "e", Type: types.Text(), Nullable: true},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -591,12 +556,12 @@ func TestDiff(t *testing.T) {
 		{
 			name: "https://github.com/open2b/chichi/issues/693 (2)",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
-				{Name: "e", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "e", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "e", Type: types.Text()},
-				{Name: "a", Type: types.Text()},
+				{Name: "e", Type: types.Text(), Nullable: true},
+				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
 			expectedOps: []warehouses.AlterSchemaOperation{
@@ -607,36 +572,36 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Renaming of an Object property",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 					{Name: "e", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
+						{Name: "f", Type: types.Text(), Nullable: true},
 						{Name: "g", Type: types.Object([]types.Property{
-							{Name: "h", Type: types.Text()},
-							{Name: "i", Type: types.Text()},
+							{Name: "h", Type: types.Text(), Nullable: true},
+							{Name: "i", Type: types.Text(), Nullable: true},
 						})},
 					})},
 				})},
-				{Name: "j", Type: types.Text()},
-				{Name: "k", Type: types.Text()},
+				{Name: "j", Type: types.Text(), Nullable: true},
+				{Name: "k", Type: types.Text(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 					{Name: "e_new_name", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
+						{Name: "f", Type: types.Text(), Nullable: true},
 						{Name: "g", Type: types.Object([]types.Property{
-							{Name: "h", Type: types.Text()},
-							{Name: "i", Type: types.Text()},
+							{Name: "h", Type: types.Text(), Nullable: true},
+							{Name: "i", Type: types.Text(), Nullable: true},
 						})},
 					})},
 				})},
-				{Name: "j", Type: types.Text()},
-				{Name: "k", Type: types.Text()},
+				{Name: "j", Type: types.Text(), Nullable: true},
+				{Name: "k", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{
 				"b.e_new_name": "b.e",
@@ -651,22 +616,22 @@ func TestDiff(t *testing.T) {
 			name: "Changing order of properties with type Object",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 				{Name: "y", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "y", Type: types.Object([]types.Property{
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "c", Type: types.Text(), Nullable: true},
+					{Name: "d", Type: types.Text(), Nullable: true},
 				})},
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
@@ -675,14 +640,14 @@ func TestDiff(t *testing.T) {
 			name: "Changing order of properties within Objects",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
-					{Name: "b", Type: types.Text()},
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			toSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "b", Type: types.Text()},
-					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text(), Nullable: true},
+					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},

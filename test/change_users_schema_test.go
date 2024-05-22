@@ -62,14 +62,14 @@ func TestChangeUsersSchema(t *testing.T) {
 
 	// Add a single property.
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
-		Name: "new_prop", Type: types.Text(),
+		Name: "new_prop", Type: types.Text(), Nullable: true,
 	}))
 	queries = c.ChangeUsersSchemaQueries(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"users\";",
 		"DROP VIEW \"users_identities\";",
-		"ALTER TABLE \"_users\"\n\tADD COLUMN \"new_prop\" varchar NOT NULL DEFAULT '';",
-		"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"new_prop\" varchar NOT NULL DEFAULT '';",
+		"ALTER TABLE \"_users\"\n\tADD COLUMN \"new_prop\" varchar;",
+		"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"new_prop\" varchar;",
 		"CREATE VIEW \"users\" AS SELECT\n\t\"__id__\",\n\t\"email\",\n\t\"dummy_id\",\n" +
 			"\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n" +
 			"\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n" +
@@ -101,9 +101,9 @@ func TestChangeUsersSchema(t *testing.T) {
 
 	// Create a schema with two properties that would conflict each other.
 	schema = types.Object(append(types.Properties(file.Schema),
-		types.Property{Name: "a_b", Type: types.Text()},
+		types.Property{Name: "a_b", Type: types.Text(), Nullable: true},
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text()},
+			{Name: "b", Type: types.Text(), Nullable: true},
 		})},
 	))
 	_, err = c.ChangeUsersSchemaQueriesErr(schema, nil)

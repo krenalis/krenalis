@@ -14,9 +14,7 @@ The Workspace Identity Resolution is executed:
 
 ## Same user criterion
 
-> NOTE: this paragraph should be reviewed and eventually clarified. See the issue [#657](https://github.com/open2b/chichi/issues/657).
-
-Given two users, they are the *same user* if they have at least one equal value for an **identifier**, and if at least one of the users have no value for identifiers with higher priority.
+Given two users, they are the *same user* if they have at least one equal value for an **identifier**, and if at least one of the users have a null value for identifiers with higher priority.
 
 Hence, it follows that if there are no identifiers defined in the workspace, the Workspace Identity Resolution considers every user imported from a connection always different from any other user.
 
@@ -45,7 +43,7 @@ In the Workspace Identity Resolution, users are merged by taking the `max` value
 
 > `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
 
-For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* (see [the issue #657](https://github.com/open2b/chichi/issues/657)) by the Workspace Identity Resolution and thus must be merged:
+For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* by the Workspace Identity Resolution and thus must be merged:
 
 | email | name     | totalOrders |
 |-------|----------|-------------|

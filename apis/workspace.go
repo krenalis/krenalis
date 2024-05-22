@@ -1780,6 +1780,20 @@ func checkAllowedTypesUsersSchema(schema types.Type) error {
 		if p.Required {
 			return errors.New("property cannot be 'required'")
 		}
+		if p.Type.Kind() == types.ObjectKind {
+			// Properties with type Object cannot be "nullable", as this would
+			// lead to confusion and representation issues regarding type and
+			// values in various data warehouses.
+			if p.Nullable {
+				return errors.New("property with type Object cannot be nullable")
+			}
+		} else {
+			// Any property which is not Object must be nullable, as NULL is
+			// used to represent "no value" on the data warehouse.
+			if !p.Nullable {
+				return fmt.Errorf("property with type %s must be nullable", p.Type.Kind())
+			}
+		}
 		switch p.Type.Kind() {
 		// Array types cannot have items of type Array, Object, or Map.
 		// Map types cannot have values of type Array, Object, or Map.
@@ -1788,13 +1802,7 @@ func checkAllowedTypesUsersSchema(schema types.Type) error {
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
 				return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), k)
 			}
-		// Properties with type Object cannot be "nullable", as this would lead
-		// to confusion and representation issues regarding type and values in
-		// various data warehouses.
 		case types.ObjectKind:
-			if p.Nullable {
-				return errors.New("property with type Object cannot be nullable")
-			}
 			err := checkAllowedTypesUsersSchema(p.Type)
 			if err != nil {
 				return err

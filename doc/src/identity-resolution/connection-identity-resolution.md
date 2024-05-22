@@ -22,6 +22,4 @@ The behavior for the users imported from events allows the implementation of [st
 When merging two or more user identities during the Connection Identity Resolution into a single identity:
 
 * the Anonymous IDs are taken from all these user identities, without duplicated values
-* for any other property, the value of the resulting identity for that property is taken from the most recently updated identity who *has a value* for that property
-
-> NOTE: the meaning of *has a value* is unclear, so the content of this section about which values are merged may be wrong. This must be reviewed. See the issue [#657](https://github.com/open2b/chichi/issues/657).
+* for any other property, the value of the resulting identity for that property is taken from the most recently updated identity who has a non-null value for that property

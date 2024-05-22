@@ -55,21 +55,6 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, usersColumn
 	return queries, nil
 }
 
-// addColumnClause returns the PostgreSQL clause "ADD COLUMN" for a column with
-// the given type and nullable constraint.
-func addColumnClause(column string, colType types.Type, nullable bool) (string, error) {
-	var typ, defaultExpr string
-	typ, defaultExpr, ok := typeToPostgresType(colType)
-	if !ok {
-		return "", fmt.Errorf("the type of the column %q is not supported by the PostgreSQL driver", column)
-	}
-	var additional string
-	if !nullable {
-		additional = " NOT NULL DEFAULT " + defaultExpr
-	}
-	return `ADD COLUMN "` + column + `" ` + typ + additional, nil
-}
-
 // alterSchemaQueries returns the queries that perform the given operations.
 // operations must contain at least one operation.
 func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
@@ -135,11 +120,13 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 					if i > 0 {
 						b.WriteString(",\n\t")
 					}
-					add, err := addColumnClause(op.Column, op.Type, op.Nullable)
-					if err != nil {
-						return nil, warehouses.UnsupportedAlterSchemaErr(err.Error())
+					typ, ok := typeToPostgresType(op.Type)
+					if !ok {
+						return nil, warehouses.UnsupportedAlterSchemaErr(
+							fmt.Sprintf("the type of the column %q is not supported by the PostgreSQL driver", op.Column),
+						)
 					}
-					b.WriteString(add)
+					b.WriteString(`ADD COLUMN "` + op.Column + `" ` + typ)
 				}
 				queries = append(queries, b.String())
 			}
@@ -191,49 +178,49 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 	return queries, nil
 }
 
-func typeToPostgresType(t types.Type) (string, string, bool) {
+func typeToPostgresType(t types.Type) (string, bool) {
 	switch t.Kind() {
 	case types.BooleanKind:
-		return "boolean", "false", true
+		return "boolean", true
 	case types.IntKind:
 		min, max := t.IntRange()
 		switch t.BitSize() {
 		case 16:
 			if min > types.MinInt16 || max < types.MaxInt16 {
-				return "", "", false
+				return "", false
 			}
-			return "smallint", "0", true
+			return "smallint", true
 		case 32:
 			if min > types.MinInt32 || max < types.MaxInt32 {
-				return "", "", false
+				return "", false
 			}
-			return "integer", "0", true
+			return "integer", true
 		case 64:
 			if min > types.MinInt64 || max < types.MaxInt64 {
-				return "", "", false
+				return "", false
 			}
-			return "bigint", "0", true
+			return "bigint", true
 		default:
-			return "", "", false
+			return "", false
 		}
 	case types.UintKind:
-		return "", "", false
+		return "", false
 	case types.FloatKind:
 		if t.IsReal() {
-			return "", "", false
+			return "", false
 		}
 		min, max := t.FloatRange()
 		switch t.BitSize() {
 		case 32:
 			if min > -math.MaxFloat32 || max < math.MaxFloat32 {
-				return "", "", false
+				return "", false
 			}
-			return "real", "0", true
+			return "real", true
 		case 64:
 			if min > -math.MaxFloat64 || max < math.MaxFloat64 {
-				return "", "", false
+				return "", false
 			}
-			return "double precision", "0", true
+			return "double precision", true
 		}
 	case types.DecimalKind:
 		// TODO(Gianluca): for decimal types specifying a minimum and a maximum
@@ -241,54 +228,54 @@ func typeToPostgresType(t types.Type) (string, string, bool) {
 		p := t.Precision()
 		s := t.Scale()
 		if p < 1 || p > 76 || s > 37 {
-			return "", "", false
+			return "", false
 		}
-		return fmt.Sprintf("decimal(%d, %d)", p, s), "0", true
+		return fmt.Sprintf("decimal(%d, %d)", p, s), true
 	case types.DateTimeKind:
-		return "timestamp without time zone", "'0001-01-01 00:00:00'", true
+		return "timestamp without time zone", true
 	case types.DateKind:
-		return "date", "'0001-01-01'", true
+		return "date", true
 	case types.TimeKind:
-		return "time without time zone", "'00:00:00'", true
+		return "time without time zone", true
 	case types.YearKind:
-		return "", "", false
+		return "", false
 	case types.UUIDKind:
-		return "uuid", "'00000000-0000-0000-0000-000000000000'", true
+		return "uuid", true
 	case types.JSONKind:
-		return "jsonb", "null", true
+		return "jsonb", true
 	case types.InetKind:
-		return "", "", false
+		return "", false
 	case types.TextKind:
 		if len(t.Values()) > 0 {
-			return "", "", false
+			return "", false
 		}
 		if t.Regexp() != nil {
-			return "", "", false
+			return "", false
 		}
 		if _, ok := t.ByteLen(); ok {
-			return "", "", false
+			return "", false
 		}
 		typ := "varchar"
 		if l, ok := t.CharLen(); ok {
 			typ += "(" + strconv.Itoa(l) + ")"
 		}
-		return typ, "''", true
+		return typ, true
 	case types.ArrayKind:
 		if t.MinItems() > 0 || t.MaxItems() < types.MaxItems {
-			return "", "", false
+			return "", false
 		}
 		if t.Elem().Kind() == types.ArrayKind {
-			return "", "", false
+			return "", false
 		}
-		typ, _, ok := typeToPostgresType(t.Elem())
+		typ, ok := typeToPostgresType(t.Elem())
 		if !ok {
-			return "", "", false
+			return "", false
 		}
-		return typ + "[]", "'{}'", true
+		return typ + "[]", true
 	case types.ObjectKind:
-		return "", "", false
+		return "", false
 	case types.MapKind:
-		return "", "", false
+		return "", false
 	}
-	return "", "", false
+	return "", false
 }

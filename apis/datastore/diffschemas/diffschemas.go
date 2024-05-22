@@ -115,9 +115,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			if !oldProp.Type.EqualTo(newProp.Type) {
 				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
 			}
-			if oldProp.Nullable != newProp.Nullable {
-				return nil, fmt.Errorf("error on property %q (renamed to %q): nullability changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
-			}
 			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range propertiesToColumns(types.Properties(newProp.Type)) {
@@ -146,7 +143,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					Operation: warehouses.OperationAddColumn,
 					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
 					Type:      c.Type,
-					Nullable:  c.Nullable,
 				})
 			}
 		} else {
@@ -154,7 +150,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				Operation: warehouses.OperationAddColumn,
 				Column:    pathToColumn(appendPath(path, addedName)),
 				Type:      p.Type,
-				Nullable:  p.Nullable,
 			})
 		}
 	}
@@ -218,7 +213,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 						Operation: warehouses.OperationAddColumn,
 						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
 						Type:      c.Type,
-						Nullable:  c.Nullable,
 					})
 				}
 			} else {
@@ -227,7 +221,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 						Operation: warehouses.OperationAddColumn,
 						Column:    pathToColumn(keptPath),
 						Type:      newProp.Type,
-						Nullable:  newProp.Nullable,
 					})
 			}
 			continue
@@ -243,9 +236,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			})
 			if !oldProp.Type.EqualTo(newProp.Type) {
 				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
-			}
-			if oldProp.Nullable != newProp.Nullable {
-				return nil, fmt.Errorf("error on property %q: nullability changes are not supported", appendPath(path, oldProp.Name))
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
@@ -280,9 +270,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 		if !oldProp.Type.EqualTo(newProp.Type) {
 			return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
-		}
-		if oldProp.Nullable != newProp.Nullable {
-			return nil, fmt.Errorf("error on property %q: nullability changes are not supported", appendPath(path, oldProp.Name))
 		}
 
 	}

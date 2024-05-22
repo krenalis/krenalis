@@ -26,11 +26,11 @@ import (
 
 // AlterSchemaOperation represents an operation that alters the "users" (and the
 // "users_identities") schema.
+// Every column is always nullable.
 type AlterSchemaOperation struct {
 	Operation OperationType
 	Column    string     // For "Add", "Drop" and "Rename" operations.
 	Type      types.Type // For "Add" operations. Object properties are expanded into single "Add" operations, so Type can never have kind Object.
-	Nullable  bool       // For "Add" operations.
 	NewColumn string     // For "Rename" operations.
 }
 

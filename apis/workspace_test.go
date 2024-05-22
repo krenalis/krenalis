@@ -23,22 +23,22 @@ func Test_checkAllowedTypesUsersSchema(t *testing.T) {
 		{
 			name: "No errors",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-					{Name: "number", Type: types.Int(32)},
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Nullable: true},
 				})},
 			}),
 		},
 		{
 			name: "Nullable Object",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-					{Name: "number", Type: types.Int(32)},
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Nullable: true},
 				})},
 				{Name: "billing_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.Text()},
@@ -51,37 +51,37 @@ func Test_checkAllowedTypesUsersSchema(t *testing.T) {
 		{
 			name: "Array with Object item",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-					{Name: "number", Type: types.Int(32)},
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Nullable: true},
 				})},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-					{Name: "number", Type: types.Int(32)},
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Nullable: true},
 				})},
 				{Name: "data", Type: types.Array(types.Object([]types.Property{
-					{Name: "a", Type: types.Int(32)},
-					{Name: "b", Type: types.Text()},
-				}))},
+					{Name: "a", Type: types.Int(32), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
+				})), Nullable: true},
 			}),
 			err: "property with type Array cannot have element with type Object",
 		},
 		{
 			name: "Property with a placeholder",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "first_name", Type: types.Text(), Nullable: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-					{Name: "number", Type: types.Int(32)},
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Nullable: true},
 				})},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-					{Name: "number", Type: types.Int(32), Placeholder: "1234"},
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Placeholder: "1234", Nullable: true},
 				})},
 			}),
 			err: "property cannot specify a placeholder",

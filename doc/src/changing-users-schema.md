@@ -19,7 +19,7 @@ When changing the `users` schema, these operations are supported:
 * **reordering** properties **at top level** and **within Object properties**
 * **changing labels** and **descriptions** of properties **at any level**
 
-Any other operation (as changing a property type or nullability) is not supported.
+Any other operation (as changing a property type) is not supported.
 
 ## Properties and types limitations
 
@@ -29,6 +29,7 @@ These are the limits imposed by Chichi:
 
 * Array types cannot have items of type Array, Object, or Map.
 * Map types cannot have values of type Array, Object, or Map.
+* Properties with type different from Object must be "nullable", as NULL is used to represent "no value" on the data warehouse.
 * Properties with type Object cannot be "nullable", as this would lead to confusion and representation issues regarding type and values in various data warehouses.
 * Properties cannot specify a placeholder
 * Properties cannot be required
