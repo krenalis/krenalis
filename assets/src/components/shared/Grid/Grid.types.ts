@@ -30,4 +30,9 @@ interface GridCell {
 	alignment?: string;
 }
 
-export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows, SortableGridRow };
+interface SortableRowComponent {
+	id: string;
+	row: ReactNode;
+}
+
+export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows, SortableGridRow, SortableRowComponent };

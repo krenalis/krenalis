@@ -215,7 +215,9 @@ sl-popup::part(arrow) {
 
 .grid--sortable .grid__sortable-rows .grid__nested-rows--expanded > .grid__row--parent,
 .grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__row--children:last-child,
-.grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__nested-rows--children:last-child {
+.grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__nested-rows--children:last-child,
+.grid--sortable .grid__sortable-rows .grid__nested-rows > .draggable-wrapper > .grid__row--children:last-child,
+.grid--sortable .grid__sortable-rows .grid__nested-rows > .draggable-wrapper > .grid__nested-rows--children:last-child {
 	border-top: 0 !important;
 	border-bottom: 0 !important;
 }
@@ -259,11 +261,17 @@ sl-popup::part(arrow) {
 	border: 1px solid var(--sl-color-primary-200);
 }
 
+.grid--sortable .grid__nested-rows .overlay-row {
+	background-color: var(--sl-color-primary-100);
+}
+
 .grid--sortable .overlay-row__handle {
 	background-color: transparent;
 	border: 0;
 	font-size: 21px;
 	cursor: grabbing;
+	position: relative;
+	left: 10px;
 }
 
 .grid--sortable .overlay-row__handle sl-icon {

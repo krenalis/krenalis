@@ -16,7 +16,7 @@ When changing the `users` schema, these operations are supported:
 * **adding** properties **at any level**
 * **dropping** properties **at any level**
 * **renaming** properties **at any level**
-* **reordering** properties (excluding properties of Objects, see the issue [#739](https://github.com/open2b/chichi/issues/739)).
+* **reordering** properties **at top level** and **within Object properties**
 * **changing labels** and **descriptions** of properties **at any level**
 
 Any other operation (as changing a property type or nullability) is not supported.

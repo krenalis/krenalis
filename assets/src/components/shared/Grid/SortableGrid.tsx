@@ -1,12 +1,11 @@
 import React, { ReactNode, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
-import { GridColumn, NestedGridRows, StandardGridRow, SortableGridRow } from './Grid.types';
+import { GridColumn, NestedGridRows, StandardGridRow, SortableGridRow, SortableRowComponent } from './Grid.types';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import {
 	DndContext,
 	closestCenter,
@@ -16,19 +15,10 @@ import {
 	useSensors,
 	DragOverlay,
 } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
-import {
-	SortableContext,
-	sortableKeyboardCoordinates,
-	useSortable,
-	verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-
-interface SortableRowComponent {
-	id: string;
-	row: ReactNode;
-}
+import { DraggableWrapper } from './DraggableWrapper/DraggableWrapper';
+import { OverlayRow } from './OverlayRow/OverlayRow';
 
 interface SortableGridProps {
 	columns: GridColumn[];
@@ -101,6 +91,8 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 						columns={columns}
 						className={`grid__nested-rows ${className}`}
 						nesting={1}
+						onSortRow={onSortRow}
+						isSortable={true}
 					/>
 				);
 				const isSortable = row[0].dragKey != null && row[0].dragKey !== '';
@@ -182,44 +174,6 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 		</div>
 	);
 });
-
-interface DraggableRowProps {
-	id: string;
-	children: ReactNode;
-}
-
-const DraggableWrapper = ({ id, children }: DraggableRowProps) => {
-	const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: id });
-
-	const style = {
-		transform: CSS.Transform.toString(transform),
-		transition,
-	};
-
-	return (
-		<div className='draggable-wrapper' ref={setNodeRef} style={style}>
-			<button className='draggable-wrapper__handle' {...listeners} {...attributes}>
-				<SlIcon name='grip-vertical' />
-			</button>
-			{children}
-		</div>
-	);
-};
-
-interface OverlayRowProps {
-	children: ReactNode;
-}
-
-const OverlayRow = ({ children }: OverlayRowProps) => {
-	return (
-		<div className='overlay-row'>
-			<button className='overlay-row__handle'>
-				<SlIcon name='grip-vertical' />
-			</button>
-			<div className='overlay-row__name'>{children}</div>
-		</div>
-	);
-};
 
 export default SortableGrid;
 export { SortableGridRef };

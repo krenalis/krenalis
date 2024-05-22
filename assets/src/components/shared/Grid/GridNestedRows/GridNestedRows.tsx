@@ -1,37 +1,83 @@
 import React, { useState, ReactNode, Fragment } from 'react';
 import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
-import { NestedGridRows, GridColumn } from '../Grid.types';
+import { NestedGridRows, GridColumn, SortableGridRow } from '../Grid.types';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import {
+	DndContext,
+	closestCenter,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+	DragOverlay,
+} from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
+import { DraggableWrapper } from '../DraggableWrapper/DraggableWrapper';
+import { OverlayRow } from '../OverlayRow/OverlayRow';
 
 interface GridNestedRowsProps {
 	rows: NestedGridRows;
 	columns: GridColumn[];
 	className?: string;
 	nesting: number;
+	onSortRow?: (overRowID: string, movedRowID: string) => void;
+	isSortable?: boolean;
 }
 
-const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsProps) => {
+const GridNestedRows = ({ rows, columns, className, nesting, onSortRow, isSortable }: GridNestedRowsProps) => {
+	const [activeRow, setActiveRow] = useState(null);
 	const [isExpanded, setIsExpanded] = useState(false);
+	const sensors = useSensors(
+		useSensor(PointerSensor),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		}),
+	);
 
-	const rowComponents = [] as ReactNode[];
+	function onDragEnd(e) {
+		const { over, active } = e;
+		if (over.id !== active.id) {
+			onSortRow(over.id, active.id);
+		}
+		setActiveRow(null);
+	}
+
+	function onDragStart(e) {
+		const { active } = e;
+		setActiveRow(active.id);
+	}
+
+	let parentComponent: ReactNode = null;
+	let childrenComponents: any[] = [];
 	for (const [i, row] of rows.entries()) {
 		if (Array.isArray(row)) {
 			const r = row as NestedGridRows;
-			rowComponents.push(
+			const component = (
 				<GridNestedRows
 					key={i}
 					rows={r}
 					columns={columns}
 					className='grid__nested-rows grid__nested-rows--children'
 					nesting={nesting + 1}
-				/>,
+					onSortRow={onSortRow}
+					isSortable={isSortable}
+				/>
 			);
+			if (isSortable) {
+				const r = row as SortableGridRow[];
+				childrenComponents.push({
+					id: r[0].dragKey,
+					row: component,
+				});
+			} else {
+				childrenComponents.push(component);
+			}
 		} else {
-			let rowComponent: ReactNode;
 			const r = row as any;
 			if (i === 0) {
-				rowComponent = (
+				parentComponent = (
 					<Fragment key={i}>
 						<SlIcon
 							className='grid__row-expand'
@@ -44,11 +90,19 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 					</Fragment>
 				);
 			} else {
-				rowComponent = (
+				const component = (
 					<GridRow key={i} row={r} columns={columns} className='grid__row grid__row--children' id={r.id} />
 				);
+				if (isSortable) {
+					const r = row as SortableGridRow;
+					childrenComponents.push({
+						id: r.dragKey,
+						row: component,
+					});
+				} else {
+					childrenComponents.push(component);
+				}
 			}
-			rowComponents.push(rowComponent);
 		}
 	}
 
@@ -64,7 +118,31 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 				} as React.CSSProperties
 			}
 		>
-			{rowComponents}
+			{parentComponent}
+			{isSortable ? (
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+					onDragStart={onDragStart}
+					onDragEnd={onDragEnd}
+				>
+					<SortableContext items={childrenComponents} strategy={verticalListSortingStrategy}>
+						{childrenComponents.map(({ id, row }) => (
+							<DraggableWrapper key={id} id={id}>
+								{row}
+							</DraggableWrapper>
+						))}
+					</SortableContext>
+					<DragOverlay>
+						{activeRow ? (
+							<OverlayRow>{childrenComponents.find((c) => c.id === activeRow).row}</OverlayRow>
+						) : null}
+					</DragOverlay>
+				</DndContext>
+			) : (
+				childrenComponents
+			)}
 		</div>
 	);
 };

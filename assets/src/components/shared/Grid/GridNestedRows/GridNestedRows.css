@@ -21,9 +21,15 @@
 }
 
 .grid__nested-rows .grid__row--children,
-.grid__nested-rows .grid__nested-rows--children {
+.grid__nested-rows .grid__nested-rows--children,
+.grid__nested-rows .draggable-wrapper {
 	display: none;
 	position: relative;
+}
+
+.grid__nested-rows .overlay-row .grid__row--children,
+.grid__nested-rows .overlay-row .grid__nested-rows--children {
+	display: grid;
 }
 
 .grid__nested-rows .grid__row--children::before {
@@ -39,13 +45,29 @@
 	border-bottom-left-radius: 5px;
 }
 
+.grid__nested-rows .draggable-wrapper__handle,
+.grid__nested-rows .overlay-row__handle {
+	left: var(--parent-indentation);
+	transform: translate(-10px, -1px);
+}
+
+.grid__nested-rows .overlay-row__handle {
+	z-index: 10;
+}
+
 .grid__nested-rows--expanded > .grid__row--parent {
 	border-top: 1px solid var(--border-primary);
 	border-bottom: 1px solid var(--border-primary);
 }
 
+.grid__nested-rows--expanded > .draggable-wrapper {
+	display: block;
+}
+
 .grid__nested-rows--expanded > .grid__row--children,
-.grid__nested-rows--expanded > .grid__nested-rows--children {
+.grid__nested-rows--expanded > .grid__nested-rows--children,
+.grid__nested-rows--expanded > .draggable-wrapper > .grid__row--children,
+.grid__nested-rows--expanded > .draggable-wrapper > .grid__nested-rows--children {
 	display: grid;
 }
 
@@ -119,16 +141,25 @@
 }
 
 .grid__nested-rows > .grid__row--children:last-child,
-.grid__nested-rows > .grid__nested-rows--children:last-child {
+.grid__nested-rows > .grid__nested-rows--children:last-child,
+.grid__nested-rows > .draggable-wrapper > .grid__row--children:last-child,
+.grid__nested-rows > .draggable-wrapper > .grid__nested-rows--children:last-child {
 	border-bottom: 1px solid var(--border-primary) !important;
 }
 
 .grid__nested-rows.grid-el--last > .grid__row--children:last-child,
-.grid__nested-rows.grid-el--last > .grid__nested-rows--children:last-child {
+.grid__nested-rows.grid-el--last > .grid__nested-rows--children:last-child,
+.grid__nested-rows.grid-el--last > .draggable-wrapper > .grid__row--children:last-child,
+.grid__nested-rows.grid-el--last > .draggable-wrapper > .grid__nested-rows--children:last-child {
 	border-bottom: 0 !important;
 }
 
 .grid__nested-rows.grid-el--last .grid__nested-rows:last-child > .grid__row--children:last-child,
-.grid__nested-rows.grid-el--last .grid__nested-rows:last-child > .grid__nested-rows--children:last-child {
+.grid__nested-rows.grid-el--last .grid__nested-rows:last-child > .grid__nested-rows--children:last-child,
+.grid__nested-rows.grid-el--last .grid__nested-rows:last-child > .draggable-wrapper > .grid__row--children:last-child,
+.grid__nested-rows.grid-el--last
+	.grid__nested-rows:last-child
+	> .draggable-wrapper
+	> .grid__nested-rows--children:last-child {
 	border-bottom: 0 !important;
 }
