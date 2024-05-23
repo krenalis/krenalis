@@ -141,6 +141,13 @@ sl-popup::part(arrow) {
 	border-bottom: 1px solid var(--border-primary);
 }
 
+.grid--hide-content .grid__header-row,
+.grid--hide-content .grid__row,
+.grid--hide-content .grid__nested-rows {
+	opacity: 0;
+	height: 0;
+}
+
 .grid__row.grid-el--last {
 	border-bottom-left-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);

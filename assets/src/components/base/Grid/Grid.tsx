@@ -101,7 +101,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}`}
+				className={`grid${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${columnsWidths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
 			>
 				{isLoading ? (

@@ -11,39 +11,42 @@ const useGrid = (
 	const [columnsWidths, setColumnsWidths] = useState<string>();
 
 	useLayoutEffect(() => {
+		const computeColumnsWidths = () => {
+			const widthsOfColumn = {};
+			for (let i = 0; i < columns.length; i++) {
+				widthsOfColumn[i] = [];
+			}
+			const rowElements = gridRef.current.querySelectorAll('.grid__header-row, .grid__row');
+			for (const r of rowElements) {
+				const contents = r.querySelectorAll('.grid__cell-content');
+				for (const [i, c] of contents.entries()) {
+					if (c instanceof HTMLElement) {
+						widthsOfColumn[i].push(c.offsetWidth);
+					}
+				}
+			}
+			const maxWidths = [] as number[];
+			for (const k in widthsOfColumn) {
+				const widths = widthsOfColumn[k];
+				maxWidths.push(Math.max(...widths) + 40); // 40 is the left/right padding of the cells.
+			}
+			let widths = '';
+			for (let i = 0; i < maxWidths.length; i++) {
+				if (i === 0) {
+					widths += `${maxWidths[i]}px`;
+				} else {
+					widths += ` ${maxWidths[i]}px`;
+				}
+			}
+			setColumnsWidths(widths);
+		};
 		if (isLoading || (isShown != null && !isShown)) {
 			return;
 		}
 		if (gridRef.current == null) {
 			return;
 		}
-		const widthsOfColumn = {};
-		for (let i = 0; i < columns.length; i++) {
-			widthsOfColumn[i] = [];
-		}
-		const rowElements = gridRef.current.querySelectorAll('.grid__header-row, .grid__row');
-		for (const r of rowElements) {
-			const contents = r.querySelectorAll('.grid__cell-content');
-			for (const [i, c] of contents.entries()) {
-				if (c instanceof HTMLElement) {
-					widthsOfColumn[i].push(c.offsetWidth);
-				}
-			}
-		}
-		const maxWidths = [] as number[];
-		for (const k in widthsOfColumn) {
-			const widths = widthsOfColumn[k];
-			maxWidths.push(Math.max(...widths) + 40); // 40 is the left/right padding of the cells.
-		}
-		let widths = '';
-		for (let i = 0; i < maxWidths.length; i++) {
-			if (i === 0) {
-				widths += `${maxWidths[i]}px`;
-			} else {
-				widths += ` ${maxWidths[i]}px`;
-			}
-		}
-		setColumnsWidths(widths);
+		setTimeout(computeColumnsWidths);
 	}, [rows, columns, isLoading, isShown]);
 
 	return { columnsWidths };

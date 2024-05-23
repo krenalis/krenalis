@@ -144,7 +144,7 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 	return (
 		<div
 			ref={gridRef}
-			className='grid grid--sortable'
+			className={`grid grid--sortable${columnsWidths == null ? ' grid--hide-content' : ''}`}
 			style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
 		>
 			<GridHeaderRow columns={columns} />
