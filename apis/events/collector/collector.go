@@ -1146,7 +1146,7 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 	propertiesEnc := json.NewEncoder(&properties)
 	propertiesEnc.SetEscapeHTML(false)
 
-	rows := make([]map[string]any, len(events))
+	rows := make([][]any, len(events))
 
 	for i, e := range events {
 
@@ -1184,96 +1184,70 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 			groupId = e.Context.GroupId
 		}
 
-		rows[i] = map[string]any{
-			"anonymous_id": e.AnonymousId,
-			"category":     e.Category,
-			"context": map[string]any{
-				"app": map[string]any{
-					"name":      e.Context.App.Name,
-					"version":   e.Context.App.Version,
-					"build":     e.Context.App.Build,
-					"namespace": e.Context.App.Namespace,
-				},
-				"browser": map[string]any{
-					"name":    e.Context.Browser.Name,
-					"other":   e.Context.Browser.Other,
-					"version": e.Context.Browser.Version,
-				},
-				"campaign": map[string]any{
-					"name":    e.Context.Campaign.Name,
-					"source":  e.Context.Campaign.Source,
-					"medium":  e.Context.Campaign.Medium,
-					"term":    e.Context.Campaign.Term,
-					"content": e.Context.Campaign.Content,
-				},
-				"device": map[string]any{
-					"id":                  e.Context.Device.Id,
-					"advertising_id":      e.Context.Device.AdvertisingId,
-					"ad_tracking_enabled": e.Context.Device.AdTrackingEnabled,
-					"manufacturer":        e.Context.Device.Manufacturer,
-					"model":               e.Context.Device.Model,
-					"name":                e.Context.Device.Name,
-					"type":                e.Context.Device.Type,
-					"token":               e.Context.Device.Token,
-				},
-				"ip": e.Context.IP,
-				"library": map[string]any{
-					"name":    e.Context.Library.Name,
-					"version": e.Context.Library.Version,
-				},
-				"locale": e.Context.Locale,
-				"location": map[string]any{
-					"city":      e.Context.Location.City,
-					"country":   e.Context.Location.Country,
-					"latitude":  e.Context.Location.Latitude,
-					"longitude": e.Context.Location.Longitude,
-					"speed":     e.Context.Location.Speed,
-				},
-				"network": map[string]any{
-					"bluetooth": e.Context.Network.Bluetooth,
-					"carrier":   e.Context.Network.Carrier,
-					"cellular":  e.Context.Network.Cellular,
-					"wifi":      e.Context.Network.WiFi,
-				},
-				"os": map[string]any{
-					"name":    e.Context.OS.Name,
-					"version": e.Context.OS.Version,
-				},
-				"page": map[string]any{
-					"path":     e.Context.Page.Path,
-					"referrer": e.Context.Page.Referrer,
-					"search":   e.Context.Page.Search,
-					"title":    e.Context.Page.Title,
-					"url":      e.Context.Page.URL,
-				},
-				"referrer": map[string]any{
-					"id":   e.Context.Referrer.Id,
-					"type": e.Context.Referrer.Type,
-				},
-				"screen": map[string]any{
-					"width":   int16(e.Context.Screen.Width),
-					"height":  int16(e.Context.Screen.Height),
-					"density": e.Context.Screen.Density,
-				},
-				"session": map[string]any{
-					"id":    e.Context.SessionId,
-					"start": e.Context.SessionStart,
-				},
-				"timezone":   e.Context.Timezone,
-				"user_agent": e.Context.UserAgent,
-			},
-			"event":       e.Event,
-			"group_id":    groupId,
-			"message_id":  e.MessageId,
-			"name":        e.Name,
-			"properties":  json.RawMessage(slices.Clone(properties.Bytes())),
-			"received_at": e.ReceivedAt,
-			"sent_at":     e.SentAt,
-			"source":      e.Header.Connection,
-			"timestamp":   e.Timestamp,
-			"traits":      json.RawMessage(slices.Clone(traits.Bytes())),
-			"type":        *e.Type,
-			"user_id":     e.UserId,
+		rows[i] = []any{
+			e.AnonymousId,                                     // anonymous_id
+			e.Category,                                        // category
+			e.Context.App.Name,                                // context_app_name
+			e.Context.App.Version,                             // context_app_version
+			e.Context.App.Build,                               // context_app_build
+			e.Context.App.Namespace,                           // context_app_namespace
+			e.Context.Browser.Name,                            // context_browser_name
+			e.Context.Browser.Other,                           // context_browser_other
+			e.Context.Browser.Version,                         // context_browser_version
+			e.Context.Campaign.Name,                           // context_campaign_name
+			e.Context.Campaign.Source,                         // context_campaign_source
+			e.Context.Campaign.Medium,                         // context_campaign_medium
+			e.Context.Campaign.Term,                           // context_campaign_term
+			e.Context.Campaign.Content,                        // context_campaign_content
+			e.Context.Device.Id,                               // context_device_id
+			e.Context.Device.AdvertisingId,                    // context_device_advertising_id
+			e.Context.Device.AdTrackingEnabled,                // context_device_ad_tracking_enabled
+			e.Context.Device.Manufacturer,                     // context_device_manufacturer
+			e.Context.Device.Model,                            // context_device_model
+			e.Context.Device.Name,                             // context_device_name
+			e.Context.Device.Type,                             // context_device_type
+			e.Context.Device.Token,                            // context_device_token
+			e.Context.IP,                                      // context_ip
+			e.Context.Library.Name,                            // context_library_name
+			e.Context.Library.Version,                         // context_library_version
+			e.Context.Locale,                                  // context_locale
+			e.Context.Location.City,                           // context_location_city
+			e.Context.Location.Country,                        // context_location_country
+			e.Context.Location.Latitude,                       // context_location_latitude
+			e.Context.Location.Longitude,                      // context_location_longitude
+			e.Context.Location.Speed,                          // context_location_speed
+			e.Context.Network.Bluetooth,                       // context_network_bluetooth
+			e.Context.Network.Carrier,                         // context_network_carrier
+			e.Context.Network.Cellular,                        // context_network_cellular
+			e.Context.Network.WiFi,                            // context_network_wifi
+			e.Context.OS.Name,                                 // context_os_name
+			e.Context.OS.Version,                              // context_os_version
+			e.Context.Page.Path,                               // context_page_path
+			e.Context.Page.Referrer,                           // context_page_referrer
+			e.Context.Page.Search,                             // context_page_search
+			e.Context.Page.Title,                              // context_page_title
+			e.Context.Page.URL,                                // context_page_url
+			e.Context.Referrer.Id,                             // context_referrer_id
+			e.Context.Referrer.Type,                           // context_referrer_type
+			int16(e.Context.Screen.Width),                     // context_screen_width
+			int16(e.Context.Screen.Height),                    // context_screen_height
+			e.Context.Screen.Density,                          // context_screen_density
+			e.Context.SessionId,                               // context_session_id
+			e.Context.SessionStart,                            // context_session_start
+			e.Context.Timezone,                                // context_timezone
+			e.Context.UserAgent,                               // context_user_agent
+			e.Event,                                           // event
+			groupId,                                           // group_id
+			e.MessageId,                                       // message_id
+			e.Name,                                            // name
+			json.RawMessage(slices.Clone(properties.Bytes())), // properties
+			e.ReceivedAt,                                      // received_at
+			e.SentAt,                                          // sent_at
+			e.Header.Connection,                               // source
+			e.Timestamp,                                       // timestamp
+			json.RawMessage(slices.Clone(traits.Bytes())),     // traits
+			*e.Type,  // type
+			e.UserId, // user_id
 		}
 
 	}

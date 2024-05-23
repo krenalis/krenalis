@@ -81,7 +81,7 @@ type Store struct {
 	}
 	mu        sync.Mutex // for mode and events fields
 	mode      state.WarehouseMode
-	events    []map[string]any
+	events    [][]any
 	closed    atomic.Bool
 	runningIR chan struct{} // prevents concurrent executions of the Workspace Identity Resolution.
 }
@@ -165,7 +165,7 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, usersSchema types.Ty
 // If the data warehouse is in inspection mode, it returns the
 // ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error.
-func (store *Store) AddEvents(events []map[string]any) error {
+func (store *Store) AddEvents(events [][]any) error {
 	switch store.Mode() {
 	case state.Inspection:
 		return ErrInspectionMode

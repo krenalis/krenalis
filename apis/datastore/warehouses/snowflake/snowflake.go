@@ -141,24 +141,18 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted []any) error {
+func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
 
-	tableSchema := types.Object(table.Properties)
-
-	columns := warehouses.PropertiesToColumns(table.Properties)
-	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
-
 	// Serialize the rows in CSV format.
 	var rowsCSV io.Reader
 	if len(rows) > 0 {
 		var err error
-		rowsSlice := serializeRowsToSlice(rows, tableSchema, columns)
-		rowsCSV, err = serializeRowsToCSV(columns, rowsSlice, false)
+		rowsCSV, err = serializeRowsToCSV(table.Columns, rows, false)
 		if err != nil {
 			return err
 		}
@@ -167,13 +161,13 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	// Serialize the deleted rows in CSV format.
 	var deletedCSV io.Reader
 	if len(deleted) > 0 {
-		n := len(primaryKeysColumns)
+		n := len(table.PrimaryKeys)
 		rows := make([][]any, 0, len(deleted)/n)
 		for i := 0; i < len(deleted); i += n {
 			rows = append(rows, deleted[i:i+n])
 		}
 		var err error
-		deletedCSV, err = serializeRowsToCSV(primaryKeysColumns, rows, true)
+		deletedCSV, err = serializeRowsToCSV(table.PrimaryKeys, rows, true)
 		if err != nil {
 			return err
 		}
@@ -185,7 +179,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	q.WriteString(`CREATE TEMPORARY TABLE "`)
 	q.WriteString(tempTableName)
 	q.WriteString("\" (\n")
-	for _, c := range columns {
+	for _, c := range table.Columns {
 		q.WriteByte('"')
 		q.WriteString(c.Name)
 		q.WriteString(`" `)
@@ -306,7 +300,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	q.WriteString(" d\nUSING \"")
 	q.WriteString(tempTableName)
 	q.WriteString("\" s\nON ")
-	for i, key := range primaryKeysColumns {
+	for i, key := range table.PrimaryKeys {
 		if i > 0 {
 			q.WriteByte(',')
 		}
@@ -320,8 +314,8 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		q.WriteString("\nWHEN MATCHED AND NOT s.\"$deleted\" THEN\n  UPDATE SET ")
 		i := 0
 	Set:
-		for _, c := range columns {
-			for _, key := range primaryKeysColumns {
+		for _, c := range table.Columns {
+			for _, key := range table.PrimaryKeys {
 				if c.Name == key.Name {
 					continue Set
 				}
@@ -337,7 +331,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			i++
 		}
 		q.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$deleted\" THEN\n  INSERT (")
-		for i, c := range columns {
+		for i, c := range table.Columns {
 			if i > 0 {
 				q.WriteByte(',')
 			}
@@ -346,7 +340,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			q.WriteByte('"')
 		}
 		q.WriteString(")\n  VALUES (")
-		for i, c := range columns {
+		for i, c := range table.Columns {
 			if i > 0 {
 				q.WriteByte(',')
 			}
@@ -430,7 +424,7 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
 // returns it as an io.Reader. It also appends a boolean column called $deleted
 // with the value of the 'deleted' argument as value for each row.
-func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (io.Reader, error) {
+func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool) (io.Reader, error) {
 	var b bytes.Buffer
 	var bj bytes.Buffer
 	for i, c := range columns {

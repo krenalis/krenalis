@@ -237,17 +237,12 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows []map[string]any, deleted []any) error {
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-
-	tableSchema := types.Object(table.Properties)
-
-	columns := warehouses.PropertiesToColumns(table.Properties)
-	primaryKeysColumns := warehouses.PropertiesToColumns(table.PrimaryKeys)
 
 	var b strings.Builder
 
@@ -265,7 +260,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString(`CREATE UNLOGGED TABLE "`)
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
-	for _, c := range columns {
+	for _, c := range table.Columns {
 		b.WriteByte('"')
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
@@ -286,12 +281,11 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
-		columnNames := make([]string, len(columns))
-		for i, c := range columns {
+		columnNames := make([]string, len(table.Columns))
+		for i, c := range table.Columns {
 			columnNames[i] = c.Name
 		}
-		rowsSlice := serializeRowsToSlice(rows, tableSchema, columns)
-		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rowsSlice))
+		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
 		if err != nil {
 			return warehouses.Error(err)
 		}
@@ -299,12 +293,12 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	// Copy the rows to delete into the temporary table.
 	if len(deleted) > 0 {
-		columnNames := make([]string, len(primaryKeysColumns)+1)
-		for i, c := range primaryKeysColumns {
+		columnNames := make([]string, len(table.PrimaryKeys)+1)
+		for i, c := range table.PrimaryKeys {
 			columnNames[i] = c.Name
 		}
 		columnNames[len(columnNames)-1] = "$deleted"
-		rowSrc := newCopyForDeleteFrom(len(primaryKeysColumns), deleted)
+		rowSrc := newCopyForDeleteFrom(len(table.PrimaryKeys), deleted)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
 			return warehouses.Error(err)
@@ -318,7 +312,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString("\" d\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString("\" s\nON ")
-	for i, key := range primaryKeysColumns {
+	for i, key := range table.PrimaryKeys {
 		if i > 0 {
 			b.WriteByte(',')
 		}
@@ -332,8 +326,8 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
 		i := 0
 	Set:
-		for _, c := range columns {
-			for _, key := range primaryKeysColumns {
+		for _, c := range table.Columns {
+			for _, key := range table.PrimaryKeys {
 				if c.Name == key.Name {
 					continue Set
 				}
@@ -349,7 +343,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			i++
 		}
 		b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
-		for i, c := range columns {
+		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}
@@ -358,7 +352,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			b.WriteByte('"')
 		}
 		b.WriteString(")\n  VALUES (")
-		for i, c := range columns {
+		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}

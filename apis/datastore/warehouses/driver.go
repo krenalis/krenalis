@@ -36,9 +36,9 @@ type AlterSchemaOperation struct {
 
 // MergeTable represents a table in which rows will be merged.
 type MergeTable struct {
-	Name        string           // Name of the table
-	Properties  []types.Property // Properties to merge
-	PrimaryKeys []types.Property // Primary keys
+	Name        string   // Name of the table
+	Columns     []Column // Columns to merge
+	PrimaryKeys []Column // Primary keys
 }
 
 // OperationType represents an operation to perform on the data warehouse to
@@ -164,7 +164,7 @@ type Warehouse interface {
 	// exist.
 	// rows or deleted can be empty but not both.
 	// Note that rows may be changed by this method.
-	Merge(ctx context.Context, table MergeTable, rows []map[string]any, deleted []any) error
+	Merge(ctx context.Context, table MergeTable, rows [][]any, deleted []any) error
 
 	// Normalize normalizes a value v returned by the Query method.
 	// In particular, Normalize handles the values obtained by the scan on the
