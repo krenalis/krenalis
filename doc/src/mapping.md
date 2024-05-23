@@ -36,35 +36,40 @@ first_name: "Emma"
 last_name: "Johnson"
 ```
 
+If a property is not mapped, its value remains unchanged. If you want to map an output property only in some cases, use the [when](#when-function) function.
+
 ### Constants
 
-You can use constant values such as strings, numbers, and booleans:
+You can use the constant `null` and constant values such as strings, numbers, and booleans:
 ```
 ┌─────────────────────────────────┐
-│ "on"                            │ ->  status  
+│ null                            │ ->  birthdate
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ 50                              │ ->  score  
+│ "on"                            │ ->  status
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ true                            │ ->  active  
+│ 50                              │ ->  score
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ true                            │ ->  active
 └─────────────────────────────────┘
 ```
 
 Strings can also be written with single quotes:
 ```
 ┌─────────────────────────────────┐
-│ 'on'                            │ ->  status  
+│ 'on'                            │ ->  status
 └─────────────────────────────────┘
 ```
 
 To include a single or double quote within a string, simply prefix the quote with a backslash:
 ```
 ┌─────────────────────────────────┐
-│ 'O\'Connor'                     │ ->  last_name  
+│ 'O\'Connor'                     │ ->  last_name
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ "123 Main Street, \"Apt 4B\""   │ ->  street  
+│ "123 Main Street, \"Apt 4B\""   │ ->  street
 └─────────────────────────────────┘
 ```
 
@@ -74,7 +79,7 @@ Properties, strings, numbers and booleans can be concatenated by writing them on
 
 ```
 ┌─────────────────────────────────┐
-│ firstName " " lastName          │ ->  full_name  
+│ firstName " " lastName          │ ->  full_name
 └─────────────────────────────────┘
 ```
 
@@ -94,10 +99,10 @@ full_name: "Emma Johnson"
 In expressions, you can reference sub-properties, map keys, and JSON object keys using either a dot or square brackets:
 ```
 ┌─────────────────────────────────┐
-│ address.city                    │ ->  city  
+│ address.city                    │ ->  city
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ properties["birth day"]         │ ->  birth_day  
+│ properties["birth day"]         │ ->  birth_day
 └─────────────────────────────────┘
 ```
 
@@ -108,7 +113,7 @@ In expressions, you can use some functions to do slightly more complex tasks.
 For instance, consider a scenario where the input property `maritalStatus` is `null`, indicating an unknown marital status. You must map this property to the non-nullable output property `marital_status`. To address this situation, you could use the `coalesce` function, which returns the first non-null argument:
 ```
 ┌─────────────────────────────────────┐
-│ coalesce(maritalStatus, "Unknown")  │ ->  marital_status  
+│ coalesce(maritalStatus, "Unknown")  │ ->  marital_status
 └─────────────────────────────────────┘
 ```
 
@@ -128,7 +133,7 @@ Below is a list of available functions:
 The `and` function returns `true` only when all of its arguments are `true`; otherwise, it returns `false`. For example:
 ```
 ┌─────────────────────────────────┐
-│ and(active, newsletterConsent)  │ ->  marketing_consent  
+│ and(active, newsletterConsent)  │ ->  marketing_consent
 └─────────────────────────────────┘
 ```
 
@@ -139,7 +144,7 @@ The arguments for `and` should be of boolean (`Boolean` type), and the returned 
 The `array` function returns an array with the passed arguments as elements.  For example:
 ```
 ┌─────────────────────────────────┐
-│ array(email, company.email)     │ ->  emails  
+│ array(email, company.email)     │ ->  emails
 └─────────────────────────────────┘
 ```
 
@@ -151,7 +156,7 @@ The `coalesce` function returns the first non-null argument, or `null` if all ar
 
 ```
 ┌───────────────────────────────────────────┐
-│ coalesce(shippingAddress, billingAddress) │ ->  ship_address  
+│ coalesce(shippingAddress, billingAddress) │ ->  ship_address
 └───────────────────────────────────────────┘
 ```
 
