@@ -36,9 +36,9 @@ type AlterSchemaOperation struct {
 
 // MergeTable represents a table in which rows will be merged.
 type MergeTable struct {
-	Name        string   // Name of the table
-	Columns     []Column // Columns to merge
-	PrimaryKeys []Column // Primary keys
+	Name    string   // Name of the table
+	Columns []Column // Columns to merge
+	Keys    []Column // Merge keys
 }
 
 // OperationType represents an operation to perform on the data warehouse to

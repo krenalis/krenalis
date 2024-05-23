@@ -161,13 +161,13 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	// Serialize the deleted rows in CSV format.
 	var deletedCSV io.Reader
 	if len(deleted) > 0 {
-		n := len(table.PrimaryKeys)
+		n := len(table.Keys)
 		rows := make([][]any, 0, len(deleted)/n)
 		for i := 0; i < len(deleted); i += n {
 			rows = append(rows, deleted[i:i+n])
 		}
 		var err error
-		deletedCSV, err = serializeRowsToCSV(table.PrimaryKeys, rows, true)
+		deletedCSV, err = serializeRowsToCSV(table.Keys, rows, true)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	q.WriteString(" d\nUSING \"")
 	q.WriteString(tempTableName)
 	q.WriteString("\" s\nON ")
-	for i, key := range table.PrimaryKeys {
+	for i, key := range table.Keys {
 		if i > 0 {
 			q.WriteByte(',')
 		}
@@ -315,7 +315,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		i := 0
 	Set:
 		for _, c := range table.Columns {
-			for _, key := range table.PrimaryKeys {
+			for _, key := range table.Keys {
 				if c.Name == key.Name {
 					continue Set
 				}
