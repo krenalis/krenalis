@@ -362,7 +362,7 @@ const ConnectorSettings = () => {
 								label='Name'
 								type='text'
 								onSlChange={(e) => {
-									const target = e.currentTarget;
+									const target = e.currentTarget as any;
 									setName(target!.value);
 								}}
 							/>
@@ -375,7 +375,7 @@ const ConnectorSettings = () => {
 									value={strategy || 'AB-C'}
 									label='Strategy'
 									onSlChange={(e) => {
-										const target = e.currentTarget;
+										const target = e.currentTarget as any;
 										const value = target.value as Strategy;
 										setStrategy(value);
 									}}
@@ -394,7 +394,7 @@ const ConnectorSettings = () => {
 									value={SendingMode}
 									label='Sending mode'
 									onSlChange={(e) => {
-										const target = e.currentTarget;
+										const target = e.currentTarget as any;
 										const value = target.value as SendingModeType;
 										setSendingMode(value);
 									}}
@@ -435,7 +435,7 @@ const ConnectorSettings = () => {
 										label='Host'
 										type='text'
 										onSlChange={(e) => {
-											const target = e.currentTarget;
+											const target = e.currentTarget as any;
 											setWebsiteHost(target.value);
 										}}
 									/>

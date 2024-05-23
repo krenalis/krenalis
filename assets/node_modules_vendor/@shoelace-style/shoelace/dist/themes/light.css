@@ -447,9 +447,21 @@
   --sl-z-index-tooltip: 1000;
 }
 
-.sl-scroll-lock {
-  padding-right: var(--sl-scroll-lock-size) !important;
-  overflow: hidden !important;
+@supports (scrollbar-gutter: stable) {
+  .sl-scroll-lock {
+    scrollbar-gutter: var(--sl-scroll-lock-gutter) !important;
+  }
+
+  .sl-scroll-lock body {
+    overflow: hidden !important;
+  }
+}
+
+@supports not (scrollbar-gutter: stable) {
+  .sl-scroll-lock body {
+    padding-right: var(--sl-scroll-lock-size) !important;
+    overflow: hidden !important;
+  }
 }
 
 .sl-toast-stack {
