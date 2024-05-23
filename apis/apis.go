@@ -673,6 +673,9 @@ func (apis *APIs) TransformationLanguages() []string {
 // properties in the expression. typ is the type of the expression, required
 // indicates whether a value for that property is required, and nullable
 // indicates whether it can be nullable.
+//
+// The returned string explains why the expression is not valid. It is empty if
+// the expression is valid.
 func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, required, nullable bool) string {
 	apis.mustBeOpen()
 	_, err := mappings.Compile(expression, types.Object(properties), typ, required, nullable, nil)
