@@ -12,7 +12,7 @@ import getLanguageLogo from '../../helpers/getLanguageLogo';
 interface EditorWrapperProps {
 	language: string;
 	languageChoices?: string[];
-	onLanguageChange?: (language: string) => void;
+	onLanguageChange?: (e) => void;
 	languageDropdownRef?: any;
 	actions?: ReactNode;
 	width?: number;
