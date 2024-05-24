@@ -950,7 +950,13 @@ const FullscreenTransformation = ({
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	useEventListener(0, true, collectEvents);
+	const { startListening } = useEventListener(0, true, collectEvents);
+
+	useEffect(() => {
+		if (connection.isApp && connection.isDestination && actionType.Target === 'Events') {
+			startListening();
+		}
+	}, []);
 
 	useEffect(() => {
 		const fetchSamples = async () => {

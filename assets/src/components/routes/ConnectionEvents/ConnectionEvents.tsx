@@ -1,4 +1,4 @@
-import React, { useState, useContext, ReactNode } from 'react';
+import React, { useState, useEffect, useContext, ReactNode } from 'react';
 import './ConnectionEvents.css';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -19,7 +19,11 @@ const ConnectionEvents = () => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	useEventListener(c.id, true, collectEvents, setDiscarded);
+	const { startListening } = useEventListener(c.id, true, collectEvents, setDiscarded);
+
+	useEffect(() => {
+		startListening();
+	}, []);
 
 	const onEventClick = (event: EventListenerEvent) => {
 		setSelectedEvent(null);

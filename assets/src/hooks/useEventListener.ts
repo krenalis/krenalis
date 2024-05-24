@@ -18,12 +18,16 @@ const useEventListener = (
 	setEvents: (events: EventListenerEvent[]) => void,
 	setDiscarded?: React.Dispatch<React.SetStateAction<number>>,
 ) => {
+	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
 	const [eventID, setEventID] = useState<number>(1);
 
 	const { api, handleError, redirect } = useContext(AppContext);
 
 	useEffect(() => {
+		if (!isStarted) {
+			return;
+		}
 		if (isListenerNotFound) {
 			setIsListenerNotFound(false);
 			return;
@@ -95,9 +99,13 @@ const useEventListener = (
 			};
 			removeListener();
 		};
-	}, [isListenerNotFound]);
+	}, [isStarted, isListenerNotFound]);
 
-	return;
+	const startListening = () => {
+		setIsStarted(true);
+	};
+
+	return { startListening };
 };
 
 export default useEventListener;
