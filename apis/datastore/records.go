@@ -60,7 +60,7 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 		return nil, err
 	}
 
-	columns, explode := columnsFromProperties(query.Properties, columnByProperty)
+	columns, unflat := columnsFromProperties(query.Properties, columnByProperty)
 	columns = append(columns, columnByProperty[query.id])
 
 	var where warehouses.Expr
@@ -98,7 +98,7 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 
 	records := &records{
 		columns:   columns,
-		explode:   explode,
+		unflat:    unflat,
 		rows:      rows,
 		normalize: store.warehouse.Normalize,
 	}
@@ -111,7 +111,7 @@ var _ Records = (*records)(nil)
 type records struct {
 	columns   []warehouses.Column
 	normalize NormalizeFunc
-	explode   explodeRowFunc
+	unflat    unflatRowFunc
 	rows      warehouses.Rows
 	last      bool
 	err       error
@@ -163,7 +163,7 @@ func (r *records) Seq() Seq[Record] {
 			}
 			record = Record{
 				ID:         id,
-				Properties: r.explode(row),
+				Properties: r.unflat(row),
 			}
 		}
 		if record.Properties != nil || record.Err != nil {

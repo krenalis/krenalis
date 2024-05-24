@@ -16,10 +16,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // ErrInspectionMode is returned by Store methods when they cannot execute due
@@ -479,7 +480,7 @@ func (store *Store) identityColumnByProperty() map[string]warehouses.Column {
 // returns a *DataWarehouseError error.
 func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]warehouses.Column) ([]map[string]any, int, error) {
 
-	columns, explode := columnsFromProperties(query.Properties, columnByProperty)
+	columns, unflat := columnsFromProperties(query.Properties, columnByProperty)
 
 	var where warehouses.Expr
 	if query.Filter != nil {
@@ -523,7 +524,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		if err := rows.Scan(values...); err != nil {
 			return nil, 0, err
 		}
-		records = append(records, explode(row))
+		records = append(records, unflat(row))
 	}
 	if err = rows.Err(); err != nil {
 		return nil, 0, err

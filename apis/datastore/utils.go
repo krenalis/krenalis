@@ -40,16 +40,16 @@ func CanBeIdentifier(t types.Type) bool {
 	}
 }
 
-// An explodeRowFunc function explodes a row read from the data warehouse into
-// a map[string]any value.
-type explodeRowFunc func(row []any) map[string]any
+// An unflatRowFunc function unflats a row read from the data warehouse into a
+// map[string]any value.
+type unflatRowFunc func(row []any) map[string]any
 
 // columnsFromProperties returns the columns corresponding to the provided
 // properties paths, based on the mapping defined in columnByProperty that can
 // be used in a query to a data warehouse. Additionally, it returns a function
 // that can be used to transform a row retrieved from a data warehouse into its
 // map representation.
-func columnsFromProperties(properties []string, columnByProperty map[string]warehouses.Column) ([]warehouses.Column, explodeRowFunc) {
+func columnsFromProperties(properties []string, columnByProperty map[string]warehouses.Column) ([]warehouses.Column, unflatRowFunc) {
 	pk := &propertyKey{}
 	columns := make([]warehouses.Column, 0, len(properties))
 	for _, path := range properties {
@@ -67,10 +67,10 @@ func columnsFromProperties(properties []string, columnByProperty map[string]ware
 			}
 		}
 	}
-	explode := func(row []any) map[string]any {
-		return explodeRow(pk, row)
+	unflat := func(row []any) map[string]any {
+		return unflatRow(pk, row)
 	}
-	return columns, explode
+	return columns, unflat
 }
 
 type propertyKey struct {
@@ -102,14 +102,14 @@ Path:
 	}
 }
 
-func explodeRow(pk *propertyKey, row []any) map[string]any {
+func unflatRow(pk *propertyKey, row []any) map[string]any {
 	v := map[string]any{}
 	for _, p := range pk.properties {
 		if p.properties == nil {
 			v[p.name] = row[p.index]
 			continue
 		}
-		v[p.name] = explodeRow(&p, row)
+		v[p.name] = unflatRow(&p, row)
 	}
 	return v
 }
