@@ -1657,7 +1657,7 @@ type identity struct {
 	Connection        int
 	IdentityId        labelValue // zero struct for identities imported from anonymous events.
 	DisplayedProperty string     // empty string for identities with no displayed property.
-	AnonymousIds      []string   // nil for identities not imported from events.
+	AnonymousId       string     // empty string for identities not imported from events.
 	LastChangeTime    time.Time
 }
 
@@ -1677,7 +1677,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
-		Properties: []string{"__connection__", "__identity_id__", "__anonymous_ids__", "__last_change_time__", "__displayed_property__"},
+		Properties: []string{"__connection__", "__identity_id__", "__anonymous_id__", "__last_change_time__", "__displayed_property__"},
 		Filter:     filter,
 		OrderBy:    "__identity_key__",
 		First:      first,
@@ -1730,14 +1730,8 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			}
 		}
 
-		// Determine the anonymous IDs.
-		var anonIDs []string
-		if ids, ok := record["__anonymous_ids__"].([]any); ok {
-			anonIDs = make([]string, len(ids))
-			for i := range ids {
-				anonIDs[i] = ids[i].(string)
-			}
-		}
+		// Determine the anonymous ID.
+		anonymousID := record["__anonymous_id__"].(string)
 
 		// Determine the last change time.
 		lastChangeTime := record["__last_change_time__"].(time.Time)
@@ -1752,7 +1746,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 				Value: identityID,
 			},
 			DisplayedProperty: displayedProperty,
-			AnonymousIds:      anonIDs,
+			AnonymousId:       anonymousID,
 			LastChangeTime:    lastChangeTime,
 		})
 

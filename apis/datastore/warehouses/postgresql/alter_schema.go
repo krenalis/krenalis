@@ -154,7 +154,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 		b := strings.Builder{}
 		b.WriteString(`CREATE VIEW "users_identities" AS SELECT` + "\n")
 		metaProps := []string{"__identity_key__", "__connection__", "__identity_id__",
-			"__displayed_property__", "__anonymous_ids__", "__last_change_time__", "__gid__"}
+			"__displayed_property__", "__anonymous_id__", "__last_change_time__", "__gid__"}
 		for i, p := range metaProps {
 			if i > 0 {
 				b.WriteString(",\n")

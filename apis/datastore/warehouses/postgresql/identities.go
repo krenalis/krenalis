@@ -119,11 +119,11 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
 			query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
-				" AND __identity_id__ = '' AND $2 = ANY(__anonymous_ids__) ORDER BY __last_change_time__, __identity_key__"
+				" AND __identity_id__ = '' AND $2 = __anonymous_id__ ORDER BY __last_change_time__, __identity_key__"
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
-				" AND (__identity_id__ = $2) OR (__identity_id__ = '' AND $3 = ANY(__anonymous_ids__)) ORDER BY __last_change_time__, __identity_key__"
+				" AND (__identity_id__ = $2) OR (__identity_id__ = '' AND $3 = __anonymous_id__) ORDER BY __last_change_time__, __identity_key__"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
@@ -161,9 +161,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	newIdentity["__identity_id__"] = id
 	newIdentity["__last_change_time__"] = lastChangeTime.Format(time.DateTime)
 	newIdentity["__displayed_property__"] = displayedProperty
-	if anonID != "" {
-		newIdentity["__anonymous_ids__"] = []string{anonID}
-	}
+	newIdentity["__anonymous_id__"] = anonID
 
 	b := strings.Builder{}
 	b.WriteString("INSERT INTO _users_identities (")
@@ -207,23 +205,6 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	}
 	idsStr.WriteString(strconv.Itoa(newIdentityKey))
 
-	// Merge the anonymous IDS.
-	b.Reset()
-	b.WriteString(`UPDATE _users_identities SET __anonymous_ids__ = (
-		SELECT array_agg(DISTINCT anon_ids.ids) as __anonymous_ids__
-		FROM (
-			SELECT unnest("__anonymous_ids__") as ids
-			FROM _users_identities
-			WHERE __identity_key__ IN (`)
-	b.WriteString(idsStr.String())
-	b.WriteString(`) AND __anonymous_ids__ IS NOT NULL
-			) AS anon_ids
-		) WHERE __identity_key__ = $1`)
-	_, err = db.Exec(ctx, b.String(), newIdentityKey)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-
 	// Retrieve the column names of the '_users_identities' table.
 	rows, err = db.Query(ctx, `SELECT * FROM "_users_identities"`)
 	if err != nil {
@@ -234,9 +215,9 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		tableColumns = append(tableColumns, fd.Name)
 	}
 
-	// Merge the other fields.
+	// Merge "__anonymous_id__" and the other columns.
 	for _, p := range tableColumns {
-		if p == "__connection__" || p == "__anonymous_ids__" || p == "__identity_id__" || p == "__last_change_time__" {
+		if p == "__connection__" || p == "__identity_id__" || p == "__last_change_time__" {
 			continue
 		}
 		b.Reset()

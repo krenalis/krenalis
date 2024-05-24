@@ -124,7 +124,7 @@ interface UserIdentity {
 	Connection: number;
 	IdentityId: UserIdentityLabelValue;
 	DisplayedProperty: string;
-	AnonymousIds: string[] | null;
+	AnonymousId: string;
 	LastChangeTime: string;
 }
 

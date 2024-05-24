@@ -132,7 +132,7 @@ type UserIdentity struct { // copy-pasted from the not-exported type 'identity' 
 	Connection        int
 	IdentityId        LabelValue
 	DisplayedProperty string
-	AnonymousIds      []string
+	AnonymousId       string
 	LastChangeTime    time.Time
 }
 
