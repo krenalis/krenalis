@@ -115,6 +115,11 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 			typ.valueType = { name: '' };
 			setTimeout(() => valueTypeSelectRef.current?.focus(), 50);
 		}
+		if (typeName === 'Object') {
+			p.nullable = false;
+		} else {
+			p.nullable = true;
+		}
 		p.type = typ;
 		setProperty(p);
 		if (typeError !== '') {
