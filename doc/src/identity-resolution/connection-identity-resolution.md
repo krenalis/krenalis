@@ -21,7 +21,9 @@ The behavior for the users imported from events allows the implementation of [st
 
 ## Merging of user identities
 
+> 📝 NOTE. The concept of 'merge', as we understand it here, will disappear. We will simply talk about updating identities.
+
 When merging two or more user identities during the Connection Identity Resolution into a single identity:
 
 * the Anonymous ID is taken from one of the identities to merge;
-* for any other property, the value of the resulting identity for that property is taken from the most recently updated identity who has a non-null value for that property.
+* for all other properties, the value for that property is updated with that of the imported identity if it has a value for that property  (including 'null', which is also considered a value); otherwise, the current value in the database is retained.

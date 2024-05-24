@@ -119,16 +119,16 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 	if fromEvent {
 		if isAnon := id == ""; isAnon {
 			query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
-				" AND __identity_id__ = '' AND $2 = __anonymous_id__ ORDER BY __last_change_time__, __identity_key__"
+				" AND __identity_id__ = '' AND $2 = __anonymous_id__ ORDER BY __identity_key__"
 			args = []any{connection, anonID}
 		} else {
 			query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
-				" AND (__identity_id__ = $2) OR (__identity_id__ = '' AND $3 = __anonymous_id__) ORDER BY __last_change_time__, __identity_key__"
+				" AND (__identity_id__ = $2) OR (__identity_id__ = '' AND $3 = __anonymous_id__) ORDER BY __identity_key__"
 			args = []any{connection, id, anonID}
 		}
 	} else { // app, file or database.
 		query = "SELECT __identity_key__ FROM _users_identities WHERE __connection__ = $1" +
-			" AND __identity_id__ = $2 ORDER BY __last_change_time__, __identity_key__"
+			" AND __identity_id__ = $2 ORDER BY __identity_key__"
 		args = []any{connection, id}
 	}
 	var matchingIdentities []int
@@ -215,9 +215,14 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		tableColumns = append(tableColumns, fd.Name)
 	}
 
+	// TODO(Gianluca): this code is supposed to implement the specifications of
+	// the Connection Identity Resolution indicated in the 'doc', but it is not
+	// thoroughly tested. The goal, for now, is to make the tests pass while
+	// waiting to implement the writing of the identities through the Merge.
+
 	// Merge "__anonymous_id__" and the other columns.
 	for _, p := range tableColumns {
-		if p == "__connection__" || p == "__identity_id__" || p == "__last_change_time__" {
+		if p == "__connection__" || p == "__identity_key__" || p == "__identity_id__" || p == "__last_change_time__" {
 			continue
 		}
 		b.Reset()
@@ -229,7 +234,7 @@ func writeUserIdentity(ctx context.Context, db *postgres.DB, identity map[string
 		b.WriteString(p)
 		b.WriteString(`" IS NOT NULL AND __identity_key__ IN (`)
 		b.WriteString(idsStr.String())
-		b.WriteString(") ORDER BY __last_change_time__ DESC, __identity_key__ DESC LIMIT 1)\n")
+		b.WriteString(") ORDER BY __identity_key__ DESC LIMIT 1)\n")
 		b.WriteString(` WHERE __identity_key__ = $1`)
 		_, err = db.Exec(ctx, b.String(), newIdentityKey)
 		if err != nil {
