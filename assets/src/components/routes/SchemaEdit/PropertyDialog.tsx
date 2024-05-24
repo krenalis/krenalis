@@ -18,7 +18,6 @@ import { PropertyToEdit } from './useSchemaEdit';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
 
 const TYPE_NAMES: TypeName[] = [
@@ -166,12 +165,6 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 		const typ = p.type as MapType;
 		typ.valueType.name = e.target.value;
 		p.type = typ;
-		setProperty(p);
-	};
-
-	const onChangeNullable = () => {
-		const p = { ...property };
-		p.nullable = !p.nullable;
 		setProperty(p);
 	};
 
@@ -386,24 +379,6 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 							<div className='property-dialog__type-value'>{property.type?.name}</div>
 						</div>
 					)}
-					{property.type?.name !== 'Object' &&
-						(!isEditing || property.isEditable ? (
-							<SlCheckbox
-								className='property-dialog__control'
-								size='small'
-								checked={property.nullable}
-								onSlChange={onChangeNullable}
-							>
-								Nullable
-							</SlCheckbox>
-						) : (
-							<div className='property-dialog__nullable'>
-								<div className='property-dialog__nullable-label'>Nullable</div>
-								<div className='property-dialog__nullable-value'>
-									{property.nullable ? 'Yes' : 'No'}
-								</div>
-							</div>
-						))}
 					<SlInput
 						className='property-dialog__control'
 						size='small'

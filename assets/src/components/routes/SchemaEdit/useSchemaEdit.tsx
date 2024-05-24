@@ -12,7 +12,6 @@ import { SortableGridRef } from '../../base/Grid/SortableGrid';
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
-	{ name: 'Nullable', alignment: 'center' },
 	{ name: 'Label' },
 	{ name: '' }, // buttons
 ];
@@ -410,14 +409,8 @@ const buildRow = (
 	} else {
 		typeCell = enrichPropertyType(property.type);
 	}
-	let nullableCell: ReactNode;
-	if (property.nullable) {
-		nullableCell = 'Yes';
-	} else {
-		nullableCell = 'No';
-	}
 	return {
-		cells: [property.name, typeCell, nullableCell, property.label, buttons],
+		cells: [property.name, typeCell, property.label, buttons],
 		dragKey: propertyKey,
 		id: propertyKey,
 	};
