@@ -2,10 +2,16 @@
 .right-buttons { font-size: 2.5rem; }
 
 .sidebar { border-right: 1px solid #dadde1; font-size: 0.925em; }
-.sidebar .sidebar-scrollbox { padding: 10px 0 10px 15px; }
-.chapter li.chapter-item { margin-block-start: 0; }
-.chapter li a { flex-grow: 1; padding: 5px 5px 5px 10px; }
-.chapter li a.active { background: #eeeff2; }
+.sidebar .sidebar-scrollbox { padding: 10px 15px 10px 15px; }
+
+.chapter li.chapter-item { align-items: center; margin-block-start: 3px; position: relative; }
+.chapter li.chapter-item a { border-radius: 5px; flex-grow: 1; padding: 5px 5px 5px 10px; transition: background-color .3s; }
+.chapter li.chapter-item a:first-child:hover { background: #f3f3ff; }
+.chapter li.chapter-item a.active { background: #f3f3ff; }
+.chapter li.chapter-item a:first-child { width: 100%; padding-left: 25px; }
+.chapter li.chapter-item a.toggle { align-items: center; display: flex; font-size: 0; left: 5px; padding: 0; position: absolute; }
+.chapter li.chapter-item a.toggle::before { align-items: center; content: '\f054'; display: block; display: flex; font-family: 'FontAwesome'; font-size: 12px; height: 15px; justify-content: center; transition: transform .3s; width: 15px; will-change: transform; }
+.chapter li.chapter-item.expanded a.toggle::before { transform: rotate(90deg) }
 .chapter strong { display: none; }
 
 h1 { font-size: 3em; font-weight: normal; }

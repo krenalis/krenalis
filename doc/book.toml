@@ -5,3 +5,7 @@ language = "en"
 [output.html]
 additional-css = ["chichi.css"]
 git-repository-url = "https://github.com/open2b/chichi/tree/main/doc"
+
+[output.html.fold]
+enable = true
+level = 0
