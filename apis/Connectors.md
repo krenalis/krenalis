@@ -1,57 +1,57 @@
 
 ## App connectors
 
-| Method           | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
-|------------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
-| Create           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| EventRequest     | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| EventTypes       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| ReceiveWebhook   | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
-| Records          | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| Resource         | -    | -              | -              | -                       | ✓                       | ✓                       |
-| Schema           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| ServeUI          | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
-| Update           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| Method           | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
+|------------------|----------------|----------------|-------------------------|-------------------------|-------------------------|
+| Create           | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| EventRequest     | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| EventTypes       | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| ReceiveWebhook   | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
+| Records          | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| Resource         | -              | -              | -                       | ✓                       | ✓                       |
+| Schema           | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| ServeUI          | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
+| Update           | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 
 
 ## Database connectors
 
-| Method           | Role | Settings | SetSettings |
-|------------------|------|----------|-------------|
-| Close            | ✓    | -/✓      | -/✓         |
-| Columns          | ✓    | ✓        | ✓           |
-| Query            | ✓    | ✓        | ✓           |
-| ServeUI          | ✓    | -/✓      | -/✓         |
-| Upsert           | ✓    | ✓        | ✓           |
+| Method           | Settings | SetSettings |
+|------------------|----------|-------------|
+| Close            | -/✓      | -/✓         |
+| Columns          | ✓        | ✓           |
+| Query            | ✓        | ✓           |
+| ServeUI          | -/✓      | -/✓         |
+| Upsert           | ✓        | ✓           |
 
 
 ## File connectors
 
-| Method           | Role | Settings | SetSettings |
-|------------------|------|----------|-------------|
-| ContentType      | ✓    | ✓        | ✓           |
-| Read             | ✓    | ✓        | -           |
-| ServeUI          | ✓    | -/✓      | -/✓         |
-| Sheets           | ✓    | ✓        | -           |
-| Write            | ✓    | ✓        | ✓           |
+| Method           | Settings | SetSettings |
+|------------------|----------|-------------|
+| ContentType      | ✓        | ✓           |
+| Read             | ✓        | -           |
+| ServeUI          | -/✓      | -/✓         |
+| Sheets           | ✓        | -           |
+| Write            | ✓        | ✓           |
 
 
 ## FileStorage connectors
 
-| Method           | Role | Settings | SetSettings |
-|------------------|------|----------|-------------|
-| CompletePath     | ✓    | ✓        | ✓           |
-| Reader           | ✓    | ✓        | ✓           |
-| ServeUI          | ✓    | -/✓      | -/✓         |
-| Write            | ✓    | ✓        | ✓           |
+| Method           | Settings | SetSettings |
+|------------------|----------|-------------|
+| CompletePath     | ✓        | ✓           |
+| Reader           | ✓        | ✓           |
+| ServeUI          | -/✓      | -/✓         |
+| Write            | ✓        | ✓           |
 
 
 ## Stream connectors
 
-| Method           | Role | Settings | SetSettings |
-|------------------|------|----------|-------------|
-| Close            | ✓    | ✓        | ✓           |
-| Receive          | ✓    | ✓        | ✓           |
-| Send             | ✓    | ✓        | ✓           |
-| ServeUI          | ✓    | -/✓      | -/✓         |
+| Method           | Settings | SetSettings |
+|------------------|----------|-------------|
+| Close            | ✓        | ✓           |
+| Receive          | ✓        | ✓           |
+| Send             | ✓        | ✓           |
+| ServeUI          | -/✓      | -/✓         |
 

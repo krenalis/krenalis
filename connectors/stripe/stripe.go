@@ -103,7 +103,7 @@ func (stripe *Stripe) Create(ctx context.Context, target chichi.Targets, propert
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (stripe *Stripe) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.WebhookPayload, error) {
 
 	// Extract signature from Stripe-Signature header.
 	var timestamp time.Time
@@ -241,7 +241,7 @@ func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, proper
 }
 
 // Schema returns the schema of the specified target.
-func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object
 	//
 	// currently the user schema is the standard schema of the user returned
@@ -255,7 +255,7 @@ func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, eventTy
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

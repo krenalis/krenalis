@@ -31,14 +31,13 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 	role := chichi.Role(action.Connection().Role)
 	c := action.Connector()
 	inner, err := chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{
-		Role:        role,
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values)
+	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values, role)
 	if err != nil {
 		return nil, err
 	}
@@ -59,13 +58,11 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		resourceID = r.ID
 		resourceCode = r.Code
 	}
-	role := chichi.Role(connection.Role)
 	var inner any
 	var err error
 	switch c := connection.Connector(); c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 			Resource:    resourceCode,
@@ -75,7 +72,6 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	case state.DatabaseType:
 		var database chichi.Database
 		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -83,31 +79,26 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		inner = database
 	case state.FileStorageType:
 		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.MobileType:
 		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.ServerType:
 		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.StreamType:
 		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.WebsiteType:
 		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{
-			Role:        role,
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -115,11 +106,11 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values)
+	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values, chichi.Role(connection.Role))
 	if err != nil {
 		return nil, err
 	}
-	return marshalUI(ui, role)
+	return marshalUI(ui, chichi.Role(connection.Role))
 }
 
 type ConnectorConfig struct {
@@ -140,41 +131,39 @@ type ConnectorConfig struct {
 func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values []byte) ([]byte, error) {
 	var inner any
 	var err error
-	role := chichi.Role(conf.Role)
 	switch c := connector; c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Role:       role,
 			Resource:   conf.Resource,
 			HTTPClient: connectors.http.Client(conf.ClientSecret, conf.AccessToken),
 			Region:     chichi.PrivacyRegion(conf.Region),
 		})
 	case state.DatabaseType:
 		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: role})
+		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{})
 		defer database.Close()
 		inner = database
 	case state.FileType:
-		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: role})
+		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{})
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: role})
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: role})
+		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: role})
+		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: role})
+		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{Role: role})
+		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{})
 	}
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values)
+	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values, chichi.Role(conf.Role))
 	if err != nil {
 		return nil, err
 	}
-	return marshalUI(ui, role)
+	return marshalUI(ui, chichi.Role(conf.Role))
 }
 
 // UpdatedSettings returns the settings, for the given connector, updated with
@@ -185,7 +174,6 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues []byte) ([]byte, error) {
 	var inner any
 	var err error
-	r := chichi.Role(conf.Role)
 	var newSettings []byte
 	setSettings := func(_ context.Context, settings []byte) error {
 		if !utf8.Valid(settings) {
@@ -200,33 +188,32 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	switch c := connector; c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Role:        r,
 			Resource:    conf.Resource,
 			HTTPClient:  connectors.http.Client(conf.ClientSecret, conf.AccessToken),
 			SetSettings: setSettings,
 		})
 	case state.DatabaseType:
 		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{Role: r, SetSettings: setSettings})
+		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{SetSettings: setSettings})
 		defer database.Close()
 		inner = database
 	case state.FileType:
-		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{Role: r, SetSettings: setSettings})
+		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{SetSettings: setSettings})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{Role: r, SetSettings: setSettings})
+		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{SetSettings: setSettings})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{Role: r, SetSettings: setSettings})
+		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{SetSettings: setSettings})
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{Role: r, SetSettings: setSettings})
+		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{SetSettings: setSettings})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{Role: r, SetSettings: setSettings})
+		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{SetSettings: setSettings})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{Role: r, SetSettings: setSettings})
+		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, err
 	}
-	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
+	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", uiValues, chichi.Role(conf.Role))
 	if err != nil {
 		return nil, err
 	}

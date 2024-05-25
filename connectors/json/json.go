@@ -178,7 +178,7 @@ Records:
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

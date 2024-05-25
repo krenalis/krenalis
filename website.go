@@ -38,7 +38,6 @@ func (info WebsiteInfo) New(conf *WebsiteConfig) (Website, error) {
 
 // WebsiteConfig represents the configuration of a website connector.
 type WebsiteConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }

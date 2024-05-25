@@ -201,7 +201,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []s
 }
 
 // Schema returns the schema of the specified target.
-func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 
 	if target == chichi.Events {
 		if eventType != "create_event" {
@@ -359,7 +359,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, eventType 
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

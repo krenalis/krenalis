@@ -93,7 +93,7 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (chichi.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

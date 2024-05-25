@@ -93,7 +93,7 @@ func (my *MySQL) Query(ctx context.Context, query string) (chichi.Rows, []types.
 }
 
 // ServeUI serves the connector's user interface.
-func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

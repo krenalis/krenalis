@@ -214,7 +214,7 @@ type Settings struct {
 }
 
 // Schema returns the schema of the specified target.
-func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	if target == chichi.Users {
 		return types.Object([]types.Property{
 			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
@@ -257,7 +257,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, eventType
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

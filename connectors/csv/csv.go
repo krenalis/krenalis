@@ -153,7 +153,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chich
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
@@ -165,7 +165,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte) (*chichi
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		return nil, c.saveValues(ctx, values)
+		return nil, c.saveValues(ctx, values, role)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -233,7 +233,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records chichi.R
 }
 
 // saveValues saves the user-entered values as settings.
-func (c *CSV) saveValues(ctx context.Context, values []byte) error {
+func (c *CSV) saveValues(ctx context.Context, values []byte, role chichi.Role) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -246,7 +246,7 @@ func (c *CSV) saveValues(ctx context.Context, values []byte) error {
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
 		return chichi.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
-	if c.conf.Role == chichi.Source {
+	if role == chichi.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {

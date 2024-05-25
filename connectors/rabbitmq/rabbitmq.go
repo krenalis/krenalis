@@ -116,7 +116,7 @@ func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options chichi.Send
 }
 
 // ServeUI serves the connector's user interface.
-func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

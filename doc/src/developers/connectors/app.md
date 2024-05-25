@@ -65,8 +65,8 @@ func (ky *Klavyio) Records(ctx context.Context, target chichi.Targets, propertie
 	// ...
 }
 
-// Schema returns the schema of the specified target.
-func (ky *Klavyio) Schema(ctx context.Context, target Targets, eventType string) (types.Type, error) {
+// Schema returns the schema of the specified target in the specified role
+func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	// ...
 }
 
@@ -132,15 +132,12 @@ The second argument supplied to the `RegisterApp` function is the function utili
 func New(conf *chichi.AppConfig) (*Klaviyo, error)
 ```
 
-This function accepts an app configuration and yields a value representing your custom type. A connector can be instantiated either as a source or a destination, but not both simultaneously. Consequently, an instance of a connector will be responsible for either receiving or sending to a app, depending on its role.
-
-### App Configuration
+This function accepts an app configuration and yields a value representing your custom type.
 
 The structure of `AppConfig` is defined as follows:
 
 ```go
 type AppConfig struct {
-    Role         chichi.Role
     Settings     []byte
     SetSettings  chichi.SetSettingsFunc
     Resource     string
@@ -150,7 +147,6 @@ type AppConfig struct {
 }
 ```
 
-- `Role`: Specifies the intended role of the resulting instance, which can be either `Source` or `Destination`.
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 - `SetSettings`: A function that enables the connector to update its settings as necessary.
 - `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required.

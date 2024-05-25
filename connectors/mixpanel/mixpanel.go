@@ -195,7 +195,7 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 }
 
 // Schema returns the schema of the specified target.
-func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {
 		return types.Object([]types.Property{
 			{Name: "event", Label: "Event Name", Placeholder: placeholder, Type: types.Text().WithCharLen(255), Required: true},
@@ -214,7 +214,7 @@ func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, eventType
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

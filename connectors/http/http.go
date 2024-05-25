@@ -122,7 +122,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

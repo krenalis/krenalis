@@ -37,7 +37,6 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 		storage: storage,
 	}
 	s.inner, s.err = chichi.RegisteredFileStorage(storage.Connector().Name).New(&chichi.FileStorageConfig{
-		Role:        chichi.Role(storage.Role),
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
 	})
@@ -101,14 +100,13 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	}
 
 	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
-		Role:        chichi.Role(storage.storage.Role),
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasUI {
-		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
+		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues, chichi.Role(storage.storage.Role))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -145,14 +143,13 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	}
 
 	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
-		Role:        chichi.Role(storage.storage.Role),
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasUI {
-		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues)
+		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues, chichi.Role(storage.storage.Role))
 		if err != nil {
 			return nil, err
 		}

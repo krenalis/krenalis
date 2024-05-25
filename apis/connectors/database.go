@@ -15,10 +15,11 @@ import (
 	"slices"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // Database represents the database of a database connection.
@@ -43,7 +44,6 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 		timeLayouts: &connector.TimeLayouts,
 	}
 	database.inner, database.err = chichi.RegisteredDatabase(connector.Name).New(&chichi.DatabaseConfig{
-		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

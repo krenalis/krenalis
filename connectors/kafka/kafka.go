@@ -119,7 +119,7 @@ func (kafka *Kafka) Send(ctx context.Context, event []byte, options chichi.SendO
 }
 
 // ServeUI serves the connector's user interface.
-func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

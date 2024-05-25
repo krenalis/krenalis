@@ -95,7 +95,7 @@ func (mc *MailChimp) Create(ctx context.Context, target chichi.Targets, properti
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (mc *MailChimp) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (mc *MailChimp) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.WebhookPayload, error) {
 
 	if mc.settings.WebhookSecret == "" {
 		// Webhooks are not set up.
@@ -208,7 +208,7 @@ func (mc *MailChimp) Resource(ctx context.Context) (string, error) {
 }
 
 // Schema returns the schema of the specified target.
-func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -436,7 +436,7 @@ func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, eventTyp
 }
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

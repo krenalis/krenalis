@@ -35,7 +35,8 @@ func NewInvalidUIValuesError(msg string) InvalidUIValuesError {
 type UIHandler interface {
 
 	// ServeUI serves the connector's user interface. event is the event to be
-	// served and values are the user-entered values in JSON format.
+	// served, values are the user-entered values in JSON format, and role is
+	// the connection's role, it can be Source or Destination.
 	//
 	// The first time ServeUI is called to display the UI, event is "load" and
 	// values is nil. The connector save the values as settings only when serving
@@ -44,7 +45,7 @@ type UIHandler interface {
 	//
 	// If event does not exist, it returns an ErrUIEventNotExist.
 	// If the values are invalid, it returns an InvalidUIValuesError error.
-	ServeUI(ctx context.Context, event string, values []byte) (*UI, error)
+	ServeUI(ctx context.Context, event string, values []byte, role Role) (*UI, error)
 }
 
 // UI represents the user interface of a connector that is shown to users.

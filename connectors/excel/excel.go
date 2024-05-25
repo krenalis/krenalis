@@ -152,7 +152,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
@@ -162,7 +162,7 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte) (*c
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		return nil, exel.saveValues(ctx, values)
+		return nil, exel.saveValues(ctx, values, role)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -245,13 +245,13 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 }
 
 // saveValues saves the user-entered values as settings.
-func (exel *Excel) saveValues(ctx context.Context, values []byte) error {
+func (exel *Excel) saveValues(ctx context.Context, values []byte, role chichi.Role) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return err
 	}
-	if exel.conf.Role != chichi.Source {
+	if role != chichi.Source {
 		s.HasColumnNames = false
 	}
 	b, err := json.Marshal(s)

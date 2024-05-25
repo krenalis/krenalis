@@ -47,7 +47,6 @@ func (info FileInfo) New(conf *FileConfig) (File, error) {
 
 // FileConfig represents the configuration of a file connector.
 type FileConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }

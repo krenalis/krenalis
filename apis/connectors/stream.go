@@ -32,7 +32,6 @@ func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, err
 	stream := &Stream{}
 	var err error
 	stream.inner, err = chichi.RegisteredStream(connection.Connector().Name).New(&chichi.StreamConfig{
-		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

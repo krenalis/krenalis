@@ -39,7 +39,6 @@ func (info StreamInfo) New(conf *StreamConfig) (Stream, error) {
 
 // StreamConfig represents the configuration of a stream connector.
 type StreamConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }

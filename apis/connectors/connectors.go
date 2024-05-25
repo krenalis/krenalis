@@ -260,7 +260,6 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 		resourceCode = r.Code
 	}
 	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
-		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
@@ -272,7 +271,7 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 		return nil, err
 	}
 	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req)
+		payload, err := inner.ReceiveWebhook(req, chichi.Role(connection.Role))
 		if err != nil {
 			if err == chichi.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
@@ -294,14 +293,12 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if connector.WebhooksPer != state.WebhooksPerConnector {
 		return nil, ErrNoWebhooks
 	}
-	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
-		Role: chichi.Source,
-	})
+	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{})
 	if err != nil {
 		return nil, err
 	}
 	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req)
+		payload, err := inner.ReceiveWebhook(req, chichi.Both)
 		if err != nil {
 			if err == chichi.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
@@ -325,7 +322,6 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 		return nil, ErrNoWebhooks
 	}
 	config := &chichi.AppConfig{
-		Role:     chichi.Source,
 		Resource: resource.Code,
 	}
 	if connector.OAuth != nil {
@@ -337,7 +333,7 @@ func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource
 		return nil, err
 	}
 	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req)
+		payload, err := inner.ReceiveWebhook(req, chichi.Both)
 		if err != nil {
 			if err == chichi.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized

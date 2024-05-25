@@ -38,7 +38,6 @@ func (info MobileInfo) New(conf *MobileConfig) (Mobile, error) {
 
 // MobileConfig represents the configuration of a mobile connector.
 type MobileConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }

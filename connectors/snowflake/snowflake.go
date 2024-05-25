@@ -86,7 +86,7 @@ func (sf *Snowflake) Query(ctx context.Context, query string) (chichi.Rows, []ty
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

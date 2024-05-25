@@ -18,11 +18,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/connectors/httpclient"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 type (
@@ -64,7 +65,6 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		resourceCode = r.Code
 	}
 	app.inner, app.err = chichi.RegisteredApp(app.name).New(&chichi.AppConfig{
-		Role:        chichi.Role(connection.Role),
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		Resource:    resourceCode,
@@ -97,7 +97,7 @@ func (app *App) EventRequest(ctx context.Context, typ string, event *Event, extr
 	if !ok {
 		panic("app does not support the Events target")
 	}
-	schema, err := app.inner.Schema(ctx, chichi.Events, typ)
+	schema, err := app.inner.Schema(ctx, chichi.Events, chichi.Destination, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -140,11 +140,11 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	}
 	switch target {
 	case state.Events:
-		return app.inner.Schema(ctx, chichi.Events, eventType)
+		return app.inner.Schema(ctx, chichi.Events, chichi.Role(role), eventType)
 	case state.Users:
 		return app.usersSchema(ctx, types.Role(role))
 	case state.Groups:
-		schema, err := app.inner.Schema(ctx, chichi.Groups, "")
+		schema, err := app.inner.Schema(ctx, chichi.Groups, chichi.Role(role), "")
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -445,7 +445,7 @@ func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, e
 	if schema := app.users.schemas[role]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.Schema(ctx, chichi.Users, "")
+	schema, err := app.inner.Schema(ctx, chichi.Users, chichi.Role(role), "")
 	if err != nil {
 		return types.Type{}, err
 	}

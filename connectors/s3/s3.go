@@ -103,7 +103,7 @@ func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

@@ -41,7 +41,6 @@ func (info DatabaseInfo) New(conf *DatabaseConfig) (Database, error) {
 
 // DatabaseConfig represents the configuration of a database connector.
 type DatabaseConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }

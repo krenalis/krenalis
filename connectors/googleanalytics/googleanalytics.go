@@ -141,7 +141,7 @@ func (ga *Analytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error
 }
 
 // Schema returns the schema of the specified target.
-func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	switch eventType {
 	case "page_view":
 		return types.Type{}, nil
@@ -156,7 +156,7 @@ func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, eventTyp
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

@@ -22,12 +22,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
 	"github.com/golang/snappy"
+	"github.com/google/uuid"
 )
 
 // storageTimeout represents the duration between consecutive calls to the Read
@@ -52,7 +52,6 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 		timeLayouts: &connector.TimeLayouts,
 	}
 	file.inner, file.err = chichi.RegisteredFile(connector.Name).New(&chichi.FileConfig{
-		Role:        chichi.Role(role),
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -241,7 +240,6 @@ func (file *File) storage() (chichi.FileStorage, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
 	return chichi.RegisteredFileStorage(connector.Name).New(&chichi.FileStorageConfig{
-		Role:        chichi.Role(conn.Role),
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})

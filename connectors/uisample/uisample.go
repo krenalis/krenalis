@@ -49,12 +49,12 @@ type UISample struct {
 }
 
 // Schema returns the schema of the specified target.
-func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

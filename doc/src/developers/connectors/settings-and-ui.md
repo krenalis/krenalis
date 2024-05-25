@@ -95,12 +95,13 @@ Sure, here's the updated part of the documentation translated into English:
 To provide the interface to the user and respond to events triggered by user interaction, the connector must implement the `ServeUI` method:
 
 ```go
-ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error)
+ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error)
 ```
 
 - `ctx`: Context, it's never `nil`.
 - `event`: Event to serve.
 - `values`: Values of the interface components, serialized in JSON. If not `nil`, it's always valid JSON.
+- `role`: Connection's role, it can be `Source` or `Destination`.
 
 The `ServeUI` method must serve the `"load"` and `"save"` events:
 
@@ -116,7 +117,7 @@ If the event is not among those expected, the method should return the `ErrUIEve
 The following is the `ServeUI` method of the Google Analytics connector:
 
 ```go
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":

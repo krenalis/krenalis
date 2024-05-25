@@ -56,7 +56,6 @@ func (info FileStorageInfo) New(conf *FileStorageConfig) (FileStorage, error) {
 
 // FileStorageConfig represents the configuration of a file storage connector.
 type FileStorageConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }

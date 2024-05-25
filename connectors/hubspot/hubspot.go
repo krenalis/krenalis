@@ -179,7 +179,7 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (hs *HubSpot) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.WebhookPayload, error) {
 	// See https://developers.hubspot.com/docs/api/webhooks.
 
 	// Check if the webhook is valid.
@@ -277,7 +277,7 @@ func (hs *HubSpot) Resource(ctx context.Context) (string, error) {
 }
 
 // Schema returns the schema of the specified target.
-func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, eventType string) (types.Type, error) {
+func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 
 	var response struct {
 		Results []struct {

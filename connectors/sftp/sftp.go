@@ -112,7 +112,7 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*chichi.UI, error) {
+func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
 
 	switch event {
 	case "load":
@@ -124,9 +124,9 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte) (*chic
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		return nil, sf.saveValues(ctx, values, false)
+		return nil, sf.saveValues(ctx, values, role, false)
 	case "test":
-		return nil, sf.saveValues(ctx, values, true)
+		return nil, sf.saveValues(ctx, values, role, true)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
@@ -205,7 +205,7 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (sf *SFTP) saveValues(ctx context.Context, values []byte, test bool) error {
+func (sf *SFTP) saveValues(ctx context.Context, values []byte, role chichi.Role, test bool) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -228,7 +228,7 @@ func (sf *SFTP) saveValues(ctx context.Context, values []byte, test bool) error 
 		return chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
-	if sf.conf.Role == chichi.Destination {
+	if role == chichi.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
 			return chichi.NewInvalidUIValuesError("length of temporary directory path must be in range [1,1000]")
 		}

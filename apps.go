@@ -82,7 +82,6 @@ func (app AppInfo) New(conf *AppConfig) (App, error) {
 
 // AppConfig represents the configuration of an app connector.
 type AppConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 	Resource    string
@@ -108,9 +107,10 @@ type AppNewFunc[T App] func(*AppConfig) (T, error)
 // and Webhooks interfaces.
 type App interface {
 
-	// Schema returns the schema of the specified target. For Users or Groups, it
-	// returns their respective schemas. For Events, it returns the schema of the
-	// specified event type.
+	// Schema returns the schema of the specified target in the specified role. For
+	// Users or Groups, role can be Source or Destination, and it returns their
+	// respective schemas. For Events, role is Destination, and it returns the
+	// schema of the specified event type.
 	//
 	// For events, the returned schema describes extra information required by the
 	// connector to send an event of this type. Actions based on the specified event
@@ -121,7 +121,7 @@ type App interface {
 	// If no extra information is needed for the event type, the returned schema is
 	// the invalid schema. If the event type does not exist, it returns the
 	// ErrEventTypeNotExist error.
-	Schema(ctx context.Context, target Targets, eventType string) (types.Type, error)
+	Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 }
 
 // EventRequest represents an event request.
@@ -229,10 +229,11 @@ type AppResource interface {
 type Webhooks interface {
 	App
 
-	// ReceiveWebhook receives a webhook request and returns its payloads. It
-	// returns the ErrWebhookUnauthorized error is the request was not authorized.
-	// The context is the request's context.
-	ReceiveWebhook(r *http.Request) ([]WebhookPayload, error)
+	// ReceiveWebhook receives a webhook request and returns its payloads. If
+	// webhooks are per connection, role is the connection's role, otherwise is
+	// Both. It returns the ErrWebhookUnauthorized error is the request was not
+	// authorized. The context is the request's context.
+	ReceiveWebhook(r *http.Request, role Role) ([]WebhookPayload, error)
 }
 
 // Event represents an event.

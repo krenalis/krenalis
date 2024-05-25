@@ -101,21 +101,17 @@ The second argument supplied to the `RegisterDatabase` function is the function 
 func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error)
 ```
 
-This function accepts a database configuration and yields a value representing your custom type. A connector can be instantiated either as a source or a destination, but not both simultaneously. Consequently, an instance of a connector will be responsible for either reading or writing to a database, depending on its role.
-
-### Database Configuration
+This function accepts a database configuration and yields a value representing your custom type.
 
 The structure of `DatabaseConfig` is outlined as follows:
 
 ```go
 type DatabaseConfig struct {
-    Role        chichi.Role
     Settings    []byte
     SetSettings chichi.SetSettingsFunc
 }
 ```
 
-- `Role`: Specifies the intended role of the resulting instance, which can be either `Source` or `Destination`.
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 - `SetSetting`: A function that enables the connector to update its settings as necessary.
 

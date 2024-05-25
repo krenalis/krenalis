@@ -38,7 +38,6 @@ func (info ServerInfo) New(conf *ServerConfig) (Server, error) {
 
 // ServerConfig represents the configuration of a server connector.
 type ServerConfig struct {
-	Role        Role
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
