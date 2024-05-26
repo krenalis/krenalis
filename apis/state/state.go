@@ -44,7 +44,7 @@ type State struct {
 	connections      map[int]*Connection
 	connectionsByKey map[string]*Connection
 	actions          map[int]*Action
-	resources        map[int]*Resource
+	accounts         map[int]*Account
 	notifications    struct {
 		channel <-chan notification
 		acks    *acks
@@ -99,7 +99,7 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 		connections:      map[int]*Connection{},
 		connectionsByKey: map[string]*Connection{},
 		actions:          map[int]*Action{},
-		resources:        map[int]*Resource{},
+		accounts:         map[int]*Account{},
 	}
 
 	// Listen to notifications.
@@ -233,14 +233,14 @@ func (state *State) Organizations() []*Organization {
 	return organizations
 }
 
-// Resource returns the resource with identifier id.
-// The boolean return value reports whether the resource exists.
-func (state *State) Resource(id int) (*Resource, bool) {
+// Account returns the account with identifier id.
+// The boolean return value reports whether the account exists.
+func (state *State) Account(id int) (*Account, bool) {
 	// TODO(marco): optimize.
 	for _, o := range state.Organizations() {
 		for _, ws := range o.Workspaces() {
-			if r, ok := ws.Resource(id); ok {
-				return r, true
+			if a, ok := ws.Account(id); ok {
+				return a, true
 			}
 		}
 	}
@@ -419,7 +419,7 @@ type Workspace struct {
 	organization        *Organization
 	Name                string
 	UsersSchema         types.Type
-	resources           map[int]*Resource
+	accounts            map[int]*Account
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
@@ -455,28 +455,28 @@ func (workspace *Workspace) Organization() *Organization {
 	return organization
 }
 
-// Resource returns the resource with identifier id. The boolean return value
-// reports whether the resource exists.
-func (workspace *Workspace) Resource(id int) (*Resource, bool) {
+// Account returns the account with identifier id. The boolean return value
+// reports whether the account exists.
+func (workspace *Workspace) Account(id int) (*Account, bool) {
 	workspace.mu.Lock()
-	r, ok := workspace.resources[id]
+	a, ok := workspace.accounts[id]
 	workspace.mu.Unlock()
-	return r, ok
+	return a, ok
 }
 
-// ResourceByCode returns the resource with the given code. The boolean return value
-// reports whether the resource exists.
-func (workspace *Workspace) ResourceByCode(code string) (*Resource, bool) {
-	var r *Resource
+// AccountByCode returns the account with the given code. The boolean return
+// value reports whether the account exists.
+func (workspace *Workspace) AccountByCode(code string) (*Account, bool) {
+	var a *Account
 	workspace.mu.Lock()
-	for _, resource := range workspace.resources {
-		if resource.Code == code {
-			r = resource
+	for _, account := range workspace.accounts {
+		if account.Code == code {
+			a = account
 			break
 		}
 	}
 	workspace.mu.Unlock()
-	return r, r != nil
+	return a, a != nil
 }
 
 // PrivacyRegion represents a privacy region.
@@ -630,9 +630,9 @@ type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerAccount
 	WebhooksPerConnection
 	WebhooksPerConnector
-	WebhooksPerResource
 )
 
 // Scan implements the sql.Scanner interface.
@@ -645,12 +645,12 @@ func (per *WebhooksPer) Scan(src any) error {
 	switch s {
 	case "None":
 		p = WebhooksPerNone
+	case "Account":
+		p = WebhooksPerAccount
 	case "Connection":
 		p = WebhooksPerConnection
 	case "Connector":
 		p = WebhooksPerConnector
-	case "Resource":
-		p = WebhooksPerResource
 	default:
 		return fmt.Errorf("invalid state.WebhooksPer: %s", s)
 	}
@@ -674,12 +674,12 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 	switch per {
 	case WebhooksPerNone:
 		return "None", nil
+	case WebhooksPerAccount:
+		return "Account", nil
 	case WebhooksPerConnection:
 		return "Connection", nil
 	case WebhooksPerConnector:
 		return "Connector", nil
-	case WebhooksPerResource:
-		return "Resource", nil
 	}
 	return nil, fmt.Errorf("not a valid WebhooksPer: %d", per)
 }
@@ -691,8 +691,8 @@ type OAuth struct {
 	ClientSecret string
 }
 
-// Resource represents a resource.
-type Resource struct {
+// Account represents an account.
+type Account struct {
 	mu           *sync.Mutex
 	ID           int
 	workspace    *Workspace
@@ -703,20 +703,20 @@ type Resource struct {
 	ExpiresIn    time.Time
 }
 
-// Connector returns the connector of the resource.
-func (resource *Resource) Connector() *Connector {
-	resource.mu.Lock()
-	c := resource.connector
-	resource.mu.Unlock()
-	return c
+// Workspace returns the workspace of the account.
+func (account *Account) Workspace() *Workspace {
+	account.mu.Lock()
+	w := account.workspace
+	account.mu.Unlock()
+	return w
 }
 
-// Workspace returns the workspace of the resource.
-func (resource *Resource) Workspace() *Workspace {
-	resource.mu.Lock()
-	w := resource.workspace
-	resource.mu.Unlock()
-	return w
+// Connector returns the connector of the account.
+func (account *Account) Connector() *Connector {
+	account.mu.Lock()
+	c := account.connector
+	account.mu.Unlock()
+	return c
 }
 
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
@@ -732,7 +732,7 @@ type Connection struct {
 	Role             Role
 	Enabled          bool
 	connector        *Connector
-	resource         *Resource
+	account          *Account
 	Strategy         *Strategy
 	SendingMode      *SendingMode
 	WebsiteHost      string
@@ -785,13 +785,13 @@ func (connection *Connection) Organization() *Organization {
 	return o
 }
 
-// Resource returns the resource of the connection.
-// The boolean return value reports whether the connection has a resource.
-func (connection *Connection) Resource() (*Resource, bool) {
+// Account returns the account of the connection. The boolean return value
+// reports whether the connection has an account.
+func (connection *Connection) Account() (*Account, bool) {
 	connection.mu.Lock()
-	r := connection.resource
+	a := connection.account
 	connection.mu.Unlock()
-	return r, r != nil
+	return a, a != nil
 }
 
 // Workspace returns the workspace of the connection.

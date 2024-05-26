@@ -56,7 +56,7 @@ type AppInfo struct {
 	TermForGroups              string
 	IdentityIDLabel            string
 	SuggestedDisplayedProperty string      // suggested property name to use as the displayed property
-	WebhooksPer                WebhooksPer // indicates if webhooks are per connection, connector, or resource.
+	WebhooksPer                WebhooksPer // indicates if webhooks are per account, connection, or connector
 	OAuth                      OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 	SendingMode                SendingMode // mode of event sending. None for sources and non-supporting event apps.
 	TimeLayouts                TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
@@ -82,12 +82,12 @@ func (app AppInfo) New(conf *AppConfig) (App, error) {
 
 // AppConfig represents the configuration of an app connector.
 type AppConfig struct {
-	Settings    []byte
-	SetSettings SetSettingsFunc
-	Resource    string
-	HTTPClient  HTTPClient
-	Region      PrivacyRegion
-	WebhookURL  string
+	Settings     []byte
+	SetSettings  SetSettingsFunc
+	OAuthAccount string
+	HTTPClient   HTTPClient
+	Region       PrivacyRegion
+	WebhookURL   string
 }
 
 // PrivacyRegion represents a privacy region.
@@ -103,8 +103,8 @@ type AppNewFunc[T App] func(*AppConfig) (T, error)
 
 // App is the interface implemented by app connectors.
 //
-// An app connector can also implement the AppEvents, AppRecords, AppResource,
-// and Webhooks interfaces.
+// An app connector can also implement the AppEvents, AppOAuth, AppRecords, and
+// Webhooks interfaces.
 type App interface {
 
 	// Schema returns the schema of the specified target in the specified role. For
@@ -162,6 +162,15 @@ type AppEvents interface {
 	EventTypes(ctx context.Context) ([]*EventType, error)
 }
 
+// AppOAuth is the interface implemented by apps that support OAuth.
+type AppOAuth interface {
+	App
+
+	// OAuthAccount returns the app's account associated with the OAuth
+	// authorization.
+	OAuthAccount(ctx context.Context) (string, error)
+}
+
 // Cursor represents a cursor used to implement pagination.
 type Cursor struct {
 	ID             string    // Identifier of the last returned user or group.
@@ -214,14 +223,6 @@ type AppRecords interface {
 	// least one property. The properties must conform to the schema as returned by
 	// the Schema method.
 	Update(ctx context.Context, target Targets, id string, properties map[string]any) error
-}
-
-// AppResource is the interface implemented by apps that support resources.
-type AppResource interface {
-	App
-
-	// Resource returns the resource.
-	Resource(ctx context.Context) (string, error)
 }
 
 // Webhooks is the interface implemented by app connectors that can receive

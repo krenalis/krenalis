@@ -33,12 +33,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppRecords, AppResource, UI, and Webhooks
+// Make sure it implements the App, AppOAuth, AppRecords, UI, and Webhooks
 // interfaces.
 var _ interface {
 	chichi.App
+	chichi.AppOAuth
 	chichi.AppRecords
-	chichi.AppResource
 	chichi.UIHandler
 	chichi.Webhooks
 } = (*MailChimp)(nil)
@@ -92,6 +92,13 @@ type Settings struct {
 // Create creates a record for the specified target with the given properties.
 func (mc *MailChimp) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
 	panic("TODO: not implemented")
+}
+
+// OAuthAccount returns the app's account associated with the OAuth
+// authorization.
+func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
+	_, account, err := mc.metadata()
+	return account, err
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
@@ -199,12 +206,6 @@ func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, propert
 	}
 
 	return users, strconv.Itoa(offset), nil
-}
-
-// Resource returns the resource.
-func (mc *MailChimp) Resource(ctx context.Context) (string, error) {
-	_, resource, err := mc.metadata()
-	return resource, err
 }
 
 // Schema returns the schema of the specified target.

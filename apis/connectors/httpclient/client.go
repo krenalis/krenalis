@@ -47,25 +47,25 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 	if connector.OAuth == nil {
 		return "", errUnsupportedOAuth
 	}
-	r, ok := connection.Resource()
+	a, ok := connection.Account()
 	if !ok {
-		return "", fmt.Errorf("connection %d does not have a resource", c.connection)
+		return "", fmt.Errorf("connection %d does not have an OAuth account", c.connection)
 	}
 
-	if r.AccessToken != "" {
-		expired := time.Now().UTC().Add(15 * time.Minute).After(r.ExpiresIn)
+	if a.AccessToken != "" {
+		expired := time.Now().UTC().Add(15 * time.Minute).After(a.ExpiresIn)
 		if !expired {
-			return r.AccessToken, nil
+			return a.AccessToken, nil
 		}
 	}
 
-	accessToken, refreshToken, expiresIn, err := c.http.retrieveOAuthToken(ctx, connector.OAuth, "", "", r.RefreshToken)
+	accessToken, refreshToken, expiresIn, err := c.http.retrieveOAuthToken(ctx, connector.OAuth, "", "", a.RefreshToken)
 	if err != nil {
 		return "", err
 	}
 
-	n := state.SetResource{
-		ID:           r.ID,
+	n := state.SetAccount{
+		ID:           a.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    expiresIn,
@@ -73,7 +73,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 
 	err = c.http.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err = tx.Exec(ctx,
-			"UPDATE resources SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
+			"UPDATE accounts SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
 			n.AccessToken, n.RefreshToken, n.ExpiresIn, n.ID)
 		if err != nil {
 			return err

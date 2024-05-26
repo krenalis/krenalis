@@ -98,15 +98,15 @@ type OAuth struct {
 	ExpiresIn int32
 }
 
-// WebhooksPer values indicates if webhooks are per connection, connector, or
-// resource.
+// WebhooksPer values indicates if webhooks are per account, connection, or
+// connector.
 type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerAccount
 	WebhooksPerConnection
 	WebhooksPerConnector
-	WebhooksPerResource
 )
 
 // Role represents a role.
@@ -136,7 +136,7 @@ type WebhookPayload interface {
 
 type UserChangeEvent struct {
 	Timestamp time.Time
-	Resource  string
+	Account   string
 	User      string
 }
 
@@ -144,7 +144,7 @@ func (ev UserChangeEvent) webhookPayload() {}
 
 type UserCreateEvent struct {
 	Timestamp  time.Time
-	Resource   string
+	Account    string
 	User       string
 	Properties map[string]any
 }
@@ -153,7 +153,7 @@ func (ev UserCreateEvent) webhookPayload() {}
 
 type UserDeleteEvent struct {
 	Timestamp time.Time
-	Resource  string
+	Account   string
 	User      string
 }
 
@@ -161,7 +161,7 @@ func (ev UserDeleteEvent) webhookPayload() {}
 
 type UserPropertyChangeEvent struct {
 	Timestamp time.Time
-	Resource  string
+	Account   string
 	User      string
 	Name      string
 	Value     any
@@ -171,7 +171,7 @@ func (ev UserPropertyChangeEvent) webhookPayload() {}
 
 type GroupChangeEvent struct {
 	Timestamp time.Time
-	Resource  string
+	Account   string
 	Group     string
 }
 
@@ -179,7 +179,7 @@ func (ev GroupChangeEvent) webhookPayload() {}
 
 type GroupCreateEvent struct {
 	Timestamp  time.Time
-	Resource   string
+	Account    string
 	Group      string
 	Properties map[string]any
 }
@@ -188,7 +188,7 @@ func (ev GroupCreateEvent) webhookPayload() {}
 
 type GroupDeleteEvent struct {
 	Timestamp time.Time
-	Resource  string
+	Account   string
 	Group     string
 }
 
@@ -196,7 +196,7 @@ func (ev GroupDeleteEvent) webhookPayload() {}
 
 type GroupPropertyChangeEvent struct {
 	Timestamp time.Time
-	Resource  string
+	Account   string
 	Group     string
 	Name      string
 	Value     any

@@ -174,7 +174,7 @@ func New(db *postgres.DB, state *state.State) *Connectors {
 
 // Authorization represents a granted OAuth authorization.
 type Authorization struct {
-	ResourceCode string    // code of the resource.
+	AccountCode  string    // code of the account.
 	AccessToken  string    // access token.
 	RefreshToken string    // refresh token.
 	ExpiresIn    time.Time // expire time of the access token.
@@ -187,23 +187,23 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	cc, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
+	app, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
 		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken),
 		Region:     chichi.PrivacyRegion(region),
 	})
 	if err != nil {
 		return nil, err
 	}
-	ar, ok := cc.(chichi.AppResource)
+	aa, ok := app.(chichi.AppOAuth)
 	if !ok {
-		return nil, errors.New("connector does not implement the AppResource interface")
+		return nil, errors.New("connector does not implement the AppOAuth interface")
 	}
-	resource, err := ar.Resource(ctx)
+	account, err := aa.OAuthAccount(ctx)
 	if err != nil {
 		return nil, err
 	}
 	authorization := &Authorization{
-		ResourceCode: resource,
+		AccountCode:  account,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    expiresIn,
@@ -217,7 +217,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 // After that, the provider redirects to the URI specified by redirectionURI.
 //
 // After acquiring the authorization code, call GrantAuthorization to get the
-// resulting resource code, access token, refresh token and expiration time.
+// resulting account code, access token, refresh token and expiration time.
 //
 // Panics if the connector does not support OAuth.
 func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, redirectionURI string) (string, error) {
@@ -242,6 +242,41 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 	return b.String(), nil
 }
 
+// ReceivePerAccountWebhook receives a per account webhook request and returns
+// its payloads. The context is the request's context.
+//
+// It returns the ErrNoWebhooks error if the connector of the account
+// is not an app, or it does not support per account webhooks. It returns the
+// ErrWebhookUnauthorized error if the request was not authorized.
+func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]WebhookPayload, error) {
+	connector := account.Connector()
+	if connector.WebhooksPer != state.WebhooksPerAccount {
+		return nil, ErrNoWebhooks
+	}
+	config := &chichi.AppConfig{
+		OAuthAccount: account.Code,
+	}
+	if connector.OAuth != nil {
+		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken)
+	}
+	config.Region = chichi.PrivacyRegion(account.Workspace().PrivacyRegion)
+	inner, err := chichi.RegisteredApp(connector.Name).New(config)
+	if err != nil {
+		return nil, err
+	}
+	if inner, ok := inner.(chichi.Webhooks); ok {
+		payload, err := inner.ReceiveWebhook(req, chichi.Both)
+		if err != nil {
+			if err == chichi.ErrWebhookUnauthorized {
+				err = ErrWebhookUnauthorized
+			}
+			return nil, err
+		}
+		return payload, nil
+	}
+	return nil, ErrNoWebhooks
+}
+
 // ReceivePerConnectionWebhook receives a per connection webhook request and
 // returns its payloads. The context is the request's context.
 //
@@ -253,19 +288,19 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	if connector.WebhooksPer != state.WebhooksPerConnection {
 		return nil, ErrNoWebhooks
 	}
-	var resourceID int
-	var resourceCode string
-	if r, ok := connection.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
+	var accountID int
+	var accountCode string
+	if a, ok := connection.Account(); ok {
+		accountID = a.ID
+		accountCode = a.Code
 	}
 	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
-		Settings:    connection.Settings,
-		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
-		Resource:    resourceCode,
-		HTTPClient:  connectors.http.ConnectionClient(connection.ID),
-		Region:      chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
-		WebhookURL:  webhookURL(connection, resourceID),
+		Settings:     connection.Settings,
+		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
+		OAuthAccount: accountCode,
+		HTTPClient:   connectors.http.ConnectionClient(connection.ID),
+		Region:       chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
+		WebhookURL:   webhookURL(connection, accountID),
 	})
 	if err != nil {
 		return nil, err
@@ -294,41 +329,6 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 		return nil, ErrNoWebhooks
 	}
 	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{})
-	if err != nil {
-		return nil, err
-	}
-	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, chichi.Both)
-		if err != nil {
-			if err == chichi.ErrWebhookUnauthorized {
-				err = ErrWebhookUnauthorized
-			}
-			return nil, err
-		}
-		return payload, nil
-	}
-	return nil, ErrNoWebhooks
-}
-
-// ReceivePerResourceWebhook receives a per resource webhook request and returns
-// its payloads. The context is the request's context.
-//
-// It returns the ErrNoWebhooks error if the connector of the resource
-// is not an app, or it does not support per resource webhooks. It returns the
-// ErrWebhookUnauthorized error if the request was not authorized.
-func (connectors *Connectors) ReceivePerResourceWebhook(resource *state.Resource, req *http.Request) ([]WebhookPayload, error) {
-	connector := resource.Connector()
-	if connector.WebhooksPer != state.WebhooksPerResource {
-		return nil, ErrNoWebhooks
-	}
-	config := &chichi.AppConfig{
-		Resource: resource.Code,
-	}
-	if connector.OAuth != nil {
-		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, resource.AccessToken)
-	}
-	config.Region = chichi.PrivacyRegion(resource.Workspace().PrivacyRegion)
-	inner, err := chichi.RegisteredApp(connector.Name).New(config)
 	if err != nil {
 		return nil, err
 	}
@@ -788,20 +788,20 @@ func validateTimestamp(t time.Time) error {
 }
 
 // webhookURL returns the URL of the webhook for the provided connection and
-// resource.
+// account.
 // If the connector does not support webhooks, it returns an empty string.
-func webhookURL(connection *state.Connection, resource int) string {
+func webhookURL(connection *state.Connection, account int) string {
 	connector := connection.Connector()
 	u := "https://localhost:9090/webhook/"
 	switch connector.WebhooksPer {
 	case state.WebhooksPerNone:
 		return ""
+	case state.WebhooksPerAccount:
+		return u + "a/" + strconv.Itoa(account) + "/"
 	case state.WebhooksPerConnection:
 		return u + "s/" + strconv.Itoa(connection.ID) + "/"
 	case state.WebhooksPerConnector:
 		return u + "c/" + url.PathEscape(connector.Name) + "/"
-	case state.WebhooksPerResource:
-		return u + "r/" + strconv.Itoa(resource) + "/"
 	}
 	panic("unexpected webhooksPer value")
 }

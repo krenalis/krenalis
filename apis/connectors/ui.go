@@ -52,23 +52,23 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 // It returns an InvalidUIValuesError error value if the values are not valid.
 // It panics if the connector has no UI.
 func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values []byte) ([]byte, error) {
-	var resourceID int
-	var resourceCode string
-	if r, ok := connection.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
+	var accountID int
+	var accountCode string
+	if r, ok := connection.Account(); ok {
+		accountID = r.ID
+		accountCode = r.Code
 	}
 	var inner any
 	var err error
 	switch c := connection.Connector(); c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
-			Resource:    resourceCode,
-			HTTPClient:  connectors.http.ConnectionClient(connection.ID),
-			Region:      chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
-			WebhookURL:  webhookURL(connection, resourceID)})
+			Settings:     connection.Settings,
+			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
+			OAuthAccount: accountCode,
+			HTTPClient:   connectors.http.ConnectionClient(connection.ID),
+			Region:       chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
+			WebhookURL:   webhookURL(connection, accountID)})
 	case state.DatabaseType:
 		var database chichi.Database
 		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{
@@ -114,11 +114,13 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 }
 
 type ConnectorConfig struct {
-	Role         state.Role
-	Resource     string
-	ClientSecret string
-	AccessToken  string
-	Region       state.PrivacyRegion
+	Role   state.Role
+	Region state.PrivacyRegion
+	OAuth  struct {
+		Account      string
+		ClientSecret string
+		AccessToken  string
+	}
 }
 
 // ServeConnectorUI serves the user interface of the provided connector and
@@ -134,9 +136,9 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	switch c := connector; c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Resource:   conf.Resource,
-			HTTPClient: connectors.http.Client(conf.ClientSecret, conf.AccessToken),
-			Region:     chichi.PrivacyRegion(conf.Region),
+			OAuthAccount: conf.OAuth.Account,
+			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			Region:       chichi.PrivacyRegion(conf.Region),
 		})
 	case state.DatabaseType:
 		var database chichi.Database
@@ -188,9 +190,9 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	switch c := connector; c.Type {
 	case state.AppType:
 		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
-			Resource:    conf.Resource,
-			HTTPClient:  connectors.http.Client(conf.ClientSecret, conf.AccessToken),
-			SetSettings: setSettings,
+			OAuthAccount: conf.OAuth.Account,
+			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			SetSettings:  setSettings,
 		})
 	case state.DatabaseType:
 		var database chichi.Database

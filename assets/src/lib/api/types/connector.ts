@@ -2,7 +2,7 @@ import { ActionTarget } from './action';
 
 type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
 
-type WebhooksPer = 'None' | 'Connection' | 'Connector' | 'Resource';
+type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector';
 
 type SendingMode = 'Cloud' | 'Device' | 'Combined';
 

@@ -22,15 +22,15 @@ import (
 	"github.com/open2b/chichi/apis/state"
 )
 
-// WebhooksPer values indicates if webhooks are per connection, connector, or
-// resource.
+// WebhooksPer values indicates if webhooks are per account, connection, or
+// connector.
 type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerAccount
 	WebhooksPerConnection
 	WebhooksPerConnector
-	WebhooksPerResource
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -45,12 +45,12 @@ func (per WebhooksPer) String() string {
 	switch per {
 	case WebhooksPerNone:
 		return "None"
+	case WebhooksPerAccount:
+		return "Account"
 	case WebhooksPerConnection:
 		return "Connection"
 	case WebhooksPerConnector:
 		return "Connector"
-	case WebhooksPerResource:
-		return "Resource"
 	}
 	panic("invalid webhooksPer value")
 }
@@ -73,12 +73,12 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 	switch s {
 	case "None":
 		p = WebhooksPerNone
+	case "Account":
+		p = WebhooksPerAccount
 	case "Connection":
 		p = WebhooksPerConnection
 	case "Connector":
 		p = WebhooksPerConnector
-	case "Resource":
-		p = WebhooksPerResource
 	default:
 		return fmt.Errorf("json: invalid state.WebhooksPer: %s", s)
 	}
@@ -126,6 +126,16 @@ func (apis *APIs) receiveWebhook(req *http.Request) error {
 	var events []connectors.WebhookPayload
 	var err error
 	switch m[1] {
+	case "a":
+		id, _ := strconv.Atoi(m[2])
+		if id < 1 || id > maxInt32 {
+			return errBadRequest
+		}
+		account, ok := apis.state.Account(id)
+		if !ok {
+			return errNotFound
+		}
+		events, err = apis.connectors.ReceivePerAccountWebhook(account, req)
 	case "s":
 		id, _ := strconv.Atoi(m[2])
 		if id < 1 || id > maxInt32 {
@@ -143,16 +153,6 @@ func (apis *APIs) receiveWebhook(req *http.Request) error {
 			return errNotFound
 		}
 		events, err = apis.connectors.ReceivePerConnectorWebhook(connector, req)
-	case "r":
-		id, _ := strconv.Atoi(m[2])
-		if id < 1 || id > maxInt32 {
-			return errBadRequest
-		}
-		resource, ok := apis.state.Resource(id)
-		if !ok {
-			return errNotFound
-		}
-		events, err = apis.connectors.ReceivePerResourceWebhook(resource, req)
 	}
 	if err != nil {
 		return err

@@ -104,6 +104,7 @@ The `AppInfo` type describes information about the app connector:
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 - `SuggestedDisplayedProperty`: suggestion for the property name to use as the displayed property. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
+- `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
 - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Layouts](data-values.md#layouts) in [Data Values](data-values.md) for more details.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
@@ -140,7 +141,7 @@ The structure of `AppConfig` is defined as follows:
 type AppConfig struct {
     Settings     []byte
     SetSettings  chichi.SetSettingsFunc
-    Resource     string
+    OAuthAccount string
     HTTPClient   chichi.HTTPClient
     Region       chichi.PrivacyRegion
     WebhookURL   string
@@ -149,6 +150,7 @@ type AppConfig struct {
 
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 - `SetSettings`: A function that enables the connector to update its settings as necessary.
+- `OAuthAccount`: The app's account associated with the OAuth authorization.
 - `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required.
 - `Region`: Indicates the privacy region of the workspace. The connector must adhere to the specified privacy region if supported. It defaults to `PrivacyRegionNotSpecified` if no region is specified, or `PrivacyRegionEurope` if the Europe region is specified.
 - `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks.

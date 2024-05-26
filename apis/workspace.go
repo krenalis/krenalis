@@ -22,7 +22,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/datastore/diffschemas"
@@ -33,6 +32,7 @@ import (
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/maps"
 )
@@ -203,30 +203,30 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		return 0, errors.BadRequest("connector %s does not support OAuth", n.Connector)
 	}
 
-	// Set the resource. It can be an existing resource or a resource that needs to be created.
+	// Set the OAuth account. It can be an existing account or an account that needs to be created.
 	if oAuthToken != "" {
 		data, err := base62.DecodeString(oAuthToken)
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
-		var resource authorizedResource
-		err = json.Unmarshal(data, &resource)
+		var account authorizedOAuthAccount
+		err = json.Unmarshal(data, &account)
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
-		if resource.Workspace != this.workspace.ID || resource.Connector != c.Name {
+		if account.Workspace != this.workspace.ID || account.Connector != c.Name {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
-		n.Resource.Code = resource.Code
-		r, ok := this.workspace.ResourceByCode(resource.Code)
+		n.Account.Code = account.Code
+		a, ok := this.workspace.AccountByCode(account.Code)
 		if ok {
-			n.Resource.ID = r.ID
+			n.Account.ID = a.ID
 		}
-		if !ok || resource.AccessToken != r.AccessToken || resource.RefreshToken != r.RefreshToken ||
-			resource.ExpiresIn != r.ExpiresIn {
-			n.Resource.AccessToken = resource.AccessToken
-			n.Resource.RefreshToken = resource.RefreshToken
-			n.Resource.ExpiresIn = resource.ExpiresIn
+		if !ok || account.AccessToken != a.AccessToken || account.RefreshToken != a.RefreshToken ||
+			account.ExpiresIn != a.ExpiresIn {
+			n.Account.AccessToken = account.AccessToken
+			n.Account.RefreshToken = account.RefreshToken
+			n.Account.ExpiresIn = account.ExpiresIn
 		}
 	}
 
@@ -241,12 +241,12 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			clientSecret = c.OAuth.ClientSecret
 		}
 		conf := &connectors.ConnectorConfig{
-			Role:         n.Role,
-			Resource:     n.Resource.Code,
-			ClientSecret: clientSecret,
-			AccessToken:  n.Resource.AccessToken,
-			Region:       state.PrivacyRegion(this.PrivacyRegion),
+			Role:   n.Role,
+			Region: state.PrivacyRegion(this.PrivacyRegion),
 		}
+		conf.OAuth.Account = n.Account.Code
+		conf.OAuth.ClientSecret = clientSecret
+		conf.OAuth.AccessToken = n.Account.AccessToken
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, c, conf, values)
 		if err != nil {
 			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
@@ -291,21 +291,21 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		if n.Resource.Code != "" {
-			if n.Resource.ID == 0 {
-				// Insert a new resource.
-				err = tx.QueryRow(ctx, "INSERT INTO resources (workspace, connector, code, access_token,"+
+		if n.Account.Code != "" {
+			if n.Account.ID == 0 {
+				// Insert a new account.
+				err = tx.QueryRow(ctx, "INSERT INTO accounts (workspace, connector, code, access_token,"+
 					" refresh_token, expires_in) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-					n.Workspace, n.Connector, n.Resource.Code, n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn).
-					Scan(&n.Resource.ID)
-			} else if n.Resource.AccessToken != "" {
-				// Update the current resource.
-				_, err = tx.Exec(ctx, "UPDATE resources "+
+					n.Workspace, n.Connector, n.Account.Code, n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn).
+					Scan(&n.Account.ID)
+			} else if n.Account.AccessToken != "" {
+				// Update the current account.
+				_, err = tx.Exec(ctx, "UPDATE accounts "+
 					"SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
-					n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn, n.Resource.ID)
+					n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn, n.Account.ID)
 			}
 			if err != nil {
-				if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "resources_workspace_fkey" {
+				if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "accounts_workspace_fkey" {
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
 				return err
@@ -313,10 +313,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector, resource,"+
+			"(id, workspace, name, type, role, enabled, connector, account,"+
 			" strategy, sending_mode, website_host, event_connections, settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
-			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Resource.ID,
+			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Account.ID,
 			n.Strategy, n.SendingMode, n.WebsiteHost, n.EventConnections, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_workspace_fkey" {
@@ -1040,9 +1040,9 @@ func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, er
 	return evs, discarded, nil
 }
 
-// authorizedResource represents an authorized resource that can be used to
-// create a new connection.
-type authorizedResource struct {
+// authorizedOAuthAccount represents an authorized OAuth account that can be
+// used to create a new connection.
+type authorizedOAuthAccount struct {
 	Workspace    int
 	Connector    string
 	Code         string
@@ -1083,10 +1083,10 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 		return "", err
 	}
 
-	resource, err := json.Marshal(authorizedResource{
+	account, err := json.Marshal(authorizedOAuthAccount{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
-		Code:         auth.ResourceCode,
+		Code:         auth.AccountCode,
 		AccessToken:  auth.AccessToken,
 		RefreshToken: auth.RefreshToken,
 		ExpiresIn:    auth.ExpiresIn,
@@ -1097,7 +1097,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 
 	// TODO(marco): Encrypt the token.
 
-	return base62.EncodeToString(resource), nil
+	return base62.EncodeToString(account), nil
 }
 
 // RemoveEventListener removes the given event listener from the workspace. It
@@ -1174,13 +1174,13 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	}
 
 	// Decode oAuth.
-	var r authorizedResource
+	var a authorizedOAuthAccount
 	if oAuth != "" {
 		data, err := base62.DecodeString(oAuth)
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
-		err = json.Unmarshal(data, &r)
+		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
@@ -1191,12 +1191,13 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connectors.ConnectorConfig{
-		Role:         state.Role(role),
-		Resource:     r.Code,
-		ClientSecret: clientSecret,
-		AccessToken:  r.AccessToken,
-		Region:       this.workspace.PrivacyRegion,
+		Role:   state.Role(role),
+		Region: this.workspace.PrivacyRegion,
 	}
+	conf.OAuth.Account = a.Code
+	conf.OAuth.ClientSecret = clientSecret
+	conf.OAuth.AccessToken = a.AccessToken
+
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
 	ui, err := this.apis.connectors.ServeConnectorUI(ctx, c, conf, event, values)

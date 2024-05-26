@@ -56,7 +56,7 @@ CREATE TABLE connections (
     role role NOT NULL,
     enabled boolean NOT NULL DEFAULT false,
     connector varchar DEFAULT NULL,
-    resource integer NOT NULL DEFAULT 0,
+    account integer NOT NULL DEFAULT 0,
     strategy strategy DEFAULT NULL,
     sending_mode sending_mode DEFAULT NULL,
     website_host varchar(261) NOT NULL DEFAULT '',
@@ -209,7 +209,7 @@ CREATE UNIQUE INDEX invitation_token_index ON members (invitation_token) WHERE i
 
 INSERT INTO members (organization, name, avatar, email, password, created_at) VALUES (1, 'ACME inc', NULL, 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC', '2024-01-01 00:00:00.000000'); -- Password: foopass2
 
-CREATE TABLE resources (
+CREATE TABLE accounts (
     id SERIAL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     connector varchar NOT NULL,
@@ -220,4 +220,4 @@ CREATE TABLE resources (
     PRIMARY KEY (id)
 );
 
-CREATE INDEX ON resources (connector);
+CREATE INDEX ON accounts (connector);

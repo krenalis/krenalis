@@ -894,10 +894,10 @@ func (this *Connection) Delete(ctx context.Context) error {
 			return err
 		}
 		if connector.OAuth != nil {
-			// Delete the resource of the deleted connection if it has no other connections.
-			_, err := tx.Exec(ctx, "DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
+			// Delete the account of the deleted connection if it has no other connections.
+			_, err := tx.Exec(ctx, "DELETE FROM accounts AS a WHERE NOT EXISTS (\n"+
 				"\tSELECT FROM connections AS c\n"+
-				"\tWHERE r.id = c.resource AND c.id <> $1 AND c.resource IS NULL\n)", n.ID)
+				"\tWHERE a.id = c.account AND c.id <> $1 AND c.account IS NULL\n)", n.ID)
 			if err != nil {
 				return err
 			}

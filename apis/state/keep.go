@@ -126,6 +126,8 @@ func (state *State) keepState() {
 			state.revokeConnectionKey(n)
 		case "SeeLeader":
 			state.seeLeader(n)
+		case "SetAccount":
+			state.setAccount(n)
 		case "SetAction":
 			state.setAction(n)
 		case "SetActionSchedulePeriod":
@@ -140,8 +142,6 @@ func (state *State) keepState() {
 			state.setConnection(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
-		case "SetResource":
-			state.setResource(n)
 		case "SetWarehouse":
 			state.setWarehouse(n)
 		case "SetWarehouseMode":
@@ -170,6 +170,30 @@ func decodeNotification(n notification, e any) bool {
 		return false
 	}
 	return true
+}
+
+// replaceAccount calls the function f passing a copy of the account with
+// identifier id. After f is returned, it replaces the account with its copy in
+// the state and returns the latter.
+func (state *State) replaceAccount(id int, f func(*Account)) *Account {
+	a := state.accounts[id]
+	aa := new(Account)
+	*aa = *a
+	f(aa)
+	ws := aa.workspace
+	ws.mu.Lock()
+	ws.accounts[id] = aa
+	ws.mu.Unlock()
+	// Update the connections.
+	for _, connection := range ws.connections {
+		if connection.account == a {
+			connection.mu.Lock()
+			connection.account = aa
+			connection.mu.Unlock()
+		}
+	}
+	state.accounts[id] = aa
+	return aa
 }
 
 // replaceAction calls the function f passing a copy of the action with
@@ -216,30 +240,6 @@ func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
 	return cc
 }
 
-// replaceResource calls the function f passing a copy of the resource with
-// identifier id. After f is returned, it replaces the resource with its copy
-// in the state and returns the latter.
-func (state *State) replaceResource(id int, f func(*Resource)) *Resource {
-	r := state.resources[id]
-	rr := new(Resource)
-	*rr = *r
-	f(rr)
-	ws := rr.workspace
-	ws.mu.Lock()
-	ws.resources[id] = rr
-	ws.mu.Unlock()
-	// Update the connections.
-	for _, connection := range ws.connections {
-		if connection.resource == r {
-			connection.mu.Lock()
-			connection.resource = rr
-			connection.mu.Unlock()
-		}
-	}
-	state.resources[id] = rr
-	return rr
-}
-
 // replaceWorkspace calls the function f passing a copy of the workspace with
 // identifier id. After f is returned, it replaces the workspace with its
 // copy in the state and returns the latter.
@@ -264,12 +264,12 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 			connection.mu.Unlock()
 		}
 	}
-	// Update the resources.
-	for _, resource := range ww.resources {
-		if resource.workspace == w {
-			resource.mu.Lock()
-			resource.workspace = ww
-			resource.mu.Unlock()
+	// Update the accounts.
+	for _, account := range ww.accounts {
+		if account.workspace == w {
+			account.mu.Lock()
+			account.workspace = ww
+			account.mu.Unlock()
 		}
 	}
 	return ww
@@ -361,7 +361,7 @@ type AddConnection struct {
 	Role      Role     // role
 	Enabled   bool     // enabled or disabled
 	Connector string   // connector name
-	Resource  struct { // resource.
+	Account   struct { // account.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
 		AccessToken  string    // access token, can be empty.
@@ -384,38 +384,38 @@ func (state *State) addConnection(n notification) {
 	}
 	workspace := state.workspaces[e.Workspace]
 	connector := state.connectors[e.Connector]
-	var r *Resource
+	var a *Account
 	if connector.OAuth != nil {
-		if _, ok := state.resources[e.Resource.ID]; ok {
-			if e.Resource.AccessToken != "" {
-				r = state.replaceResource(e.Resource.ID, func(r *Resource) {
-					r.AccessToken = e.Resource.AccessToken
-					r.RefreshToken = e.Resource.RefreshToken
-					r.ExpiresIn = e.Resource.ExpiresIn
+		if _, ok := state.accounts[e.Account.ID]; ok {
+			if e.Account.AccessToken != "" {
+				a = state.replaceAccount(e.Account.ID, func(a *Account) {
+					a.AccessToken = e.Account.AccessToken
+					a.RefreshToken = e.Account.RefreshToken
+					a.ExpiresIn = e.Account.ExpiresIn
 				})
-				// Update the resources.
+				// Update the accounts.
 				state.mu.Lock()
-				state.resources[r.ID] = r
+				state.accounts[a.ID] = a
 				state.mu.Unlock()
 			}
 		} else {
-			r = &Resource{
+			a = &Account{
 				mu:           new(sync.Mutex),
-				ID:           e.Resource.ID,
+				ID:           e.Account.ID,
 				workspace:    workspace,
 				connector:    connector,
-				Code:         e.Resource.Code,
-				AccessToken:  e.Resource.AccessToken,
-				RefreshToken: e.Resource.RefreshToken,
-				ExpiresIn:    e.Resource.ExpiresIn,
+				Code:         e.Account.Code,
+				AccessToken:  e.Account.AccessToken,
+				RefreshToken: e.Account.RefreshToken,
+				ExpiresIn:    e.Account.ExpiresIn,
 			}
-			// Update the resources.
+			// Update the accounts.
 			state.mu.Lock()
-			state.resources[r.ID] = r
+			state.accounts[a.ID] = a
 			state.mu.Unlock()
 			// Update the workspaces.
 			workspace.mu.Lock()
-			workspace.resources[r.ID] = r
+			workspace.accounts[a.ID] = a
 			workspace.mu.Unlock()
 		}
 	}
@@ -428,7 +428,7 @@ func (state *State) addConnection(n notification) {
 		Role:             e.Role,
 		Enabled:          e.Enabled,
 		connector:        connector,
-		resource:         r,
+		account:          a,
 		Strategy:         e.Strategy,
 		SendingMode:      e.SendingMode,
 		WebsiteHost:      e.WebsiteHost,
@@ -645,9 +645,9 @@ func (state *State) deleteWorkspace(n notification) {
 		}
 		delete(state.connections, c.ID)
 	}
-	// Delete the resources.
-	for _, r := range e.workspace.resources {
-		delete(state.resources, r.ID)
+	// Delete the accounts.
+	for _, a := range e.workspace.accounts {
+		delete(state.accounts, a.ID)
 	}
 	state.mu.Unlock()
 	for _, listener := range state.listeners.DeleteWorkspace {
@@ -865,6 +865,27 @@ func (state *State) seeLeader(n notification) {
 	state.mu.Unlock()
 }
 
+// SetAccount is the event sent when an account is changed.
+type SetAccount struct {
+	ID           int
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    time.Time
+}
+
+// setAccount sets an account.
+func (state *State) setAccount(n notification) {
+	e := SetAccount{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAccount(e.ID, func(a *Account) {
+		a.AccessToken = e.AccessToken
+		a.RefreshToken = e.RefreshToken
+		a.ExpiresIn = e.ExpiresIn
+	})
+}
+
 // SetAction is the event sent when an action is set.
 type SetAction struct {
 	ID                      int
@@ -1045,27 +1066,6 @@ func (state *State) setConnectionSettings(n notification) {
 	for _, listener := range state.listeners.SetConnectionSettings {
 		listener(e)
 	}
-}
-
-// SetResource is the event sent when a resource is changed.
-type SetResource struct {
-	ID           int
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    time.Time
-}
-
-// setResource sets a resource.
-func (state *State) setResource(n notification) {
-	e := SetResource{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceResource(e.ID, func(r *Resource) {
-		r.AccessToken = e.AccessToken
-		r.RefreshToken = e.RefreshToken
-		r.ExpiresIn = e.ExpiresIn
-	})
 }
 
 // SetWarehouse is the event sent when the settings of a data warehouse are

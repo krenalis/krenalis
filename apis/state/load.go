@@ -189,7 +189,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					ws := &Workspace{
 						mu:          new(sync.Mutex),
 						connections: map[int]*Connection{},
-						resources:   map[int]*Resource{},
+						accounts:    map[int]*Account{},
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseMode,
 						&warehouseSettings, &usersSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
@@ -223,22 +223,22 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			return err
 		}
 
-		// Read all resources.
-		state.resources = map[int]*Resource{}
-		err = state.db.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
+		// Read all accounts.
+		state.accounts = map[int]*Account{}
+		err = state.db.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM accounts",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
-					r := Resource{}
+					a := Account{}
 					var workspaceID int
 					var connectorName string
-					if err := rows.Scan(&r.ID, &workspaceID, &connectorName, &r.Code, &r.AccessToken, &r.RefreshToken, &r.ExpiresIn); err != nil {
+					if err := rows.Scan(&a.ID, &workspaceID, &connectorName, &a.Code, &a.AccessToken, &a.RefreshToken, &a.ExpiresIn); err != nil {
 						return err
 					}
-					r.mu = new(sync.Mutex)
-					r.workspace = state.workspaces[workspaceID]
-					r.connector = state.connectors[connectorName]
-					r.workspace.resources[r.ID] = &r
-					state.resources[r.ID] = &r
+					a.mu = new(sync.Mutex)
+					a.workspace = state.workspaces[workspaceID]
+					a.connector = state.connectors[connectorName]
+					a.workspace.accounts[a.ID] = &a
+					state.accounts[a.ID] = &a
 				}
 				return nil
 			})
@@ -249,14 +249,14 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 		// Read all connections.
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
-			" resource, strategy, sending_mode, website_host, event_connections,"+
+			" account, strategy, sending_mode, website_host, event_connections,"+
 			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
-				var workspaceID, resource int
+				var workspaceID, account int
 				var connector string
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector,
-					&resource, &c.Strategy, &c.SendingMode, &c.WebsiteHost, &c.EventConnections, &c.Settings, &c.Health,
+					&account, &c.Strategy, &c.SendingMode, &c.WebsiteHost, &c.EventConnections, &c.Settings, &c.Health,
 				); err != nil {
 					return err
 				}
@@ -269,8 +269,8 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					return fmt.Errorf("the %s connector is required but not registered. (Possibly forgotten import?)", connector)
 				}
 				c.actions = map[int]*Action{}
-				if resource > 0 {
-					c.resource = state.resources[resource]
+				if account > 0 {
+					c.account = state.accounts[account]
 				}
 				if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {
 					mode := Cloud

@@ -58,19 +58,19 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		users:       schema{lock: make(chan struct{}, 1)},
 		targets:     connector.Targets,
 	}
-	var resourceID int
-	var resourceCode string
-	if r, ok := connection.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
+	var accountID int
+	var accountCode string
+	if a, ok := connection.Account(); ok {
+		accountID = a.ID
+		accountCode = a.Code
 	}
 	app.inner, app.err = chichi.RegisteredApp(app.name).New(&chichi.AppConfig{
-		Settings:    connection.Settings,
-		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
-		Resource:    resourceCode,
-		HTTPClient:  app.httpClient,
-		Region:      chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
-		WebhookURL:  webhookURL(connection, resourceID),
+		Settings:     connection.Settings,
+		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
+		OAuthAccount: accountCode,
+		HTTPClient:   app.httpClient,
+		Region:       chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
+		WebhookURL:   webhookURL(connection, accountID),
 	})
 	return app
 }

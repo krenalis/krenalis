@@ -32,12 +32,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppRecords, AppResource, and Webhooks
+// Make sure it implements the App, AppOAuth, AppRecords, and Webhooks
 // interfaces.
 var _ interface {
 	chichi.App
+	chichi.AppOAuth
 	chichi.AppRecords
-	chichi.AppResource
 	chichi.Webhooks
 } = (*HubSpot)(nil)
 
@@ -92,6 +92,22 @@ func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, properties
 	body.WriteString("}")
 
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
+}
+
+// OAuthAccount returns the app's account associated with the OAuth
+// authorization.
+func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
+	var res struct {
+		PortalId int
+	}
+	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, 200, &res)
+	if err != nil {
+		return "", err
+	}
+	if res.PortalId <= 0 {
+		return "", fmt.Errorf("connector HubSpot has returned an invalid account (portalId): %d", res.PortalId)
+	}
+	return strconv.Itoa(res.PortalId), nil
 }
 
 // Records returns the records of the specified target.
@@ -209,12 +225,12 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 	for _, req := range requests {
 		var event chichi.WebhookPayload
 		timestamp := time.UnixMilli(req.OccurredAt).UTC()
-		resource := strconv.Itoa(req.PortalId)
+		account := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {
 		case "company.propertyChange":
 			event = chichi.GroupPropertyChangeEvent{
 				Timestamp: timestamp,
-				Resource:  resource,
+				Account:   account,
 				Group:     strconv.Itoa(req.ObjectId),
 				Name:      req.PropertyName,
 				Value:     req.PropertyValue,
@@ -222,7 +238,7 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 		case "contact.propertyChange":
 			event = chichi.UserPropertyChangeEvent{
 				Timestamp: timestamp,
-				Resource:  resource,
+				Account:   account,
 				User:      strconv.Itoa(req.ObjectId),
 				Name:      req.PropertyName,
 				Value:     req.PropertyValue,
@@ -230,13 +246,13 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 		case "company.creation":
 			event = chichi.GroupCreateEvent{
 				Timestamp: timestamp,
-				Resource:  resource,
+				Account:   account,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.creation":
 			event = chichi.UserCreateEvent{
 				Timestamp: timestamp,
-				Resource:  resource,
+				Account:   account,
 				User:      strconv.Itoa(req.ObjectId),
 				Properties: map[string]any{
 					req.PropertyName: req.PropertyValue,
@@ -245,13 +261,13 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 		case "company.deletion":
 			event = chichi.GroupDeleteEvent{
 				Timestamp: timestamp,
-				Resource:  resource,
+				Account:   account,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.deletion":
 			event = chichi.UserDeleteEvent{
 				Timestamp: timestamp,
-				Resource:  resource,
+				Account:   account,
 				User:      strconv.Itoa(req.ObjectId),
 			}
 		}
@@ -259,21 +275,6 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 	}
 
 	return events, nil
-}
-
-// Resource returns the resource from a client token.
-func (hs *HubSpot) Resource(ctx context.Context) (string, error) {
-	var res struct {
-		PortalId int
-	}
-	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, 200, &res)
-	if err != nil {
-		return "", err
-	}
-	if res.PortalId <= 0 {
-		return "", fmt.Errorf("connector HubSpot has returned an invalid resource (portalId): %d", res.PortalId)
-	}
-	return strconv.Itoa(res.PortalId), nil
 }
 
 // Schema returns the schema of the specified target.

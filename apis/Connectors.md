@@ -1,17 +1,17 @@
 
 ## App connectors
 
-| Method           | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
-|------------------|----------------|----------------|-------------------------|-------------------------|-------------------------|
-| Create           | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| EventRequest     | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| EventTypes       | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| ReceiveWebhook   | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
-| Records          | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| Resource         | -              | -              | -                       | ✓                       | ✓                       |
-| Schema           | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| ServeUI          | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
-| Update           | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| Method         | Settings       | SetSettings    | OAuthAccount           | HTTPClient             | Region                 |
+|----------------|----------------|----------------|------------------------|------------------------|------------------------|
+| Create         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| EventRequest   | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| EventTypes     | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| OAuthAccount   | -              | -              | -                      | ✓                      | ✓                      |
+| ReceiveWebhook | ✓ (connection) | ✓ (connection) | ✓ (account,connection) | ✓ (account,connection) | ✓ (account,connection) |
+| Records        | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| Schema         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| ServeUI        | -/✓            | -/✓            | ✓                      | ✓                      | -/✓                    |
+| Update         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 
 
 ## Database connectors
