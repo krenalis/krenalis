@@ -52,7 +52,7 @@ func init() {
 		TermForUsers:               "contacts",
 		SuggestedDisplayedProperty: "EmailAddress",
 		Icon:                       icon,
-		WebhooksPer:                chichi.WebhooksPerSource,
+		WebhooksPer:                chichi.WebhooksPerConnection,
 		OAuth: chichi.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",

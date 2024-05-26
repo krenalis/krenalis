@@ -22,15 +22,15 @@ import (
 	"github.com/open2b/chichi/apis/state"
 )
 
-// WebhooksPer values indicates if webhooks are per connector, resource or
-// source.
+// WebhooksPer values indicates if webhooks are per connection, connector, or
+// resource.
 type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerConnection
 	WebhooksPerConnector
 	WebhooksPerResource
-	WebhooksPerSource
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -45,12 +45,12 @@ func (per WebhooksPer) String() string {
 	switch per {
 	case WebhooksPerNone:
 		return "None"
+	case WebhooksPerConnection:
+		return "Connection"
 	case WebhooksPerConnector:
 		return "Connector"
 	case WebhooksPerResource:
 		return "Resource"
-	case WebhooksPerSource:
-		return "Source"
 	}
 	panic("invalid webhooksPer value")
 }
@@ -73,12 +73,12 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 	switch s {
 	case "None":
 		p = WebhooksPerNone
+	case "Connection":
+		p = WebhooksPerConnection
 	case "Connector":
 		p = WebhooksPerConnector
 	case "Resource":
 		p = WebhooksPerResource
-	case "Source":
-		p = WebhooksPerSource
 	default:
 		return fmt.Errorf("json: invalid state.WebhooksPer: %s", s)
 	}

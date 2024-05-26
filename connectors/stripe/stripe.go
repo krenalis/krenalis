@@ -68,7 +68,7 @@ func init() {
 		TermForUsers:               "customers",
 		SuggestedDisplayedProperty: "email",
 		Icon:                       icon,
-		WebhooksPer:                chichi.WebhooksPerSource,
+		WebhooksPer:                chichi.WebhooksPerConnection,
 	}, New)
 }
 

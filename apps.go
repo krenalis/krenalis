@@ -56,7 +56,7 @@ type AppInfo struct {
 	TermForGroups              string
 	IdentityIDLabel            string
 	SuggestedDisplayedProperty string      // suggested property name to use as the displayed property
-	WebhooksPer                WebhooksPer // indicates if webhooks are per connector, resource or connection
+	WebhooksPer                WebhooksPer // indicates if webhooks are per connection, connector, or resource.
 	OAuth                      OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 	SendingMode                SendingMode // mode of event sending. None for sources and non-supporting event apps.
 	TimeLayouts                TimeLayouts // layouts for time values. If left empty, it is ISO 8601.

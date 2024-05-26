@@ -98,15 +98,15 @@ type OAuth struct {
 	ExpiresIn int32
 }
 
-// WebhooksPer values indicates if webhooks are per connector, resource or
-// source.
+// WebhooksPer values indicates if webhooks are per connection, connector, or
+// resource.
 type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerConnection
 	WebhooksPerConnector
 	WebhooksPerResource
-	WebhooksPerSource
 )
 
 // Role represents a role.
