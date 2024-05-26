@@ -117,31 +117,6 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 	return state, nil
 }
 
-// Organization returns the organization with identifier id.
-// The boolean return value reports whether the organization exists.
-func (state *State) Organization(id int) (*Organization, bool) {
-	state.mu.Lock()
-	a, ok := state.organizations[id]
-	state.mu.Unlock()
-	return a, ok
-}
-
-// Organizations returns all organizations.
-func (state *State) Organizations() []*Organization {
-	state.mu.Lock()
-	organizations := make([]*Organization, len(state.organizations))
-	i := 0
-	for _, organization := range state.organizations {
-		organizations[i] = organization
-		i++
-	}
-	state.mu.Unlock()
-	sort.Slice(organizations, func(i, j int) bool {
-		return organizations[i].ID < organizations[j].ID
-	})
-	return organizations
-}
-
 // Action returns the action with identifier id.
 // The boolean return value reports whether the action exists.
 func (state *State) Action(id int) (*Action, bool) {
@@ -174,20 +149,20 @@ func (state *State) Close() {
 	state.notifications.stop()
 }
 
-// ConnectionByKey returns the connection with the given key.
-// The boolean return value reports whether the key exists.
-func (state *State) ConnectionByKey(key string) (*Connection, bool) {
-	state.mu.Lock()
-	c, ok := state.connectionsByKey[key]
-	state.mu.Unlock()
-	return c, ok
-}
-
 // Connection returns the connection with identifier id.
 // The boolean return value reports whether the connection exists.
 func (state *State) Connection(id int) (*Connection, bool) {
 	state.mu.Lock()
 	c, ok := state.connections[id]
+	state.mu.Unlock()
+	return c, ok
+}
+
+// ConnectionByKey returns the connection with the given key.
+// The boolean return value reports whether the key exists.
+func (state *State) ConnectionByKey(key string) (*Connection, bool) {
+	state.mu.Lock()
+	c, ok := state.connectionsByKey[key]
 	state.mu.Unlock()
 	return c, ok
 }
@@ -231,6 +206,31 @@ func (state *State) IsLeader() bool {
 	election := state.election
 	state.mu.Unlock()
 	return election.leader == state.id
+}
+
+// Organization returns the organization with identifier id.
+// The boolean return value reports whether the organization exists.
+func (state *State) Organization(id int) (*Organization, bool) {
+	state.mu.Lock()
+	a, ok := state.organizations[id]
+	state.mu.Unlock()
+	return a, ok
+}
+
+// Organizations returns all organizations.
+func (state *State) Organizations() []*Organization {
+	state.mu.Lock()
+	organizations := make([]*Organization, len(state.organizations))
+	i := 0
+	for _, organization := range state.organizations {
+		organizations[i] = organization
+		i++
+	}
+	state.mu.Unlock()
+	sort.Slice(organizations, func(i, j int) bool {
+		return organizations[i].ID < organizations[j].ID
+	})
+	return organizations
 }
 
 // Resource returns the resource with identifier id.
@@ -297,16 +297,6 @@ const (
 	Snowflake
 )
 
-// String returns the string representation of typ.
-// It panics if typ is not a valid WarehouseType value.
-func (typ WarehouseType) String() string {
-	s, err := typ.Value()
-	if err != nil {
-		panic("invalid warehouse type")
-	}
-	return s.(string)
-}
-
 // Scan implements the sql.Scanner interface.
 func (typ *WarehouseType) Scan(src any) error {
 	s, ok := src.(string)
@@ -330,6 +320,16 @@ func (typ *WarehouseType) Scan(src any) error {
 	}
 	*typ = t
 	return nil
+}
+
+// String returns the string representation of typ.
+// It panics if typ is not a valid WarehouseType value.
+func (typ WarehouseType) String() string {
+	s, err := typ.Value()
+	if err != nil {
+		panic("invalid warehouse type")
+	}
+	return s.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -359,16 +359,6 @@ const (
 	Maintenance
 )
 
-// String returns the string representation of mode.
-// It panics if mode is not a valid WarehouseMode value.
-func (mode WarehouseMode) String() string {
-	m, err := mode.Value()
-	if err != nil {
-		panic("invalid warehouse mode")
-	}
-	return m.(string)
-}
-
 // Scan implements the sql.Scanner interface.
 func (mode *WarehouseMode) Scan(src any) error {
 	s, ok := src.(string)
@@ -388,6 +378,16 @@ func (mode *WarehouseMode) Scan(src any) error {
 	}
 	*mode = m
 	return nil
+}
+
+// String returns the string representation of mode.
+// It panics if mode is not a valid WarehouseMode value.
+func (mode WarehouseMode) String() string {
+	m, err := mode.Value()
+	if err != nil {
+		panic("invalid warehouse mode")
+	}
+	return m.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -425,14 +425,6 @@ type Workspace struct {
 	DisplayedProperties DisplayedProperties
 }
 
-// Organization returns the organization of the workspace.
-func (workspace *Workspace) Organization() *Organization {
-	workspace.mu.Lock()
-	organization := workspace.organization
-	workspace.mu.Unlock()
-	return organization
-}
-
 // Connection returns the connection of the workspace with identifier id.
 // The boolean return value reports whether the connection exists.
 func (workspace *Workspace) Connection(id int) (*Connection, bool) {
@@ -453,6 +445,14 @@ func (workspace *Workspace) Connections() []*Connection {
 	}
 	workspace.mu.Unlock()
 	return connections
+}
+
+// Organization returns the organization of the workspace.
+func (workspace *Workspace) Organization() *Organization {
+	workspace.mu.Lock()
+	organization := workspace.organization
+	workspace.mu.Unlock()
+	return organization
 }
 
 // Resource returns the resource with identifier id. The boolean return value
@@ -703,20 +703,20 @@ type Resource struct {
 	ExpiresIn    time.Time
 }
 
-// Workspace returns the workspace of the resource.
-func (resource *Resource) Workspace() *Workspace {
-	resource.mu.Lock()
-	w := resource.workspace
-	resource.mu.Unlock()
-	return w
-}
-
 // Connector returns the connector of the resource.
 func (resource *Resource) Connector() *Connector {
 	resource.mu.Lock()
 	c := resource.connector
 	resource.mu.Unlock()
 	return c
+}
+
+// Workspace returns the workspace of the resource.
+func (resource *Resource) Workspace() *Workspace {
+	resource.mu.Lock()
+	w := resource.workspace
+	resource.mu.Unlock()
+	return w
 }
 
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
@@ -744,39 +744,6 @@ type Connection struct {
 	Health           Health
 }
 
-// Organization returns the organization of the connection.
-func (connection *Connection) Organization() *Organization {
-	connection.mu.Lock()
-	o := connection.organization
-	connection.mu.Unlock()
-	return o
-}
-
-// Workspace returns the workspace of the connection.
-func (connection *Connection) Workspace() *Workspace {
-	connection.mu.Lock()
-	w := connection.workspace
-	connection.mu.Unlock()
-	return w
-}
-
-// Connector returns the connector of the connection.
-func (connection *Connection) Connector() *Connector {
-	connection.mu.Lock()
-	c := connection.connector
-	connection.mu.Unlock()
-	return c
-}
-
-// Resource returns the resource of the connection.
-// The boolean return value reports whether the connection has a resource.
-func (connection *Connection) Resource() (*Resource, bool) {
-	connection.mu.Lock()
-	r := connection.resource
-	connection.mu.Unlock()
-	return r, r != nil
-}
-
 // Action returns the action of the connection with identifier id.
 // The boolean return value reports whether the action exists.
 func (connection *Connection) Action(id int) (*Action, bool) {
@@ -800,6 +767,39 @@ func (connection *Connection) Actions() []*Action {
 		return actions[i].ID < actions[j].ID
 	})
 	return actions
+}
+
+// Connector returns the connector of the connection.
+func (connection *Connection) Connector() *Connector {
+	connection.mu.Lock()
+	c := connection.connector
+	connection.mu.Unlock()
+	return c
+}
+
+// Organization returns the organization of the connection.
+func (connection *Connection) Organization() *Organization {
+	connection.mu.Lock()
+	o := connection.organization
+	connection.mu.Unlock()
+	return o
+}
+
+// Resource returns the resource of the connection.
+// The boolean return value reports whether the connection has a resource.
+func (connection *Connection) Resource() (*Resource, bool) {
+	connection.mu.Lock()
+	r := connection.resource
+	connection.mu.Unlock()
+	return r, r != nil
+}
+
+// Workspace returns the workspace of the connection.
+func (connection *Connection) Workspace() *Workspace {
+	connection.mu.Lock()
+	w := connection.workspace
+	connection.mu.Unlock()
+	return w
 }
 
 // Health is an indicator of the current state of an action or a connection.
@@ -1076,16 +1076,6 @@ const (
 	Python
 )
 
-func (lang Language) String() string {
-	switch lang {
-	case JavaScript:
-		return "JavaScript"
-	case Python:
-		return "Python"
-	}
-	panic("invalid language")
-}
-
 // Scan implements the sql.Scanner interface.
 func (lang *Language) Scan(src any) error {
 	s, ok := src.(string)
@@ -1101,6 +1091,16 @@ func (lang *Language) Scan(src any) error {
 		return fmt.Errorf("invalid state.Language: %s", s)
 	}
 	return nil
+}
+
+func (lang Language) String() string {
+	switch lang {
+	case JavaScript:
+		return "JavaScript"
+	case Python:
+		return "Python"
+	}
+	panic("invalid language")
 }
 
 // Transformation represents a transformation.

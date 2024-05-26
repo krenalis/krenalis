@@ -506,41 +506,6 @@ func (state *State) addEventConnection(n notification) {
 	}
 }
 
-// ExecuteAction is the event sent when an action is executed.
-type ExecuteAction struct {
-	ID        int
-	Action    int
-	Storage   int
-	Reimport  bool
-	StartTime time.Time
-}
-
-// executeAction executes an action.
-func (state *State) executeAction(n notification) {
-	e := ExecuteAction{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	a := state.actions[e.Action]
-	var storage *Connection
-	if e.Storage > 0 {
-		storage = state.connections[e.Storage]
-	}
-	a.mu.Lock()
-	a.execution = &ActionExecution{
-		mu:        &sync.Mutex{},
-		ID:        e.ID,
-		action:    a,
-		storage:   storage,
-		Reimport:  e.Reimport,
-		StartTime: e.StartTime,
-	}
-	a.mu.Unlock()
-	for _, listener := range state.listeners.ExecuteAction {
-		listener(e)
-	}
-}
-
 // AddWorkspace is the event sent when a workspace is added.
 type AddWorkspace struct {
 	ID                  int
@@ -651,29 +616,6 @@ func (state *State) deleteConnection(n notification) {
 	}
 }
 
-// EndActionExecution is the event sent when action execution ends.
-type EndActionExecution struct {
-	ID     int
-	Health Health
-}
-
-// endActionExecution ends an action execution in progress.
-func (state *State) endActionExecution(n notification) {
-	e := EndActionExecution{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	for _, a := range state.actions {
-		if ex := a.execution; ex != nil && ex.ID == e.ID {
-			state.replaceAction(a.ID, func(a *Action) {
-				a.execution = nil
-				a.Health = e.Health
-			})
-			break
-		}
-	}
-}
-
 // DeleteWorkspace is the event sent when a workspace is deleted.
 type DeleteWorkspace struct {
 	ID        int
@@ -739,6 +681,64 @@ func (state *State) electLeader(n notification) {
 		for _, listener := range state.listeners.ElectLeader {
 			listener(e)
 		}
+	}
+}
+
+// EndActionExecution is the event sent when action execution ends.
+type EndActionExecution struct {
+	ID     int
+	Health Health
+}
+
+// endActionExecution ends an action execution in progress.
+func (state *State) endActionExecution(n notification) {
+	e := EndActionExecution{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	for _, a := range state.actions {
+		if ex := a.execution; ex != nil && ex.ID == e.ID {
+			state.replaceAction(a.ID, func(a *Action) {
+				a.execution = nil
+				a.Health = e.Health
+			})
+			break
+		}
+	}
+}
+
+// ExecuteAction is the event sent when an action is executed.
+type ExecuteAction struct {
+	ID        int
+	Action    int
+	Storage   int
+	Reimport  bool
+	StartTime time.Time
+}
+
+// executeAction executes an action.
+func (state *State) executeAction(n notification) {
+	e := ExecuteAction{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	a := state.actions[e.Action]
+	var storage *Connection
+	if e.Storage > 0 {
+		storage = state.connections[e.Storage]
+	}
+	a.mu.Lock()
+	a.execution = &ActionExecution{
+		mu:        &sync.Mutex{},
+		ID:        e.ID,
+		action:    a,
+		storage:   storage,
+		Reimport:  e.Reimport,
+		StartTime: e.StartTime,
+	}
+	a.mu.Unlock()
+	for _, listener := range state.listeners.ExecuteAction {
+		listener(e)
 	}
 }
 
@@ -945,6 +945,24 @@ func (state *State) setActionSchedulePeriod(n notification) {
 	}
 }
 
+// SetActionSettings is the event sent when the settings of an action is
+// changed.
+type SetActionSettings struct {
+	Action   int
+	Settings []byte
+}
+
+// setConnectionSettings sets the settings of an action.
+func (state *State) setActionSettings(n notification) {
+	e := SetActionSettings{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.Action, func(a *Action) {
+		a.Settings = e.Settings
+	})
+}
+
 // SetActionStatus is the event sent when the status of an action is set.
 type SetActionStatus struct {
 	ID      int
@@ -1006,24 +1024,6 @@ func (state *State) setConnection(n notification) {
 	for _, listener := range state.listeners.SetConnection {
 		listener(e)
 	}
-}
-
-// SetActionSettings is the event sent when the settings of an action is
-// changed.
-type SetActionSettings struct {
-	Action   int
-	Settings []byte
-}
-
-// setConnectionSettings sets the settings of an action.
-func (state *State) setActionSettings(n notification) {
-	e := SetActionSettings{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceAction(e.Action, func(a *Action) {
-		a.Settings = e.Settings
-	})
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is
