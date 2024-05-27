@@ -118,12 +118,26 @@ const hasTransformationFunction = (action: ActionToSet) => {
 	return action.transformation?.Function != null;
 };
 
-const hasValidTransformation = (action: ActionToSet) => {
+const hasTransformationMapping = (action: ActionToSet) => {
+	return action.transformation?.Mapping != null;
+};
+
+const hasSchemas = (action: ActionToSet) => {
+	if (action.inSchema == null || action.outSchema == null) {
+		return false;
+	}
+	return action.inSchema.properties.length > 0 && action.outSchema.properties.length > 0;
+};
+
+const hasEmptyMapping = (action: ActionToSet) => {
 	return (
-		(hasTransformationFunction(action) || action.transformation?.Mapping != null) &&
-		action.inSchema?.properties.length > 0 &&
-		action.outSchema?.properties.length > 0
+		(!hasTransformationMapping(action) && !hasTransformationFunction(action)) ||
+		(hasTransformationMapping(action) && !hasSchemas(action))
 	);
+};
+
+const hasValidTransformation = (action: ActionToSet) => {
+	return (hasTransformationFunction(action) || hasTransformationMapping(action)) && hasSchemas(action);
 };
 
 const validateTransformation = (
@@ -135,18 +149,33 @@ const validateTransformation = (
 		if (connection.isApp) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
+					if (hasEmptyMapping(action)) {
+						throw new Error(
+							'There are no properties in the mapping expressions; use at least one property in an expression',
+						);
+					}
 					throw new Error('Action must have a valid transformation');
 				}
 			}
 		} else if (connection.isDatabase) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
+					if (hasEmptyMapping(action)) {
+						throw new Error(
+							'There are no properties in the mapping expressions; use at least one property in an expression',
+						);
+					}
 					throw new Error('Action must have a valid transformation');
 				}
 			}
 		} else if (connection.isFileStorage) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
+					if (hasEmptyMapping(action)) {
+						throw new Error(
+							'There are no properties in the mapping expressions; use at least one property in an expression',
+						);
+					}
 					throw new Error('Action must have a valid transformation');
 				}
 			}
@@ -168,12 +197,22 @@ const validateTransformation = (
 		if (connection.isApp) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
+					if (hasEmptyMapping(action)) {
+						throw new Error(
+							'There are no properties in the mapping expressions; use at least one property in an expression',
+						);
+					}
 					throw new Error('Action must have a valid transformation');
 				}
 			}
 		} else if (connection.isDatabase) {
 			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 				if (!hasValidTransformation(action)) {
+					if (hasEmptyMapping(action)) {
+						throw new Error(
+							'There are no properties in the mapping expressions; use at least one property in an expression',
+						);
+					}
 					throw new Error('Action must have a valid transformation');
 				}
 			}
