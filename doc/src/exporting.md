@@ -11,5 +11,11 @@ Exporting users to an app occurs by determining, through the matching of values 
  └────────────────────────────┘         └─────────────────────────────┘
 ```
 
-* In the case that multiple users within Chichi have the same value for the specified property, the export is not initiated and an error is shown.
-* In the case that multiple users on the app have the same value for the specified property, whether to proceed with the export or not depends on the configuration set in the action.
+### Users conflicts
+
+When exporting to an app, **two different types of conflicts** can occur, which are handled differently.
+
+| Case                                                                             | Consequences                                                                                  |
+|----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| **Multiple users within Chichi** have the same value for the specified property. | The **export is not initiated** and an error is shown.                                        |
+| **Multiple users on the app** have the same value for the specified property.    | Whether to proceed with the export or not **depends on the configuration** set in the action. |
