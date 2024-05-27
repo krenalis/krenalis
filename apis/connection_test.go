@@ -26,6 +26,7 @@ func Test_isMetaProperty(t *testing.T) {
 		{types.Property{Name: "__", Type: types.Int(32)}, false},
 		{types.Property{Name: "____", Type: types.Int(32)}, false},
 		{types.Property{Name: "__hello__", Type: types.Int(32)}, true},
+		{types.Property{Name: "__h__", Type: types.Int(32)}, true},
 		{types.Property{Name: "__hey_test__", Type: types.Int(32)}, true},
 	}
 	for _, test := range tests {

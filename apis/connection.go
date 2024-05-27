@@ -2155,7 +2155,7 @@ type ConnectionToSet struct {
 // isMetaProperty reports whether the given property name refers to a property
 // considered a meta property by a data warehouse.
 func isMetaProperty(name string) bool {
-	return len(name) > 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
+	return len(name) >= 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
 }
 
 // marshalSchema marshals the given schema.
