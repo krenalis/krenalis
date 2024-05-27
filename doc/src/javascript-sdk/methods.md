@@ -245,7 +245,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-identify('59a20n37ec82', {
+chichiAnalytics.identify('59a20n37ec82', {
 	firstName: 'Emily',
 	lastName: 'Johnson',
 	email: 'emma.johnson@example.com',
@@ -297,7 +297,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-anonymize().then(() => console.log('user has been anonymized'));
+chichiAnalytics.anonymize().then(() => console.log('user has been anonymized'));
 ```
 
 ## group
