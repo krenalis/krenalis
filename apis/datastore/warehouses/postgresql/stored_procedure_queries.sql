@@ -124,7 +124,7 @@ AS $$
         (
             ("events"."user_id" <> '' AND "events"."user_id" = "_users_identities"."__identity_id__")
                 OR
-            ("events"."user_id" = '' AND "events"."anonymous_id" = "_users_identities"."__anonymous_id__")
+            ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_users_identities"."__anonymous_ids__"))
         );
 
 $$;

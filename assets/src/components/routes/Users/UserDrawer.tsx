@@ -266,9 +266,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 											<div className='user-drawer__identity-displayed-property'>
 												Displayed property: <code>{identity.DisplayedProperty}</code>
 											</div>
-											{identity.AnonymousId !== '' && (
+											{identity.AnonymousIds !== null && (
 												<div className='user-drawer__identity-anonymous-ids'>
-													Anonymous ID: <code>{identity.AnonymousId}</code>
+													Anonymous IDs: <code>{identity.AnonymousIds.join(', ')}</code>
 												</div>
 											)}
 										</div>

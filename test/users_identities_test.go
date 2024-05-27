@@ -114,8 +114,8 @@ func Test_UsersIdentities(t *testing.T) {
 
 		for _, identity := range identities {
 
-			if identity.AnonymousId != "" {
-				t.Fatalf("identity should have an empty 'AnonymousIds', got %q", identity.AnonymousId)
+			if anonIds := identity.AnonymousIds; anonIds != nil {
+				t.Fatalf("identity should have a nil 'AnonymousIds', got %v", anonIds)
 			}
 
 			t.Logf(

@@ -1,7 +1,5 @@
 # Connection Identity Resolution
 
-> 📝 NOTE. This section will be completely reviewed and will likely be rewritten, simplifying the concept of "Connection Identity Resolution" which will probably be removed.
-
 The Connection Identity Resolution determines if an user, imported from a connection, was previously imported by that connection, and eventually merges them.
 
 ## Behaviour
@@ -14,8 +12,8 @@ for users **imported from files** and **databases**, the user is merged with oth
 
 for users **imported from events**, if the user…
 
-* … **is anonymous** (i.e. does not have a value for `userId`), it is merged with **other anonymous users** imported from the same connection who have the same Anonymous ID.
-* … **is not anonymous**, it is merged with other users within the same connection that (1) share the same `userId` or (2) do not have a `userId` and have the same Anonymous ID. 
+* … **is anonymous** (i.e. does not have a value for `userId`), it is merged with **other anonymous users** imported from the same connection who have an Anonymous ID in common.
+* … **is not anonymous**, it is merged with other users within the same connection that (1) share the same `userId` or (2) do not have an `userId` and have an Anonymous ID in common.
 
 The behavior for the users imported from events allows the implementation of [strategies](anonymous-users-strategies.md) by controlling how `userId` and `anonymousId` are sent by the client (eg. the [JavaScript SDK](../javascript-sdk.md) in the browser).
 
@@ -25,5 +23,5 @@ The behavior for the users imported from events allows the implementation of [st
 
 When merging two or more user identities during the Connection Identity Resolution into a single identity:
 
-* the Anonymous ID is taken from one of the identities to merge;
+* the Anonymous IDs are taken from all these user identities, without duplicated values
 * for all other properties, the value for that property is updated with that of the imported identity if it has a value for that property  (including 'null', which is also considered a value); otherwise, the current value in the database is retained.

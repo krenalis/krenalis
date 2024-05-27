@@ -227,7 +227,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			Connection:        dummy,
 			IdentityId:        chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
 			DisplayedProperty: "kbuessen0@example.com",
-			AnonymousId:       "",
+			AnonymousIds:      nil,
 			LastChangeTime:    time.Time{},
 		})
 	}
@@ -241,7 +241,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				Value: "1",
 			},
 			DisplayedProperty: "kbuessen0@example.com",
-			AnonymousId:       "",
+			AnonymousIds:      nil,
 			LastChangeTime:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
 		})
 	}
@@ -253,7 +253,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			Connection:        javaScript,
 			IdentityId:        chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
 			DisplayedProperty: "kbuessen0@example.com",
-			AnonymousId:       "5ce0fd49-199a-47e7-b0c8-498f5144f0ee",
+			AnonymousIds:      []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			LastChangeTime:    time.Time{},
 		})
 	}

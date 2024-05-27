@@ -73,7 +73,7 @@ const useConnectionIdentities = () => {
 		}
 		if (connection.hasAnonymousIdentifiers) {
 			columns.push({
-				name: 'Anonymous Id',
+				name: 'Anonymous Ids',
 			});
 		}
 
@@ -88,12 +88,10 @@ const useConnectionIdentities = () => {
 			}
 			if (connection.hasAnonymousIdentifiers) {
 				const anonymousIds: ReactNode[] = [];
-				// TODO(Gianluca): the field that was previously called
-				// "AnonymousIds" has now become "AnonymousId", and its content
-				// instead of being a list of strings is just a string. So we
-				// no longer need to treat it as a list, here.
-				if (identity.AnonymousId != '') {
-					anonymousIds.push(<code>{identity.AnonymousId}</code>);
+				if (identity.AnonymousIds != null) {
+					for (const id of identity.AnonymousIds) {
+						anonymousIds.push(<code>{id}</code>);
+					}
 				}
 				row.cells.push(anonymousIds);
 			}

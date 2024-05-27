@@ -200,7 +200,7 @@ func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column)
 		"__connection__":         {Name: "__connection__", Type: types.Int(32)},
 		"__identity_id__":        {Name: "__identity_id__", Type: types.Text()},
 		"__displayed_property__": {Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
-		"__anonymous_id__":       {Name: "__anonymous_id__", Type: types.Text()},
+		"__anonymous_ids__":      {Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
 		"__last_change_time__":   {Name: "__last_change_time__", Type: types.DateTime()},
 		"__gid__":                {Name: "__gid__", Type: types.UUID()},
 	}
