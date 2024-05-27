@@ -98,12 +98,12 @@ chichiAnalytics.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
 
 ## traits
 
-The `traits` method is utilized for accessing and modifying the user's traits. It consistently returns the user's traits.
+The `traits` method is used to access and modify a user's traits. These traits are for the anonymous user if the user is anonymous, and for the non-anonymous user if non-anonymous. It consistently returns the user's traits.
 
 To modify the user's traits, call the `traits` method with an argument:
 
 - To remove all traits, pass a `null` argument.
-- To update the traits, provide a non-null `Object`. Since traits are serialized with `JSON.stringify`, they must consist only of serializable values and should not contain cyclic references. In case of serialization errors, a warning will be logged in the console.
+- To update the traits, provide a non-null `Object`. Since traits are serialized with `JSON.stringify`, they must consist only of serializable values and should not contain cyclic references. In case of serialization errors, a warning will be logged in the console. The provided traits will completely replace the current traits of the user, if any.
 
 #### Syntax
 

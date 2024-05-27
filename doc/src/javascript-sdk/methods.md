@@ -233,12 +233,12 @@ identify(
 
 All parameters are optional. A single `Object` parameter signifies `traits`.
 
-| Name       | Type       | Required | Description                                       |
-|------------|------------|----------|---------------------------------------------------|
-| `userId`   | `String`   |          | Identifier of the user.                           |
-| `traits`   | `Object`   |          | Traits of the user.                               |
-| `options`  | `Object`   |          | Options of the event.                             |
-| `callback` | `Function` |          | A function called when the event has been queued. |
+| Name       | Type       | Required | Description                                                                              |
+|------------|------------|----------|------------------------------------------------------------------------------------------|
+| `userId`   | `String`   |          | Identifier of the user.                                                                  |
+| `traits`   | `Object`   |          | Traits to add to the user's traits. Pass the `undefined` value for a trait to remove it. |
+| `options`  | `Object`   |          | Options of the event.                                                                    |
+| `callback` | `Function` |          | A function called when the event has been queued.                                        |
 
 It returns a `Promise` that resolve when the event has queued. If the browser does not support promises and a polyfill has not been installed, it returns `undefined`.
 
@@ -258,6 +258,14 @@ identify('59a20n37ec82', {
 	}
 });
 ```
+
+For the previous example, we can have three scenarios:
+
+* If the user is currently anonymous, they become known with the given User ID and traits.
+* If the user is currently non-anonymous but has a different User ID, their User ID is changed, and all traits are replaced with the provided ones.
+* If the user is currently non-anonymous and has the same User ID as the provided one, the provided traits are added to the current traits. If a provided trait has the value `undefined`, the corresponding trait is removed.
+
+> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](../events/identify.md) call, use the [`user().traits`](user-class.md#traits) method.  
 
 ## anonymize
 
