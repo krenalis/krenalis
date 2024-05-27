@@ -294,7 +294,7 @@ anonymize().then(() => console.log('user has been anonymized'));
 
 ## group
 
-The `group` method, when called without arguments, returns an instance of the [Group](group-class.md) class representing the group.
+The `group` method, when called without arguments, returns an instance of the [Group class](group-class.md) representing the group.
 
 When called with arguments, implements the [group call](../events/group.md). The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
 
@@ -344,7 +344,7 @@ All parameters are optional. A single `Object` parameter signifies `traits`.
 | `options`  | `Object`   |          | Options of the event.                             |
 | `callback` | `Function` |          | A function called when the event has been queued. |
 
-If no arguments are provided, it returns an instance of the [Group](#group-class) class. Otherwise, it returns a `Promise` that resolve when the event has queued. If the browser does not support promises and a polyfill has not been installed, it returns `undefined`.
+If no arguments are provided, it returns an instance of the [Group class](group-class.md). Otherwise, it returns a `Promise` that resolve when the event has queued. If the browser does not support promises and a polyfill has not been installed, it returns `undefined`.
 
 #### Example
 
@@ -362,7 +362,7 @@ chichiAnalytics.group('84s76y49tb28v1jxq', {
 
 ## user
 
-The `user` method returns an instance of the [`User`](user-class.md) class to read and set the identifier, Anonymous ID, and traits of the user.
+The `user` method returns an instance of the [`User class`](user-class.md) to read and set the identifier, Anonymous ID, and traits of the user.
 
 #### Syntax
 
@@ -383,7 +383,7 @@ user(): User
 
 There are no parameters.
 
-Returns an instance of the [`User`](#user-class) class representing the user.
+Returns an instance of the [`User class`](user-class.md) representing the user.
 
 #### Example
 
