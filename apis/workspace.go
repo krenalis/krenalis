@@ -435,17 +435,16 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
-	current := removeMetaProperties(this.workspace.UsersSchema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
-	schema = removeMetaProperties(schema)                       // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
 
-	if err := checkAllowedTypesUsersSchema(schema); err != nil {
-		return errors.BadRequest("not allowed type in schema: %s", err)
+	if err := checkAllowedPropertyUsersSchema(schema); err != nil {
+		return errors.BadRequest("not allowed property in schema: %s", err)
 	}
 
 	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
 
+	current := removeMetaProperties(this.workspace.UsersSchema)
 	operations, err := diffschemas.Diff(current, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -531,15 +530,13 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	if err := validateRePaths(rePaths); err != nil {
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
 	}
-	users := this.workspace.UsersSchema
-	users = removeMetaProperties(users)   // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
-	schema = removeMetaProperties(schema) // TODO(Gianluca): see https://github.com/open2b/chichi/issues/703.
-	if err := checkAllowedTypesUsersSchema(schema); err != nil {
-		return nil, errors.BadRequest("not allowed type in schema: %s", err)
+	if err := checkAllowedPropertyUsersSchema(schema); err != nil {
+		return nil, errors.BadRequest("not allowed property in schema: %s", err)
 	}
 	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return nil, errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
+	users := removeMetaProperties(this.workspace.UsersSchema)
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -1761,11 +1758,14 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 	return identities, count, nil
 }
 
-// checkAllowedTypesUsersSchema checks the given users schema and returns error
+// checkAllowedPropertyUsersSchema checks the given users schema and returns error
 // in case it contains properties which are not allowed in data warehouse users
 // schemas.
-func checkAllowedTypesUsersSchema(schema types.Type) error {
+func checkAllowedPropertyUsersSchema(schema types.Type) error {
 	for _, p := range schema.Properties() {
+		if isMetaProperty(p.Name) {
+			return errors.New("property cannot be a meta property")
+		}
 		if p.Placeholder != "" {
 			return errors.New("property cannot specify a placeholder")
 		}
@@ -1798,7 +1798,7 @@ func checkAllowedTypesUsersSchema(schema types.Type) error {
 				return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), k)
 			}
 		case types.ObjectKind:
-			err := checkAllowedTypesUsersSchema(p.Type)
+			err := checkAllowedPropertyUsersSchema(p.Type)
 			if err != nil {
 				return err
 			}

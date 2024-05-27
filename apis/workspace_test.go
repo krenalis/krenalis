@@ -86,11 +86,23 @@ func Test_checkAllowedTypesUsersSchema(t *testing.T) {
 			}),
 			err: "property cannot specify a placeholder",
 		},
+		{
+			name: "Meta properties",
+			schema: types.Object([]types.Property{
+				{Name: "__id__", Type: types.Text(), Nullable: true},
+				{Name: "shipping_address", Type: types.Object([]types.Property{
+					{Name: "street1", Type: types.Text(), Nullable: true},
+					{Name: "street2", Type: types.Text(), Nullable: true},
+					{Name: "number", Type: types.Int(32), Nullable: true},
+				})},
+			}),
+			err: "property cannot be a meta property",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := checkAllowedTypesUsersSchema(test.schema)
+			gotErr := checkAllowedPropertyUsersSchema(test.schema)
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()

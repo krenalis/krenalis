@@ -8,6 +8,7 @@ import { ChangeUsersSchemaQueriesResponse, RePaths } from '../../../lib/api/type
 import AppContext from '../../../context/AppContext';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { SortableGridRef } from '../../base/Grid/SortableGrid';
+import { isMetaProperty } from '../../../lib/core/schema';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -59,7 +60,17 @@ const useSchemaEdit = (
 	}, [editableSchema]);
 
 	useEffect(() => {
-		setEditableSchema(transformSchema(schema));
+		if (schema == null) {
+			return;
+		}
+		// Remove meta properties from the schema.
+		const s: ObjectType = { name: 'Object', properties: [] };
+		for (const p of schema.properties) {
+			if (!isMetaProperty(p.name)) {
+				s.properties.push(p);
+			}
+		}
+		setEditableSchema(transformSchema(s));
 	}, [schema]);
 
 	const rePaths = useRef<RePaths>({});

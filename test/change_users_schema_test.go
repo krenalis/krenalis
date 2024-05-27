@@ -132,7 +132,7 @@ func TestChangeUsersSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"not allowed type in schema: property with type Text must be nullable"}}`
+	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"not allowed property in schema: property with type Text must be nullable"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
