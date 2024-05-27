@@ -114,11 +114,23 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		properties = schema.PropertiesNames()
 	}
 
+	// Determine the "order by" property.
+	var orderBy string
+	if action.Connection().Connector().Type == state.FileStorageType {
+		// TODO(Gianluca): for now let's take the first property. Maybe we'll
+		// evaluate it in the future to let the user choose, see the issue
+		// https://github.com/open2b/chichi/issues/757.
+		orderBy = properties[0]
+	} else {
+		// For any other type of connector other than FileStorage, don't order
+		// the results.
+	}
+
 	// Read the users.
 	records, err := store.UserRecords(ctx, datastore.Query{
 		Properties: properties,
 		Filter:     action.Filter,
-		OrderBy:    properties[0], // What should be the sorting property? See https://github.com/open2b/chichi/issues/757.
+		OrderBy:    orderBy,
 	}, action.Connection().Workspace().UsersSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
