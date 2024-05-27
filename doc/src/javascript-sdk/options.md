@@ -33,15 +33,15 @@ Where `<options>` represent one or more of the options shown below.
 
 Below are the options that control various aspects of the JavaScript SDK.
 
-| Option                                     | Type                                 | Default | Description                                                                                                                                     |
-|--------------------------------------------|--------------------------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                         |
-| `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the `debug` method. |
-| [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                  |
-| [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../events/session-tracking.md) is automatic or not, and sets its timeout.                               |
-| [`storage`](#storage-option)               | `Object`                             |         | Customize the global storage priority.                                                                                                          |
-| [`useQueryString`](#usequerystring-option) | `Boolean`<center>or</center>`Object` | `true`  | Indicates whether to process query parameters using the [Querystring API](querystring-api.md), and if enforce validation rules.                 |
-| [`user`](#user-option)                     | `Object`                             |         | Customize the storage priority for user data.                                                                                                   |
+| Option                                     | Type                                 | Default | Description                                                                                                                                                         |
+|--------------------------------------------|--------------------------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                             |
+| `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the [`debug`](methods.md#debug) method. |
+| [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                                      |
+| [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../events/session-tracking.md) is automatic or not, and sets its timeout.                                                   |
+| [`storage`](#storage-option)               | `Object`                             |         | Customize the global storage priority.                                                                                                                              |
+| [`useQueryString`](#usequerystring-option) | `Boolean`<center>or</center>`Object` | `true`  | Indicates whether to process query parameters using the [Querystring API](querystring-api.md), and if enforce validation rules.                                     |
+| [`user`](#user-option)                     | `Object`                             |         | Customize the storage priority for user data.                                                                                                                       |
 
 > The JavaScript SDK also supports the following options from the RudderStack SDK: `secureCookie`, `sameDomainCookiesOnly`, `sameSiteCookie`, `setCookieDomain`, `storage.cookie`, and `storage.type`.
 
