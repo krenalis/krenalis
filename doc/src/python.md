@@ -1,5 +1,22 @@
 # Python
 
+This is how a Python transform function looks like:
+
+```python
+def transform(user: dict) -> dict:
+	return {}
+```
+
+So, for example, it could be written like this:
+
+```python
+def transform(user: dict) -> dict:
+	return {
+        "email": user["email"],
+        "first_name": user.get("first_name", ""),
+    }
+```
+
 ## Types
 
 The table below outlines the various Chichi types and their corresponding representations in the Python code for the transformation.

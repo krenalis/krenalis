@@ -1,5 +1,24 @@
 # JavaScript
 
+This is how a JavaScript transform function looks like:
+
+```javascript
+const transform = (user) => {
+    return {}
+}
+```
+
+So, for example, it could be written like this:
+
+```javascript
+const transform = (user) => {
+    return {
+        email: user.email,
+        first_name: user.first_name,
+    }
+}
+```
+
 ## Types
 
 The table below outlines the various Chichi types and their corresponding representations in the JavaScript code for the transformation.
