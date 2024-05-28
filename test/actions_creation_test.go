@@ -115,7 +115,7 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Export users to a CSV on Filesystem",
 				Path: "users.csv",
 				OutSchema: types.Object([]types.Property{
-					{Name: "Email", Type: types.Text()}, // allowed because this is a destination connection.
+					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Connector: "CSV",
