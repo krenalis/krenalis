@@ -219,7 +219,11 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 		_, err := c.db.Exec(c.close.ctx, query)
 		if err != nil {
 			if s := err.Error(); s != errLogged {
-				slog.Error("failed to store the statistics on action executions", "err", s)
+				select {
+				case <-c.close.ctx.Done():
+				default:
+					slog.Error("failed to store the statistics on action executions", "err", s)
+				}
 			}
 			continue
 		}
