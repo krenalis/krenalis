@@ -314,6 +314,9 @@ func (c *Collector) importUsersIdentities(source *state.Connection, events []*ev
 
 		// Import the user identities from the events batch.
 		for _, event := range events {
+			if *event.Type != "identify" {
+				continue
+			}
 			mapEvent := event.ToMap()
 			var properties map[string]any
 			// If the action specifies mappings, apply them to the event and
