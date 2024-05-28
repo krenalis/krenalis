@@ -285,7 +285,7 @@ func (c *Collector) hasImportUsersAction(source *state.Connection) bool {
 // If the data warehouse is in inspection mode, it returns the
 // datastore.ErrInspectionMode error. If it is in maintenance mode, it returns
 // the datastore.ErrMaintenanceMode error.
-func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Connection, events []*events.Event) error {
+func (c *Collector) importUsersIdentities(source *state.Connection, events []*events.Event) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
 			continue
@@ -305,6 +305,7 @@ func (c *Collector) importUsersIdentities(ctx context.Context, source *state.Con
 			}
 			slog.Warn("users identities imported successfully", "action", action.ID, "ids", ids)
 		}
+		ctx := context.Background()
 		iw, err := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
 		if err != nil {
 			return err
@@ -457,8 +458,6 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 
 // serveEvents is called by the ServeHTTP method to serve an events request.
 func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
-
-	ctx := r.Context()
 
 	date := time.Now().UTC()
 	if y := date.Year(); y < 1 || y > 9999 {
@@ -652,7 +651,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	if c.hasImportUsersAction(connection) {
 		// Import the users identities.
-		err = c.importUsersIdentities(ctx, connection, batch)
+		err = c.importUsersIdentities(connection, batch)
 		if err != nil {
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
