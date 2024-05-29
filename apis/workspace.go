@@ -1216,6 +1216,8 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string)
 	this.apis.mustBeOpen()
 
 	// Validate the identifiers.
+	// Note that identifiers are only formally validated; the types are instead
+	// checked at runtime, before starting the Workspace Identity Resolution.
 	for i, id := range identifiers {
 		if !types.IsValidPropertyPath(id) {
 			return errors.BadRequest("identifier %q is not a valid property path", id)
