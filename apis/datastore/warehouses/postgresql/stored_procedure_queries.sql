@@ -32,8 +32,8 @@ AS $$
     INSERT INTO
         matchings(i1, i2, match)
     SELECT
-        i1.__identity_key__,
-        i2.__identity_key__,
+        i1.__pk__,
+        i2.__pk__,
         
         -- This placeholder will be replaced by Chichi:
         {{ matching_expr }} as match
@@ -42,7 +42,7 @@ AS $$
             CROSS JOIN
         _users_identities i2
     WHERE
-        i1.__identity_key__ < i2.__identity_key__;
+        i1.__pk__ < i2.__pk__;
     
     -- Do the clustering.
     DO $clustering$
@@ -61,8 +61,8 @@ AS $$
                 i2.__cluster__ c2
             FROM
                 matchings m
-                JOIN _users_identities i1 ON m.i1 = i1.__identity_key__
-                JOIN _users_identities i2 ON m.i2 = i2.__identity_key__
+                JOIN _users_identities i1 ON m.i1 = i1.__pk__
+                JOIN _users_identities i2 ON m.i2 = i2.__pk__
             WHERE
                 m.match
                 AND i1.__cluster__ <> i2.__cluster__;
@@ -94,7 +94,7 @@ AS $$
                         source
                 ) new_clusters ON new_clusters.source = identities_b.__cluster__
             WHERE
-                identities_a.__identity_key__ = identities_b.__identity_key__;
+                identities_a.__pk__ = identities_b.__pk__;
 
         END LOOP;
 
@@ -108,12 +108,12 @@ AS $$
         SELECT "__id__"
         FROM "_users"
         WHERE
-            "_users_identities"."__identity_key__" = ANY ("_users"."__identities__")
+            "_users_identities"."__pk__" = ANY ("_users"."__identities__")
         LIMIT 1
     )
     FROM "_users"
     WHERE
-        "_users_identities"."__identity_key__" = ANY ("_users"."__identities__");
+        "_users_identities"."__pk__" = ANY ("_users"."__identities__");
 
     -- Update the user GID of the events.
     UPDATE "events" SET "user" = null;

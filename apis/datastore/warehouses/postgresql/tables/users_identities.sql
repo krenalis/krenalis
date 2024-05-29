@@ -1,5 +1,5 @@
 CREATE TABLE _users_identities (
-    "__identity_key__" serial,
+    "__pk__" serial,
     "__connection__" int NOT NULL DEFAULT 0,
     "__identity_id__" text NOT NULL DEFAULT '',
     "__is_anonymous__" boolean NOT NULL DEFAULT FALSE,
@@ -9,12 +9,12 @@ CREATE TABLE _users_identities (
     "__gid__" uuid,
     "__cluster__" serial,
     "email" varchar(300),
-    PRIMARY KEY ("__identity_key__")
+    PRIMARY KEY ("__pk__")
 );
 
 CREATE VIEW "users_identities" AS
 SELECT
-    "__identity_key__",
+    "__pk__",
     "__connection__",
     "__identity_id__",
     "__is_anonymous__",

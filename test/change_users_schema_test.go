@@ -78,7 +78,7 @@ func TestChangeUsersSchema(t *testing.T) {
 			"\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n" +
 			"\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n" +
 			"\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users\";",
-		"CREATE VIEW \"users_identities\" AS SELECT\n\t\"__identity_key__\",\n\t\"__connection__\",\n" +
+		"CREATE VIEW \"users_identities\" AS SELECT\n\t\"__pk__\",\n\t\"__connection__\",\n" +
 			"\t\"__identity_id__\",\n\t\"__is_anonymous__\",\n\t\"__displayed_property__\",\n\t\"__anonymous_ids__\",\n" +
 			"\t\"__last_change_time__\",\n\t\"__gid__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n" +
 			"\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n" +

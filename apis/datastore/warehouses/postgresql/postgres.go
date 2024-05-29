@@ -577,7 +577,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte(',')
 	}
 	// Write the "__identities__" column.
-	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__identity_key__"), `)
+	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
 	// Write the "__id__" column.
 	// If all GIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the user's GID; otherwise, if

@@ -196,7 +196,7 @@ func columnByProperty(schema types.Type) map[string]warehouses.Column {
 // substituting meta properties with the meta properties of user identity.
 func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
 	columns := map[string]warehouses.Column{
-		"__identity_key__":       {Name: "__identity_key__", Type: types.Int(32)},
+		"__pk__":                 {Name: "__pk__", Type: types.Int(32)},
 		"__connection__":         {Name: "__connection__", Type: types.Int(32)},
 		"__identity_id__":        {Name: "__identity_id__", Type: types.Text()},
 		"__is_anonymous__":       {Name: "__is_anonymous__", Type: types.Boolean()},

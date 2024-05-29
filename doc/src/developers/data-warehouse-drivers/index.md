@@ -26,7 +26,7 @@ A driver must ensure that the data warehouse contains at least these tables with
 | Table Name         | Column Name                             | Type          | Additional Requirements                                       |
 |--------------------|-----------------------------------------|---------------|---------------------------------------------------------------|
 | `users`            | `__id__`                                | uuid          | -                                                             |
-| `users_identities` | `__identity_key__`                      | integer       | auto-incrementing, primary key                                |
+| `users_identities` | `__pk__`                                | integer       | auto-incrementing, primary key                                |
 | `users_identities` | `__connection__`                        | integer       | not null, default to 0                                        |
 | `users_identities` | `__identity_id__`                       | text          | not null, default to empty string                             |
 | `users_identities` | `__displayed_property__`                | text          | 40 characters long or more, not null, default to empty string |

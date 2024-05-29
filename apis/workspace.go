@@ -1680,7 +1680,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		Properties: []string{"__connection__", "__identity_id__", "__is_anonymous__",
 			"__anonymous_ids__", "__last_change_time__", "__displayed_property__"},
 		Filter:  filter,
-		OrderBy: "__identity_key__",
+		OrderBy: "__pk__",
 		First:   first,
 		Limit:   limit,
 	})
