@@ -506,23 +506,6 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 	return &b, nil
 }
 
-func serializeRowToSlice(row map[string]any, schema types.Type, columns []types.Property) []any {
-	warehouses.SerializeRow(row, schema)
-	rr := make([]any, len(columns))
-	for i, c := range columns {
-		rr[i] = row[c.Name]
-	}
-	return rr
-}
-
-func serializeRowsToSlice(rows []map[string]any, schema types.Type, columns []types.Property) [][]any {
-	rs := make([][]any, len(rows))
-	for i, r := range rows {
-		rs[i] = serializeRowToSlice(r, schema, columns)
-	}
-	return rs
-}
-
 // quoteCSVString quotes the string s for use in a CSV file and writes it to b.
 // A string must be quoted if is empty, or starts with the character "'", or
 // contains characters "," or "\n".

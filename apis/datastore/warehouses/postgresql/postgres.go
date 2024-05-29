@@ -21,7 +21,6 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -762,21 +761,4 @@ func (c *copyForIdentities) Values() ([]any, error) {
 
 func (c *copyForIdentities) Err() error {
 	return nil
-}
-
-func serializeRowToSlice(row map[string]any, schema types.Type, columns []types.Property) []any {
-	warehouses.SerializeRow(row, schema)
-	rr := make([]any, len(columns))
-	for i, c := range columns {
-		rr[i] = row[c.Name]
-	}
-	return rr
-}
-
-func serializeRowsToSlice(rows []map[string]any, schema types.Type, columns []types.Property) [][]any {
-	rs := make([][]any, len(rows))
-	for i, r := range rows {
-		rs[i] = serializeRowToSlice(r, schema, columns)
-	}
-	return rs
 }
