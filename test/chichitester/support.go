@@ -143,21 +143,6 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 	return c.AddConnection(conn)
 }
 
-func (c *Chichi) AddDummyWithUIValues(name string, role Role, values map[string]any) int {
-	conn := ConnectionToAdd{
-		Name:      name,
-		Role:      role,
-		Enabled:   true,
-		Connector: "Dummy",
-		UIValues:  JSONEncodeUIValues(values),
-	}
-	if role == Destination {
-		mode := Cloud
-		conn.SendingMode = &mode
-	}
-	return c.AddConnection(conn)
-}
-
 func (c *Chichi) AddJavaScriptSource(name, host string, eventConnections []int) int {
 	return c.AddConnection(ConnectionToAdd{
 		Name:             name,

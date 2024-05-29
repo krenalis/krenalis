@@ -68,10 +68,10 @@ def transform(user: dict) -> dict:
 
 	// Validate the users.
 	expectedUsers := []map[string]any{
-		{"email": "aniece2x@example.com",
+		{"email": "abenois2@example.com",
 			"ios": map[string]any{
-				"id":         "aniece2x@example.com-id",
-				"idfa":       "aniece2x@example.com-idfa",
+				"id":         "abenois2@example.com-id",
+				"idfa":       "abenois2@example.com-idfa",
 				"push_token": nil},
 		},
 	}

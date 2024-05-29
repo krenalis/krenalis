@@ -12,7 +12,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"io"
 	"log"
 	"math/rand"
@@ -33,7 +32,6 @@ var _ interface {
 	chichi.App
 	chichi.AppEvents
 	chichi.AppRecords
-	chichi.UIHandler
 } = (*Dummy)(nil)
 
 func init() {
@@ -53,18 +51,11 @@ func init() {
 // New returns a new Dummy connector instance.
 func New(conf *chichi.AppConfig) (*Dummy, error) {
 	c := Dummy{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connector")
-		}
-	}
 	return &c, nil
 }
 
 type Dummy struct {
-	conf     *chichi.AppConfig
-	settings *Settings
+	conf *chichi.AppConfig
 }
 
 var (
@@ -183,9 +174,6 @@ func (dummy *Dummy) Records(ctx context.Context, target chichi.Targets, properti
 		})
 	}
 	sort.Slice(users, func(i, j int) bool { return users[i].ID < users[j].ID })
-	if !dummy.settings.LargeDataset {
-		users = users[:10]
-	}
 	return users, "", io.EOF
 }
 
@@ -198,6 +186,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	// Only the first 10 users are taken. The others, with the current
+	// implementation of Dummy, remain defined in the JSON file but are not
+	// used.
+	rawUsers = rawUsers[:10]
 	usersLock.Lock()
 	allUsers = make(map[string]map[string]any, len(rawUsers))
 	usersLastChangeTimes = make(map[string]time.Time, len(rawUsers))
@@ -209,9 +201,7 @@ func init() {
 	usersLock.Unlock()
 }
 
-type Settings struct {
-	LargeDataset bool
-}
+type Settings struct{}
 
 // Schema returns the schema of the specified target.
 func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
@@ -256,32 +246,6 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chic
 	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
-// ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
-
-	switch event {
-	case "load":
-		var s Settings
-		if dummy.settings != nil {
-			s = *dummy.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		return nil, dummy.saveValues(ctx, values)
-	default:
-		return nil, chichi.ErrUIEventNotExist
-	}
-
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Checkbox{Name: "LargeDataset", Label: "Enable the full dataset of users (1000 users instead of 10)", Role: chichi.Source},
-		},
-		Values: values,
-	}
-
-	return ui, nil
-}
-
 // Update updates a record of the specified target.
 func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 
@@ -312,24 +276,5 @@ func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string
 	allUsers[id] = u
 	usersLastChangeTimes[id] = time.Now().UTC()
 
-	return nil
-}
-
-// validateValues validates the user-entered values and returns the settings.
-func (dummy *Dummy) saveValues(ctx context.Context, values []byte) error {
-	var s Settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return err
-	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = dummy.conf.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	dummy.settings = &s
 	return nil
 }

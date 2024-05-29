@@ -79,16 +79,16 @@ def transform(user: dict) -> dict:
 
 	// Validate the users.
 	expectedUsers := []map[string]any{
-		{"email": "aniece2x@example.com", "first_name": "Ashil", "gender": "female"},
-		{"email": "aquittonden2t@example.com", "first_name": "Aimil", "gender": "female"},
-		{"email": "csifflett2v@example.com", "first_name": "Cristiano", "gender": "female"},
-		{"email": "emoakes2r@example.com", "first_name": "Edyth", "gender": "female"},
+		{"email": "abenois2@example.com", "first_name": "Ariela", "gender": "female"},
+		{"email": "bdroghan5@example.com", "first_name": "Bryon", "gender": "female"},
+		{"email": "ctroy7@example.com", "first_name": "Codie", "gender": "female"},
+		{"email": "cveschambes3@example.com", "first_name": "Conroy", "gender": "female"},
+		{"email": "gclother1@example.com", "first_name": "Glyn", "gender": "female"},
 		{"email": "jdebrett9@example.com", "first_name": "Jerad", "gender": "male"},
+		{"email": "jsharpin8@example.com", "first_name": "Janifer", "gender": "female"},
 		{"email": "kbuessen0@example.com", "first_name": "Kinsley", "gender": "female"},
-		{"email": "lwhitesonrr@example.com", "first_name": "Leann", "gender": "female"},
-		{"email": "mpordal2w@example.com", "first_name": "Mona", "gender": "female"},
-		{"email": "sattestone2s@example.com", "first_name": "Susanne", "gender": "female"},
-		{"email": "tbrayson2u@example.com", "first_name": "Teodora", "gender": "female"},
+		{"email": "kdericut4@example.com", "first_name": "Kingsly", "gender": "female"},
+		{"email": "kfellon6@example.com", "first_name": "Katine", "gender": "female"},
 	}
 	if len(expectedUsers) != len(users) {
 		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))
