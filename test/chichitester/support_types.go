@@ -19,55 +19,57 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type Action struct {
-	ID                      int
-	Connection              int
-	Target                  *Target
-	Name                    string
-	Enabled                 bool
-	EventType               *string
-	Running                 bool
-	ScheduleStart           *int
-	SchedulePeriod          *SchedulePeriod
-	InSchema                types.Type
-	OutSchema               types.Type
-	Filter                  *Filter
-	Transformation          Transformation
-	Query                   *string
-	Connector               int
-	Path                    *string
-	Sheet                   *string
-	Compression             Compression
-	Table                   *string
-	IdentityProperty        *string
-	DisplayedProperty       string
-	LastChangeTimeProperty  *string
-	LastChangeTimeFormat    *string
-	ExportMode              *ExportMode
-	MatchingProperties      *MatchingProperties
-	ExportOnDuplicatedUsers *bool
+	ID                       int
+	Connection               int
+	Target                   *Target
+	Name                     string
+	Enabled                  bool
+	EventType                *string
+	Running                  bool
+	ScheduleStart            *int
+	SchedulePeriod           *SchedulePeriod
+	InSchema                 types.Type
+	OutSchema                types.Type
+	Filter                   *Filter
+	Transformation           Transformation
+	Query                    *string
+	Connector                int
+	Path                     *string
+	Sheet                    *string
+	Compression              Compression
+	Table                    *string
+	IdentityProperty         *string
+	DisplayedProperty        string
+	LastChangeTimeProperty   *string
+	LastChangeTimeFormat     *string
+	FileOrderingPropertyPath string
+	ExportMode               *ExportMode
+	MatchingProperties       *MatchingProperties
+	ExportOnDuplicatedUsers  *bool
 }
 
 type ActionToSet struct {
-	Name                    string
-	Enabled                 bool
-	Filter                  *Filter
-	InSchema                types.Type
-	OutSchema               types.Type
-	Transformation          Transformation
-	Connector               string
-	Query                   string
-	Path                    string
-	Sheet                   string
-	Compression             Compression
-	UIValues                json.RawMessage `json:",omitempty"`
-	TableName               string
-	IdentityProperty        string
-	DisplayedProperty       string
-	LastChangeTimeProperty  string
-	LastChangeTimeFormat    string
-	ExportMode              *ExportMode
-	MatchingProperties      *MatchingProperties
-	ExportOnDuplicatedUsers *bool
+	Name                     string
+	Enabled                  bool
+	Filter                   *Filter
+	InSchema                 types.Type
+	OutSchema                types.Type
+	Transformation           Transformation
+	Connector                string
+	Query                    string
+	Path                     string
+	Sheet                    string
+	Compression              Compression
+	UIValues                 json.RawMessage `json:",omitempty"`
+	TableName                string
+	IdentityProperty         string
+	DisplayedProperty        string
+	LastChangeTimeProperty   string
+	LastChangeTimeFormat     string
+	FileOrderingPropertyPath string
+	ExportMode               *ExportMode
+	MatchingProperties       *MatchingProperties
+	ExportOnDuplicatedUsers  *bool
 }
 
 type Compression string

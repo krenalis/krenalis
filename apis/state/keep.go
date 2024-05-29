@@ -277,32 +277,33 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 
 // AddAction is the event sent when an action is added.
 type AddAction struct {
-	ID                      int
-	Connection              int
-	Target                  Target
-	EventType               string
-	Name                    string
-	Enabled                 bool
-	ScheduleStart           int16
-	SchedulePeriod          int16
-	InSchema                types.Type
-	OutSchema               types.Type
-	Filter                  *Filter
-	Transformation          Transformation
-	Query                   string
-	Connector               string
-	Path                    string
-	Sheet                   string
-	Compression             Compression
-	Settings                []byte
-	TableName               string
-	IdentityProperty        string
-	DisplayedProperty       string
-	LastChangeTimeProperty  string
-	LastChangeTimeFormat    string
-	ExportMode              *ExportMode
-	MatchingProperties      *MatchingProperties
-	ExportOnDuplicatedUsers *bool
+	ID                       int
+	Connection               int
+	Target                   Target
+	EventType                string
+	Name                     string
+	Enabled                  bool
+	ScheduleStart            int16
+	SchedulePeriod           int16
+	InSchema                 types.Type
+	OutSchema                types.Type
+	Filter                   *Filter
+	Transformation           Transformation
+	Query                    string
+	Connector                string
+	Path                     string
+	Sheet                    string
+	Compression              Compression
+	Settings                 []byte
+	TableName                string
+	IdentityProperty         string
+	DisplayedProperty        string
+	LastChangeTimeProperty   string
+	LastChangeTimeFormat     string
+	FileOrderingPropertyPath string
+	ExportMode               *ExportMode
+	MatchingProperties       *MatchingProperties
+	ExportOnDuplicatedUsers  *bool
 }
 
 // addAction adds a new action.
@@ -314,33 +315,34 @@ func (state *State) addAction(n notification) {
 	c := state.connections[e.Connection]
 	connector := state.connectors[e.Connector]
 	action := &Action{
-		mu:                      new(sync.Mutex),
-		ID:                      e.ID,
-		connection:              c,
-		connector:               connector,
-		Target:                  e.Target,
-		Name:                    e.Name,
-		Enabled:                 e.Enabled,
-		EventType:               e.EventType,
-		ScheduleStart:           e.ScheduleStart,
-		SchedulePeriod:          e.SchedulePeriod,
-		InSchema:                e.InSchema,
-		OutSchema:               e.OutSchema,
-		Filter:                  e.Filter,
-		Transformation:          e.Transformation,
-		Query:                   e.Query,
-		Path:                    e.Path,
-		Sheet:                   e.Sheet,
-		Compression:             e.Compression,
-		Settings:                e.Settings,
-		TableName:               e.TableName,
-		IdentityProperty:        e.IdentityProperty,
-		DisplayedProperty:       e.DisplayedProperty,
-		LastChangeTimeProperty:  e.LastChangeTimeProperty,
-		LastChangeTimeFormat:    e.LastChangeTimeFormat,
-		ExportMode:              e.ExportMode,
-		MatchingProperties:      e.MatchingProperties,
-		ExportOnDuplicatedUsers: e.ExportOnDuplicatedUsers,
+		mu:                       new(sync.Mutex),
+		ID:                       e.ID,
+		connection:               c,
+		connector:                connector,
+		Target:                   e.Target,
+		Name:                     e.Name,
+		Enabled:                  e.Enabled,
+		EventType:                e.EventType,
+		ScheduleStart:            e.ScheduleStart,
+		SchedulePeriod:           e.SchedulePeriod,
+		InSchema:                 e.InSchema,
+		OutSchema:                e.OutSchema,
+		Filter:                   e.Filter,
+		Transformation:           e.Transformation,
+		Query:                    e.Query,
+		Path:                     e.Path,
+		Sheet:                    e.Sheet,
+		Compression:              e.Compression,
+		Settings:                 e.Settings,
+		TableName:                e.TableName,
+		IdentityProperty:         e.IdentityProperty,
+		DisplayedProperty:        e.DisplayedProperty,
+		LastChangeTimeProperty:   e.LastChangeTimeProperty,
+		LastChangeTimeFormat:     e.LastChangeTimeFormat,
+		FileOrderingPropertyPath: e.FileOrderingPropertyPath,
+		ExportMode:               e.ExportMode,
+		MatchingProperties:       e.MatchingProperties,
+		ExportOnDuplicatedUsers:  e.ExportOnDuplicatedUsers,
 	}
 	state.mu.Lock()
 	state.actions[e.ID] = action
@@ -888,27 +890,28 @@ func (state *State) setAccount(n notification) {
 
 // SetAction is the event sent when an action is set.
 type SetAction struct {
-	ID                      int
-	Name                    string
-	Enabled                 bool
-	InSchema                types.Type
-	OutSchema               types.Type
-	Filter                  *Filter
-	Transformation          Transformation
-	Query                   string
-	Connector               string
-	Path                    string
-	Sheet                   string
-	Compression             Compression
-	Settings                []byte
-	TableName               string
-	IdentityProperty        string
-	DisplayedProperty       string
-	LastChangeTimeProperty  string
-	LastChangeTimeFormat    string
-	ExportMode              *ExportMode
-	MatchingProperties      *MatchingProperties
-	ExportOnDuplicatedUsers *bool
+	ID                       int
+	Name                     string
+	Enabled                  bool
+	InSchema                 types.Type
+	OutSchema                types.Type
+	Filter                   *Filter
+	Transformation           Transformation
+	Query                    string
+	Connector                string
+	Path                     string
+	Sheet                    string
+	Compression              Compression
+	Settings                 []byte
+	TableName                string
+	IdentityProperty         string
+	DisplayedProperty        string
+	LastChangeTimeProperty   string
+	LastChangeTimeFormat     string
+	FileOrderingPropertyPath string
+	ExportMode               *ExportMode
+	MatchingProperties       *MatchingProperties
+	ExportOnDuplicatedUsers  *bool
 }
 
 // setAction sets an action.
@@ -936,6 +939,7 @@ func (state *State) setAction(n notification) {
 		a.DisplayedProperty = e.DisplayedProperty
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
+		a.FileOrderingPropertyPath = e.FileOrderingPropertyPath
 		a.ExportMode = e.ExportMode
 		a.MatchingProperties = e.MatchingProperties
 		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers

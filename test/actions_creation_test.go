@@ -123,6 +123,7 @@ func TestActionsCreation(t *testing.T) {
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
+				FileOrderingPropertyPath: "email",
 			},
 		},
 		{

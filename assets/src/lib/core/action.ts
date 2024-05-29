@@ -107,6 +107,7 @@ interface TransformedAction {
 	LastChangeTimeProperty?: string | null;
 	LastChangeTimeFormat?: string | null;
 	DisplayedProperty?: string | null;
+	FileOrderingPropertyPath?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: TransformedMatchingProperties | null;
 	ExportOnDuplicatedUsers?: boolean | null;
@@ -376,6 +377,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
 		LastChangeTimeFormat: action.LastChangeTimeFormat,
 		DisplayedProperty: action.DisplayedProperty,
+		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		ExportMode: action.ExportMode,
 		MatchingProperties: transformedMatchingProperties,
 		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
@@ -597,6 +599,7 @@ const transformInActionToSet = async (
 		path: action.Path,
 		tableName: action.Table,
 		sheet: action.Sheet,
+		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		exportMode: action.ExportMode,
 		IdentityProperty: action.IdentityProperty,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,

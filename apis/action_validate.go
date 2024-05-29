@@ -271,6 +271,15 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest(err.Error())
 		}
 	}
+	// Validate the file ordering property path.
+	if action.FileOrderingPropertyPath != "" {
+		if !types.IsValidPropertyPath(action.FileOrderingPropertyPath) {
+			return errors.BadRequest("the specified file ordering is a not valid property path")
+		}
+		if utf8.RuneCountInString(action.FileOrderingPropertyPath) > 1024 {
+			return errors.BadRequest("file ordering property path is longer than 1024 runes")
+		}
+	}
 
 	// Second, do validations based on the workspace and the connection.
 
@@ -437,11 +446,41 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	}
 
-	// When exporting users to file, ensure that the output schema is valid, as
-	// it contains the properties that will be exported to the file.
-	if connector.Type == state.FileStorageType && c.Role == state.Destination && target == state.Users {
+	// Do some checks related to exporting users to files.
+	exportUsersToFile := connector.Type == state.FileStorageType && c.Role == state.Destination && target == state.Users
+	if exportUsersToFile {
+		// When exporting users to file, ensure that the output schema is valid,
+		// as it contains the properties that will be exported to the file.
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema cannot be empty when exporting users to file")
+		}
+		// Check that FileOrderingPropertyPath is defined and exists in the out
+		// schema.
+		if action.FileOrderingPropertyPath == "" {
+			return errors.BadRequest("file ordering property path cannot be empty when exporting users to file")
+		}
+		path := types.Path(strings.Split(action.FileOrderingPropertyPath, "."))
+		p, err := outSchema.PropertyByPath(path)
+		if err != nil {
+			return errors.BadRequest("file ordering property path cannot be found in action's output schema: %s", err)
+		}
+		// Check the allowed types.
+		// Regarding the allowed types, we can use the same criterion used for
+		// the allowed types of the workspace identifiers, so as to simplify the
+		// specifications for the warehouse drivers.
+		switch p.Type.Kind() {
+		case types.IntKind, types.UintKind, types.UUIDKind, types.InetKind, types.TextKind:
+			// Ok.
+		case types.DecimalKind:
+			if p.Type.Precision() != 0 {
+				return errors.BadRequest("the Decimal type of the file ordering property cannot have a precision greater than 0")
+			}
+		default:
+			return errors.BadRequest("file ordering property cannot have kind %s", p.Type.Kind())
+		}
+	} else {
+		if action.FileOrderingPropertyPath != "" {
+			return errors.BadRequest("actions that do not export users to files cannot specify a file ordering property path")
 		}
 	}
 

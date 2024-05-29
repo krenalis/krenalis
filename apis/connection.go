@@ -532,18 +532,19 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Transformation: state.Transformation{
 			Mapping: action.Transformation.Mapping,
 		},
-		Query:                   action.Query,
-		Connector:               action.Connector,
-		Path:                    action.Path,
-		Sheet:                   action.Sheet,
-		Compression:             state.Compression(action.Compression),
-		TableName:               action.TableName,
-		IdentityProperty:        action.IdentityProperty,
-		DisplayedProperty:       action.DisplayedProperty,
-		LastChangeTimeProperty:  action.LastChangeTimeProperty,
-		LastChangeTimeFormat:    action.LastChangeTimeFormat,
-		ExportMode:              (*state.ExportMode)(action.ExportMode),
-		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
+		Query:                    action.Query,
+		Connector:                action.Connector,
+		Path:                     action.Path,
+		Sheet:                    action.Sheet,
+		Compression:              state.Compression(action.Compression),
+		TableName:                action.TableName,
+		IdentityProperty:         action.IdentityProperty,
+		DisplayedProperty:        action.DisplayedProperty,
+		LastChangeTimeProperty:   action.LastChangeTimeProperty,
+		LastChangeTimeFormat:     action.LastChangeTimeFormat,
+		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
+		ExportMode:               (*state.ExportMode)(action.ExportMode),
+		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
 	if function := action.Transformation.Function; function != nil {
 		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
@@ -675,16 +676,16 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, query,\n" +
 			"connector, path, sheet, compression, settings, table_name, identity_property,\n" +
-			"last_change_time_property, last_change_time_format, export_mode,\n" +
+			"last_change_time_property, last_change_time_format, file_ordering_property_path, export_mode,\n" +
 			"matching_properties_internal, matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
-			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)"
+			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(filter), mapping, function.Source, function.Language, function.Version,
 			n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ExportMode,
-			string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
+			n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath,
+			n.ExportMode, string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)

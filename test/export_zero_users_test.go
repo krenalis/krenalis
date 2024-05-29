@@ -99,6 +99,7 @@ func TestExportZeroUsers(t *testing.T) {
 			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma": ",",
 			}),
+			FileOrderingPropertyPath: "email",
 		})
 
 		// Remove the export file, if exists.

@@ -103,6 +103,7 @@ CREATE TABLE actions (
     displayed_property varchar(1024) NOT NULL DEFAULT '',
     user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00")',
     health health NOT NULL DEFAULT 'Healthy',
+    file_ordering_property_path varchar(1024) NOT NULL DEFAULT '',
     export_mode export_mode DEFAULT NULL,
     matching_properties_internal text NOT NULL,
     matching_properties_external text NOT NULL,

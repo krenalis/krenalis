@@ -1036,36 +1036,37 @@ type Cursor struct {
 }
 
 type Action struct {
-	mu                      *sync.Mutex
-	ID                      int
-	connection              *Connection
-	connector               *Connector
-	execution               *ActionExecution
-	Target                  Target
-	Name                    string
-	Enabled                 bool
-	EventType               string
-	ScheduleStart           int16
-	SchedulePeriod          int16
-	InSchema                types.Type
-	OutSchema               types.Type
-	Filter                  *Filter
-	Transformation          Transformation
-	Query                   string
-	Path                    string
-	Sheet                   string
-	Compression             Compression
-	Settings                []byte
-	TableName               string
-	IdentityProperty        string
-	LastChangeTimeProperty  string
-	LastChangeTimeFormat    string
-	DisplayedProperty       string
-	UserCursor              Cursor
-	Health                  Health
-	ExportMode              *ExportMode
-	MatchingProperties      *MatchingProperties
-	ExportOnDuplicatedUsers *bool
+	mu                       *sync.Mutex
+	ID                       int
+	connection               *Connection
+	connector                *Connector
+	execution                *ActionExecution
+	Target                   Target
+	Name                     string
+	Enabled                  bool
+	EventType                string
+	ScheduleStart            int16
+	SchedulePeriod           int16
+	InSchema                 types.Type
+	OutSchema                types.Type
+	Filter                   *Filter
+	Transformation           Transformation
+	Query                    string
+	Path                     string
+	Sheet                    string
+	Compression              Compression
+	Settings                 []byte
+	TableName                string
+	IdentityProperty         string
+	LastChangeTimeProperty   string
+	LastChangeTimeFormat     string
+	DisplayedProperty        string
+	UserCursor               Cursor
+	Health                   Health
+	FileOrderingPropertyPath string
+	ExportMode               *ExportMode
+	MatchingProperties       *MatchingProperties
+	ExportOnDuplicatedUsers  *bool
 }
 
 // Language represents a transformation language.

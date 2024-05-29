@@ -28,35 +28,36 @@ import (
 
 // Action represents an action of a connection.
 type Action struct {
-	apis                    *APIs
-	action                  *state.Action
-	connection              *Connection
-	ID                      int
-	Connection              int
-	Target                  Target
-	Name                    string
-	Enabled                 bool
-	EventType               *string
-	Running                 bool
-	ScheduleStart           *int
-	SchedulePeriod          *SchedulePeriod
-	InSchema                types.Type
-	OutSchema               types.Type
-	Filter                  *Filter
-	Transformation          Transformation
-	Query                   *string
-	Connector               string
-	Path                    *string
-	Sheet                   *string
-	Compression             Compression
-	Table                   *string
-	IdentityProperty        *string
-	DisplayedProperty       string
-	LastChangeTimeProperty  *string
-	LastChangeTimeFormat    *string
-	ExportMode              *ExportMode
-	MatchingProperties      *MatchingProperties
-	ExportOnDuplicatedUsers *bool
+	apis                     *APIs
+	action                   *state.Action
+	connection               *Connection
+	ID                       int
+	Connection               int
+	Target                   Target
+	Name                     string
+	Enabled                  bool
+	EventType                *string
+	Running                  bool
+	ScheduleStart            *int
+	SchedulePeriod           *SchedulePeriod
+	InSchema                 types.Type
+	OutSchema                types.Type
+	Filter                   *Filter
+	Transformation           Transformation
+	Query                    *string
+	Connector                string
+	Path                     *string
+	Sheet                    *string
+	Compression              Compression
+	Table                    *string
+	IdentityProperty         *string
+	DisplayedProperty        string
+	LastChangeTimeProperty   *string
+	LastChangeTimeFormat     *string
+	FileOrderingPropertyPath *string
+	ExportMode               *ExportMode
+	MatchingProperties       *MatchingProperties
+	ExportOnDuplicatedUsers  *bool
 }
 
 // Language represents a transformation language. Valid values are "JavaScript"
@@ -161,6 +162,10 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	if action.LastChangeTimeFormat != "" {
 		format := action.LastChangeTimeFormat
 		this.LastChangeTimeFormat = &format
+	}
+	if action.FileOrderingPropertyPath != "" {
+		p := action.FileOrderingPropertyPath
+		this.FileOrderingPropertyPath = &p
 	}
 	this.ExportMode = (*ExportMode)(action.ExportMode)
 	if props := action.MatchingProperties; props != nil {
@@ -380,18 +385,19 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Transformation: state.Transformation{
 			Mapping: action.Transformation.Mapping,
 		},
-		Query:                   action.Query,
-		Connector:               action.Connector,
-		Path:                    action.Path,
-		Sheet:                   action.Sheet,
-		Compression:             state.Compression(action.Compression),
-		TableName:               action.TableName,
-		IdentityProperty:        action.IdentityProperty,
-		DisplayedProperty:       action.DisplayedProperty,
-		LastChangeTimeProperty:  action.LastChangeTimeProperty,
-		LastChangeTimeFormat:    action.LastChangeTimeFormat,
-		ExportMode:              (*state.ExportMode)(action.ExportMode),
-		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
+		Query:                    action.Query,
+		Connector:                action.Connector,
+		Path:                     action.Path,
+		Sheet:                    action.Sheet,
+		Compression:              state.Compression(action.Compression),
+		TableName:                action.TableName,
+		IdentityProperty:         action.IdentityProperty,
+		DisplayedProperty:        action.DisplayedProperty,
+		LastChangeTimeProperty:   action.LastChangeTimeProperty,
+		LastChangeTimeFormat:     action.LastChangeTimeFormat,
+		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
+		ExportMode:               (*state.ExportMode)(action.ExportMode),
+		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
 	if function := action.Transformation.Function; function != nil {
 		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
@@ -533,13 +539,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_property = $17, "+
 			"displayed_property = $18, last_change_time_property = $19, last_change_time_format = $20, "+
-			"export_mode = $21, matching_properties_internal = $22, matching_properties_external = $23, "+
-			"export_on_duplicated_users = $24\nWHERE id = $25",
+			"file_ordering_property_path = $21, export_mode = $22, matching_properties_internal = $23, "+
+			"matching_properties_external = $24, export_on_duplicated_users = $25\nWHERE id = $26",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorName,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
 			n.IdentityProperty, n.DisplayedProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
-			n.ExportMode, string(matchPropInternal),
+			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
 		if err != nil {
@@ -785,6 +791,13 @@ type ActionToSet struct {
 	//
 	// It cannot be longer than 64 runes.
 	LastChangeTimeFormat string
+
+	// FileOrderingPropertyPath is the property path for which to order users
+	// when they are exported to a file, and must therefore refer to a property
+	// of the action's output schema (OutSchema).
+	// It cannot be longer than 1024 runes.
+	// For actions that do not export users to file, this is the empty string.
+	FileOrderingPropertyPath string
 
 	// ExportMode is the export mode, if it has one.
 	ExportMode *ExportMode

@@ -52,6 +52,7 @@ interface Action {
 	LastChangeTimeProperty: string | null;
 	LastChangeTimeFormat: string | null;
 	DisplayedProperty: string | null;
+	FileOrderingPropertyPath: string | null;
 	ExportMode: ExportMode | null;
 	MatchingProperties: MatchingProperties | null;
 	ExportOnDuplicatedUsers: boolean | null;
@@ -81,6 +82,7 @@ interface ActionToSet {
 	LastChangeTimeProperty?: string | null;
 	LastChangeTimeFormat?: string | null;
 	DisplayedProperty?: string | null;
+	FileOrderingPropertyPath?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
 	exportOnDuplicatedUsers?: boolean | null;

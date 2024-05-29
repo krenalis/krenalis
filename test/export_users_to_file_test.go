@@ -96,6 +96,7 @@ func TestExportUsersToFile(t *testing.T) {
 		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma": ",",
 		}),
+		FileOrderingPropertyPath: "email",
 	})
 
 	compressions := []apis.Compression{
@@ -138,7 +139,8 @@ func TestExportUsersToFile(t *testing.T) {
 			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma": ",",
 			}),
-			Compression: chichitester.Compression(compression),
+			Compression:              chichitester.Compression(compression),
+			FileOrderingPropertyPath: "email",
 		}, nil)
 
 		// Execute the action that export users.

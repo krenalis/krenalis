@@ -24,6 +24,13 @@ When exporting to an app, **two different types of conflicts** can occur, which 
 
 ### Ordering
 
-When exporting users to a file, the ordering of users is according to *the first property mapped and/or transformed*.
+When exporting users to a file, the order of the users is indicated through an action setting, where you can choose a property to sort users by.
 
-> NOTE: this behavior is only a temporary workaround and will be changed. See the [issue 757](https://github.com/open2b/chichi/issues/757).
+This property, which can also be an Object property, must have one of these types:
+
+* `Int(n)`       
+* `UInt(n)`      
+* `Decimal(p,s)`, but only if scale `s` is 0
+* `UUID`         
+* `Inet`         
+* `Text`         
