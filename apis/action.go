@@ -408,6 +408,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			n.Transformation.Function.Language = state.Python
 		}
 	}
+	if n.Transformation.Mapping != nil || n.Transformation.Function != nil {
+		n.ResetUserCursor = shouldResetCursor(this.action.Transformation, n.Transformation)
+	}
 
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -537,14 +540,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
-			"sheet = $13, compression = $14, settings = $15, table_name = $16,  identity_property = $17, "+
-			"displayed_property = $18, last_change_time_property = $19, last_change_time_format = $20, "+
-			"file_ordering_property_path = $21, export_mode = $22, matching_properties_internal = $23, "+
-			"matching_properties_external = $24, export_on_duplicated_users = $25\nWHERE id = $26",
+			"sheet = $13, compression = $14, settings = $15, table_name = $16, identity_property = $17, "+
+			"displayed_property = $18, user_cursor = CASE WHEN $19 THEN '(\"\", \"0001-01-01 00:00:00+00\")' ELSE user_cursor END, "+
+			"last_change_time_property = $20, last_change_time_format = $21, "+
+			"file_ordering_property_path = $22, export_mode = $23, matching_properties_internal = $24, "+
+			"matching_properties_external = $25, export_on_duplicated_users = $26\nWHERE id = $27",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorName,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.DisplayedProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.IdentityProperty, n.DisplayedProperty, n.ResetUserCursor, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -937,6 +941,27 @@ func onlyForMatching(schema types.Type) types.Type {
 		return types.Type{}
 	}
 	return types.Object(props)
+}
+
+// shouldResetCursor reports whether the cursor of an action should be reset if
+// the transformation of the action changes from t1 to t2.
+func shouldResetCursor(t1, t2 state.Transformation) bool {
+	if t1.Mapping == nil && t2.Mapping != nil {
+		return true
+	}
+	if t1.Function == nil && t2.Function != nil {
+		return true
+	}
+	if t1.Function != nil {
+		return t1.Function != t2.Function
+	}
+	for out, in2 := range t2.Mapping {
+		in1, ok := t1.Mapping[out]
+		if !ok || in1 != in2 {
+			return true
+		}
+	}
+	return false
 }
 
 // transformationFunctionName returns the name the transformation function for

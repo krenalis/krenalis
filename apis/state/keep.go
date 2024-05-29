@@ -906,6 +906,7 @@ type SetAction struct {
 	TableName                string
 	IdentityProperty         string
 	DisplayedProperty        string
+	ResetUserCursor          bool
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	FileOrderingPropertyPath string
@@ -937,6 +938,9 @@ func (state *State) setAction(n notification) {
 		a.TableName = e.TableName
 		a.IdentityProperty = e.IdentityProperty
 		a.DisplayedProperty = e.DisplayedProperty
+		if e.ResetUserCursor {
+			a.UserCursor = Cursor{}
+		}
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
 		a.FileOrderingPropertyPath = e.FileOrderingPropertyPath
