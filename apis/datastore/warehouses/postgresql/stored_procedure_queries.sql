@@ -108,12 +108,12 @@ AS $$
         SELECT "__id__"
         FROM "_users"
         WHERE
-            "_users_identities"."__identity_key__" = ANY ("_users"."__identity_keys__")
+            "_users_identities"."__identity_key__" = ANY ("_users"."__identities__")
         LIMIT 1
     )
     FROM "_users"
     WHERE
-        "_users_identities"."__identity_key__" = ANY ("_users"."__identity_keys__");
+        "_users_identities"."__identity_key__" = ANY ("_users"."__identities__");
 
     -- Update the user GID of the events.
     UPDATE "events" SET "user" = null;

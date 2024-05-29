@@ -563,7 +563,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`"__identity_keys__", "__id__"`)
+	usersSyncQueries.WriteString(`"__identities__", "__id__"`)
 	usersSyncQueries.WriteString(") SELECT\n")
 	for _, c := range usersColumns {
 		if c.Name == "__id__" {
@@ -576,7 +576,7 @@ func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context,
 		usersSyncQueries.WriteByte('"')
 		usersSyncQueries.WriteByte(',')
 	}
-	// Write the "__identity_keys__" column.
+	// Write the "__identities__" column.
 	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__identity_key__"), `)
 	// Write the "__id__" column.
 	// If all GIDs are the same - ignoring the NULL ones, which refer to new
