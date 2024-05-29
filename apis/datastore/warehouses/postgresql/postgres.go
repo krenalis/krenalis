@@ -12,6 +12,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -108,6 +109,19 @@ func (warehouse *PostgreSQL) Close() error {
 	}
 	warehouse.db.Close()
 	warehouse.db = nil
+	return nil
+}
+
+// DeleteConnectionIdentities deletes the identities of a connection.
+func (warehouse *PostgreSQL) DeleteConnectionIdentities(ctx context.Context, connection int) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(ctx, `DELETE FROM "_users_identities" WHERE "__connection__" = $1`, connection)
+	if err != nil {
+		return warehouses.Error(err)
+	}
 	return nil
 }
 
@@ -373,6 +387,110 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	return nil
 }
 
+// MergeIdentities merges existing identities, deletes them, and inserts new
+// ones.
+func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
+
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+
+	var b strings.Builder
+
+	// Create the temporary table.
+	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	b.WriteString(`CREATE UNLOGGED TABLE "`)
+	b.WriteString(tempTableName)
+	b.WriteString("\" AS\n  SELECT ")
+	for _, c := range columns {
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteString(`",`)
+	}
+	b.WriteString("B'0'::bit(" + strconv.Itoa(len(columns)) + ") AS \"$v\"," +
+		"FALSE AS \"$deleted\" FROM \"_users_identities\"\nWITH NO DATA")
+	_, err = db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	defer func() {
+		_, err := warehouse.db.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
+		if err != nil {
+			slog.Error("cannot drop temporary table from data warehouse", "table", tempTableName, "err", err)
+		}
+	}()
+
+	// Copy the rows into the temporary table.
+	columnNames := make([]string, len(columns)+2)
+	for i, c := range columns {
+		columnNames[i] = c.Name
+	}
+	columnNames[len(columns)] = `$v`
+	columnNames[len(columns)+1] = `$deleted`
+	_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	var keys = []string{"__connection__", "__identity_id__", "__is_anonymous__"}
+
+	// Merge the temporary table's rows with the destination table's rows.
+	b.Reset()
+	b.WriteString("MERGE INTO \"_users_identities\" d\nUSING \"")
+	b.WriteString(tempTableName)
+	b.WriteString("\" s\nON d.\"__connection__\" = s.\"__connection__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
+	b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
+	j := 0
+	for i, c := range columns {
+		if slices.Contains(keys, c.Name) {
+			continue
+		}
+		if j > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString("\n\"")
+		b.WriteString(c.Name)
+		b.WriteString("\" = CASE WHEN get_bit(\"$v\"," + strconv.Itoa(i) + ") = 0 THEN ")
+		if c.Name == "__anonymous_ids__" {
+			b.WriteString(`CASE WHEN s."__anonymous_ids__"[1] = ANY(d."__anonymous_ids__") THEN d."__anonymous_ids__" ELSE d."__anonymous_ids__" || s."__anonymous_ids__"[1] END`)
+		} else {
+			b.WriteString(`s."`)
+			b.WriteString(c.Name)
+			b.WriteString(`"`)
+		}
+		b.WriteString(` ELSE d."`)
+		b.WriteString(c.Name)
+		b.WriteString(`" END`)
+		j++
+	}
+	b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
+	for i, c := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteByte('"')
+	}
+	b.WriteString(")\n  VALUES (")
+	for i, c := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`s."`)
+		b.WriteString(c.Name)
+		b.WriteByte('"')
+	}
+	b.WriteString(")\nWHEN MATCHED THEN\n  DELETE")
+	_, err = db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	return nil
+}
+
 // Ping checks the connection to the data warehouse.
 func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	db, err := warehouse.connection()
@@ -593,6 +711,56 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 }
 
 func (c *copyForDeleteFrom) Err() error {
+	return nil
+}
+
+// copyForIdentities implements the pgx.CopyFromSource interface.
+type copyForIdentities struct {
+	columns []warehouses.Column
+	rows    []map[string]any
+	values  []any
+	noVoid  string
+}
+
+// newCopyForIdentities returns a pgx.CopyFromSource implementation used to copy
+// identities to add and delete to a temporary identity table.
+func newCopyForIdentities(columns []warehouses.Column, rows []map[string]any) pgx.CopyFromSource {
+	c := &copyForIdentities{
+		columns: columns,
+		rows:    rows,
+		values:  make([]any, len(columns)+2),
+		noVoid:  strings.Repeat("0", len(columns)),
+	}
+	return c
+}
+
+func (c *copyForIdentities) Next() bool {
+	return len(c.rows) > 0
+}
+
+func (c *copyForIdentities) Values() ([]any, error) {
+	row := c.rows[0]
+	var ok bool
+	var void string
+	for i, column := range c.columns {
+		c.values[i], ok = row[column.Name]
+		if ok {
+			void += "0"
+		} else {
+			void += "1"
+		}
+	}
+	c.values[len(c.values)-2] = void
+	if deleted, _ := row["$deleted"].(bool); deleted {
+		c.values[len(c.values)-1] = true
+	} else {
+		c.values[len(c.values)-1] = nil
+	}
+	c.rows = c.rows[1:]
+	return c.values, nil
+}
+
+func (c *copyForIdentities) Err() error {
 	return nil
 }
 

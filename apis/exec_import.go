@@ -94,7 +94,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.ImportedStep)
 		}
 	}
-	iw, err := this.connection.store.IdentitiesWriter(ctx, this.action.OutSchema, connection.ID, false, ack)
+	iw, err := this.connection.store.IdentitiesWriter(this.action.OutSchema, connection.ID, ack)
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
@@ -157,20 +157,16 @@ func (this *Action) importUsers(ctx context.Context) error {
 				user.Properties = result.Value
 				stats.Passed(statistics.TransformedStep)
 				stats.Passed(statistics.OutputValidatedStep)
-				ok := iw.Write(ctx, warehouses.Identity{
+				err = iw.Write(datastore.Identity{
 					ID:                user.ID,
 					Properties:        user.Properties,
-					LastChangeTime:    user.LastChangeTime,
 					DisplayedProperty: user.DisplayedProperty,
+					LastChangeTime:    user.LastChangeTime,
 				})
-				if !ok {
+				if err != nil {
 					err := iw.Close(ctx)
 					return actionExecutionError{err}
 				}
-			}
-			err = iw.Close(ctx)
-			if err != nil {
-				return actionExecutionError{err}
 			}
 
 			// Update the connection stats.
@@ -198,6 +194,11 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if err == connectors.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}
+		return actionExecutionError{err}
+	}
+
+	err = iw.Close(ctx)
+	if err != nil {
 		return actionExecutionError{err}
 	}
 

@@ -130,11 +130,6 @@ func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, column string) 
 	panic("TODO: not implemented")
 }
 
-// IdentitiesWriter returns an IdentitiesWriter.
-func (warehouse *Snowflake) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
-	panic("not implemented")
-}
-
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *Snowflake) Init(ctx context.Context) error {
 	return nil
@@ -359,6 +354,11 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	}
 
 	return nil
+}
+
+// MergeIdentities merge existing identities, deletes them and inserts new ones.
+func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
+	panic("TODO: not implemented")
 }
 
 // Ping checks the connection to the data warehouse.

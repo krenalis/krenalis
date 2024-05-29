@@ -22,7 +22,6 @@ import (
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -123,11 +122,6 @@ func (warehouse *ClickHouse) DuplicatedUsers(ctx context.Context, column string)
 	panic("TODO: not implemented")
 }
 
-// IdentitiesWriter returns an IdentitiesWriter.
-func (warehouse *ClickHouse) IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack warehouses.IdentitiesAckFunc) warehouses.IdentitiesWriter {
-	panic("not implemented")
-}
-
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	conn, err := warehouse.connection()
@@ -152,6 +146,11 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 // Merge performs a table merge operation.
 func (warehouse *ClickHouse) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
 	return errors.New("not implemented yet")
+}
+
+// MergeIdentities merge existing identities, deletes them and inserts new ones.
+func (warehouse *ClickHouse) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
+	panic("TODO: not implemented")
 }
 
 // Ping checks the connection to the data warehouse.

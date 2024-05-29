@@ -146,14 +146,6 @@ type Warehouse interface {
 	// error.
 	DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error)
 
-	// IdentitiesWriter returns an IdentitiesWriter.
-	// An IdentitiesWriter can be used for writing user identities with the given
-	// schema, relative to the connection, on the data warehouse. fromEvent
-	// indicates if the user identities are imported from an event or not. ack is
-	// the ack function (see the documentation of IdentitiesWriter for more details
-	// about it).
-	IdentitiesWriter(ctx context.Context, schema types.Type, connection int, fromEvent bool, ack IdentitiesAckFunc) IdentitiesWriter
-
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
 
@@ -165,6 +157,22 @@ type Warehouse interface {
 	// rows or deleted can be empty but not both.
 	// Note that rows may be changed by this method.
 	Merge(ctx context.Context, table MergeTable, rows [][]any, deleted []any) error
+
+	// MergeIdentities merges existing identities, deletes them, and inserts new
+	// ones. cols are the columns whose values are present in the rows and contain
+	// at least the columns:
+	//
+	//   __connection__
+	//   __identity_id__
+	//   __is_anonymous__
+	//   __displayed_property__
+	//   __last_change_time__
+	//
+	// rows are the rows to update or add if not already present. If a row contains
+	// the "$deleted" column with value true, then the matching row in the
+	// identities table is deleted.
+	// Note that rows may be changed by this method.
+	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
 	// Normalize normalizes a value v returned by the Query method.
 	// In particular, Normalize handles the values obtained by the scan on the
@@ -241,55 +249,6 @@ type Column struct {
 	Name     string
 	Type     types.Type
 	Nullable bool
-}
-
-// IdentitiesAckFunc is the function called when the writing of one or more user
-// identities terminates. The parameter err represents the error that occurred
-// while writing the identities, if any, and ids holds the identifiers of such
-// identities.
-type IdentitiesAckFunc func(err error, ids []string)
-
-// IdentitiesWriter is the interface implemented by the data warehouse drivers
-// to write user identities on the data warehouse.
-type IdentitiesWriter interface {
-
-	// Close closes the IdentitiesWriter, ensuring the completion of all pending or
-	// ongoing write operations. In the event of a canceled context, it interrupts
-	// ongoing writes, discards pending ones, and returns.
-	//
-	// In case an error occurs with the data warehouse, a DataWarehouseError error
-	// is returned.
-	//
-	// If the IdentitiesWriter is already closed, it does nothing and returns
-	// immediately.
-	Close(ctx context.Context) error
-
-	// Write writes a user identity. Typically, Write returns immediately, deferring
-	// the actual write operation to a later time. If it returns false, no further
-	// Write operations can be performed, and a call to Close will return an error.
-	//
-	// The values of the Identity Properties must comply with the schema of the
-	// table of the identities in the data warehouse (note that "internal columns",
-	// starting and ending with "__", shall not be included in Properties since they
-	// are not included in the schema).
-	//
-	// If the user identity is successfully written, the ack function is invoked
-	// with a nil error and the record's ID as arguments. If writing the record
-	// fails, the ack function is invoked with a non-nil error and the user
-	// identity's ID as arguments. The ack function is invoked even if Write returns
-	// false.
-	//
-	// It panics if called on a closed writer.
-	Write(ctx context.Context, identity Identity) bool
-}
-
-// Identity is a user identity to be written on the data warehouse.
-type Identity struct {
-	ID                string
-	Properties        map[string]any
-	AnonymousID       string    // empty string if not present.
-	DisplayedProperty string    // cannot be longer than 40 runes.
-	LastChangeTime    time.Time // in UTC.
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

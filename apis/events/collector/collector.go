@@ -33,7 +33,6 @@ import (
 
 	"github.com/open2b/chichi/apis/culture"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/events/dispatcher"
 	"github.com/open2b/chichi/apis/postgres"
@@ -306,7 +305,7 @@ func (c *Collector) importUsersIdentities(source *state.Connection, events []*ev
 			slog.Warn("users identities imported successfully", "action", action.ID, "ids", ids)
 		}
 		ctx := context.Background()
-		iw, err := store.IdentitiesWriter(ctx, action.OutSchema, connection.ID, true, ack)
+		iw, err := store.IdentitiesWriter(action.OutSchema, connection.ID, ack)
 		if err != nil {
 			return err
 		}
@@ -363,14 +362,14 @@ func (c *Collector) importUsersIdentities(source *state.Connection, events []*ev
 				displayedProperty = ""
 			}
 			// Write the user identity on the data warehouse.
-			ok := iw.Write(ctx, warehouses.Identity{
+			err := iw.Write(datastore.Identity{
 				ID:                event.UserId,
-				Properties:        properties,
 				AnonymousID:       event.AnonymousId,
-				LastChangeTime:    event.Timestamp,
+				Properties:        properties,
 				DisplayedProperty: displayedProperty,
+				LastChangeTime:    event.Timestamp,
 			})
-			if !ok {
+			if err != nil {
 				return iw.Close(ctx)
 			}
 		}

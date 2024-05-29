@@ -12,7 +12,7 @@ Meta properties are, syntactically, properties whose names start and end with `_
 
 ```
 __id__
-__anonymous_id__
+__anonymous_ids__
 __GID__
 __x__
 ```

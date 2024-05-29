@@ -11,10 +11,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/analytics-go/v3"
 )
 

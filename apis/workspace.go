@@ -1677,11 +1677,12 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
-		Properties: []string{"__connection__", "__identity_id__", "__anonymous_ids__", "__last_change_time__", "__displayed_property__"},
-		Filter:     filter,
-		OrderBy:    "__identity_key__",
-		First:      first,
-		Limit:      limit,
+		Properties: []string{"__connection__", "__identity_id__", "__is_anonymous__",
+			"__anonymous_ids__", "__last_change_time__", "__displayed_property__"},
+		Filter:  filter,
+		OrderBy: "__identity_key__",
+		First:   first,
+		Limit:   limit,
 	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
@@ -1704,8 +1705,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			continue
 		}
 
-		// Determine the value for the identity ID, which may be the empty
-		// string for identities incoming from anonymous events.
+		// Determine the value for the identity ID.
 		identityID := record["__identity_id__"].(string)
 
 		// Determine the label for the Identity ID, except for the case of
@@ -1737,6 +1737,16 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			for i := range ids {
 				anonIDs[i] = ids[i].(string)
 			}
+		}
+
+		// In the case of anonymous identities, the anonymous ID is inside the
+		// identity ID, so there is the need to populate the anonymous IDs by
+		// taking that value, then reset the identity ID.
+		// TODO(Gianluca): we should then review this behavior, to understand
+		// what we want to expose externally.
+		if record["__is_anonymous__"].(bool) {
+			anonIDs = append(anonIDs, identityID)
+			identityID = ""
 		}
 
 		// Determine the last change time.
