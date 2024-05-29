@@ -330,13 +330,12 @@ class Connections {
 		);
 	};
 
-	executeAction = async (connection: number, action: number, reimport: boolean): Promise<void> => {
+	executeAction = async (connection: number, action: number): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
 				action,
 			)}/executions`,
 			http.POST,
-			{ Reimport: reimport },
 		);
 	};
 

@@ -89,7 +89,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			</div>
 		);
 		try {
-			await api.workspaces.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
+			await api.workspaces.connections.executeAction(connection.id, actionID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				runButtonRefs.current[actionID].current!.error(
