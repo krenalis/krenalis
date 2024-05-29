@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
@@ -108,6 +109,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
+	var lastChangeTime time.Time
+
 	// Read the users.
 	for user := range records.Seq() {
 
@@ -123,6 +126,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		stats.Passed(statistics.ReceivedStep)
 		stats.Passed(statistics.InputValidatedStep)
+
+		if user.LastChangeTime.After(lastChangeTime) {
+			lastChangeTime = user.LastChangeTime
+		}
 
 		users = append(users, user)
 
@@ -178,7 +185,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			// Set the user cursor.
 			if connector.Type == state.AppType {
 				last := users[len(users)-1]
-				err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, LastChangeTime: last.LastChangeTime})
+				err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, LastChangeTime: lastChangeTime})
 				if err != nil {
 					return actionExecutionError{err}
 				}
