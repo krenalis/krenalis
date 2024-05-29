@@ -23,17 +23,17 @@ __x__
 
 A driver must ensure that the data warehouse contains at least these tables with their respective columns:
 
-| Table Name         | Column Name                             | Type          | Additional Requirements                                       |
-|--------------------|-----------------------------------------|---------------|---------------------------------------------------------------|
-| `users`            | `__id__`                                | `UUID`        | -                                                             |
-| `users_identities` | `__pk__`                                | `Int(32)`     | auto-incrementing, primary key                                |
-| `users_identities` | `__connection__`                        | `Int(32)`     | not null, default to 0                                        |
-| `users_identities` | `__identity_id__`                       | `Text`        | not null, default to empty string                             |
-| `users_identities` | `__displayed_property__`                | `Text`        | 40 characters long or more, not null, default to empty string |
-| `users_identities` | `__anonymous_ids__`                     | `Array(Text)` | -                                                             |
-| `users_identities` | `__last_change_time__`                  | `DateTime`    | not null                                                      |
-| `users_identities` | `__gid__`                               | `UUID`        | -                                                             |
-| `events`           | *every column in the event schema* [^1] |               |                                                               |
+| Table Name         | Column Name                             | Type          | Additional Requirements                                       | Description                                                                                                                              |
+|--------------------|-----------------------------------------|---------------|---------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `users`            | `__id__`                                | `UUID`        | -                                                             | GID of the user                                                                                                                          |
+| `users_identities` | `__pk__`                                | `Int(32)`     | auto-incrementing, primary key                                | It is used to refer a specific identity. It can probably then be removed, see issue [#687](https://github.com/open2b/chichi/issues/687). |
+| `users_identities` | `__connection__`                        | `Int(32)`     | not null, default to 0                                        | Connection from which the identity is imported                                                                                           |
+| `users_identities` | `__identity_id__`                       | `Text`        | not null, default to empty string                             | Identifier for the identity. For anonymous identities, this is the anonymous ID.                                                         |
+| `users_identities` | `__displayed_property__`                | `Text`        | 40 characters long or more, not null, default to empty string | Displayed property.                                                                                                                      |
+| `users_identities` | `__anonymous_ids__`                     | `Array(Text)` | -                                                             | List of anonymous IDs for logged in users. Empty for anonymous users, for whom the anonymous ID is inside `__identity_id__`              |
+| `users_identities` | `__last_change_time__`                  | `DateTime`    | not null                                                      | Datetime of last modification of the identity                                                                                            |
+| `users_identities` | `__gid__`                               | `UUID`        | -                                                             | GID of the user associated with the identity                                                                                             |
+| `events`           | *every column in the event schema* [^1] |               | -                                                             | -                                                                                                                                        |
 
 Note that other tables, for example those to store destination users, are at the discretion of the driver, which must only expose the methods to implement the interface in Go.
 
