@@ -167,6 +167,9 @@ func (dummy *Dummy) Records(ctx context.Context, target chichi.Targets, properti
 	defer usersLock.Unlock()
 	users := make([]chichi.Record, 0, len(allUsers))
 	for id, props := range allUsers {
+		if usersLastChangeTimes[id].Before(cursor.LastChangeTime) {
+			continue
+		}
 		users = append(users, chichi.Record{
 			ID:             id,
 			Properties:     props,
