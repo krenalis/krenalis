@@ -319,11 +319,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	externalProp := this.action.MatchingProperties.External
 	schema := types.Object([]types.Property{externalProp})
 
-	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
-	// issue https://github.com/open2b/chichi/issues/183.
-	var cursor state.Cursor
-
-	records, err := this.app().Users(ctx, schema, "", cursor)
+	records, err := this.app().Users(ctx, schema, "", time.Time{})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 	}

@@ -759,17 +759,17 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	if !schema.Valid() {
 		return nil, "", errors.BadRequest("schema is not valid")
 	}
-	var cur state.Cursor
+	var lastChangeTime time.Time
 	if cursor != "" {
 		var err error
-		cur, err = deserializeCursor(cursor)
+		lastChangeTime, err = deserializeCursor(cursor)
 		if err != nil {
 			return nil, "", errors.BadRequest("cursor is malformed")
 		}
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, "", cur)
+	records, err := this.app().Users(ctx, schema, "", lastChangeTime)
 	if err != nil {
 		return nil, "", err
 	}
@@ -2194,15 +2194,15 @@ func statsTimeSlot(t time.Time) int {
 }
 
 // deserializeCursor deserializes a cursor passed to the API.
-func deserializeCursor(cursor string) (state.Cursor, error) {
+func deserializeCursor(cursor string) (time.Time, error) {
 	data, err := hex.DecodeString(cursor)
 	if err != nil {
-		return state.Cursor{}, err
+		return time.Time{}, err
 	}
-	var c state.Cursor
+	var c time.Time
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		return state.Cursor{}, err
+		return time.Time{}, err
 	}
 	// TODO(marco): validate the cursor's fields.
 	return c, nil

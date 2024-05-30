@@ -43,10 +43,9 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 	switch connector.Type {
 	case state.AppType:
-		var cursor state.Cursor
+		var lastChangeTime time.Time
 		if exe, _ := action.Execution(); !exe.Reimport {
-			cursor.ID = action.UserCursor.ID
-			cursor.LastChangeTime = action.UserCursor.LastChangeTime
+			lastChangeTime = action.UserCursor.LastChangeTime
 		}
 		if exe, _ := action.Execution(); exe.Reimport {
 			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
@@ -60,7 +59,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 				return err
 			}
 		}
-		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedProperty, cursor)
+		records, err = this.app().Users(ctx, action.InSchema, action.DisplayedProperty, lastChangeTime)
 	case state.DatabaseType:
 		replacer := func(name string) (string, bool) {
 			if name == "limit" {

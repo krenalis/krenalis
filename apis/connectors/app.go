@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/connectors/httpclient"
@@ -170,18 +171,21 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 	return app.httpClient.Do(r)
 }
 
-// Users returns an iterator to iterate over the app's users, starting from a
-// cursor. Each returned record will contain, in the Properties field, the
-// properties in schema, with the same types.
+// Users returns an iterator to iterate over the app's users. Each returned
+// record will contain, in the Properties field, the properties in schema, with
+// the same types.
 //
 // displayedProperty, when not empty, is the app property name from which the
 // displayed property should be imported. If such property does not exist in the
 // app's schema, or exists but its type is not compatible, no errors are
 // returned and the displayed property  is simply not imported.
 //
+// lastChangeTime is the most recent lastChangeTime value read from the previous
+// import.
+//
 // If the provided schema, that must be valid, does not conform with the app's
 // source users schema, it returns a *SchemaError error.
-func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty string, cursor state.Cursor) (Records, error) {
+func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty string, lastChangeTime time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -209,7 +213,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 		ctx:               ctx,
 		schema:            schema,
 		timeLayouts:       app.timeLayouts,
-		cursor:            cursor,
+		lastChangeTime:    lastChangeTime,
 		appName:           app.name,
 		inner:             app.inner,
 		displayedProperty: dp,
@@ -275,7 +279,7 @@ type appRecords struct {
 	ctx               context.Context
 	schema            types.Type
 	timeLayouts       *state.TimeLayouts
-	cursor            state.Cursor
+	lastChangeTime    time.Time
 	appName           string
 	inner             chichi.App
 	last              bool
@@ -307,7 +311,7 @@ func (r *appRecords) Seq() Seq[Record] {
 		}
 
 		cursor := chichi.Cursor{
-			LastChangeTime: r.cursor.LastChangeTime,
+			LastChangeTime: r.lastChangeTime,
 		}
 
 		properties := types.Properties(r.schema)
