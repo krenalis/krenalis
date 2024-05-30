@@ -20,7 +20,7 @@ The Identity Resolution is executed:
 
 ## Same User Criterion
 
-This is the definition: **given two user identities, they correspond to the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value), and (2) if one or both identities have `NULL` value for each identifier with higher priority than the first identifier that is matched.**
+This is the definition: **given two user identities, they correspond to the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value), and (2) one or both identities have `NULL` value for each identifier with higher priority than the first identifier that is matched.**
 
 In this example, with two user identities (A and B) and three identifiers (where #1 has the higher priority):
 
@@ -54,21 +54,21 @@ Here, `customerId` is the identifier with the higher priority while `address.str
 
 ## Merging of Users
 
-In the Identity Resolution, user identities are merged into a single user by taking the `max` value between the values of their properties.
+In the Identity Resolution, **two or more user identities** are merged into a single user by taking the `max` value between the values of their properties.
 
 > `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
 
 For example, consider two user identities with the properties `email`, `name` and `total_orders`, which are considered *the same user* by the Identity Resolution and thus must be merged:
 
 | email | name   | total_orders |
-| ----- | ------ | ------------ |
+|-------|--------|--------------|
 | a@b   | John   | 10           |
 | a@b   | `NULL` | 20           |
 
 The resulting user will be then:
 
 | email | name | total_orders |
-| ----- | ---- | ------------ |
+|-------|------|--------------|
 | a@b   | John | 20           |
 
 ## User GIDs
