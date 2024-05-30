@@ -79,9 +79,9 @@ Cursor{
 }
 ```
 
-For subsequent calls in the same import process, `LastChangeTime` is the `LastChangeTime` field of the last record returned, while `Next` is the value of `next` returned by the last successful call.
+For subsequent calls in the same import process, `LastChangeTime` is most recent last change time among all records, while `Next` is the value of `next` returned by the last successful call.
 
-As a special case, the first call of an **incremental** import, unlike a complete import, receives a cursor with `LastChangeTime` being those of the last record returned from the previous import. This way, the import can resume from where the previous one ended.
+As a special case, the first call of an **incremental** import, unlike a complete import, receives a cursor with `LastChangeTime` being the most recent last change time among all records returned by the previous imports. This way, the import can resume from where the previous one ended.
 
 > For apps that do not return a "next" value in the response to use for reading the next records, the connector can still rely on the cursor's `LastChangeTime` field.
 
