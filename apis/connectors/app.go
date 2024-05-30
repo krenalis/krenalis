@@ -307,7 +307,6 @@ func (r *appRecords) Seq() Seq[Record] {
 		}
 
 		cursor := chichi.Cursor{
-			ID:             r.cursor.ID,
 			LastChangeTime: r.cursor.LastChangeTime,
 		}
 
@@ -417,7 +416,6 @@ func (r *appRecords) Seq() Seq[Record] {
 			}
 
 			user := users[last]
-			cursor.ID = user.ID
 			cursor.LastChangeTime = user.LastChangeTime
 			cursor.Next = next
 

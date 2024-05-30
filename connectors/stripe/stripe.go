@@ -208,9 +208,9 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chich
 func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
 
 	var body io.Reader
-	if cursor.ID != "" {
+	if cursor.Next != "" {
 		form := url.Values{
-			"starting_after": {cursor.ID},
+			"starting_after": {cursor.Next},
 		}
 		body = strings.NewReader(form.Encode())
 	}
@@ -236,8 +236,9 @@ func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, proper
 			LastChangeTime: time.Now().UTC(),
 		}
 	}
+	next := users[len(users)-1].ID
 
-	return users, "", nil
+	return users, next, nil
 }
 
 // Schema returns the schema of the specified target.
