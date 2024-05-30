@@ -20,9 +20,19 @@ The Identity Resolution is executed:
 
 ## Same User Criterion
 
-Given two users, they are the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value), and (2) if one or both users have `NULL` value for each identifier with higher priority than the first identifier that is matched.
+Given two user identities, they correspond to the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value), and (2) if one or both identities have `NULL` value for each identifier with higher priority than the first identifier that is matched.
 
-Hence, it follows that if there are no identifiers defined in the workspace, the Identity Resolution considers every user imported from a connection always different from any other user.
+Hence, it follows that if there are no identifiers defined in the workspace, the Identity Resolution considers every user identity imported from a connection always different from any other identity.
+
+In this example, with two user identities (A and B) and three identifiers (where #1 has the higher priority):
+
+|            | Identifier #1 | Identifier #2 | Identifier #3 |
+|------------|---------------|---------------|---------------|
+| Identity A | `NULL`        | 10            | 45            |
+| Identity B | `NULL`        | `NULL`        | 45            |
+
+
+the two identities A and B match because they have the same value for the identifier #3, and one or both have a `NULL` value with identifiers with higher priority (#1 and #2). 
 
 ## Identifiers
 
