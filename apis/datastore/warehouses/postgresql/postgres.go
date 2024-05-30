@@ -503,8 +503,8 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	return nil
 }
 
-// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
-func (warehouse *PostgreSQL) RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
+// RunIdentityResolution runs the Identity Resolution.
+func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
 
 	db, err := warehouse.connection()
 	if err != nil {

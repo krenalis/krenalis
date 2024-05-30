@@ -895,7 +895,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 }
 
 // IdentifiersSchema returns the properties of the "users" schema that can be
-// used as identifiers in the Workspace Identity Resolution.
+// used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the
 // invalid schema.
 func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error) {
@@ -941,8 +941,7 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	return nil
 }
 
-// RunIdentityResolution runs the Workspace Identity Resolution on the
-// workspace.
+// RunIdentityResolution runs the Identity Resolution on the workspace.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -955,8 +954,8 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	slog.Info("running Workspace Identity Resolution", "workspace", this.workspace.ID)
-	err := this.store.RunWorkspaceIdentityResolution(ctx)
+	slog.Info("running Identity Resolution", "workspace", this.workspace.ID)
+	err := this.store.RunIdentityResolution(ctx)
 	if err != nil {
 		if err == datastore.ErrInspectionMode {
 			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
@@ -966,7 +965,7 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 		}
 		return err
 	}
-	slog.Info("execution of Workspace Identity Resolution is completed", "workspace", this.workspace.ID)
+	slog.Info("execution of Identity Resolution is completed", "workspace", this.workspace.ID)
 	return nil
 }
 
@@ -1217,7 +1216,7 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string)
 
 	// Validate the identifiers.
 	// Note that identifiers are only formally validated; the types are instead
-	// checked at runtime, before starting the Workspace Identity Resolution.
+	// checked at runtime, before starting the Identity Resolution.
 	for i, id := range identifiers {
 		if !types.IsValidPropertyPath(id) {
 			return errors.BadRequest("identifier %q is not a valid property path", id)

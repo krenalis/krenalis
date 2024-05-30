@@ -178,9 +178,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		t.Fatalf("expected 14 users, got %d", count)
 	}
 
-	// Set the "email" as identifier and run the Workspace Identity Resolution.
+	// Set the "email" as identifier and run the Identity Resolution.
 	c.SetWorkspaceIdentifiers([]string{"email"})
-	c.RunWorkspaceIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Ensure that there are 10 users.
 	users, _, count := c.Users([]string{"__id__", "email"}, "", 0, 1000)

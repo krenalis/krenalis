@@ -184,17 +184,18 @@ type Warehouse interface {
 	// active and, if necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
-	// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
+	// RunIdentityResolution runs the Identity Resolution.
 	//
-	// connections holds the identifiers of the connections of the workspace and may
-	// be empty to indicate that no connections are present in the workspace.
+	// connections holds the identifiers of the connections of the workspace and
+	// may be empty to indicate that no connections are present in the
+	// workspace.
 	//
-	// identifiers are the columns corresponding to the Workspace Identity
-	// Resolution identifiers, ordered by priority.
+	// identifiers are the columns corresponding to the Identity Resolution
+	// identifiers, ordered by priority.
 	//
 	// usersColumns holds the columns of the "users" schema, as the "users"
 	// table on the data warehouse is rebuilt by this procedure.
-	RunWorkspaceIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []Column) error
+	RunIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []Column) error
 
 	// SetDestinationUser sets the destination user for an action.
 	//

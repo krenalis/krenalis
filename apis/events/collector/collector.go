@@ -377,8 +377,8 @@ func (c *Collector) importUsersIdentities(source *state.Connection, events []*ev
 		if err != nil {
 			return err
 		}
-		// Run the Workspace Identity Resolution.
-		err = store.RunWorkspaceIdentityResolution(ctx)
+		// Run the Identity Resolution.
+		err = store.RunIdentityResolution(ctx)
 		if err != nil {
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				return err

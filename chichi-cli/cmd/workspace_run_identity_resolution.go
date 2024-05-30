@@ -13,14 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var workspaceRunIdentityResolution = &cobra.Command{
-	Use:   "run-workspace-identity-resolution <workspace>",
-	Short: "Run the Workspace Identity Resolution",
+var runIdentityResolution = &cobra.Command{
+	Use:   "run-identity-resolution <workspace>",
+	Short: "Run the Identity Resolution",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.WorkspaceRunIdentityResolution(workspace(cmd))
+		chichiapis.RunIdentityResolution(workspace(cmd))
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(workspaceRunIdentityResolution)
+	rootCmd.AddCommand(runIdentityResolution)
 }

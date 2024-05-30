@@ -64,10 +64,10 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 		t.Fatalf("expected 20 users, got %d", count)
 	}
 
-	// Delete one Dummy, run the Workspace Identity Resolution and ensure that
+	// Delete one Dummy, run the Identity Resolution and ensure that
 	// only 10 users are left.
 	c.DeleteConnection(dummy1)
-	c.RunWorkspaceIdentityResolution()
+	c.RunIdentityResolution()
 	_, _, count = c.Users([]string{"__id__", "email"}, "__id__", 0, 100)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d", count)
@@ -76,7 +76,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Delete also the other Dummy connection; now the total count of users
 	// should be zero.
 	c.DeleteConnection(dummy2)
-	c.RunWorkspaceIdentityResolution()
+	c.RunIdentityResolution()
 	_, _, count = c.Users([]string{"__id__", "email"}, "__id__", 0, 100)
 	if count != 0 {
 		t.Fatalf("expected no users, got %d", count)

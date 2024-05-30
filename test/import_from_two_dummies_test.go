@@ -108,10 +108,9 @@ func TestImportFromTwoDummies(t *testing.T) {
 		t.Fatalf("expecting %d users returned, got %d", expectedCount, totalUsers)
 	}
 
-	// Change the workspace identifiers and run the Workspace Identity
-	// Resolution.
+	// Change the workspace identifiers and run the Identity Resolution.
 	c.SetWorkspaceIdentifiers([]string{"email"})
-	c.RunWorkspaceIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
 	users, _, count = c.Users([]string{"__id__", "email", "first_name", "last_name"}, "__id__", 0, 100)

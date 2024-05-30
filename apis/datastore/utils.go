@@ -24,7 +24,7 @@ import (
 )
 
 // CanBeIdentifier reports whether a property with type t can be used as
-// identifier in the Workspace Identity Resolution.
+// identifier in the Identity Resolution.
 func CanBeIdentifier(t types.Type) bool {
 	switch t.Kind() {
 	case types.IntKind,

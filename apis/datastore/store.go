@@ -84,7 +84,7 @@ type Store struct {
 	mode      state.WarehouseMode
 	events    [][]any
 	closed    atomic.Bool
-	runningIR chan struct{} // prevents concurrent executions of the Workspace Identity Resolution.
+	runningIR chan struct{} // prevents concurrent executions of the Identity Resolution.
 }
 
 // newStore returns a new Store for the workspace ws.
@@ -312,12 +312,12 @@ func (store *Store) Mode() state.WarehouseMode {
 	return mode
 }
 
-// RunWorkspaceIdentityResolution runs the Workspace Identity Resolution.
+// RunIdentityResolution runs the Identity Resolution.
 //
 // If the data warehouse is in inspection mode, it returns the
 // ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error.
-func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
+func (store *Store) RunIdentityResolution(ctx context.Context) error {
 
 	switch store.Mode() {
 	case state.Inspection:
@@ -326,8 +326,8 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 		return ErrMaintenanceMode
 	}
 
-	// Prevent concurrent executions of the Workspace Identity Resolution. This
-	// is a workaround for the PostgreSQL error:
+	// Prevent concurrent executions of the Identity Resolution. This is a
+	// workaround for the PostgreSQL error:
 	//
 	//     duplicate key value violates unique constraint "pg_proc_proname_args_nsp_index" (SQLSTATE 23505)
 	//
@@ -373,7 +373,7 @@ func (store *Store) RunWorkspaceIdentityResolution(ctx context.Context) error {
 	// Determine the users columns.
 	usersColumns := propertiesToColumns(types.Properties(ws.UsersSchema))
 
-	return store.warehouse.RunWorkspaceIdentityResolution(ctx, connections, identifiers, usersColumns)
+	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, usersColumns)
 }
 
 // SetDestinationUser sets the destination user for an action.

@@ -210,8 +210,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 	users = nil
 
-	// Run the Workspace Identity Resolution.
-	err = this.connection.store.RunWorkspaceIdentityResolution(ctx)
+	// Run the Identity Resolution.
+	err = this.connection.store.RunIdentityResolution(ctx)
 	if err != nil {
 		return actionExecutionError{err}
 	}

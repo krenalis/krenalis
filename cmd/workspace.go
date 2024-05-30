@@ -209,7 +209,7 @@ func (workspace workspace) DisconnectWarehouse(_ http.ResponseWriter, r *http.Re
 }
 
 // IdentifiersSchema returns the properties of the "users" schema that can be
-// used as identifiers in the Workspace Identity Resolution.
+// used as identifiers in the Identity Resolution.
 func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -295,7 +295,7 @@ func (workspace workspace) RemoveEventListener(_ http.ResponseWriter, r *http.Re
 	return nil, nil
 }
 
-// RunIdentityResolution runs the Workspace Identity Resolution on a workspace.
+// RunIdentityResolution runs the Identity Resolution on a workspace.
 func (workspace workspace) RunIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
