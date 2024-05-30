@@ -1652,6 +1652,11 @@ type labelValue struct {
 	Label string
 	Value string
 }
+
+// identity represents a user identity.
+//
+// TODO(Gianluca): this type should be reviewed. See the issue
+// https://github.com/open2b/chichi/issues/791.
 type identity struct {
 	Connection        int
 	IdentityId        labelValue // zero struct for identities imported from anonymous events.
@@ -1742,7 +1747,8 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		// identity ID, so there is the need to populate the anonymous IDs by
 		// taking that value, then reset the identity ID.
 		// TODO(Gianluca): we should then review this behavior, to understand
-		// what we want to expose externally.
+		// what we want to expose externally. See the issue
+		// https://github.com/open2b/chichi/issues/791.
 		if record["__is_anonymous__"].(bool) {
 			anonIDs = append(anonIDs, identityID)
 			identityID = ""
