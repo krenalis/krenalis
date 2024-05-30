@@ -39,8 +39,8 @@ var (
 	createUsersIdentitiesTable string
 	//go:embed tables/users.sql
 	createUsersTable string
-	//go:embed stored_procedure_queries.sql
-	storeProcedureQueries string
+	//go:embed identity_resolution.sql
+	identityResolutionQueries string
 )
 
 var _ warehouses.Warehouse = &PostgreSQL{}
@@ -612,16 +612,16 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 					COUNT(*) > 1
 	)`)
 
-	// Replace the placeholders in the stored procedure query and run it.
-	query := strings.Replace(storeProcedureQueries, "{{ matching_expr }}", matchingExpr.String(), 1)
+	// Replace the placeholders in the Identity Resolution queries and run them.
+	query := strings.Replace(identityResolutionQueries, "{{ matching_expr }}", matchingExpr.String(), 1)
 	query = strings.Replace(query, "{{ users_sync_queries }}", usersSyncQueries.String(), 1)
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
 	}
 
-	// Call the 'resolve_sync_users' stored procedure, which performs the
-	// identity resolution and updates the 'users' table.
+	// Call the 'resolve_sync_users' stored procedure (which is declared in the
+	// "identity_resolution.sql" file).
 	_, err = db.Exec(ctx, "CALL resolve_sync_users()")
 	if err != nil {
 		return warehouses.Error(err)
