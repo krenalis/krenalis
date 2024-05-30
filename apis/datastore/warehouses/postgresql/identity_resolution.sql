@@ -49,7 +49,9 @@ AS $$
         DECLARE
             has_clusters_to_merge boolean;
         BEGIN 
-    
+
+        -- The idea here is to keep iterating as long as there are two
+        -- identities that match but have different clusters.
         LOOP
         
             -- Determine the clusters to merge.
