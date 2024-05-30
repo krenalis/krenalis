@@ -24,9 +24,9 @@ When exporting to an app, **two different types of conflicts** can occur, which 
 
 ### Ordering
 
-When exporting users to a file, the order of the users is indicated through an action setting, where you can choose a property to sort users by.
+When exporting users to a file, the order of the users is indicated through an action setting, where you can choose a property path to sort users by.
 
-This property, which can also be an Object property, must have one of these types:
+This property must have one of these types:
 
 * `Int(n)`       
 * `UInt(n)`      
