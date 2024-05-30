@@ -1,7 +1,7 @@
 
 # The Identity Resolution
 
-The **Identity Resolution** determines if more users, belonging to **any connection** of the workspace (even the same connection), are a single user of the workspace, and eventually merges them. It also associates the workspace users to the events stored in the data warehouse.
+The **Identity Resolution** determines if more user identities, belonging to **any connection** of the workspace (even the same connection), are a single user of the workspace, and eventually merges them. It also associates the workspace users to the events stored in the data warehouse.
 
 In particular, it performs these operations (not necessarily in this order):
 
@@ -20,9 +20,7 @@ The Identity Resolution is executed:
 
 ## Same User Criterion
 
-Given two user identities, they correspond to the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value), and (2) if one or both identities have `NULL` value for each identifier with higher priority than the first identifier that is matched.
-
-Hence, it follows that if there are no identifiers defined in the workspace, the Identity Resolution considers every user identity imported from a connection always different from any other identity.
+This is the definition: **given two user identities, they correspond to the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value), and (2) if one or both identities have `NULL` value for each identifier with higher priority than the first identifier that is matched.**
 
 In this example, with two user identities (A and B) and three identifiers (where #1 has the higher priority):
 
@@ -31,8 +29,9 @@ In this example, with two user identities (A and B) and three identifiers (where
 | Identity A | `NULL`        | 10            | 45            |
 | Identity B | `NULL`        | `NULL`        | 45            |
 
-
 the two identities A and B match because they have the same value for the identifier #3, and one or both have a `NULL` value with identifiers with higher priority (#1 and #2). 
+
+As a corollary of the previous definition, **if there are no identifiers defined in the workspace**, the Identity Resolution considers **every user identity imported** from a connection **always different from any other identity**.
 
 ## Identifiers
 
@@ -55,22 +54,22 @@ Here, `customerId` is the identifier with the higher priority while `address.str
 
 ## Merging of Users
 
-In the Identity Resolution, users are merged by taking the `max` value between the values of the properties for the users.
+In the Identity Resolution, user identities are merged into a single user by taking the `max` value between the values of their properties.
 
 > `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
 
-For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* by the Identity Resolution and thus must be merged:
+For example, consider two user identities with the properties `email`, `name` and `total_orders`, which are considered *the same user* by the Identity Resolution and thus must be merged:
 
-| email | name     | totalOrders |
-|-------|----------|-------------|
-| a@b   | John     | 10          |
-| a@b   | *(null)* | 20          |
+| email | name   | total_orders |
+| ----- | ------ | ------------ |
+| a@b   | John   | 10           |
+| a@b   | `NULL` | 20           |
 
-The resulting user of the workspace will be:
+The resulting user will be then:
 
-| email | name | totalOrders |
-|-------|------|-------------|
-| a@b   | John | 20          |
+| email | name | total_orders |
+| ----- | ---- | ------------ |
+| a@b   | John | 20           |
 
 ## User GIDs
 
