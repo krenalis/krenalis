@@ -126,7 +126,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		stats.Passed(statistics.ReceivedStep)
 		stats.Passed(statistics.InputValidatedStep)
 
-		if user.LastChangeTime.After(cursor) {
+		if connector.Type == state.AppType && user.LastChangeTime.After(cursor) {
 			cursor = user.LastChangeTime
 		}
 

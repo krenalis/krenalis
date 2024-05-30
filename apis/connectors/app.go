@@ -345,6 +345,7 @@ func (r *appRecords) Seq() Seq[Record] {
 				}
 				return
 			}
+			cursor.Next = next
 			last := len(users) - 1
 
 			// Normalize the returned users.
@@ -406,6 +407,9 @@ func (r *appRecords) Seq() Seq[Record] {
 				if err = validateTimestamp(user.LastChangeTime); err != nil {
 					return
 				}
+				if user.LastChangeTime.After(cursor.LastChangeTime) {
+					cursor.LastChangeTime = user.LastChangeTime
+				}
 
 				r.last = i == last
 
@@ -418,10 +422,6 @@ func (r *appRecords) Seq() Seq[Record] {
 			if eof {
 				return
 			}
-
-			user := users[last]
-			cursor.LastChangeTime = user.LastChangeTime
-			cursor.Next = next
 
 		}
 
