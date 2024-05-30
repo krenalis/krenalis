@@ -30,6 +30,8 @@ import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import actionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
+import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
+import { getOrderingPropertyPathComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -263,11 +265,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		setIsFileConnectorChanged,
 		isFileConnectorChanged,
 		isTransformationDisabled,
+		isEditing,
 	} = useContext(ActionContext);
 
 	const getCompletePathTimeoutID = useRef<number>();
 	const sheetsSelectRef = useRef<any>();
 	const fileConfirmButtonRef = useRef<any>();
+	const fileOrderingPropertyListRef = useRef<any>();
 
 	const pathRef = useRef({
 		lastConfirmation: '',
@@ -316,6 +320,18 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			lastConfirmation: { ...values },
 			lastUpdate: { ...values },
 		};
+	}, []);
+
+	useEffect(() => {
+		if (isImport || isEditing || actionType.Target !== 'Users') {
+			return;
+		}
+		const hasEmailColumn = actionType.InputSchema.properties.find((p) => p.name === 'email');
+		if (hasEmailColumn) {
+			const a = { ...action };
+			a.FileOrderingPropertyPath = 'email';
+			setAction(a);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -488,6 +504,21 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		compressionRef.current.lastUpdate = compression;
 		checkIsFileChanged();
 		a.Compression = compression;
+		setAction(a);
+	};
+
+	const onOrderingPropertyChange = (e) => {
+		const a = { ...action };
+		a.FileOrderingPropertyPath = e.target.value;
+		setAction(a);
+	};
+
+	const onOrderingPropertySelect = (input, value) => {
+		if (input.name !== 'ordering') {
+			return;
+		}
+		const a = { ...action };
+		a.FileOrderingPropertyPath = value;
 		setAction(a);
 	};
 
@@ -704,6 +735,23 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<SlOption value='Gzip'>Gzip</SlOption>
 				<SlOption value='Snappy'>Snappy</SlOption>
 			</SlSelect>
+			{!isImport && actionType.Target === 'Users' && (
+				<>
+					<ComboBoxInput
+						className='action__file-ordering'
+						value={action.FileOrderingPropertyPath}
+						comboBoxListRef={fileOrderingPropertyListRef}
+						onInput={onOrderingPropertyChange}
+						label='Order users by'
+						name='ordering'
+					/>
+					<ComboBoxList
+						ref={fileOrderingPropertyListRef}
+						items={getOrderingPropertyPathComboboxItems(actionType.InputSchema)}
+						onSelect={onOrderingPropertySelect}
+					/>
+				</>
+			)}
 			{fieldsToRender.length > 0 && (
 				<ConnectorUI fields={fieldsToRender} values={values} onChange={onFieldChange} />
 			)}

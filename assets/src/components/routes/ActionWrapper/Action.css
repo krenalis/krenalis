@@ -915,7 +915,8 @@ inherit the disabled style */
 }
 
 .action__file-connector,
-.action__file-compression {
+.action__file-compression,
+.action__file-ordering {
 	margin-bottom: 30px;
 }
 

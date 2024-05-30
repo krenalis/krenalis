@@ -651,6 +651,7 @@ const computeDefaultAction = (
 		action.LastChangeTimeFormat = '';
 		action.Sheet = null;
 		action.Compression = '';
+		action.FileOrderingPropertyPath = '';
 		action.Connector = '';
 	}
 	if (fields.includes('Table')) {

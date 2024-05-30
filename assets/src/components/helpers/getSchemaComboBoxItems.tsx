@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react';
 import { TransformedMapping, flattenSchema } from '../../lib/core/action';
-import { ObjectType } from '../../lib/api/types/types';
+import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/ComboBox/ComboBox.types';
 
 const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
@@ -63,6 +63,28 @@ const getLastChangeTimeComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
+const getOrderingPropertyPathComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+	if (schema == null) {
+		return [];
+	}
+	const flatSchema = flattenSchema(schema);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(flatSchema)) {
+		const typ = flatSchema[k].type;
+		if (typ === 'Decimal') {
+			const t = flatSchema[k].full.type as DecimalType;
+			if (t.scale === 0) {
+				filteredSchema[k] = v;
+			}
+			continue;
+		}
+		if (typ === 'Int' || typ === 'Uint' || typ === 'UUID' || typ === 'Inet' || typ === 'Text') {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
 const computeItems = (flatSchema: TransformedMapping) => {
 	const items: ComboboxItem[] = [];
 	for (const propertyName in flatSchema) {
@@ -97,4 +119,5 @@ export {
 	getIdentityPropertyComboboxItems,
 	getDisplayedPropertyComboboxItems,
 	getLastChangeTimeComboboxItems,
+	getOrderingPropertyPathComboboxItems,
 };
