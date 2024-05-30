@@ -1,12 +1,87 @@
-# Identity Resolution
 
-The Identity Resolution consists in two different procedures:
+# The Identity Resolution
 
-1. The [Connection Identity Resolution](identity-resolution/connection-identity-resolution.md), which determines if an user, imported from a [connection](./connections.md), was previously imported **by that connection**, and eventually merges them.
-2. The [Workspace Identity Resolution](identity-resolution/workspace-identity-resolution.md), which determines if two users, belonging to **any connection** of the workspace (even the same connection), should be merged into a single user of the workspace. It also associates the workspace users to the events stored in the data warehouse.
+The **Identity Resolution** determines if more users, belonging to **any connection** of the workspace (even the same connection), are a single user of the workspace, and eventually merges them. It also associates the workspace users to the events stored in the data warehouse.
 
-The former is executed when a user is imported by a connection, while the latter is executed arbitrarily by Chichi when necessary.
+In particular, it performs these operations (not necessarily in this order):
 
-> We have a discussion on that, [#354](https://github.com/open2b/chichi/issues/354).
+* recreates the contents of the `users` table starting from the identities within `users_identities`
+* updates the association between the events within the `events` table and the users within `users`
+* deletes the users within `users_identities` and `users` which no longer belong to any connection (i.e. connections that have been deleted).
 
-**A note about data overwriting**. While the Connection Identity Resolution overwrites information in Chichi, by updating users imported from a connection with the updated data, the Workspace Identity Resolution is reversible and can be re-executed from scratch at any time.
+## When It Is Executed
+
+The Identity Resolution is executed:
+
+* arbitrarily by Chichi, for example when importing from a connection
+* explicitly by the user
+
+>  We have a discussion on that, [#354](https://github.com/open2b/chichi/issues/354).
+
+## Same User Criterion
+
+Given two users, they are the *same user* if they have at least one equal value for an **identifier**, and if at least one of the users have a null value for identifiers with higher priority.
+
+Hence, it follows that if there are no identifiers defined in the workspace, the Identity Resolution considers every user imported from a connection always different from any other user.
+
+## Identifiers
+
+An identifier consists in **a property path** which refers to a property of the `users_identities` schema which have [an allowed type](./identity-resolution/allowed-types-for-identifiers.md).
+
+It is possible to define zero, one, or more identifiers for the identity resolution. 
+
+In case more than one identifier is defined, it is necessary to choose a **priority order**, which will be taken into account by the identity resolution procedure.
+
+So, for example:
+
+```
+[ 1 ]  customerId
+[ 2 ]  taxCode
+[ 3 ]  email
+[ 4 ]  address.street1
+```
+
+Here, `customerId` is the identifier with the higher priority while `address.street1` has the lower priority.
+
+## Merging of Users
+
+In the Identity Resolution, users are merged by taking the `max` value between the values of the properties for the users.
+
+> `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
+
+For example, consider two users with the properties `email`, `name` and `totalOrders`, which are considered *the same user* by the Identity Resolution and thus must be merged:
+
+| email | name     | totalOrders |
+|-------|----------|-------------|
+| a@b   | John     | 10          |
+| a@b   | *(null)* | 20          |
+
+The resulting user of the workspace will be:
+
+| email | name | totalOrders |
+|-------|------|-------------|
+| a@b   | John | 20          |
+
+## User GIDs
+
+A GID is a UUID that uniquely identifies a user at a certain point in time.
+
+During the **Identity Resolution**, a user's GID **is retained unless**:
+
+- the users **has been merged** with other users
+- the users **has been split** into two or more users
+
+In these cases, the GID of the original user is deleted, and one or more new GIDs are created in its place.
+
+## Association Between Events and Users
+
+From the same connection which receives events, can both be imported users and events, using different actions. The Identity Resolution, as mentioned before, also associated events to the users of the workspace.
+
+Every event is associated to the **users incoming from the same connection** which:
+
+* have the same `userId` (in case of non-anonymous events)
+* or have an `anonymousId` in common (in case of anonymous events).
+
+At that point, since users from multiple connections have been merged together through the Identity Resolution, **events from different connections can be associated to the same workspace user**.
+
+<img src="../images/events-users.png" width="70%" alt="event-users">

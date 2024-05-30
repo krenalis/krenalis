@@ -1,6 +1,6 @@
 # Allowed Types For Identifiers
 
-Here is a list of allowed types for the [identifiers](workspace-identity-resolution.md#identifiers) used in the [Workspace Identity Resolution](workspace-identity-resolution.md):
+Here is a list of allowed types for the [identifiers](../identity-resolution.md#identifiers) used in the [Identity Resolution](../identity-resolution.md):
 
 * `Int(n)`       
 * `UInt(n)`      
