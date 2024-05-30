@@ -66,11 +66,6 @@ CREATE TABLE connections (
     PRIMARY KEY (id)
 );
 
-CREATE TYPE cursor AS (
-    id text,
-    last_change_time timestamp(6)
-);
-
 CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');
 
@@ -101,7 +96,7 @@ CREATE TABLE actions (
     last_change_time_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',
     displayed_property varchar(1024) NOT NULL DEFAULT '',
-    user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00")',
+    user_cursor timestamp(6) NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     health health NOT NULL DEFAULT 'Healthy',
     file_ordering_property_path varchar(1024) NOT NULL DEFAULT '',
     export_mode export_mode DEFAULT NULL,

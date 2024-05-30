@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/open2b/chichi/apis/connectors"
@@ -541,7 +542,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16, identity_property = $17, "+
-			"displayed_property = $18, user_cursor = CASE WHEN $19 THEN '(\"\", \"0001-01-01 00:00:00+00\")' ELSE user_cursor END, "+
+			"displayed_property = $18, user_cursor = CASE WHEN $19 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
 			"last_change_time_property = $20, last_change_time_format = $21, "+
 			"file_ordering_property_path = $22, export_mode = $23, matching_properties_internal = $24, "+
 			"matching_properties_external = $25, export_on_duplicated_users = $26\nWHERE id = $27",
@@ -566,15 +567,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 }
 
 // setUserCursor sets the user cursor of the action.
-func (this *Action) setUserCursor(ctx context.Context, cursor state.Cursor) error {
+func (this *Action) setUserCursor(ctx context.Context, cursor time.Time) error {
 	n := state.SetActionUserCursor{
 		ID:         this.action.ID,
 		UserCursor: cursor,
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE actions\n"+
-			"SET user_cursor.id = $1, user_cursor.last_change_time = $2 WHERE id = $3",
-			n.UserCursor.ID, n.UserCursor.LastChangeTime, n.ID)
+		result, err := tx.Exec(ctx, "UPDATE actions SET user_cursor = $1 WHERE id = $2", n.UserCursor, n.ID)
 		if err != nil {
 			return err
 		}

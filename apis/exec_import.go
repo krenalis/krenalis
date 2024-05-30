@@ -45,7 +45,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	case state.AppType:
 		var lastChangeTime time.Time
 		if exe, _ := action.Execution(); !exe.Reimport {
-			lastChangeTime = action.UserCursor.LastChangeTime
+			lastChangeTime = action.UserCursor
 		}
 		if exe, _ := action.Execution(); exe.Reimport {
 			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
@@ -108,7 +108,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
-	var lastChangeTime time.Time
+	var cursor time.Time
 
 	// Read the users.
 	for user := range records.Seq() {
@@ -126,8 +126,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 		stats.Passed(statistics.ReceivedStep)
 		stats.Passed(statistics.InputValidatedStep)
 
-		if user.LastChangeTime.After(lastChangeTime) {
-			lastChangeTime = user.LastChangeTime
+		if user.LastChangeTime.After(cursor) {
+			cursor = user.LastChangeTime
 		}
 
 		users = append(users, user)
@@ -183,8 +183,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 			// Set the user cursor.
 			if connector.Type == state.AppType {
-				last := users[len(users)-1]
-				err = this.setUserCursor(ctx, state.Cursor{ID: last.ID, LastChangeTime: lastChangeTime})
+				err = this.setUserCursor(ctx, cursor)
 				if err != nil {
 					return actionExecutionError{err}
 				}

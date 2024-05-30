@@ -322,8 +322,8 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
 			"transformation_language, transformation_version, query, connector, path, sheet, compression::TEXT,\n"+
 			"settings, table_name, identity_property, displayed_property, last_change_time_property, last_change_time_format,\n"+
-			"(user_cursor).id, (user_cursor).last_change_time, health,  file_ordering_property_path, export_mode,\n"+
-			"matching_properties_internal, matching_properties_external, export_on_duplicated_users\n"+
+			"user_cursor, health, file_ordering_property_path, export_mode, matching_properties_internal,\n"+
+			"matching_properties_external, export_on_duplicated_users\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
@@ -339,9 +339,8 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 						&filter, &mapping, &function.Source, &function.Language, &function.Version, &action.Query,
 						&connector, &action.Path, &action.Sheet, &action.Compression, &action.Settings,
 						&action.TableName, &action.IdentityProperty, &action.DisplayedProperty, &action.LastChangeTimeProperty,
-						&action.LastChangeTimeFormat, &action.UserCursor.ID, &action.UserCursor.LastChangeTime, &action.Health,
-						&action.FileOrderingPropertyPath, &action.ExportMode, &matchPropInternal, &matchPropExternal,
-						&action.ExportOnDuplicatedUsers)
+						&action.LastChangeTimeFormat, &action.UserCursor, &action.Health, &action.FileOrderingPropertyPath,
+						&action.ExportMode, &matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)
 					if err != nil {
 						return err
 					}

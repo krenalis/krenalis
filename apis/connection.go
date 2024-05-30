@@ -795,10 +795,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Build the cursor.
-	cursor, err = serializeCursor(state.Cursor{
-		ID:             last.ID,
-		LastChangeTime: last.LastChangeTime,
-	})
+	cursor, err = serializeCursor(last.LastChangeTime)
 	if err != nil {
 		return nil, "", err
 	}
@@ -2225,7 +2222,7 @@ func ordinal(n int) string {
 }
 
 // serializeCursor serializes a cursor to be returned by the API.
-func serializeCursor(cursor state.Cursor) (string, error) {
+func serializeCursor(cursor time.Time) (string, error) {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)

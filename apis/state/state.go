@@ -1029,12 +1029,6 @@ func (target Target) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Target: %d", target)
 }
 
-// Cursor represents a cursor.
-type Cursor struct {
-	ID             string
-	LastChangeTime time.Time
-}
-
 type Action struct {
 	mu                       *sync.Mutex
 	ID                       int
@@ -1061,7 +1055,7 @@ type Action struct {
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	DisplayedProperty        string
-	UserCursor               Cursor
+	UserCursor               time.Time
 	Health                   Health
 	FileOrderingPropertyPath string
 	ExportMode               *ExportMode

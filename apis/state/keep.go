@@ -939,7 +939,7 @@ func (state *State) setAction(n notification) {
 		a.IdentityProperty = e.IdentityProperty
 		a.DisplayedProperty = e.DisplayedProperty
 		if e.ResetUserCursor {
-			a.UserCursor = Cursor{}
+			a.UserCursor = time.Time{}
 		}
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
@@ -1013,7 +1013,7 @@ func (state *State) setActionStatus(n notification) {
 // set.
 type SetActionUserCursor struct {
 	ID         int
-	UserCursor Cursor
+	UserCursor time.Time
 }
 
 // setActionUserCursor sets the user cursor of an action.
