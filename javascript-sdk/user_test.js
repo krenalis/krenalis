@@ -1,5 +1,5 @@
-import { assert, assertEquals } from 'std/assert/mod.ts'
-import * as uuid from 'std/uuid/v4.ts'
+import { assert, assertEquals } from '@std/assert'
+import * as uuid from '@std/uuid/v4'
 import Storage from './storage.js'
 import User from './user.js'
 import Options from './options.js'

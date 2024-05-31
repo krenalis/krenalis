@@ -1,5 +1,5 @@
-import { assertEquals } from 'std/assert/mod.ts'
-import { FakeTime } from 'std/testing/time.ts'
+import { assertEquals } from '@std/assert'
+import { FakeTime } from '@std/testing/time'
 import Storage from './storage.js'
 import Session from './session.js'
 import Options from './options.js'

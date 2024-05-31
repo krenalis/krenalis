@@ -1,5 +1,5 @@
-import { assert, assertEquals, AssertionError } from 'std/assert/mod.ts'
-import { FakeTime } from 'std/testing/time.ts'
+import { assert, assertEquals, AssertionError } from '@std/assert'
+import { FakeTime } from '@std/testing/time'
 import { uuid } from './utils.js'
 import Elections from './elections.js'
 

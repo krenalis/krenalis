@@ -1,6 +1,6 @@
-import { assert, assertEquals, AssertionError } from 'std/assert/mod.ts'
+import { assert, assertEquals, AssertionError } from '@std/assert'
 import { DOMParser } from 'https://deno.land/x/deno_dom/deno-dom-wasm.ts'
-import * as uuid from 'std/uuid/v4.ts'
+import * as uuid from '@std/uuid/v4'
 import { MaxBodySize } from './sender.js'
 import * as utils from './utils.js'
 

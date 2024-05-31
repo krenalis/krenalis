@@ -1,4 +1,4 @@
-import { assert, assertEquals } from 'std/assert/mod.ts'
+import { assert, assertEquals } from '@std/assert'
 import { isStrategy, Options } from './options.js'
 
 const days = 24 * 60 * 60 * 1000

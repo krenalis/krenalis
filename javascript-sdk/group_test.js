@@ -1,4 +1,4 @@
-import { assertEquals } from 'std/assert/mod.ts'
+import { assertEquals } from '@std/assert'
 import Options from './options.js'
 import Storage from './storage.js'
 import Group from './group.js'

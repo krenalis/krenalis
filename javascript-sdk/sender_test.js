@@ -1,5 +1,5 @@
-import { assert, assertEquals } from 'std/assert/mod.ts'
-import { FakeTime } from 'std/testing/time.ts'
+import { assert, assertEquals } from '@std/assert'
+import { FakeTime } from '@std/testing/time'
 import * as fake from './test_fake.js'
 import Sender from './sender.js'
 import { Queue } from './queue.js'
