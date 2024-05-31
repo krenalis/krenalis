@@ -532,23 +532,24 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		return warehouses.Error(err)
 	}
 
-	// Generate the SQL matching expression.
-	var matchingExpr strings.Builder
+	// Generate the SQL function that determines if two identities are the same
+	// user.
+	var sameUser strings.Builder
 	if len(identifiers) > 0 {
-		matchingExpr.WriteString("matching_func(")
+		sameUser.WriteString("same_user(")
 		for i, ident := range identifiers {
 			if i > 0 {
-				matchingExpr.WriteByte(',')
+				sameUser.WriteByte(',')
 			}
-			matchingExpr.WriteString(`i1."`)
-			matchingExpr.WriteString(ident.Name)
-			matchingExpr.WriteString(`"::text,i2."`)
-			matchingExpr.WriteString(ident.Name)
-			matchingExpr.WriteString(`"::text`)
+			sameUser.WriteString(`i1."`)
+			sameUser.WriteString(ident.Name)
+			sameUser.WriteString(`"::text,i2."`)
+			sameUser.WriteString(ident.Name)
+			sameUser.WriteString(`"::text`)
 		}
-		matchingExpr.WriteString(")")
+		sameUser.WriteString(")")
 	} else {
-		matchingExpr.WriteString("false")
+		sameUser.WriteString("false")
 	}
 
 	// Generate the SQL queries that will perform the users synchronization.
@@ -613,16 +614,16 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	)`)
 
 	// Replace the placeholders in the Identity Resolution queries and run them.
-	query := strings.Replace(identityResolutionQueries, "{{ matching_expr }}", matchingExpr.String(), 1)
+	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
 	query = strings.Replace(query, "{{ users_sync_queries }}", usersSyncQueries.String(), 1)
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
 	}
 
-	// Call the 'resolve_sync_users' stored procedure (which is declared in the
+	// Call the 'do_identity_resolution' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, err = db.Exec(ctx, "CALL resolve_sync_users()")
+	_, err = db.Exec(ctx, "CALL do_identity_resolution()")
 	if err != nil {
 		return warehouses.Error(err)
 	}

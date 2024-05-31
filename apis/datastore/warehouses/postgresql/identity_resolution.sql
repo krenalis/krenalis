@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION matching_func(VARIADIC identifiers text[])
+CREATE OR REPLACE FUNCTION same_user(VARIADIC identifiers text[])
 RETURNS boolean
 AS $$
     DECLARE
@@ -13,30 +13,28 @@ AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-DROP TABLE IF EXISTS "matchings";
-CREATE TABLE matchings (
+DROP TABLE IF EXISTS "edges";
+CREATE TABLE edges (
     i1 int,
     i2 int,
-    match boolean not null
+    same_user boolean not null -- TODO(Gianluca): maybe this can be removed.
 );
 
 DROP TABLE IF EXISTS clusters_to_merge;
 CREATE TABLE clusters_to_merge(c1 int, c2 int);
 
-CREATE OR REPLACE PROCEDURE resolve_sync_users()
+CREATE OR REPLACE PROCEDURE do_identity_resolution()
 LANGUAGE sql
 AS $$
 
-    -- Determine the matchings.
-    TRUNCATE matchings;
+    -- Determine the edges of the identities graph.
+    TRUNCATE edges;
     INSERT INTO
-        matchings(i1, i2, match)
+        edges
     SELECT
         i1.__pk__,
         i2.__pk__,
-        
-        -- This placeholder will be replaced by Chichi:
-        {{ matching_expr }} as match
+        {{ same_user }} as same_user -- This placeholder will be replaced by Chichi:
     FROM
         _users_identities i1
             CROSS JOIN
@@ -51,22 +49,22 @@ AS $$
         BEGIN 
 
         -- The idea here is to keep iterating as long as there are two
-        -- identities that match but have different clusters.
+        -- identities that are the same user but have different clusters.
         LOOP
         
             -- Determine the clusters to merge.
             TRUNCATE clusters_to_merge;
             INSERT INTO
-                clusters_to_merge(c1, c2)
+                clusters_to_merge
             SELECT
                 i1.__cluster__ c1,
                 i2.__cluster__ c2
             FROM
-                matchings m
-                JOIN _users_identities i1 ON m.i1 = i1.__pk__
-                JOIN _users_identities i2 ON m.i2 = i2.__pk__
+                edges
+                JOIN _users_identities i1 ON edges.i1 = i1.__pk__
+                JOIN _users_identities i2 ON edges.i2 = i2.__pk__
             WHERE
-                m.match
+                edges.same_user
                 AND i1.__cluster__ <> i2.__cluster__;
 
             -- Stop iterating when there are no more clusters to merge.
