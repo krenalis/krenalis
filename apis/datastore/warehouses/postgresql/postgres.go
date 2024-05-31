@@ -552,40 +552,40 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		sameUser.WriteString("false")
 	}
 
-	// Generate the SQL queries that will perform the users synchronization.
-	var usersSyncQueries strings.Builder
-	usersSyncQueries.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
+	// Generate the SQL queries that populates the users table.
+	var populateUsers strings.Builder
+	populateUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
 	for _, c := range usersColumns {
 		if c.Name == "__id__" {
 			continue
 		}
-		usersSyncQueries.WriteByte('"')
-		usersSyncQueries.WriteString(c.Name)
-		usersSyncQueries.WriteByte('"')
-		usersSyncQueries.WriteByte(',')
+		populateUsers.WriteByte('"')
+		populateUsers.WriteString(c.Name)
+		populateUsers.WriteByte('"')
+		populateUsers.WriteByte(',')
 	}
-	usersSyncQueries.WriteString(`"__identities__", "__id__"`)
-	usersSyncQueries.WriteString(") SELECT\n")
+	populateUsers.WriteString(`"__identities__", "__id__"`)
+	populateUsers.WriteString(") SELECT\n")
 	for _, c := range usersColumns {
 		if c.Name == "__id__" {
 			continue
 		}
-		usersSyncQueries.WriteString(`MAX(DISTINCT "`)
-		usersSyncQueries.WriteString(c.Name)
-		usersSyncQueries.WriteString(`") AS "`)
-		usersSyncQueries.WriteString(c.Name)
-		usersSyncQueries.WriteByte('"')
-		usersSyncQueries.WriteByte(',')
+		populateUsers.WriteString(`MAX(DISTINCT "`)
+		populateUsers.WriteString(c.Name)
+		populateUsers.WriteString(`") AS "`)
+		populateUsers.WriteString(c.Name)
+		populateUsers.WriteByte('"')
+		populateUsers.WriteByte(',')
 	}
 	// Write the "__identities__" column.
-	usersSyncQueries.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
+	populateUsers.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
 	// Write the "__id__" column.
 	// If all GIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the user's GID; otherwise, if
 	// we are in a situation where a previously split user is now merged, in
 	// this case, create a new random GID. If the identities are all new, also
 	// in this case, create a new random GID.
-	usersSyncQueries.WriteString(`COALESCE(
+	populateUsers.WriteString(`COALESCE(
 		CASE
 			WHEN COUNT(DISTINCT "__gid__") FILTER ( WHERE "__gid__" IS NOT NULL ) = 1
 				THEN MAX("__gid__"::text)::uuid
@@ -593,12 +593,12 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		END,
 		gen_random_uuid()
 	)`)
-	usersSyncQueries.WriteString(" FROM _users_identities GROUP BY __cluster__; ")
+	populateUsers.WriteString(" FROM _users_identities GROUP BY __cluster__; ")
 
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,
 	// replaces the GID of both users with new random GIDs.
-	usersSyncQueries.WriteString(`UPDATE "_users" u
+	populateUsers.WriteString(`UPDATE "_users" u
 		SET
 			"__id__" = gen_random_uuid()
 		WHERE
@@ -615,7 +615,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 
 	// Replace the placeholders in the Identity Resolution queries and run them.
 	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
-	query = strings.Replace(query, "{{ users_sync_queries }}", usersSyncQueries.String(), 1)
+	query = strings.Replace(query, "{{ populate_users }}", populateUsers.String(), 1)
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)

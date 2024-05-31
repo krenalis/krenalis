@@ -383,7 +383,7 @@ func (c *Collector) importUsersIdentities(source *state.Connection, events []*ev
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				return err
 			}
-			return fmt.Errorf("cannot resolve and sync users: %s", err)
+			return fmt.Errorf("cannot run the Identity Resolution: %s", err)
 		}
 	}
 	return nil
