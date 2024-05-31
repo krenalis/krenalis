@@ -10,6 +10,19 @@
 	font-size: 15px !important;
 }
 
+.editor-wrapper .codicon,
+.editor-wrapper .codicon:before,
+.editor-wrapper .codicon:after,
+.editor-wrapper .codicon *,
+.editor-wrapper .codicon *:before,
+.editor-wrapper .codicon *:after {
+	font-family: codicon !important;
+}
+
+.editor-wrapper .codicon.codicon-light-bulb {
+	background-color: transparent !important;
+}
+
 .editor-wrapper__heading {
 	background-color: var(--bg-gray);
 	border-radius: 20px;

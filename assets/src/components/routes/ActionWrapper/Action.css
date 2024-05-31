@@ -845,6 +845,17 @@ inherit the disabled style */
 	height: 100%;
 }
 
+.fullscreen-transformation__editor-panel--hide .transformation-box {
+	display: none;
+}
+
+.fullscreen-transformation__editor-panel-spinner {
+	display: block;
+	margin: auto;
+	position: relative;
+	top: 30px;
+}
+
 .fullscreen-transformation__editor-panel .transformation-box {
 	border-radius: 0;
 	box-shadow: none;

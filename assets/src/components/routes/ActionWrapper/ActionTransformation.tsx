@@ -935,6 +935,8 @@ const FullscreenTransformation = ({
 	const [output, setOutput] = useState<string>('');
 	const [outputError, setOutputError] = useState<string>('');
 	const [isExecuting, setIsExecuting] = useState<boolean>(false);
+	const [isBodyRendered, setIsBodyRendered] = useState<boolean>(false);
+	const [isBodyShown, setIsBodyShown] = useState<boolean>(false);
 
 	const { handleError, api } = useContext(AppContext);
 	const { action, values, actionType, connection } = useContext(ActionContext);
@@ -957,6 +959,24 @@ const FullscreenTransformation = ({
 			startListening();
 		}
 	}, []);
+
+	useEffect(() => {
+		if (isFullscreenTransformationOpen) {
+			// Delay the rendering of the transformation box to avoid
+			// content flashes and to ensure that the code editor is
+			// rendered only when the screen is fully open, avoiding
+			// unexpected behaviors such as text selection issues.
+			setTimeout(() => {
+				setIsBodyRendered(true);
+				setTimeout(() => {
+					setIsBodyShown(true);
+				}, 300);
+			}, 150);
+		} else {
+			setIsBodyRendered(false);
+			setIsBodyShown(false);
+		}
+	}, [isFullscreenTransformationOpen]);
 
 	useEffect(() => {
 		const fetchSamples = async () => {
@@ -1594,8 +1614,22 @@ const FullscreenTransformation = ({
 					</SlSplitPanel>
 				</div>
 				<div className='fullscreen-transformation__right-panel' slot='end'>
-					<div slot='start' className='fullscreen-transformation__editor-panel'>
-						{body}
+					<div
+						slot='start'
+						className={`fullscreen-transformation__editor-panel${!isBodyShown ? ' fullscreen-transformation__editor-panel--hide' : ''}`}
+					>
+						{!isBodyShown && (
+							<SlSpinner
+								className='fullscreen-transformation__editor-panel-spinner'
+								style={
+									{
+										fontSize: '3rem',
+										'--track-width': '6px',
+									} as React.CSSProperties
+								}
+							></SlSpinner>
+						)}
+						{isBodyRendered && body}
 					</div>
 				</div>
 			</SlSplitPanel>
