@@ -86,18 +86,6 @@ type HTTPClient interface {
 	AccessToken(ctx context.Context) (string, error)
 }
 
-// OAuth represents the connector OAuth 2.0 info.
-type OAuth struct {
-	AuthURL  string
-	TokenURL string
-
-	Scopes []string
-
-	// The lifetime in seconds of the access token.
-	// If zero or negative, the lifetime is returned by the TokenURL endpoint.
-	ExpiresIn int32
-}
-
 // WebhooksPer values indicates if webhooks are per account, connection, or
 // connector.
 type WebhooksPer int

@@ -66,6 +66,24 @@ type AppInfo struct {
 	ct      reflect.Type
 }
 
+// OAuth represents the OAuth 2.0 connector information.
+type OAuth struct {
+	// AuthURL is the authorization endpoint. It's the URL of the app where
+	// users are redirected to grant consent.
+	AuthURL string
+
+	// TokenURL is the token endpoint. It's the URL to retrieve the access token,
+	// refresh token, and lifetime of the access token.
+	TokenURL string
+
+	// Scopes specifies the scopes required by the connector.
+	Scopes []string
+
+	// ExpiresIn represents the lifetime of the access token in seconds.
+	// If the value is zero or negative, the lifetime is provided by the TokenURL endpoint.
+	ExpiresIn int32
+}
+
 // ReflectType returns the type of the value implementing the app connector
 // info.
 func (app AppInfo) ReflectType() reflect.Type {
