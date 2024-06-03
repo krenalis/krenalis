@@ -136,8 +136,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
-	users := this.connection.Workspace().UserSchema
-	groups := dummyGroupsSchema
+	users := removeMetaProperties(this.connection.Workspace().UserSchema)
+	groups := removeMetaProperties(dummyGroupsSchema)
 
 	c := this.connection
 
@@ -154,7 +154,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if c.Role == state.Source {
 				return &ActionSchemas{
 					In:  schema,
-					Out: removeMetaProperties(users),
+					Out: users,
 				}, nil
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
@@ -162,7 +162,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
 				actionSchemas := &ActionSchemas{
-					In:  users, // don't remove meta properties here, they may be useful in transformations.
+					In:  users,
 					Out: schema,
 				}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -180,7 +180,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			if c.Role == state.Source {
 				return &ActionSchemas{
 					In:  schema,
-					Out: removeMetaProperties(groups),
+					Out: groups,
 				}, nil
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
@@ -188,7 +188,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
 				actionSchemas := &ActionSchemas{
-					In:  groups, // don't remove meta properties here, they may be useful in transformations.
+					In:  groups,
 					Out: schema,
 				}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -213,21 +213,21 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		case Users:
 			if c.Role == state.Source {
 				return &ActionSchemas{
-					Out: removeMetaProperties(users),
+					Out: users,
 				}, nil
 			} else {
 				return &ActionSchemas{
-					In: users, // don't remove meta properties here, they may be useful in transformations.
+					In: users,
 				}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
 				return &ActionSchemas{
-					Out: removeMetaProperties(groups),
+					Out: groups,
 				}, nil
 			} else {
 				return &ActionSchemas{
-					In: groups, // don't remove meta properties here, they may be useful in transformations.
+					In: groups,
 				}, nil
 			}
 		}
@@ -237,21 +237,21 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		case Users:
 			if c.Role == state.Source {
 				return &ActionSchemas{
-					Out: removeMetaProperties(users),
+					Out: users,
 				}, nil
 			} else {
 				return &ActionSchemas{
-					In: users, // don't remove meta properties here, they may be useful in transformations.
+					In: users,
 				}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
 				return &ActionSchemas{
-					Out: removeMetaProperties(groups),
+					Out: groups,
 				}, nil
 			} else {
 				return &ActionSchemas{
-					In: groups, // don't remove meta properties here, they may be useful in transformations.
+					In: groups,
 				}, nil
 			}
 		}
@@ -267,12 +267,12 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		case Users:
 			return &ActionSchemas{
 				In:  events.Schema,
-				Out: removeMetaProperties(users),
+				Out: users,
 			}, nil
 		case Groups:
 			return &ActionSchemas{
 				In:  events.Schema,
-				Out: removeMetaProperties(groups),
+				Out: groups,
 			}, nil
 		}
 		return &ActionSchemas{}, nil
