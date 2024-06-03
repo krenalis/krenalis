@@ -1,6 +1,6 @@
 import call from './call';
 import * as http from './http';
-import Type, { Property, ObjectType } from './types/types';
+import Type, { Property, ObjectType, Role } from './types/types';
 import { Connection, ConnectionRole, ConnectionToAdd, ConnectionStats, ConnectionToSet } from './types/connection';
 import { Identifiers } from './types/identifiers';
 import { ActionTarget, SchedulePeriod, ActionToSet, ExpressionToBeExtracted, Transformation } from './types/action';
@@ -628,10 +628,10 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authCodeURL = async (connector: string): Promise<authCodeURLResponse> => {
+	authCodeURL = async (connector: string, role: Role): Promise<authCodeURLResponse> => {
 		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
 		return await call(
-			`${this.apiURL}/connectors/${connector}/auth-code-url?redirecturi=${encodeURIComponent(redirectURI)}`,
+			`${this.apiURL}/connectors/${connector}/auth-code-url?role=${role}&redirecturi=${encodeURIComponent(redirectURI)}`,
 			http.GET,
 		);
 	};

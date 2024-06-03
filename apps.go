@@ -76,8 +76,11 @@ type OAuth struct {
 	// refresh token, and lifetime of the access token.
 	TokenURL string
 
-	// Scopes specifies the scopes required by the connector.
-	Scopes []string
+	// SourceScopes specifies the required scopes when used as a source.
+	SourceScopes []string
+
+	// DestinationScopes specifies the required scopes when used as a destination.
+	DestinationScopes []string
 
 	// ExpiresIn represents the lifetime of the access token in seconds.
 	// If the value is zero or negative, the lifetime is provided by the TokenURL endpoint.

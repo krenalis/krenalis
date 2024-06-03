@@ -1,5 +1,6 @@
 import React, { useState, useContext, useLayoutEffect, useMemo } from 'react';
 import './ConnectorsList.css';
+import { Role } from '../../../lib/api/types/types';
 import Card from '../../base/Card/Card';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -30,12 +31,12 @@ const ConnectorsList = () => {
 		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
-	const authorizeWithOAuth = async (connectorName: string) => {
+	const authorizeWithOAuth = async (connectorName: string, role: Role) => {
 		localStorage.setItem('chichi_ui_add_connector_name', connectorName);
 		localStorage.setItem('chichi_ui_add_connection_role', connectionRole);
 		let res: authCodeURLResponse;
 		try {
-			res = await api.connectors.authCodeURL(connectorName);
+			res = await api.connectors.authCodeURL(connectorName, role);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -77,7 +78,7 @@ const ConnectorsList = () => {
 							<SlButton
 								size='medium'
 								variant='default'
-								onClick={c.oAuth ? () => authorizeWithOAuth(c.name) : null}
+								onClick={c.oAuth ? () => authorizeWithOAuth(c.name, connectionRole as Role) : null}
 								circle
 							>
 								<SlIcon name='plus' />

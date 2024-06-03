@@ -54,9 +54,10 @@ func init() {
 		Icon:                       icon,
 		WebhooksPer:                chichi.WebhooksPerConnector,
 		OAuth: chichi.OAuth{
-			AuthURL:  "https://app-eu1.hubspot.com/oauth/authorize",
-			TokenURL: "https://api.hubapi.com/oauth/v1/token",
-			Scopes:   []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
+			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
+			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
+			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
+			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
 	}, New)
 }

@@ -147,12 +147,18 @@ func isValidSendingMode(sm SendingMode) bool {
 }
 
 // AuthCodeURL returns a URL that directs to the consent page of an OAuth 2.0
-// provider. This page requests explicit permissions for the required scopes.
-// After that, the provider redirects to the URL specified by redirectURI.
-func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
+// provider. This page requests explicit permissions for the scopes required by
+// the provided role, which could be Source or Destination.
+//
+// After granting permissions, the provider redirects the user to the URL
+// specified by redirectURI.
+func (this *Connector) AuthCodeURL(role Role, redirectURI string) (string, error) {
 	this.apis.mustBeOpen()
 	if this.connector.OAuth == nil {
 		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Name)
 	}
-	return this.apis.connectors.AuthorizationEndpoint(this.connector, redirectURI)
+	if role != Source && role != Destination {
+		return "", errors.BadRequest("role %q is not valid", role)
+	}
+	return this.apis.connectors.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
 }

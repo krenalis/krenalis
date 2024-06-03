@@ -211,16 +211,17 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	return authorization, nil
 }
 
-// AuthorizationEndpoint returns an OAuth authorization endpoint URI for the
-// provided app connector, used to redirects to the consent page of its OAuth
-// provider. This page requests explicit permissions for the required scopes.
-// After that, the provider redirects to the URI specified by redirectionURI.
+// AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
+// provided app connector. This URI is used to redirect users to the consent
+// page of the OAuth provider, where they can grant explicit permissions for the
+// specified role's scopes. After granting permissions, the provider redirects
+// the user to the URI specified by redirectionURI.
 //
-// After acquiring the authorization code, call GrantAuthorization to get the
-// resulting account code, access token, refresh token and expiration time.
+// After acquiring the authorization code, call GrantAuthorization to obtain the
+// resulting account code, access token, refresh token, and expiration time.
 //
 // Panics if the connector does not support OAuth.
-func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, redirectionURI string) (string, error) {
+func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	var b strings.Builder
 	b.WriteString(oauth.AuthURL)
@@ -230,8 +231,12 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 		"redirect_uri":  {redirectionURI},
 		"state":         {"state"},
 	}
-	if len(oauth.Scopes) > 0 {
-		v.Set("scope", strings.Join(oauth.Scopes, " "))
+	scopes := oauth.SourceScopes
+	if role == state.Destination {
+		scopes = oauth.DestinationScopes
+	}
+	if len(scopes) > 0 {
+		v.Set("scope", strings.Join(scopes, " "))
 	}
 	if strings.Contains(oauth.AuthURL, "?") {
 		b.WriteByte('&')
