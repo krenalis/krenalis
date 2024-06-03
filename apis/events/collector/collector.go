@@ -140,7 +140,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
 	}()
-	var serveSettings = strings.HasPrefix(r.URL.Path, "/api/v1/connection/")
+	var serveSettings = strings.HasPrefix(r.URL.Path, "/api/v1/projects/")
 	var err error
 	if serveSettings {
 		err = c.serveSettings(w, r)
@@ -430,7 +430,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	if r.Method != "GET" {
 		return errMethodNotAllowed
 	}
-	path, ok := strings.CutPrefix(r.URL.Path, "/api/v1/connection/")
+	path, ok := strings.CutPrefix(r.URL.Path, "/api/v1/projects/")
 	if !ok {
 		return errNotFound
 	}
