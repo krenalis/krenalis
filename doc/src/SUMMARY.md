@@ -41,6 +41,7 @@
     - [Data Types](./developers/data-types.md)
     - [Connectors](./developers/connectors/index.md)
         - [App connectors](./developers/connectors/app.md)
+            - [OAuth](developers/connectors/app/oauth.md)
             - [Users and groups](developers/connectors/app/users-and-groups.md)
             - [Dispatch events](developers/connectors/app/dispatch-events.md)
         - [Database connectors](./developers/connectors/database.md)
