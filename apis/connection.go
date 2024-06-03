@@ -152,19 +152,13 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			if c.Role == state.Source {
-				return &ActionSchemas{
-					In:  schema,
-					Out: users,
-				}, nil
+				return &ActionSchemas{In: schema, Out: users}, nil
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
 				if err != nil {
 					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
-				actionSchemas := &ActionSchemas{
-					In:  users,
-					Out: schema,
-				}
+				actionSchemas := &ActionSchemas{In: users, Out: schema}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
 					Internal: onlyForMatching(users),
 					External: onlyForMatching(sourceSchema),
@@ -178,19 +172,13 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			if c.Role == state.Source {
-				return &ActionSchemas{
-					In:  schema,
-					Out: groups,
-				}, nil
+				return &ActionSchemas{In: schema, Out: groups}, nil
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
 				if err != nil {
 					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
-				actionSchemas := &ActionSchemas{
-					In:  groups,
-					Out: schema,
-				}
+				actionSchemas := &ActionSchemas{In: groups, Out: schema}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
 					Internal: onlyForMatching(groups),
 					External: onlyForMatching(sourceSchema),
@@ -202,33 +190,22 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			// have the GID, as they are sent as they are after enrichment; the
 			// GID is added by the identity resolution directly to the data
 			// warehouse, without affecting the events sent to the apps.
-			return &ActionSchemas{
-				In:  events.Schema,
-				Out: eventTypeSchema,
-			}, nil
+			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
 		}
 
 	case state.DatabaseType:
 		switch target {
 		case Users:
 			if c.Role == state.Source {
-				return &ActionSchemas{
-					Out: users,
-				}, nil
+				return &ActionSchemas{Out: users}, nil
 			} else {
-				return &ActionSchemas{
-					In: users,
-				}, nil
+				return &ActionSchemas{In: users}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
-				return &ActionSchemas{
-					Out: groups,
-				}, nil
+				return &ActionSchemas{Out: groups}, nil
 			} else {
-				return &ActionSchemas{
-					In: groups,
-				}, nil
+				return &ActionSchemas{In: groups}, nil
 			}
 		}
 
@@ -236,23 +213,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
-				return &ActionSchemas{
-					Out: users,
-				}, nil
+				return &ActionSchemas{Out: users}, nil
 			} else {
-				return &ActionSchemas{
-					In: users,
-				}, nil
+				return &ActionSchemas{In: users}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
-				return &ActionSchemas{
-					Out: groups,
-				}, nil
+				return &ActionSchemas{Out: groups}, nil
 			} else {
-				return &ActionSchemas{
-					In: groups,
-				}, nil
+				return &ActionSchemas{In: groups}, nil
 			}
 		}
 
@@ -265,15 +234,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		// have any user associated.
 		switch target {
 		case Users:
-			return &ActionSchemas{
-				In:  events.Schema,
-				Out: users,
-			}, nil
+			return &ActionSchemas{In: events.Schema, Out: users}, nil
 		case Groups:
-			return &ActionSchemas{
-				In:  events.Schema,
-				Out: groups,
-			}, nil
+			return &ActionSchemas{In: events.Schema, Out: groups}, nil
 		}
 		return &ActionSchemas{}, nil
 
