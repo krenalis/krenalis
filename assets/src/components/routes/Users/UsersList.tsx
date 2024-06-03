@@ -21,7 +21,7 @@ const UsersList = () => {
 
 	const { api, handleError, showStatus } = useContext(AppContext);
 	const { users, usersCount, limit, usersProperties, pagination, isLoading, fetchUsers } = useContext(UsersContext);
-	const { usersRows, usersColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: number) =>
+	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: number) =>
 		setSelectedUser(id),
 	);
 
@@ -93,7 +93,7 @@ const UsersList = () => {
 			<div className='users-list__content'>
 				<div className='users-list__grid-container'>
 					<Grid
-						columns={usersColumns}
+						columns={userColumns}
 						rows={usersRows}
 						isLoading={isLoading}
 						noRowsMessage={'No users to show'}

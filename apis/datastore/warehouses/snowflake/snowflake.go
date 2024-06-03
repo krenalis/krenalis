@@ -88,12 +88,12 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 }
 
 // AlterSchema alters the user schema.
-func (warehouse *Snowflake) AlterSchema(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
+func (warehouse *Snowflake) AlterSchema(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
 	panic("TODO: not implemented")
 }
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
-func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	panic("TODO: not implemented")
 }
 
@@ -380,7 +380,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 }
 
 // RunIdentityResolution runs the Identity Resolution.
-func (warehouse *Snowflake) RunIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
+func (warehouse *Snowflake) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column) error {
 	panic("not implemented")
 }
 

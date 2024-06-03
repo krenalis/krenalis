@@ -84,10 +84,10 @@ type Warehouse interface {
 
 	// AlterSchema alters the user schema.
 	//
-	// usersColumns contains the columns of the "users" table to obtain (this
+	// userColumns contains the columns of the "users" table to obtain (this
 	// parameters is useful for obtaining type information and for creating views),
 	// while operations is the set of operations to apply in order to migrate the
-	// current columns to usersColumns.
+	// current columns to userColumns.
 	//
 	// If one of the specified operations is not supported by the data warehouse,
 	// for example if a type is not supported, this method returns a
@@ -95,22 +95,22 @@ type Warehouse interface {
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
-	AlterSchema(ctx context.Context, usersColumns []Column, operations []AlterSchemaOperation) error
+	AlterSchema(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) error
 
 	// AlterSchemaQueries returns the queries of a schema altering operation.
 	//
-	// usersColumns contains the columns of the "users" table to obtain (this
+	// userColumns contains the columns of the "users" table to obtain (this
 	// parameters is useful for obtaining type information and for creating views),
 	// while operations is the set of operations to apply in order to migrate the
-	// current columns to usersColumns.
+	// current columns to userColumns.
 	//
-	// If one of the specified operations is not supported by the data warehouse,
-	// for example if a type is not supported, this method returns a
+	// If one of the specified operations is not supported by the data
+	// warehouse, for example if a type is not supported, this method returns a
 	// warehouses.UnsupportedSchemaChangeErr error.
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
-	AlterSchemaQueries(ctx context.Context, usersColumns []Column, operations []AlterSchemaOperation) ([]string, error)
+	AlterSchemaQueries(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) ([]string, error)
 
 	// Close closes the data warehouse. When Close is called, no other calls to
 	// data warehouse's methods are in progress and no more will be made.
@@ -193,9 +193,9 @@ type Warehouse interface {
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
 	//
-	// usersColumns holds the columns of the "users" schema, as the "users"
-	// table on the data warehouse is rebuilt by this procedure.
-	RunIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []Column) error
+	// userColumns holds the columns of the "users" schema, as the "users" table on
+	// the data warehouse is rebuilt by this procedure.
+	RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []Column) error
 
 	// SetDestinationUser sets the destination user for an action.
 	//

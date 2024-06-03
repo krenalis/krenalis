@@ -20,8 +20,8 @@ import (
 )
 
 // AlterSchema alters the user schema.
-func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
-	queries, err := alterSchemaQueries(usersColumns, operations)
+func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
+	queries, err := alterSchemaQueries(userColumns, operations)
 	if err != nil {
 		return err
 	}
@@ -42,8 +42,8 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, usersColumns []war
 }
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
-func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
-	queries, err := alterSchemaQueries(usersColumns, operations)
+func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+	queries, err := alterSchemaQueries(userColumns, operations)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, usersColumn
 
 // alterSchemaQueries returns the queries that perform the given operations.
 // operations must contain at least one operation.
-func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 
 	// The operations are performed in this order:
 	//
@@ -137,7 +137,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 	{
 		b := strings.Builder{}
 		b.WriteString(`CREATE VIEW "users" AS SELECT` + "\n")
-		for i, c := range usersColumns {
+		for i, c := range userColumns {
 			if i > 0 {
 				b.WriteString(",\n")
 			}
@@ -164,7 +164,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 			b.WriteString(p)
 			b.WriteRune('"')
 		}
-		for _, c := range usersColumns {
+		for _, c := range userColumns {
 			if c.Name == "__id__" {
 				continue
 			}

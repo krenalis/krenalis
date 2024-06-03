@@ -504,7 +504,7 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 }
 
 // RunIdentityResolution runs the Identity Resolution.
-func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connections []int, identifiers, usersColumns []warehouses.Column) error {
+func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -555,7 +555,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	// Generate the SQL queries that populates the users table.
 	var populateUsers strings.Builder
 	populateUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
-	for _, c := range usersColumns {
+	for _, c := range userColumns {
 		if c.Name == "__id__" {
 			continue
 		}
@@ -566,7 +566,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	}
 	populateUsers.WriteString(`"__identities__", "__id__"`)
 	populateUsers.WriteString(") SELECT\n")
-	for _, c := range usersColumns {
+	for _, c := range userColumns {
 		if c.Name == "__id__" {
 			continue
 		}

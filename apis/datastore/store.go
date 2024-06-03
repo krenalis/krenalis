@@ -138,8 +138,8 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 	if store.Mode() == state.Inspection {
 		return ErrInspectionMode
 	}
-	usersColumns := propertiesToColumns(types.Properties(userSchema))
-	return store.warehouse.AlterSchema(ctx, usersColumns, operations)
+	userColumns := propertiesToColumns(types.Properties(userSchema))
+	return store.warehouse.AlterSchema(ctx, userColumns, operations)
 }
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
@@ -157,8 +157,8 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 // error.
 func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
-	usersColumns := propertiesToColumns(types.Properties(userSchema))
-	return store.warehouse.AlterSchemaQueries(ctx, usersColumns, operations)
+	userColumns := propertiesToColumns(types.Properties(userSchema))
+	return store.warehouse.AlterSchemaQueries(ctx, userColumns, operations)
 }
 
 // AddEvents adds events to the store.
@@ -370,10 +370,10 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 		}
 	}
 
-	// Determine the users columns.
-	usersColumns := propertiesToColumns(types.Properties(ws.UserSchema))
+	// Determine the user columns.
+	userColumns := propertiesToColumns(types.Properties(ws.UserSchema))
 
-	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, usersColumns)
+	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, userColumns)
 }
 
 // SetDestinationUser sets the destination user for an action.

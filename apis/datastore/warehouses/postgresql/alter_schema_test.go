@@ -17,14 +17,14 @@ func Test_alterSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		usersColumns    []warehouses.Column // without "__id__", which is added by the test
+		userColumns     []warehouses.Column // without "__id__", which is added by the test
 		ops             []warehouses.AlterSchemaOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     string
 	}{
 		{
 			name: "Add a first level Text property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -37,7 +37,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Float64 property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -50,7 +50,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Float64 (non-real) property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -63,7 +63,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Float64 real properties are not supported",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "f", Type: types.Float(64).AsReal(), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -73,7 +73,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Unsupported type at first-level property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "f", Type: types.Float(64).AsReal(), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -83,7 +83,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Unsupported type at second-level property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_f", Type: types.Float(64).AsReal(), Nullable: true},
 			},
@@ -94,7 +94,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Enum are not supported",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad"), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -104,7 +104,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a second level property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
@@ -121,7 +121,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Array property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Array(types.Text()), Nullable: true},
 			},
@@ -135,7 +135,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Text property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
@@ -149,7 +149,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Object property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_b", Type: types.Int(32), Nullable: true},
@@ -165,7 +165,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add two first level Text properties",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
@@ -181,7 +181,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Drop a first level property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -194,7 +194,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Drop two first level properties",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "z", Type: types.Int(32), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -208,7 +208,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Rename a first level property",
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
 			ops: []warehouses.AlterSchemaOperation{
@@ -220,7 +220,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			usersColumns: []warehouses.Column{
+			userColumns: []warehouses.Column{
 				{Name: "b", Type: types.Boolean(), Nullable: true},
 				{Name: "i16", Type: types.Int(16), Nullable: true},
 				{Name: "i32", Type: types.Int(32), Nullable: true},
@@ -294,14 +294,14 @@ func Test_alterSchemaQueries(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			usersColumns := test.usersColumns
-			for _, c := range usersColumns {
+			userColumns := test.userColumns
+			for _, c := range userColumns {
 				if !c.Nullable {
-					t.Fatalf("test %q is wrong: every column within 'usersColumns' must be nullable, but column %q is not nullable", test.name, c.Name)
+					t.Fatalf("test %q is wrong: every column within 'userColumns' must be nullable, but column %q is not nullable", test.name, c.Name)
 				}
 			}
-			usersColumns = append([]warehouses.Column{{Name: "__id__", Type: types.Int(32)}}, usersColumns...)
-			gotQueries, gotErr := alterSchemaQueries(usersColumns, test.ops)
+			userColumns = append([]warehouses.Column{{Name: "__id__", Type: types.Int(32)}}, userColumns...)
+			gotQueries, gotErr := alterSchemaQueries(userColumns, test.ops)
 			if len(gotQueries) > 2 {
 				gotQueries = gotQueries[2 : len(gotQueries)-2]
 			}

@@ -30,21 +30,21 @@ const useUsersGrid = (
 		return rows;
 	}, [users, usersProperties, onUserClick]);
 
-	const usersColumns = useMemo(() => {
+	const userColumns = useMemo(() => {
 		// compute the columns for the grid component.
-		const usersColumns: GridColumn[] = [];
+		const userColumns: GridColumn[] = [];
 		for (const p of usersProperties) {
 			if (p.isUsed) {
-				usersColumns.push({
+				userColumns.push({
 					name: p.name,
 					type: p.type,
 				});
 			}
 		}
-		return usersColumns;
+		return userColumns;
 	}, [usersProperties]);
 
-	return { usersRows, usersColumns };
+	return { usersRows, userColumns };
 };
 
 export { useUsersGrid };
