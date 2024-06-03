@@ -137,11 +137,17 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 	{
 		b := strings.Builder{}
 		b.WriteString(`CREATE VIEW "users" AS SELECT` + "\n")
-		for i, c := range userColumns {
+		metaProps := []string{"__id__"}
+		for i, p := range metaProps {
 			if i > 0 {
 				b.WriteString(",\n")
 			}
 			b.WriteString("\t\"")
+			b.WriteString(p)
+			b.WriteRune('"')
+		}
+		for _, c := range userColumns {
+			b.WriteString(",\n\t\"")
 			b.WriteString(c.Name)
 			b.WriteRune('"')
 		}
@@ -165,9 +171,6 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 			b.WriteRune('"')
 		}
 		for _, c := range userColumns {
-			if c.Name == "__id__" {
-				continue
-			}
 			b.WriteString(",\n\t\"")
 			b.WriteString(c.Name)
 			b.WriteRune('"')

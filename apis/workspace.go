@@ -486,7 +486,7 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 	// necessary to recreate the views (for example in the case where only the
 	// ordering of properties has been changed).
 	//
-	err = this.store.AlterSchema(ctx, schema, operations)
+	err = this.store.AlterSchema(ctx, removeMetaProperties(schema), operations)
 	if err != nil {
 		if err == datastore.ErrInspectionMode {
 			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
@@ -547,7 +547,7 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	schema = types.Object(append([]types.Property{
 		{Name: "__id__", Type: types.UUID()},
 	}, types.Properties(schema)...))
-	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
+	queries, err := this.store.AlterSchemaQueries(ctx, removeMetaProperties(schema), operations)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)

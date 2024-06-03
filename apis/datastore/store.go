@@ -121,10 +121,10 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 
 // AlterSchema alters the user schema.
 //
-// userSchema is the "users" schema to obtain (this parameters is useful for
-// obtaining type information and for creating views), while operations is the
-// set of operations to apply in order to migrate the current schema to
-// userSchema.
+// userSchema is the user schema without meta properties (this parameter is
+// useful for obtaining type information and for creating views), while
+// operations is the set of operations to apply in order to migrate the current
+// schema to userSchema.
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
@@ -144,10 +144,10 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
 //
-// userSchema is the "users" schema to obtain (this parameters is useful for
-// obtaining type information and for creating views), while operations is the
-// set of operations to apply in order to migrate the current schema to
-// userSchema.
+// userSchema is the user schema without meta properties (this parameter is
+// useful for obtaining type information and for creating views), while
+// operations is the set of operations to apply in order to migrate the current
+// schema to userSchema.
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
