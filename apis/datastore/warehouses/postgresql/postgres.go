@@ -35,7 +35,7 @@ var (
 	createGroupsIdentitiesTable string
 	//go:embed tables/groups.sql
 	createGroupsTable string
-	//go:embed tables/users_identities.sql
+	//go:embed tables/user_identities.sql
 	createUsersIdentitiesTable string
 	//go:embed tables/users.sql
 	createUsersTable string
@@ -117,7 +117,7 @@ func (warehouse *PostgreSQL) DeleteConnectionIdentities(ctx context.Context, con
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, `DELETE FROM "_users_identities" WHERE "__connection__" = $1`, connection)
+	_, err = db.Exec(ctx, `DELETE FROM "_user_identities" WHERE "__connection__" = $1`, connection)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -261,7 +261,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	// Determine the table name.
 	// The table "events" is the only one that doesn't have "_" as a prefix in
-	// the name (as for "users" and "users_identities", they also have the
+	// the name (as for "users" and "user_identities", they also have the
 	// underscore; it's only the respective views that don't have it).
 	tableName := table.Name
 	if tableName != "events" {
@@ -408,7 +408,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(`",`)
 	}
 	b.WriteString("B'0'::bit(" + strconv.Itoa(len(columns)) + ") AS \"$v\"," +
-		"FALSE AS \"$deleted\" FROM \"_users_identities\"\nWITH NO DATA")
+		"FALSE AS \"$deleted\" FROM \"_user_identities\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
@@ -436,7 +436,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 
 	// Merge the temporary table's rows with the destination table's rows.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_users_identities\" d\nUSING \"")
+	b.WriteString("MERGE INTO \"_user_identities\" d\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString("\" s\nON d.\"__connection__\" = s.\"__connection__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
 	b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
@@ -516,9 +516,9 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	// Delete the orphan user identities, which are the identities that belong
 	// to connections that no longer exist.
 	if len(connections) == 0 {
-		b.WriteString(`DELETE FROM "_users_identities"`)
+		b.WriteString(`DELETE FROM "_user_identities"`)
 	} else {
-		b.WriteString(`DELETE FROM "_users_identities" WHERE "__connection__" NOT IN (`)
+		b.WriteString(`DELETE FROM "_user_identities" WHERE "__connection__" NOT IN (`)
 		for i, connection := range connections {
 			if i > 0 {
 				b.WriteByte(',')
@@ -593,7 +593,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		END,
 		gen_random_uuid()
 	)`)
-	populateUsers.WriteString(" FROM _users_identities GROUP BY __cluster__; ")
+	populateUsers.WriteString(" FROM _user_identities GROUP BY __cluster__; ")
 
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,

@@ -27,4 +27,4 @@ You can create a destination in the "connections" page of a workspace clicking o
 
 ### Deleting a connection
 
-When deleting a source connection, the users imported from it are kept within the table `users_identities`, as well as in the table `users`, until the next [Identity Resolution](./identity-resolution.md) is executed.
+When deleting a source connection, the users imported from it are kept within the table `user_identities`, as well as in the table `users`, until the next [Identity Resolution](./identity-resolution.md) is executed.

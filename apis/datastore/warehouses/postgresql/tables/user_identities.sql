@@ -1,4 +1,4 @@
-CREATE TABLE _users_identities (
+CREATE TABLE _user_identities (
     "__pk__" serial,
     "__connection__" int NOT NULL,
     "__identity_id__" text NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE _users_identities (
     PRIMARY KEY ("__pk__")
 );
 
-CREATE VIEW "users_identities" AS
+CREATE VIEW "user_identities" AS
 SELECT
     "__pk__",
     "__connection__",
@@ -24,4 +24,4 @@ SELECT
     "__gid__",
     "email"
 FROM
-    "_users_identities";
+    "_user_identities";

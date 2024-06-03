@@ -35,7 +35,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 
 	// Determine the table name.
 	// The table "events" is the only one that doesn't have "_" as a prefix in
-	// the name (as for "users" and "users_identities", they also have the
+	// the name (as for "users" and "user_identities", they also have the
 	// underscore; it's only the respective views that don't have it).
 	tableName := query.Table
 	if tableName != "events" {

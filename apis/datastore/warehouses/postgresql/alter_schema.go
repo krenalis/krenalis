@@ -71,7 +71,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 
 	// DROP VIEW.
 	queries = append(queries, "DROP VIEW \"users\"")
-	queries = append(queries, "DROP VIEW \"users_identities\"")
+	queries = append(queries, "DROP VIEW \"user_identities\"")
 
 	// ALTER TABLE ... DROP COLUMN.
 	{
@@ -82,7 +82,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 			}
 		}
 		if len(toDrop) > 0 {
-			for _, table := range []string{"_users", "_users_identities"} {
+			for _, table := range []string{"_users", "_user_identities"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE \"" + table + "\"\n\t")
 				for i, c := range toDrop {
@@ -100,7 +100,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
 			queries = append(queries, `ALTER TABLE "_users"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
-			queries = append(queries, `ALTER TABLE "_users_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
+			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
 		}
 	}
 
@@ -113,7 +113,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 			}
 		}
 		if len(toAdd) > 0 {
-			for _, table := range []string{"_users", "_users_identities"} {
+			for _, table := range []string{"_users", "_user_identities"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE \"" + table + "\"\n\t")
 				for i, op := range toAdd {
@@ -149,10 +149,10 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 		queries = append(queries, b.String())
 	}
 
-	// CREATE VIEW "users_identities"
+	// CREATE VIEW "user_identities"
 	{
 		b := strings.Builder{}
-		b.WriteString(`CREATE VIEW "users_identities" AS SELECT` + "\n")
+		b.WriteString(`CREATE VIEW "user_identities" AS SELECT` + "\n")
 		metaProps := []string{"__pk__", "__connection__", "__identity_id__",
 			"__is_anonymous__", "__displayed_property__", "__anonymous_ids__",
 			"__last_change_time__", "__gid__"}
@@ -172,7 +172,7 @@ func alterSchemaQueries(usersColumns []warehouses.Column, operations []warehouse
 			b.WriteString(c.Name)
 			b.WriteRune('"')
 		}
-		b.WriteString("\n" + `FROM "_users_identities"`)
+		b.WriteString("\n" + `FROM "_user_identities"`)
 		queries = append(queries, b.String())
 	}
 

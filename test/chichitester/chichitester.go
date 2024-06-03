@@ -68,7 +68,7 @@ type TestingOption int
 
 const (
 	// DoNotPopulateUsersSchema prevents the test from populating the "users"
-	// (and "users_identities") schema with testing properties.
+	// (and "user_identities") schema with testing properties.
 	DoNotPopulateUsersSchema TestingOption = iota + 1
 )
 

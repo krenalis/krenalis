@@ -36,9 +36,9 @@ AS $$
         i2.__pk__,
         {{ same_user }} as same_user -- This placeholder will be replaced by Chichi:
     FROM
-        _users_identities i1
+        _user_identities i1
             CROSS JOIN
-        _users_identities i2
+        _user_identities i2
     WHERE
         i1.__pk__ < i2.__pk__;
     
@@ -61,8 +61,8 @@ AS $$
                 i2.__cluster__ c2
             FROM
                 edges
-                JOIN _users_identities i1 ON edges.i1 = i1.__pk__
-                JOIN _users_identities i2 ON edges.i2 = i2.__pk__
+                JOIN _user_identities i1 ON edges.i1 = i1.__pk__
+                JOIN _user_identities i2 ON edges.i2 = i2.__pk__
             WHERE
                 edges.same_user
                 AND i1.__cluster__ <> i2.__cluster__;
@@ -79,11 +79,11 @@ AS $$
             
             -- Update the clusters of the user identities.
             UPDATE
-                _users_identities identities_a
+                _user_identities identities_a
             SET
                 __cluster__ = least(identities_a.__cluster__, target)
             FROM
-                _users_identities identities_b
+                _user_identities identities_b
                 JOIN (
                     SELECT
                         c1 source,
@@ -104,27 +104,27 @@ AS $$
     {{ populate_users }};
 
     -- Update the GID of the user identities.
-    UPDATE "_users_identities" SET "__gid__" = (
+    UPDATE "_user_identities" SET "__gid__" = (
         SELECT "__id__"
         FROM "_users"
         WHERE
-            "_users_identities"."__pk__" = ANY ("_users"."__identities__")
+            "_user_identities"."__pk__" = ANY ("_users"."__identities__")
         LIMIT 1
     )
     FROM "_users"
     WHERE
-        "_users_identities"."__pk__" = ANY ("_users"."__identities__");
+        "_user_identities"."__pk__" = ANY ("_users"."__identities__");
 
     -- Update the user GID of the events.
     UPDATE "events" SET "user" = null;
-    UPDATE "events" SET "user" = "_users_identities"."__gid__"
-    FROM "_users_identities" WHERE
-        "events"."source" = "_users_identities"."__connection__"
+    UPDATE "events" SET "user" = "_user_identities"."__gid__"
+    FROM "_user_identities" WHERE
+        "events"."source" = "_user_identities"."__connection__"
             AND
         (
-            ("events"."user_id" <> '' AND "events"."user_id" = "_users_identities"."__identity_id__")
+            ("events"."user_id" <> '' AND "events"."user_id" = "_user_identities"."__identity_id__")
                 OR
-            ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_users_identities"."__anonymous_ids__"))
+            ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_user_identities"."__anonymous_ids__"))
         );
 
 $$;

@@ -5,9 +5,9 @@ The **Identity Resolution** determines if more user identities, belonging to **a
 
 In particular, it performs these operations (not necessarily in this order):
 
-* recreates the contents of the `users` table starting from the identities within `users_identities`
+* recreates the contents of the `users` table starting from the identities within `user_identities`
 * updates the association between the events within the `events` table and the users within `users`
-* deletes the users within `users_identities` and `users` which no longer belong to any connection (i.e. connections that have been deleted).
+* deletes the users within `user_identities` and `users` which no longer belong to any connection (i.e. connections that have been deleted).
 
 ## When It Is Executed
 
@@ -37,7 +37,7 @@ As a corollary of the previous definition, **if there are no identifiers defined
 
 ## Identifiers
 
-An identifier consists in **a property path** which refers to a property of the `users_identities` schema which have [an allowed type](./identity-resolution/allowed-types-for-identifiers.md).
+An identifier consists in **a property path** which refers to a property of the `user_identities` schema which have [an allowed type](./identity-resolution/allowed-types-for-identifiers.md).
 
 It is possible to define zero, one, or more identifiers for the identity resolution. 
 

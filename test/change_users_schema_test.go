@@ -67,9 +67,9 @@ func TestChangeUsersSchema(t *testing.T) {
 	queries = c.ChangeUsersSchemaQueries(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"users\";",
-		"DROP VIEW \"users_identities\";",
+		"DROP VIEW \"user_identities\";",
 		"ALTER TABLE \"_users\"\n\tADD COLUMN \"new_prop\" varchar;",
-		"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"new_prop\" varchar;",
+		"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"new_prop\" varchar;",
 		"CREATE VIEW \"users\" AS SELECT\n\t\"__id__\",\n\t\"email\",\n\t\"dummy_id\",\n" +
 			"\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n" +
 			"\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n" +
@@ -78,7 +78,7 @@ func TestChangeUsersSchema(t *testing.T) {
 			"\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n" +
 			"\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n" +
 			"\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users\";",
-		"CREATE VIEW \"users_identities\" AS SELECT\n\t\"__pk__\",\n\t\"__connection__\",\n" +
+		"CREATE VIEW \"user_identities\" AS SELECT\n\t\"__pk__\",\n\t\"__connection__\",\n" +
 			"\t\"__identity_id__\",\n\t\"__is_anonymous__\",\n\t\"__displayed_property__\",\n\t\"__anonymous_ids__\",\n" +
 			"\t\"__last_change_time__\",\n\t\"__gid__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n" +
 			"\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n" +
@@ -86,7 +86,7 @@ func TestChangeUsersSchema(t *testing.T) {
 			"\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n" +
 			"\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n" +
 			"\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n" +
-			"\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users_identities\";",
+			"\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_user_identities\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {

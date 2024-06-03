@@ -32,7 +32,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"a\" varchar",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar",
 			},
 		},
 		{
@@ -45,7 +45,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"f\" double precision",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"f\" double precision",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
 		},
 		{
@@ -116,7 +116,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" varchar",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" varchar",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" varchar",
 			},
 		},
 		{
@@ -130,7 +130,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar[]",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"a\" varchar[]",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar[]",
 			},
 		},
 		{
@@ -144,7 +144,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"a\" varchar",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar",
 			},
 		},
 		{
@@ -160,7 +160,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" integer",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" integer",
 			},
 		},
 		{
@@ -176,7 +176,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tADD COLUMN \"a\" varchar,\n\tADD COLUMN \"b\" integer",
-				"ALTER TABLE \"_users_identities\"\n\tADD COLUMN \"a\" varchar,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar,\n\tADD COLUMN \"b\" integer",
 			},
 		},
 		{
@@ -189,7 +189,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tDROP COLUMN \"a\"",
-				"ALTER TABLE \"_users_identities\"\n\tDROP COLUMN \"a\"",
+				"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"a\"",
 			},
 		},
 		{
@@ -203,7 +203,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
-				"ALTER TABLE \"_users_identities\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
+				"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
 			},
 		},
 		{
@@ -216,7 +216,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users\"\n\tRENAME COLUMN \"a\" TO \"b\"",
-				"ALTER TABLE \"_users_identities\"\n\tRENAME COLUMN \"a\" TO \"b\"",
+				"ALTER TABLE \"_user_identities\"\n\tRENAME COLUMN \"a\" TO \"b\"",
 			},
 		},
 		{
@@ -272,7 +272,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 					"\n\tADD COLUMN \"t\" varchar," +
 					"\n\tADD COLUMN \"at\" varchar[]," +
 					"\n\tADD COLUMN \"ai32\" integer[]",
-				"ALTER TABLE \"_users_identities\"" +
+				"ALTER TABLE \"_user_identities\"" +
 					"\n\tADD COLUMN \"b\" boolean," +
 					"\n\tADD COLUMN \"i16\" smallint," +
 					"\n\tADD COLUMN \"i32\" integer," +

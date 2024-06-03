@@ -46,7 +46,7 @@ var workspaceChangeUsersSchema = &cobra.Command{
 		}
 		queries := chichiapis.WorkspaceChangeUsersSchemaQueries(workspace(cmd), req.Schema, req.RePaths)
 		if len(queries) == 0 {
-			fmt.Printf("It looks like the 'users' / 'users_identities' schemas"+
+			fmt.Printf("It looks like the 'users' / 'user_identities' schemas"+
 				" on the data warehouse already match with the schema indicated in %q,"+
 				" so there are no queries to execute, exiting\n", filename)
 			return

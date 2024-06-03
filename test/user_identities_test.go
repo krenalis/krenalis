@@ -28,7 +28,7 @@ func Test_UsersIdentities(t *testing.T) {
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
-	storageDir, err := filepath.Abs("testdata/users_identities_test")
+	storageDir, err := filepath.Abs("testdata/user_identities_test")
 	if err != nil {
 		t.Fatal(err)
 	}

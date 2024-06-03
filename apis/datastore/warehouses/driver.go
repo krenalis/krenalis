@@ -25,7 +25,7 @@ import (
 )
 
 // AlterSchemaOperation represents an operation that alters the "users" (and the
-// "users_identities") schema.
+// "user_identities") schema.
 // Every column is always nullable.
 type AlterSchemaOperation struct {
 	Operation OperationType
@@ -42,7 +42,7 @@ type MergeTable struct {
 }
 
 // OperationType represents an operation to perform on the data warehouse to
-// alter the "users" (and "users_identities") schema.
+// alter the "users" (and "user_identities") schema.
 type OperationType int
 
 const (
