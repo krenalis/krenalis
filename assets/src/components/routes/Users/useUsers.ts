@@ -88,12 +88,12 @@ const useUsers = () => {
 		// update the value of the properties in the storage.
 		localStorage.setItem('chichi_ui_users_properties', JSON.stringify(properties));
 
-		// compute the names of the showed user properties to request only those
-		// properties when fetching the users.
-		const propertiesNames: string[] = [];
+		// compute the names of the showed user properties to request
+		// only those properties when fetching the users. Always request
+		// the id as it is needed for navigation.
+		const propertiesNames: string[] = ['__id__'];
 		for (const p of properties) {
-			// always request the id as it is needed for navigation.
-			if (p.name === '__id__' || p.isUsed) {
+			if (p.isUsed) {
 				propertiesNames.push(p.name);
 			}
 		}
