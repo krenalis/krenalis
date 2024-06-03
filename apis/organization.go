@@ -131,11 +131,10 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	return err
 }
 
-// defaultUserSchema is the default user schema.
+// defaultUserSchema is the default user schema (without meta properties).
 // It must be kept in sync with the SQL script that initializes the data
 // warehouse.
 var defaultUserSchema = types.Object([]types.Property{
-	{Name: "__id__", Type: types.UUID()},
 	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
 })
 
@@ -461,7 +460,7 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		workspace:           ws,
 		ID:                  ws.ID,
 		Name:                ws.Name,
-		UserSchema:          removeMetaProperties(ws.UserSchema),
+		UserSchema:          ws.UserSchema,
 		Identifiers:         ws.Identifiers,
 		PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),

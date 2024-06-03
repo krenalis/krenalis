@@ -444,8 +444,7 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 		return errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
 
-	current := removeMetaProperties(this.workspace.UserSchema)
-	operations, err := diffschemas.Diff(current, schema, rePaths, "")
+	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
@@ -453,11 +452,6 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 	if this.store == nil {
 		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-
-	// Add the "__id__" meta property.
-	schema = types.Object(append([]types.Property{
-		{Name: "__id__", Type: types.UUID()},
-	}, types.Properties(schema)...))
 
 	// Update the database and send the notification.
 	n := state.SetWorkspaceUserSchema{
@@ -486,7 +480,7 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 	// necessary to recreate the views (for example in the case where only the
 	// ordering of properties has been changed).
 	//
-	err = this.store.AlterSchema(ctx, removeMetaProperties(schema), operations)
+	err = this.store.AlterSchema(ctx, schema, operations)
 	if err != nil {
 		if err == datastore.ErrInspectionMode {
 			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
@@ -536,18 +530,14 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return nil, errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
-	users := removeMetaProperties(this.workspace.UserSchema)
-	operations, err := diffschemas.Diff(users, schema, rePaths, "")
+	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
 	if this.store == nil {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-	schema = types.Object(append([]types.Property{
-		{Name: "__id__", Type: types.UUID()},
-	}, types.Properties(schema)...))
-	queries, err := this.store.AlterSchemaQueries(ctx, removeMetaProperties(schema), operations)
+	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
@@ -902,9 +892,6 @@ func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error
 	this.apis.mustBeOpen()
 	var properties []types.Property
 	for _, p := range this.workspace.UserSchema.Properties() {
-		if isMetaProperty(p.Name) {
-			continue
-		}
 		if datastore.CanBeIdentifier(p.Type) {
 			properties = append(properties, p)
 		}
@@ -1362,8 +1349,15 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	if len(properties) == 0 {
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
 	}
+
+	userSchema := ws.UserSchema
+
+	// Add the "__id__" meta property to the user schema.
+	userSchema = types.Object(append([]types.Property{{Name: "__id__", Type: types.UUID()}},
+		types.Properties(userSchema)...))
+
 	propertyByName := map[string]types.Property{}
-	for _, p := range ws.UserSchema.Properties() {
+	for _, p := range userSchema.Properties() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {
@@ -1379,7 +1373,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	var stateFilter *state.Filter
 	if filter != nil {
-		_, err := validateFilter(filter, ws.UserSchema)
+		_, err := validateFilter(filter, userSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)

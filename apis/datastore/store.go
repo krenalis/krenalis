@@ -77,8 +77,8 @@ type Store struct {
 	warehouse        warehouses.Warehouse
 	columnByProperty struct {
 		mu       sync.Mutex
-		user     map[string]warehouses.Column
-		identity map[string]warehouses.Column
+		user     map[string]warehouses.Column // including meta properties.
+		identity map[string]warehouses.Column // including meta properties.
 	}
 	mu        sync.Mutex // for mode and events fields
 	mode      state.WarehouseMode
@@ -101,6 +101,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
 	store.columnByProperty.user = columnByProperty(ws.UserSchema)
+	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	if ws.Warehouse.Mode == state.Normal {
 		go func() {
@@ -371,9 +372,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the user columns.
-	userSchema := ws.UserSchema
-	userSchema = removeMetaProperties(userSchema)
-	userColumns := propertiesToColumns(types.Properties(userSchema))
+	userColumns := propertiesToColumns(types.Properties(ws.UserSchema))
 
 	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, userColumns)
 }
@@ -552,21 +551,4 @@ func (store *Store) userColumnByProperty() map[string]warehouses.Column {
 	columns := store.columnByProperty.user
 	store.columnByProperty.mu.Unlock()
 	return columns
-}
-
-// removeMetaProperties removes the properties considered meta properties by the
-// data warehouses from the schema, and returns it as a new schema.
-func removeMetaProperties(schema types.Type) types.Type {
-
-	// TODO(Gianluca): note that this function will be removed by the PR #801.
-
-	props := types.Properties(schema)
-	noMetaProps := make([]types.Property, 0, len(props))
-	for _, p := range props {
-		if isMetaProperty(p.Name) {
-			continue
-		}
-		noMetaProps = append(noMetaProps, p)
-	}
-	return types.Object(noMetaProps)
 }

@@ -161,6 +161,7 @@ func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 	if ok {
 		store.columnByProperty.mu.Lock()
 		store.columnByProperty.user = columnByProperty(n.UserSchema)
+		store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
 		store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 		store.columnByProperty.mu.Unlock()
 	}

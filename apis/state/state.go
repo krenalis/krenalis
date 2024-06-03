@@ -418,7 +418,7 @@ type Workspace struct {
 	ID                  int
 	organization        *Organization
 	Name                string
-	UserSchema          types.Type
+	UserSchema          types.Type // without meta properties.
 	accounts            map[int]*Account
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion

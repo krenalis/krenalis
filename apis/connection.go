@@ -136,8 +136,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
-	users := removeMetaProperties(this.connection.Workspace().UserSchema)
-	groups := removeMetaProperties(dummyGroupsSchema)
+	users := this.connection.Workspace().UserSchema
+	groups := dummyGroupsSchema
 
 	c := this.connection
 
@@ -2130,20 +2130,6 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 		return nil, errors.New("data is too large")
 	}
 	return rawSchema, nil
-}
-
-// removeMetaProperties removes the properties considered meta properties by the
-// data warehouses from the schema, and returns it as a new schema.
-func removeMetaProperties(schema types.Type) types.Type {
-	props := types.Properties(schema)
-	noMetaProps := make([]types.Property, 0, len(props))
-	for _, p := range props {
-		if isMetaProperty(p.Name) {
-			continue
-		}
-		noMetaProps = append(noMetaProps, p)
-	}
-	return types.Object(noMetaProps)
 }
 
 // statsTimeSlot returns the stats time slot for the time t.
