@@ -36,7 +36,7 @@ var (
 	//go:embed tables/groups.sql
 	createGroupsTable string
 	//go:embed tables/user_identities.sql
-	createUsersIdentitiesTable string
+	createUserIdentitiesTable string
 	//go:embed tables/users.sql
 	createUsersTable string
 	//go:embed identity_resolution.sql
@@ -237,7 +237,7 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 		createEventsTable,
 		createGroupsIdentitiesTable,
 		createGroupsTable,
-		createUsersIdentitiesTable,
+		createUserIdentitiesTable,
 		createUsersTable,
 	}
 	for _, table := range tables {

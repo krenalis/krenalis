@@ -162,7 +162,7 @@ func (connection connection) Executions(_ http.ResponseWriter, r *http.Request) 
 	return c.Executions(r.Context())
 }
 
-// Identities returns the users identities of a connection.
+// Identities returns the user identities of a connection.
 func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {

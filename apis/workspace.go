@@ -1665,8 +1665,8 @@ type identity struct {
 	LastChangeTime    time.Time
 }
 
-// userIdentities returns the users identities matching the provided filter
-// and an estimate of their count without applying first and limit.
+// userIdentities returns the user identities matching the provided filter and
+// an estimate of their count without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.

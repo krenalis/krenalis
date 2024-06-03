@@ -21,7 +21,7 @@
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
-- [How to test events (and eventually import users identities)](#how-to-test-events-and-eventually-import-users-identities)
+- [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
 - [APIs](#apis)
 
@@ -202,7 +202,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 4. Make a note of the URL listed in the standard output (example:  https://xxxxxxx.trycloudflare.com)
 5. Open the URL in a browser
 
-## How to test events (and eventually import users identities)
+## How to test events (and eventually import user identities)
 
 1. Add a JavaScript source connection with host `localhost:9090`.
 2. Add an action with type "Import events" (and/or an action "Import users", depending on what you want to test) and enable it.

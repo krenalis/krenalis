@@ -18,7 +18,7 @@ import (
 	"github.com/segmentio/analytics-go/v3"
 )
 
-func TestUsersIdentitiesFromEvents(t *testing.T) {
+func TestUserIdentitiesFromEvents(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {

@@ -92,7 +92,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	return encoding.MarshalSlice(events.Schema, evs)
 }
 
-// Identities returns the users identities of the user, and an estimate of their
+// Identities returns the user identities of the user, and an estimate of their
 // count without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0

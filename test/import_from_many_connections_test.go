@@ -131,7 +131,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	t.Log("importing users and events...")
 	{
 		// Add a JavaScript connection with two actions (one for importing
-		// events, one for importing users identities) and retrieve its key.
+		// events, one for importing user identities) and retrieve its key.
 		var javaScriptKey string
 		{
 			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)

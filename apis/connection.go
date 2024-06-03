@@ -261,7 +261,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			return nil, errors.NotFound("event type not expected")
 		}
 		// The input schema is the events schema without GID because these
-		// actions import users identities from incoming events, which do not
+		// actions import user identities from incoming events, which do not
 		// have any user associated.
 		switch target {
 		case Users:
@@ -512,10 +512,10 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	connector := this.connection.Connector()
 	inSchema := action.InSchema
-	if importsUsersIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target)) {
+	if importsUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target)) {
 		// The input schema is the events schema without GID because this
-		// actions imports users identities from incoming events, which,
-		// clearly, still do not have any user associated.
+		// actions imports user identities from incoming events, which, clearly,
+		// still do not have any user associated.
 		inSchema = events.Schema
 	}
 
@@ -1038,7 +1038,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	return executions, nil
 }
 
-// Identities returns the users identities of the connection, and an estimate of
+// Identities returns the user identities of the connection, and an estimate of
 // their count without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0

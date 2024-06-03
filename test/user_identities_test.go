@@ -17,7 +17,7 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-func Test_UsersIdentities(t *testing.T) {
+func Test_UserIdentities(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {

@@ -370,7 +370,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 
 	inSchema := action.InSchema
-	if importsUsersIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
+	if importsUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
 		// Use the schema without GID because incoming events do not have a GID.
 		inSchema = events.Schema
 	}
@@ -911,10 +911,10 @@ func canBeUsedAsAsMatchingProp(k types.Kind) bool {
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
-// importsUsersIdentitiesFromEvents reports whether a connector with the given
+// importsUserIdentitiesFromEvents reports whether a connector with the given
 // type, on a connection with the given role, with an action with the given
-// target, imports users identities from events.
-func importsUsersIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+// target, imports user identities from events.
+func importsUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	if role == state.Source && target == state.Users {
 		switch connectorType {
 		case state.MobileType, state.ServerType, state.WebsiteType:

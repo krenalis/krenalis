@@ -35,7 +35,7 @@ func (user user) Events(_ http.ResponseWriter, r *http.Request) (any, error) {
 	return map[string]any{"events": rawJSON(events)}, nil
 }
 
-// Identities returns the users identities of a user, and an estimate of their
+// Identities returns the user identities of a user, and an estimate of their
 // count without applying first and limit.
 func (user user) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	u, err := user.user(r)

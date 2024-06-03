@@ -375,7 +375,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: javaScriptConnection,
 			action: chichitester.ActionToSet{
-				Name:     "Import users identities from events",
+				Name:     "Import user identities from events",
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
@@ -391,7 +391,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: javaScriptConnection,
 			action: chichitester.ActionToSet{
-				Name:    "Import users identities from events",
+				Name:    "Import user identities from events",
 				Enabled: true,
 				InSchema: types.Object([]types.Property{
 					{Name: "traits", Type: types.Object([]types.Property{
@@ -407,7 +407,7 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import users identities from events"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import user identities from events"}}`,
 		},
 		{
 			conn: dummyExportConnection,
@@ -438,7 +438,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: javaScriptConnection,
 			action: chichitester.ActionToSet{
-				Name:     "Import users identities from events",
+				Name:     "Import user identities from events",
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{

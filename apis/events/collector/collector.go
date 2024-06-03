@@ -278,13 +278,13 @@ func (c *Collector) hasImportUsersAction(source *state.Connection) bool {
 	return false
 }
 
-// importUsersIdentities imports users identities from the given events batch
+// importUserIdentities imports user identities from the given events batch
 // collected on the source connection.
 //
 // If the data warehouse is in inspection mode, it returns the
 // datastore.ErrInspectionMode error. If it is in maintenance mode, it returns
 // the datastore.ErrMaintenanceMode error.
-func (c *Collector) importUsersIdentities(source *state.Connection, events []*events.Event) error {
+func (c *Collector) importUserIdentities(source *state.Connection, events []*events.Event) error {
 	for _, action := range source.Actions() {
 		if !action.Enabled {
 			continue
@@ -296,13 +296,13 @@ func (c *Collector) importUsersIdentities(source *state.Connection, events []*ev
 		ws := connection.Workspace()
 		store := c.datastore.Store(ws.ID)
 
-		// Instantiate an IdentitiesWriter for writing the users identities.
+		// Instantiate an IdentitiesWriter for writing the user identities.
 		ack := func(err error, ids []string) {
 			if err != nil {
-				slog.Warn("cannot import users identities", "action", action.ID, "ids", ids, "err", err)
+				slog.Warn("cannot import user identities", "action", action.ID, "ids", ids, "err", err)
 				return
 			}
-			slog.Warn("users identities imported successfully", "action", action.ID, "ids", ids)
+			slog.Warn("user identities imported successfully", "action", action.ID, "ids", ids)
 		}
 		ctx := context.Background()
 		iw, err := store.IdentitiesWriter(action.OutSchema, connection.ID, ack)
@@ -652,8 +652,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if c.hasImportUsersAction(connection) {
-		// Import the users identities.
-		err = c.importUsersIdentities(connection, batch)
+		// Import the user identities.
+		err = c.importUserIdentities(connection, batch)
 		if err != nil {
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
