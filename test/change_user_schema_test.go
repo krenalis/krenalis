@@ -27,8 +27,8 @@ func TestChangeUserSchema(t *testing.T) {
 	defer c.Stop()
 
 	ws := c.Workspace()
-	if n := len(types.Properties(ws.UserSchema)); n != 11 {
-		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
+	if n := len(types.Properties(ws.UserSchema)); n != 10 {
+		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 
 	// Read the schema in "tests_user_schema.json".
@@ -56,8 +56,8 @@ func TestChangeUserSchema(t *testing.T) {
 	c.ChangeUserSchema(file.Schema, file.RePaths) // this should do nothing.
 
 	ws = c.Workspace()
-	if n := len(types.Properties(ws.UserSchema)); n != 11 {
-		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
+	if n := len(types.Properties(ws.UserSchema)); n != 10 {
+		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 
 	// Add a single property.
@@ -95,8 +95,8 @@ func TestChangeUserSchema(t *testing.T) {
 	c.ChangeUserSchema(schema, nil)
 
 	ws = c.Workspace()
-	if n := len(types.Properties(ws.UserSchema)); n != 12 {
-		t.Fatalf("expected 12 properties in the \"users\" schema, got %d", n)
+	if n := len(types.Properties(ws.UserSchema)); n != 11 {
+		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
 
 	// Create a schema with two properties that would conflict each other.

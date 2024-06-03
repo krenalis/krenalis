@@ -461,7 +461,7 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		workspace:           ws,
 		ID:                  ws.ID,
 		Name:                ws.Name,
-		UserSchema:          ws.UserSchema,
+		UserSchema:          removeMetaProperties(ws.UserSchema),
 		Identifiers:         ws.Identifiers,
 		PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
