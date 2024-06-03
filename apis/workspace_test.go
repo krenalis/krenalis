@@ -13,7 +13,7 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-func Test_checkAllowedTypesUsersSchema(t *testing.T) {
+func Test_checkAllowedTypesUserSchema(t *testing.T) {
 
 	tests := []struct {
 		name   string
@@ -102,7 +102,7 @@ func Test_checkAllowedTypesUsersSchema(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := checkAllowedPropertyUsersSchema(test.schema)
+			gotErr := checkAllowedPropertyUserSchema(test.schema)
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()

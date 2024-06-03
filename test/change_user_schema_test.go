@@ -17,7 +17,7 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-func TestChangeUsersSchema(t *testing.T) {
+func TestChangeUserSchema(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -27,12 +27,12 @@ func TestChangeUsersSchema(t *testing.T) {
 	defer c.Stop()
 
 	ws := c.Workspace()
-	if n := len(types.Properties(ws.UsersSchema)); n != 11 {
+	if n := len(types.Properties(ws.UserSchema)); n != 11 {
 		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
 
-	// Read the schema in "tests_users_schema.json".
-	f, err := os.Open("tests_users_schema.json")
+	// Read the schema in "tests_user_schema.json".
+	f, err := os.Open("tests_user_schema.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,16 +47,16 @@ func TestChangeUsersSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The schema of "tests_users_schema.json" has already been applied by the
+	// The schema of "tests_user_schema.json" has already been applied by the
 	// tests framework.
-	queries := c.ChangeUsersSchemaQueries(file.Schema, file.RePaths)
+	queries := c.ChangeUserSchemaQueries(file.Schema, file.RePaths)
 	if len(queries) != 6 {
 		t.Fatalf("expected 6 queries, got %d", len(queries))
 	}
-	c.ChangeUsersSchema(file.Schema, file.RePaths) // this should do nothing.
+	c.ChangeUserSchema(file.Schema, file.RePaths) // this should do nothing.
 
 	ws = c.Workspace()
-	if n := len(types.Properties(ws.UsersSchema)); n != 11 {
+	if n := len(types.Properties(ws.UserSchema)); n != 11 {
 		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
 
@@ -64,7 +64,7 @@ func TestChangeUsersSchema(t *testing.T) {
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
 		Name: "new_prop", Type: types.Text(), Nullable: true,
 	}))
-	queries = c.ChangeUsersSchemaQueries(schema, nil)
+	queries = c.ChangeUserSchemaQueries(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"users\";",
 		"DROP VIEW \"user_identities\";",
@@ -92,10 +92,10 @@ func TestChangeUsersSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.ChangeUsersSchema(schema, nil)
+	c.ChangeUserSchema(schema, nil)
 
 	ws = c.Workspace()
-	if n := len(types.Properties(ws.UsersSchema)); n != 12 {
+	if n := len(types.Properties(ws.UserSchema)); n != 12 {
 		t.Fatalf("expected 12 properties in the \"users\" schema, got %d", n)
 	}
 
@@ -106,7 +106,7 @@ func TestChangeUsersSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), Nullable: true},
 		})},
 	))
-	_, err = c.ChangeUsersSchemaQueriesErr(schema, nil)
+	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -114,7 +114,7 @@ func TestChangeUsersSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.ChangeUsersSchemaErr(schema, nil)
+	err = c.ChangeUserSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -128,7 +128,7 @@ func TestChangeUsersSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), Nullable: false},
 		})},
 	))
-	_, err = c.ChangeUsersSchemaQueriesErr(schema, nil)
+	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -136,7 +136,7 @@ func TestChangeUsersSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.ChangeUsersSchemaErr(schema, nil)
+	err = c.ChangeUserSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}

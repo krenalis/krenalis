@@ -19,7 +19,7 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// AlterSchema alters the users schema.
+// AlterSchema alters the user schema.
 func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
 	queries, err := alterSchemaQueries(usersColumns, operations)
 	if err != nil {

@@ -56,8 +56,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetWarehouseMode = append(state.listeners.SetWarehouseMode, l)
 	case func(SetWorkspace):
 		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
-	case func(schema SetWorkspaceUsersSchema):
-		state.listeners.SetWorkspaceUsersSchema = append(state.listeners.SetWorkspaceUsersSchema, l)
+	case func(schema SetWorkspaceUserSchema):
+		state.listeners.SetWorkspaceUserSchema = append(state.listeners.SetWorkspaceUserSchema, l)
 	default:
 		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
 	}
@@ -150,8 +150,8 @@ func (state *State) keepState() {
 			state.setWorkspace(n)
 		case "SetWorkspaceIdentifiers":
 			state.setWorkspaceIdentifiers(n)
-		case "SetWorkspaceUsersSchema":
-			state.setWorkspaceUsersSchema(n)
+		case "SetWorkspaceUserSchema":
+			state.setWorkspaceUserSchema(n)
 		default:
 			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
@@ -513,7 +513,7 @@ type AddWorkspace struct {
 	ID                  int
 	Organization        int
 	Name                string
-	UsersSchema         types.Type
+	UserSchema          types.Type
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
 }
@@ -531,7 +531,7 @@ func (state *State) addWorkspace(n notification) {
 		ID:                  e.ID,
 		organization:        organization,
 		Name:                e.Name,
-		UsersSchema:         e.UsersSchema,
+		UserSchema:          e.UserSchema,
 		PrivacyRegion:       e.PrivacyRegion,
 		DisplayedProperties: e.DisplayedProperties,
 	}
@@ -1165,23 +1165,23 @@ func (state *State) setWorkspaceIdentifiers(n notification) {
 	})
 }
 
-// SetWorkspaceUsersSchema is the event sent when the "users" schema of a
+// SetWorkspaceUserSchema is the event sent when the "users" schema of a
 // workspace is changed.
-type SetWorkspaceUsersSchema struct {
-	Workspace   int
-	UsersSchema types.Type
+type SetWorkspaceUserSchema struct {
+	Workspace  int
+	UserSchema types.Type
 }
 
-// setWorkspaceUsersSchema sets the "users" schema of a workspace.
-func (state *State) setWorkspaceUsersSchema(n notification) {
-	e := SetWorkspaceUsersSchema{}
+// setWorkspaceUserSchema sets the "users" schema of a workspace.
+func (state *State) setWorkspaceUserSchema(n notification) {
+	e := SetWorkspaceUserSchema{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.UsersSchema = e.UsersSchema
+		w.UserSchema = e.UserSchema
 	})
-	for _, listener := range state.listeners.SetWorkspaceUsersSchema {
+	for _, listener := range state.listeners.SetWorkspaceUserSchema {
 		listener(e)
 	}
 }

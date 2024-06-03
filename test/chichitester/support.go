@@ -183,7 +183,7 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 	})
 }
 
-func (c *Chichi) ChangeUsersSchema(schema types.Type, rePaths map[string]any) {
+func (c *Chichi) ChangeUserSchema(schema types.Type, rePaths map[string]any) {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"Schema":  schema,
@@ -192,9 +192,9 @@ func (c *Chichi) ChangeUsersSchema(schema types.Type, rePaths map[string]any) {
 	c.MustCall("PUT", method, req, nil)
 }
 
-// ChangeUsersSchemaErr is like ChangeUsersSchema but returns an error instead
-// of panicking.
-func (c *Chichi) ChangeUsersSchemaErr(schema types.Type, rePaths map[string]any) error {
+// ChangeUserSchemaErr is like ChangeUserSchema but returns an error instead of
+// panicking.
+func (c *Chichi) ChangeUserSchemaErr(schema types.Type, rePaths map[string]any) error {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"Schema":  schema,
@@ -203,7 +203,7 @@ func (c *Chichi) ChangeUsersSchemaErr(schema types.Type, rePaths map[string]any)
 	return c.Call("PUT", method, req, nil)
 }
 
-func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]any) []string {
+func (c *Chichi) ChangeUserSchemaQueries(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
@@ -211,14 +211,14 @@ func (c *Chichi) ChangeUsersSchemaQueries(schema types.Type, rePaths map[string]
 	var response struct {
 		Queries []string
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema-queries", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/change-user-schema-queries", c.ws)
 	c.MustCall("POST", method, req, &response)
 	return response.Queries
 }
 
-// ChangeUsersSchemaQueriesErr is like ChangeUsersSchemaQueries but returns an
+// ChangeUserSchemaQueriesErr is like ChangeUserSchemaQueries but returns an
 // error instead of panicking.
-func (c *Chichi) ChangeUsersSchemaQueriesErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (c *Chichi) ChangeUserSchemaQueriesErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
@@ -226,7 +226,7 @@ func (c *Chichi) ChangeUsersSchemaQueriesErr(schema types.Type, rePaths map[stri
 	var response struct {
 		Queries []string
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/change-users-schema-queries", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/change-user-schema-queries", c.ws)
 	err := c.Call("POST", method, req, &response)
 	if err != nil {
 		return nil, err

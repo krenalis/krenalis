@@ -131,10 +131,10 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	return err
 }
 
-// defaultUsersSchema is the default "users" schema.
+// defaultUserSchema is the default user schema.
 // It must be kept in sync with the SQL script that initializes the data
 // warehouse.
-var defaultUsersSchema = types.Object([]types.Property{
+var defaultUserSchema = types.Object([]types.Property{
 	{Name: "__id__", Type: types.UUID()},
 	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
 })
@@ -160,7 +160,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	n := state.AddWorkspace{
 		Organization:  this.organization.ID,
 		Name:          name,
-		UsersSchema:   defaultUsersSchema,
+		UserSchema:    defaultUserSchema,
 		PrivacyRegion: state.PrivacyRegion(region),
 	}
 
@@ -171,15 +171,15 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		return 0, err
 	}
 
-	// Encode the "users" schema to JSON.
-	usersSchema, err := json.Marshal(n.UsersSchema)
+	// Encode the user schema to JSON.
+	userSchema, err := json.Marshal(n.UserSchema)
 	if err != nil {
 		return 0, err
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name, users_schema, privacy_region) VALUES ($1, $2, $3, $4, $5)",
-			n.ID, n.Organization, n.Name, usersSchema, n.PrivacyRegion)
+		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name, user_schema, privacy_region) VALUES ($1, $2, $3, $4, $5)",
+			n.ID, n.Organization, n.Name, userSchema, n.PrivacyRegion)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
@@ -461,7 +461,7 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		workspace:           ws,
 		ID:                  ws.ID,
 		Name:                ws.Name,
-		UsersSchema:         ws.UsersSchema,
+		UserSchema:          ws.UserSchema,
 		Identifiers:         ws.Identifiers,
 		PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
@@ -486,7 +486,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			workspace:           ws,
 			ID:                  ws.ID,
 			Name:                ws.Name,
-			UsersSchema:         ws.UsersSchema,
+			UserSchema:          ws.UserSchema,
 			Identifiers:         ws.Identifiers,
 			PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 			DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),

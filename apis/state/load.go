@@ -172,7 +172,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
-			" warehouse_settings, users_schema, identifiers, privacy_region, displayed_image, displayed_first_name,"+
+			" warehouse_settings, user_schema, identifiers, privacy_region, displayed_image, displayed_first_name,"+
 			" displayed_last_name, displayed_information\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
@@ -183,7 +183,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				var displayedFirstName string
 				var displayedLastName string
 				var displayedInformation string
-				var usersSchema []byte
+				var userSchema []byte
 				var warehouseSettings []byte
 				for rows.Next() {
 					ws := &Workspace{
@@ -192,7 +192,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 						accounts:    map[int]*Account{},
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseMode,
-						&warehouseSettings, &usersSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
+						&warehouseSettings, &userSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
 						&displayedFirstName, &displayedLastName, &displayedInformation); err != nil {
 						return err
 					}
@@ -204,7 +204,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 							Settings: warehouseSettings,
 						}
 					}
-					err = json.Unmarshal(usersSchema, &ws.UsersSchema)
+					err = json.Unmarshal(userSchema, &ws.UserSchema)
 					if err != nil {
 						return err
 					}

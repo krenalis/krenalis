@@ -16,16 +16,16 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-func TestExampleUsersSchema(t *testing.T) {
+func TestExampleUserSchema(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t, chichitester.DoNotPopulateUsersSchema)
+	c := chichitester.InitAndLaunch(t, chichitester.DoNotPopulateUserSchema)
 	defer c.Stop()
 
-	f, err := os.Open("example_users_schema.json")
+	f, err := os.Open("example_user_schema.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,10 +40,10 @@ func TestExampleUsersSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries := c.ChangeUsersSchemaQueries(file.Schema, file.RePaths)
+	queries := c.ChangeUserSchemaQueries(file.Schema, file.RePaths)
 	if len(queries) != 8 {
 		t.Fatalf("expected 8 queries, got %d", len(queries))
 	}
-	c.ChangeUsersSchema(file.Schema, file.RePaths)
+	c.ChangeUserSchema(file.Schema, file.RePaths)
 
 }

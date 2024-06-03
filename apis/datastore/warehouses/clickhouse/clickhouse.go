@@ -82,7 +82,7 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	return &ClickHouse{settings: &s}, nil
 }
 
-// AlterSchema alters the users schema.
+// AlterSchema alters the user schema.
 func (warehouse *ClickHouse) AlterSchema(ctx context.Context, usersColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
 	panic("TODO: not implemented")
 }

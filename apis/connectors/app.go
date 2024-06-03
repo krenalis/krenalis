@@ -143,7 +143,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	case state.Events:
 		return app.inner.Schema(ctx, chichi.Events, chichi.Role(role), eventType)
 	case state.Users:
-		return app.usersSchema(ctx, types.Role(role))
+		return app.userSchema(ctx, types.Role(role))
 	case state.Groups:
 		schema, err := app.inner.Schema(ctx, chichi.Groups, chichi.Role(role), "")
 		if err != nil {
@@ -184,7 +184,7 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 // import.
 //
 // If the provided schema, that must be valid, does not conform with the app's
-// source users schema, it returns a *SchemaError error.
+// source user schema, it returns a *SchemaError error.
 func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty string, lastChangeTime time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
@@ -192,19 +192,19 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 	if !schema.Valid() {
 		return nil, fmt.Errorf("schema is not valid")
 	}
-	// Check that the schema is aligned with the source users schema.
-	usersSchema, err := app.usersSchema(ctx, types.SourceRole)
+	// Check that the schema is aligned with the source user schema.
+	userSchema, err := app.userSchema(ctx, types.SourceRole)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get users schema: %s", err)
+		return nil, fmt.Errorf("cannot get user schema: %s", err)
 	}
-	err = checkSchemaAlignment(schema, usersSchema)
+	err = checkSchemaAlignment(schema, userSchema)
 	if err != nil {
 		return nil, err
 	}
 	// Determine and validate the property for the displayed property.
 	var dp types.Property
 	if displayedProperty != "" {
-		dp, err = displayedPropertyFromSchema(usersSchema, displayedProperty)
+		dp, err = displayedPropertyFromSchema(userSchema, displayedProperty)
 		if err != nil {
 			slog.Warn("cannot determine the displayed property", "err", err)
 		}
@@ -434,8 +434,8 @@ type schema struct {
 	schemas [3]types.Type
 }
 
-// usersSchema returns the users schema with the provided role.
-func (app *App) usersSchema(ctx context.Context, role types.Role) (types.Type, error) {
+// userSchema returns the user schema with the provided role.
+func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, error) {
 	select {
 	case <-ctx.Done():
 		return types.Type{}, errors.New("canceled context")

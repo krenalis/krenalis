@@ -25,7 +25,7 @@
     - [Querystring API](javascript-sdk/querystring-api.md)
     - [FAQ](javascript-sdk/faq.md)
 - [Data Validation](./data-validation.md)
-- [Changing Users Schema](./changing-users-schema.md)
+- [Changing User Schema](./changing-user-schema.md)
 - [Transformations](./transformations.md)
     - [Mapping](./mapping.md)
     - [JavaScript](./javascript.md)

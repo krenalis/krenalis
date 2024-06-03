@@ -49,7 +49,7 @@ type Workspace struct {
 	workspace           *state.Workspace
 	ID                  int
 	Name                string
-	UsersSchema         types.Type
+	UserSchema          types.Type
 	Identifiers         []string
 	WarehouseMode       *WarehouseMode
 	PrivacyRegion       PrivacyRegion
@@ -409,7 +409,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 	return id, nil
 }
 
-// ChangeUsersSchema changes the "users" schema to schema.
+// ChangeUserSchema changes the user schema to schema.
 //
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
@@ -424,7 +424,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaChange, if the schema change is invalid.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type, rePaths map[string]any) error {
+func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, rePaths map[string]any) error {
 	this.apis.mustBeOpen()
 	if !schema.Valid() {
 		return errors.BadRequest("schema must be valid")
@@ -436,7 +436,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
 
-	if err := checkAllowedPropertyUsersSchema(schema); err != nil {
+	if err := checkAllowedPropertyUserSchema(schema); err != nil {
 		return errors.BadRequest("not allowed property in schema: %s", err)
 	}
 
@@ -444,7 +444,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 		return errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
 
-	current := removeMetaProperties(this.workspace.UsersSchema)
+	current := removeMetaProperties(this.workspace.UserSchema)
 	operations, err := diffschemas.Diff(current, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -460,17 +460,17 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	}, types.Properties(schema)...))
 
 	// Update the database and send the notification.
-	n := state.SetWorkspaceUsersSchema{
-		Workspace:   this.ID,
-		UsersSchema: schema,
+	n := state.SetWorkspaceUserSchema{
+		Workspace:  this.ID,
+		UserSchema: schema,
 	}
-	usersSchemaJSON, err := json.Marshal(schema)
+	userSchemaJSON, err := json.Marshal(schema)
 	if err != nil {
 		return err
 	}
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET users_schema = $1 WHERE id = $2",
-			usersSchemaJSON, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1 WHERE id = $2",
+			userSchemaJSON, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -503,8 +503,8 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 	return nil
 }
 
-// ChangeUsersSchemaQueries returns the queries that would be executed changing
-// the "users" schema to schema.
+// ChangeUserSchemaQueries returns the queries that would be executed changing
+// the user schema to schema.
 //
 // schema cannot contain conflict properties, that are properties whose name,
 // once represented on the data warehouse as columns, would have the same name.
@@ -519,7 +519,7 @@ func (this *Workspace) ChangeUsersSchema(ctx context.Context, schema types.Type,
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - InvalidSchemaChange, if the schema change is invalid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
+func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.apis.mustBeOpen()
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
@@ -530,13 +530,13 @@ func (this *Workspace) ChangeUsersSchemaQueries(ctx context.Context, schema type
 	if err := validateRePaths(rePaths); err != nil {
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
 	}
-	if err := checkAllowedPropertyUsersSchema(schema); err != nil {
+	if err := checkAllowedPropertyUserSchema(schema); err != nil {
 		return nil, errors.BadRequest("not allowed property in schema: %s", err)
 	}
 	if err := datastore.CheckConflictingProperties(schema); err != nil {
 		return nil, errors.BadRequest("schema contains conflicting properties: %s", err.Error())
 	}
-	users := removeMetaProperties(this.workspace.UsersSchema)
+	users := removeMetaProperties(this.workspace.UserSchema)
 	operations, err := diffschemas.Diff(users, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
@@ -901,7 +901,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error) {
 	this.apis.mustBeOpen()
 	var properties []types.Property
-	for _, p := range this.workspace.UsersSchema.Properties() {
+	for _, p := range this.workspace.UserSchema.Properties() {
 		if isMetaProperty(p.Name) {
 			continue
 		}
@@ -1363,7 +1363,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
 	}
 	propertyByName := map[string]types.Property{}
-	for _, p := range ws.UsersSchema.Properties() {
+	for _, p := range ws.UserSchema.Properties() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {
@@ -1379,7 +1379,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	var stateFilter *state.Filter
 	if filter != nil {
-		_, err := validateFilter(filter, ws.UsersSchema)
+		_, err := validateFilter(filter, ws.UserSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
@@ -1781,10 +1781,10 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 	return identities, count, nil
 }
 
-// checkAllowedPropertyUsersSchema checks the given users schema and returns error
-// in case it contains properties which are not allowed in data warehouse users
-// schemas.
-func checkAllowedPropertyUsersSchema(schema types.Type) error {
+// checkAllowedPropertyUserSchema checks the given user schema and returns
+// error in case it contains properties which are not allowed in data warehouse
+// user schemas.
+func checkAllowedPropertyUserSchema(schema types.Type) error {
 	for _, p := range schema.Properties() {
 		if isMetaProperty(p.Name) {
 			return errors.New("property cannot be a meta property")
@@ -1821,7 +1821,7 @@ func checkAllowedPropertyUsersSchema(schema types.Type) error {
 				return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), k)
 			}
 		case types.ObjectKind:
-			err := checkAllowedPropertyUsersSchema(p.Type)
+			err := checkAllowedPropertyUserSchema(p.Type)
 			if err != nil {
 				return err
 			}

@@ -82,7 +82,7 @@ func (e UnsupportedAlterSchemaErr) Error() string {
 // warehouse.
 type Warehouse interface {
 
-	// AlterSchema alters the users schema.
+	// AlterSchema alters the user schema.
 	//
 	// usersColumns contains the columns of the "users" table to obtain (this
 	// parameters is useful for obtaining type information and for creating views),

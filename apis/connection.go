@@ -136,7 +136,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
-	users := this.connection.Workspace().UsersSchema
+	users := this.connection.Workspace().UserSchema
 	groups := dummyGroupsSchema
 
 	c := this.connection

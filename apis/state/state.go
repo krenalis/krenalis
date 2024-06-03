@@ -65,7 +65,7 @@ type State struct {
 		SetWarehouse            []func(SetWarehouse)
 		SetWarehouseMode        []func(SetWarehouseMode)
 		SetWorkspace            []func(SetWorkspace)
-		SetWorkspaceUsersSchema []func(SetWorkspaceUsersSchema)
+		SetWorkspaceUserSchema  []func(SetWorkspaceUserSchema)
 	}
 	close struct {
 		ctx       context.Context
@@ -418,7 +418,7 @@ type Workspace struct {
 	ID                  int
 	organization        *Organization
 	Name                string
-	UsersSchema         types.Type
+	UserSchema          types.Type
 	accounts            map[int]*Account
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion

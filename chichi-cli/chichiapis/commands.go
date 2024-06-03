@@ -109,7 +109,7 @@ func RemoveEventListener(workspace int, listener string) {
 	}
 }
 
-func WorkspaceChangeUsersSchema(workspace int, schema types.Type, rePaths map[string]any) {
+func WorkspaceChangeUserSchema(workspace int, schema types.Type, rePaths map[string]any) {
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
@@ -122,7 +122,7 @@ func WorkspaceChangeUsersSchema(workspace int, schema types.Type, rePaths map[st
 	}
 }
 
-func WorkspaceChangeUsersSchemaQueries(workspace int, schema types.Type, rePaths map[string]any) []string {
+func WorkspaceChangeUserSchemaQueries(workspace int, schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"Schema":  schema,
 		"RePaths": rePaths,
@@ -132,7 +132,7 @@ func WorkspaceChangeUsersSchemaQueries(workspace int, schema types.Type, rePaths
 	var resp struct {
 		Queries []string
 	}
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/change-users-schema-queries", &b, &resp)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/change-user-schema-queries", &b, &resp)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -100,7 +100,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
-	store.columnByProperty.user = columnByProperty(ws.UsersSchema)
+	store.columnByProperty.user = columnByProperty(ws.UserSchema)
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	if ws.Warehouse.Mode == state.Normal {
 		go func() {
@@ -119,35 +119,35 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	return store, nil
 }
 
-// AlterSchema alters the users schema.
+// AlterSchema alters the user schema.
 //
-// usersSchema is the "users" schema to obtain (this parameters is useful for
+// userSchema is the "users" schema to obtain (this parameters is useful for
 // obtaining type information and for creating views), while operations is the
 // set of operations to apply in order to migrate the current schema to
-// usersSchema.
+// userSchema.
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
 // UnsupportedSchemaChangeErr error.
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If an error occurs with the data warehouse, it returns a
+// *DataWarehouseError error.
+func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
 	store.mustBeOpen()
 	if store.Mode() == state.Inspection {
 		return ErrInspectionMode
 	}
-	usersColumns := propertiesToColumns(types.Properties(usersSchema))
+	usersColumns := propertiesToColumns(types.Properties(userSchema))
 	return store.warehouse.AlterSchema(ctx, usersColumns, operations)
 }
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
 //
-// usersSchema is the "users" schema to obtain (this parameters is useful for
+// userSchema is the "users" schema to obtain (this parameters is useful for
 // obtaining type information and for creating views), while operations is the
 // set of operations to apply in order to migrate the current schema to
-// usersSchema.
+// userSchema.
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
@@ -155,9 +155,9 @@ func (store *Store) AlterSchema(ctx context.Context, usersSchema types.Type, ope
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) AlterSchemaQueries(ctx context.Context, usersSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
-	usersColumns := propertiesToColumns(types.Properties(usersSchema))
+	usersColumns := propertiesToColumns(types.Properties(userSchema))
 	return store.warehouse.AlterSchemaQueries(ctx, usersColumns, operations)
 }
 
@@ -356,7 +356,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	identifiers := make([]warehouses.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
 		path := strings.Split(ident, ".")
-		identifier, err := ws.UsersSchema.PropertyByPath(path)
+		identifier, err := ws.UserSchema.PropertyByPath(path)
 		if err != nil {
 			return err
 		}
@@ -371,7 +371,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the users columns.
-	usersColumns := propertiesToColumns(types.Properties(ws.UsersSchema))
+	usersColumns := propertiesToColumns(types.Properties(ws.UserSchema))
 
 	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, usersColumns)
 }
@@ -413,7 +413,7 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema, which must be valid, does not
-// conform to the users schema, it returns a *SchemaError error. If an error
+// conform to the user schema, it returns a *SchemaError error. If an error
 // occurs with the data warehouse, it returns a *DataWarehouseError error.
 func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (Records, error) {
 	store.mustBeOpen()

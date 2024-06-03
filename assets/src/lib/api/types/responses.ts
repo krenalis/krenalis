@@ -159,7 +159,7 @@ interface MemberInvitationResponse {
 
 type RePaths = Record<string, string | null>;
 
-interface ChangeUsersSchemaQueriesResponse {
+interface ChangeUserSchemaQueriesResponse {
 	Queries: string[];
 }
 
@@ -193,5 +193,5 @@ export type {
 	MemberAvatar,
 	MemberInvitationResponse,
 	RePaths,
-	ChangeUsersSchemaQueriesResponse,
+	ChangeUserSchemaQueriesResponse,
 };

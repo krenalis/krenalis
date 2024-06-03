@@ -23,7 +23,7 @@ CREATE TABLE workspaces (
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_mode warehouse_mode DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
-    users_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
+    user_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     identifiers text[] NOT NULL DEFAULT '{}',
     privacy_region privacy_region NOT NULL DEFAULT '',
     displayed_image varchar(100) NOT NULL DEFAULT '',
@@ -33,7 +33,7 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, organization, name, users_schema, warehouse_type, warehouse_settings)
+INSERT INTO workspaces (id, organization, name, user_schema, warehouse_type, warehouse_settings)
 VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name": "__id__","type":{"name":"UUID"}},{"name": "email","type":{"name":"Text","charLen":300},"nullable":true}]}', NULL, '');
 
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');

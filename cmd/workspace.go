@@ -66,8 +66,8 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	return map[string]any{"id": id}, nil
 }
 
-// ChangeUsersSchema changes the "users" schema of a workspace.
-func (workspace workspace) ChangeUsersSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// ChangeUserSchema changes the user schema of a workspace.
+func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -80,13 +80,13 @@ func (workspace workspace) ChangeUsersSchema(_ http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeUsersSchema(r.Context(), body.Schema, body.RePaths)
+	err = ws.ChangeUserSchema(r.Context(), body.Schema, body.RePaths)
 	return nil, err
 }
 
-// ChangeUsersSchemaQueries returns the queries that would be executed changing
+// ChangeUserSchemaQueries returns the queries that would be executed changing
 // the "users" schema of a workspace.
-func (workspace workspace) ChangeUsersSchemaQueries(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) ChangeUserSchemaQueries(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func (workspace workspace) ChangeUsersSchemaQueries(_ http.ResponseWriter, r *ht
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	queries, err := ws.ChangeUsersSchemaQueries(r.Context(), body.Schema, body.RePaths)
+	queries, err := ws.ChangeUserSchemaQueries(r.Context(), body.Schema, body.RePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -411,13 +411,13 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}, nil
 }
 
-// UsersSchema returns the users schema of a workspace.
-func (workspace workspace) UsersSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UserSchema returns the user schema of a workspace.
+func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	return ws.UsersSchema, nil
+	return ws.UserSchema, nil
 }
 
 // WarehouseSettings returns the type and settings of the data warehouse for a

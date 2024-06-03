@@ -128,7 +128,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		Properties: properties,
 		Filter:     action.Filter,
 		OrderBy:    orderBy,
-	}, action.Connection().Workspace().UsersSchema)
+	}, action.Connection().Workspace().UserSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}

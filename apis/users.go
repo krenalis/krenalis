@@ -155,7 +155,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	properties := this.workspace.UsersSchema.PropertiesNames()
+	properties := this.workspace.UserSchema.PropertiesNames()
 	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 		Property: "__id__",
 		Operator: "is",
@@ -183,5 +183,5 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.NotFound("user %s does not exist", this.id)
 	}
 
-	return encoding.Marshal(ws.UsersSchema, records[0])
+	return encoding.Marshal(ws.UserSchema, records[0])
 }

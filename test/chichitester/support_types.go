@@ -324,7 +324,7 @@ type TransformationFunction struct {
 type Workspace struct {
 	ID                  int
 	Name                string
-	UsersSchema         types.Type
+	UserSchema          types.Type
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties

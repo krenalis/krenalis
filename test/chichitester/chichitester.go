@@ -67,9 +67,9 @@ var chichiAlreadyBuilt bool
 type TestingOption int
 
 const (
-	// DoNotPopulateUsersSchema prevents the test from populating the "users"
+	// DoNotPopulateUserSchema prevents the test from populating the "users"
 	// (and "user_identities") schema with testing properties.
-	DoNotPopulateUsersSchema TestingOption = iota + 1
+	DoNotPopulateUserSchema TestingOption = iota + 1
 )
 
 // InitAndLaunch initializes and launches an instance of Chichi in a separate
@@ -88,11 +88,11 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 	}
 
 	// Determine the options.
-	populateUsersSchema := true
+	populateUserSchema := true
 	for _, opt := range options {
 		switch opt {
-		case DoNotPopulateUsersSchema:
-			populateUsersSchema = false
+		case DoNotPopulateUserSchema:
+			populateUserSchema = false
 		default:
 			panic("unexpected testing option %d")
 		}
@@ -286,11 +286,11 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Chichi {
 		t.Fatalf("cannot init warehouse: %s", err)
 	}
 
-	// Change the users schema.
-	if populateUsersSchema {
-		err = c.changeUsersSchema()
+	// Change the user schema.
+	if populateUserSchema {
+		err = c.changeUserSchema()
 		if err != nil {
-			t.Fatalf("cannot change users schema: %s", err)
+			t.Fatalf("cannot change user schema: %s", err)
 		}
 	}
 
@@ -362,8 +362,8 @@ func (c *Chichi) initWarehouse() error {
 	return c.call("POST", method, nil, nil)
 }
 
-func (c *Chichi) changeUsersSchema() error {
-	f, err := os.Open("tests_users_schema.json")
+func (c *Chichi) changeUserSchema() error {
+	f, err := os.Open("tests_user_schema.json")
 	if err != nil {
 		return err
 	}

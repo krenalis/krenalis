@@ -160,7 +160,7 @@ Launch the server command executing `./chichi` (or `./chichi.exe` on Windows) an
 Within the root of the repository, run:
 
 ```
-chichi-cli change-users-schema ./test/example_users_schema.json
+chichi-cli change-user-schema ./test/example_user_schema.json
 ```
 
 ## Enable telemetry (optional)

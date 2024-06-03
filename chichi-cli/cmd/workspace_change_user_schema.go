@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var workspaceChangeUsersSchema = &cobra.Command{
-	Use:  "change-users-schema <file>",
+var workspaceChangeUserSchema = &cobra.Command{
+	Use:  "change-user-schema <file>",
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		filename := args[0]
@@ -44,7 +44,7 @@ var workspaceChangeUsersSchema = &cobra.Command{
 		if !req.Schema.Valid() {
 			log.Fatalf("field 'Schema' in JSON must refer to a valid schema")
 		}
-		queries := chichiapis.WorkspaceChangeUsersSchemaQueries(workspace(cmd), req.Schema, req.RePaths)
+		queries := chichiapis.WorkspaceChangeUserSchemaQueries(workspace(cmd), req.Schema, req.RePaths)
 		if len(queries) == 0 {
 			fmt.Printf("It looks like the 'users' / 'user_identities' schemas"+
 				" on the data warehouse already match with the schema indicated in %q,"+
@@ -58,7 +58,7 @@ var workspaceChangeUsersSchema = &cobra.Command{
 		if !askUserConfirmation("Are you sure you want to proceed?") {
 			log.Fatalf("exiting")
 		}
-		chichiapis.WorkspaceChangeUsersSchema(workspace(cmd), req.Schema, req.RePaths)
+		chichiapis.WorkspaceChangeUserSchema(workspace(cmd), req.Schema, req.RePaths)
 		fmt.Print("Done!\n")
 	},
 }
@@ -82,5 +82,5 @@ func askUserConfirmation(s string) bool {
 }
 
 func init() {
-	rootCmd.AddCommand(workspaceChangeUsersSchema)
+	rootCmd.AddCommand(workspaceChangeUserSchema)
 }

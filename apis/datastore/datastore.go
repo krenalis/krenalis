@@ -63,7 +63,7 @@ func New(st *state.State) *Datastore {
 	}
 	ds.state.AddListener(ds.onSetWarehouse)
 	ds.state.AddListener(ds.onSetWarehouseMode)
-	ds.state.AddListener(ds.onSetWorkspaceUsersSchema)
+	ds.state.AddListener(ds.onSetWorkspaceUserSchema)
 	for _, organization := range st.Organizations() {
 		for _, ws := range organization.Workspaces() {
 			if ws.Warehouse == nil {
@@ -154,13 +154,13 @@ func (ds *Datastore) mustBeOpen() {
 	}
 }
 
-func (ds *Datastore) onSetWorkspaceUsersSchema(n state.SetWorkspaceUsersSchema) {
+func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 	ds.mu.Lock()
 	store, ok := ds.store[n.Workspace]
 	ds.mu.Unlock()
 	if ok {
 		store.columnByProperty.mu.Lock()
-		store.columnByProperty.user = columnByProperty(n.UsersSchema)
+		store.columnByProperty.user = columnByProperty(n.UserSchema)
 		store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 		store.columnByProperty.mu.Unlock()
 	}
