@@ -371,7 +371,9 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the user columns.
-	userColumns := propertiesToColumns(types.Properties(ws.UserSchema))
+	userSchema := ws.UserSchema
+	userSchema = removeMetaProperties(userSchema)
+	userColumns := propertiesToColumns(types.Properties(userSchema))
 
 	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, userColumns)
 }
@@ -550,4 +552,21 @@ func (store *Store) userColumnByProperty() map[string]warehouses.Column {
 	columns := store.columnByProperty.user
 	store.columnByProperty.mu.Unlock()
 	return columns
+}
+
+// removeMetaProperties removes the properties considered meta properties by the
+// data warehouses from the schema, and returns it as a new schema.
+func removeMetaProperties(schema types.Type) types.Type {
+
+	// TODO(Gianluca): note that this function will be removed by the PR #801.
+
+	props := types.Properties(schema)
+	noMetaProps := make([]types.Property, 0, len(props))
+	for _, p := range props {
+		if isMetaProperty(p.Name) {
+			continue
+		}
+		noMetaProps = append(noMetaProps, p)
+	}
+	return types.Object(noMetaProps)
 }

@@ -556,9 +556,6 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	var populateUsers strings.Builder
 	populateUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
 	for _, c := range userColumns {
-		if c.Name == "__id__" {
-			continue
-		}
 		populateUsers.WriteByte('"')
 		populateUsers.WriteString(c.Name)
 		populateUsers.WriteByte('"')
@@ -567,9 +564,6 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	populateUsers.WriteString(`"__identities__", "__id__"`)
 	populateUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
-		if c.Name == "__id__" {
-			continue
-		}
 		populateUsers.WriteString(`MAX(DISTINCT "`)
 		populateUsers.WriteString(c.Name)
 		populateUsers.WriteString(`") AS "`)

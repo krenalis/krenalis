@@ -193,8 +193,8 @@ type Warehouse interface {
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
 	//
-	// userColumns holds the columns of the "users" schema, as the "users" table on
-	// the data warehouse is rebuilt by this procedure.
+	// userColumns holds the columns of the user schema, without the meta
+	// properties.
 	RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []Column) error
 
 	// SetDestinationUser sets the destination user for an action.
