@@ -56,26 +56,34 @@ Here, `customerId` is the identifier with the higher priority while `address.str
 
 ## Merging of Users
 
-> 🚧🚧🚧 Work in progress! 🚧🚧🚧
-> 
-> The documentation in this section must be updated after the implementation of the PR [804](https://github.com/open2b/chichi/pull/804).
+In Identity Resolution, **two or more user identities** are merged into a single user by merging, one by one, all their properties, including identifiers.
 
-In the Identity Resolution, **two or more user identities** are merged into a single user by taking the `max` value between the values of their properties.
+The values of a property P are merged in this way:
 
-> `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).
+* **if P is an array**: the values of the arrays of the identities are concatenated into a single array, without duplicated values. The ordering of the values in the array is not established a priori and is left to the driver.
+* **if P is not an array**: if there is a source connection S that is **set as primary** for P and at least one identity imported from S has a non-null value for P, then the non-null value from the most recently updated identity imported from S is taken. Otherwise, the value is taken from the most recently updated identity which has a non-null value for P. If there is none, then null is assigned to P.
 
-For example, consider two user identities with the properties `email`, `name` and `total_orders`, which are considered *the same user* by the Identity Resolution and thus must be merged:
+For example, consider these three user identities, with the properties `email`, `name` and `total_orders`, which are considered *the same user* by the Identity Resolution and thus must be merged:
 
-| email | name   | total_orders |
-|-------|--------|--------------|
-| a@b   | John   | 10           |
-| a@b   | `NULL` | 20           |
+| Connection | email | name   | phone_numbers      | total_orders | Last change time         |
+|------------|-------|--------|--------------------|--------------|--------------------------|
+| A          | a@b   | John   | {+11 111}          | 10           | Jan 1, 2000, 12:00:00 PM |
+| B          | a@b   | `NULL` | {+22 222, +33 333} | 20           | Jan 2, 2000, 12:00:00 PM |
+| C          | a@b   | `NULL` | `NULL`             | 21           | Jan 3, 2000, 12:00:00 PM |
 
 The resulting user will be then:
 
-| email | name | total_orders |
-|-------|------|--------------|
-| a@b   | John | 20           |
+| email | name | phone_numbers               | total_orders |
+|-------|------|-----------------------------|--------------|
+| a@b   | John | {+11 111, +22 222, +33 333} | 21           |
+
+Now let's suppose that the connection C is set as primary source for the property `total_orders`.
+
+The resulting user will be then:
+
+| email | name | phone_numbers               | total_orders           |
+|-------|------|-----------------------------|------------------------|
+| a@b   | John | {+11 111, +22 222, +33 333} | **20** (instead of 21) |
 
 ## User GIDs
 
