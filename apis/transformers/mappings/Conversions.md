@@ -21,7 +21,7 @@
 
 [^1]: Only for Int(8) and Uint(8).
 
-Note: keep this table in sync with the matrix within the package `mappings`,
+Note: keep this table in sync with the `convertMatrix` global variable in this package,
 which holds information about valid conversions.
 
 # From nil
