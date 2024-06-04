@@ -205,6 +205,12 @@ CREATE UNIQUE INDEX invitation_token_index ON members (invitation_token) WHERE i
 
 INSERT INTO members (organization, name, avatar, email, password, created_at) VALUES (1, 'ACME inc', NULL, 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC', '2024-01-01 00:00:00.000000'); -- Password: foopass2
 
+CREATE TABLE user_schema_primary_sources (
+    source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    path varchar NOT NULL,
+    PRIMARY KEY (source, path)
+);
+
 CREATE TABLE accounts (
     id SERIAL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,

@@ -50,6 +50,7 @@ type Workspace struct {
 	ID                  int
 	Name                string
 	UserSchema          types.Type
+	UserPrimarySources  map[string]int
 	Identifiers         []string
 	WarehouseMode       *WarehouseMode
 	PrivacyRegion       PrivacyRegion
@@ -409,7 +410,8 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 	return id, nil
 }
 
-// ChangeUserSchema changes the user schema to schema.
+// ChangeUserSchema changes the user schema and the primary sources of the
+// workspace. schema must be a valid schema.
 //
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
@@ -420,17 +422,25 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - ConnectionNotExist, if a connections used as primary source does not
+//     exist.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaChange, if the schema change is invalid.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, rePaths map[string]any) error {
+func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.apis.mustBeOpen()
+	if primarySources == nil {
+		primarySources = map[string]int{}
+	}
 	if !schema.Valid() {
 		return errors.BadRequest("schema must be valid")
 	}
 	if schema.Kind() != types.ObjectKind {
 		return errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+	}
+	if err := validatePrimarySources(schema, primarySources); err != nil {
+		return errors.BadRequest("primary sources are not valid: %w", err)
 	}
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
@@ -449,24 +459,75 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
 
+	for _, s := range primarySources {
+		source, ok := this.workspace.Connection(s)
+		if !ok {
+			return errors.Unprocessable(ConnectionNotExist, "primary source %d does not exist", s)
+		}
+		if source.Role != state.Source {
+			return errors.BadRequest("primary source %d is not a source connection", s)
+		}
+		if !source.Connector().Targets.Contains(state.Users) {
+			return errors.BadRequest("primary source %d does not support Users target", s)
+		}
+	}
+
 	if this.store == nil {
 		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 
 	// Update the database and send the notification.
 	n := state.SetWorkspaceUserSchema{
-		Workspace:  this.ID,
-		UserSchema: schema,
+		Workspace:      this.ID,
+		UserSchema:     schema,
+		PrimarySources: primarySources,
 	}
-	userSchemaJSON, err := json.Marshal(schema)
+	schemaJSON, err := json.Marshal(n.UserSchema)
 	if err != nil {
 		return err
 	}
+
+	// Build the query to insert the primary paths.
+	var insertPrimarySources string
+	var paths []any
+	if len(primarySources) > 0 {
+		i := 0
+		var b strings.Builder
+		for path, source := range primarySources {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('(')
+			b.WriteString(strconv.Itoa(source))
+			b.WriteString(",$")
+			b.WriteString(strconv.Itoa(i + 1))
+			b.WriteString(")")
+			paths = append(paths, path)
+			i++
+		}
+		insertPrimarySources = "INSERT INTO user_schema_primary_sources (source, path) VALUES " + b.String()
+	}
+
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1 WHERE id = $2",
-			userSchemaJSON, n.Workspace)
+		// Update the schema.
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1 WHERE id = $2", schemaJSON, n.Workspace)
 		if err != nil {
 			return err
+		}
+		// Update the primary sources.
+		_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources s USING connections c\n"+
+			"WHERE c.workspace = $1 AND s.source = c.id", n.Workspace)
+		if err != nil {
+			return err
+		}
+		if insertPrimarySources != "" {
+			_, err = tx.Exec(ctx, insertPrimarySources, paths...)
+			if err != nil {
+				if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "user_schema_primary_sources_source_fkey" {
+					err = errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
+				}
+				return err
+			}
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1819,6 +1880,21 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// validatePrimarySources validates a primary source returning an error if it is
+// not valid.
+func validatePrimarySources(schema types.Type, primarySources map[string]int) error {
+	for path, source := range primarySources {
+		_, err := schema.PropertyByPath(strings.Split(path, "."))
+		if err != nil {
+			return err
+		}
+		if source < 1 || source > maxInt32 {
+			return fmt.Errorf("primary source identifier %d is not valid", source)
 		}
 	}
 	return nil

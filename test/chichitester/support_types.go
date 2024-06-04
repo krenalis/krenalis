@@ -325,6 +325,7 @@ type Workspace struct {
 	ID                  int
 	Name                string
 	UserSchema          types.Type
+	UserPrimarySources  map[string]int
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties

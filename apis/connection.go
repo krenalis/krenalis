@@ -863,6 +863,11 @@ func (this *Connection) Delete(ctx context.Context) error {
 				return err
 			}
 		}
+		// Remove the connection as primary source, if any.
+		_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources WHERE source = $1", n.ID)
+		if err != nil {
+			return err
+		}
 		return tx.Notify(ctx, n)
 	})
 	return err

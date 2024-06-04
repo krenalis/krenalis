@@ -183,22 +183,24 @@ func (c *Chichi) AddSourcePostgreSQL() int {
 	})
 }
 
-func (c *Chichi) ChangeUserSchema(schema types.Type, rePaths map[string]any) {
+func (c *Chichi) ChangeUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
-		"Schema":  schema,
-		"RePaths": rePaths,
+		"Schema":         schema,
+		"PrimarySources": primarySources,
+		"RePaths":        rePaths,
 	}
 	c.MustCall("PUT", method, req, nil)
 }
 
 // ChangeUserSchemaErr is like ChangeUserSchema but returns an error instead of
 // panicking.
-func (c *Chichi) ChangeUserSchemaErr(schema types.Type, rePaths map[string]any) error {
+func (c *Chichi) ChangeUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
-		"Schema":  schema,
-		"RePaths": rePaths,
+		"Schema":         schema,
+		"PrimarySources": primarySources,
+		"RePaths":        rePaths,
 	}
 	return c.Call("PUT", method, req, nil)
 }

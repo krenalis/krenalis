@@ -44,6 +44,6 @@ func TestExampleUserSchema(t *testing.T) {
 	if len(queries) != 8 {
 		t.Fatalf("expected 8 queries, got %d", len(queries))
 	}
-	c.ChangeUserSchema(file.Schema, file.RePaths)
+	c.ChangeUserSchema(file.Schema, nil, file.RePaths)
 
 }

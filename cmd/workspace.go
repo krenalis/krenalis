@@ -73,14 +73,15 @@ func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Reque
 		return nil, err
 	}
 	body := struct {
-		Schema  types.Type
-		RePaths map[string]any
+		Schema         types.Type
+		PrimarySources map[string]int
+		RePaths        map[string]any
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeUserSchema(r.Context(), body.Schema, body.RePaths)
+	err = ws.ChangeUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
 	return nil, err
 }
 

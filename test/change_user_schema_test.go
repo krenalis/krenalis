@@ -9,12 +9,15 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
 	"testing"
 
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
+
+	"golang.org/x/exp/maps"
 )
 
 func TestChangeUserSchema(t *testing.T) {
@@ -39,8 +42,9 @@ func TestChangeUserSchema(t *testing.T) {
 	defer f.Close()
 	dec := json.NewDecoder(f)
 	var file struct {
-		Schema  types.Type
-		RePaths map[string]any
+		Schema         types.Type
+		PrimarySources map[string]int
+		RePaths        map[string]any
 	}
 	err = dec.Decode(&file)
 	if err != nil {
@@ -53,7 +57,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if len(queries) != 6 {
 		t.Fatalf("expected 6 queries, got %d", len(queries))
 	}
-	c.ChangeUserSchema(file.Schema, file.RePaths) // this should do nothing.
+	c.ChangeUserSchema(file.Schema, file.PrimarySources, file.RePaths) // this should do nothing.
 
 	ws = c.Workspace()
 	if n := len(types.Properties(ws.UserSchema)); n != 10 {
@@ -92,7 +96,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.ChangeUserSchema(schema, nil)
+	c.ChangeUserSchema(schema, nil, nil)
 
 	ws = c.Workspace()
 	if n := len(types.Properties(ws.UserSchema)); n != 11 {
@@ -114,7 +118,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.ChangeUserSchemaErr(schema, nil)
+	err = c.ChangeUserSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -136,10 +140,40 @@ func TestChangeUserSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.ChangeUserSchemaErr(schema, nil)
+	err = c.ChangeUserSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+
+	// Set a primary source for the first property.
+	firstProperty := file.Schema.PropertiesNames()[0]
+	primarySource := c.AddDummy("Primary Source", chichitester.Source)
+	primarySources := map[string]int{firstProperty: primarySource}
+	c.ChangeUserSchema(file.Schema, primarySources, nil)
+	ws = c.Workspace()
+	if !maps.Equal(primarySources, ws.UserPrimarySources) {
+		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.UserPrimarySources)
+	}
+
+	// Set a primary source for a not existent property.
+	primarySources = map[string]int{"not_existent_property": primarySource}
+	err = c.ChangeUserSchemaErr(file.Schema, primarySources, nil)
+	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+
+	// Set a not existing primary source for the first property.
+	notExistentSource := primarySource - 1
+	if notExistentSource == 0 {
+		notExistentSource = 2
+	}
+	primarySources = map[string]int{firstProperty: notExistentSource}
+	err = c.ChangeUserSchemaErr(file.Schema, primarySources, nil)
+	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %d does not exist"}}`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}

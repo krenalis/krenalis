@@ -208,6 +208,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					if err != nil {
 						return err
 					}
+					ws.UserPrimarySources = map[string]int{}
 					ws.DisplayedProperties = DisplayedProperties{
 						Image:       displayedImage,
 						FirstName:   displayedFirstName,
@@ -416,6 +417,24 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 						exe.storage = state.connections[*storage]
 					}
 					exe.action.execution = &exe
+				}
+				return nil
+			})
+		if err != nil {
+			return err
+		}
+
+		// Read all primary sources.
+		err = state.db.QueryScan(ctx, "SELECT source, path FROM user_schema_primary_sources",
+			func(rows *postgres.Rows) error {
+				var source int
+				var path string
+				for rows.Next() {
+					if err := rows.Scan(&source, &path); err != nil {
+						return err
+					}
+					c := state.connections[source]
+					c.workspace.UserPrimarySources[path] = source
 				}
 				return nil
 			})

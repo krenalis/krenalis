@@ -600,7 +600,25 @@ func (state *State) deleteConnection(n notification) {
 	ws := e.connection.workspace
 	ws.mu.Lock()
 	delete(ws.connections, e.ID)
+	var found bool
+	for _, source := range ws.UserPrimarySources {
+		if source == e.ID {
+			found = true
+			break
+		}
+	}
 	ws.mu.Unlock()
+	if found {
+		sources := map[string]int{}
+		for path, source := range ws.UserPrimarySources {
+			if source != e.ID {
+				sources[path] = source
+			}
+		}
+		state.replaceWorkspace(ws.ID, func(ws *Workspace) {
+			ws.UserPrimarySources = sources
+		})
+	}
 	// Update the actions.
 	state.mu.Lock()
 	for _, a := range e.connection.actions {
@@ -1168,8 +1186,9 @@ func (state *State) setWorkspaceIdentifiers(n notification) {
 // SetWorkspaceUserSchema is the event sent when the "users" schema of a
 // workspace is changed.
 type SetWorkspaceUserSchema struct {
-	Workspace  int
-	UserSchema types.Type
+	Workspace      int
+	UserSchema     types.Type
+	PrimarySources map[string]int
 }
 
 // setWorkspaceUserSchema sets the "users" schema of a workspace.
@@ -1180,6 +1199,7 @@ func (state *State) setWorkspaceUserSchema(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.UserSchema = e.UserSchema
+		w.UserPrimarySources = e.PrimarySources
 	})
 	for _, listener := range state.listeners.SetWorkspaceUserSchema {
 		listener(e)

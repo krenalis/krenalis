@@ -33,6 +33,7 @@ import (
 
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/exp/maps"
 )
 
 var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`)
@@ -461,6 +462,7 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		ID:                  ws.ID,
 		Name:                ws.Name,
 		UserSchema:          ws.UserSchema,
+		UserPrimarySources:  maps.Clone(ws.UserPrimarySources),
 		Identifiers:         ws.Identifiers,
 		PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
@@ -486,6 +488,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			ID:                  ws.ID,
 			Name:                ws.Name,
 			UserSchema:          ws.UserSchema,
+			UserPrimarySources:  maps.Clone(ws.UserPrimarySources),
 			Identifiers:         ws.Identifiers,
 			PrivacyRegion:       PrivacyRegion(ws.PrivacyRegion),
 			DisplayedProperties: DisplayedProperties(ws.DisplayedProperties),
