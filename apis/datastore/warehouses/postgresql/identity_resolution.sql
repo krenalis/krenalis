@@ -101,7 +101,7 @@ AS $$
     END $clustering$;
 
     -- This placeholder will be replaced by Chichi:
-    {{ populate_users }};
+    {{ merge_users }};
 
     -- Update the GID of the user identities.
     UPDATE "_user_identities" SET "__gid__" = (

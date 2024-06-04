@@ -569,20 +569,20 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		return warehouses.Error(fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err))
 	}
 
-	// Generate the SQL queries that populates the users table.
-	var populateUsers strings.Builder
-	populateUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
+	// Generate the SQL queries that merge the identities to obtain the users.
+	var mergeUsers strings.Builder
+	mergeUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
 	for _, c := range userColumns {
-		populateUsers.WriteByte('"')
-		populateUsers.WriteString(c.Name)
-		populateUsers.WriteByte('"')
-		populateUsers.WriteByte(',')
+		mergeUsers.WriteByte('"')
+		mergeUsers.WriteString(c.Name)
+		mergeUsers.WriteByte('"')
+		mergeUsers.WriteByte(',')
 	}
-	populateUsers.WriteString(`"__identities__", "__id__"`)
-	populateUsers.WriteString(") SELECT\n")
+	mergeUsers.WriteString(`"__identities__", "__id__"`)
+	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
-			populateUsers.WriteString(`array_cat_agg(
+			mergeUsers.WriteString(`array_cat_agg(
 				DISTINCT "` + c.Name + `"
 				ORDER BY
 					"` + c.Name + `"
@@ -591,13 +591,13 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 					"` + c.Name + `" IS NOT NULL
 			)`)
 		} else {
-			populateUsers.WriteByte('(')
+			mergeUsers.WriteByte('(')
 			if s, ok := userPrimarySources[c.Name]; ok {
 				// If there is a user primary source S defined for this column,
 				// then add to the concatenation the expression that returns the
 				// values ​​for the column c.Name read from the identities
 				// coming from S, excluding the NULL values.
-				populateUsers.WriteString(`(
+				mergeUsers.WriteString(`(
 					(
 						ARRAY_AGG(
 							"` + c.Name + `"
@@ -616,7 +616,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 			// a non-NULL value for the column, so that the indexing operation
 			// that takes the first value does not fail and explicitly returns
 			// "NULL" instead.
-			populateUsers.WriteString(`(
+			mergeUsers.WriteString(`(
 					ARRAY_AGG(
 						"` + c.Name + `"
 						ORDER BY
@@ -628,20 +628,20 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 				) || '{NULL}'
 			)[1]`)
 		}
-		populateUsers.WriteString(` AS "`)
-		populateUsers.WriteString(c.Name)
-		populateUsers.WriteByte('"')
-		populateUsers.WriteByte(',')
+		mergeUsers.WriteString(` AS "`)
+		mergeUsers.WriteString(c.Name)
+		mergeUsers.WriteByte('"')
+		mergeUsers.WriteByte(',')
 	}
 	// Write the "__identities__" column.
-	populateUsers.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
+	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
 	// Write the "__id__" column.
 	// If all GIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the user's GID; otherwise, if
 	// we are in a situation where a previously split user is now merged, in
 	// this case, create a new random GID. If the identities are all new, also
 	// in this case, create a new random GID.
-	populateUsers.WriteString(`COALESCE(
+	mergeUsers.WriteString(`COALESCE(
 		CASE
 			WHEN COUNT(DISTINCT "__gid__") FILTER ( WHERE "__gid__" IS NOT NULL ) = 1
 				THEN MAX("__gid__"::text)::uuid
@@ -649,12 +649,12 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		END,
 		gen_random_uuid()
 	)`)
-	populateUsers.WriteString(" FROM _user_identities GROUP BY __cluster__; ")
+	mergeUsers.WriteString(" FROM _user_identities GROUP BY __cluster__; ")
 
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,
 	// replaces the GID of both users with new random GIDs.
-	populateUsers.WriteString(`UPDATE "_users" u
+	mergeUsers.WriteString(`UPDATE "_users" u
 		SET
 			"__id__" = gen_random_uuid()
 		WHERE
@@ -671,7 +671,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 
 	// Replace the placeholders in the Identity Resolution queries and run them.
 	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
-	query = strings.Replace(query, "{{ populate_users }}", populateUsers.String(), 1)
+	query = strings.Replace(query, "{{ merge_users }}", mergeUsers.String(), 1)
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
