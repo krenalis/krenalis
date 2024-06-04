@@ -504,12 +504,14 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 }
 
 // RunIdentityResolution runs the Identity Resolution.
-func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column) error {
+func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
+
+	_ = userPrimarySources // TODO(Gianluca): will be used by the PR #804.
 
 	var b strings.Builder
 

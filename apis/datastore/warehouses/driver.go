@@ -195,7 +195,11 @@ type Warehouse interface {
 	//
 	// userColumns holds the columns of the user schema, without the meta
 	// properties.
-	RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []Column) error
+	//
+	// userPrimarySources is a mapping between user column names (for which a
+	// primary source connection have have been set) and the ID of primary source
+	// connections.
+	RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// SetDestinationUser sets the destination user for an action.
 	//

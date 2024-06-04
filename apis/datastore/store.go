@@ -374,7 +374,14 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	// Determine the user columns.
 	userColumns := propertiesToColumns(types.Properties(ws.UserSchema))
 
-	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, userColumns)
+	// Determine the primary sources for every user column.
+	userPrimarySources := make(map[string]int, len(ws.UserPrimarySources))
+	for p, s := range ws.UserPrimarySources {
+		c := strings.ReplaceAll(p, "_", ".")
+		userPrimarySources[c] = s
+	}
+
+	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, userColumns, userPrimarySources)
 }
 
 // SetDestinationUser sets the destination user for an action.

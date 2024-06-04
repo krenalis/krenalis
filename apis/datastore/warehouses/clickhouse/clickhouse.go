@@ -183,7 +183,7 @@ func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuer
 }
 
 // RunIdentityResolution runs the Identity Resolution.
-func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column) error {
+func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	panic("TODO: not implemented")
 }
 
