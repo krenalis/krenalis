@@ -162,7 +162,7 @@ Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReade
 
 The `Write` method is invoked by Chichi to write records to a new file. This occurs during an export process.
 
-The `Write` method takes an `io.Writer` as an argument to write the contents of the entire file and a `RecordReader` from which to read the records to be written. `RecordWriter` is an interface defined as follows:
+The `Write` method takes an `io.Writer` as an argument to write the contents of the entire file and a `RecordReader` from which to read the records to be written. `RecordReader` is an interface defined as follows:
 
 ```go
 type RecordReader interface {
