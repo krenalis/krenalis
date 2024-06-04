@@ -487,6 +487,44 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		return s, nil
 	case types.ArrayKind:
 		switch spt {
+		default:
+			if dt.MinItems() > 1 {
+				return nil, errInvalidConversion
+			}
+			it := dt.Elem()
+			if !st.EqualTo(it) {
+				var err error
+				v, err = convert(v, st, it, false, layouts)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return []any{v}, nil
+		case types.JSONKind:
+			s, err := jsonToArray(v)
+			if err != nil {
+				return nil, errInvalidConversion
+			}
+			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
+				return nil, errInvalidConversion
+			}
+			it2 := dt.Elem()
+			for i, item := range s {
+				s[i], err = convert(item, types.JSON(), it2, false, layouts)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if dt.Unique() {
+				for i, item := range s {
+					for _, item2 := range s[i:] {
+						if item == item2 {
+							return nil, errInvalidConversion
+						}
+					}
+				}
+			}
+			return s, nil
 		case types.ArrayKind:
 			s := v.([]any)
 			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
@@ -513,31 +551,8 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				}
 			}
 			return s, nil
-		case types.JSONKind:
-			s, err := jsonToArray(v)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
-				return nil, errInvalidConversion
-			}
-			it2 := dt.Elem()
-			for i, item := range s {
-				s[i], err = convert(item, types.JSON(), it2, false, layouts)
-				if err != nil {
-					return nil, err
-				}
-			}
-			if dt.Unique() {
-				for i, item := range s {
-					for _, item2 := range s[i:] {
-						if item == item2 {
-							return nil, errInvalidConversion
-						}
-					}
-				}
-			}
-			return s, nil
+		case types.ObjectKind, types.MapKind:
+
 		}
 	case types.ObjectKind:
 		switch spt {
@@ -932,15 +947,17 @@ func jsonToInet(v any) (string, error) {
 // jsonToArray converts v of type JSON to Array.
 func jsonToArray(v any) ([]any, error) {
 	switch v := v.(type) {
+	case bool, string, float64, json.Number:
+		return []any{v}, nil
 	case []any:
 		return v, nil
 	case json.RawMessage:
 		enc := json.NewDecoder(bytes.NewReader(v))
 		enc.UseNumber()
-		var s []any
+		var s any
 		err := enc.Decode(&s)
 		if err == nil {
-			return s, nil
+			return jsonToArray(s)
 		}
 	}
 	return nil, errInvalidConversion

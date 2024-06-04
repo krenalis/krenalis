@@ -234,9 +234,16 @@ func TestConvert(t *testing.T) {
 		// Array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
 		{types.Array(types.Int(32)), types.Array(types.Int(8)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
+		{types.Int(32), types.Array(types.Int(8)), 5, []any{5}, true, nil},
+		{types.Boolean(), types.Array(types.Boolean()).WithMinItems(1), false, []any{false}, true, nil},
+		{types.Text(), types.Array(types.UUID()), "123e4567-e89b-12d3-a456-426614174000", []any{"123e4567-e89b-12d3-a456-426614174000"}, true, nil},
 		{types.JSON(), types.Array(types.Int(32)), []any{1.0, 2.0, 3.0}, []any{1, 2, 3}, true, nil},
 		{types.JSON(), types.Array(types.Int(32)), []any{json.Number("1"), json.Number("2"), json.Number("3")}, []any{1, 2, 3}, true, nil},
 		{types.JSON(), types.Array(types.Int(32)), json.RawMessage(`[1,2,3]`), []any{1, 2, 3}, true, nil},
+		{types.JSON(), types.Array(types.Int(32)), 6.0, []any{6}, true, nil},
+		{types.JSON(), types.Array(types.Boolean()), true, []any{true}, true, nil},
+		{types.JSON(), types.Array(types.Text()), "foo", []any{"foo"}, true, nil},
+		{types.JSON(), types.Array(types.Float(64)), json.RawMessage(`15.07`), []any{15.07}, true, nil},
 
 		// Object.
 		{

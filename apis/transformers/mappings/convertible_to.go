@@ -7,7 +7,9 @@
 
 package mappings
 
-import "github.com/open2b/chichi/types"
+import (
+	"github.com/open2b/chichi/types"
+)
 
 // convertMatrix is a matrix which holds information about valid conversions.
 //
@@ -23,19 +25,19 @@ var convertMatrix = [...]int32{
 	//                │ │ │ │  │   │  ┌── JSON
 	//                │ │ │ │  │   │  │   ┌── Array
 	//                │ │ │ │  │   │  │   │
-	/* Boolean  */ 0b_1_0_0_00_000_00_101_000,
-	/* Int      */ 0b_0_1_1_11_000_10_101_000,
-	/* Uint     */ 0b_0_1_1_11_000_10_101_000,
-	/* Float    */ 0b_0_1_1_11_000_00_101_000,
-	/* Decimal  */ 0b_0_1_1_11_000_00_101_000,
-	/* DateTime */ 0b_0_0_0_00_111_00_101_000,
-	/* Date     */ 0b_0_0_0_00_110_00_101_000,
-	/* Time     */ 0b_0_0_0_00_001_00_101_000,
-	/* Year     */ 0b_0_1_1_00_000_10_101_000,
-	/* UUID     */ 0b_0_0_0_00_000_01_101_000,
+	/* Boolean  */ 0b_1_0_0_00_000_00_101_100,
+	/* Int      */ 0b_0_1_1_11_000_10_101_100,
+	/* Uint     */ 0b_0_1_1_11_000_10_101_100,
+	/* Float    */ 0b_0_1_1_11_000_00_101_100,
+	/* Decimal  */ 0b_0_1_1_11_000_00_101_100,
+	/* DateTime */ 0b_0_0_0_00_111_00_101_100,
+	/* Date     */ 0b_0_0_0_00_110_00_101_100,
+	/* Time     */ 0b_0_0_0_00_001_00_101_100,
+	/* Year     */ 0b_0_1_1_00_000_10_101_100,
+	/* UUID     */ 0b_0_0_0_00_000_01_101_100,
 	/* JSON     */ 0b_1_1_1_11_111_11_111_111,
-	/* Inet     */ 0b_0_0_0_00_000_00_111_000,
-	/* Text     */ 0b_1_1_1_11_111_11_111_000,
+	/* Inet     */ 0b_0_0_0_00_000_00_111_100,
+	/* Text     */ 0b_1_1_1_11_111_11_111_100,
 	/* Array    */ 0b_0_0_0_00_000_00_100_100,
 	/* Object   */ 0b_0_0_0_00_000_00_100_010,
 	/* Map      */ 0b_0_0_0_00_000_00_100_001,
@@ -59,7 +61,15 @@ func convertibleTo(st, dt types.Type) bool {
 		return true
 	}
 	switch dk {
-	case types.ArrayKind, types.MapKind:
+	case types.ArrayKind:
+		switch sk {
+		default:
+			return convertibleTo(st, dt.Elem())
+		case types.ArrayKind:
+			return convertibleTo(st.Elem(), dt.Elem())
+		case types.ObjectKind, types.MapKind:
+		}
+	case types.MapKind:
 		return convertibleTo(st.Elem(), dt.Elem())
 	case types.ObjectKind:
 		var hasSameNameProperty bool
