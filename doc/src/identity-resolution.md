@@ -56,6 +56,10 @@ Here, `customerId` is the identifier with the higher priority while `address.str
 
 ## Merging of Users
 
+> 🚧🚧🚧 Work in progress! 🚧🚧🚧
+> 
+> The documentation in this section must be updated after the implementation of the PR [804](https://github.com/open2b/chichi/pull/804).
+
 In the Identity Resolution, **two or more user identities** are merged into a single user by taking the `max` value between the values of their properties.
 
 > `max` refers to the `max` function in PostgreSQL, which [is documented here](https://www.postgresql.org/docs/current/tutorial-agg.html).

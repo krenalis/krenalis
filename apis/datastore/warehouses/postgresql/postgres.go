@@ -11,6 +11,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/postgres"
+	"github.com/open2b/chichi/types"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -554,6 +556,19 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		sameUser.WriteString("false")
 	}
 
+	// Drop (if exists) and create the aggregation function "array_cat_agg"
+	// which is used by the merge query.
+	const aggregateFunction = `
+		DROP AGGREGATE IF EXISTS array_cat_agg(anycompatiblearray);
+		CREATE AGGREGATE array_cat_agg(anycompatiblearray) (
+			SFUNC=array_cat,
+			STYPE=anycompatiblearray
+		);`
+	_, err = warehouse.db.Exec(ctx, aggregateFunction)
+	if err != nil {
+		return warehouses.Error(fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err))
+	}
+
 	// Generate the SQL queries that populates the users table.
 	var populateUsers strings.Builder
 	populateUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
@@ -566,9 +581,54 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 	populateUsers.WriteString(`"__identities__", "__id__"`)
 	populateUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
-		populateUsers.WriteString(`MAX(DISTINCT "`)
-		populateUsers.WriteString(c.Name)
-		populateUsers.WriteString(`") AS "`)
+		if c.Type.Kind() == types.ArrayKind {
+			populateUsers.WriteString(`array_cat_agg(
+				DISTINCT "` + c.Name + `"
+				ORDER BY
+					"` + c.Name + `"
+			) FILTER (
+				WHERE
+					"` + c.Name + `" IS NOT NULL
+			)`)
+		} else {
+			populateUsers.WriteByte('(')
+			if s, ok := userPrimarySources[c.Name]; ok {
+				// If there is a user primary source S defined for this column,
+				// then add to the concatenation the expression that returns the
+				// values ​​for the column c.Name read from the identities
+				// coming from S, excluding the NULL values.
+				populateUsers.WriteString(`(
+					(
+						ARRAY_AGG(
+							"` + c.Name + `"
+							ORDER BY
+								"__last_change_time__" DESC
+						) FILTER (
+							WHERE
+								"` + c.Name + `" IS NOT NULL
+								AND __connection__ = ` + strconv.Itoa(s) + `
+						)
+					) || `)
+			}
+			// Concatenates the values ​​of all identities for which the value
+			// is not NULL, sorted by last change time. At the end is appended
+			// "NULL", which handles the case where none of the identities have
+			// a non-NULL value for the column, so that the indexing operation
+			// that takes the first value does not fail and explicitly returns
+			// "NULL" instead.
+			populateUsers.WriteString(`(
+					ARRAY_AGG(
+						"` + c.Name + `"
+						ORDER BY
+							"__last_change_time__" DESC
+					) FILTER (
+						WHERE
+							"` + c.Name + `" IS NOT NULL
+					)
+				) || '{NULL}'
+			)[1]`)
+		}
+		populateUsers.WriteString(` AS "`)
 		populateUsers.WriteString(c.Name)
 		populateUsers.WriteByte('"')
 		populateUsers.WriteByte(',')
