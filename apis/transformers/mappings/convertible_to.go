@@ -43,22 +43,22 @@ var convertMatrix = [...]int32{
 
 // convertibleTo reports whether a value of type st can be converted to type dt.
 func convertibleTo(st, dt types.Type) bool {
-	spt := st.Kind()
-	dpt := dt.Kind()
-	mask := int32(1 << (types.MapKind - dpt))
-	if convertMatrix[spt-1]&mask == 0 {
-		if spt == types.BooleanKind && dpt == types.IntKind && dt.BitSize() == 8 { // Boolean is convertible to Int(8)
+	sk := st.Kind()
+	dk := dt.Kind()
+	mask := int32(1 << (types.MapKind - dk))
+	if convertMatrix[sk-1]&mask == 0 {
+		if sk == types.BooleanKind && dk == types.IntKind && dt.BitSize() == 8 { // Boolean is convertible to Int(8)
 			return true
 		}
-		if spt == types.IntKind && dpt == types.BooleanKind && st.BitSize() == 8 { // Int(8) is convertible to Boolean.
+		if sk == types.IntKind && dk == types.BooleanKind && st.BitSize() == 8 { // Int(8) is convertible to Boolean.
 			return true
 		}
 		return false
 	}
-	if spt == types.JSONKind {
+	if sk == types.JSONKind {
 		return true
 	}
-	switch dpt {
+	switch dk {
 	case types.ArrayKind, types.MapKind:
 		return convertibleTo(st.Elem(), dt.Elem())
 	case types.ObjectKind:
