@@ -47,7 +47,7 @@ const SchemaGrid = () => {
 					</SlButton>
 				</div>
 				<SlButton className='schema-grid__edit-button' variant='primary' onClick={onEditClick}>
-					Change...
+					Alter Schema...
 				</SlButton>
 			</Toolbar>
 			<Grid ref={gridRef} columns={columns} rows={rows} isLoading={isLoadingSchema} />

@@ -61,13 +61,13 @@ const SchemaEdit = () => {
 	return (
 		<div className='schema-edit'>
 			<div className='schema-edit__header'>
-				<div className='schema-edit__header-title'>Schema change</div>
+				<div className='schema-edit__header-title'>Alter Schema</div>
 				<div className='schema-edit__header-buttons'>
 					<SlButton className='schema-edit__header-cancel-button' onClick={onCancelEdit}>
 						Cancel
 					</SlButton>
 					<SlButton className='schema-edit__header-apply-button' variant='primary' onClick={onApplyChanges}>
-						Apply changes...
+						Review Changes
 					</SlButton>
 				</div>
 			</div>
@@ -91,7 +91,7 @@ const SchemaEdit = () => {
 			/>
 			<SlDialog
 				open={isQueriesLoading || queries != null}
-				label='Confirm the changes'
+				label='Review changes'
 				onSlAfterHide={onCancelChanges}
 				className={`schema-edit__queries ${isQueriesLoading ? ' schema-edit__queries--loading' : ''}`}
 			>
@@ -121,11 +121,11 @@ const SchemaEdit = () => {
 								</SlButton>
 								<SlButton
 									size='small'
-									variant='primary'
+									variant='danger'
 									onClick={onConfirmChanges}
 									loading={isConfirmChangesLoading}
 								>
-									Confirm
+									Apply Alter Schema
 								</SlButton>
 							</div>
 						</>

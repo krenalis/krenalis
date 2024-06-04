@@ -88,3 +88,8 @@
 	justify-content: end;
 	gap: 15px;
 }
+
+.schema-edit__queries-buttons sl-button:first-child::part(base) {
+	padding-left: 30px;
+	padding-right: 30px;
+}
