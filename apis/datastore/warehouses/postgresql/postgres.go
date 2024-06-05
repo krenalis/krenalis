@@ -596,7 +596,6 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 				// values ​​for the column c.Name read from the identities
 				// coming from S, excluding the NULL values.
 				mergeUsers.WriteString(`(
-					(
 						ARRAY_AGG(
 							"` + c.Name + `"
 							ORDER BY
