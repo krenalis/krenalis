@@ -32,8 +32,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	action := this.action
 	store := this.connection.store
-	stats := this.apis.statistics.Action(action.ID)
+	execution, _ := action.Execution()
 	connector := action.Connection().Connector()
+
+	stats := this.apis.statistics.Execution(execution.ID)
 
 	if connector.Type == state.AppType {
 		// Download the users from this connection to match the identities for the export.
@@ -149,10 +151,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	ack := func(err error, gids []uuid.UUID) {
 		for _, gid := range gids {
 			if err != nil {
-				stats.Failed(statistics.ExportStep, gid, err)
+				stats.Failed(statistics.ConclusiveStep, gid, err)
 				continue
 			}
-			stats.Passed(statistics.ExportStep)
+			stats.Passed(statistics.ConclusiveStep)
 		}
 	}
 

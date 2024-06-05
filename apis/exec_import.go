@@ -30,8 +30,9 @@ func (this *Action) importUsers(ctx context.Context) error {
 	action := this.action
 	connection := action.Connection()
 	connector := connection.Connector()
+	execution, _ := action.Execution()
 
-	stats := this.apis.statistics.Action(action.ID)
+	stats := this.apis.statistics.Execution(execution.ID)
 
 	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
 		this.apis.functionTransformer, nil)
@@ -44,10 +45,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 	switch connector.Type {
 	case state.AppType:
 		var lastChangeTime time.Time
-		if exe, _ := action.Execution(); !exe.Reimport {
+		if !execution.Reimport {
 			lastChangeTime = action.UserCursor
 		}
-		if exe, _ := action.Execution(); exe.Reimport {
+		if execution.Reimport {
 			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
 			if err != nil {
 				if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
@@ -88,10 +89,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 		for _, id := range ids {
 			if err != nil {
 				_ = id // TODO: see https://github.com/open2b/chichi/issues/456.
-				stats.Failed(statistics.ImportedStep, uuid.UUID{}, err)
+				stats.Failed(statistics.ConclusiveStep, uuid.UUID{}, err)
 				return
 			}
-			stats.Passed(statistics.ImportedStep)
+			stats.Passed(statistics.ConclusiveStep)
 		}
 	}
 	iw, err := this.connection.store.IdentitiesWriter(this.action.OutSchema, connection.ID, ack)
@@ -114,20 +115,13 @@ func (this *Action) importUsers(ctx context.Context) error {
 	for user := range records.Seq() {
 
 		if user.Err != nil {
-
-			return actionExecutionError{user.Err}
-
-			// TODO(Gianluca): this code that set the statistics had the problem
-			// of hiding the error, making the action end successfully even when
-			// there are errors. We need to revise this part.
-
-			// if _, ok := user.Err.(ValidationError); ok {
-			// 	stats.Passed(statistics.ReceivedStep)
-			// 	stats.Failed(statistics.InputValidatedStep, uuid.UUID{}, err)
-			// 	continue
-			// }
-			// stats.Failed(statistics.ReceivedStep, uuid.UUID{}, err)
-			// continue
+			if _, ok := user.Err.(ValidationError); ok {
+				stats.Passed(statistics.ReceivedStep)
+				stats.Failed(statistics.InputValidatedStep, uuid.UUID{}, err)
+				continue
+			}
+			stats.Failed(statistics.ReceivedStep, uuid.UUID{}, err)
+			continue
 		}
 
 		stats.Passed(statistics.ReceivedStep)

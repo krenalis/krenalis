@@ -21,31 +21,30 @@ import (
 	"github.com/google/uuid"
 )
 
-const numSteps = 7
+const numSteps = 6
 
 // timeslotBase is the time, in minutes, from the epoch, considered as the
 // timeslot 0.
 var timeslotBase int64 = 1701388800 / 60 // minutes from epoch to 2023-12-01 00:00:00 UTC
 
-// ActionStep represents a step of an action execution.
-type ActionStep int
+// ExecutionStep represents a step of an execution.
+type ExecutionStep int
 
 const (
-	ReceivedStep ActionStep = iota
+	ReceivedStep ExecutionStep = iota
 	InputValidatedStep
 	FilteredStep
 	TransformedStep
 	OutputValidatedStep
-	ImportedStep
-	ExportStep
+	ConclusiveStep
 )
 
 // Collector is a statistics collector.
 type Collector struct {
-	db      *postgres.DB
-	mu      sync.RWMutex
-	actions map[int]*ActionCollector
-	close   struct {
+	db         *postgres.DB
+	mu         sync.RWMutex
+	executions map[int]*ExecutionCollector
+	close      struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		shutdown  chan struct{}
@@ -59,8 +58,8 @@ type Collector struct {
 func New(db *postgres.DB) *Collector {
 
 	stats := &Collector{
-		db:      db,
-		actions: map[int]*ActionCollector{},
+		db:         db,
+		executions: map[int]*ExecutionCollector{},
 	}
 
 	stats.close.ctx, stats.close.cancelCtx = context.WithCancel(context.Background())
@@ -71,15 +70,15 @@ func New(db *postgres.DB) *Collector {
 	return stats
 }
 
-// Action returns the action collector to collect statistics for the action with
-// identifier id.
-func (c *Collector) Action(id int) *ActionCollector {
+// Execution returns the execution collector to collect statistics for the
+// execution with identifier id.
+func (c *Collector) Execution(id int) *ExecutionCollector {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	action, ok := c.actions[id]
+	action, ok := c.executions[id]
 	if !ok {
-		action = &ActionCollector{}
-		c.actions[id] = action
+		action = &ExecutionCollector{}
+		c.executions[id] = action
 	}
 	return action
 }
@@ -96,9 +95,9 @@ func (c *Collector) Close(ctx context.Context) {
 
 // collectedStats represents collected statistics that have to be stored.
 type collectedStats struct {
-	action int
-	passed [numSteps]int
-	failed [numSteps]int
+	execution int
+	passed    [numSteps]int
+	failed    [numSteps]int
 }
 
 // process processes the collected statistics.
@@ -111,7 +110,7 @@ func (c *Collector) process() {
 	time.Sleep(t.Sub(now))
 
 	// Starts the ticker.
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	var isShuttingDown bool
@@ -120,21 +119,21 @@ func (c *Collector) process() {
 	for {
 		timeslot := t.Unix()/60 - timeslotBase
 		c.mu.Lock()
-		if len(c.actions) > 0 {
-			data := make([]collectedStats, 0, len(c.actions))
-			for id, action := range c.actions {
+		if len(c.executions) > 0 {
+			data := make([]collectedStats, 0, len(c.executions))
+			for id, execution := range c.executions {
 				d := collectedStats{}
-				action.mu.Lock()
-				isZero := action.passed == [numSteps]int{} && action.failed == [numSteps]int{}
+				execution.mu.Lock()
+				isZero := execution.passed == [numSteps]int{} && execution.failed == [numSteps]int{}
 				if !isZero {
-					d.passed = action.passed
-					d.failed = action.failed
-					action.passed = [numSteps]int{}
-					action.failed = [numSteps]int{}
+					d.passed = execution.passed
+					d.failed = execution.failed
+					execution.passed = [numSteps]int{}
+					execution.failed = [numSteps]int{}
 				}
-				action.mu.Unlock()
+				execution.mu.Unlock()
 				if !isZero {
-					d.action = id
+					d.execution = id
 					data = append(data, d)
 				}
 			}
@@ -171,9 +170,9 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 			b.WriteByte(',')
 		}
 		b.WriteByte('(')
-		b.WriteString(strconv.FormatInt(timeslot, 10))
+		b.WriteString(strconv.Itoa(d.execution))
 		b.WriteByte(',')
-		b.WriteString(strconv.Itoa(d.action))
+		b.WriteString(strconv.FormatInt(timeslot, 10))
 		b.WriteByte(',')
 		for j := 0; j < 6; j++ {
 			b.WriteString(strconv.Itoa(d.passed[j]))
@@ -188,8 +187,8 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 		b.WriteByte(')')
 	}
 	b.WriteString("\n) INSERT INTO actions_executions_stats AS s " +
-		`(timeslot, action, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
-		` SELECT * FROM t ON CONFLICT (timeslot, action) DO UPDATE SET ` +
+		`(execution, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
+		` SELECT * FROM t ON CONFLICT (execution, timeslot) DO UPDATE SET ` +
 		`passed_0 = s.passed_0 + EXCLUDED.passed_0, ` +
 		`passed_1 = s.passed_1 + EXCLUDED.passed_1, ` +
 		`passed_2 = s.passed_2 + EXCLUDED.passed_2, ` +
@@ -215,7 +214,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 				select {
 				case <-c.close.ctx.Done():
 				default:
-					slog.Error("failed to store the statistics on action executions", "err", s)
+					slog.Error("failed to store the statistics on execution executions", "err", s)
 				}
 			}
 			continue
@@ -225,22 +224,22 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 
 }
 
-// ActionCollector collects the statistics for an action execution.
-type ActionCollector struct {
+// ExecutionCollector collects the statistics for an execution.
+type ExecutionCollector struct {
 	mu     sync.Mutex
 	passed [numSteps]int
 	failed [numSteps]int
 }
 
 // Failed increases the failed count for the provided step.
-func (stats *ActionCollector) Failed(step ActionStep, gid uuid.UUID, err error) {
+func (stats *ExecutionCollector) Failed(step ExecutionStep, gid uuid.UUID, err error) {
 	stats.mu.Lock()
 	stats.failed[step]++
 	stats.mu.Unlock()
 }
 
 // Passed increases the passed count for the provided step.
-func (stats *ActionCollector) Passed(step ActionStep) {
+func (stats *ExecutionCollector) Passed(step ExecutionStep) {
 	stats.mu.Lock()
 	stats.passed[step]++
 	stats.mu.Unlock()

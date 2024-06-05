@@ -963,37 +963,48 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 // An Execution describes an action execution as returned by Executions.
 type Execution struct {
-	ID        int
-	Action    int
-	StartTime time.Time
-	EndTime   *time.Time
-	Error     string
+	ID          int
+	Action      int
+	StartTime   time.Time
+	EndTime     *time.Time
+	Passed      [6]int
+	Failed      [6]int
+	TotalPassed int
+	TotalFailed int
+	Error       string
 }
 
-// Executions returns a list of Execution describing all executions of the
-// actions of the connection.
-// The connection must be an app, database, or file connection.
+// Executions returns the executions of the actions of the connections.
+// The connection must be an app, database, file, or stream connection.
 func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
+
 	this.apis.mustBeOpen()
-	c := this.connection
-	connector := c.Connector()
-	switch connector.Type {
+
+	switch c := this.connection.Connector(); c.Type {
 	case state.AppType, state.DatabaseType, state.FileStorageType, state.StreamType:
 	default:
 		return nil, errors.BadRequest("connection %d cannot have executions, it's a %s connection",
-			c.ID, strings.ToLower(connector.Type.String()))
+			this.connection.ID, strings.ToLower(c.Type.String()))
 	}
+
 	executions := []*Execution{}
 	err := this.apis.db.QueryScan(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.error\n"+
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.error,"+
+			" SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5),"+
+			" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
+			"INNER JOIN actions_executions_stats s ON s.execution = e.id\n"+
 			"WHERE a.connection = $1\n"+
-			"ORDER BY id DESC", c.ID, func(rows *postgres.Rows) error {
+			"GROUP BY e.id\n"+
+			"ORDER BY id DESC", this.connection.ID, func(rows *postgres.Rows) error {
 			var err error
 			for rows.Next() {
 				var exe Execution
-				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Error); err != nil {
+				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Error,
+					&exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3], &exe.Passed[4], &exe.Passed[5],
+					&exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4], &exe.Failed[5],
+				); err != nil {
 					return err
 				}
 				executions = append(executions, &exe)
@@ -1003,6 +1014,12 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	for _, exe := range executions {
+		exe.TotalPassed = exe.Passed[5]
+		exe.TotalFailed = exe.Failed[0] + exe.Failed[1] + exe.Failed[2] + exe.Failed[3] + exe.Failed[4] + exe.Failed[5]
+	}
+
 	return executions, nil
 }
 
