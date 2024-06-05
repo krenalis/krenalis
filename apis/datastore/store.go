@@ -377,7 +377,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	// Determine the primary sources for every user column.
 	userPrimarySources := make(map[string]int, len(ws.UserPrimarySources))
 	for p, s := range ws.UserPrimarySources {
-		c := strings.ReplaceAll(p, "_", ".")
+		c := strings.ReplaceAll(p, ".", "_")
 		userPrimarySources[c] = s
 	}
 
