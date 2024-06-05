@@ -114,13 +114,20 @@ func (this *Action) importUsers(ctx context.Context) error {
 	for user := range records.Seq() {
 
 		if user.Err != nil {
-			if _, ok := user.Err.(ValidationError); ok {
-				stats.Passed(statistics.ReceivedStep)
-				stats.Failed(statistics.InputValidatedStep, uuid.UUID{}, err)
-				continue
-			}
-			stats.Failed(statistics.ReceivedStep, uuid.UUID{}, err)
-			continue
+
+			return actionExecutionError{user.Err}
+
+			// TODO(Gianluca): this code that set the statistics had the problem
+			// of hiding the error, making the action end successfully even when
+			// there are errors. We need to revise this part.
+
+			// if _, ok := user.Err.(ValidationError); ok {
+			// 	stats.Passed(statistics.ReceivedStep)
+			// 	stats.Failed(statistics.InputValidatedStep, uuid.UUID{}, err)
+			// 	continue
+			// }
+			// stats.Failed(statistics.ReceivedStep, uuid.UUID{}, err)
+			// continue
 		}
 
 		stats.Passed(statistics.ReceivedStep)
