@@ -25,6 +25,10 @@ var workspaceChangeUserSchema = &cobra.Command{
 	Use:  "change-user-schema <file>",
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
+		assumeYes, err := cmd.Flags().GetBool("yes")
+		if err != nil {
+			log.Fatal(err)
+		}
 		filename := args[0]
 		content, err := os.ReadFile(filename)
 		if err != nil {
@@ -55,8 +59,12 @@ var workspaceChangeUserSchema = &cobra.Command{
 		for _, query := range queries {
 			fmt.Printf("%s\n\n", query)
 		}
-		if !askUserConfirmation("Are you sure you want to proceed?") {
-			log.Fatalf("exiting")
+		if assumeYes {
+			// Just go on.
+		} else {
+			if !askUserConfirmation("Are you sure you want to proceed?") {
+				log.Fatalf("exiting")
+			}
 		}
 		chichiapis.WorkspaceChangeUserSchema(workspace(cmd), req.Schema, req.RePaths)
 		fmt.Print("Done!\n")
@@ -82,5 +90,6 @@ func askUserConfirmation(s string) bool {
 }
 
 func init() {
+	_ = workspaceChangeUserSchema.Flags().Bool("yes", false, "Assume \"yes\" instead of asking for confirmation before changing schema")
 	rootCmd.AddCommand(workspaceChangeUserSchema)
 }
