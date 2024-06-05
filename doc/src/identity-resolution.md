@@ -77,13 +77,15 @@ The resulting user will be then:
 |-------|------|-----------------------------|--------------|
 | a@b   | John | {+11 111, +22 222, +33 333} | 21           |
 
-Now let's suppose that the connection C is set as primary source for the property `total_orders`.
+Now let's suppose that the connection B is set as primary source for the property `total_orders`.
 
 The resulting user will be then:
 
 | email | name | phone_numbers               | total_orders           |
 |-------|------|-----------------------------|------------------------|
 | a@b   | John | {+11 111, +22 222, +33 333} | **20** (instead of 21) |
+
+where the value "20" for `total_orders` comes from B, which is primary for this property, instead of coming from the identity from C (even if this last one was updated more recently).
 
 ## User GIDs
 
