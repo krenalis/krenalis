@@ -302,7 +302,7 @@ func (apis *APIs) Close() {
 	apis.close.Wait()
 	// Close event dispatcher, statistics, datastore and state.
 	apis.events.dispatcher.Close()
-	apis.statistics.Close()
+	apis.statistics.Close(context.Background())
 	apis.datastore.Close()
 	apis.state.Close()
 }

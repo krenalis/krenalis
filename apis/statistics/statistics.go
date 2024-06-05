@@ -84,17 +84,10 @@ func (c *Collector) Action(id int) *ActionCollector {
 	return action
 }
 
-// Close closes the collector.
-func (c *Collector) Close() {
-	close(c.close.shutdown)
-	c.close.cancelCtx()
-	c.close.Wait()
-}
-
-// Shutdown gracefully shuts down the collector storing the remaining
-// statistics. If the provided context expires before the shutdown is complete,
-// Shutdown interrupts any ongoing store execution and returns.
-func (c *Collector) Shutdown(ctx context.Context) {
+// Close closes the collector, ensuring any remaining statistics are stored. If
+// the provided context expires before completion, ongoing store execution is
+// interrupted and the function returns.
+func (c *Collector) Close(ctx context.Context) {
 	close(c.close.shutdown)
 	stop := context.AfterFunc(ctx, func() { c.close.cancelCtx() })
 	defer stop()
