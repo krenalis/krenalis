@@ -6,7 +6,7 @@ replace github.com/open2b/chichi => ../
 
 require (
 	github.com/open2b/chichi v0.0.0-00010101000000-000000000000
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
 )
 
