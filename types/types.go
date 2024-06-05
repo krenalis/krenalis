@@ -188,12 +188,12 @@ func (role Role) String() string {
 type Property struct {
 	Name        string
 	Label       string
-	Description string
 	Placeholder string
 	Role        Role
 	Type        Type
 	Required    bool
 	Nullable    bool
+	Note        string
 }
 
 var _ interface {
@@ -444,10 +444,6 @@ func ObjectOf(properties []Property) (Type, error) {
 		if err != nil {
 			return Type{}, err
 		}
-		description, err := normalizedUTF8(property.Description)
-		if err != nil {
-			return Type{}, err
-		}
 		placeholder, err := normalizedUTF8(property.Placeholder)
 		if err != nil {
 			return Type{}, err
@@ -458,15 +454,19 @@ func ObjectOf(properties []Property) (Type, error) {
 		if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		note, err := normalizedUTF8(property.Note)
+		if err != nil {
+			return Type{}, err
+		}
 		ps[i] = Property{
 			Name:        property.Name,
 			Label:       label,
-			Description: description,
 			Placeholder: placeholder,
 			Role:        property.Role,
 			Type:        property.Type,
 			Required:    property.Required,
 			Nullable:    property.Nullable,
+			Note:        note,
 		}
 	}
 	return Type{kind: ObjectKind, vl: ps}, nil
@@ -1204,11 +1204,11 @@ func (t Type) EqualTo(t2 Type) bool {
 			p2 := (vl2)[i]
 			if p1.Name != p2.Name ||
 				p1.Label != p2.Label ||
-				p1.Description != p2.Description ||
 				p1.Placeholder != p2.Placeholder ||
 				p1.Role != p2.Role ||
 				p1.Required != p2.Required ||
 				p1.Nullable != p2.Nullable ||
+				p1.Note != p2.Note ||
 				!p1.Type.EqualTo(p2.Type) {
 				return false
 			}

@@ -104,10 +104,10 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Changes in descriptions are not influent",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Description: "old description", Nullable: true},
+				{Name: "a", Type: types.Text(), Nullable: true, Note: "old note"},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Description: "new description", Nullable: true},
+				{Name: "a", Type: types.Text(), Nullable: true, Note: "new note"},
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},

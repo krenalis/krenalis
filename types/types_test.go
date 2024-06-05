@@ -770,9 +770,6 @@ func sameProperty(p1, p2 Property) error {
 	if p1.Label != p2.Label {
 		return fmt.Errorf("expected property label %q, got %q", p1.Label, p2.Label)
 	}
-	if p1.Description != p2.Description {
-		return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)
-	}
 	if p1.Placeholder != p2.Placeholder {
 		return fmt.Errorf("expected property placeholder %q, got %q", p1.Placeholder, p2.Placeholder)
 	}
@@ -787,6 +784,9 @@ func sameProperty(p1, p2 Property) error {
 	}
 	if p1.Nullable != p2.Nullable {
 		return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
+	}
+	if p1.Note != p2.Note {
+		return fmt.Errorf("expected property note %q, got %q", p1.Note, p2.Note)
 	}
 	return nil
 }

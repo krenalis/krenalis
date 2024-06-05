@@ -179,9 +179,9 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 		setProperty(p);
 	};
 
-	const onChangeDescription = (e) => {
+	const onChangeNote = (e) => {
 		const p = { ...property };
-		p.description = e.target.value;
+		p.note = e.target.value;
 		setProperty(p);
 	};
 
@@ -286,7 +286,7 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 										className='property-dialog__bitsize'
 										ref={bitSizeSelectRef}
 										size='small'
-										label='Size'
+										label='Bit size'
 										value={String(property.type?.bitSize)}
 										onSlChange={onChangeBitSize}
 									>
@@ -395,9 +395,9 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 					<SlTextarea
 						className='property-dialog__control'
 						size='small'
-						value={property.description}
-						label='Description'
-						onSlChange={onChangeDescription}
+						value={property.note}
+						label='Note'
+						onSlChange={onChangeNote}
 					/>
 					<div className='property-dialog__buttons'>
 						<SlButton size='small' variant='neutral' onClick={() => setPropertyToEdit(null)}>

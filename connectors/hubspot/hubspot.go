@@ -313,11 +313,11 @@ func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, role chich
 			continue
 		}
 		property := types.Property{
-			Name:        r.Name,
-			Label:       r.Label,
-			Description: r.Description,
-			Type:        typ,
-			Nullable:    true,
+			Name:     r.Name,
+			Label:    r.Label,
+			Type:     typ,
+			Nullable: true,
+			Note:     r.Description,
 		}
 		if r.ModificationMetadata.ReadOnlyValue {
 			property.Role = types.SourceRole

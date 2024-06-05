@@ -6,12 +6,12 @@ interface EditableProperty {
 	root: string;
 	name: string;
 	label: string;
-	description: string;
 	placeholder: string;
 	role: Role;
 	type: Type;
 	required: boolean;
 	nullable: boolean;
+	note: string;
 	isEditable?: boolean;
 }
 
@@ -75,9 +75,9 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			const p: any = {
 				name: property.name,
 				label: property.label,
-				description: property.description,
 				type: typ,
 				nullable: property.nullable,
+				note: property.note,
 			};
 			if (!property.isEditable) {
 				p.placeholder = property.placeholder;
@@ -103,9 +103,9 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			const subP: any = {
 				name: property.name,
 				label: property.label,
-				description: property.description,
 				type: typ,
 				nullable: property.nullable,
+				note: property.note,
 			};
 			if (!property.isEditable) {
 				subP.placeholder = property.placeholder;
@@ -127,7 +127,7 @@ const newPropertyToEdit = (parentKey: string, indentation: number, root: string)
 		nullable: true,
 		type: null,
 		label: '',
-		description: '',
+		note: '',
 		isEditable: true,
 	};
 };

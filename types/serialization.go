@@ -262,8 +262,6 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	b.WriteByte('"')
 	b.WriteString(`,"label":`)
 	_ = marshalString(b, p.Label)
-	b.WriteString(`,"description":`)
-	_ = marshalString(b, p.Description)
 	if p.Placeholder != "" {
 		b.WriteString(`,"placeholder":`)
 		_ = marshalString(b, p.Placeholder)
@@ -278,6 +276,8 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	} else {
 		b.WriteString(`,"nullable":false`)
 	}
+	b.WriteString(`,"note":`)
+	_ = marshalString(b, p.Note)
 	b.WriteByte('}')
 	return nil
 }
@@ -922,7 +922,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasLabel, hasDescription, hasPlaceholder, hasRequired, hasNullable bool
+	var hasLabel, hasPlaceholder, hasRequired, hasNullable, hasNote bool
 
 	// Read property keys and values.
 	for {
@@ -980,15 +980,6 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 				return Property{}, errors.New("unexpected value for property label")
 			}
 			hasLabel = true
-		case "description":
-			if hasDescription {
-				return Property{}, errors.New("repeated 'description' key")
-			}
-			p.Description, ok = tok.(string)
-			if !ok {
-				return Property{}, errors.New("unexpected value for property description")
-			}
-			hasDescription = true
 		case "placeholder":
 			if hasPlaceholder {
 				return Property{}, errors.New("repeated 'placeholder' key")
@@ -1016,6 +1007,15 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 				return Property{}, errors.New("unexpected value for 'nullable' key of property")
 			}
 			hasNullable = true
+		case "note":
+			if hasNote {
+				return Property{}, errors.New("repeated 'note' key")
+			}
+			p.Note, ok = tok.(string)
+			if !ok {
+				return Property{}, errors.New("unexpected value for property note")
+			}
+			hasNote = true
 		default:
 			return Property{}, fmt.Errorf("unknown property '%s'", key)
 		}

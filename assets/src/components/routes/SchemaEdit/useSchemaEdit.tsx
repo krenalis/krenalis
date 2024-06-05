@@ -24,12 +24,12 @@ interface PropertyToEdit {
 	root?: string;
 	name?: string;
 	label?: string;
-	description?: string;
 	placeholder?: string;
 	role?: Role;
 	type?: Type | null;
 	required?: boolean;
 	nullable?: boolean;
+	note?: string;
 	isEditable?: boolean;
 }
 
@@ -124,10 +124,10 @@ const useSchemaEdit = (
 			type: property.type,
 			nullable: property.nullable,
 			label: property.label,
-			description: property.description,
 			placeholder: '',
 			role: 'Both',
 			required: false,
+			note: property.note,
 			isEditable: true,
 		};
 		setEditableSchema(s);
@@ -213,10 +213,10 @@ const useSchemaEdit = (
 			type: property.type,
 			nullable: property.nullable,
 			label: property.label,
-			description: property.description,
 			placeholder: current.placeholder,
 			role: current.role,
 			required: current.required,
+			note: property.note,
 			isEditable: current.isEditable ? current.isEditable : false,
 		};
 		s[key] = editedProperty;

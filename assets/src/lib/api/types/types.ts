@@ -25,12 +25,12 @@ type FloatBitSize = 32 | 64;
 interface Property {
 	name: string;
 	label: string;
-	description: string;
 	placeholder: string;
 	role: Role;
 	type: Type;
 	required: boolean;
 	nullable: boolean;
+	note: string;
 }
 
 type Type =

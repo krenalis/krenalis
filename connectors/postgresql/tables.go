@@ -191,7 +191,7 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 			return nil, fmt.Errorf("type of column %s.%s is not supported", row.table, column.Name)
 		}
 		if description != nil {
-			column.Description = *description
+			column.Note = *description
 		}
 		if table == nil || row.table != table.name {
 			table = &tableSchema{name: row.table}
