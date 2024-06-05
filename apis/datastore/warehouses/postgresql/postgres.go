@@ -513,8 +513,6 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		return err
 	}
 
-	_ = userPrimarySources // TODO(Gianluca): will be used by the PR #804.
-
 	var b strings.Builder
 
 	// Delete the orphan user identities, which are the identities that belong
