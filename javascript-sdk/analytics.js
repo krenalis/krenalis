@@ -212,6 +212,7 @@ class Analytics {
 	// startSession starts a new session.
 	startSession(id) {
 		if (id) {
+			// Check that it is a number and can be represented as an integer.
 			if (typeof id !== 'number' || id % 1 !== 0) {
 				throw new Error('sessionId must be a positive integer')
 			}
