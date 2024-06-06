@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/open2b/chichi/apis"
@@ -432,6 +433,11 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 			if e["EndTime"] == nil {
 				stillRunning = true
 				break
+			}
+			if failed, _ := strconv.Atoi(string(e["TotalFailed"].(json.Number))); failed > 0 {
+				actionID := string(e["Action"].(json.Number))
+				connID := string(e["ID"].(json.Number))
+				c.t.Fatalf("an error occurred when running action %q on connection %q: %d failed", actionID, connID, failed)
 			}
 		}
 		if stillRunning {

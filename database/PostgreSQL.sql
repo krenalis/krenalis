@@ -117,6 +117,12 @@ CREATE TABLE actions_executions (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE actions_executions_log (
+    execution integer NOT NULL REFERENCES actions_executions ON DELETE CASCADE,
+    timeslot integer NOT NULL,
+    message varchar NOT NULL
+);
+
 CREATE TABLE actions_executions_stats (
     execution integer NOT NULL REFERENCES actions_executions ON DELETE CASCADE,
     timeslot integer NOT NULL,
@@ -134,6 +140,7 @@ CREATE TABLE actions_executions_stats (
     failed_5 integer NOT NULL,
     PRIMARY KEY (execution, timeslot)
 );
+
 
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,

@@ -149,9 +149,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	var writer connectors.Writer
 
 	ack := func(err error, gids []uuid.UUID) {
-		for _, gid := range gids {
+		for range gids {
 			if err != nil {
-				stats.Failed(statistics.ConclusiveStep, gid, err)
+				stats.Failed(statistics.ConclusiveStep, err.Error())
 				continue
 			}
 			stats.Passed(statistics.ConclusiveStep)
@@ -193,9 +193,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	for user := range records.Seq() {
 
 		if user.Err != nil {
-			stats.Failed(statistics.ReceivedStep, user.ID, user.Err)
+			stats.Failed(statistics.ReceivedStep, user.Err.Error())
 			if connector.Type == state.FileStorageType {
-				return err
+				return user.Err
 			}
 			continue
 		}
@@ -269,10 +269,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				if result.Err != nil {
 					if _, ok := result.Err.(ValidationError); ok {
 						stats.Passed(statistics.TransformedStep)
-						stats.Failed(statistics.OutputValidatedStep, user.GID, err)
+						stats.Failed(statistics.OutputValidatedStep, result.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.TransformedStep, user.GID, err)
+					stats.Failed(statistics.TransformedStep, result.Err.Error())
 					continue
 				}
 				stats.Passed(statistics.TransformedStep)

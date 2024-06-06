@@ -17,8 +17,6 @@ import (
 
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/backoff"
-
-	"github.com/google/uuid"
 )
 
 const numSteps = 6
@@ -98,6 +96,7 @@ type collectedStats struct {
 	execution int
 	passed    [numSteps]int
 	failed    [numSteps]int
+	messages  []string
 }
 
 // process processes the collected statistics.
@@ -128,8 +127,10 @@ func (c *Collector) process() {
 				if !isZero {
 					d.passed = execution.passed
 					d.failed = execution.failed
+					d.messages = execution.messages
 					execution.passed = [numSteps]int{}
 					execution.failed = [numSteps]int{}
+					execution.messages = nil
 				}
 				execution.mu.Unlock()
 				if !isZero {
@@ -163,6 +164,8 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 
 	defer c.close.Done()
 
+	var hasMessages bool
+
 	var b strings.Builder
 	b.WriteString("WITH t AS (\n\tVALUES ")
 	for i, d := range data {
@@ -185,6 +188,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 			}
 		}
 		b.WriteByte(')')
+		hasMessages = hasMessages || d.messages != nil
 	}
 	b.WriteString("\n) INSERT INTO actions_executions_stats AS s " +
 		`(execution, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
@@ -214,7 +218,45 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 				select {
 				case <-c.close.ctx.Done():
 				default:
-					slog.Error("failed to store the statistics on execution executions", "err", s)
+					slog.Error("failed to store the statistics on action executions", "err", s)
+				}
+			}
+			continue
+		}
+		break
+	}
+
+	if !hasMessages {
+		return
+	}
+
+	b.Reset()
+	b.WriteString("INSERT INTO actions_executions_log (execution, timeslot, message) VALUES ")
+	for i, d := range data {
+		for _, msg := range d.messages {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('(')
+			b.WriteString(strconv.Itoa(d.execution))
+			b.WriteByte(',')
+			b.WriteString(strconv.FormatInt(timeslot, 10))
+			b.WriteByte(',')
+			b.WriteString(postgres.QuoteValue(msg))
+			b.WriteByte(')')
+		}
+	}
+	query = b.String()
+
+	bo = backoff.New(20)
+	for bo.Next(c.close.ctx) {
+		_, err := c.db.Exec(c.close.ctx, query)
+		if err != nil {
+			if s := err.Error(); s != errLogged {
+				select {
+				case <-c.close.ctx.Done():
+				default:
+					slog.Error("failed to store the messages on action executions", "err", s)
 				}
 			}
 			continue
@@ -226,15 +268,17 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 
 // ExecutionCollector collects the statistics for an execution.
 type ExecutionCollector struct {
-	mu     sync.Mutex
-	passed [numSteps]int
-	failed [numSteps]int
+	mu       sync.Mutex
+	passed   [numSteps]int
+	failed   [numSteps]int
+	messages []string
 }
 
 // Failed increases the failed count for the provided step.
-func (stats *ExecutionCollector) Failed(step ExecutionStep, gid uuid.UUID, err error) {
+func (stats *ExecutionCollector) Failed(step ExecutionStep, msg string) {
 	stats.mu.Lock()
 	stats.failed[step]++
+	stats.messages = append(stats.messages, msg)
 	stats.mu.Unlock()
 }
 
