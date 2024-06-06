@@ -270,17 +270,17 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // identities.
 type IdentitiesAckFunc func(err error, ids []string)
 
-// IdentitiesWriter returns an IdentitiesWriter for writing user identities with
-// the given schema, relative to the connection, on the data warehouse.
-// ack is the ack function (see the documentation of IdentitiesWriter for more
-// details about it).
+// IdentityWriter returns an identity writer for writing user identities with
+// the given schema, relative to the connection, on the data warehouse. ack is
+// the ack function (see the documentation of IdentityWriter for more details
+// about it).
 //
 // If the data warehouse is in inspection mode, it returns the
 // ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error.
 //
 // TODO(marco): ack is currently not implemented.
-func (store *Store) IdentitiesWriter(schema types.Type, connection int, ack IdentitiesAckFunc) (*IdentitiesWriter, error) {
+func (store *Store) IdentityWriter(schema types.Type, connection int, ack IdentitiesAckFunc) (*IdentityWriter, error) {
 	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
@@ -288,7 +288,7 @@ func (store *Store) IdentitiesWriter(schema types.Type, connection int, ack Iden
 	case state.Maintenance:
 		return nil, ErrMaintenanceMode
 	}
-	return newIdentitiesWriter(store, connection, schema), nil
+	return newIdentityWriter(store, connection, schema), nil
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the

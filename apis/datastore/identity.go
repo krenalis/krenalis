@@ -28,10 +28,10 @@ type Identity struct {
 	LastChangeTime    time.Time              // Last change time in UTC.
 }
 
-// IdentitiesWriter writes user identities into the data warehouse. It deletes
-// an anonymous identity when a non-anonymous identity with the same Anonymous
-// ID is written.
-type IdentitiesWriter struct {
+// IdentityWriter writes user identities into the data warehouse. It deletes an
+// anonymous identity when a non-anonymous identity with the same Anonymous ID
+// is written.
+type IdentityWriter struct {
 	store      *Store
 	connection int
 	flatter    *flatter
@@ -40,10 +40,10 @@ type IdentitiesWriter struct {
 	closed     bool
 }
 
-// newIdentitiesWriter returns a new identity writer to write identities for the
-// provide connection and conforming to the provided user schema.
-func newIdentitiesWriter(store *Store, connection int, schema types.Type) *IdentitiesWriter {
-	iw := IdentitiesWriter{
+// newIdentityWriter returns a new identity writer to write identities for the
+// provided connection and conforming to the provided user schema.
+func newIdentityWriter(store *Store, connection int, schema types.Type) *IdentityWriter {
+	iw := IdentityWriter{
 		store:      store,
 		connection: connection,
 		flatter:    newFlatter(schema, store.userColumnByProperty()),
@@ -53,16 +53,15 @@ func newIdentitiesWriter(store *Store, connection int, schema types.Type) *Ident
 	return &iw
 }
 
-// Close closes the IdentitiesWriter, ensuring the completion of all pending or
-// ongoing write operations. In the event of a canceled context, it interrupts
-// ongoing writes, discards pending ones, and returns.
+// Close closes the Writer, ensuring the completion of all pending or ongoing
+// write operations. In the event of a canceled context, it interrupts ongoing
+// writes, discards pending ones, and returns.
 //
 // In case an error occurs with the data warehouse, a DataWarehouseError error
 // is returned.
 //
-// If the IdentitiesWriter is already closed, it does nothing and returns
-// immediately.
-func (iw *IdentitiesWriter) Close(ctx context.Context) error {
+// If the writer is already closed, it does nothing and returns immediately.
+func (iw *IdentityWriter) Close(ctx context.Context) error {
 	if iw.closed {
 		return nil
 	}
@@ -90,7 +89,7 @@ func (iw *IdentitiesWriter) Close(ctx context.Context) error {
 // otherwise, an error is returned.
 //
 // It panics if called on a closed writer.
-func (iw *IdentitiesWriter) Write(identity Identity) error {
+func (iw *IdentityWriter) Write(identity Identity) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
 	}

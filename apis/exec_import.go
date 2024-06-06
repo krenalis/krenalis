@@ -82,7 +82,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
-	// Instantiate an IdentitiesWriter.
+	// Instantiate an IdentityWriter.
 	ack := func(err error, ids []string) {
 		for _, id := range ids {
 			if err != nil {
@@ -93,7 +93,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			stats.Passed(statistics.ConclusiveStep)
 		}
 	}
-	iw, err := this.connection.store.IdentitiesWriter(this.action.OutSchema, connection.ID, ack)
+	iw, err := this.connection.store.IdentityWriter(this.action.OutSchema, connection.ID, ack)
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
