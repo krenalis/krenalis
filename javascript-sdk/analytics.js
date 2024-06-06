@@ -15,6 +15,10 @@ const none = () => {}
 // event. Events exceeding this size will not be appended to the queue.
 const maxEventSize = 32 * 1024
 
+// maxSafeInteger is the maximum safe integer. It is the same as
+// Number.MAX_SAFE_INTEGER, which is not available in Internet Explorer.
+const maxSafeInteger = 9007199254740991
+
 // queueKeyReg is the regexp for storage queue keys.
 const queueKeyReg = /^chichi\.[a-zA-Z0-9]{7}\.[a-zA-Z0-9]{8}(?:-[a-zA-Z0-9]{4}){3}-[a-zA-Z0-9]{12}\.queue$/
 
@@ -211,13 +215,13 @@ class Analytics {
 
 	// startSession starts a new session.
 	startSession(id) {
-		if (id) {
-			// Check that it is a number and can be represented as an integer.
-			if (typeof id !== 'number' || id % 1 !== 0) {
+		if (id == null) {
+			id = null
+		} else {
+			// Check that it is a number and can be represented as a positive integer.
+			if (typeof id !== 'number' || id <= 0 || id > maxSafeInteger || id % 1 !== 0) {
 				throw new Error('sessionId must be a positive integer')
 			}
-		} else {
-			id = null
 		}
 		this.#session.start(id)
 	}

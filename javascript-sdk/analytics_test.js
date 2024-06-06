@@ -1,4 +1,4 @@
-import { assert, assertEquals, AssertionError, assertNotEquals } from '@std/assert'
+import { assert, assertEquals, AssertionError, assertNotEquals, assertThrows } from '@std/assert'
 import { FakeTime } from '@std/testing/time'
 import * as uuid from '@std/uuid/v4'
 import * as fake from './test_fake.js'
@@ -163,6 +163,28 @@ Deno.test('Analytics', async (t) => {
 		assert(hasQueueKey)
 		assert(localStorage.getItem(`chichi.rq6JJg5.leader.beat`) != null)
 		assert(localStorage.getItem(`chichi.rq6JJg5.leader.election`) != null)
+		a.close()
+	})
+
+	await t.step('startSession argument validation', async () => {
+		const a = newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
+		await a.ready()
+		// Check valid startSession arguments.
+		let ids = [null, undefined, 1, 300, Number.MAX_SAFE_INTEGER]
+		for (let i = 0; i < ids.length; i++) {
+			a.startSession(ids[i])
+		}
+		// Check invalid startSession arguments.
+		ids = ['a', {}, -100, -10.56, -1, 0, -0, 0.1, 23.904, Number.MAX_SAFE_INTEGER + 1]
+		for (let i = 0; i < ids.length; i++) {
+			assertThrows(
+				() => {
+					a.startSession(ids[i])
+				},
+				Error,
+				'sessionId must be a positive integer',
+			)
+		}
 		a.close()
 	})
 
