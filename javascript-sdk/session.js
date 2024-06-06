@@ -1,14 +1,14 @@
 import { debug, getTime } from './utils.js'
 
 class Session {
-	#autoTrack
 	#storage
+	#autoTrack
 	#timeout
 	#debug
 
 	constructor(storage, autoTrack, timeout, debug) {
-		this.#autoTrack = autoTrack
 		this.#storage = storage
+		this.#autoTrack = autoTrack
 		this.#timeout = timeout
 		this.debug(debug)
 		if (autoTrack) {
