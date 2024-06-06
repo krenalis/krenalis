@@ -741,7 +741,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	var last connectors.Record
 	users := make([]map[string]any, 0, 100)
 
-	for user := range records.Seq() {
+	for user := range records.All(ctx) {
 		if user.Err != nil {
 			return nil, "", user.Err
 		}

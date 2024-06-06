@@ -109,7 +109,6 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		file.action.IdentityProperty, lastChangeTimeProperty, file.action.DisplayedProperty,
 		storageLastChangeTime, file.timeLayouts, math.MaxInt)
 	records := &fileRecords{
-		ctx:   ctx,
 		rw:    rw,
 		rc:    rc,
 		sheet: file.action.Sheet,
@@ -247,7 +246,6 @@ func (file *File) storage() (chichi.FileStorage, error) {
 
 // fileRecords implements the Records interface for files.
 type fileRecords struct {
-	ctx    context.Context
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
@@ -255,6 +253,33 @@ type fileRecords struct {
 	last   bool
 	err    error
 	closed bool
+}
+
+func (r *fileRecords) All(ctx context.Context) Seq[Record] {
+	return func(yield func(Record) bool) {
+		if r.closed {
+			r.err = errors.New("connectors: For called on a closed Records")
+			return
+		}
+		defer func() {
+			_ = r.Close()
+			if r.err == nil && r.rw.properties == nil {
+				r.err = ErrNoColumns
+			}
+		}()
+		r.rw.yield = yield
+		err := r.inner.Read(ctx, r.rc, r.sheet, r.rw)
+		if r.rw.record.Properties != nil || r.rw.record.Err != nil {
+			r.last = true
+			r.rw.yield(r.rw.record)
+		}
+		if err != nil && err != errRecordStop {
+			if err == chichi.ErrSheetNotExist {
+				err = ErrSheetNotExist
+			}
+			r.err = err
+		}
+	}
 }
 
 func (r *fileRecords) Close() error {
@@ -275,33 +300,6 @@ func (r *fileRecords) Err() error {
 
 func (r *fileRecords) Last() bool {
 	return r.last
-}
-
-func (r *fileRecords) Seq() Seq[Record] {
-	return func(yield func(Record) bool) {
-		if r.closed {
-			r.err = errors.New("connectors: For called on a closed Records")
-			return
-		}
-		defer func() {
-			_ = r.Close()
-			if r.err == nil && r.rw.properties == nil {
-				r.err = ErrNoColumns
-			}
-		}()
-		r.rw.yield = yield
-		err := r.inner.Read(r.ctx, r.rc, r.sheet, r.rw)
-		if r.rw.record.Properties != nil || r.rw.record.Err != nil {
-			r.last = true
-			r.rw.yield(r.rw.record)
-		}
-		if err != nil && err != errRecordStop {
-			if err == chichi.ErrSheetNotExist {
-				err = ErrSheetNotExist
-			}
-			r.err = err
-		}
-	}
 }
 
 var (

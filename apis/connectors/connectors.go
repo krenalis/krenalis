@@ -75,6 +75,10 @@ type Record struct {
 // apps, databases, and files.
 type Records interface {
 
+	// All returns an iterator to iterate over the records. After All completes, it
+	// is also necessary to check the result of Err for any potential errors.
+	All(ctx context.Context) Seq[Record]
+
 	// Close closes the iterator. It is automatically called by the For method
 	// before returning. Close is idempotent and does not impact the result of Err.
 	Close() error
@@ -86,10 +90,6 @@ type Records interface {
 
 	// Last reports whether the last record has been read.
 	Last() bool
-
-	// Seq returns an iterator to iterate over the records. After Seq completes, it
-	// is also necessary to check the result of Err for any potential errors.
-	Seq() Seq[Record]
 }
 
 // AckFunc is the function called when a write of one or more records

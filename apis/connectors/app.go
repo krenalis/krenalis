@@ -210,7 +210,6 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 		}
 	}
 	records := &appRecords{
-		ctx:               ctx,
 		schema:            schema,
 		timeLayouts:       app.timeLayouts,
 		lastChangeTime:    lastChangeTime,
@@ -276,7 +275,6 @@ func (w *appWriter) Write(ctx context.Context, gid uuid.UUID, record Record) boo
 
 // appRecords implements the Records interface for apps.
 type appRecords struct {
-	ctx               context.Context
 	schema            types.Type
 	timeLayouts       *state.TimeLayouts
 	lastChangeTime    time.Time
@@ -288,20 +286,7 @@ type appRecords struct {
 	displayedProperty types.Property
 }
 
-func (r *appRecords) Close() error {
-	r.closed = true
-	return nil
-}
-
-func (r *appRecords) Err() error {
-	return r.err
-}
-
-func (r *appRecords) Last() bool {
-	return r.last
-}
-
-func (r *appRecords) Seq() Seq[Record] {
+func (r *appRecords) All(ctx context.Context) Seq[Record] {
 
 	return func(yield func(Record) bool) {
 
@@ -329,7 +314,7 @@ func (r *appRecords) Seq() Seq[Record] {
 		for {
 
 			// Retrieve the users.
-			users, next, err := r.inner.(chichi.AppRecords).Records(r.ctx, chichi.Users, names, cursor)
+			users, next, err := r.inner.(chichi.AppRecords).Records(ctx, chichi.Users, names, cursor)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = err
@@ -351,6 +336,13 @@ func (r *appRecords) Seq() Seq[Record] {
 			// Normalize the returned users.
 
 			for i, appUser := range users {
+
+				select {
+				case <-ctx.Done():
+					r.err = ctx.Err()
+					return
+				default:
+				}
 
 				user := Record{
 					ID:           appUser.ID,
@@ -427,6 +419,19 @@ func (r *appRecords) Seq() Seq[Record] {
 
 	}
 
+}
+
+func (r *appRecords) Close() error {
+	r.closed = true
+	return nil
+}
+
+func (r *appRecords) Err() error {
+	return r.err
+}
+
+func (r *appRecords) Last() bool {
+	return r.last
 }
 
 type schema struct {

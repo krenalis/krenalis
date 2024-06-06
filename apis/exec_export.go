@@ -328,7 +328,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	defer records.Close()
 
 	// Importing users from a destination to match identities for the export.
-	for user := range records.Seq() {
+	for user := range records.All(ctx) {
 
 		if user.Err != nil {
 			return actionExecutionError{user.Err}

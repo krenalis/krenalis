@@ -363,27 +363,7 @@ func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 	return &records
 }
 
-func (r *databaseRecords) Close() error {
-	if r.closed {
-		return nil
-	}
-	r.closed = true
-	err := r.rows.Close()
-	if err != nil && r.err == nil {
-		r.err = err
-	}
-	return err
-}
-
-func (r *databaseRecords) Err() error {
-	return r.err
-}
-
-func (r *databaseRecords) Last() bool {
-	return r.last
-}
-
-func (r *databaseRecords) Seq() Seq[Record] {
+func (r *databaseRecords) All(ctx context.Context) Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
 			r.err = errors.New("connectors: For called on a closed Records")
@@ -396,6 +376,12 @@ func (r *databaseRecords) Seq() Seq[Record] {
 				if !yield(record) {
 					return
 				}
+			}
+			select {
+			case <-ctx.Done():
+				r.err = ctx.Err()
+				return
+			default:
 			}
 			record = Record{
 				Properties: make(map[string]any, len(r.propertyOf)),
@@ -436,6 +422,26 @@ func (r *databaseRecords) Seq() Seq[Record] {
 			r.err = err
 		}
 	}
+}
+
+func (r *databaseRecords) Close() error {
+	if r.closed {
+		return nil
+	}
+	r.closed = true
+	err := r.rows.Close()
+	if err != nil && r.err == nil {
+		r.err = err
+	}
+	return err
+}
+
+func (r *databaseRecords) Err() error {
+	return r.err
+}
+
+func (r *databaseRecords) Last() bool {
+	return r.last
 }
 
 // recordsScanValue implements the sql.Scanner interface to read the database

@@ -110,7 +110,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	var cursor time.Time
 
 	// Read the users.
-	for user := range records.Seq() {
+	for user := range records.All(ctx) {
 
 		if user.Err != nil {
 			if _, ok := user.Err.(ValidationError); ok {
