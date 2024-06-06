@@ -264,11 +264,9 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	return records, err
 }
 
-// IdentitiesAckFunc is the function called when the writing of one or more user
-// identities terminates. The parameter err represents the error that occurred
-// while writing the identities, if any, and ids holds the identifiers of such
-// identities.
-type IdentitiesAckFunc func(err error, ids []string)
+// IdentityWriterAckFunc is the function called when a batch of user identities
+// have been written to the data warehouse.
+type IdentityWriterAckFunc func(ids []string, err error)
 
 // IdentityWriter returns an identity writer for writing user identities with
 // the given schema, relative to the connection, on the data warehouse. ack is
@@ -279,8 +277,13 @@ type IdentitiesAckFunc func(err error, ids []string)
 // ErrInspectionMode error. If it is in maintenance mode, it returns the
 // ErrMaintenanceMode error.
 //
+// It panics if the ack function is nil.
+//
 // TODO(marco): ack is currently not implemented.
-func (store *Store) IdentityWriter(schema types.Type, connection int, ack IdentitiesAckFunc) (*IdentityWriter, error) {
+func (store *Store) IdentityWriter(schema types.Type, connection int, ack IdentityWriterAckFunc) (*IdentityWriter, error) {
+	if ack == nil {
+		panic("nil ack function")
+	}
 	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
@@ -288,7 +291,7 @@ func (store *Store) IdentityWriter(schema types.Type, connection int, ack Identi
 	case state.Maintenance:
 		return nil, ErrMaintenanceMode
 	}
-	return newIdentityWriter(store, connection, schema), nil
+	return newIdentityWriter(store, connection, schema, ack), nil
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the

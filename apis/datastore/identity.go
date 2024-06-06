@@ -34,18 +34,21 @@ type Identity struct {
 type IdentityWriter struct {
 	store      *Store
 	connection int
+	ack        IdentityWriterAckFunc
 	flatter    *flatter
 	columns    map[string]warehouses.Column
 	rows       []map[string]any
+	ackIDs     []string
 	closed     bool
 }
 
 // newIdentityWriter returns a new identity writer to write identities for the
 // provided connection and conforming to the provided user schema.
-func newIdentityWriter(store *Store, connection int, schema types.Type) *IdentityWriter {
+func newIdentityWriter(store *Store, connection int, schema types.Type, ack IdentityWriterAckFunc) *IdentityWriter {
 	iw := IdentityWriter{
 		store:      store,
 		connection: connection,
+		ack:        ack,
 		flatter:    newFlatter(schema, store.userColumnByProperty()),
 		columns:    map[string]warehouses.Column{},
 		rows:       make([]map[string]any, 0),
@@ -79,17 +82,25 @@ func (iw *IdentityWriter) Close(ctx context.Context) error {
 		columns[i+6] = iw.columns[name]
 	}
 	err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
-	return err
+	if err != nil {
+		return err
+	}
+	iw.ack(iw.ackIDs, nil)
+	return nil
 }
 
-// Write writes a user identity. It returns immediately, deferring the actual
-// write operation to a later time.
+// Write writes a user identity. The properties must comply with the user
+// schema. It returns immediately, deferring the validation of the properties
+// and the actual write operation to a later time.
 //
-// The values of the Identity Properties must comply with the user schema;
-// otherwise, an error is returned.
+// If an error occurs during validation of the properties, it calls the ack
+// function with the value of ackID and the error.
+//
+// When a batch of identities has been written to the data warehouse, it calls
+// the ack function with the ackID of the written identities and a nil error.
 //
 // It panics if called on a closed writer.
-func (iw *IdentityWriter) Write(identity Identity) error {
+func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
 	}
@@ -121,6 +132,7 @@ func (iw *IdentityWriter) Write(identity Identity) error {
 		row["__anonymous_ids__"] = []string{identity.AnonymousID}
 	}
 	iw.rows = append(iw.rows, row)
+	iw.ackIDs = append(iw.ackIDs, ackID)
 	return nil
 }
 

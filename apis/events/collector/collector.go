@@ -297,15 +297,14 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 		store := c.datastore.Store(ws.ID)
 
 		// Instantiate an identity writer for writing the user identities.
-		ack := func(err error, ids []string) {
+		ctx := context.Background()
+		iw, err := store.IdentityWriter(action.OutSchema, connection.ID, func(ids []string, err error) {
 			if err != nil {
 				slog.Warn("cannot import user identities", "action", action.ID, "ids", ids, "err", err)
 				return
 			}
 			slog.Warn("user identities imported successfully", "action", action.ID, "ids", ids)
-		}
-		ctx := context.Background()
-		iw, err := store.IdentityWriter(action.OutSchema, connection.ID, ack)
+		})
 		if err != nil {
 			return err
 		}
@@ -368,7 +367,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				Properties:        properties,
 				DisplayedProperty: displayedProperty,
 				LastChangeTime:    event.Timestamp,
-			})
+			}, event.MessageId)
 			if err != nil {
 				return iw.Close(ctx)
 			}

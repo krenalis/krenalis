@@ -274,7 +274,7 @@ type ExecutionCollector struct {
 	messages []string
 }
 
-// Failed increases the failed count for the provided step.
+// Failed increases the failed count for the provided step by one.
 func (stats *ExecutionCollector) Failed(step ExecutionStep, msg string) {
 	stats.mu.Lock()
 	stats.failed[step]++
@@ -282,9 +282,26 @@ func (stats *ExecutionCollector) Failed(step ExecutionStep, msg string) {
 	stats.mu.Unlock()
 }
 
-// Passed increases the passed count for the provided step.
+// FailedCount increases the failed count for the provided step by the given
+// count.
+func (stats *ExecutionCollector) FailedCount(step ExecutionStep, count int, msg string) {
+	stats.mu.Lock()
+	stats.failed[step] += count
+	stats.messages = append(stats.messages, msg)
+	stats.mu.Unlock()
+}
+
+// Passed increases the passed count for the provided step by one.
 func (stats *ExecutionCollector) Passed(step ExecutionStep) {
 	stats.mu.Lock()
 	stats.passed[step]++
+	stats.mu.Unlock()
+}
+
+// PassedCount increases the passed count for the provided step by the given
+// count.
+func (stats *ExecutionCollector) PassedCount(step ExecutionStep, count int) {
+	stats.mu.Lock()
+	stats.passed[step] += count
 	stats.mu.Unlock()
 }

@@ -82,18 +82,14 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
-	// Instantiate an IdentityWriter.
-	ack := func(err error, ids []string) {
-		for _, id := range ids {
-			if err != nil {
-				_ = id // TODO: see https://github.com/open2b/chichi/issues/456.
-				stats.Failed(statistics.ConclusiveStep, err.Error())
-				return
-			}
-			stats.Passed(statistics.ConclusiveStep)
+	// Instantiate an identity writer.
+	iw, err := this.connection.store.IdentityWriter(this.action.OutSchema, connection.ID, func(ids []string, err error) {
+		if err != nil {
+			stats.FailedCount(statistics.ConclusiveStep, len(ids), err.Error())
+			return
 		}
-	}
-	iw, err := this.connection.store.IdentityWriter(this.action.OutSchema, connection.ID, ack)
+		stats.PassedCount(statistics.ConclusiveStep, len(ids))
+	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
@@ -167,7 +163,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 					Properties:        user.Properties,
 					DisplayedProperty: user.DisplayedProperty,
 					LastChangeTime:    user.LastChangeTime,
-				})
+				}, "")
 				if err != nil {
 					err := iw.Close(ctx)
 					return actionExecutionError{err}
