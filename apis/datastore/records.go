@@ -25,6 +25,10 @@ type Seq[V any] func(yield func(V) bool)
 // a data warehouse.
 type Records interface {
 
+	// All returns an iterator to iterate over the records. After All completes, it
+	// is also necessary to check the result of Err for any potential errors.
+	All(ctx context.Context) Seq[Record]
+
 	// Close closes the iterator. It is automatically called by the For method
 	// before returning. Close is idempotent and does not impact the result of Err.
 	Close() error
@@ -35,10 +39,6 @@ type Records interface {
 
 	// Last reports whether the last record has been read.
 	Last() bool
-
-	// Seq returns an iterator to iterate over the records. After Seq completes, it
-	// is also necessary to check the result of Err for any potential errors.
-	Seq() Seq[Record]
 }
 
 // Record represents a record.
@@ -118,27 +118,10 @@ type records struct {
 	closed    bool
 }
 
-func (r *records) Close() error {
-	if r.closed {
-		return nil
-	}
-	r.closed = true
-	r.rows.Close()
-	return nil
-}
-
-func (r *records) Err() error {
-	return r.err
-}
-
-func (r *records) Last() bool {
-	return r.last
-}
-
-func (r *records) Seq() Seq[Record] {
+func (r *records) All(ctx context.Context) Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
-			r.err = errors.New("Seq called on a closed Query")
+			r.err = errors.New("All called on a closed Records")
 			return
 		}
 		defer r.Close()
@@ -147,6 +130,12 @@ func (r *records) Seq() Seq[Record] {
 		row := make([]any, len(r.columns))
 		values := newScanValues(r.columns, row, r.normalize)
 		for r.rows.Next() {
+			select {
+			case <-ctx.Done():
+				r.err = ctx.Err()
+				return
+			default:
+			}
 			if record.Properties != nil || record.Err != nil {
 				if !yield(record) {
 					return
@@ -203,6 +192,23 @@ func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFu
 		values[i] = value
 	}
 	return values
+}
+
+func (r *records) Close() error {
+	if r.closed {
+		return nil
+	}
+	r.closed = true
+	r.rows.Close()
+	return nil
+}
+
+func (r *records) Err() error {
+	return r.err
+}
+
+func (r *records) Last() bool {
+	return r.last
 }
 
 func (sv *scanValue) Scan(src any) error {

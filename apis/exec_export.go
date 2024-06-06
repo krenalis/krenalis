@@ -190,7 +190,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
-	for user := range records.Seq() {
+	for user := range records.All(ctx) {
 
 		if user.Err != nil {
 			stats.Failed(statistics.ReceivedStep, user.Err.Error())
