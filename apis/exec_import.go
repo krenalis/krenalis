@@ -85,10 +85,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 	// Instantiate an identity writer.
 	iw, err := this.connection.store.IdentityWriter(this.action.OutSchema, connection.ID, func(ids []string, err error) {
 		if err != nil {
-			stats.FailedCount(statistics.ConclusiveStep, len(ids), err.Error())
+			stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
 			return
 		}
-		stats.PassedCount(statistics.ConclusiveStep, len(ids))
+		stats.PassedCount(statistics.Finalizing, len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
@@ -110,16 +110,16 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		if user.Err != nil {
 			if _, ok := user.Err.(ValidationError); ok {
-				stats.Passed(statistics.ReceivedStep)
-				stats.Failed(statistics.InputValidatedStep, user.Err.Error())
+				stats.Passed(statistics.Receiving)
+				stats.Failed(statistics.InputValidation, user.Err.Error())
 				continue
 			}
-			stats.Failed(statistics.ReceivedStep, user.Err.Error())
+			stats.Failed(statistics.Receiving, user.Err.Error())
 			continue
 		}
 
-		stats.Passed(statistics.ReceivedStep)
-		stats.Passed(statistics.InputValidatedStep)
+		stats.Passed(statistics.Receiving)
+		stats.Passed(statistics.InputValidation)
 
 		if connector.Type == state.AppType && user.LastChangeTime.After(cursor) {
 			cursor = user.LastChangeTime
@@ -148,16 +148,16 @@ func (this *Action) importUsers(ctx context.Context) error {
 				user := users[i]
 				if result.Err != nil {
 					if _, ok := result.Err.(ValidationError); ok {
-						stats.Passed(statistics.TransformedStep)
-						stats.Failed(statistics.OutputValidatedStep, result.Err.Error())
+						stats.Passed(statistics.Transformation)
+						stats.Failed(statistics.OutputValidation, result.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.TransformedStep, result.Err.Error())
+					stats.Failed(statistics.Transformation, result.Err.Error())
 					continue
 				}
 				user.Properties = result.Value
-				stats.Passed(statistics.TransformedStep)
-				stats.Passed(statistics.OutputValidatedStep)
+				stats.Passed(statistics.Transformation)
+				stats.Passed(statistics.OutputValidation)
 				err = iw.Write(datastore.Identity{
 					ID:                user.ID,
 					Properties:        user.Properties,

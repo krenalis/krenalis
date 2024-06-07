@@ -25,16 +25,16 @@ const numSteps = 6
 // timeslot 0.
 var timeslotBase int64 = 1701388800 / 60 // minutes from epoch to 2023-12-01 00:00:00 UTC
 
-// ExecutionStep represents a step of an execution.
-type ExecutionStep int
+// Step represents a step of an execution.
+type Step int
 
 const (
-	ReceivedStep ExecutionStep = iota
-	InputValidatedStep
-	FilteredStep
-	TransformedStep
-	OutputValidatedStep
-	ConclusiveStep
+	Receiving Step = iota
+	InputValidation
+	Filtering
+	Transformation
+	OutputValidation
+	Finalizing
 )
 
 // Collector is a statistics collector.
@@ -275,7 +275,7 @@ type ExecutionCollector struct {
 }
 
 // Failed increases the failed count for the provided step by one.
-func (stats *ExecutionCollector) Failed(step ExecutionStep, msg string) {
+func (stats *ExecutionCollector) Failed(step Step, msg string) {
 	stats.mu.Lock()
 	stats.failed[step]++
 	stats.messages = append(stats.messages, msg)
@@ -284,7 +284,7 @@ func (stats *ExecutionCollector) Failed(step ExecutionStep, msg string) {
 
 // FailedCount increases the failed count for the provided step by the given
 // count.
-func (stats *ExecutionCollector) FailedCount(step ExecutionStep, count int, msg string) {
+func (stats *ExecutionCollector) FailedCount(step Step, count int, msg string) {
 	stats.mu.Lock()
 	stats.failed[step] += count
 	stats.messages = append(stats.messages, msg)
@@ -292,7 +292,7 @@ func (stats *ExecutionCollector) FailedCount(step ExecutionStep, count int, msg 
 }
 
 // Passed increases the passed count for the provided step by one.
-func (stats *ExecutionCollector) Passed(step ExecutionStep) {
+func (stats *ExecutionCollector) Passed(step Step) {
 	stats.mu.Lock()
 	stats.passed[step]++
 	stats.mu.Unlock()
@@ -300,7 +300,7 @@ func (stats *ExecutionCollector) Passed(step ExecutionStep) {
 
 // PassedCount increases the passed count for the provided step by the given
 // count.
-func (stats *ExecutionCollector) PassedCount(step ExecutionStep, count int) {
+func (stats *ExecutionCollector) PassedCount(step Step, count int) {
 	stats.mu.Lock()
 	stats.passed[step] += count
 	stats.mu.Unlock()

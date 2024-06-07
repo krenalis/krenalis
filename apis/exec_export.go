@@ -152,10 +152,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	ack := func(ids []string, err error) {
 		for range ids {
 			if err != nil {
-				stats.Failed(statistics.ConclusiveStep, err.Error())
+				stats.Failed(statistics.Finalizing, err.Error())
 				continue
 			}
-			stats.Passed(statistics.ConclusiveStep)
+			stats.Passed(statistics.Finalizing)
 		}
 	}
 
@@ -194,15 +194,15 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	for properties, err := range records.All(ctx) {
 
 		if err != nil {
-			stats.Failed(statistics.ReceivedStep, err.Error())
+			stats.Failed(statistics.Receiving, err.Error())
 			if connector.Type == state.FileStorageType {
 				return err
 			}
 			continue
 		}
 
-		stats.Passed(statistics.ReceivedStep)
-		stats.Passed(statistics.InputValidatedStep)
+		stats.Passed(statistics.Receiving)
+		stats.Passed(statistics.InputValidation)
 
 		if connector.Type == state.AppType {
 			// Resolve the external identities.
@@ -271,15 +271,15 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				user := users[i]
 				if result.Err != nil {
 					if _, ok := result.Err.(ValidationError); ok {
-						stats.Passed(statistics.TransformedStep)
-						stats.Failed(statistics.OutputValidatedStep, result.Err.Error())
+						stats.Passed(statistics.Transformation)
+						stats.Failed(statistics.OutputValidation, result.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.TransformedStep, result.Err.Error())
+					stats.Failed(statistics.Transformation, result.Err.Error())
 					continue
 				}
-				stats.Passed(statistics.TransformedStep)
-				stats.Passed(statistics.OutputValidatedStep)
+				stats.Passed(statistics.Transformation)
+				stats.Passed(statistics.OutputValidation)
 				if len(result.Value) == 0 {
 					continue
 				}
