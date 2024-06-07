@@ -29,7 +29,6 @@ import (
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
-	"github.com/google/uuid"
 	"github.com/itchyny/timefmt-go"
 	"github.com/relvacode/iso8601"
 	"github.com/shopspring/decimal"
@@ -93,10 +92,9 @@ type Records interface {
 }
 
 // AckFunc is the function called when a write of one or more records
-// terminates. The parameter err represents the error that occurred while
-// writing the records, if any, and ids represents the identifiers of the
-// records.
-type AckFunc func(err error, ids []uuid.UUID)
+// terminates. ids represents the ack identifiers, and the parameter err
+// represents the error that occurred while writing the records, if any.
+type AckFunc func(ids []string, err error)
 
 // Writer is the interface implemented by app, database, and file connectors to
 // write records.
@@ -115,15 +113,15 @@ type Writer interface {
 	// actual write operation to a later time. If it returns false, no further Write
 	// operations can be performed, and a call to Close will return an error.
 	//
-	// If the record is successfully written, the ack function is invoked with a nil
-	// error and the record's ID as arguments. If writing the record fails, the ack
-	// function is invoked with a non-nil error and the record's ID as arguments.
+	// If the record is successfully written, the ack function is invoked with
+	// the ack ID and a nil error as arguments. If writing the record fails, the
+	// ack function is invoked with the ack ID and a non-nil error as arguments.
 	// The ack function is invoked even if Write returns false.
 	//
 	// record must contain at least one property.
 	//
 	// It panics if called on a closed writer.
-	Write(ctx context.Context, gid uuid.UUID, record Record) bool
+	Write(ctx context.Context, id string, properties map[string]any, ackID string) bool
 }
 
 // CommittableWriter is the interface implemented by writers that support

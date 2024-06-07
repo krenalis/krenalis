@@ -218,7 +218,7 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 
 	// Write the records.
 	for i := 2; ; i++ {
-		gid, record, err := records.Record(ctx)
+		ackID, record, err := records.Record(ctx)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -230,7 +230,7 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 		if err != nil {
 			return err
 		}
-		records.Ack(gid, nil)
+		records.Ack(ackID, nil)
 	}
 
 	err = sw.Flush()

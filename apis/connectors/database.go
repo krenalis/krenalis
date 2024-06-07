@@ -18,8 +18,6 @@ import (
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
-
-	"github.com/google/uuid"
 )
 
 // Database represents the database of a database connection.
@@ -222,13 +220,13 @@ func (w *databaseWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *databaseWriter) Write(ctx context.Context, gid uuid.UUID, record Record) bool {
+func (w *databaseWriter) Write(ctx context.Context, id string, properties map[string]any, ackID string) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
-	record.Properties["id"] = gid.String()
+	properties["id"] = ackID // see issue https://github.com/open2b/chichi/issues/731
 	// Append the row.
-	w.rows = append(w.rows, record.Properties)
+	w.rows = append(w.rows, properties)
 	// Upsert the rows.
 	if len(w.rows) == 100 {
 		w.upsert(ctx)
@@ -240,11 +238,11 @@ func (w *databaseWriter) Write(ctx context.Context, gid uuid.UUID, record Record
 // records.
 func (w *databaseWriter) upsert(ctx context.Context) {
 	err := w.inner.Upsert(ctx, w.table, w.rows, w.columns)
-	gids := make([]uuid.UUID, len(w.rows))
+	ackIDs := make([]string, len(w.rows))
 	for i, row := range w.rows {
-		gids[i] = uuid.MustParse(row["id"].(string))
+		ackIDs[i] = row["id"].(string) // see issue https://github.com/open2b/chichi/issues/731
 	}
-	w.ack(err, gids)
+	w.ack(ackIDs, err)
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
 }
 

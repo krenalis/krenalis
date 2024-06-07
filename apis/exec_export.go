@@ -149,8 +149,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	var writer connectors.Writer
 
-	ack := func(err error, gids []uuid.UUID) {
-		for range gids {
+	ack := func(ids []string, err error) {
+		for range ids {
 			if err != nil {
 				stats.Failed(statistics.ConclusiveStep, err.Error())
 				continue
@@ -245,7 +245,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 					record := connectors.Record{
 						Properties: user.Properties,
 					}
-					if ok := writer.Write(ctx, user.GID, record); !ok {
+					if ok := writer.Write(ctx, record.ID, record.Properties, user.GID.String()); !ok {
 						return writer.Close(ctx)
 					}
 				}
@@ -288,7 +288,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 					ID:         user.ID,
 					Properties: user.Properties,
 				}
-				if ok := writer.Write(ctx, user.GID, record); !ok {
+				if ok := writer.Write(ctx, record.ID, record.Properties, user.GID.String()); !ok {
 					return writer.Close(ctx)
 				}
 			}

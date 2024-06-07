@@ -13,8 +13,6 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/google/uuid"
-
 	"github.com/open2b/chichi/types"
 )
 
@@ -82,19 +80,19 @@ type Sheets interface {
 // written.
 type RecordReader interface {
 
-	// Ack acknowledges the processing of the record with the given GID.
+	// Ack acknowledges the processing of the record with the given ack ID.
 	// err is the error occurred processing the record, if any.
-	Ack(gid uuid.UUID, err error)
+	Ack(ackID string, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
-	// Record returns the next record as a slice of any with its GID.
-	// It returns 0, nil, and io.EOF if there are no more records.
+	// Record returns the next record as a slice of any with its ack ID.
+	// It returns "", nil, and io.EOF if there are no more records.
 	//
 	// After a record has been read and processed, the caller should call Ack
 	// to acknowledge the processing of the record.
-	Record(ctx context.Context) (gid uuid.UUID, record []any, err error)
+	Record(ctx context.Context) (ackID string, record []any, err error)
 }
 
 // A RecordWriter interface is used by file connectors to write read records.

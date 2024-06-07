@@ -23,8 +23,6 @@ import (
 	"github.com/open2b/chichi/apis/connectors/httpclient"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
-
-	"github.com/google/uuid"
 )
 
 type (
@@ -259,17 +257,17 @@ func (w *appWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *appWriter) Write(ctx context.Context, gid uuid.UUID, record Record) bool {
+func (w *appWriter) Write(ctx context.Context, id string, properties map[string]any, ackID string) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
 	var err error
-	if record.ID == "" {
-		err = w.records.Create(ctx, w.target, record.Properties)
+	if id == "" {
+		err = w.records.Create(ctx, w.target, properties)
 	} else {
-		err = w.records.Update(ctx, w.target, record.ID, record.Properties)
+		err = w.records.Update(ctx, w.target, id, properties)
 	}
-	w.ack(err, []uuid.UUID{gid})
+	w.ack([]string{ackID}, err)
 	return true
 }
 
