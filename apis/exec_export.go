@@ -191,12 +191,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		values = make([]map[string]any, 0, 100)
 	)
 
-	for user := range records.All(ctx) {
+	for properties, err := range records.All(ctx) {
 
-		if user.Err != nil {
-			stats.Failed(statistics.ReceivedStep, user.Err.Error())
+		if err != nil {
+			stats.Failed(statistics.ReceivedStep, err.Error())
 			if connector.Type == state.FileStorageType {
-				return user.Err
+				return err
 			}
 			continue
 		}
@@ -207,7 +207,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		var id string
 		if connector.Type == state.AppType {
 			// Resolve the external identities.
-			ids, err := this.resolveExternalIdentities(ctx, user)
+			ids, err := this.resolveExternalIdentities(ctx, properties)
 			if err != nil {
 				if err == datastore.ErrMaintenanceMode {
 					return actionExecutionError{err}
@@ -221,21 +221,21 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				continue
 			}
 			for _, id := range ids {
-				gid := uuid.MustParse(user.Properties["__id__"].(string))
-				delete(user.Properties, "__id__")
+				gid := uuid.MustParse(properties["__id__"].(string))
+				delete(properties, "__id__")
 				users = append(users, userToProcess{
 					GID:        gid,
 					ID:         id,
-					Properties: user.Properties,
+					Properties: properties,
 				})
 			}
 		} else {
-			gid := uuid.MustParse(user.Properties["__id__"].(string))
-			delete(user.Properties, "__id__")
+			gid := uuid.MustParse(properties["__id__"].(string))
+			delete(properties, "__id__")
 			users = append(users, userToProcess{
 				GID:        gid,
 				ID:         id,
-				Properties: user.Properties,
+				Properties: properties,
 			})
 		}
 
@@ -368,9 +368,9 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 //
 // If the data warehouse is in maintenance mode, it returns the
 // datastore.ErrMaintenanceMode error.
-func (this *Action) resolveExternalIdentities(ctx context.Context, user datastore.Record) ([]string, error) {
+func (this *Action) resolveExternalIdentities(ctx context.Context, userProperties map[string]any) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
-	property, ok := user.Properties[internalPropName]
+	property, ok := userProperties[internalPropName]
 	if !ok {
 		return nil, fmt.Errorf("property %q not found", internalPropName)
 	}

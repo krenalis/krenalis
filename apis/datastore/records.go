@@ -16,16 +16,8 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// Seq is an iterator over sequences of individual values.
-type Seq[V any] func(yield func(V) bool)
-
-// Record represents a record.
-type Record struct {
-	Properties map[string]any // Properties.
-	// Err reports an error that occurred while reading the record.
-	// If Err is not nil, only the ID field is significant.
-	Err error
-}
+// Seq2 is an iterator over sequences of pairs of values.
+type Seq2[K, V any] func(yield func(K, V) bool)
 
 // records executes a query on the data warehouse and returns an iterator to
 // iterate on the resulting records. schema is the schema of the properties in
@@ -95,14 +87,17 @@ type Records struct {
 
 // All returns an iterator to iterate over the records. After All completes, it
 // is also necessary to check the result of Err for any potential errors.
-func (r *Records) All(ctx context.Context) Seq[Record] {
-	return func(yield func(Record) bool) {
+func (r *Records) All(ctx context.Context) Seq2[map[string]any, error] {
+	return func(yield func(map[string]any, error) bool) {
 		if r.closed {
 			r.err = errors.New("All called on a closed Records")
 			return
 		}
 		defer r.Close()
-		var record Record
+		var previous struct {
+			properties map[string]any
+			err        error
+		}
 		row := make([]any, len(r.columns))
 		values := newScanValues(r.columns, row, r.normalize)
 		for r.rows.Next() {
@@ -112,22 +107,20 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 				return
 			default:
 			}
-			if record.Properties != nil || record.Err != nil {
-				if !yield(record) {
+			if previous.properties != nil || previous.err != nil {
+				if !yield(previous.properties, previous.err) {
 					return
 				}
 			}
 			if err := r.rows.Scan(values...); err != nil {
-				record = Record{Err: err}
+				previous.err = err
 				continue
 			}
-			record = Record{
-				Properties: r.unflat(row),
-			}
+			previous.properties = r.unflat(row)
 		}
-		if record.Properties != nil || record.Err != nil {
+		if previous.properties != nil || previous.err != nil {
 			r.last = true
-			if !yield(record) {
+			if !yield(previous.properties, previous.err) {
 				return
 			}
 		}
