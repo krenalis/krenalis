@@ -204,7 +204,6 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		stats.Passed(statistics.ReceivedStep)
 		stats.Passed(statistics.InputValidatedStep)
 
-		var id string
 		if connector.Type == state.AppType {
 			// Resolve the external identities.
 			ids, err := this.resolveExternalIdentities(ctx, properties)
@@ -234,7 +233,6 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			delete(properties, "__id__")
 			users = append(users, userToProcess{
 				GID:        gid,
-				ID:         id,
 				Properties: properties,
 			})
 		}
