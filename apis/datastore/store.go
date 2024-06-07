@@ -37,12 +37,6 @@ type Query struct {
 	// table is the table to query.
 	table string
 
-	// id is the path of a property whose value is returned in the 'Record.ID'
-	// field. The property must have type Int(32) and cannot be nullable. It is
-	// meaningful only if the method executing the query returns a Records
-	// iterator.
-	id string
-
 	// count retrieves the total number of rows that match the filter,
 	// irrespective of the first and limit parameters. It is meaningful only if
 	// the method has a count return parameter.
@@ -432,7 +426,6 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 		return nil, ErrMaintenanceMode
 	}
 	query.table = "users"
-	query.id = "__id__"
 	return store.records(ctx, query, schema, store.userColumnByProperty())
 }
 

@@ -14,8 +14,6 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
-
-	"github.com/google/uuid"
 )
 
 // Seq is an iterator over sequences of individual values.
@@ -23,7 +21,6 @@ type Seq[V any] func(yield func(V) bool)
 
 // Record represents a record.
 type Record struct {
-	ID         uuid.UUID      // Identifier.
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -41,7 +38,6 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 	}
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty)
-	columns = append(columns, columnByProperty[query.id])
 
 	var where warehouses.Expr
 	if query.Filter != nil {
@@ -107,7 +103,6 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 		}
 		defer r.Close()
 		var record Record
-		last := len(r.columns) - 1
 		row := make([]any, len(r.columns))
 		values := newScanValues(r.columns, row, r.normalize)
 		for r.rows.Next() {
@@ -126,13 +121,7 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 				record = Record{Err: err}
 				continue
 			}
-			id, err := uuid.Parse(row[last].(string))
-			if err != nil {
-				record = Record{Err: fmt.Errorf("id is not a valid UUID: %s", err)}
-				continue
-			}
 			record = Record{
-				ID:         id,
 				Properties: r.unflat(row),
 			}
 		}

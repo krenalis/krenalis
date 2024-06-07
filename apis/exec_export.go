@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -92,7 +93,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 
 	// Determine the properties to select from the data warehouse.
-	var properties []string
+	properties := []string{"__id__"}
 	if action.Transformation.Mapping != nil {
 		pp := transformer.Properties()
 		if action.MatchingProperties != nil {
@@ -108,12 +109,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				pp = append(pp, types.Path{internal})
 			}
 		}
-		properties = make([]string, len(pp))
-		for i, p := range pp {
-			properties[i] = p.String()
+		properties = slices.Grow(properties, len(pp))
+		for _, p := range pp {
+			properties = append(properties, p.String())
 		}
 	} else {
-		properties = schema.PropertiesNames()
+		properties = append(properties, schema.PropertiesNames()...)
 	}
 
 	// Determine the "order by" property.
@@ -220,15 +221,19 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				continue
 			}
 			for _, id := range ids {
+				gid := uuid.MustParse(user.Properties["__id__"].(string))
+				delete(user.Properties, "__id__")
 				users = append(users, userToProcess{
-					GID:        user.ID,
+					GID:        gid,
 					ID:         id,
 					Properties: user.Properties,
 				})
 			}
 		} else {
+			gid := uuid.MustParse(user.Properties["__id__"].(string))
+			delete(user.Properties, "__id__")
 			users = append(users, userToProcess{
-				GID:        user.ID,
+				GID:        gid,
 				ID:         id,
 				Properties: user.Properties,
 			})
