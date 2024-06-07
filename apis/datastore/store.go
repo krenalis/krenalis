@@ -426,7 +426,7 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 // ErrMaintenanceMode error. If the schema, which must be valid, does not
 // conform to the user schema, it returns a *SchemaError error. If an error
 // occurs with the data warehouse, it returns a *DataWarehouseError error.
-func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (Records, error) {
+func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (*Records, error) {
 	store.mustBeOpen()
 	if store.Mode() == state.Maintenance {
 		return nil, ErrMaintenanceMode

@@ -18,28 +18,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Seq represents a sequence of V values.
+// Seq is an iterator over sequences of individual values.
 type Seq[V any] func(yield func(V) bool)
-
-// Records is the iterator interface used to iterate over the records read from
-// a data warehouse.
-type Records interface {
-
-	// All returns an iterator to iterate over the records. After All completes, it
-	// is also necessary to check the result of Err for any potential errors.
-	All(ctx context.Context) Seq[Record]
-
-	// Close closes the iterator. It is automatically called by the For method
-	// before returning. Close is idempotent and does not impact the result of Err.
-	Close() error
-
-	// Err returns any error encountered during iteration which may have occurred
-	// after an explicit or implicit Close.
-	Err() error
-
-	// Last reports whether the last record has been read.
-	Last() bool
-}
 
 // Record represents a record.
 type Record struct {
@@ -50,11 +30,11 @@ type Record struct {
 	Err error
 }
 
-// records executes a query on the data warehouse and returns a Records iterator
-// to iterate on the resulting records. schema is the schema of the properties
-// in Properties and Filter of query, and columnByProperty is the mapping from
-// the path of a property to the relative column.
-func (store *Store) records(ctx context.Context, query Query, schema types.Type, columnByProperty map[string]warehouses.Column) (Records, error) {
+// records executes a query on the data warehouse and returns an iterator to
+// iterate on the resulting records. schema is the schema of the properties in
+// Properties and Filter of query, and columnByProperty is the mapping from the
+// path of a property to the relative column.
+func (store *Store) records(ctx context.Context, query Query, schema types.Type, columnByProperty map[string]warehouses.Column) (*Records, error) {
 
 	if err := checkSchemaAlignment(schema, columnByProperty); err != nil {
 		return nil, err
@@ -96,7 +76,7 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 		return nil, err
 	}
 
-	records := &records{
+	records := &Records{
 		columns:   columns,
 		unflat:    unflat,
 		rows:      rows,
@@ -106,9 +86,8 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 	return records, err
 }
 
-var _ Records = (*records)(nil)
-
-type records struct {
+// Records represents records read from the data warehouse.
+type Records struct {
 	columns   []warehouses.Column
 	normalize NormalizeFunc
 	unflat    unflatRowFunc
@@ -118,7 +97,9 @@ type records struct {
 	closed    bool
 }
 
-func (r *records) All(ctx context.Context) Seq[Record] {
+// All returns an iterator to iterate over the records. After All completes, it
+// is also necessary to check the result of Err for any potential errors.
+func (r *Records) All(ctx context.Context) Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
 			r.err = errors.New("All called on a closed Records")
@@ -194,7 +175,9 @@ func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFu
 	return values
 }
 
-func (r *records) Close() error {
+// Close closes the iterator. It is automatically called by the For method
+// before returning. Close is idempotent and does not impact the result of Err.
+func (r *Records) Close() error {
 	if r.closed {
 		return nil
 	}
@@ -203,11 +186,14 @@ func (r *records) Close() error {
 	return nil
 }
 
-func (r *records) Err() error {
+// Err returns any error encountered during iteration which may have occurred
+// after an explicit or implicit Close.
+func (r *Records) Err() error {
 	return r.err
 }
 
-func (r *records) Last() bool {
+// Last reports whether the last record has been read.
+func (r *Records) Last() bool {
 	return r.last
 }
 
