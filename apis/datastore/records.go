@@ -106,7 +106,7 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 			return
 		}
 		defer r.Close()
-		var record Record
+		var previous Record
 		last := len(r.columns) - 1
 		row := make([]any, len(r.columns))
 		values := newScanValues(r.columns, row, r.normalize)
@@ -117,28 +117,28 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 				return
 			default:
 			}
-			if record.Properties != nil || record.Err != nil {
-				if !yield(record) {
+			if previous.Properties != nil || previous.Err != nil {
+				if !yield(previous) {
 					return
 				}
 			}
 			if err := r.rows.Scan(values...); err != nil {
-				record = Record{Err: err}
+				previous = Record{Err: err}
 				continue
 			}
 			id, err := uuid.Parse(row[last].(string))
 			if err != nil {
-				record = Record{Err: fmt.Errorf("id is not a valid UUID: %s", err)}
+				previous = Record{Err: fmt.Errorf("id is not a valid UUID: %s", err)}
 				continue
 			}
-			record = Record{
+			previous = Record{
 				ID:         id,
 				Properties: r.unflat(row),
 			}
 		}
-		if record.Properties != nil || record.Err != nil {
+		if previous.Properties != nil || previous.Err != nil {
 			r.last = true
-			if !yield(record) {
+			if !yield(previous) {
 				return
 			}
 		}
