@@ -22,8 +22,6 @@ import (
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/types"
-
-	"github.com/google/uuid"
 )
 
 // exportUsers exports the users for the action.
@@ -180,7 +178,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	defer writer.Close(ctx)
 
 	type userToProcess struct {
-		GID        uuid.UUID
+		GID        string
 		ID         string
 		Properties map[string]any
 	}
@@ -220,14 +218,14 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			}
 			for _, id := range ids {
 				users = append(users, userToProcess{
-					GID:        user.ID,
+					GID:        user.ID.(string),
 					ID:         id,
 					Properties: user.Properties,
 				})
 			}
 		} else {
 			users = append(users, userToProcess{
-				GID:        user.ID,
+				GID:        user.ID.(string),
 				Properties: user.Properties,
 			})
 		}
@@ -240,7 +238,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 					record := connectors.Record{
 						Properties: user.Properties,
 					}
-					if ok := writer.Write(ctx, record.ID, record.Properties, user.GID.String()); !ok {
+					if ok := writer.Write(ctx, record.ID, record.Properties, user.GID); !ok {
 						return writer.Close(ctx)
 					}
 				}
@@ -283,7 +281,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 					ID:         user.ID,
 					Properties: user.Properties,
 				}
-				if ok := writer.Write(ctx, record.ID, record.Properties, user.GID.String()); !ok {
+				if ok := writer.Write(ctx, record.ID, record.Properties, user.GID); !ok {
 					return writer.Close(ctx)
 				}
 			}

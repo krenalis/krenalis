@@ -14,8 +14,6 @@ import (
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
-
-	"github.com/google/uuid"
 )
 
 // Seq is an iterator over sequences of individual values.
@@ -23,7 +21,7 @@ type Seq[V any] func(yield func(V) bool)
 
 // Record represents a record.
 type Record struct {
-	ID         uuid.UUID      // Identifier.
+	ID         any            // Identifier.
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -32,16 +30,17 @@ type Record struct {
 
 // records executes a query on the data warehouse and returns an iterator to
 // iterate on the resulting records. schema is the schema of the properties in
-// Properties and Filter of query, and columnByProperty is the mapping from the
-// path of a property to the relative column.
-func (store *Store) records(ctx context.Context, query Query, schema types.Type, columnByProperty map[string]warehouses.Column) (*Records, error) {
+// Properties and Filter of query, idProperty specifies the property whose value
+// is returned as ID, and columnByProperty is the mapping from the path of a
+// property to the relative column.
+func (store *Store) records(ctx context.Context, query Query, schema types.Type, idProperty string, columnByProperty map[string]warehouses.Column) (*Records, error) {
 
 	if err := checkSchemaAlignment(schema, columnByProperty); err != nil {
 		return nil, err
 	}
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty)
-	columns = append(columns, columnByProperty[query.id])
+	columns = append(columns, columnByProperty[idProperty])
 
 	var where warehouses.Expr
 	if query.Filter != nil {
@@ -126,14 +125,9 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 				previous = Record{Err: err}
 				continue
 			}
-			id, err := uuid.Parse(row[last].(string))
-			if err != nil {
-				previous = Record{Err: fmt.Errorf("id is not a valid UUID: %s", err)}
-				continue
-			}
 			previous = Record{
-				ID:         id,
-				Properties: r.unflat(row),
+				ID:         row[last],
+				Properties: r.unflat(row[:last]),
 			}
 		}
 		if previous.Properties != nil || previous.Err != nil {
