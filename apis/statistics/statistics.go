@@ -21,10 +21,6 @@ import (
 
 const numSteps = 6
 
-// timeslotBase is the time, in minutes, from the epoch, considered as the
-// timeslot 0.
-var timeslotBase int64 = 1701388800 / 60 // minutes from epoch to 2023-12-01 00:00:00 UTC
-
 // Step represents a step of an execution.
 type Step int
 
@@ -99,7 +95,8 @@ type collectedStats struct {
 	messages  []string
 }
 
-// process processes the collected statistics.
+// process processes the collected statistics. It collects statistics every
+// minute and aggregate them into 10-minute time slots for storage.
 func (c *Collector) process() {
 
 	now := time.Now().UTC()
@@ -114,9 +111,8 @@ func (c *Collector) process() {
 
 	var isShuttingDown bool
 
-	// Collect statistics each minute.
 	for {
-		timeslot := t.Unix()/60 - timeslotBase
+		timeslot := t.Unix() / 60 / 10
 		c.mu.Lock()
 		if len(c.executions) > 0 {
 			data := make([]collectedStats, 0, len(c.executions))
