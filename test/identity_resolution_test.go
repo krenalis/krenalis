@@ -109,18 +109,18 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Define a function "expectUsers" which checks if the expected user
 	// properties match with the users on the data warehouse.
-	expectUsers := func(expected []map[string]any) {
+	expectUsers := func(expectedUsers []map[string]any) {
 
 		// Retrieve the users from the APIs.
 		users, _, _ := c.Users([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", 0, 1000)
 
 		// Check if the users are equal to the expected or not.
-		if len(expected) != len(users) {
-			t.Fatalf("\nexpected: %d users\ngot %d", len(expected), len(users))
+		if len(expectedUsers) != len(users) {
+			t.Fatalf("\nexpected: %d users\ngot %d", len(expectedUsers), len(users))
 		}
 		for i, user := range users {
-			if !reflect.DeepEqual(expected[i], user.Properties) {
-				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expected, strings.Repeat(" ", len(strconv.Itoa(i))), users)
+			if !reflect.DeepEqual(expectedUsers[i], user.Properties) {
+				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expectedUsers[i], strings.Repeat(" ", len(strconv.Itoa(i))), user.Properties)
 			}
 		}
 		t.Logf("users: %v", users)
