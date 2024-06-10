@@ -37,6 +37,7 @@ import (
 	"github.com/open2b/chichi/apis/events/dispatcher"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
 
 	"github.com/google/uuid"
@@ -58,6 +59,12 @@ var (
 	errServiceUnavailable = errors.New("service unavailable")
 	errUnauthorized       = errors.New("unauthorized")
 )
+
+// ValidationError is the interface implemented by validation errors.
+type ValidationError interface {
+	error
+	PropertyPath() string
+}
 
 type batchEvents struct {
 	Batch    []*collectedEvent `json:"batch"`
@@ -100,6 +107,7 @@ type Collector struct {
 	db          *postgres.DB
 	state       *state.State
 	datastore   *datastore.Datastore
+	statistics  *statistics.Collector
 	observer    *Observer
 	messageIds  sync.Map
 	transformer transformers.Function
@@ -109,11 +117,12 @@ type Collector struct {
 
 // New returns a new event collector. It receives HTTP requests from mobile,
 // server and website sources and sends them to the dispatcher.
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Function, dispatcher *dispatcher.Dispatcher) (*Collector, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Function, dispatcher *dispatcher.Dispatcher, stats *statistics.Collector) (*Collector, error) {
 	var collector = Collector{
 		db:          db,
 		state:       st,
 		datastore:   ds,
+		statistics:  stats,
 		observer:    newObserver(db),
 		messageIds:  sync.Map{},
 		transformer: transformer,
@@ -295,15 +304,16 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 		connection := action.Connection()
 		ws := connection.Workspace()
 		store := c.datastore.Store(ws.ID)
+		stats := c.statistics.Action(action.ID)
 
 		// Instantiate an identity writer for writing the user identities.
 		ctx := context.Background()
 		iw, err := store.IdentityWriter(action.OutSchema, connection.ID, func(ids []string, err error) {
 			if err != nil {
-				slog.Warn("cannot import user identities", "action", action.ID, "ids", ids, "err", err)
+				stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
 				return
 			}
-			slog.Warn("user identities imported successfully", "action", action.ID, "ids", ids)
+			stats.PassedCount(statistics.Finalizing, len(ids))
 		})
 		if err != nil {
 			return err
@@ -327,8 +337,16 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				}
 				properties, err = transformer.Transform(ctx, mapEvent)
 				if err != nil {
-					return err
+					if _, ok := err.(ValidationError); ok {
+						stats.Passed(statistics.Transformation)
+						stats.Failed(statistics.OutputValidation, err.Error())
+						continue
+					}
+					stats.Failed(statistics.Transformation, err.Error())
+					continue
 				}
+				stats.Passed(statistics.Transformation)
+				stats.Passed(statistics.OutputValidation)
 			}
 			// Discard anonymous events with no properties.
 			if event.UserId == "" && len(properties) == 0 {

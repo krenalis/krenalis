@@ -198,7 +198,7 @@ func New(conf *Config) (*APIs, error) {
 		apis.state.Close()
 		return nil, err
 	}
-	apis.events.collector, err = collector.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.events.dispatcher)
+	apis.events.collector, err = collector.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.events.dispatcher, apis.statistics)
 	if err != nil {
 		apis.events.dispatcher.Close()
 		apis.datastore.Close()
