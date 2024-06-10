@@ -234,20 +234,6 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	return nil, false
 }
 
-// hasEnabledActions reports whether connection is enabled and has at least one
-// enabled action.
-func (c *Collector) hasEnabledActions(connection *state.Connection) bool {
-	if !connection.Enabled {
-		return false
-	}
-	for _, a := range connection.Actions() {
-		if a.Enabled {
-			return true
-		}
-	}
-	return false
-}
-
 // HasEventDestinations reports whether source has an enabled event destination
 // with an enabled action on events.
 func (c *Collector) hasEventDestinations(source *state.Connection) bool {
