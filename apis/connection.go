@@ -1765,21 +1765,25 @@ type ConnectionsStats struct {
 // anymore.
 func (this *Connection) Stats(ctx context.Context) (*ConnectionsStats, error) {
 	this.apis.mustBeOpen()
-	now := time.Now().UTC()
-	toSlot := statsTimeSlot(now)
-	fromSlot := toSlot - 23
+	toSlot := int(time.Now().UTC().Unix() / (60 * 10))
+	firstHour := toSlot/6 - 23
+	fromSlot := firstHour * 6
 	stats := &ConnectionsStats{
 		UserIdentities: [24]int{},
 	}
-	query := "SELECT time_slot, user_identities\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
+	query := "SELECT s.timeslot / 6 AS hour, SUM(s.passed_5)\n" +
+		"FROM actions_stats s\n" +
+		"INNER JOIN actions a ON a.id = s.action\n" +
+		"WHERE a.connection = $1 AND timeslot BETWEEN $2 AND $3\n" +
+		"GROUP BY s.action, hour"
 	err := this.apis.db.QueryScan(ctx, query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
-		var slot, userIdentities int
+		var hour, passed int
 		for rows.Next() {
-			if err = rows.Scan(&slot, &userIdentities); err != nil {
+			if err = rows.Scan(&hour, &passed); err != nil {
 				return err
 			}
-			stats.UserIdentities[slot-fromSlot] = userIdentities
+			stats.UserIdentities[hour-firstHour] = passed
 		}
 		return nil
 	})
@@ -1855,15 +1859,6 @@ func (this *Connection) database() *connectors.Database {
 // storage returns the storage of the connection.
 func (this *Connection) storage() *connectors.FileStorage {
 	return this.apis.connectors.FileStorage(this.connection)
-}
-
-// updateConnectionsStats updates the statistics about the connection.
-func (this *Connection) updateConnectionsStats(ctx context.Context, count int) error {
-	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, user_identities)\n"+
-		"VALUES ($1, $2, $3)\n"+
-		"ON CONFLICT (connection, time_slot) DO UPDATE SET user_identities = cs.user_identities + $3",
-		this.connection.ID, statsTimeSlot(time.Now().UTC()), count)
-	return err
 }
 
 // validateTargetAndEventType validates a target and an event type and, if the
@@ -2147,13 +2142,6 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 		return nil, errors.New("data is too large")
 	}
 	return rawSchema, nil
-}
-
-// statsTimeSlot returns the stats time slot for the time t.
-// t must be a UTC time.
-func statsTimeSlot(t time.Time) int {
-	epoch := int(t.Unix())
-	return epoch / (60 * 60)
 }
 
 // deserializeCursor deserializes a cursor passed to the API.

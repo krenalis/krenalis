@@ -168,12 +168,6 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 				}
 			}
 
-			// Update the connection stats.
-			err = this.connection.updateConnectionsStats(ctx, len(users))
-			if err != nil {
-				return actionExecutionError{err}
-			}
-
 			// Set the user cursor.
 			if connector.Type == state.AppType {
 				err = this.setUserCursor(ctx, cursor)
