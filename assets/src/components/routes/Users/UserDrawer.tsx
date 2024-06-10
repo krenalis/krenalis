@@ -113,16 +113,12 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 			switch (key) {
 				case workspace.DisplayedProperties.Image:
 					userImage = value;
-					break;
 				case workspace.DisplayedProperties.FirstName:
 					userFirstName = value;
-					break;
 				case workspace.DisplayedProperties.LastName:
 					userLastName = value;
-					break;
 				case workspace.DisplayedProperties.Information:
 					userInformation = value;
-					break;
 			}
 		}
 	}
