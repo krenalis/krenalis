@@ -26,7 +26,7 @@ import (
 
 // exportUsers exports the users for the action.
 // The action must have a store.
-func (this *Action) exportUsers(ctx context.Context, stats *statistics.ExecutionCollector) error {
+func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCollector) error {
 
 	action := this.action
 	store := this.connection.store

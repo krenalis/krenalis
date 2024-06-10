@@ -35,10 +35,10 @@ const (
 
 // Collector is a statistics collector.
 type Collector struct {
-	db         *postgres.DB
-	mu         sync.RWMutex
-	executions map[int]*ExecutionCollector
-	close      struct {
+	db      *postgres.DB
+	mu      sync.RWMutex
+	actions map[int]*ActionCollector
+	close   struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		shutdown  chan struct{}
@@ -52,8 +52,8 @@ type Collector struct {
 func New(db *postgres.DB) *Collector {
 
 	stats := &Collector{
-		db:         db,
-		executions: map[int]*ExecutionCollector{},
+		db:      db,
+		actions: map[int]*ActionCollector{},
 	}
 
 	stats.close.ctx, stats.close.cancelCtx = context.WithCancel(context.Background())
@@ -64,15 +64,15 @@ func New(db *postgres.DB) *Collector {
 	return stats
 }
 
-// Execution returns the execution collector to collect statistics for the
-// execution with identifier id.
-func (c *Collector) Execution(id int) *ExecutionCollector {
+// Action returns the action collector to collect statistics for the action with
+// identifier id.
+func (c *Collector) Action(id int) *ActionCollector {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	action, ok := c.executions[id]
+	action, ok := c.actions[id]
 	if !ok {
-		action = &ExecutionCollector{}
-		c.executions[id] = action
+		action = &ActionCollector{}
+		c.actions[id] = action
 	}
 	return action
 }
@@ -89,10 +89,10 @@ func (c *Collector) Close(ctx context.Context) {
 
 // collectedStats represents collected statistics that have to be stored.
 type collectedStats struct {
-	execution int
-	passed    [numSteps]int
-	failed    [numSteps]int
-	messages  []string
+	action   int
+	passed   [numSteps]int
+	failed   [numSteps]int
+	messages []string
 }
 
 // process processes the collected statistics. It collects statistics every
@@ -114,23 +114,23 @@ func (c *Collector) process() {
 	for {
 		timeslot := t.Unix() / 60 / 10
 		c.mu.Lock()
-		if len(c.executions) > 0 {
-			data := make([]collectedStats, 0, len(c.executions))
-			for id, execution := range c.executions {
+		if len(c.actions) > 0 {
+			data := make([]collectedStats, 0, len(c.actions))
+			for id, action := range c.actions {
 				d := collectedStats{}
-				execution.mu.Lock()
-				isZero := execution.passed == [numSteps]int{} && execution.failed == [numSteps]int{}
+				action.mu.Lock()
+				isZero := action.passed == [numSteps]int{} && action.failed == [numSteps]int{}
 				if !isZero {
-					d.passed = execution.passed
-					d.failed = execution.failed
-					d.messages = execution.messages
-					execution.passed = [numSteps]int{}
-					execution.failed = [numSteps]int{}
-					execution.messages = nil
+					d.passed = action.passed
+					d.failed = action.failed
+					d.messages = action.messages
+					action.passed = [numSteps]int{}
+					action.failed = [numSteps]int{}
+					action.messages = nil
 				}
-				execution.mu.Unlock()
+				action.mu.Unlock()
 				if !isZero {
-					d.execution = id
+					d.action = id
 					data = append(data, d)
 				}
 			}
@@ -169,7 +169,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 			b.WriteByte(',')
 		}
 		b.WriteByte('(')
-		b.WriteString(strconv.Itoa(d.execution))
+		b.WriteString(strconv.Itoa(d.action))
 		b.WriteByte(',')
 		b.WriteString(strconv.FormatInt(timeslot, 10))
 		b.WriteByte(',')
@@ -186,9 +186,9 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 		b.WriteByte(')')
 		hasMessages = hasMessages || d.messages != nil
 	}
-	b.WriteString("\n) INSERT INTO actions_executions_stats AS s " +
-		`(execution, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
-		` SELECT * FROM t ON CONFLICT (execution, timeslot) DO UPDATE SET ` +
+	b.WriteString("\n) INSERT INTO actions_stats AS s " +
+		`(action, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
+		` SELECT * FROM t ON CONFLICT (action, timeslot) DO UPDATE SET ` +
 		`passed_0 = s.passed_0 + EXCLUDED.passed_0, ` +
 		`passed_1 = s.passed_1 + EXCLUDED.passed_1, ` +
 		`passed_2 = s.passed_2 + EXCLUDED.passed_2, ` +
@@ -214,7 +214,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 				select {
 				case <-c.close.ctx.Done():
 				default:
-					slog.Error("failed to store the statistics on action executions", "err", s)
+					slog.Error("failed to store the statistics on action", "err", s)
 				}
 			}
 			continue
@@ -227,14 +227,14 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 	}
 
 	b.Reset()
-	b.WriteString("INSERT INTO actions_executions_log (execution, timeslot, message) VALUES ")
+	b.WriteString("INSERT INTO actions_log (execution, timeslot, message) VALUES ")
 	for i, d := range data {
 		for _, msg := range d.messages {
 			if i > 0 {
 				b.WriteByte(',')
 			}
 			b.WriteByte('(')
-			b.WriteString(strconv.Itoa(d.execution))
+			b.WriteString(strconv.Itoa(d.action))
 			b.WriteByte(',')
 			b.WriteString(strconv.FormatInt(timeslot, 10))
 			b.WriteByte(',')
@@ -252,7 +252,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 				select {
 				case <-c.close.ctx.Done():
 				default:
-					slog.Error("failed to store the messages on action executions", "err", s)
+					slog.Error("failed to store the messages on action", "err", s)
 				}
 			}
 			continue
@@ -262,8 +262,8 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 
 }
 
-// ExecutionCollector collects the statistics for an execution.
-type ExecutionCollector struct {
+// ActionCollector collects the statistics for an action.
+type ActionCollector struct {
 	mu       sync.Mutex
 	passed   [numSteps]int
 	failed   [numSteps]int
@@ -271,7 +271,7 @@ type ExecutionCollector struct {
 }
 
 // Failed increases the failed count for the provided step by one.
-func (stats *ExecutionCollector) Failed(step Step, msg string) {
+func (stats *ActionCollector) Failed(step Step, msg string) {
 	stats.mu.Lock()
 	stats.failed[step]++
 	stats.messages = append(stats.messages, msg)
@@ -280,7 +280,7 @@ func (stats *ExecutionCollector) Failed(step Step, msg string) {
 
 // FailedCount increases the failed count for the provided step by the given
 // count.
-func (stats *ExecutionCollector) FailedCount(step Step, count int, msg string) {
+func (stats *ActionCollector) FailedCount(step Step, count int, msg string) {
 	stats.mu.Lock()
 	stats.failed[step] += count
 	stats.messages = append(stats.messages, msg)
@@ -288,7 +288,7 @@ func (stats *ExecutionCollector) FailedCount(step Step, count int, msg string) {
 }
 
 // Passed increases the passed count for the provided step by one.
-func (stats *ExecutionCollector) Passed(step Step) {
+func (stats *ActionCollector) Passed(step Step) {
 	stats.mu.Lock()
 	stats.passed[step]++
 	stats.mu.Unlock()
@@ -296,14 +296,14 @@ func (stats *ExecutionCollector) Passed(step Step) {
 
 // PassedCount increases the passed count for the provided step by the given
 // count.
-func (stats *ExecutionCollector) PassedCount(step Step, count int) {
+func (stats *ActionCollector) PassedCount(step Step, count int) {
 	stats.mu.Lock()
 	stats.passed[step] += count
 	stats.mu.Unlock()
 }
 
 // Stats returns the passed and failed count per step.
-func (stats *ExecutionCollector) Stats() (passed, failed [numSteps]int) {
+func (stats *ActionCollector) Stats() (passed, failed [numSteps]int) {
 	stats.mu.Lock()
 	passed, failed = stats.passed, stats.failed
 	stats.mu.Unlock()

@@ -23,7 +23,7 @@ import (
 )
 
 // importUsers imports the users of the action.
-func (this *Action) importUsers(ctx context.Context, stats *statistics.ExecutionCollector) error {
+func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCollector) error {
 
 	action := this.action
 	connection := action.Connection()

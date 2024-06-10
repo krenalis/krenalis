@@ -78,7 +78,7 @@ func (this *Action) exec(ctx context.Context) {
 	} else if this.connection.store == nil {
 		err = actionExecutionError{fmt.Errorf("workspace %d does not have a data warehouse", connection.Workspace().ID)}
 	} else {
-		stats := this.apis.statistics.Execution(execution.ID)
+		stats := this.apis.statistics.Action(this.action.ID)
 		if connection.Role == state.Source {
 			err = this.importUsers(ctx, stats)
 		} else {

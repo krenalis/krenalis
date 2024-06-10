@@ -119,14 +119,14 @@ CREATE TABLE actions_executions (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE actions_executions_log (
-    execution integer NOT NULL REFERENCES actions_executions ON DELETE CASCADE,
+CREATE TABLE actions_log (
+    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     timeslot integer NOT NULL,
     message varchar NOT NULL
 );
 
-CREATE TABLE actions_executions_stats (
-    execution integer NOT NULL REFERENCES actions_executions ON DELETE CASCADE,
+CREATE TABLE actions_stats (
+    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     timeslot integer NOT NULL,
     passed_0 integer NOT NULL,
     passed_1 integer NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE actions_executions_stats (
     failed_3 integer NOT NULL,
     failed_4 integer NOT NULL,
     failed_5 integer NOT NULL,
-    PRIMARY KEY (execution, timeslot)
+    PRIMARY KEY (action, timeslot)
 );
 
 
