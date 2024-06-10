@@ -69,6 +69,7 @@ func (this *Action) exec(ctx context.Context) {
 	execution, _ := this.action.Execution()
 
 	var err error
+	var passed, failed [6]int
 
 	if this.Target == Groups {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
@@ -77,11 +78,13 @@ func (this *Action) exec(ctx context.Context) {
 	} else if this.connection.store == nil {
 		err = actionExecutionError{fmt.Errorf("workspace %d does not have a data warehouse", connection.Workspace().ID)}
 	} else {
+		stats := this.apis.statistics.Execution(execution.ID)
 		if connection.Role == state.Source {
-			err = this.importUsers(ctx)
+			err = this.importUsers(ctx, stats)
 		} else {
-			err = this.exportUsers(ctx)
+			err = this.exportUsers(ctx, stats)
 		}
+		passed, failed = stats.Stats()
 	}
 	endTime := time.Now().UTC()
 
@@ -115,8 +118,8 @@ func (this *Action) exec(ctx context.Context) {
 
 	// TODO(marco) retry if the transaction fails.
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(txCtx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
-			endTime, errorMessage, n.ID)
+		_, err := tx.Exec(txCtx, "UPDATE actions_executions SET end_time = $1, passed = $2, failed = $3, error = $4 WHERE id = $5",
+			endTime, passed, failed, errorMessage, n.ID)
 		if err != nil {
 			return err
 		}

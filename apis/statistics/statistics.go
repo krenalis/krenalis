@@ -305,3 +305,11 @@ func (stats *ExecutionCollector) PassedCount(step Step, count int) {
 	stats.passed[step] += count
 	stats.mu.Unlock()
 }
+
+// Stats returns the passed and failed count per step.
+func (stats *ExecutionCollector) Stats() (passed, failed [numSteps]int) {
+	stats.mu.Lock()
+	passed, failed = stats.passed, stats.failed
+	stats.mu.Unlock()
+	return
+}

@@ -113,6 +113,8 @@ CREATE TABLE actions_executions (
     reimport boolean NOT NULL DEFAULT FALSE,
     start_time timestamp NOT NULL,
     end_time timestamp DEFAULT NULL,
+    passed integer[6] DEFAULT NULL,
+    failed integer[6] DEFAULT NULL,
     error varchar(1000) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );

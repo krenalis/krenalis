@@ -26,14 +26,11 @@ import (
 
 // exportUsers exports the users for the action.
 // The action must have a store.
-func (this *Action) exportUsers(ctx context.Context) error {
+func (this *Action) exportUsers(ctx context.Context, stats *statistics.ExecutionCollector) error {
 
 	action := this.action
 	store := this.connection.store
-	execution, _ := action.Execution()
 	connector := action.Connection().Connector()
-
-	stats := this.apis.statistics.Execution(execution.ID)
 
 	if connector.Type == state.AppType {
 		// Download the users from this connection to match the identities for the export.
