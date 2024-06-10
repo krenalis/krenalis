@@ -332,9 +332,6 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			}
 			// Discard anonymous events with no properties.
 			if event.UserId == "" && len(properties) == 0 {
-				slog.Info("incoming event is anonymous and there are no properties returned"+
-					" by mappings, so the user identity won't be imported",
-					"anonymous ID", event.AnonymousId)
 				continue
 			}
 			// Determine the displayed property.
@@ -357,7 +354,6 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				}
 			}
 			if utf8.RuneCountInString(displayedProperty) > 40 {
-				slog.Error("the displayed property value is longer than 40 runes")
 				displayedProperty = ""
 			}
 			// Write the user identity on the data warehouse.
