@@ -43,15 +43,18 @@ type IdentityWriter struct {
 }
 
 // newIdentityWriter returns a new identity writer to write identities for the
-// provided connection and conforming to the provided user schema.
+// provided connection. If schema is valid, the identities will be validated
+// again the provided schema.
 func newIdentityWriter(store *Store, connection int, schema types.Type, ack IdentityWriterAckFunc) *IdentityWriter {
 	iw := IdentityWriter{
 		store:      store,
 		connection: connection,
 		ack:        ack,
-		flatter:    newFlatter(schema, store.userColumnByProperty()),
 		columns:    map[string]warehouses.Column{},
 		rows:       make([]map[string]any, 0),
+	}
+	if schema.Valid() {
+		iw.flatter = newFlatter(schema, store.userColumnByProperty())
 	}
 	return &iw
 }
@@ -89,9 +92,9 @@ func (iw *IdentityWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-// Write writes a user identity. The properties must comply with the user
-// schema. It returns immediately, deferring the validation of the properties
-// and the actual write operation to a later time.
+// Write writes a user identity. If a valid user schema has been provided, the
+// properties must comply with it. It returns immediately, deferring the
+// validation of the properties and the actual write operation to a later time.
 //
 // If an error occurs during validation of the properties, it calls the ack
 // function with the value of ackID and the error.
@@ -117,8 +120,13 @@ func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 			"__last_change_time__":   identity.LastChangeTime,
 		})
 	}
-	row := identity.Properties
-	iw.flatter.flat(row, iw.columns)
+	var row map[string]any
+	if iw.flatter == nil {
+		row = map[string]any{}
+	} else {
+		row = identity.Properties
+		iw.flatter.flat(row, iw.columns)
+	}
 	row["__connection__"] = iw.connection
 	if isAnonymous {
 		row["__identity_id__"] = identity.AnonymousID
