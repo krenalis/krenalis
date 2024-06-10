@@ -37,6 +37,7 @@ const SchemaEdit = () => {
 	const {
 		rows,
 		columns,
+		primarySources,
 		queries,
 		isQueriesLoading,
 		isConfirmChangesLoading,
@@ -86,6 +87,7 @@ const SchemaEdit = () => {
 			<PropertyDialog
 				propertyToEdit={propertyToEdit}
 				setPropertyToEdit={setPropertyToEdit}
+				primarySources={primarySources}
 				onAddProperty={onAddProperty}
 				onEditProperty={onEditProperty}
 			/>

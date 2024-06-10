@@ -7,7 +7,7 @@ import { ActionTarget, SchedulePeriod, ActionToSet, ExpressionToBeExtracted, Tra
 import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseType } from './types/warehouse';
-import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties } from './types/workspace';
+import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties, PrimarySources } from './types/workspace';
 import {
 	ConnectorUIResponse,
 	ConnectorValues,
@@ -601,9 +601,10 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolutions`, http.POST);
 	};
 
-	changeUserSchema = async (schema: ObjectType, rePaths: RePaths): Promise<void> => {
+	changeUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
 		return await call(`${this.apiURL}/user-schema`, http.PUT, {
 			schema,
+			primarySources,
 			rePaths,
 		});
 	};

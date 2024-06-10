@@ -16,6 +16,16 @@
 	min-width: 150px;
 }
 
+.schema-grid__primary-source {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.schema-grid__primary-source .little-logo svg {
+	height: 20px;
+}
+
 .schema-grid > .grid {
 	border-radius: 0;
 	border: 0;

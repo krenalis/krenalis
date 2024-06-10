@@ -1,0 +1,100 @@
+import React, { ReactNode, useMemo, useContext } from 'react';
+import { ObjectType } from '../../../lib/api/types/types';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
+import { enrichPropertyType } from '../../helpers/enrichPropertyType';
+import AppContext from '../../../context/AppContext';
+import TransformedConnection from '../../../lib/core/connection';
+import { TransformedMapping, TransformedProperty, flattenSchema } from '../../../lib/core/action';
+import getConnectorLogo from '../../helpers/getConnectorLogo';
+import { PrimarySources } from '../../../lib/api/types/workspace';
+
+const SCHEMA_COLUMNS: GridColumn[] = [
+	{ name: 'Name' },
+	{ name: 'Type' },
+	{ name: 'Nullable', alignment: 'center' },
+	{ name: 'Label' },
+	{ name: 'Primary source' },
+];
+
+const useSchemaGrid = (schema: ObjectType, isLoading: boolean) => {
+	const { workspaces, selectedWorkspace, connections } = useContext(AppContext);
+
+	const rows = useMemo(() => {
+		if (isLoading) {
+			return [];
+		}
+		const flatSchema = flattenSchema(schema);
+		const w = workspaces.find((ws) => ws.ID === selectedWorkspace);
+		return getRows(flatSchema, w.UserPrimarySources, connections);
+	}, [schema]);
+
+	return {
+		columns: SCHEMA_COLUMNS,
+		rows: rows,
+	};
+};
+
+const getRows = (
+	schema: TransformedMapping,
+	primarySources: PrimarySources,
+	connections: TransformedConnection[],
+	parent?: string,
+) => {
+	const rows: GridRow[] = [];
+	for (const k in schema) {
+		if (!schema.hasOwnProperty(k)) {
+			return;
+		}
+		const path = parent ? `${parent}.${k}` : k;
+		const p = schema[k];
+		if (p.indentation !== 0) {
+			continue;
+		}
+		if (p.type === 'Object') {
+			const typ = p.full.type as ObjectType;
+			if (typ.properties == null) {
+				console.warn(`Object property ${p.full.name} of the warehouse schema has empty properties`);
+				continue;
+			}
+			const nestedRows: GridRow[] = [
+				buildRow(p),
+				...getRows(flattenSchema(typ), primarySources, connections, path),
+			];
+			rows.push(nestedRows);
+		} else {
+			let primarySource: TransformedConnection | null;
+			if (primarySources[path]) {
+				primarySource = connections.find((c) => c.id === primarySources[path]);
+			}
+			rows.push(buildRow(p, primarySource));
+		}
+	}
+
+	return rows;
+};
+
+const buildRow = (property: TransformedProperty, primarySource?: TransformedConnection | null) => {
+	const typeCell = enrichPropertyType(property.full.type);
+	let nullableCell: ReactNode;
+	if (property.full.nullable) {
+		nullableCell = 'Yes';
+	} else {
+		nullableCell = 'No';
+	}
+	let primarySourceCell: ReactNode;
+	if (property.full.type.name !== 'Object' && property.full.type.name !== 'Array') {
+		if (primarySource) {
+			primarySourceCell = (
+				<div className='schema-grid__primary-source'>
+					{getConnectorLogo(primarySource.connector.icon)}
+					{primarySource.name}
+				</div>
+			);
+		} else {
+			primarySourceCell = 'None';
+		}
+	}
+	return { cells: [property.full.name, typeCell, nullableCell, property.label, primarySourceCell] };
+};
+
+export { useSchemaGrid };

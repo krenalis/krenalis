@@ -758,4 +758,4 @@ export {
 	doesLastChangeTimePropertyNeedFormat,
 };
 
-export type { TransformedMapping, TransformedActionType, TransformedAction, ActionTypeField };
+export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };

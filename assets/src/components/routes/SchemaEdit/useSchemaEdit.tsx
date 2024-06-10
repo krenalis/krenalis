@@ -9,11 +9,15 @@ import AppContext from '../../../context/AppContext';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { SortableGridRef } from '../../base/Grid/SortableGrid';
 import { isMetaProperty } from '../../../lib/core/schema';
+import TransformedConnection from '../../../lib/core/connection';
+import getConnectorLogo from '../../helpers/getConnectorLogo';
+import { PrimarySources } from '../../../lib/api/types/workspace';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
 	{ name: 'Label' },
+	{ name: 'Primary source' },
 	{ name: '' }, // buttons
 ];
 
@@ -53,10 +57,17 @@ const useSchemaEdit = (
 
 	const sortableGridRef = useRef<SortableGridRef>();
 
-	const { api, handleError } = useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
+		useContext(AppContext);
+
+	const primarySources = useRef<PrimarySources>(
+		workspaces.find((w) => w.ID === selectedWorkspace).UserPrimarySources,
+	);
+	const rePaths = useRef<RePaths>({});
+	const deletedAppliedKeys = useRef<string[]>([]);
 
 	const rows = useMemo(() => {
-		return getRows(editableSchema, onAddClick, onEditClick, onRemoveClick);
+		return getRows(editableSchema, primarySources.current, connections, onAddClick, onEditClick, onRemoveClick);
 	}, [editableSchema]);
 
 	useEffect(() => {
@@ -73,10 +84,7 @@ const useSchemaEdit = (
 		setEditableSchema(transformSchema(s));
 	}, [schema]);
 
-	const rePaths = useRef<RePaths>({});
-	const deletedAppliedKeys = useRef<string[]>([]);
-
-	const onAddProperty = (property: PropertyToEdit) => {
+	const onAddProperty = (property: PropertyToEdit, primarySource: number | null) => {
 		let key = property.name;
 		if (property.parentKey !== '') {
 			key = `${property.parentKey}.${property.name}`;
@@ -105,6 +113,13 @@ const useSchemaEdit = (
 		if (deletedAppliedKeys.current.includes(key)) {
 			rePaths.current[key] = null;
 		}
+
+		// Update the primary sources.
+		const sources = { ...primarySources.current };
+		if (primarySource) {
+			sources[key] = primarySource;
+		}
+		primarySources.current = sources;
 
 		const s = { ...editableSchema };
 
@@ -140,7 +155,7 @@ const useSchemaEdit = (
 		}
 	};
 
-	const onEditProperty = (property: PropertyToEdit) => {
+	const onEditProperty = (property: PropertyToEdit, primarySource: number | null) => {
 		const key = property.key;
 		const s = { ...editableSchema };
 		const current = s[key];
@@ -206,6 +221,15 @@ const useSchemaEdit = (
 			}
 		}
 
+		// Update the primary sources.
+		const sources = { ...primarySources.current };
+		if (primarySource) {
+			sources[key] = primarySource;
+		} else if (sources[key]) {
+			delete sources[key];
+		}
+		primarySources.current = sources;
+
 		const editedProperty = {
 			indentation: current.indentation,
 			root: property.name,
@@ -242,6 +266,10 @@ const useSchemaEdit = (
 						if (rePaths.current[k] === key) {
 							delete rePaths.current[k];
 						}
+					}
+					// Check if nested property is in primary sources.
+					if (primarySources.current[key]) {
+						delete primarySources.current[key];
 					}
 				}
 			}
@@ -298,7 +326,7 @@ const useSchemaEdit = (
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(editableSchema);
 		try {
-			await api.workspaces.changeUserSchema(s, rePaths.current);
+			await api.workspaces.changeUserSchema(s, primarySources.current, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);
@@ -310,6 +338,7 @@ const useSchemaEdit = (
 		setTimeout(() => {
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
+			setIsLoadingWorkspaces(true);
 			onClose();
 		}, 300);
 	};
@@ -321,6 +350,7 @@ const useSchemaEdit = (
 	return {
 		rows: rows,
 		columns: SCHEMA_COLUMNS,
+		primarySources: primarySources.current,
 		queries,
 		isQueriesLoading,
 		isConfirmChangesLoading,
@@ -337,6 +367,8 @@ const useSchemaEdit = (
 
 const getRows = (
 	schema: EditableSchema,
+	primarySources: PrimarySources,
+	connections: TransformedConnection[],
 	onAddClick: (parentKey: string, indentation: number, root: string) => void,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
 	onRemoveClick: (propertyKey: string, propertyName: string, typeName: TypeName) => void,
@@ -345,6 +377,10 @@ const getRows = (
 	for (const propertyKey in schema) {
 		if (!schema.hasOwnProperty(propertyKey)) {
 			continue;
+		}
+		let primarySourceConnection: TransformedConnection | null = null;
+		if (primarySources[propertyKey]) {
+			primarySourceConnection = connections.find((c) => c.id === primarySources[propertyKey]);
 		}
 		const property = schema[propertyKey];
 		const isSubProperty = property.indentation > 0;
@@ -360,18 +396,46 @@ const getRows = (
 			}
 			if (property.type.name === 'Object') {
 				const subMap = {};
-				subMap[propertyKey] = buildRow(propertyKey, property, onAddClick, onEditClick, onRemoveClick);
+				subMap[propertyKey] = buildRow(
+					propertyKey,
+					property,
+					primarySourceConnection,
+					onAddClick,
+					onEditClick,
+					onRemoveClick,
+				);
 				m[propertyKey] = subMap;
 			} else {
-				m[propertyKey] = buildRow(propertyKey, property, null, onEditClick, onRemoveClick);
+				m[propertyKey] = buildRow(
+					propertyKey,
+					property,
+					primarySourceConnection,
+					null,
+					onEditClick,
+					onRemoveClick,
+				);
 			}
 		} else {
 			if (property.type.name === 'Object') {
 				const subMap = {};
-				subMap[propertyKey] = buildRow(propertyKey, property, onAddClick, onEditClick, onRemoveClick);
+				subMap[propertyKey] = buildRow(
+					propertyKey,
+					property,
+					primarySourceConnection,
+					onAddClick,
+					onEditClick,
+					onRemoveClick,
+				);
 				mappedRows[propertyKey] = subMap;
 			} else {
-				mappedRows[propertyKey] = buildRow(propertyKey, property, null, onEditClick, onRemoveClick);
+				mappedRows[propertyKey] = buildRow(
+					propertyKey,
+					property,
+					primarySourceConnection,
+					null,
+					onEditClick,
+					onRemoveClick,
+				);
 			}
 		}
 	}
@@ -382,6 +446,7 @@ const getRows = (
 const buildRow = (
 	propertyKey: string,
 	property: EditableProperty,
+	primarySourceConnection: TransformedConnection,
 	onAddClick: (parentKey: string, indentation: number, root: string) => void,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
 	onRemoveClick: (propertyKey: string, propertyName: string, typeName: TypeName) => void,
@@ -420,8 +485,21 @@ const buildRow = (
 	} else {
 		typeCell = enrichPropertyType(property.type);
 	}
+	let primarySourceCell: ReactNode;
+	if (property.type.name !== 'Object' && property.type.name !== 'Array') {
+		if (primarySourceConnection) {
+			primarySourceCell = (
+				<div className='schema-edit__primary-source'>
+					{getConnectorLogo(primarySourceConnection.connector.icon)}
+					{primarySourceConnection.name}
+				</div>
+			);
+		} else {
+			primarySourceCell = 'None';
+		}
+	}
 	return {
-		cells: [property.name, typeCell, property.label, buttons],
+		cells: [property.name, typeCell, property.label, primarySourceCell, buttons],
 		dragKey: propertyKey,
 		id: propertyKey,
 	};

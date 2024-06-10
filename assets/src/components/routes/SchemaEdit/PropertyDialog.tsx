@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useContext } from 'react';
 import './PropertyDialog.css';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -19,6 +19,10 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
+import AppContext from '../../../context/AppContext';
+import TransformedConnection from '../../../lib/core/connection';
+import getConnectorLogo from '../../helpers/getConnectorLogo';
+import { PrimarySources } from '../../../lib/api/types/workspace';
 
 const TYPE_NAMES: TypeName[] = [
 	'Boolean',
@@ -47,14 +51,24 @@ const MAX_DECIMAL_SCALE: number = 37;
 interface PropertyDialogProps {
 	propertyToEdit: PropertyToEdit | null;
 	setPropertyToEdit: React.Dispatch<React.SetStateAction<PropertyToEdit | null>>;
-	onAddProperty: (property: PropertyToEdit) => void;
-	onEditProperty: (property: PropertyToEdit) => void;
+	primarySources: PrimarySources;
+	onAddProperty: (property: PropertyToEdit, primarySource: number | null) => void;
+	onEditProperty: (property: PropertyToEdit, primarySource: number | null) => void;
 }
 
-const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEditProperty }: PropertyDialogProps) => {
+const PropertyDialog = ({
+	propertyToEdit,
+	setPropertyToEdit,
+	primarySources,
+	onAddProperty,
+	onEditProperty,
+}: PropertyDialogProps) => {
 	const [property, setProperty] = useState<PropertyToEdit>();
+	const [primarySource, setPrimarySource] = useState<number | null>(null);
 	const [nameError, setNameError] = useState<string>('');
 	const [typeError, setTypeError] = useState<string>('');
+
+	const { connections } = useContext(AppContext);
 
 	const nameInputRef = useRef<any>();
 	const bitSizeSelectRef = useRef<any>();
@@ -69,6 +83,16 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 		return propertyToEdit.key != null;
 	}, [propertyToEdit]);
 
+	const sourceConnections = useMemo(() => {
+		const sources: TransformedConnection[] = [];
+		for (const c of connections) {
+			if (c.role === 'Source') {
+				sources.push(c);
+			}
+		}
+		return sources;
+	}, [connections]);
+
 	useEffect(() => {
 		if (propertyToEdit == null) {
 			return;
@@ -76,6 +100,7 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 		setNameError('');
 		setTypeError('');
 		setProperty(propertyToEdit);
+		setPrimarySource(primarySources[propertyToEdit.key]);
 	}, [propertyToEdit]);
 
 	const onInputName = (e) => {
@@ -185,6 +210,15 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 		setProperty(p);
 	};
 
+	const onChangePrimarySource = (e) => {
+		const v = e.target.value;
+		if (v === 'none') {
+			setPrimarySource(null);
+		} else {
+			setPrimarySource(Number(e.target.value));
+		}
+	};
+
 	const onHide = (e) => {
 		if (e.target.tagName === 'SL-DIALOG') {
 			setPropertyToEdit(null);
@@ -220,14 +254,14 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 		}
 		if (isEditing) {
 			try {
-				onEditProperty(property);
+				onEditProperty(property, primarySource);
 			} catch (err) {
 				setNameError(err);
 				return;
 			}
 		} else {
 			try {
-				onAddProperty(property);
+				onAddProperty(property, primarySource);
 			} catch (err) {
 				setNameError(err);
 				return;
@@ -399,6 +433,36 @@ const PropertyDialog = ({ propertyToEdit, setPropertyToEdit, onAddProperty, onEd
 						label='Note'
 						onSlChange={onChangeNote}
 					/>
+					{property.type?.name !== 'Object' &&
+						property.type?.name !== 'Array' &&
+						(sourceConnections.length === 0 ? (
+							<div className='property-dialog__no-primary-source'>
+								<div className='property-dialog__no-primary-source-label'>Primary Source</div>
+								Currently there is no source connection
+							</div>
+						) : (
+							<SlSelect
+								className='property-dialog__primary-source'
+								size='small'
+								value={primarySource == null ? 'none' : String(primarySource)}
+								label='Primary Source'
+								onSlChange={onChangePrimarySource}
+							>
+								<div slot='prefix'>
+									{primarySource &&
+										getConnectorLogo(
+											sourceConnections.find((c) => c.id === primarySource).connector.icon,
+										)}
+								</div>
+								<SlOption value='none'>None</SlOption>
+								{sourceConnections.map((c) => (
+									<SlOption key={c.id} value={String(c.id)}>
+										<div slot='prefix'>{getConnectorLogo(c.connector.icon)}</div>
+										{c.name}
+									</SlOption>
+								))}
+							</SlSelect>
+						))}
 					<div className='property-dialog__buttons'>
 						<SlButton size='small' variant='neutral' onClick={() => setPropertyToEdit(null)}>
 							Cancel

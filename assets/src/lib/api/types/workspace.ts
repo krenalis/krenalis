@@ -3,6 +3,8 @@ import { WarehouseMode } from './warehouse';
 
 type PrivacyRegion = 'Europe' | '';
 
+type PrimarySources = Record<string, number>;
+
 interface DisplayedProperties {
 	Image: string;
 	FirstName: string;
@@ -17,6 +19,7 @@ interface Workspace {
 	PrivacyRegion: PrivacyRegion;
 	DisplayedProperties: DisplayedProperties;
 	WarehouseMode: WarehouseMode;
+	UserPrimarySources: PrimarySources;
 }
 
 interface AddWorkspaceResponse {
@@ -24,4 +27,4 @@ interface AddWorkspaceResponse {
 }
 
 export default Workspace;
-export type { PrivacyRegion, AddWorkspaceResponse, DisplayedProperties };
+export type { PrivacyRegion, AddWorkspaceResponse, DisplayedProperties, PrimarySources };

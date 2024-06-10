@@ -64,6 +64,16 @@
 	align-items: center;
 }
 
+.schema-edit__primary-source {
+	display: flex;
+	gap: 10px;
+	align-items: end;
+}
+
+.schema-edit__primary-source .little-logo svg {
+	height: 21px;
+}
+
 .schema-edit sl-dialog::part(base) {
 	padding-left: 0;
 }
