@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserTab } from './Users.types';
 import { UserEvent, UserIdentity } from '../../../lib/api/types/user';
 
-const useUserDrawer = (id: number, selectedTab: UserTab) => {
+const useUserDrawer = (id: string, selectedTab: UserTab) => {
 	const [traits, setTraits] = useState<Map<string, any>>();
 	const [events, setEvents] = useState<UserEvent[]>();
 	const [identities, setIdentities] = useState<UserIdentity[]>();
@@ -50,7 +50,7 @@ const useUserDrawer = (id: number, selectedTab: UserTab) => {
 			setTimeout(() => setIsLoading(false), 200);
 			return;
 		};
-		if (id === 0) {
+		if (id === '') {
 			return;
 		}
 		fetchUserTraits();
@@ -120,7 +120,7 @@ const useUserDrawer = (id: number, selectedTab: UserTab) => {
 				return;
 			}
 		};
-		if (id === 0) {
+		if (id === '') {
 			return;
 		}
 		fetchUserTab();

@@ -1382,7 +1382,7 @@ func (this *Workspace) User(id uuid.UUID) (*User, error) {
 // their count without applying first and limit. It returns the users that
 // satisfies the filter, if not nil, and in range [first,first+limit] with first
 // >= 0 and 0 < limit <= 1000 and only the given properties. properties cannot
-// be empty.
+// be empty and cannot contain meta properties.
 //
 // order is the property by which to sort the returned users and cannot have
 // type JSON, Array, Object, or Map; it defaults to the "__id__" property.
@@ -1406,9 +1406,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	ws := this.workspace
 
-	// Validate the arguments.
+	// Validate the properties.
 	if len(properties) == 0 {
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
+	}
+	for _, p := range properties {
+		if isMetaProperty(p) {
+			return nil, types.Type{}, 0, errors.BadRequest("properties cannot contain meta properties")
+		}
 	}
 
 	userSchema := ws.UserSchema
@@ -1479,7 +1484,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	// Read the users.
 	users, count, err := this.store.Users(ctx, datastore.Query{
-		Properties: properties,
+		Properties: append([]string{"__id__"}, properties...),
 		Filter:     stateFilter,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1504,12 +1509,44 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		requestedProperties[i] = propertyByName[name]
 	}
 	schema := types.Object(requestedProperties)
-	marshaledUsers, err := encoding.MarshalSlice(schema, users)
-	if err != nil {
-		return nil, types.Type{}, 0, err
-	}
 
-	return marshaledUsers, schema, count, nil
+	// Marshal the users into a JSON array like this:
+	//
+	//  [
+	//  	{
+	//  		"id": "f88893fb-fc04-4868-8ab7-041c225c79b4",
+	//  		"properties": {
+	//  			"email": "a@example.com"
+	//  		}
+	//  	},
+	//  	{
+	//  		"id": "e0bb8a23-d1ee-4fe4-8264-5892499d21e5",
+	//  		"properties": {
+	//  			"email": "c@example.com"
+	//  		}
+	//  	}
+	//  ]
+	var marshaledUsers bytes.Buffer
+	marshaledUsers.WriteRune('[')
+	for i, user := range users {
+		id := user["__id__"].(string)
+		delete(user, "__id__")
+		marshaledUser, err := encoding.Marshal(schema, user)
+		if err != nil {
+			return nil, types.Type{}, 0, err
+		}
+		if i > 0 {
+			marshaledUsers.WriteByte(',')
+		}
+		marshaledUsers.WriteString(`{"id":"`)
+		marshaledUsers.WriteString(id)
+		marshaledUsers.WriteString(`","properties":`)
+		marshaledUsers.Write(marshaledUser)
+		marshaledUsers.WriteRune('}')
+	}
+	marshaledUsers.WriteRune(']')
+
+	return marshaledUsers.Bytes(), schema, count, nil
 }
 
 // WarehouseSettings returns the type and settings of the data warehouse for the

@@ -144,14 +144,14 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
 	}
 	user := users[0]
-	expectedUser := map[string]any{
+	expectedProps := map[string]any{
 		"email":         "a@b",
 		"name":          "John",
 		"phone_numbers": []any{"+11 111", "+22 222", "+33 333"},
 		"total_orders":  json.Number("21"),
 	}
-	if !reflect.DeepEqual(user, expectedUser) {
-		t.Fatalf("expected user %#v, got %#v", expectedUser, user)
+	if !reflect.DeepEqual(user.Properties, expectedProps) {
+		t.Fatalf("expected user properties %#v, got %#v", expectedProps, user)
 	}
 
 	// Change the primary sources, making the "total_orders" property have
@@ -173,14 +173,14 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
 	}
 	user = users[0]
-	expectedUser = map[string]any{
+	expectedProps = map[string]any{
 		"email":         "a@b",
 		"name":          "John",
 		"phone_numbers": []any{"+11 111", "+22 222", "+33 333"},
 		"total_orders":  json.Number("20"),
 	}
-	if !reflect.DeepEqual(user, expectedUser) {
-		t.Fatalf("expected user %#v, got %#v", expectedUser, user)
+	if !reflect.DeepEqual(user.Properties, expectedProps) {
+		t.Fatalf("expected user properties %#v, got %#v", expectedProps, user)
 	}
 
 	storage.Remove()

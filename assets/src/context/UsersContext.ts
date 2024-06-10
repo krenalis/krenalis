@@ -1,15 +1,16 @@
 import { createContext } from 'react';
 import { UserProperty, UserPagination } from '../components/routes/Users/Users.types';
+import { ResponseUser } from '../lib/api/types/responses';
 
 interface UsersContext {
-	users: Record<string, any>[];
+	users: ResponseUser[];
 	usersCount: number;
 	limit: number;
 	usersProperties: UserProperty[];
 	pagination: UserPagination;
 	isLoading: boolean;
-	userIDList: number[];
-	fetchUsers: (page: number) => Promise<number[]>;
+	userIDList: string[];
+	fetchUsers: (page: number) => Promise<string[]>;
 }
 
 const usersContext = createContext<UsersContext>({} as UsersContext);

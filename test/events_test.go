@@ -122,20 +122,16 @@ func TestEvents(t *testing.T) {
 	c.WaitActionsToFinish(dummySrc)
 
 	// Retrieve the user imported from the event.
-	users, _, count := c.Users([]string{"__id__", "email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"email"}, "", 0, 100)
 	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)
 	}
 	var userGID uuid.UUID
 	for _, user := range users {
-		email, _ := user["email"].(string)
+		email, _ := user.Properties["email"].(string)
 		if email == eventUserEmail {
-			var err error
-			userGID, err = uuid.Parse(user["__id__"].(string))
-			if err != nil {
-				t.Fatalf("invalid user GID: %s", err)
-			}
+			userGID = user.ID
 			break
 		}
 	}

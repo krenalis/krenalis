@@ -15,8 +15,8 @@ import toJSDateString from '../../../utils/toJSDateString';
 import { Link } from '../../base/Link/Link';
 
 interface UserDrawerProps {
-	selectedUser: number;
-	setSelectedUser: React.Dispatch<React.SetStateAction<number>>;
+	selectedUser: string;
+	setSelectedUser: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
@@ -57,7 +57,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 
 	const onNavigate = async (direction: 'previous' | 'next') => {
 		const i = userIDList.findIndex((id) => id === selectedUser);
-		let newUserID: number;
+		let newUserID: string;
 		if (direction === 'previous') {
 			if (i - 1 < 0) {
 				// if the index is overflowing the start of the users list.
@@ -100,7 +100,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	};
 
 	const onClose = () => {
-		setSelectedUser(0);
+		setSelectedUser('');
 	};
 
 	let userImage: any;
@@ -137,7 +137,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	return (
 		<SlDrawer
 			className='user-drawer'
-			open={selectedUser !== 0}
+			open={selectedUser !== ''}
 			contained
 			style={{ '--size': '600px' } as React.CSSProperties}
 			onSlHide={onClose}

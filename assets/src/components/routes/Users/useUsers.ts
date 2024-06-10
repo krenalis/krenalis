@@ -4,15 +4,15 @@ import { UI_BASE_PATH } from '../../../constants/paths';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserProperty, UserPagination } from './Users.types';
 import { ObjectType } from '../../../lib/api/types/types';
-import { FindUsersResponse } from '../../../lib/api/types/responses';
+import { FindUsersResponse, ResponseUser } from '../../../lib/api/types/responses';
 
 const DEFAULT_USER_LIMIT = 15;
 
 const useUsers = () => {
-	const [users, setUsers] = useState<Record<string, any>[]>([]);
+	const [users, setUsers] = useState<ResponseUser[]>([]);
 	const [usersCount, setUsersCount] = useState<number>(0);
 	const [usersProperties, setUsersProperties] = useState<UserProperty[]>([]);
-	const [userIDList, setUserIDList] = useState<number[]>([]);
+	const [userIDList, setUserIDList] = useState<string[]>([]);
 	const [pagination, setPagination] = useState<UserPagination>({} as UserPagination);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [limit, setLimit] = useState<number>(0);
@@ -31,7 +31,7 @@ const useUsers = () => {
 		fetchUsers(1);
 	}, [selectedWorkspace]);
 
-	const fetchUsers = async (page: number): Promise<number[]> => {
+	const fetchUsers = async (page: number): Promise<string[]> => {
 		setIsLoading(true);
 
 		// compute the max number of users to show in the users list.
@@ -89,9 +89,8 @@ const useUsers = () => {
 		localStorage.setItem('chichi_ui_users_properties', JSON.stringify(properties));
 
 		// compute the names of the showed user properties to request
-		// only those properties when fetching the users. Always request
-		// the id as it is needed for navigation.
-		const propertiesNames: string[] = ['__id__'];
+		// only those properties when fetching the users.
+		const propertiesNames: string[] = [];
 		for (const p of properties) {
 			if (p.isUsed) {
 				propertiesNames.push(p.name);
@@ -135,9 +134,9 @@ const useUsers = () => {
 		setPagination({ current: page, last: Math.ceil(count / lim) });
 
 		// compute the list of users ids needed for navigating between users.
-		const ids: number[] = [];
+		const ids: string[] = [];
 		for (const user of users) {
-			ids.push(user.__id__);
+			ids.push(user.id);
 		}
 		setUserIDList(ids);
 

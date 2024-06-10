@@ -78,7 +78,7 @@ def transform(user: dict) -> dict:
 	}
 
 	// Validate the users.
-	expectedUsers := []map[string]any{
+	expectedProperties := []map[string]any{
 		{"email": "abenois2@example.com", "first_name": "Ariela", "gender": "female"},
 		{"email": "bdroghan5@example.com", "first_name": "Bryon", "gender": "female"},
 		{"email": "ctroy7@example.com", "first_name": "Codie", "gender": "female"},
@@ -90,12 +90,12 @@ def transform(user: dict) -> dict:
 		{"email": "kdericut4@example.com", "first_name": "Kingsly", "gender": "female"},
 		{"email": "kfellon6@example.com", "first_name": "Katine", "gender": "female"},
 	}
-	if len(expectedUsers) != len(users) {
-		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))
+	if len(expectedProperties) != len(users) {
+		t.Fatalf("expecting %d users, got %d", len(expectedProperties), len(users))
 	}
 	for i, user := range users {
-		expected := expectedUsers[i]
-		if !reflect.DeepEqual(expected, user) {
+		expected := expectedProperties[i]
+		if !reflect.DeepEqual(expected, user.Properties) {
 			t.Fatalf("expecting %#v, got %#v", expected, user)
 		}
 	}

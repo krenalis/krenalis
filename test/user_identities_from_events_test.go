@@ -14,7 +14,6 @@ import (
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
 
-	"github.com/google/uuid"
 	"github.com/segmentio/analytics-go/v3"
 )
 
@@ -72,21 +71,21 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 
 	// Retrieve the user imported from the event.
-	users, _, count := c.Users([]string{"__id__", "email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"email"}, "", 0, 100)
 	const expectedUsersCount = 1
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d user(s), got %d", expectedUsersCount, count)
 	}
+	found := false
 	for _, user := range users {
-		email, _ := user["email"].(string)
+		email, _ := user.Properties["email"].(string)
 		if email == eventUserEmail {
-			var err error
-			_, err = uuid.Parse(user["__id__"].(string))
-			if err != nil {
-				t.Fatal(err)
-			}
+			found = true
 			break
 		}
+	}
+	if !found {
+		t.Fatalf("user with email %q not found", eventUserEmail)
 	}
 
 }

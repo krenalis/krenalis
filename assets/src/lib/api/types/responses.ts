@@ -82,8 +82,13 @@ interface Filter {
 	Conditions: FilterCondition[];
 }
 
+interface ResponseUser {
+	id: string;
+	properties: Record<string, any>;
+}
+
 interface FindUsersResponse {
-	users: Record<string, any>[];
+	users: ResponseUser[];
 	schema: ObjectType;
 	count: number;
 }
@@ -194,4 +199,5 @@ export type {
 	MemberInvitationResponse,
 	RePaths,
 	ChangeUserSchemaQueriesResponse,
+	ResponseUser,
 };

@@ -1,28 +1,24 @@
 import { useMemo } from 'react';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { UserProperty } from './Users.types';
+import { ResponseUser } from '../../../lib/api/types/responses';
 
 const useUsersGrid = (
-	users: Record<string, any>[],
+	users: ResponseUser[],
 	usersProperties: UserProperty[],
-	selectedUser: number,
-	onUserClick: (id: number) => void,
+	selectedUser: string,
+	onUserClick: (id: string) => void,
 ) => {
 	const usersRows = useMemo(() => {
-		const isIDUsed = usersProperties.find((property) => property.name === '__id__')?.isUsed;
 		// compute the rows for the grid component.
 		const rows: GridRow[] = [];
 		for (const user of users) {
 			// copy the user to prevent changes in-place.
 			let userCopy = { ...user };
-			const isSelected = userCopy.__id__ === selectedUser;
-			if (!isIDUsed) {
-				// do not show the id in the grid if this is the preference.
-				delete userCopy.__id__;
-			}
+			const isSelected = userCopy.id === selectedUser;
 			const row: GridRow = {
-				onClick: () => onUserClick(user.__id__),
-				cells: Object.values(userCopy),
+				onClick: () => onUserClick(user.id),
+				cells: Object.values(userCopy.properties),
 				selected: isSelected,
 			};
 			rows.push(row);

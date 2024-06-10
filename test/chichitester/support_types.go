@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/open2b/chichi/types"
 )
 
@@ -128,6 +129,10 @@ type FilterCondition struct {
 	Property string
 	Operator string
 	Value    string
+}
+type User struct {
+	ID         uuid.UUID      `json:"id"`
+	Properties map[string]any `json:"properties"`
 }
 
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.

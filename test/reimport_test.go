@@ -66,12 +66,12 @@ func TestReimport(t *testing.T) {
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
-	assertEq("first  user email", "abenois2@example.com", users[0]["email"])
-	assertEq("first  user first name", "Ariela", users[0]["first_name"])
-	assertEq("first  user last name", nil, users[0]["last_name"])
-	assertEq("second user email", "bdroghan5@example.com", users[1]["email"])
-	assertEq("second user first name", "Bryon", users[1]["first_name"])
-	assertEq("second user last name", nil, users[1]["last_name"])
+	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
+	assertEq("first  user first name", "Ariela", users[0].Properties["first_name"])
+	assertEq("first  user last name", nil, users[0].Properties["last_name"])
+	assertEq("second user email", "bdroghan5@example.com", users[1].Properties["email"])
+	assertEq("second user first name", "Bryon", users[1].Properties["first_name"])
+	assertEq("second user last name", nil, users[1].Properties["last_name"])
 
 	// Change an action that imports users from Dummy, that imports:
 	//
@@ -108,11 +108,11 @@ func TestReimport(t *testing.T) {
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
-	assertEq("first  user email", "abenois2@example.com", users[0]["email"])
-	assertEq("first  user first name", nil, users[0]["first_name"])    // <- now is nil
-	assertEq("first  user last name", "Benois", users[0]["last_name"]) // <- now has a value
-	assertEq("second user email", "bdroghan5@example.com", users[1]["email"])
-	assertEq("second user first name", nil, users[1]["first_name"])     // <- now is nil
-	assertEq("second user last name", "Droghan", users[1]["last_name"]) // <- now has a value
+	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
+	assertEq("first  user first name", nil, users[0].Properties["first_name"])    // <- now is nil
+	assertEq("first  user last name", "Benois", users[0].Properties["last_name"]) // <- now has a value
+	assertEq("second user email", "bdroghan5@example.com", users[1].Properties["email"])
+	assertEq("second user first name", nil, users[1].Properties["first_name"])     // <- now is nil
+	assertEq("second user last name", "Droghan", users[1].Properties["last_name"]) // <- now has a value
 
 }

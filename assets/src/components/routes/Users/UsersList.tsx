@@ -16,12 +16,12 @@ import { UserProperty } from './Users.types';
 import AppContext from '../../../context/AppContext';
 
 const UsersList = () => {
-	const [selectedUser, setSelectedUser] = useState<number>(0);
+	const [selectedUser, setSelectedUser] = useState<string>('');
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
 
 	const { api, handleError, showStatus } = useContext(AppContext);
 	const { users, usersCount, limit, usersProperties, pagination, isLoading, fetchUsers } = useContext(UsersContext);
-	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: number) =>
+	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: string) =>
 		setSelectedUser(id),
 	);
 

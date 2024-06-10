@@ -67,20 +67,21 @@ def transform(user: dict) -> dict:
 	}
 
 	// Validate the users.
-	expectedUsers := []map[string]any{
-		{"email": "abenois2@example.com",
+	expectedProperties := []map[string]any{
+		{
+			"email": "abenois2@example.com",
 			"ios": map[string]any{
 				"id":         "abenois2@example.com-id",
 				"idfa":       "abenois2@example.com-idfa",
 				"push_token": nil},
 		},
 	}
-	if len(expectedUsers) != len(users) {
-		t.Fatalf("expecting %d users, got %d", len(expectedUsers), len(users))
+	if len(expectedProperties) != len(users) {
+		t.Fatalf("expecting %d users, got %d", len(expectedProperties), len(users))
 	}
 	for i, user := range users {
-		expected := expectedUsers[i]
-		if !reflect.DeepEqual(expected, user) {
+		expected := expectedProperties[i]
+		if !reflect.DeepEqual(expected, user.Properties) {
 			t.Fatalf("expecting %#v, got %#v", expected, user)
 		}
 	}

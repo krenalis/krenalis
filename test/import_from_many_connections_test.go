@@ -183,7 +183,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	c.RunIdentityResolution()
 
 	// Ensure that there are 10 users.
-	users, _, count := c.Users([]string{"__id__", "email"}, "", 0, 1000)
+	users, _, count := c.Users([]string{"email"}, "", 0, 1000)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d", count)
 	}
@@ -191,12 +191,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	// Retrieve the GID of "kbuessen0@example.com".
 	var kBuessenGid uuid.UUID
 	for _, user := range users {
-		if user["email"] == "kbuessen0@example.com" {
-			gid, err := uuid.Parse(user["__id__"].(string))
-			if err != nil {
-				t.Fatal(err)
-			}
-			kBuessenGid = gid
+		if user.Properties["email"] == "kbuessen0@example.com" {
+			kBuessenGid = user.ID
 			break
 		}
 	}

@@ -461,15 +461,15 @@ class Users {
 		});
 	};
 
-	events = async (user: number): Promise<UserEventsResponse> => {
+	events = async (user: string): Promise<UserEventsResponse> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/events`, http.GET);
 	};
 
-	traits = async (user: number): Promise<userTraitsResponse> => {
+	traits = async (user: string): Promise<userTraitsResponse> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/traits`, http.GET);
 	};
 
-	identities = async (user: number, first: number, limit: number): Promise<UserIdentitiesResponse> => {
+	identities = async (user: string, first: number, limit: number): Promise<UserIdentitiesResponse> => {
 		return await call(
 			`${this.apiURL}/users/${encodeURIComponent(user)}/identities?first=${first}&limit=${limit}`,
 			http.GET,

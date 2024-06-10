@@ -400,7 +400,7 @@ func (c *Chichi) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 	return response.Identities, response.Count
 }
 
-func (c *Chichi) Users(properties []string, order string, first, limit int) (users []map[string]any, schema types.Type, count int) {
+func (c *Chichi) Users(properties []string, order string, first, limit int) (users []User, schema types.Type, count int) {
 	req := map[string]any{
 		"Properties": properties,
 		"Order":      order,
@@ -408,9 +408,9 @@ func (c *Chichi) Users(properties []string, order string, first, limit int) (use
 		"Limit":      limit,
 	}
 	var response struct {
-		Users  []map[string]any `json:"users"`
-		Count  int              `json:"count"`
-		Schema types.Type       `json:"schema"`
+		Users  []User     `json:"users"`
+		Count  int        `json:"count"`
+		Schema types.Type `json:"schema"`
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/users", c.ws)
 	c.MustCall("POST", method, req, &response)
