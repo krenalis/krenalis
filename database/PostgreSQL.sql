@@ -95,7 +95,6 @@ CREATE TABLE actions (
     identity_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',
-    displayed_property varchar(1024) NOT NULL DEFAULT '',
     user_cursor timestamp(6) NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     health health NOT NULL DEFAULT 'Healthy',
     file_ordering_property_path varchar(1024) NOT NULL DEFAULT '',

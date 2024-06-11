@@ -26,28 +26,6 @@ const getIdentityPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] =>
 	return computeItems(filteredSchema);
 };
 
-const getDisplayedPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
-	if (schema == null) {
-		return [];
-	}
-	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
-	for (const [k, v] of Object.entries(flatSchema)) {
-		const typ = flatSchema[k].type;
-		if (
-			typ === 'Int' ||
-			typ === 'Uint' ||
-			typ === 'Float' ||
-			typ === 'Decimal' ||
-			typ === 'JSON' ||
-			typ === 'Text'
-		) {
-			filteredSchema[k] = v;
-		}
-	}
-	return computeItems(filteredSchema);
-};
-
 const getLastChangeTimeComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
@@ -117,7 +95,6 @@ const computeItems = (flatSchema: TransformedMapping) => {
 export {
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
-	getDisplayedPropertyComboboxItems,
 	getLastChangeTimeComboboxItems,
 	getOrderingPropertyPathComboboxItems,
 };

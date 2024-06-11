@@ -338,36 +338,13 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if event.UserId == "" && len(properties) == 0 {
 				continue
 			}
-			// Determine the displayed property.
-			var displayedProperty string
-			if action.DisplayedProperty != "" {
-				v, ok := mapEvent["traits"].(map[string]any)[action.DisplayedProperty]
-				if ok {
-					switch v := v.(type) {
-					case string:
-						displayedProperty = v
-					case json.Number:
-						if f, err := v.Float64(); err == nil && math.Floor(f) == f {
-							displayedProperty = v.String()
-						}
-					case float64:
-						if math.Floor(v) == v {
-							displayedProperty = fmt.Sprint(v)
-						}
-					}
-				}
-			}
-			if utf8.RuneCountInString(displayedProperty) > 40 {
-				displayedProperty = ""
-			}
 			// Write the user identity on the data warehouse.
 			err := iw.Write(datastore.Identity{
-				Action:            action.ID,
-				ID:                event.UserId,
-				AnonymousID:       event.AnonymousId,
-				Properties:        properties,
-				DisplayedProperty: displayedProperty,
-				LastChangeTime:    event.Timestamp,
+				Action:         action.ID,
+				ID:             event.UserId,
+				AnonymousID:    event.AnonymousId,
+				Properties:     properties,
+				LastChangeTime: event.Timestamp,
 			}, event.MessageId)
 			if err != nil {
 				return iw.Close(ctx)

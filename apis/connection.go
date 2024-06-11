@@ -502,7 +502,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Compression:              state.Compression(action.Compression),
 		TableName:                action.TableName,
 		IdentityProperty:         action.IdentityProperty,
-		DisplayedProperty:        action.DisplayedProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
@@ -732,7 +731,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, "", lastChangeTime)
+	records, err := this.app().Users(ctx, schema, lastChangeTime)
 	if err != nil {
 		return nil, "", err
 	}

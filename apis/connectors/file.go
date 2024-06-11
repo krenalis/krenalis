@@ -105,7 +105,7 @@ func (file *File) Records(ctx context.Context) (Records, error) {
 		Format: file.action.LastChangeTimeFormat,
 	}
 	rw := newRecordWriter(file.action.Connector().Name, file.action.InSchema,
-		file.action.IdentityProperty, lastChangeTimeProperty, file.action.DisplayedProperty,
+		file.action.IdentityProperty, lastChangeTimeProperty,
 		storageLastChangeTime, file.timeLayouts, math.MaxInt)
 	records := &fileRecords{
 		rw:    rw,
@@ -364,7 +364,7 @@ func (rr *recordReader) Record(ctx context.Context) (string, []any, error) {
 // storageLastChangeTime is the lat change time provided by the storage
 // connector, and it is used in the case when the file columns do not specify a
 // last change time property.
-func newRecordWriter(connector string, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, displayedProperty string, storageLastChangeTime time.Time, layout *state.TimeLayouts, limit int) *recordWriter {
+func newRecordWriter(connector string, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, storageLastChangeTime time.Time, layout *state.TimeLayouts, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:       connector,
 		schema:          schema,
@@ -373,7 +373,6 @@ func newRecordWriter(connector string, schema types.Type, identityProperty strin
 		timeLayouts:     layout,
 		records:         []map[string]any{},
 	}
-	rw.displayedProperty.name = displayedProperty
 	if identityProperty != "" {
 		rw.identityProperty.name = identityProperty
 		typ, _ := schema.Property(identityProperty)
@@ -392,20 +391,15 @@ func newRecordWriter(connector string, schema types.Type, identityProperty strin
 
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
-	connector         string
-	limit             int
-	record            Record
-	yield             func(Record) bool
-	schema            types.Type
-	properties        []types.Property // schema's properties, or the file's columns if a schema has not been provided
-	columnIndexOf     map[int]int      // map a property index in the schema to the corresponding file's column
-	columns           int              // number of file's columns
-	textColumnsOnly   bool
-	displayedProperty struct {
-		name   string
-		column types.Property
-		index  int
-	}
+	connector        string
+	limit            int
+	record           Record
+	yield            func(Record) bool
+	schema           types.Type
+	properties       []types.Property // schema's properties, or the file's columns if a schema has not been provided
+	columnIndexOf    map[int]int      // map a property index in the schema to the corresponding file's column
+	columns          int              // number of file's columns
+	textColumnsOnly  bool
 	identityProperty struct {
 		name  string
 		typ   types.Type
@@ -467,17 +461,6 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		}
 		rw.lastChangeTimeProperty.typ = c.Type
 		rw.lastChangeTimeProperty.index = columnIndex[c.Name]
-	}
-	// Validate the displayed property.
-	if rw.displayedProperty.name != "" {
-		col, err := displayedPropertyFromSchema(fileSchema, rw.displayedProperty.name)
-		if err != nil {
-			slog.Warn("cannot determine the displayed property", "err", err)
-			rw.displayedProperty.name = ""
-		} else {
-			rw.displayedProperty.column = col
-			rw.displayedProperty.index = columnIndex[col.Name]
-		}
 	}
 	// Check that the schema, if valid, is aligned with the file's schema.
 	if rw.schema.Valid() {
@@ -557,22 +540,6 @@ func (rw *recordWriter) Record(record []any) error {
 				rw.record.LastChangeTime = rw.storageLastChangeTime
 			}
 		}
-		// Parse the displayed property.
-		if rw.record.Err == nil && rw.displayedProperty.name != "" {
-			v := record[rw.displayedProperty.index]
-			c := rw.displayedProperty.column
-			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
-			if err != nil {
-				slog.Warn("the displayed property value cannot be normalized", "err", err)
-			} else {
-				s, err := displayedPropertyToString(vv)
-				if err != nil {
-					slog.Warn("invalid displayed property value", "err", err)
-				} else {
-					rw.record.DisplayedProperty = s
-				}
-			}
-		}
 	}
 	rw.limit--
 	if rw.limit == 0 {
@@ -632,22 +599,6 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				}
 			} else {
 				rw.record.LastChangeTime = rw.storageLastChangeTime
-			}
-		}
-		// Parse the displayed property.
-		if rw.record.Err == nil && rw.displayedProperty.name != "" {
-			v := record[rw.displayedProperty.name]
-			c := rw.displayedProperty.column
-			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
-			if err != nil {
-				slog.Warn("displayed property value cannot be normalized", "err", err)
-			} else {
-				s, err := displayedPropertyToString(vv)
-				if err != nil {
-					slog.Warn("invalid displayed property value", "err", err)
-				} else {
-					rw.record.DisplayedProperty = s
-				}
 			}
 		}
 	}
@@ -716,22 +667,6 @@ func (rw *recordWriter) RecordString(record []string) error {
 				}
 			} else {
 				rw.record.LastChangeTime = rw.storageLastChangeTime
-			}
-		}
-		// Parse the displayed property.
-		if rw.record.Err == nil && rw.displayedProperty.name != "" {
-			v := record[rw.displayedProperty.index]
-			c := rw.displayedProperty.column
-			vv, err := normalize(c.Name, c.Type, v, c.Nullable, rw.timeLayouts)
-			if err != nil {
-				slog.Warn("displayed property value cannot be normalized", "err", err)
-			} else {
-				s, err := displayedPropertyToString(vv)
-				if err != nil {
-					slog.Warn("invalid displayed property value", "err", err)
-				} else {
-					rw.record.DisplayedProperty = s
-				}
 			}
 		}
 	}

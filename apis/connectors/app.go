@@ -13,9 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -173,17 +171,12 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 // record will contain, in the Properties field, the properties in schema, with
 // the same types.
 //
-// displayedProperty, when not empty, is the app property name from which the
-// displayed property should be imported. If such property does not exist in the
-// app's schema, or exists but its type is not compatible, no errors are
-// returned and the displayed property  is simply not imported.
-//
 // lastChangeTime is the most recent lastChangeTime value read from the previous
 // import.
 //
 // If the provided schema, that must be valid, does not conform with the app's
 // source user schema, it returns a *SchemaError error.
-func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty string, lastChangeTime time.Time) (Records, error) {
+func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -199,21 +192,12 @@ func (app *App) Users(ctx context.Context, schema types.Type, displayedProperty 
 	if err != nil {
 		return nil, err
 	}
-	// Determine and validate the property for the displayed property.
-	var dp types.Property
-	if displayedProperty != "" {
-		dp, err = displayedPropertyFromSchema(userSchema, displayedProperty)
-		if err != nil {
-			slog.Warn("cannot determine the displayed property", "err", err)
-		}
-	}
 	records := &appRecords{
-		schema:            schema,
-		timeLayouts:       app.timeLayouts,
-		lastChangeTime:    lastChangeTime,
-		appName:           app.name,
-		inner:             app.inner,
-		displayedProperty: dp,
+		schema:         schema,
+		timeLayouts:    app.timeLayouts,
+		lastChangeTime: lastChangeTime,
+		appName:        app.name,
+		inner:          app.inner,
 	}
 	return records, nil
 }
@@ -273,15 +257,14 @@ func (w *appWriter) Write(ctx context.Context, id string, properties map[string]
 
 // appRecords implements the Records interface for apps.
 type appRecords struct {
-	schema            types.Type
-	timeLayouts       *state.TimeLayouts
-	lastChangeTime    time.Time
-	appName           string
-	inner             chichi.App
-	last              bool
-	err               error
-	closed            bool
-	displayedProperty types.Property
+	schema         types.Type
+	timeLayouts    *state.TimeLayouts
+	lastChangeTime time.Time
+	appName        string
+	inner          chichi.App
+	last           bool
+	err            error
+	closed         bool
 }
 
 func (r *appRecords) All(ctx context.Context) Seq[Record] {
@@ -303,10 +286,6 @@ func (r *appRecords) All(ctx context.Context) Seq[Record] {
 		for i, p := range properties {
 			names[i] = p.Name
 			propertyByName[p.Name] = &p
-		}
-
-		if r.displayedProperty.Name != "" && !slices.Contains(names, r.displayedProperty.Name) {
-			names = append(names, r.displayedProperty.Name)
 		}
 
 		for {
@@ -345,25 +324,6 @@ func (r *appRecords) All(ctx context.Context) Seq[Record] {
 				user := Record{
 					ID:           appUser.ID,
 					Associations: appUser.Associations,
-				}
-
-				// Read the displayed property.
-				if r.displayedProperty.Name != "" {
-					for p, v := range appUser.Properties {
-						if p == r.displayedProperty.Name {
-							normalizedValue, err := normalize(r.displayedProperty.Name, r.displayedProperty.Type, v, r.displayedProperty.Nullable, r.timeLayouts)
-							if err != nil {
-								slog.Warn("displayed property value cannot be normalized", "err", err)
-								break
-							}
-							user.DisplayedProperty, err = displayedPropertyToString(normalizedValue)
-							if err != nil {
-								slog.Warn("invalid displayed property value", "err", err)
-								break
-							}
-							break
-						}
-					}
 				}
 
 				// Read the properties.

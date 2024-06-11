@@ -5,7 +5,6 @@ CREATE TABLE _user_identities (
     "__identity_id__" text NOT NULL,
     "__connection__" int NOT NULL,
     "__anonymous_ids__" text [],
-    "__displayed_property__" varchar(40) NOT NULL DEFAULT '',
     "__last_change_time__" timestamp NOT NULL,
     "__gid__" uuid,
     "__cluster__" serial,
@@ -21,7 +20,6 @@ SELECT
     "__identity_id__",
     "__connection__",
     "__anonymous_ids__",
-    "__displayed_property__",
     "__last_change_time__",
     "__gid__",
     "email"

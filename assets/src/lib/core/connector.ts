@@ -18,7 +18,6 @@ class TransformedConnector {
 	termForGroups: string;
 	SendingMode: SendingMode | null;
 	targets: Record<ActionTarget, boolean>;
-	suggestedDisplayedProperty: string;
 
 	constructor(
 		name: string,
@@ -36,7 +35,6 @@ class TransformedConnector {
 		termForGroups: string,
 		SendingMode: SendingMode,
 		targets: Record<ActionTarget, boolean>,
-		suggestedDisplayeProperty: string,
 	) {
 		this.name = name;
 		this.type = type;
@@ -53,7 +51,6 @@ class TransformedConnector {
 		this.termForGroups = termForGroups;
 		this.SendingMode = SendingMode;
 		this.targets = targets;
-		this.suggestedDisplayedProperty = suggestedDisplayeProperty;
 	}
 
 	get isApp() {

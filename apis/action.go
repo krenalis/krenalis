@@ -52,7 +52,6 @@ type Action struct {
 	Compression              Compression
 	Table                    *string
 	IdentityProperty         *string
-	DisplayedProperty        string
 	LastChangeTimeProperty   *string
 	LastChangeTimeFormat     *string
 	FileOrderingPropertyPath *string
@@ -155,7 +154,6 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		p := action.IdentityProperty
 		this.IdentityProperty = &p
 	}
-	this.DisplayedProperty = action.DisplayedProperty
 	if action.LastChangeTimeProperty != "" {
 		column := action.LastChangeTimeProperty
 		this.LastChangeTimeProperty = &column
@@ -393,7 +391,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Compression:              state.Compression(action.Compression),
 		TableName:                action.TableName,
 		IdentityProperty:         action.IdentityProperty,
-		DisplayedProperty:        action.DisplayedProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
@@ -542,14 +539,14 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
 			"sheet = $13, compression = $14, settings = $15, table_name = $16, identity_property = $17, "+
-			"displayed_property = $18, user_cursor = CASE WHEN $19 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
-			"last_change_time_property = $20, last_change_time_format = $21, "+
-			"file_ordering_property_path = $22, export_mode = $23, matching_properties_internal = $24, "+
-			"matching_properties_external = $25, export_on_duplicated_users = $26\nWHERE id = $27",
+			"user_cursor = CASE WHEN $18 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
+			"last_change_time_property = $19, last_change_time_format = $20, "+
+			"file_ordering_property_path = $21, export_mode = $22, matching_properties_internal = $23, "+
+			"matching_properties_external = $24, export_on_duplicated_users = $25\nWHERE id = $26",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, n.Query, connectorName,
 			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.DisplayedProperty, n.ResetUserCursor, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.IdentityProperty, n.ResetUserCursor, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
 			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -758,14 +755,6 @@ type ActionToSet struct {
 	// from a file or from a database.
 	// It cannot be longer than 1024 runes.
 	IdentityProperty string
-
-	// DisplayedProperty, if not empty, is the property that holds the
-	// identifier displayed in the UI for the imported user or group.
-	//
-	// In particular, for apps actions it is an app property, for file and
-	// database actions it is a column name, while for event-based actions it is
-	// a "traits" property.
-	DisplayedProperty string
 
 	// LastChangeTimeProperty is the last change time property when importing
 	// from a file or from a database. May be empty to indicate that no

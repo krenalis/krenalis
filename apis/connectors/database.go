@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"time"
 
@@ -164,18 +163,9 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		return nil, err
 	}
 
-	// Determine the displayed property, if necessary.
-	var displayedProperty types.Property
-	if action.DisplayedProperty != "" {
-		displayedProperty, err = displayedPropertyFromSchema(querySchema, action.DisplayedProperty)
-		if err != nil {
-			slog.Warn("cannot determine the displayed property", "err", err)
-		}
-	}
-
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, types.Properties(action.InSchema), identityProperty,
-		lastChangeTimeProperty, action.LastChangeTimeFormat, displayedProperty, database.timeLayouts)
+		lastChangeTimeProperty, action.LastChangeTimeFormat, database.timeLayouts)
 	return records, nil
 }
 
@@ -334,7 +324,6 @@ type databaseRecords struct {
 	identityProperty     types.Property
 	lastChangeTime       types.Property
 	lastChangeTimeFormat string
-	displayedProperty    types.Property
 	timeLayouts          *state.TimeLayouts
 	last                 bool
 	err                  error
@@ -343,7 +332,7 @@ type databaseRecords struct {
 
 func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 	identityProperty, lastChangeTimeProperty types.Property, lastChangeTimeFormat string,
-	displayedProperty types.Property, layouts *state.TimeLayouts) *databaseRecords {
+	layouts *state.TimeLayouts) *databaseRecords {
 	records := databaseRecords{
 		columns:              columns,
 		rows:                 rows,
@@ -352,7 +341,6 @@ func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 		identityProperty:     identityProperty,
 		lastChangeTime:       lastChangeTimeProperty,
 		lastChangeTimeFormat: lastChangeTimeFormat,
-		displayedProperty:    displayedProperty,
 		timeLayouts:          layouts,
 	}
 	for _, p := range properties {
@@ -386,19 +374,12 @@ func (r *databaseRecords) All(ctx context.Context) Seq[Record] {
 			}
 			for i, c := range r.columns {
 				p := r.propertyOf[c.Name]
-				if c.Name == r.displayedProperty.Name {
-					// This is necessary as the displayed property is not
-					// necessarily included in "propertyOf"; even if it is, the type
-					// of its property must be taken from the query.
-					p = r.displayedProperty
-				}
 				r.dst[i] = recordsScanValue{
 					property:             p,
 					record:               &record,
 					identityProperty:     r.identityProperty,
 					lastChangeTime:       r.lastChangeTime,
 					lastChangeTimeFormat: r.lastChangeTimeFormat,
-					displayedProperty:    r.displayedProperty,
 					timeLayouts:          r.timeLayouts,
 				}
 			}
@@ -450,7 +431,6 @@ type recordsScanValue struct {
 	identityProperty     types.Property
 	lastChangeTime       types.Property
 	lastChangeTimeFormat string
-	displayedProperty    types.Property
 	timeLayouts          *state.TimeLayouts
 }
 
@@ -459,21 +439,6 @@ func (sv recordsScanValue) Scan(src any) error {
 
 	if !p.Type.Valid() {
 		return nil
-	}
-
-	if p.Name == sv.displayedProperty.Name {
-		col := sv.displayedProperty
-		normalizedValue, err := normalize(col.Name, col.Type, src, col.Nullable, sv.timeLayouts)
-		if err != nil {
-			slog.Warn("displayed property value cannot be normalized", "err", err)
-		} else {
-			dp, err := displayedPropertyToString(normalizedValue)
-			if err != nil {
-				slog.Warn("invalid displayed property value", "err", err)
-			} else {
-				sv.record.DisplayedProperty = dp
-			}
-		}
 	}
 
 	switch p.Name {

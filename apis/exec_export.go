@@ -314,7 +314,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	externalProp := this.action.MatchingProperties.External
 	schema := types.Object([]types.Property{externalProp})
 
-	records, err := this.app().Users(ctx, schema, "", time.Time{})
+	records, err := this.app().Users(ctx, schema, time.Time{})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 	}

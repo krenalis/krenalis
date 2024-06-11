@@ -166,7 +166,6 @@ type Warehouse interface {
 	//   __is_anonymous__
 	//   __identity_id__
 	//   __connection__
-	//   __displayed_property__
 	//   __last_change_time__
 	//
 	// rows are the rows to update or add if not already present. If a row contains

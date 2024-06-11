@@ -1750,12 +1750,11 @@ type labelValue struct {
 // TODO(Gianluca): this type should be reviewed. See the issue
 // https://github.com/open2b/chichi/issues/791.
 type identity struct {
-	Connection        int
-	Action            int
-	IdentityId        labelValue // zero struct for identities imported from anonymous events.
-	DisplayedProperty string     // empty string for identities with no displayed property.
-	AnonymousIds      []string   // nil for identities not imported from events.
-	LastChangeTime    time.Time
+	Connection     int
+	Action         int
+	IdentityId     labelValue // zero struct for identities imported from anonymous events.
+	AnonymousIds   []string   // nil for identities not imported from events.
+	LastChangeTime time.Time
 }
 
 // userIdentities returns the user identities matching the provided filter and
@@ -1780,7 +1779,6 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			"__identity_id__",
 			"__connection__",
 			"__anonymous_ids__",
-			"__displayed_property__",
 			"__last_change_time__",
 		},
 		Filter:  filter,
@@ -1866,9 +1864,6 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		// Determine the last change time.
 		lastChangeTime := record["__last_change_time__"].(time.Time)
 
-		// Determine the displayed property.
-		displayedProperty := record["__displayed_property__"].(string)
-
 		identities = append(identities, identity{
 			Connection: connID,
 			Action:     actionID,
@@ -1876,9 +1871,8 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 				Label: identityIDLabel,
 				Value: identityID,
 			},
-			DisplayedProperty: displayedProperty,
-			AnonymousIds:      anonIDs,
-			LastChangeTime:    lastChangeTime,
+			AnonymousIds:   anonIDs,
+			LastChangeTime: lastChangeTime,
 		})
 
 	}

@@ -40,7 +40,6 @@ type Action struct {
 	Compression              Compression
 	Table                    *string
 	IdentityProperty         *string
-	DisplayedProperty        string
 	LastChangeTimeProperty   *string
 	LastChangeTimeFormat     *string
 	FileOrderingPropertyPath string
@@ -64,7 +63,6 @@ type ActionToSet struct {
 	UIValues                 json.RawMessage `json:",omitempty"`
 	TableName                string
 	IdentityProperty         string
-	DisplayedProperty        string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	FileOrderingPropertyPath string
@@ -136,12 +134,11 @@ type User struct {
 }
 
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
-	Action            int
-	Connection        int
-	IdentityId        LabelValue
-	DisplayedProperty string
-	AnonymousIds      []string
-	LastChangeTime    time.Time
+	Action         int
+	Connection     int
+	IdentityId     LabelValue
+	AnonymousIds   []string
+	LastChangeTime time.Time
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

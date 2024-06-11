@@ -63,7 +63,6 @@ interface TransformedMatchingProperties {
 }
 
 type ActionTypeField =
-	| 'DisplayedProperty'
 	| 'Filter'
 	| 'Transformation'
 	| 'MatchingProperties'
@@ -106,7 +105,6 @@ interface TransformedAction {
 	IdentityProperty?: string | null;
 	LastChangeTimeProperty?: string | null;
 	LastChangeTimeFormat?: string | null;
-	DisplayedProperty?: string | null;
 	FileOrderingPropertyPath?: string | null;
 	ExportMode?: ExportMode | null;
 	MatchingProperties?: TransformedMatchingProperties | null;
@@ -376,7 +374,6 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		IdentityProperty: action.IdentityProperty,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
 		LastChangeTimeFormat: action.LastChangeTimeFormat,
-		DisplayedProperty: action.DisplayedProperty,
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		ExportMode: action.ExportMode,
 		MatchingProperties: transformedMatchingProperties,
@@ -604,7 +601,6 @@ const transformInActionToSet = async (
 		IdentityProperty: action.IdentityProperty,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
 		LastChangeTimeFormat: lastChangeTimeFormat,
-		DisplayedProperty: action.DisplayedProperty,
 		matchingProperties: matchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Compression: action.Compression,
@@ -638,9 +634,6 @@ const computeDefaultAction = (
 		InSchema: null,
 		OutSchema: null,
 	};
-	if (fields.includes('DisplayedProperty')) {
-		action.DisplayedProperty = '';
-	}
 	if (fields.includes('Query')) {
 		action.Query = connection.connector.sampleQuery;
 	}
@@ -696,15 +689,6 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('ExportOnDuplicatedUsers');
 		fields.push('ExportMode');
 		fields.push('Filter');
-	}
-	if (
-		connection.role === 'Source' &&
-		(connection.type === 'App' ||
-			connection.type === 'FileStorage' ||
-			connection.type === 'Database' ||
-			connection.isEventBased)
-	) {
-		fields.push('DisplayedProperty');
 	}
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');

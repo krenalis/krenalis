@@ -166,7 +166,6 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 			"__identity_id__",
 			"__connection__",
 			"__anonymous_ids__",
-			"__displayed_property__",
 			"__last_change_time__",
 			"__gid__",
 		}

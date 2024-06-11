@@ -151,7 +151,6 @@
 	margin-left: -15px;
 }
 
-.action__transformation-displayed-property,
 .action__transformation-identity-property {
 	margin-bottom: 30px;
 }
@@ -166,7 +165,6 @@
 	gap: 15px;
 }
 
-.action__transformation-displayed-property,
 .action__transformation-identity-property,
 .action__transformation-last-change-time {
 	display: grid;

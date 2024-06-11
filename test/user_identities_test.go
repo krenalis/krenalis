@@ -49,9 +49,8 @@ func Test_UserIdentities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityProperty:  "identity",
-		DisplayedProperty: "email",
-		Connector:         "CSV",
+		IdentityProperty: "identity",
+		Connector:        "CSV",
 		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
@@ -73,9 +72,8 @@ func Test_UserIdentities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityProperty:  "identity",
-		DisplayedProperty: "email",
-		Connector:         "CSV",
+		IdentityProperty: "identity",
+		Connector:        "CSV",
 		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
@@ -135,11 +133,6 @@ func Test_UserIdentities(t *testing.T) {
 			}
 			if !strings.HasPrefix(id.Value, idPrefix) {
 				t.Fatalf("unexpected identity ID %q, it should have prefix %q", id, idPrefix)
-			}
-
-			// Check the displayed property.
-			if !strings.Contains(identity.DisplayedProperty, "@") {
-				t.Fatalf("expecting displayed property value with a '@', got %q", identity.DisplayedProperty)
 			}
 
 			totalIdentities++

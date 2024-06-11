@@ -21,12 +21,11 @@ import (
 
 // Identity is an identity
 type Identity struct {
-	Action            int                    // Action from which the identity has been imported.
-	ID                string                 // Identifier of the identity; it is empty for anonymous identities.
-	AnonymousID       string                 // AnonymousID of identities received via events.
-	Properties        map[string]interface{} // Properties of the user schema.
-	DisplayedProperty string                 // Display property value; cannot be longer than 40 runes.
-	LastChangeTime    time.Time              // Last change time in UTC.
+	Action         int                    // Action from which the identity has been imported.
+	ID             string                 // Identifier of the identity; it is empty for anonymous identities.
+	AnonymousID    string                 // AnonymousID of identities received via events.
+	Properties     map[string]interface{} // Properties of the user schema.
+	LastChangeTime time.Time              // Last change time in UTC.
 }
 
 // IdentityWriter writes user identities into the data warehouse. It deletes an
@@ -73,18 +72,17 @@ func (iw *IdentityWriter) Close(ctx context.Context) error {
 		return nil
 	}
 	iw.closed = true
-	columns := make([]warehouses.Column, 7+len(iw.columns))
+	columns := make([]warehouses.Column, 6+len(iw.columns))
 	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
 	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Text()}
 	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
 	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
 	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	columns[5] = warehouses.Column{Name: "__displayed_property__", Type: types.Text().WithCharLen(40)}
-	columns[6] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	columnsNames := maps.Keys(iw.columns)
 	slices.Sort(columnsNames)
 	for i, name := range columnsNames {
-		columns[i+7] = iw.columns[name]
+		columns[i+6] = iw.columns[name]
 	}
 	err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
 	if err != nil {
@@ -114,13 +112,12 @@ func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 	if isEvent && !isAnonymous {
 		// Delete the anonymous identity with the same AnonymousId of the non-anonymous identity.
 		iw.rows = append(iw.rows, map[string]any{
-			"$deleted":               true,
-			"__action__":             identity.Action,
-			"__is_anonymous__":       true,
-			"__identity_id__":        identity.AnonymousID,
-			"__connection__":         iw.connection,
-			"__displayed_property__": "",
-			"__last_change_time__":   identity.LastChangeTime,
+			"$deleted":             true,
+			"__action__":           identity.Action,
+			"__is_anonymous__":     true,
+			"__identity_id__":      identity.AnonymousID,
+			"__connection__":       iw.connection,
+			"__last_change_time__": identity.LastChangeTime,
 		})
 	}
 	var row map[string]any
@@ -141,7 +138,6 @@ func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 	} else {
 		row["__identity_id__"] = identity.ID
 	}
-	row["__displayed_property__"] = identity.DisplayedProperty
 	row["__last_change_time__"] = identity.LastChangeTime
 	iw.rows = append(iw.rows, row)
 	iw.ackIDs = append(iw.ackIDs, ackID)

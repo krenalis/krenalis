@@ -163,7 +163,6 @@ const ActionFile = () => {
 		a.Sheet = connector.hasSheets ? '' : null;
 		a.Path = '';
 		a.IdentityProperty = '';
-		a.DisplayedProperty = '';
 		a.LastChangeTimeProperty = '';
 		a.LastChangeTimeFormat = '';
 		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);

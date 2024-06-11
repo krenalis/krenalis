@@ -31,7 +31,6 @@ import (
 
 	"github.com/itchyny/timefmt-go"
 	"github.com/relvacode/iso8601"
-	"github.com/shopspring/decimal"
 )
 
 // Seq represents a sequence of V values.
@@ -56,10 +55,6 @@ type Record struct {
 	ID             string         // Identifier.
 	Properties     map[string]any // Properties.
 	LastChangeTime time.Time      // Last modification time, in UTC.
-
-	// DisplayedProperty, if any, otherwise the empty string. Cannot be longer than 40
-	// runes.
-	DisplayedProperty string
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
@@ -464,47 +459,6 @@ func checkTypeAlignment(name string, t1, t2 types.Type) error {
 // Keep in sync with the events.maxSettingsLen constant.
 const maxSettingsLen = 10_000
 
-// displayedPropertyFromSchema returns the displayed property from the given
-// schema, if found and its type is compatible, otherwise returns the zero
-// Property and an error.
-func displayedPropertyFromSchema(schema types.Type, displayedPropertyName string) (types.Property, error) {
-	p, ok := schema.Property(displayedPropertyName)
-	if !ok {
-		return types.Property{}, fmt.Errorf("displayed property %q not found in schema", displayedPropertyName)
-	}
-	if !supportedTypeForDisplayedProperty(p.Type) {
-		return types.Property{}, fmt.Errorf("displayed property %q has an unsupported type %s", displayedPropertyName, p.Type)
-	}
-	return p, nil
-}
-
-// displayedPropertyToString returns a string representation of the displayed property
-// value. If value cannot be represented as a valid displayed property value, an
-// error is returned.
-func displayedPropertyToString(value any) (string, error) {
-	var s string
-	switch src := value.(type) {
-	case int: // Int(n).
-		s = strconv.Itoa(src)
-	case uint: // Uint(n).
-		s = strconv.Itoa(int(src))
-	case string: // Text, JSON String.
-		s = src
-	case decimal.Decimal: // Decimal.
-		s = src.String()
-	case json.Number: // JSON Number
-		s = src.String()
-	case float64:
-		s = fmt.Sprint(src)
-	default:
-		return "", fmt.Errorf("unexpected displayed property value with type %T", src)
-	}
-	if utf8.RuneCountInString(s) > 40 {
-		return "", fmt.Errorf("the displayed property value is longer than 40 runes")
-	}
-	return s, nil
-}
-
 // isExcelSimpleFloat reports whether s is a string representing a float value
 // encoding an Excel date / datetime value.
 func isExcelSimpleFloat(s string) bool {
@@ -755,23 +709,6 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 		return tx.Notify(ctx, n)
 	})
 	return err
-}
-
-// supportedTypeForDisplayedProperty reports whether the type t is supported as
-// a displayed property type.
-func supportedTypeForDisplayedProperty(t types.Type) bool {
-	switch t.Kind() {
-	case types.IntKind,
-		types.UintKind,
-		types.FloatKind,
-		types.JSONKind,
-		types.TextKind:
-		return true
-	case types.DecimalKind:
-		return t.Scale() == 0
-	default:
-		return false
-	}
 }
 
 // validateTimestamp validates the timestamp t, returning an error if it is not

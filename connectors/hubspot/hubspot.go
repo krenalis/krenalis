@@ -43,16 +43,15 @@ var _ interface {
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
-		Name:                       "HubSpot",
-		Targets:                    chichi.Users,
-		SourceDescription:          "import contacts as users and companies as groups from HubSpot",
-		DestinationDescription:     "export users as contacts and groups as companies to HubSpot",
-		TermForUsers:               "contacts",
-		TermForGroups:              "companies",
-		IdentityIDLabel:            "HubSpot ID",
-		SuggestedDisplayedProperty: "email",
-		Icon:                       icon,
-		WebhooksPer:                chichi.WebhooksPerConnector,
+		Name:                   "HubSpot",
+		Targets:                chichi.Users,
+		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
+		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
+		TermForUsers:           "contacts",
+		TermForGroups:          "companies",
+		IdentityIDLabel:        "HubSpot ID",
+		Icon:                   icon,
+		WebhooksPer:            chichi.WebhooksPerConnector,
 		OAuth: chichi.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",

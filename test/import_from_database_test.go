@@ -43,7 +43,6 @@ func TestImportFromDatabase(t *testing.T) {
 		IdentityProperty:       "id",
 		LastChangeTimeProperty: "",
 		LastChangeTimeFormat:   "",
-		DisplayedProperty:      "customer_id",
 	})
 
 	c.ExecuteAction(pgSQL, importUsers, false)
@@ -58,9 +57,11 @@ func TestImportFromDatabase(t *testing.T) {
 	}
 
 	for _, identity := range identities {
-		const expectedDisplayedProperty = "ABC123"
-		if identity.DisplayedProperty != expectedDisplayedProperty {
-			t.Fatalf("expected displayed property %q, got %q", expectedDisplayedProperty, identity.DisplayedProperty)
+		if identity.Action != importUsers {
+			t.Fatalf("expected identity action %d, got %d", importUsers, identity.Action)
+		}
+		if identity.Connection != pgSQL {
+			t.Fatalf("expected identity connection %d, got %d", pgSQL, identity.Connection)
 		}
 	}
 }

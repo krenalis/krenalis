@@ -506,24 +506,23 @@ type TimeLayouts struct {
 
 // Connector represents a connector.
 type Connector struct {
-	Name                       string
-	SourceDescription          string
-	DestinationDescription     string
-	TermForUsers               string
-	TermForGroups              string
-	Type                       ConnectorType
-	Targets                    ConnectorTargets
-	SendingMode                *SendingMode
-	HasSheets                  bool
-	HasUI                      bool
-	IdentityIDLabel            string
-	SuggestedDisplayedProperty string
-	Icon                       string
-	TimeLayouts                TimeLayouts
-	FileExtension              string
-	SampleQuery                string
-	WebhooksPer                WebhooksPer
-	OAuth                      *OAuth
+	Name                   string
+	SourceDescription      string
+	DestinationDescription string
+	TermForUsers           string
+	TermForGroups          string
+	Type                   ConnectorType
+	Targets                ConnectorTargets
+	SendingMode            *SendingMode
+	HasSheets              bool
+	HasUI                  bool
+	IdentityIDLabel        string
+	Icon                   string
+	TimeLayouts            TimeLayouts
+	FileExtension          string
+	SampleQuery            string
+	WebhooksPer            WebhooksPer
+	OAuth                  *OAuth
 }
 
 // ConnectorTargets represents the targets of a connector.
@@ -1055,7 +1054,6 @@ type Action struct {
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
-	DisplayedProperty        string
 	UserCursor               time.Time
 	Health                   Health
 	FileOrderingPropertyPath string

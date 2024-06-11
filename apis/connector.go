@@ -18,25 +18,24 @@ import (
 
 // Connector represents a connector.
 type Connector struct {
-	apis                       *APIs
-	connector                  *state.Connector
-	Name                       string
-	SourceDescription          string
-	DestinationDescription     string
-	TermForUsers               string
-	TermForGroups              string
-	Type                       ConnectorType
-	Targets                    Targets
-	SendingMode                *SendingMode
-	HasSheets                  bool
-	HasUI                      bool
-	IdentityIDLabel            string
-	SuggestedDisplayedProperty string
-	Icon                       string
-	FileExtension              string
-	SampleQuery                string
-	WebhooksPer                WebhooksPer
-	OAuth                      bool
+	apis                   *APIs
+	connector              *state.Connector
+	Name                   string
+	SourceDescription      string
+	DestinationDescription string
+	TermForUsers           string
+	TermForGroups          string
+	Type                   ConnectorType
+	Targets                Targets
+	SendingMode            *SendingMode
+	HasSheets              bool
+	HasUI                  bool
+	IdentityIDLabel        string
+	Icon                   string
+	FileExtension          string
+	SampleQuery            string
+	WebhooksPer            WebhooksPer
+	OAuth                  bool
 }
 
 // ConnectorType represents a connector type.

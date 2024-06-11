@@ -103,7 +103,6 @@ The `AppInfo` type describes information about the app connector:
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
-- `SuggestedDisplayedProperty`: suggestion for the property name to use as the displayed property. This field may be empty if there is no property to suggest, and it is not required to always exist as a property.
 - `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required.
 - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.

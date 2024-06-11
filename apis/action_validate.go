@@ -247,15 +247,6 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			return errors.BadRequest("identity property is longer than 1024 runes")
 		}
 	}
-	// Validate the displayed property.
-	if action.DisplayedProperty != "" {
-		if !types.IsValidPropertyName(action.DisplayedProperty) {
-			return errors.BadRequest("displayed property is not a valid property name")
-		}
-		if n := utf8.RuneCountInString(action.DisplayedProperty); n > 1024 {
-			return errors.BadRequest("displayed property is longer than 1024 runes")
-		}
-	}
 	// Validate the last change time property.
 	if action.LastChangeTimeProperty != "" {
 		if !types.IsValidPropertyName(action.LastChangeTimeProperty) {
@@ -431,18 +422,6 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 		if action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
-		}
-	}
-
-	// Validate the displayed property.
-	if action.DisplayedProperty != "" {
-		if c.Role != state.Source {
-			return errors.BadRequest("destination actions cannot have a displayed property")
-		}
-		if t := connector.Type; t == state.StreamType {
-			return errors.BadRequest("%s actions cannot have a displayed property", strings.ToLower(t.String()))
-		} else if eventBasedConn && target == state.Events {
-			return errors.BadRequest("%s actions importing events cannot have a displayed property", strings.ToLower(target.String()))
 		}
 	}
 

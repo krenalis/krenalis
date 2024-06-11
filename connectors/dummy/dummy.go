@@ -36,15 +36,14 @@ var _ interface {
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
-		Name:                       "Dummy",
-		Targets:                    chichi.Events | chichi.Users,
-		SourceDescription:          "import users from Dummy",
-		DestinationDescription:     "export users and send events to Dummy",
-		TermForUsers:               "users",
-		IdentityIDLabel:            "Dummy Unique ID",
-		SuggestedDisplayedProperty: "email",
-		Icon:                       icon,
-		SendingMode:                chichi.Combined,
+		Name:                   "Dummy",
+		Targets:                chichi.Events | chichi.Users,
+		SourceDescription:      "import users from Dummy",
+		DestinationDescription: "export users and send events to Dummy",
+		TermForUsers:           "users",
+		IdentityIDLabel:        "Dummy Unique ID",
+		Icon:                   icon,
+		SendingMode:            chichi.Combined,
 	}, New)
 }
 

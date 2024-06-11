@@ -297,7 +297,6 @@ type AddAction struct {
 	Settings                 []byte
 	TableName                string
 	IdentityProperty         string
-	DisplayedProperty        string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	FileOrderingPropertyPath string
@@ -336,7 +335,6 @@ func (state *State) addAction(n notification) {
 		Settings:                 e.Settings,
 		TableName:                e.TableName,
 		IdentityProperty:         e.IdentityProperty,
-		DisplayedProperty:        e.DisplayedProperty,
 		LastChangeTimeProperty:   e.LastChangeTimeProperty,
 		LastChangeTimeFormat:     e.LastChangeTimeFormat,
 		FileOrderingPropertyPath: e.FileOrderingPropertyPath,
@@ -923,7 +921,6 @@ type SetAction struct {
 	Settings                 []byte
 	TableName                string
 	IdentityProperty         string
-	DisplayedProperty        string
 	ResetUserCursor          bool
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
@@ -955,7 +952,6 @@ func (state *State) setAction(n notification) {
 		a.Settings = e.Settings
 		a.TableName = e.TableName
 		a.IdentityProperty = e.IdentityProperty
-		a.DisplayedProperty = e.DisplayedProperty
 		if e.ResetUserCursor {
 			a.UserCursor = time.Time{}
 		}

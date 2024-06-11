@@ -1,7 +1,6 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
 import { checkIfPropertyExists, updateMappingProperty, extractSpecialProperties } from './Action.helpers';
 import {
-	getDisplayedPropertyComboboxItems,
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
 	getLastChangeTimeComboboxItems,
@@ -91,7 +90,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const mappingListRef = useRef(null);
 	const identityPropertyListRef = useRef(null);
-	const displayedPropertyListRef = useRef(null);
 	const lastChangeTimePropertyListRef = useRef(null);
 	const isFirstCompilation = useRef(true);
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
@@ -99,7 +97,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const hasSpecialProperties = useMemo(() => {
 		return (
 			connection.isSource &&
-			(connection.isApp || connection.isDatabase || connection.isFileStorage || connection.isEventBased) &&
+			(connection.isDatabase || connection.isFileStorage || connection.isEventBased) &&
 			(actionType.Target === 'Users' || actionType.Target === 'Events')
 		);
 	}, [connection, actionType]);
@@ -149,24 +147,13 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (hasSpecialProperties && isFirstCompilation.current) {
-			// precompile the 'IdentityProperty', 'displayedProperty' and
-			// 'lastChangeTimeProperty' fields, if possible.
+			// precompile the 'IdentityProperty' and 'lastChangeTimeProperty'
+			// fields, if possible.
 			const a = { ...action };
-			if (connection.isApp) {
-				const suggestedDisplayedProperty = connection.connector.suggestedDisplayedProperty;
-				if (suggestedDisplayedProperty !== '') {
-					// check if the suggested displayed property exists in the
-					// input schema.
-					const flatSchema = flattenSchema(actionType.InputSchema);
-					if (flatSchema[suggestedDisplayedProperty]) {
-						a.DisplayedProperty = suggestedDisplayedProperty;
-					}
-				}
-			} else if (connection.isDatabase || connection.isFileStorage) {
+			if (connection.isDatabase || connection.isFileStorage) {
 				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 				if (hasIdColumn) {
 					a.IdentityProperty = 'id';
-					a.DisplayedProperty = 'id';
 					isFirstCompilation.current = false;
 				}
 				const hasLastChangeTimeProperty =
@@ -244,23 +231,15 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [action, flatSchema]);
 
-	const displayedProperty = useMemo<string>(() => {
-		if (!hasSpecialProperties || connection.isEventBased) {
-			return;
-		}
-		return checkIfPropertyExists(action.DisplayedProperty, flatSchema);
-	}, [action, flatSchema]);
-
 	const lastChangeTimePropertyError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
 			return checkIfPropertyExists(action.LastChangeTimeProperty, flatSchema);
 		}
 	}, [action, flatSchema]);
 
-	const { identityPropertyList, displayedPropertyList, lastChangeTimeList, mappingList } = useMemo(() => {
+	const { identityPropertyList, lastChangeTimeList, mappingList } = useMemo(() => {
 		return {
 			identityPropertyList: getIdentityPropertyComboboxItems(actionType.InputSchema),
-			displayedPropertyList: getDisplayedPropertyComboboxItems(actionType.InputSchema),
 			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.InputSchema),
 			mappingList: getSchemaComboboxItems(actionType.InputSchema),
 		};
@@ -311,18 +290,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		if (input.name === 'identityProperty') {
 			const a = { ...action };
 			a.IdentityProperty = value;
-			if (isFirstCompilation.current && a.DisplayedProperty === '') {
-				a.DisplayedProperty = value;
-			}
 			setAction(a);
 			if (isFirstCompilation.current) {
 				isFirstCompilation.current = false;
 			}
-			return;
-		} else if (input.name === 'displayedProperty') {
-			const a = { ...action };
-			a.DisplayedProperty = value;
-			setAction(a);
 			return;
 		} else if (input.name === 'lastChangeTimeProperty') {
 			const a = { ...action };
@@ -340,19 +311,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		const a = { ...action };
 		const value = e.target.value;
 		a.IdentityProperty = value;
-		if (isFirstCompilation.current && a.DisplayedProperty === '') {
-			a.DisplayedProperty = value;
-		}
 		setAction(a);
 		if (isFirstCompilation.current) {
 			isFirstCompilation.current = false;
 		}
-	};
-
-	const onUpdateDisplayedProperty = (e) => {
-		const a = { ...action };
-		a.DisplayedProperty = e.target.value;
-		setAction(a);
 	};
 
 	const onUpdateLastChangeTimeProperty = async (e) => {
@@ -461,31 +423,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								/>
 							</div>
 						)}
-						<div className='action__transformation-displayed-property'>
-							<div className='action__transformation-special-properties-label'>Displayed:</div>
-							{connection.isEventBased ? (
-								<SlInput
-									onSlInput={onUpdateDisplayedProperty}
-									value={action.DisplayedProperty}
-									disabled={isTransformationDisabled}
-									size='small'
-								/>
-							) : (
-								<ComboBoxInput
-									comboBoxListRef={displayedPropertyListRef}
-									onInput={onUpdateDisplayedProperty}
-									value={action.DisplayedProperty}
-									name='displayedProperty'
-									disabled={isTransformationDisabled}
-									className='action__transformation-input-property'
-									caret={true}
-									clearable={action.DisplayedProperty?.length > 0}
-									error={displayedProperty}
-									size='small'
-									helpText='An additional property displayed to distinguish a user'
-								/>
-							)}
-						</div>
 						{(connection.isFileStorage || connection.isDatabase) && (
 							<div className='action__transformation-last-change-time-property'>
 								<div className='action__transformation-last-change-time'>
@@ -568,11 +505,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					outputSchema={actionType.OutputSchema}
 				/>
 				<ComboBoxList ref={identityPropertyListRef} items={identityPropertyList} onSelect={onSelectProperty} />
-				<ComboBoxList
-					ref={displayedPropertyListRef}
-					items={displayedPropertyList}
-					onSelect={onSelectProperty}
-				/>
 				<ComboBoxList
 					ref={lastChangeTimePropertyListRef}
 					items={lastChangeTimeList}

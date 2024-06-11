@@ -37,14 +37,13 @@ var _ interface {
 
 func init() {
 	chichi.RegisterApp(chichi.AppInfo{
-		Name:                       "Klaviyo",
-		Targets:                    chichi.Events | chichi.Users,
-		SourceDescription:          "import clients as users from Klaviyo",
-		DestinationDescription:     "export users as clients and send events to Klaviyo",
-		TermForUsers:               "clients",
-		SuggestedDisplayedProperty: "email",
-		Icon:                       icon,
-		SendingMode:                chichi.Cloud,
+		Name:                   "Klaviyo",
+		Targets:                chichi.Events | chichi.Users,
+		SourceDescription:      "import clients as users from Klaviyo",
+		DestinationDescription: "export users as clients and send events to Klaviyo",
+		TermForUsers:           "clients",
+		Icon:                   icon,
+		SendingMode:            chichi.Cloud,
 	}, New)
 }
 
