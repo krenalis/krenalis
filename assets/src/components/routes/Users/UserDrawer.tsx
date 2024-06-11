@@ -110,15 +110,17 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	if (traits && traits.size > 0) {
 		const t = Array.from(traits);
 		for (const [key, value] of t) {
-			switch (key) {
-				case workspace.DisplayedProperties.Image:
-					userImage = value;
-				case workspace.DisplayedProperties.FirstName:
-					userFirstName = value;
-				case workspace.DisplayedProperties.LastName:
-					userLastName = value;
-				case workspace.DisplayedProperties.Information:
-					userInformation = value;
+			if (key == workspace.DisplayedProperties.Image) {
+				userImage = value;
+			}
+			if (key == workspace.DisplayedProperties.FirstName) {
+				userFirstName = value;
+			}
+			if (key == workspace.DisplayedProperties.LastName) {
+				userLastName = value;
+			}
+			if (key == workspace.DisplayedProperties.Information) {
+				userInformation = value;
 			}
 		}
 	}
