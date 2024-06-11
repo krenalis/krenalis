@@ -157,6 +157,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 				stats.Passed(statistics.Transformation)
 				stats.Passed(statistics.OutputValidation)
 				err = iw.Write(datastore.Identity{
+					Action:            action.ID,
 					ID:                user.ID,
 					Properties:        user.Properties,
 					DisplayedProperty: user.DisplayedProperty,

@@ -35,11 +35,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 	// Import users from Dummy.
 	t.Log("importing from Dummy...")
-	var dummy int
+	var dummy, dummyAction int
 	{
 
 		dummy = c.AddDummy("Dummy", chichitester.Source)
-		dummyAction := c.AddAction(dummy, "Users", chichitester.ActionToSet{
+		dummyAction = c.AddAction(dummy, "Users", chichitester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -71,7 +71,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Imports users from CSV.
-	var fs int
+	var fs, csvAction int
 	t.Log("importing from CSV file...")
 	{
 		// Determine the storage directory and assert that such directory exists.
@@ -87,7 +87,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
 		fs = c.AddSourceFilesystem(storageDir)
-		csvAction := c.AddAction(fs, "Users", chichitester.ActionToSet{
+		csvAction = c.AddAction(fs, "Users", chichitester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
 			InSchema: types.Object([]types.Property{
@@ -127,7 +127,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Import users and events from a JavaScript connection.
-	var javaScript int
+	var javaScript, javascriptUsersAction int
 	t.Log("importing users and events...")
 	{
 		// Add a JavaScript connection with two actions (one for importing
@@ -144,7 +144,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			c.AddAction(javaScript, "Users", chichitester.ActionToSet{
+			javascriptUsersAction = c.AddAction(javaScript, "Users", chichitester.ActionToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
 				InSchema: types.Type{},
@@ -220,6 +220,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		dummyIdentity := identities[0]
 		dummyIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
+			Action:            dummyAction,
 			Connection:        dummy,
 			IdentityId:        chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
 			DisplayedProperty: "kbuessen0@example.com",
@@ -231,6 +232,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		csvIdentity := identities[1]
 		assertEqualIdentity(csvIdentity, chichitester.UserIdentity{
+			Action:     csvAction,
 			Connection: fs,
 			IdentityId: chichitester.LabelValue{
 				Label: "ID",
@@ -246,6 +248,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity := identities[2]
 		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
+			Action:            javascriptUsersAction,
 			Connection:        javaScript,
 			IdentityId:        chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
 			DisplayedProperty: "kbuessen0@example.com",

@@ -62,6 +62,10 @@ const useConnectionIdentities = () => {
 				type: 'DateTime',
 			},
 			{
+				name: 'Action',
+				explanation: 'The ID of the action which imported this identity (TODO: this will be revised)',
+			},
+			{
 				name: identities[0].IdentityId.Label,
 			},
 		];
@@ -80,7 +84,7 @@ const useConnectionIdentities = () => {
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
 			const row: GridRow = {
-				cells: [identity.LastChangeTime, identity.IdentityId.Value],
+				cells: [identity.LastChangeTime, identity.Action, identity.IdentityId.Value],
 				key: identity.IdentityId.Value,
 			};
 			if (isDisplayedPropertyDefined) {

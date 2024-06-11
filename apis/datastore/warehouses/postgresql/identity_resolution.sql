@@ -34,7 +34,13 @@ AS $$
     SELECT
         i1.__pk__,
         i2.__pk__,
-        {{ same_user }} as same_user -- This placeholder will be replaced by Chichi:
+        (
+            (i1.__connection__ = i2.__connection__
+                AND i1.__identity_id__ = i2.__identity_id__
+                AND i1.__is_anonymous__ = i2.__is_anonymous__
+            )
+            OR {{ same_user }} -- This placeholder will be replaced by Chichi:
+        ) as same_user
     FROM
         _user_identities i1
             CROSS JOIN

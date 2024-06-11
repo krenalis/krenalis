@@ -121,6 +121,7 @@ interface UserIdentityLabelValue {
 }
 
 interface UserIdentity {
+	Action: number;
 	Connection: number;
 	IdentityId: UserIdentityLabelValue;
 	DisplayedProperty: string;

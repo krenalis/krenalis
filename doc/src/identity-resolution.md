@@ -20,9 +20,15 @@ The Identity Resolution is executed:
 
 ## Same User Criterion
 
-This is the definition: **given two user identities, they correspond to the *same user* if (1) they have at least one *identifier* whose value matches (that is, has the same value[^samevalue]), and (2) one or both identities have `NULL` value for each identifier with higher priority than the first identifier that has matched.**
+Given two user identities, they correspond to the *same user* **if at least one** of those cases applies:
 
+* they have been imported by the same connection, while they have the same identity ID and are both anonymous or both non-anonymous;[^differentactions]
+* they have at least one [identifier](#identifiers) whose value matches (that is, has the same value[^samevalue]), and one or both identities have a `NULL` value for each identifier with higher priority than the first identifier that has matched.
+
+[^differentactions]: this handles the case when a user identity have been imported by two different actions of the same connection.
 [^samevalue]: same value means, currently (in the PostgreSQL driver): cast to `text` and then compare with `=`.
+
+### An Example
 
 In this example, with two user identities (A and B) and three identifiers (where #1 has the higher priority):
 

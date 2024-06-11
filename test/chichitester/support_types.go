@@ -136,6 +136,7 @@ type User struct {
 }
 
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
+	Action            int
 	Connection        int
 	IdentityId        LabelValue
 	DisplayedProperty string

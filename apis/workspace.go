@@ -1751,6 +1751,7 @@ type labelValue struct {
 // https://github.com/open2b/chichi/issues/791.
 type identity struct {
 	Connection        int
+	Action            int
 	IdentityId        labelValue // zero struct for identities imported from anonymous events.
 	DisplayedProperty string     // empty string for identities with no displayed property.
 	AnonymousIds      []string   // nil for identities not imported from events.
@@ -1773,8 +1774,15 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
-		Properties: []string{"__connection__", "__identity_id__", "__is_anonymous__",
-			"__anonymous_ids__", "__last_change_time__", "__displayed_property__"},
+		Properties: []string{
+			"__action__",
+			"__is_anonymous__",
+			"__identity_id__",
+			"__connection__",
+			"__anonymous_ids__",
+			"__displayed_property__",
+			"__last_change_time__",
+		},
 		Filter:  filter,
 		OrderBy: "__pk__",
 		First:   first,
@@ -1798,6 +1806,15 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		if !ok {
 			// The connection for this user identity no longer exists, so skip
 			// this identity.
+			continue
+		}
+
+		// Retrieve the action.
+		actionID := record["__action__"].(int)
+		_, ok = conn.Action(actionID)
+		if !ok {
+			// The action for this user identity no longer exists, so skip this
+			// identity.
 			continue
 		}
 
@@ -1854,6 +1871,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 
 		identities = append(identities, identity{
 			Connection: connID,
+			Action:     actionID,
 			IdentityId: labelValue{
 				Label: identityIDLabel,
 				Value: identityID,

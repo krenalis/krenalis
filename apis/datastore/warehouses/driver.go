@@ -162,9 +162,10 @@ type Warehouse interface {
 	// ones. cols are the columns whose values are present in the rows and contain
 	// at least the columns:
 	//
-	//   __connection__
-	//   __identity_id__
+	//   __action__
 	//   __is_anonymous__
+	//   __identity_id__
+	//   __connection__
 	//   __displayed_property__
 	//   __last_change_time__
 	//

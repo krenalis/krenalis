@@ -256,6 +256,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 													)}
 												</div>
 											</div>
+											<div className='user-drawer__action'>
+												Imported from action: <code>{identity.Action}</code>
+											</div>
 											<div className='user-drawer__identity-id'>
 												{identity.IdentityId.Label}: <code>{identity.IdentityId.Value}</code>
 											</div>

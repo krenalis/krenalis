@@ -327,6 +327,7 @@
 }
 
 .user-drawer__identity-id,
+.user-drawer__action,
 .user-drawer__identity-displayed-property,
 .user-drawer__identity-anonymous-ids {
 	font-weight: 500;

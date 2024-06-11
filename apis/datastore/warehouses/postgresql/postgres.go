@@ -434,13 +434,13 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		return warehouses.Error(err)
 	}
 
-	var keys = []string{"__connection__", "__identity_id__", "__is_anonymous__"}
+	var keys = []string{"__action__", "__identity_id__", "__is_anonymous__"}
 
 	// Merge the temporary table's rows with the destination table's rows.
 	b.Reset()
 	b.WriteString("MERGE INTO \"_user_identities\" d\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" s\nON d.\"__connection__\" = s.\"__connection__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
+	b.WriteString("\" s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
 	b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
 	j := 0
 	for i, c := range columns {

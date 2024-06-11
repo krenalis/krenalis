@@ -197,11 +197,12 @@ func columnByProperty(schema types.Type) map[string]warehouses.Column {
 func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
 	columns := map[string]warehouses.Column{
 		"__pk__":                 {Name: "__pk__", Type: types.Int(32)},
-		"__connection__":         {Name: "__connection__", Type: types.Int(32)},
-		"__identity_id__":        {Name: "__identity_id__", Type: types.Text()},
+		"__action__":             {Name: "__action__", Type: types.Int(32)},
 		"__is_anonymous__":       {Name: "__is_anonymous__", Type: types.Boolean()},
-		"__displayed_property__": {Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
+		"__identity_id__":        {Name: "__identity_id__", Type: types.Text()},
+		"__connection__":         {Name: "__connection__", Type: types.Int(32)},
 		"__anonymous_ids__":      {Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
+		"__displayed_property__": {Name: "__displayed_property__", Type: types.Text().WithCharLen(40)},
 		"__last_change_time__":   {Name: "__last_change_time__", Type: types.DateTime()},
 		"__gid__":                {Name: "__gid__", Type: types.UUID()},
 	}
