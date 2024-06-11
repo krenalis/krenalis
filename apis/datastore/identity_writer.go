@@ -51,7 +51,6 @@ func newIdentityWriter(store *Store, connection int, schema types.Type, ack Iden
 		connection: connection,
 		ack:        ack,
 		columns:    map[string]warehouses.Column{},
-		rows:       make([]map[string]any, 0),
 	}
 	if schema.Valid() {
 		iw.flatter = newFlatter(schema, store.userColumnByProperty())
@@ -72,6 +71,9 @@ func (iw *IdentityWriter) Close(ctx context.Context) error {
 		return nil
 	}
 	iw.closed = true
+	if iw.rows == nil {
+		return nil
+	}
 	columns := make([]warehouses.Column, 6+len(iw.columns))
 	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
 	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Text()}
