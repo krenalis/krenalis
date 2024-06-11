@@ -409,8 +409,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
 	}
-	b.WriteString("B'0'::bit(" + strconv.Itoa(len(columns)) + ") AS \"$v\"," +
-		"FALSE AS \"$deleted\" FROM \"_user_identities\"\nWITH NO DATA")
+	b.WriteString("FALSE AS \"$deleted\" FROM \"_user_identities\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
@@ -423,12 +422,11 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	}()
 
 	// Copy the rows into the temporary table.
-	columnNames := make([]string, len(columns)+2)
+	columnNames := make([]string, len(columns)+1)
 	for i, c := range columns {
 		columnNames[i] = c.Name
 	}
-	columnNames[len(columns)] = `$v`
-	columnNames[len(columns)+1] = `$deleted`
+	columnNames[len(columns)] = `$deleted`
 	_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
 	if err != nil {
 		return warehouses.Error(err)
@@ -443,7 +441,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	b.WriteString("\" s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
 	b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
 	j := 0
-	for i, c := range columns {
+	for _, c := range columns {
 		if slices.Contains(keys, c.Name) {
 			continue
 		}
@@ -452,7 +450,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		}
 		b.WriteString("\n\"")
 		b.WriteString(c.Name)
-		b.WriteString("\" = CASE WHEN get_bit(\"$v\"," + strconv.Itoa(i) + ") = 0 THEN ")
+		b.WriteString(`" = `)
 		if c.Name == "__anonymous_ids__" {
 			b.WriteString(`CASE WHEN s."__anonymous_ids__"[1] = ANY(d."__anonymous_ids__") THEN d."__anonymous_ids__" ELSE d."__anonymous_ids__" || s."__anonymous_ids__"[1] END`)
 		} else {
@@ -460,9 +458,6 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 			b.WriteString(c.Name)
 			b.WriteString(`"`)
 		}
-		b.WriteString(` ELSE d."`)
-		b.WriteString(c.Name)
-		b.WriteString(`" END`)
 		j++
 	}
 	b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
@@ -772,7 +767,6 @@ type copyForIdentities struct {
 	columns []warehouses.Column
 	rows    []map[string]any
 	values  []any
-	noVoid  string
 }
 
 // newCopyForIdentities returns a pgx.CopyFromSource implementation used to copy
@@ -781,8 +775,7 @@ func newCopyForIdentities(columns []warehouses.Column, rows []map[string]any) pg
 	c := &copyForIdentities{
 		columns: columns,
 		rows:    rows,
-		values:  make([]any, len(columns)+2),
-		noVoid:  strings.Repeat("0", len(columns)),
+		values:  make([]any, len(columns)+1),
 	}
 	return c
 }
@@ -793,17 +786,9 @@ func (c *copyForIdentities) Next() bool {
 
 func (c *copyForIdentities) Values() ([]any, error) {
 	row := c.rows[0]
-	var ok bool
-	var void string
 	for i, column := range c.columns {
-		c.values[i], ok = row[column.Name]
-		if ok {
-			void += "0"
-		} else {
-			void += "1"
-		}
+		c.values[i] = row[column.Name]
 	}
-	c.values[len(c.values)-2] = void
 	if deleted, _ := row["$deleted"].(bool); deleted {
 		c.values[len(c.values)-1] = true
 	} else {
