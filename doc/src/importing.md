@@ -35,7 +35,29 @@ Actions on **file storage** and **database** source connections **must** indicat
 * `JSON`
 * `Text`
 
-> It is advisable that **the user identifier be unique** for each user found on the source connection (be it a file or a set of values returned by a database query), as this value is used to identify the identities. If you use an identifier with non-unique values, this can lead to an unexpected overwriting of connection's identities.
+### Choice of User Identifier
+
+It is advisable that **the user identifier be unique** for each user found on the source connection (be it a file or a set of values returned by a database query), as this value is used to identify the identities. If you use an identifier with non-unique values, this can lead to an unexpected overwriting of connection's identities.
+
+For example, if a file has these properties:
+
+| Email | SSN  | First Name |
+| ----- | ---- | ---------- |
+| a@b ⚠️ | 123  | John       |
+| c@d   | 456  | Paul       |
+| a@b ⚠️ | 789  | Jake       |
+
+it is recommended to use the "SSN" property as User Identifier, since it uniquely identifies a user, while the "Email" property is used by multiple users and would cause John's data to be overwritten with Jake's.
+
+### Choice of User Identifier With Multiple Actions
+
+It is important to note that **identities with the same User Identifier value, if they come from distinct actions from the same connection, are put together during the [Identity Resolution](./identity-resolution.md#same-user-criterion) process**.
+
+This means that, if you have **multiple actions for the same connection**, there may be two distinct scenarios:
+
+* if the actions all read **a property that has the same meaning and the same data set on all the actions**, then it is desirable to **choose that property as User Identifier**, so that the Identity Resolution puts the corresponding identities together
+
+* if the action reads **properties with different meanings**, then it is important that the set of values for each property is different from the set of values of the others (for example, one is a tax code, the other is an email), to avoid unexpected collisions and consequent incorrect merges between multiple identities. If this condition cannot be ensured, then **it is recommended to create separate connections to import users**, so that the merge is then handled exclusively by the identifiers of the Identity Resolution.
 
 ## Last change time column
 
