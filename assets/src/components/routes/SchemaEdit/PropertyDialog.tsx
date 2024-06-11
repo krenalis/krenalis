@@ -256,14 +256,14 @@ const PropertyDialog = ({
 			try {
 				onEditProperty(property, primarySource);
 			} catch (err) {
-				setNameError(err);
+				setNameError(err.message);
 				return;
 			}
 		} else {
 			try {
 				onAddProperty(property, primarySource);
 			} catch (err) {
-				setNameError(err);
+				setNameError(err.message);
 				return;
 			}
 		}

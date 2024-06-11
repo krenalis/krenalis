@@ -114,13 +114,6 @@ const useSchemaEdit = (
 			rePaths.current[key] = null;
 		}
 
-		// Update the primary sources.
-		const sources = { ...primarySources.current };
-		if (primarySource) {
-			sources[key] = primarySource;
-		}
-		primarySources.current = sources;
-
 		const s = { ...editableSchema };
 
 		// Check if the key already exists (a renamed property, changes
@@ -130,6 +123,11 @@ const useSchemaEdit = (
 		let counter = 2;
 		while (s[k] != null) {
 			k = `${key}-${counter}`;
+		}
+
+		// Update the primary sources.
+		if (primarySource) {
+			primarySources.current[k] = primarySource;
 		}
 
 		s[k] = {
@@ -222,13 +220,13 @@ const useSchemaEdit = (
 		}
 
 		// Update the primary sources.
-		const sources = { ...primarySources.current };
 		if (primarySource) {
-			sources[key] = primarySource;
-		} else if (sources[key]) {
-			delete sources[key];
+			primarySources.current[key] = primarySource;
+		} else {
+			if (primarySources.current[key]) {
+				delete primarySources.current[key];
+			}
 		}
-		primarySources.current = sources;
 
 		const editedProperty = {
 			indentation: current.indentation,
@@ -278,6 +276,9 @@ const useSchemaEdit = (
 		if (isAlreadyApplied) {
 			deletedAppliedKeys.current.push(propertyKey);
 		}
+		if (primarySources.current[propertyKey]) {
+			delete primarySources.current[propertyKey];
+		}
 		delete schema[propertyKey];
 		setEditableSchema(schema);
 	};
@@ -323,10 +324,28 @@ const useSchemaEdit = (
 	};
 
 	const onConfirmChanges = async () => {
+		// compute the real paths of the primary sources (currently they
+		// are based on the editable schema keys).
+		const sources: PrimarySources = {};
+		for (const k in primarySources.current) {
+			if (!primarySources.current.hasOwnProperty(k)) {
+				continue;
+			}
+			let path: string = '';
+			let fragments = k.split('.');
+			for (let i = 0; i < fragments.length; i++) {
+				if (i !== 0) {
+					path += '.';
+				}
+				const key = fragments.slice(0, i + 1).join('.');
+				path += editableSchema[key].name;
+			}
+			sources[path] = primarySources.current[k];
+		}
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(editableSchema);
 		try {
-			await api.workspaces.changeUserSchema(s, primarySources.current, rePaths.current);
+			await api.workspaces.changeUserSchema(s, sources, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);
