@@ -68,23 +68,6 @@ func (processor *processor) Close() {
 	processor.close.cancelCtx()
 }
 
-// actions returns the app destination actions that are enabled, have the Events
-// target, and their connection is enabled.
-func (processor *processor) actions() []*state.Action {
-	var actions []*state.Action
-	for _, action := range processor.state.Actions() {
-		if !action.Enabled || action.Target != state.Events {
-			continue
-		}
-		c := action.Connection()
-		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.AppType {
-			continue
-		}
-		actions = append(actions, action)
-	}
-	return actions
-}
-
 func (processor *processor) worker() {
 	for {
 		ctx := processor.close.ctx
