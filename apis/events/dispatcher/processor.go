@@ -111,8 +111,14 @@ func (processor *processor) worker() {
 				continue
 			}
 			ctx := context.Background()
-			_, err = processor.db.Exec(ctx, "INSERT INTO event_dispatching (action, request) VALUES ($1, $2)", event.action.ID, request)
+			_, err = processor.db.Exec(ctx, "INSERT INTO event_dispatching (action, event, request) VALUES ($1, $2, $3)", event.action.ID, event.Id[:], request)
 			if err != nil {
+				if postgres.IsDuplicateKeyValue(err) {
+					// The event is already present in the database. This happens if it was previously inserted but
+					// failed to signal that the event has been processed for this action.
+					// There's no need to route it to the dispatcher since the restoration procedure handles it.
+					continue
+				}
 				slog.Error("cannot persist event request", "error", err)
 				continue
 			}

@@ -143,7 +143,6 @@ CREATE TABLE actions_stats (
     PRIMARY KEY (action, timeslot)
 );
 
-
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
     value char(32) NOT NULL,
@@ -170,7 +169,9 @@ INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-
 
 CREATE TABLE event_dispatching (
     action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
-    request bytea
+    event bytea NOT NULL,
+    request bytea,
+    PRIMARY KEY (action, event)
 );
 
 CREATE TABLE event_payloads (
