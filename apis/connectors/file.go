@@ -520,6 +520,7 @@ func (rw *recordWriter) Record(record []any) error {
 		}
 		rw.records = append(rw.records, rd)
 	} else {
+		// Call the rw.yield iterator with the record.
 		if rw.record.Properties != nil || rw.record.Err != nil {
 			if !rw.yield(rw.record) {
 				rw.record.Properties = nil
@@ -527,7 +528,6 @@ func (rw *recordWriter) Record(record []any) error {
 				return errRecordStop
 			}
 		}
-		// Call the rw.write function to store the record.
 		rw.record = Record{Properties: map[string]any{}}
 		for i, p := range rw.properties {
 			j := rw.columnIndexOf[i]
@@ -598,6 +598,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		}
 		rw.records = append(rw.records, rd)
 	} else {
+		// Call the rw.yield iterator with the record.
 		if rw.record.Properties != nil || rw.record.Err != nil {
 			if !rw.yield(rw.record) {
 				rw.record.Properties = nil
@@ -605,7 +606,6 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				return errRecordStop
 			}
 		}
-		// Call the rw.write function to store the record.
 		rw.record = Record{Properties: record}
 		for _, p := range rw.properties {
 			value, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
@@ -681,6 +681,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 		}
 		rw.records = append(rw.records, rd)
 	} else {
+		// Call the rw.yield iterator with the record.
 		if rw.record.Properties != nil || rw.record.Err != nil {
 			if !rw.yield(rw.record) {
 				rw.record.Properties = nil
@@ -688,7 +689,6 @@ func (rw *recordWriter) RecordString(record []string) error {
 				return errRecordStop
 			}
 		}
-		// Call the rw.write function to store the record.
 		rw.record = Record{Properties: make(map[string]any, len(rw.properties))}
 		for i, p := range rw.properties {
 			j := rw.columnIndexOf[i]
