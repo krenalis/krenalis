@@ -130,6 +130,8 @@ The following connection parameters are supported:
   - clientConfigFile: specifies the location of the client configuration json file.
     In this file you can configure Easy Logging feature.
 
+  - disableSamlURLCheck: disables the SAML URL check. Default value is false.
+
 All other parameters are interpreted as session parameters (https://docs.snowflake.com/en/sql-reference/parameters.html).
 For example, the TIMESTAMP_OUTPUT_FORMAT session parameter can be set by adding:
 
@@ -429,6 +431,22 @@ Example table definition:
 
 The data not have any corresponding schema, so values in table may be slightly different.
 
+### Semistructured types
+
+Semistuctured variants, objects and arrays are always represented as strings for scanning:
+
+		rows, err := db.Query("SELECT {'a': 'b'}::OBJECT")
+		// handle error
+		defer rows.Close()
+		rows.Next()
+		var v string
+		err := rows.Scan(&v)
+
+When inserting, a marker indicating correct type must be used, for example:
+
+	db.Exec("CREATE TABLE test_object_binding (obj OBJECT)")
+	db.Exec("INSERT INTO test_object_binding SELECT (?)", DataTypeObject, "{'s': 'some string'}")
+
 ### Structured types
 
 Structured types differentiate from semistructured types by having specific schema.
@@ -481,6 +499,8 @@ If you want to scan array of structs, you have to use a helper function ScanArra
 
 	var res map[string]*simpleObject
 	err := rows.Scan(ScanMapOfScanners(&res))
+
+## Using higher precision numbers
 
 The following example shows how to retrieve very large values using the math/big
 package. This example retrieves a large INTEGER value to an interface and then

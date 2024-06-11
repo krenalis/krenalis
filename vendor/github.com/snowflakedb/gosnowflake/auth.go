@@ -428,7 +428,8 @@ func createRequestBody(sc *snowflakeConn, sessionParameters map[string]interface
 			sc.cfg.Application,
 			sc.cfg.Account,
 			sc.cfg.User,
-			sc.cfg.Password)
+			sc.cfg.Password,
+			sc.cfg.DisableSamlURLCheck)
 		if err != nil {
 			return nil, err
 		}
@@ -479,7 +480,7 @@ func prepareJWTToken(config *Config) (string, error) {
 	}
 	hash := sha256.Sum256(pubBytes)
 
-	accountName := strings.ToUpper(config.Account)
+	accountName := extractAccountName(config.Account)
 	userName := strings.ToUpper(config.User)
 
 	issueAtTime := time.Now().UTC()

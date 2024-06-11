@@ -107,6 +107,8 @@ type Config struct {
 	ClientConfigFile string // File path to the client configuration json file
 
 	DisableConsoleLogin ConfigBool // Indicates whether console login should be disabled
+
+	DisableSamlURLCheck ConfigBool // Indicates whether the SAML URL check should be disabled
 }
 
 // Validate enables testing if config is correct.
@@ -266,6 +268,9 @@ func DSN(cfg *Config) (dsn string, err error) {
 	}
 	if cfg.DisableConsoleLogin != configBoolNotSet {
 		params.Add("disableConsoleLogin", strconv.FormatBool(cfg.DisableConsoleLogin != ConfigBoolFalse))
+	}
+	if cfg.DisableSamlURLCheck != configBoolNotSet {
+		params.Add("disableSamlURLCheck", strconv.FormatBool(cfg.DisableSamlURLCheck != ConfigBoolFalse))
 	}
 
 	dsn = fmt.Sprintf("%v:%v@%v:%v", url.QueryEscape(cfg.User), url.QueryEscape(cfg.Password), cfg.Host, cfg.Port)
@@ -770,6 +775,17 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 			} else {
 				cfg.DisableConsoleLogin = ConfigBoolFalse
 			}
+		case "disableSamlURLCheck":
+			var vv bool
+			vv, err = strconv.ParseBool(value)
+			if err != nil {
+				return
+			}
+			if vv {
+				cfg.DisableSamlURLCheck = ConfigBoolTrue
+			} else {
+				cfg.DisableSamlURLCheck = ConfigBoolFalse
+			}
 		default:
 			if cfg.Params == nil {
 				cfg.Params = make(map[string]*string)
@@ -890,4 +906,12 @@ func parsePrivateKeyFromFile(path string) (*rsa.PrivateKey, error) {
 		return nil, fmt.Errorf("interface convertion. expected type *rsa.PrivateKey, but got %T", privateKey)
 	}
 	return pk, nil
+}
+
+func extractAccountName(rawAccount string) string {
+	posDot := strings.Index(rawAccount, ".")
+	if posDot > 0 {
+		return strings.ToUpper(rawAccount[:posDot])
+	}
+	return strings.ToUpper(rawAccount)
 }
