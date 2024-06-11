@@ -388,6 +388,15 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	return nil
 }
 
+// immutableMergeIdentitiesColumns are columns in the merge of identities that
+// are the immutable.
+var immutableMergeIdentitiesColumns = []string{
+	"__action__",
+	"__identity_id__",
+	"__is_anonymous__",
+	"__connection__",
+}
+
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
@@ -432,8 +441,6 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		return warehouses.Error(err)
 	}
 
-	var keys = []string{"__action__", "__identity_id__", "__is_anonymous__"}
-
 	// Merge the temporary table's rows with the destination table's rows.
 	b.Reset()
 	b.WriteString("MERGE INTO \"_user_identities\" d\nUSING \"")
@@ -442,7 +449,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
 	j := 0
 	for _, c := range columns {
-		if slices.Contains(keys, c.Name) {
+		if slices.Contains(immutableMergeIdentitiesColumns, c.Name) {
 			continue
 		}
 		if j > 0 {
