@@ -643,22 +643,6 @@ func asInt64(v any) (int64, bool) {
 	return 0, false
 }
 
-// validateStringProperty validates a string property like
-// normalizeDatabaseFileProperty does.
-func validateStringProperty(p types.Property, s string) error {
-	if !utf8.ValidString(s) {
-		return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
-			errors.Abbreviate(s, 20), p.Name)
-	}
-	if l, ok := p.Type.ByteLen(); ok && len(s) > l {
-		return newNormalizationErrorf(p.Name, "has value %q that is longer than %d bytes", errors.Abbreviate(s, 20), l)
-	}
-	if l, ok := p.Type.CharLen(); ok && utf8.RuneCountInString(s) > l {
-		return newNormalizationErrorf(p.Name, "has value %q that is longer than %d characters", errors.Abbreviate(s, 20), l)
-	}
-	return nil
-}
-
 // dateTimeFromUnixInt returns the local Time corresponding to the provided Unix
 // time. Unix time is expressed in seconds, milliseconds, microseconds or
 // nanoseconds according to layout.

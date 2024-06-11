@@ -512,8 +512,8 @@ func (rw *recordWriter) Record(record []any) error {
 	if rw.yield == nil {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
-		for i, c := range rw.properties {
-			rd[c.Name], err = normalize(c.Name, c.Type, record[i], c.Nullable, rw.timeLayouts)
+		for i, p := range rw.properties {
+			rd[p.Name], err = normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				return err
 			}
@@ -529,14 +529,14 @@ func (rw *recordWriter) Record(record []any) error {
 		}
 		// Call the rw.write function to store the record.
 		rw.record = Record{Properties: map[string]any{}}
-		for i, c := range rw.properties {
+		for i, p := range rw.properties {
 			j := rw.columnIndexOf[i]
-			value, err := normalize(c.Name, c.Type, record[j], c.Nullable, rw.timeLayouts)
+			value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[c.Name] = value
+			rw.record.Properties[p.Name] = value
 		}
 		// Parse the identity property.
 		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
@@ -590,8 +590,8 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.yield == nil {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
-		for _, c := range rw.properties {
-			rd[c.Name], err = normalize(c.Name, c.Type, record[c.Name], c.Nullable, rw.timeLayouts)
+		for _, p := range rw.properties {
+			rd[p.Name], err = normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				return err
 			}
@@ -607,13 +607,13 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		}
 		// Call the rw.write function to store the record.
 		rw.record = Record{Properties: record}
-		for _, c := range rw.properties {
-			value, err := normalize(c.Name, c.Type, record[c.Name], c.Nullable, rw.timeLayouts)
+		for _, p := range rw.properties {
+			value, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[c.Name] = value
+			rw.record.Properties[p.Name] = value
 		}
 		// Parse the identity property.
 		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
@@ -673,12 +673,11 @@ func (rw *recordWriter) RecordString(record []string) error {
 	if rw.yield == nil {
 		// Store the record in the records field.
 		rd := make(map[string]any, len(rw.properties))
-		for i, c := range rw.properties {
-			err = validateStringProperty(c, record[i])
+		for i, p := range rw.properties {
+			rd[p.Name], err = normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				return err
 			}
-			rd[c.Name] = record[i]
 		}
 		rw.records = append(rw.records, rd)
 	} else {
@@ -691,15 +690,14 @@ func (rw *recordWriter) RecordString(record []string) error {
 		}
 		// Call the rw.write function to store the record.
 		rw.record = Record{Properties: make(map[string]any, len(rw.properties))}
-		for i, c := range rw.properties {
+		for i, p := range rw.properties {
 			j := rw.columnIndexOf[i]
-			value := record[j]
-			err = validateStringProperty(c, value)
+			value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[c.Name] = value
+			rw.record.Properties[p.Name] = value
 		}
 		// Parse the identity property.
 		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
