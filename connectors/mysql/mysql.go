@@ -38,7 +38,7 @@ var _ interface {
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:        "MySQL",
-		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
+		SampleQuery: "SELECT *\nFROM users\nLIMIT ${limit}\n",
 		Icon:        icon,
 	}, New)
 }

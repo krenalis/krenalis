@@ -40,7 +40,7 @@ var _ interface {
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:        "PostgreSQL",
-		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
+		SampleQuery: "SELECT *\nFROM users\nLIMIT ${limit}\n",
 		Icon:        icon,
 	}, New)
 }
