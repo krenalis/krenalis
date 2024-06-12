@@ -378,13 +378,12 @@ func (rr *recordReader) Record(ctx context.Context) (string, []any, error) {
 // last change time property.
 func newRecordWriter(connector string, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
-		connector:       connector,
-		schema:          schema,
-		startTime:       startTime,
-		limit:           limit,
-		textColumnsOnly: true,
-		timeLayouts:     layout,
-		records:         []map[string]any{},
+		connector:   connector,
+		schema:      schema,
+		startTime:   startTime,
+		limit:       limit,
+		timeLayouts: layout,
+		records:     []map[string]any{},
 	}
 	if identityProperty != "" {
 		rw.identityProperty.name = identityProperty
@@ -413,7 +412,6 @@ type recordWriter struct {
 	properties       []types.Property // schema's properties, or the file's columns if a schema has not been provided
 	columnIndexOf    map[int]int      // map a property index in the schema to the corresponding file's column
 	columns          int              // number of file's columns
-	textColumnsOnly  bool
 	identityProperty struct {
 		name  string
 		typ   types.Type
@@ -448,9 +446,6 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	for i, c := range columns {
 		columnByName[c.Name] = c
 		columnIndex[c.Name] = i
-		if rw.textColumnsOnly {
-			rw.textColumnsOnly = c.Type.Kind() == types.TextKind
-		}
 	}
 	// Validate the identity property.
 	if name := rw.identityProperty.name; name != "" {
@@ -640,9 +635,6 @@ func (rw *recordWriter) RecordString(record []string) error {
 	}
 	if len(record) != rw.columns {
 		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
-	}
-	if !rw.textColumnsOnly {
-		return fmt.Errorf("connector %s has called RecordString when there are non-text columns", rw.connector)
 	}
 	if rw.yield == nil {
 		// Store the record in the records field.
