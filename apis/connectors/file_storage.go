@@ -114,7 +114,18 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	}
 
 	rw := newRecordWriter(file.Name, types.Type{}, "", LastChangeTimeProperty{}, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
+	var records []map[string]any
+	var recordErr error
+	rw.setYieldFunc(func(record Record) bool {
+		if record.Err != nil {
+			recordErr = record.Err
+			return false
+		}
+		records = append(records, record.Properties)
+		return true
+	})
 	err = _file.Read(ctx, r, sheet, rw)
+	rw.close()
 	if err != nil && err != errRecordStop {
 		if err == chichi.ErrSheetNotExist {
 			err = ErrSheetNotExist
@@ -124,10 +135,13 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	if err = r.Close(); err != nil {
 		return nil, nil, err
 	}
+	if recordErr != nil {
+		return nil, nil, recordErr
+	}
 	if rw.properties == nil {
 		return nil, nil, ErrNoColumns
 	}
-	return rw.properties, rw.records, nil
+	return rw.properties, records, nil
 }
 
 // Sheets returns the sheets of the file with the provided name. Sheet names

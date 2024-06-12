@@ -258,7 +258,6 @@ type fileRecords struct {
 	rc     io.ReadCloser
 	sheet  string
 	inner  chichi.File
-	last   bool
 	err    error
 	closed bool
 }
@@ -275,14 +274,11 @@ func (r *fileRecords) All(ctx context.Context) Seq[Record] {
 				r.err = ErrNoColumns
 			}
 		}()
-		r.rw.yield = yield
+		r.rw.setYieldFunc(yield)
 		err := r.inner.Read(ctx, r.rc, r.sheet, r.rw)
+		r.rw.close()
 		if err == errRecordStop {
 			return
-		}
-		if r.rw.record.Properties != nil || r.rw.record.Err != nil {
-			r.last = true
-			r.rw.yield(r.rw.record)
 		}
 		if err != nil {
 			if err == chichi.ErrSheetNotExist {
@@ -310,7 +306,7 @@ func (r *fileRecords) Err() error {
 }
 
 func (r *fileRecords) Last() bool {
-	return r.last
+	return r.rw.last()
 }
 
 var (
@@ -370,12 +366,16 @@ func (rr *recordReader) Record(ctx context.Context) (string, []any, error) {
 	}
 }
 
-// newRecordWriter returns a new record writer that writes at most limit
-// records. If the yield function is not nil, it calls the yield function for
-// each record, otherwise it stores the records in the records field.
-// storageLastChangeTime is the lat change time provided by the storage
-// connector, and it is used in the case when the file columns do not specify a
-// last change time property.
+// newRecordWriter returns a new record writer implementing the RecordWriter
+// interface. It calls the yield function, which must be set by calling the
+// setYieldFunc method, for each record written, up to a maximum of limit
+// records.
+//
+// storageLastChangeTime is the last change time provided by the storage
+// connector, used when the file columns do not specify a last change time
+// property.
+//
+// The close method should be called when there are no more records to write.
 func newRecordWriter(connector string, schema types.Type, identityProperty string, lastChangeTime LastChangeTimeProperty, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		connector:   connector,
@@ -383,7 +383,6 @@ func newRecordWriter(connector string, schema types.Type, identityProperty strin
 		startTime:   startTime,
 		limit:       limit,
 		timeLayouts: layout,
-		records:     []map[string]any{},
 	}
 	if identityProperty != "" {
 		rw.identityProperty.name = identityProperty
@@ -407,6 +406,7 @@ type recordWriter struct {
 	startTime        time.Time
 	limit            int
 	record           Record
+	isLast           bool
 	yield            func(Record) bool
 	schema           types.Type
 	properties       []types.Property // schema's properties, or the file's columns if a schema has not been provided
@@ -425,7 +425,6 @@ type recordWriter struct {
 	}
 	storageLastChangeTime time.Time
 	timeLayouts           *state.TimeLayouts
-	records               []map[string]any
 }
 
 // Columns sets the columns of the records as properties.
@@ -478,12 +477,12 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			return err
 		}
 		rw.properties = types.Properties(rw.schema)
-		rw.columnIndexOf = make(map[int]int, len(rw.properties))
-		for i, c := range rw.properties {
-			rw.columnIndexOf[i] = columnIndex[c.Name]
-		}
 	} else {
 		rw.properties = columns
+	}
+	rw.columnIndexOf = make(map[int]int, len(rw.properties))
+	for i, c := range rw.properties {
+		rw.columnIndexOf[i] = columnIndex[c.Name]
 	}
 	rw.columns = len(columns)
 	if rw.limit == 0 {
@@ -500,60 +499,47 @@ func (rw *recordWriter) Record(record []any) error {
 	if len(record) != rw.columns {
 		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
 	}
-	if rw.yield == nil {
-		// Store the record in the records field.
-		var err error
-		rd := make(map[string]any, len(rw.properties))
-		for i, p := range rw.properties {
-			rd[p.Name], err = normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
-			if err != nil {
-				return err
-			}
-		}
-		rw.records = append(rw.records, rd)
-	} else {
-		// Get the last change time.
-		var err error
-		lastChangeTime := rw.storageLastChangeTime
-		if rw.lastChangeTimeProperty.name != "" {
-			ts := record[rw.lastChangeTimeProperty.index]
-			lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
-			if err != nil {
-				rw.record.Err = err
-			} else if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
-				// Skip the record because it is older than the specified starting time.
-				return nil
-			}
-		}
-		// Call the rw.yield function with the previous record.
-		if rw.record.Properties != nil || rw.record.Err != nil {
-			if !rw.yield(rw.record) {
-				return errRecordStop
-			}
-		}
-		rw.record = Record{
-			Properties:     make(map[string]any, len(rw.properties)),
-			LastChangeTime: lastChangeTime,
-			Err:            err,
-		}
-		// Normalize the properties.
-		if rw.record.Err == nil {
-			for i, p := range rw.properties {
-				j := rw.columnIndexOf[i]
-				value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
-				if err != nil {
-					rw.record.Err = err
-					break
-				}
-				rw.record.Properties[p.Name] = value
-			}
-		}
-		// Parse the identity property.
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+	// Get the last change time.
+	var err error
+	lastChangeTime := rw.storageLastChangeTime
+	if rw.lastChangeTimeProperty.name != "" {
+		ts := record[rw.lastChangeTimeProperty.index]
+		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
 		if err != nil {
-			if rw.record.Err != nil {
+			rw.record.Err = err
+		} else if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+			// Skip the record because it is older than the specified starting time.
+			return nil
+		}
+	}
+	// Call the yield function passing the previous record.
+	if rw.record.Properties != nil || rw.record.Err != nil {
+		if !rw.yield(rw.record) {
+			return errRecordStop
+		}
+	}
+	rw.record = Record{
+		Properties:     make(map[string]any, len(rw.properties)),
+		LastChangeTime: lastChangeTime,
+		Err:            err,
+	}
+	// Normalize the properties.
+	if rw.record.Err == nil {
+		for i, p := range rw.properties {
+			j := rw.columnIndexOf[i]
+			value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
+			if err != nil {
 				rw.record.Err = err
+				break
 			}
+			rw.record.Properties[p.Name] = value
+		}
+	}
+	// Parse the identity property.
+	if rw.identityProperty.name != "" {
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+		if err != nil && rw.record.Err != nil {
+			rw.record.Err = err
 		}
 	}
 	rw.limit--
@@ -568,57 +554,44 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.connector)
 	}
-	if rw.yield == nil {
-		// Store the record in the records field.
-		var err error
-		rd := make(map[string]any, len(rw.properties))
+	// Get the last change time.
+	var err error
+	lastChangeTime := rw.storageLastChangeTime
+	if rw.lastChangeTimeProperty.name != "" {
+		ts := record[rw.lastChangeTimeProperty.name]
+		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+			// Skip the record because it is older than the specified starting time.
+			return nil
+		}
+	}
+	// Call the yield function passing the previous record.
+	if rw.record.Properties != nil || rw.record.Err != nil {
+		if !rw.yield(rw.record) {
+			return errRecordStop
+		}
+	}
+	rw.record = Record{
+		Properties:     make(map[string]any, len(rw.properties)),
+		LastChangeTime: lastChangeTime,
+		Err:            err,
+	}
+	// Normalize the properties.
+	if rw.record.Err == nil {
 		for _, p := range rw.properties {
-			rd[p.Name], err = normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
+			value, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
 			if err != nil {
-				return err
-			}
-		}
-		rw.records = append(rw.records, rd)
-	} else {
-		// Get the last change time.
-		var err error
-		lastChangeTime := rw.storageLastChangeTime
-		if rw.lastChangeTimeProperty.name != "" {
-			ts := record[rw.lastChangeTimeProperty.name]
-			lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
-			if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
-				// Skip the record because it is older than the specified starting time.
-				return nil
-			}
-		}
-		// Call the rw.yield function with the previous record.
-		if rw.record.Properties != nil || rw.record.Err != nil {
-			if !rw.yield(rw.record) {
-				return errRecordStop
-			}
-		}
-		rw.record = Record{
-			Properties:     make(map[string]any, len(rw.properties)),
-			LastChangeTime: lastChangeTime,
-			Err:            err,
-		}
-		// Normalize the properties.
-		if rw.record.Err == nil {
-			for _, p := range rw.properties {
-				value, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
-				if err != nil {
-					rw.record.Err = err
-					break
-				}
-				rw.record.Properties[p.Name] = value
-			}
-		}
-		// Parse the identity property.
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
-		if err != nil {
-			if rw.record.Err != nil {
 				rw.record.Err = err
+				break
 			}
+			rw.record.Properties[p.Name] = value
+		}
+	}
+	// Parse the identity property.
+	if rw.identityProperty.name != "" {
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
+		if err != nil && rw.record.Err != nil {
+			rw.record.Err = err
 		}
 	}
 	rw.limit--
@@ -636,58 +609,45 @@ func (rw *recordWriter) RecordString(record []string) error {
 	if len(record) != rw.columns {
 		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
 	}
-	if rw.yield == nil {
-		// Store the record in the records field.
-		var err error
-		rd := make(map[string]any, len(rw.properties))
+	// Get the last change time.
+	var err error
+	lastChangeTime := rw.storageLastChangeTime
+	if rw.lastChangeTimeProperty.name != "" {
+		ts := record[rw.lastChangeTimeProperty.index]
+		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+			// Skip the record because it is older than the specified starting time.
+			return nil
+		}
+	}
+	// Call the yield function passing the previous record.
+	if rw.record.Properties != nil || rw.record.Err != nil {
+		if !rw.yield(rw.record) {
+			return errRecordStop
+		}
+	}
+	rw.record = Record{
+		Properties:     make(map[string]any, len(rw.properties)),
+		LastChangeTime: lastChangeTime,
+		Err:            err,
+	}
+	// Normalize the properties.
+	if rw.record.Err == nil {
 		for i, p := range rw.properties {
-			rd[p.Name], err = normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
+			j := rw.columnIndexOf[i]
+			value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
 			if err != nil {
-				return err
-			}
-		}
-		rw.records = append(rw.records, rd)
-	} else {
-		// Get the last change time.
-		var err error
-		lastChangeTime := rw.storageLastChangeTime
-		if rw.lastChangeTimeProperty.name != "" {
-			ts := record[rw.lastChangeTimeProperty.index]
-			lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
-			if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
-				// Skip the record because it is older than the specified starting time.
-				return nil
-			}
-		}
-		// Call the rw.yield function with the previous record.
-		if rw.record.Properties != nil || rw.record.Err != nil {
-			if !rw.yield(rw.record) {
-				return errRecordStop
-			}
-		}
-		rw.record = Record{
-			Properties:     make(map[string]any, len(rw.properties)),
-			LastChangeTime: lastChangeTime,
-			Err:            err,
-		}
-		// Normalize the properties.
-		if rw.record.Err == nil {
-			for i, p := range rw.properties {
-				j := rw.columnIndexOf[i]
-				value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
-				if err != nil {
-					rw.record.Err = err
-					break
-				}
-				rw.record.Properties[p.Name] = value
-			}
-		}
-		// Parse the identity property.
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
-		if err != nil {
-			if rw.record.Err != nil {
 				rw.record.Err = err
+				break
 			}
+			rw.record.Properties[p.Name] = value
+		}
+	}
+	// Parse the identity property.
+	if rw.identityProperty.name != "" {
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+		if err != nil && rw.record.Err != nil {
+			rw.record.Err = err
 		}
 	}
 	rw.limit--
@@ -695,6 +655,33 @@ func (rw *recordWriter) RecordString(record []string) error {
 		return errRecordStop
 	}
 	return nil
+}
+
+// close closes the record writer. It should be called when there are no more
+// records to write. If there is a last record, it calls the yield function with
+// that record. After close is called, no other methods of the record writer
+// should be called except for the 'last' method.
+func (rw *recordWriter) close() {
+	if rw.record.Properties == nil && rw.record.Err == nil {
+		return
+	}
+	rw.isLast = true
+	rw.yield(rw.record)
+	rw.record.Properties = nil
+	rw.record.Err = nil
+}
+
+// last reports whether the record passed to the yield function is the last
+// record. It should be only called in the yield function.
+func (rw *recordWriter) last() bool {
+	return rw.isLast
+}
+
+// setYieldFunc sets the yield function that will be called for each written
+// record. setYieldFunc must be set before calling the Record, RecordMap, and
+// RecordString methods.
+func (rw *recordWriter) setYieldFunc(yield func(Record) bool) {
+	rw.yield = yield
 }
 
 // IsValidSheetName reports whether name is a valid sheet name.
