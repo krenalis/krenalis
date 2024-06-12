@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"time"
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/state"
@@ -112,7 +113,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		}
 	}
 
-	rw := newRecordWriter(file.Name, types.Type{}, "", LastChangeTimeProperty{}, storageTimestamp, &file.TimeLayouts, limit)
+	rw := newRecordWriter(file.Name, types.Type{}, "", LastChangeTimeProperty{}, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
 	err = _file.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		if err == chichi.ErrSheetNotExist {

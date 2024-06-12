@@ -80,8 +80,8 @@ func Test_UserIdentities(t *testing.T) {
 		}),
 	})
 
-	c.ExecuteAction(fs1, action1, false)
-	c.ExecuteAction(fs2, action2, false)
+	c.ExecuteAction(fs1, action1, true)
+	c.ExecuteAction(fs2, action2, true)
 
 	c.WaitActionsToFinish(fs1)
 	c.WaitActionsToFinish(fs2)

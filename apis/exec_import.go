@@ -68,7 +68,11 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		defer database.Close()
 		records, err = database.Records(ctx, action, replacer)
 	case state.FileStorageType:
-		records, err = this.file().Records(ctx)
+		var lastChangeTime time.Time
+		if !execution.Reimport && action.LastChangeTimeProperty != "" {
+			lastChangeTime = action.UserCursor
+		}
+		records, err = this.file().Records(ctx, lastChangeTime)
 	default:
 		return fmt.Errorf("invalid connector type %s", connector.Type)
 	}
@@ -119,7 +123,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		stats.Passed(statistics.Receiving)
 		stats.Passed(statistics.InputValidation)
 
-		if connector.Type == state.AppType && user.LastChangeTime.After(cursor) {
+		if (connector.Type == state.AppType || connector.Type == state.FileStorageType) && user.LastChangeTime.After(cursor) {
 			cursor = user.LastChangeTime
 		}
 
@@ -169,7 +173,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			}
 
 			// Set the user cursor.
-			if connector.Type == state.AppType {
+			if connector.Type == state.AppType || connector.Type == state.FileStorageType {
 				err = this.setUserCursor(ctx, cursor)
 				if err != nil {
 					return actionExecutionError{err}
