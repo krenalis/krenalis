@@ -99,15 +99,15 @@ type RecordReader interface {
 type RecordWriter interface {
 
 	// Columns sets the columns of the records as properties.
-	// Columns must be called before Record, RecordMap and RecordString.
-	Columns([]types.Property) error
+	// Columns must be called before Record, RecordMap, and RecordString.
+	Columns(columns []types.Property) error
 
-	// Record writes a record as a slice of any.
-	Record([]any) error
+	// Record writes a record represented as a slice of any.
+	Record(record []any) error
 
-	// RecordMap writes a record as a string to any map.
+	// RecordMap writes a record represented as a string to any map.
 	RecordMap(record map[string]any) error
 
-	// RecordString writes a record as a string slice.
-	RecordString([]string) error
+	// RecordString writes a record represented as a string slice.
+	RecordString(record []string) error
 }
