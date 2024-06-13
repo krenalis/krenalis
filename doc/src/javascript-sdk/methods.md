@@ -490,9 +490,9 @@ startSession(id?: number): void
 
 #### Parameters
 
-| Name | Type       | Required | Description         |
-|------|------------|----------|---------------------|
-| `id` | `String`   |          | Session identifier. |
+| Name | Type     | Required | Description         |
+|------|----------|----------|---------------------|
+| `id` | `Number` |          | Session identifier. |
 
 #### Example
 
