@@ -129,8 +129,9 @@ type FilterCondition struct {
 	Value    string
 }
 type User struct {
-	ID         uuid.UUID      `json:"id"`
-	Properties map[string]any `json:"properties"`
+	ID             uuid.UUID      `json:"id"`
+	LastChangeTime time.Time      `json:"lastChangeTime"`
+	Properties     map[string]any `json:"properties"`
 }
 
 type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.

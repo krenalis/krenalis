@@ -96,6 +96,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	store.columnByProperty.user = columnByProperty(ws.UserSchema)
 	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	if ws.Warehouse.Mode == state.Normal {
 		go func() {

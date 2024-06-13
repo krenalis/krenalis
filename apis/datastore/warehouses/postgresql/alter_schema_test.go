@@ -17,7 +17,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		userColumns     []warehouses.Column // without "__id__", which is added by the test
+		userColumns     []warehouses.Column // without "__id__" and "__last_change_time__", which are added by the test
 		ops             []warehouses.AlterSchemaOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     string
@@ -300,7 +300,10 @@ func Test_alterSchemaQueries(t *testing.T) {
 					t.Fatalf("test %q is wrong: every column within 'userColumns' must be nullable, but column %q is not nullable", test.name, c.Name)
 				}
 			}
-			userColumns = append([]warehouses.Column{{Name: "__id__", Type: types.Int(32)}}, userColumns...)
+			userColumns = append([]warehouses.Column{
+				{Name: "__id__", Type: types.Int(32)},
+				{Name: "__last_change_time__", Type: types.DateTime()},
+			}, userColumns...)
 			gotQueries, gotErr := alterSchemaQueries(userColumns, test.ops)
 			if len(gotQueries) > 2 {
 				gotQueries = gotQueries[2 : len(gotQueries)-2]

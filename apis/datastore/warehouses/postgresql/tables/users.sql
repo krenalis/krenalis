@@ -1,6 +1,7 @@
 CREATE TABLE _users (
     "__id__" uuid,
     "__identities__" int [],
+    "__last_change_time__" timestamp NOT NULL,
     
     "email" varchar(300)
 );

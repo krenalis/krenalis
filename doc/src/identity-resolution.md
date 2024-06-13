@@ -79,17 +79,17 @@ For example, consider these three user identities, with the properties `email`, 
 
 The resulting user will be then:
 
-| email | name | phone_numbers               | total_orders |
-|-------|------|-----------------------------|--------------|
-| a@b   | John | {+11 111, +22 222, +33 333} | 21           |
+| email | name | phone_numbers               | total_orders | Last change time         |
+|-------|------|-----------------------------|--------------|--------------------------|
+| a@b   | John | {+11 111, +22 222, +33 333} | 21           | Jan 3, 2000, 12:00:00 PM |
 
 Now let's suppose that the connection B is set as primary source for the property `total_orders`.
 
 The resulting user will be then:
 
-| email | name | phone_numbers               | total_orders           |
-|-------|------|-----------------------------|------------------------|
-| a@b   | John | {+11 111, +22 222, +33 333} | **20** (instead of 21) |
+| email | name | phone_numbers               | total_orders           | Last change time         |
+|-------|------|-----------------------------|------------------------|--------------------------|
+| a@b   | John | {+11 111, +22 222, +33 333} | **20** (instead of 21) | Jan 3, 2000, 12:00:00 PM |
 
 where the value "20" for `total_orders` comes from B, which is primary for this property, instead of coming from the identity from C (even if this last one was updated more recently).
 

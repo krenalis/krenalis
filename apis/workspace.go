@@ -1418,9 +1418,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	userSchema := ws.UserSchema
 
-	// Add the "__id__" meta property to the user schema.
-	userSchema = types.Object(append([]types.Property{{Name: "__id__", Type: types.UUID()}},
-		types.Properties(userSchema)...))
+	// Add the "__id__" and "__last_change_time__" meta properties to the user
+	// schema.
+	userSchema = types.Object(append([]types.Property{
+		{Name: "__id__", Type: types.UUID()},
+		{Name: "__last_change_time__", Type: types.DateTime()},
+	}, types.Properties(userSchema)...))
 
 	propertyByName := map[string]types.Property{}
 	for _, p := range userSchema.Properties() {
@@ -1484,7 +1487,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	// Read the users.
 	users, count, err := this.store.Users(ctx, datastore.Query{
-		Properties: append([]string{"__id__"}, properties...),
+		Properties: append([]string{"__id__", "__last_change_time__"}, properties...),
 		Filter:     stateFilter,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1515,12 +1518,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	//  [
 	//  	{
 	//  		"id": "f88893fb-fc04-4868-8ab7-041c225c79b4",
+	//          "lastChangeTime": "2000-01-03T12:00:00Z",
 	//  		"properties": {
 	//  			"email": "a@example.com"
 	//  		}
 	//  	},
 	//  	{
 	//  		"id": "e0bb8a23-d1ee-4fe4-8264-5892499d21e5",
+	//          "lastChangeTime": "2000-01-03T12:00:00Z",
 	//  		"properties": {
 	//  			"email": "c@example.com"
 	//  		}
@@ -1531,6 +1536,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	for i, user := range users {
 		id := user["__id__"].(string)
 		delete(user, "__id__")
+		lastChangeTime := user["__last_change_time__"].(time.Time)
+		delete(user, "__last_change_time__")
 		marshaledUser, err := encoding.Marshal(schema, user)
 		if err != nil {
 			return nil, types.Type{}, 0, err
@@ -1540,7 +1547,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		marshaledUsers.WriteString(`{"id":"`)
 		marshaledUsers.WriteString(id)
-		marshaledUsers.WriteString(`","properties":`)
+		marshaledUsers.WriteString(`","lastChangeTime":`)
+		err = json.NewEncoder(&marshaledUsers).Encode(lastChangeTime)
+		if err != nil {
+			return nil, types.Type{}, 0, err
+		}
+		marshaledUsers.WriteString(`,"properties":`)
 		marshaledUsers.Write(marshaledUser)
 		marshaledUsers.WriteRune('}')
 	}

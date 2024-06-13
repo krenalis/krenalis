@@ -162,6 +162,7 @@ func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 		store.columnByProperty.mu.Lock()
 		store.columnByProperty.user = columnByProperty(n.UserSchema)
 		store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
+		store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 		store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 		store.columnByProperty.mu.Unlock()
 	}

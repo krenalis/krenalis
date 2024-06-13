@@ -92,7 +92,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 		mergeUsers.WriteByte('"')
 		mergeUsers.WriteByte(',')
 	}
-	mergeUsers.WriteString(`"__identities__", "__id__"`)
+	mergeUsers.WriteString(`"__identities__", "__id__", "__last_change_time__"`)
 	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -161,7 +161,9 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connecti
 			ELSE gen_random_uuid()
 		END,
 		gen_random_uuid()
-	)`)
+	),`)
+	// Write the "__last_change_time__" column.
+	mergeUsers.WriteString(`MAX("__last_change_time__")`)
 	mergeUsers.WriteString(" FROM _user_identities GROUP BY __cluster__; ")
 
 	// If two users who were previously one are split, they will end up having

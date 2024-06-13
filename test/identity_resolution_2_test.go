@@ -144,6 +144,9 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
 	}
 	user := users[0]
+	if user.LastChangeTime.IsZero() {
+		t.Fatalf("expected a valid last change time, got zero instead")
+	}
 	expectedProps := map[string]any{
 		"email":         "a@b",
 		"name":          "John",
@@ -173,6 +176,9 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
 	}
 	user = users[0]
+	if user.LastChangeTime.IsZero() {
+		t.Fatalf("expected a valid last change time, got zero instead")
+	}
 	expectedProps = map[string]any{
 		"email":         "a@b",
 		"name":          "John",
