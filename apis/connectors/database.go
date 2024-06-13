@@ -66,7 +66,16 @@ func (database *Database) Columns(ctx context.Context, table string) ([]types.Pr
 	if database.err != nil {
 		return nil, database.err
 	}
-	return database.inner.Columns(ctx, table)
+	columns, err := database.inner.Columns(ctx, table)
+	if err != nil {
+		return nil, err
+	}
+	for _, column := range columns {
+		if err := isValidColumnName(column.Name); err != nil {
+			return nil, err
+		}
+	}
+	return columns, nil
 }
 
 // Query executes a query and returns the resulting rows.
@@ -87,6 +96,12 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	rows, columns, err := database.inner.Query(ctx, query)
 	if err != nil {
 		return nil, err
+	}
+	for _, column := range columns {
+		if err := isValidColumnName(column.Name); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
 	}
 	return newRows(rows, columns, database.timeLayouts), nil
 }
@@ -121,6 +136,12 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	rows, columns, err := database.inner.Query(ctx, query)
 	if err != nil {
 		return nil, err
+	}
+	for _, column := range columns {
+		if err = isValidColumnName(column.Name); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
 	}
 	var records Records
 	defer func() {
@@ -468,5 +489,17 @@ func (sv recordsScanValue) Scan(src any) error {
 		return err
 	}
 	sv.record.Properties[p.Name] = value
+	return nil
+}
+
+// isValidColumnName reports whether name is a valid column name.
+// A column name must follow the same rules as a property name:
+//   - start with [A-Za-z_]
+//   - subsequently contain only [A-Za-z0-9_]
+func isValidColumnName(name string) error {
+	if !types.IsValidPropertyPath(name) {
+		return fmt.Errorf("column name %q is not valid. Column names must start with a letter or underscore [A-Za-z_]"+
+			" and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", name)
+	}
 	return nil
 }

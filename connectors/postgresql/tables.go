@@ -156,9 +156,6 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		if columnName == nil {
 			return nil, errors.New("database has returned NULL as column name")
 		}
-		if !types.IsValidPropertyName(*columnName) {
-			return nil, fmt.Errorf("column name %q is not supported", *columnName)
-		}
 		row.column = *columnName
 		if isNullable == nil {
 			return nil, errors.New("database has returned NULL as nullability of column")
