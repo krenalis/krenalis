@@ -62,7 +62,7 @@ func (user user) Identities(_ http.ResponseWriter, r *http.Request) (any, error)
 		return nil, err
 	}
 	return map[string]any{
-		"identities": rawJSON(identities),
+		"identities": identities,
 		"count":      count,
 	}, nil
 }

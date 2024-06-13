@@ -134,9 +134,9 @@ type User struct {
 	Properties     map[string]any `json:"properties"`
 }
 
-type UserIdentity struct { // copy-pasted from the not-exported type 'identity' within package 'apis'.
-	Action         int
+type UserIdentity struct {
 	Connection     int
+	Action         int
 	IdentityId     LabelValue
 	AnonymousIds   []string
 	LastChangeTime time.Time

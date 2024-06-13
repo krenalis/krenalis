@@ -9,7 +9,6 @@ package apis
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -104,7 +103,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
+func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.apis.mustBeOpen()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", limit)
@@ -132,8 +131,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]byte, int
 	if identities == nil {
 		return nil, 0, errors.NotFound("user %s does not exist", this.id)
 	}
-	data, err := json.Marshal(identities)
-	return data, count, err
+	return identities, count, nil
 }
 
 // Traits returns the traits of the user.

@@ -1757,11 +1757,11 @@ type labelValue struct {
 	Value string
 }
 
-// identity represents a user identity.
+// UserIdentity represents a user identity.
 //
 // TODO(Gianluca): this type should be reviewed. See the issue
 // https://github.com/open2b/chichi/issues/791.
-type identity struct {
+type UserIdentity struct {
 	Connection     int
 	Action         int
 	IdentityId     labelValue // zero struct for identities imported from anonymous events.
@@ -1781,7 +1781,7 @@ type identity struct {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter, first, limit int) ([]identity, int, error) {
+func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter, first, limit int) ([]UserIdentity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
@@ -1806,7 +1806,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 	}
 
 	// Create the identities from the records returned by the datastore.
-	var identities []identity
+	var identities []UserIdentity
 
 	for _, record := range records {
 
@@ -1876,7 +1876,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		// Determine the last change time.
 		lastChangeTime := record["__last_change_time__"].(time.Time)
 
-		identities = append(identities, identity{
+		identities = append(identities, UserIdentity{
 			Connection: connID,
 			Action:     actionID,
 			IdentityId: labelValue{

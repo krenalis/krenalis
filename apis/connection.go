@@ -1028,7 +1028,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byte, int, error) {
+func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.apis.mustBeOpen()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", limit)
@@ -1055,10 +1055,9 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]byt
 		return nil, 0, err
 	}
 	if identities == nil {
-		identities = []identity{}
+		identities = []UserIdentity{}
 	}
-	data, err := json.Marshal(identities)
-	return data, count, err
+	return identities, count, err
 }
 
 // Keys returns the write keys of the connection.

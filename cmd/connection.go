@@ -181,7 +181,7 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 	return map[string]any{
-		"identities": rawJSON(identities),
+		"identities": identities,
 		"count":      count,
 	}, nil
 }
