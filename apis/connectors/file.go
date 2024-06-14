@@ -384,18 +384,13 @@ func newRecordWriter(connector string, schema types.Type, identityProperty strin
 		limit:       limit,
 		timeLayouts: layout,
 	}
-	if identityProperty != "" {
-		rw.identityProperty.name = identityProperty
-		typ, _ := schema.Property(identityProperty)
-		rw.identityProperty.typ = typ.Type
-	}
-	if lastChangeTime.Name != "" {
-		rw.lastChangeTimeProperty.name = lastChangeTime.Name
-		typ, _ := schema.Property(lastChangeTime.Name)
-		rw.lastChangeTimeProperty.typ = typ.Type
-		rw.lastChangeTimeProperty.format = lastChangeTime.Format
-	} else {
+	rw.identityProperty.index = -1
+	rw.identityProperty.name = identityProperty
+	rw.lastChangeTime.index = -1
+	if lastChangeTime.Name == "" {
 		rw.storageLastChangeTime = storageLastChangeTime
+	} else {
+		rw.lastChangeTime.property = lastChangeTime
 	}
 	return &rw
 }
@@ -410,18 +405,13 @@ type recordWriter struct {
 	yield            func(Record) bool
 	schema           types.Type
 	properties       []types.Property // schema's properties, or the file's columns if a schema has not been provided
-	columnIndexOf    map[int]int      // map a property index in the schema to the corresponding file's column
-	columns          int              // number of file's columns
 	identityProperty struct {
-		name  string
-		typ   types.Type
 		index int
+		name  string
 	}
-	lastChangeTimeProperty struct {
-		name   string
-		typ    types.Type
-		index  int
-		format string
+	lastChangeTime struct {
+		index    int
+		property LastChangeTimeProperty
 	}
 	storageLastChangeTime time.Time
 	timeLayouts           *state.TimeLayouts
@@ -440,51 +430,42 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	if err != nil {
 		return fmt.Errorf("connector %s has returned invalid columns: %s", rw.connector, err)
 	}
-	columnByName := make(map[string]types.Property, len(columns))
-	columnIndex := make(map[string]int, len(columns))
-	for i, c := range columns {
-		columnByName[c.Name] = c
-		columnIndex[c.Name] = i
-	}
-	// Validate the identity property.
-	if name := rw.identityProperty.name; name != "" {
-		c, ok := columnByName[name]
-		if !ok {
-			return fmt.Errorf("there is no identity property %q", name)
-		}
-		if typ := rw.identityProperty.typ; c.Type.Kind() != typ.Kind() {
-			return fmt.Errorf("identity property %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
-		}
-		rw.identityProperty.typ = c.Type
-		rw.identityProperty.index = columnIndex[c.Name]
-	}
-	// Validate the last change time property.
-	if name := rw.lastChangeTimeProperty.name; name != "" {
-		c, ok := columnByName[name]
-		if !ok {
-			return fmt.Errorf("there is no last change time property %q", name)
-		}
-		if typ := rw.lastChangeTimeProperty.typ; c.Type.Kind() != typ.Kind() {
-			return fmt.Errorf("last change time property %q has type %s instead of %s", c.Name, c.Type.Kind(), typ.Kind())
-		}
-		rw.lastChangeTimeProperty.typ = c.Type
-		rw.lastChangeTimeProperty.index = columnIndex[c.Name]
-	}
 	// Check that the schema, if valid, is aligned with the file's schema.
 	if rw.schema.Valid() {
 		err := checkSchemaAlignment(rw.schema, fileSchema)
 		if err != nil {
 			return err
 		}
-		rw.properties = types.Properties(rw.schema)
+		rw.properties = make([]types.Property, len(columns))
+		for i, c := range columns {
+			p, ok := rw.schema.Property(c.Name)
+			if !ok {
+				continue
+			}
+			rw.properties[i] = p
+			if p.Name == rw.identityProperty.name {
+				if c.Type.Kind() != p.Type.Kind() {
+					return fmt.Errorf("identity property %q has type %s instead of %s", p.Name, c.Type.Kind(), p.Type.Kind())
+				}
+				rw.identityProperty.index = i
+			}
+			// Validate the last change time property.
+			if p.Name == rw.lastChangeTime.property.Name {
+				if c.Type.Kind() != p.Type.Kind() {
+					return fmt.Errorf("last change time property %q has type %s instead of %s", p.Name, c.Type.Kind(), p.Type.Kind())
+				}
+				rw.lastChangeTime.index = i
+			}
+		}
+		if rw.identityProperty.name != "" && rw.identityProperty.index == -1 {
+			return fmt.Errorf("there is no identity property %q", rw.identityProperty.name)
+		}
+		if rw.lastChangeTime.property.Name != "" && rw.lastChangeTime.index == -1 {
+			return fmt.Errorf("there is no last change time property %q", rw.lastChangeTime.property.Name)
+		}
 	} else {
 		rw.properties = columns
 	}
-	rw.columnIndexOf = make(map[int]int, len(rw.properties))
-	for i, c := range rw.properties {
-		rw.columnIndexOf[i] = columnIndex[c.Name]
-	}
-	rw.columns = len(columns)
 	if rw.limit == 0 {
 		return errRecordStop
 	}
@@ -496,15 +477,15 @@ func (rw *recordWriter) Record(record []any) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling Record", rw.connector)
 	}
-	if len(record) != rw.columns {
+	if len(record) != len(rw.properties) {
 		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
 	}
 	// Get the last change time.
 	var err error
 	lastChangeTime := rw.storageLastChangeTime
-	if rw.lastChangeTimeProperty.name != "" {
-		ts := record[rw.lastChangeTimeProperty.index]
-		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+	if i := rw.lastChangeTime.index; i >= 0 {
+		p := rw.properties[i]
+		lastChangeTime, err = parseTimestampColumn(p.Name, p.Type, rw.lastChangeTime.property.Format, record[i], rw.timeLayouts)
 		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil
@@ -522,8 +503,9 @@ func (rw *recordWriter) Record(record []any) error {
 		Err:            err,
 	}
 	// Get the identity property.
-	if rw.identityProperty.name != "" {
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+	if i := rw.identityProperty.index; i >= 0 {
+		p := rw.properties[i]
+		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -531,13 +513,15 @@ func (rw *recordWriter) Record(record []any) error {
 	// Get the properties.
 	if rw.record.Err == nil {
 		for i, p := range rw.properties {
-			j := rw.columnIndexOf[i]
-			value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
+			if p.Name == "" {
+				continue
+			}
+			v, err := normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[p.Name] = value
+			rw.record.Properties[p.Name] = v
 		}
 	}
 	rw.limit--
@@ -555,9 +539,9 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	// Get the last change time.
 	var err error
 	lastChangeTime := rw.storageLastChangeTime
-	if rw.lastChangeTimeProperty.name != "" {
-		ts := record[rw.lastChangeTimeProperty.name]
-		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+	if i := rw.lastChangeTime.index; i >= 0 {
+		p := rw.properties[i]
+		lastChangeTime, err = parseTimestampColumn(p.Name, p.Type, rw.lastChangeTime.property.Format, record[p.Name], rw.timeLayouts)
 		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil
@@ -575,8 +559,9 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		Err:            err,
 	}
 	// Get the identity property.
-	if rw.identityProperty.name != "" {
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
+	if i := rw.identityProperty.index; i >= 0 {
+		p := rw.properties[i]
+		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[p.Name], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -584,12 +569,15 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	// Get the properties.
 	if rw.record.Err == nil {
 		for _, p := range rw.properties {
-			value, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
+			if p.Name == "" {
+				continue
+			}
+			v, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[p.Name] = value
+			rw.record.Properties[p.Name] = v
 		}
 	}
 	rw.limit--
@@ -604,15 +592,15 @@ func (rw *recordWriter) RecordString(record []string) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling RecordString", rw.connector)
 	}
-	if len(record) != rw.columns {
+	if len(record) != len(rw.properties) {
 		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
 	}
 	// Get the last change time.
 	var err error
 	lastChangeTime := rw.storageLastChangeTime
-	if rw.lastChangeTimeProperty.name != "" {
-		ts := record[rw.lastChangeTimeProperty.index]
-		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
+	if i := rw.lastChangeTime.index; i >= 0 {
+		p := rw.properties[i]
+		lastChangeTime, err = parseTimestampColumn(p.Name, p.Type, rw.lastChangeTime.property.Format, record[i], rw.timeLayouts)
 		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil
@@ -630,8 +618,9 @@ func (rw *recordWriter) RecordString(record []string) error {
 		Err:            err,
 	}
 	// Get the identity property.
-	if rw.identityProperty.name != "" {
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+	if i := rw.identityProperty.index; i >= 0 {
+		p := rw.properties[i]
+		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -639,13 +628,15 @@ func (rw *recordWriter) RecordString(record []string) error {
 	// Get the properties.
 	if rw.record.Err == nil {
 		for i, p := range rw.properties {
-			j := rw.columnIndexOf[i]
-			value, err := normalize(p.Name, p.Type, record[j], p.Nullable, rw.timeLayouts)
+			if p.Name == "" {
+				continue
+			}
+			v, err := normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[p.Name] = value
+			rw.record.Properties[p.Name] = v
 		}
 	}
 	rw.limit--
