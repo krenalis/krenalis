@@ -106,7 +106,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 	if err != nil {
 		return nil, err
 	}
-	if err = validateTimestamp(storageLastChangeTime); err != nil {
+	if err = validateLastChangeTime(storageLastChangeTime); err != nil {
 		return nil, fmt.Errorf("invalid last change time returned by the storage: %s", err)
 	}
 	lastChangeTimeProperty := LastChangeTimeProperty{

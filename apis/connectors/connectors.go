@@ -544,7 +544,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 	case nil:
 		return time.Time{}, errors.New("timestamp value is null")
 	case time.Time:
-		err = validateTimestamp(timestamp)
+		err = validateLastChangeTime(timestamp)
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -554,7 +554,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
-		err = validateTimestamp(ts)
+		err = validateLastChangeTime(ts)
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -569,7 +569,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
-		err = validateTimestamp(ts)
+		err = validateLastChangeTime(ts)
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -705,18 +705,14 @@ func setConnectionSettingsFunc(st *state.State, c *state.Connection) chichi.SetS
 	}
 }
 
-// validateTimestamp validates the timestamp t, returning an error if it is not
-// valid.
-func validateTimestamp(t time.Time) error {
-	if t.IsZero() {
-		return errors.New("timestamp cannot be the zero time instant (January 1, year 1, 00:00:00 UTC)")
+// validateLastChangeTime validates the last change time t, returning an error
+// if it is before the year 1000 or too far ahead in the future.
+func validateLastChangeTime(t time.Time) error {
+	if y := t.Year(); y < 1900 {
+		return fmt.Errorf("last change time %q is before the year 1900", t.Format(time.DateTime))
 	}
-	if y := t.Year(); y < 1 || y > 9999 {
-		return fmt.Errorf("timestamp year %d out of range [1,9999]", y)
-	}
-	now := time.Now().UTC()
-	if t.After(now) {
-		return errors.New("timestamp cannot be in the future")
+	if t.After(time.Now().UTC().Add(5 * time.Minute)) {
+		return fmt.Errorf("last change time %q is too far ahead in the future", t.Format(time.DateTime))
 	}
 	return nil
 }

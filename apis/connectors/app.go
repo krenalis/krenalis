@@ -354,7 +354,7 @@ func (r *appRecords) All(ctx context.Context) Seq[Record] {
 
 				// Read the last change time.
 				user.LastChangeTime = appUser.LastChangeTime.UTC()
-				if err = validateTimestamp(user.LastChangeTime); err != nil {
+				if err = validateLastChangeTime(user.LastChangeTime); err != nil {
 					return
 				}
 				if user.LastChangeTime.After(cursor.LastChangeTime) {
