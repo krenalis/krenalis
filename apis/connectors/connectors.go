@@ -482,6 +482,102 @@ func isExcelSimpleFloat(s string) bool {
 	return true
 }
 
+// parseIdentityProperty parses the value for the identity property.
+func parseIdentityProperty(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
+	id, err := normalize(name, typ, value, false, layouts)
+	if err != nil {
+		return "", err
+	}
+	switch id := id.(type) {
+	case nil:
+		return "", fmt.Errorf("identify value is null")
+	case int:
+
+		return strconv.FormatInt(int64(id), 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(id), 10), nil
+	case string:
+		if id == "" {
+			return "", fmt.Errorf("identify value is empty")
+		}
+		return id, nil
+	case float64:
+		if int(math.Round(id)) == int(id) {
+			return strconv.FormatInt(int64(id), 10), nil
+		}
+	case json.Number:
+		var n int64
+		err := json.Unmarshal([]byte(id), &n)
+		if err == nil {
+			return strconv.FormatInt(n, 10), nil
+		}
+	case json.RawMessage:
+		if id[0] == '"' {
+			var s string
+			_ = json.Unmarshal(id, &s)
+			if s == "" {
+				return "", fmt.Errorf("identify value is empty")
+			}
+			return s, nil
+		} else {
+			var n int64
+			err := json.Unmarshal(id, &n)
+			if err == nil {
+				return strconv.FormatInt(n, 10), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
+}
+
+// parseLastChangeTimeProperty parses a last change time property value. If the
+// value cannot be parsed, or it is not valid, returns an error.
+//
+// For the accepted formats, see the 'apis.validateLastChangeTimeWithFormat'
+// function.
+func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
+	timestamp, err := normalize(name, typ, value, nullable, layouts)
+	if err != nil {
+		return time.Time{}, err
+	}
+	switch timestamp := timestamp.(type) {
+	case nil:
+		return time.Time{}, errors.New("timestamp value is null")
+	case time.Time:
+		err = validateTimestamp(timestamp)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return timestamp, nil
+	case string:
+		ts, err := parseLastChangeTimePropertyWithFormat(format, timestamp)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+		}
+		err = validateTimestamp(ts)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return ts, nil
+	case json.RawMessage:
+		var s string
+		err := json.Unmarshal(timestamp, &s)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+		}
+		ts, err := parseLastChangeTimePropertyWithFormat(format, s)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+		}
+		err = validateTimestamp(ts)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return ts, nil
+	}
+	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+}
+
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 // parseLastChangeTimePropertyWithFormat parses a last change time value with
@@ -549,118 +645,6 @@ func parseLastChangeTimePropertyWithFormat(format, timestamp string) (time.Time,
 	}
 }
 
-// parseLastChangeTimeProperty parses a last change time property value. If the
-// value cannot be parsed, or it is not valid, returns an error.
-//
-// For the accepted formats, see the 'apis.validateLastChangeTimeWithFormat'
-// function.
-func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
-	timestamp, err := normalize(name, typ, value, nullable, layouts)
-	if err != nil {
-		return time.Time{}, err
-	}
-	switch timestamp := timestamp.(type) {
-	case nil:
-		return time.Time{}, errors.New("timestamp value is null")
-	case time.Time:
-		err = validateTimestamp(timestamp)
-		if err != nil {
-			return time.Time{}, err
-		}
-		return timestamp, nil
-	case string:
-		ts, err := parseLastChangeTimePropertyWithFormat(format, timestamp)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
-		}
-		err = validateTimestamp(ts)
-		if err != nil {
-			return time.Time{}, err
-		}
-		return ts, nil
-	case json.RawMessage:
-		var s string
-		err := json.Unmarshal(timestamp, &s)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
-		}
-		ts, err := parseLastChangeTimePropertyWithFormat(format, s)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
-		}
-		err = validateTimestamp(ts)
-		if err != nil {
-			return time.Time{}, err
-		}
-		return ts, nil
-	}
-	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
-}
-
-// parseIdentityProperty parses the value for the identity property.
-func parseIdentityProperty(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
-	id, err := normalize(name, typ, value, false, layouts)
-	if err != nil {
-		return "", err
-	}
-	switch id := id.(type) {
-	case nil:
-		return "", fmt.Errorf("identify value is null")
-	case int:
-
-		return strconv.FormatInt(int64(id), 10), nil
-	case uint:
-		return strconv.FormatUint(uint64(id), 10), nil
-	case string:
-		if id == "" {
-			return "", fmt.Errorf("identify value is empty")
-		}
-		return id, nil
-	case float64:
-		if int(math.Round(id)) == int(id) {
-			return strconv.FormatInt(int64(id), 10), nil
-		}
-	case json.Number:
-		var n int64
-		err := json.Unmarshal([]byte(id), &n)
-		if err == nil {
-			return strconv.FormatInt(n, 10), nil
-		}
-	case json.RawMessage:
-		if id[0] == '"' {
-			var s string
-			_ = json.Unmarshal(id, &s)
-			if s == "" {
-				return "", fmt.Errorf("identify value is empty")
-			}
-			return s, nil
-		} else {
-			var n int64
-			err := json.Unmarshal(id, &n)
-			if err == nil {
-				return strconv.FormatInt(n, 10), nil
-			}
-		}
-	}
-	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
-}
-
-// setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
-// the settings for the action.
-func setActionSettingsFunc(st *state.State, a *state.Action) chichi.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
-		return setActionSettings(ctx, st, a.ID, settings)
-	}
-}
-
-// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
-// settings for the connection.
-func setConnectionSettingsFunc(st *state.State, c *state.Connection) chichi.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
-		return setConnectionSettings(ctx, st, c.ID, settings)
-	}
-}
-
 // setActionSettings sets the settings of the provided action.
 func setActionSettings(ctx context.Context, st *state.State, action int, settings []byte) error {
 	if !utf8.Valid(settings) {
@@ -683,6 +667,14 @@ func setActionSettings(ctx context.Context, st *state.State, action int, setting
 	return err
 }
 
+// setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
+// the settings for the action.
+func setActionSettingsFunc(st *state.State, a *state.Action) chichi.SetSettingsFunc {
+	return func(ctx context.Context, settings []byte) error {
+		return setActionSettings(ctx, st, a.ID, settings)
+	}
+}
+
 // setConnectionSettings sets the settings of the provided connection.
 func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
 	if !utf8.Valid(settings) {
@@ -703,6 +695,14 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 		return tx.Notify(ctx, n)
 	})
 	return err
+}
+
+// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
+// settings for the connection.
+func setConnectionSettingsFunc(st *state.State, c *state.Connection) chichi.SetSettingsFunc {
+	return func(ctx context.Context, settings []byte) error {
+		return setConnectionSettings(ctx, st, c.ID, settings)
+	}
 }
 
 // validateTimestamp validates the timestamp t, returning an error if it is not
