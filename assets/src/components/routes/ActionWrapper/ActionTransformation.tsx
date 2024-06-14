@@ -94,11 +94,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const isFirstCompilation = useRef(true);
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
 
-	const hasSpecialProperties = useMemo(() => {
+	const hasIdentityAndTimestamp = useMemo(() => {
 		return (
-			connection.isSource &&
-			(connection.isDatabase || connection.isFileStorage || connection.isEventBased) &&
-			(actionType.Target === 'Users' || actionType.Target === 'Events')
+			connection.isSource && (connection.isDatabase || connection.isFileStorage) && actionType.Target === 'Users'
 		);
 	}, [connection, actionType]);
 
@@ -135,7 +133,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (!hasSpecialProperties || !action.LastChangeTimeProperty) {
+		if (!hasIdentityAndTimestamp || !action.LastChangeTimeProperty) {
 			return;
 		}
 		// check if the last change time format is custom.
@@ -146,23 +144,21 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (hasSpecialProperties && isFirstCompilation.current) {
+		if (hasIdentityAndTimestamp && isFirstCompilation.current) {
 			// precompile the 'IdentityProperty' and 'lastChangeTimeProperty'
 			// fields, if possible.
 			const a = { ...action };
-			if (connection.isDatabase || connection.isFileStorage) {
-				const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
-				if (hasIdColumn) {
-					a.IdentityProperty = 'id';
-					isFirstCompilation.current = false;
-				}
-				const hasLastChangeTimeProperty =
-					actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
-				if (hasLastChangeTimeProperty) {
-					a.LastChangeTimeProperty = 'timestamp';
-					if (doesLastChangeTimePropertyNeedFormat(a.LastChangeTimeProperty, actionType.InputSchema)) {
-						a.LastChangeTimeFormat = lastChangeTimeFormats['dateTime'];
-					}
+			const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
+			if (hasIdColumn) {
+				a.IdentityProperty = 'id';
+				isFirstCompilation.current = false;
+			}
+			const hasLastChangeTimeProperty =
+				actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
+			if (hasLastChangeTimeProperty) {
+				a.LastChangeTimeProperty = 'timestamp';
+				if (doesLastChangeTimePropertyNeedFormat(a.LastChangeTimeProperty, actionType.InputSchema)) {
+					a.LastChangeTimeFormat = lastChangeTimeFormats['dateTime'];
 				}
 			}
 			setAction(a);
@@ -393,101 +389,93 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			className={`action__transformation${isTransformationDisabled ? ' action__transformation--disabled' : ''}`}
 			ref={ref}
 		>
-			{hasSpecialProperties && (
+			{hasIdentityAndTimestamp && (
 				<Section title='Special properties' padded={true}>
 					<div className='action__transformation-special-properties'>
-						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='action__transformation-identity-property'>
-								<div className='action__transformation-special-properties-label'>
-									Identity
-									<span className='action__transformation-special-properties-asterisk'>*</span>:
-								</div>
+						<div className='action__transformation-identity-property'>
+							<div className='action__transformation-special-properties-label'>
+								Identity
+								<span className='action__transformation-special-properties-asterisk'>*</span>:
+							</div>
+							<ComboBoxInput
+								comboBoxListRef={identityPropertyListRef}
+								onInput={onUpdateIdentityProperty}
+								value={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
+								name='identityProperty'
+								disabled={isTransformationDisabled || identityPropertyList.length === 0}
+								className='action__transformation-input-property'
+								caret={true}
+								clearable={action.IdentityProperty?.length > 0}
+								error={
+									identityPropertyList.length === 0
+										? `No column ${
+												connection.isFileStorage ? 'in the file' : 'returned by the query'
+											} can be used as user identifier`
+										: identityPropertyError
+								}
+								size='small'
+								helpText='A property that uniquely identifies a user'
+							/>
+						</div>
+						<div className='action__transformation-last-change-time-property'>
+							<div className='action__transformation-last-change-time'>
+								<div className='action__transformation-special-properties-label'>Last change time:</div>
 								<ComboBoxInput
-									comboBoxListRef={identityPropertyListRef}
-									onInput={onUpdateIdentityProperty}
-									value={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
-									name='identityProperty'
-									disabled={isTransformationDisabled || identityPropertyList.length === 0}
+									comboBoxListRef={lastChangeTimePropertyListRef}
+									onInput={onUpdateLastChangeTimeProperty}
+									value={action.LastChangeTimeProperty!}
+									name='lastChangeTimeProperty'
+									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
 									caret={true}
-									clearable={action.IdentityProperty?.length > 0}
-									error={
-										identityPropertyList.length === 0
-											? `No column ${
-													connection.isFileStorage ? 'in the file' : 'returned by the query'
-												} can be used as user identifier`
-											: identityPropertyError
-									}
+									clearable={action.LastChangeTimeProperty?.length > 0}
+									error={lastChangeTimePropertyError}
 									size='small'
-									helpText='A property that uniquely identifies a user'
+									helpText='A property with the time of the last modification of a user'
 								/>
 							</div>
-						)}
-						{(connection.isFileStorage || connection.isDatabase) && (
-							<div className='action__transformation-last-change-time-property'>
-								<div className='action__transformation-last-change-time'>
-									<div className='action__transformation-special-properties-label'>
-										Last change time:
-									</div>
-									<ComboBoxInput
-										comboBoxListRef={lastChangeTimePropertyListRef}
-										onInput={onUpdateLastChangeTimeProperty}
-										value={action.LastChangeTimeProperty!}
-										name='lastChangeTimeProperty'
-										disabled={isTransformationDisabled}
-										className='action__transformation-input-property'
-										caret={true}
-										clearable={action.LastChangeTimeProperty?.length > 0}
-										error={lastChangeTimePropertyError}
+							<div className='action__transformation-last-change-format-property'>
+								<div className='action__transformation-last-change-format'>
+									<div className='action__transformation-special-properties-label'>Format:</div>
+									<SlSelect
+										onSlChange={onChangeLastChangeTimeFormat}
+										value={
+											isCustomLastChangeTimeFormatSelected
+												? 'custom'
+												: action.LastChangeTimeProperty
+													? Object.keys(lastChangeTimeFormats).find(
+															(key) =>
+																lastChangeTimeFormats[key] ===
+																action.LastChangeTimeFormat,
+														)
+													: ''
+										}
+										name='lastChangeTimeFormat'
+										disabled={!needFormat}
 										size='small'
-										helpText='A property with the time of the last modification of a user'
-									/>
+									>
+										<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
+										<SlOption value='dateOnly'>2006-01-02</SlOption>
+										<SlOption value='iso8601'>ISO 8601</SlOption>
+										{fileConnector?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
+										<SlOption value='custom'>Custom...</SlOption>
+									</SlSelect>
 								</div>
-								<div className='action__transformation-last-change-format-property'>
-									<div className='action__transformation-last-change-format'>
-										<div className='action__transformation-special-properties-label'>Format:</div>
-										<SlSelect
-											onSlChange={onChangeLastChangeTimeFormat}
-											value={
-												isCustomLastChangeTimeFormatSelected
-													? 'custom'
-													: action.LastChangeTimeProperty
-														? Object.keys(lastChangeTimeFormats).find(
-																(key) =>
-																	lastChangeTimeFormats[key] ===
-																	action.LastChangeTimeFormat,
-															)
-														: ''
-											}
-											name='lastChangeTimeFormat'
-											disabled={!needFormat}
+								{needFormat && isCustomLastChangeTimeFormatSelected && (
+									<div className='action__transformation-last-change-custom-format'>
+										<SlInput
+											onSlInput={onInputLastChangeTimeCustomFormat}
+											value={action.LastChangeTimeFormat}
+											name='lastChangeTimeCustomFormat'
+											placeholder='%Y-%m-%d'
+											helpText='C89 "strftime" format string'
 											size='small'
-										>
-											<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
-											<SlOption value='dateOnly'>2006-01-02</SlOption>
-											<SlOption value='iso8601'>ISO 8601</SlOption>
-											{fileConnector?.name === 'Excel' && (
-												<SlOption value='excel'>Excel</SlOption>
-											)}
-											<SlOption value='custom'>Custom...</SlOption>
-										</SlSelect>
+											ref={lastChangeTimeCustomFormatInputRef}
+										></SlInput>
 									</div>
-									{needFormat && isCustomLastChangeTimeFormatSelected && (
-										<div className='action__transformation-last-change-custom-format'>
-											<SlInput
-												onSlInput={onInputLastChangeTimeCustomFormat}
-												value={action.LastChangeTimeFormat}
-												name='lastChangeTimeCustomFormat'
-												placeholder='%Y-%m-%d'
-												helpText='C89 "strftime" format string'
-												size='small'
-												ref={lastChangeTimeCustomFormatInputRef}
-											></SlInput>
-										</div>
-									)}
-								</div>
+								)}
 							</div>
-						)}
+						</div>
 					</div>
 				</Section>
 			)}
