@@ -42,14 +42,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"
-	"github.com/oschwald/geoip2-golang"
+	"github.com/oschwald/maxminddb-golang"
 	"github.com/relvacode/iso8601"
 )
 
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
-const geoLite2Path = "GeoLite2-City.mmdb"
+const maxmindDBPath = "GeoLite2-City.mmdb"
 
 // Errors handled by the HTTP server of the collector.
 var (
@@ -112,7 +112,7 @@ type Collector struct {
 	messageIds  sync.Map
 	transformer transformers.Function
 	dispatcher  *dispatcher.Dispatcher
-	geoLiteDB   *geoip2.Reader
+	maxmindDB   *maxminddb.Reader
 }
 
 // New returns a new event collector. It receives HTTP requests from mobile,
@@ -129,9 +129,9 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer 
 		dispatcher:  dispatcher,
 	}
 	var err error
-	collector.geoLiteDB, err = geoip2.Open(geoLite2Path)
+	collector.maxmindDB, err = maxminddb.Open(maxmindDBPath)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("cannot open GeoLite at path %q: %s", geoLite2Path, err)
+		return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxmindDBPath, err)
 	}
 	return &collector, nil
 }
@@ -1000,16 +1000,30 @@ func (c *Collector) enrichEvent(event *collectedEvent) {
 
 	// Location.
 	if loc := event.Context.Location; loc.Country == "" && loc.City == "" {
-		if c.geoLiteDB != nil {
-			city, err := c.geoLiteDB.City(requestIP)
+		if c.maxmindDB != nil {
+			var record struct {
+				City struct {
+					Names struct {
+						EN string `maxminddb:"en"`
+					} `maxminddb:"names"`
+				} `maxminddb:"city"`
+				Country struct {
+					IsoCode string `maxminddb:"iso_code"`
+				} `maxminddb:"country"`
+				Location struct {
+					Latitude  float64 `maxminddb:"latitude"`
+					Longitude float64 `maxminddb:"longitude"`
+				} `maxminddb:"location"`
+			}
+			err := c.maxmindDB.Lookup(requestIP, &record)
 			if err == nil {
-				country := culture.Country(city.Country.IsoCode)
+				country := culture.Country(record.Country.IsoCode)
 				if country != nil {
 					event.Context.Location.Country = country.Code()
 				}
-				event.Context.Location.City = city.City.Names["en"]
-				event.Context.Location.Latitude = city.Location.Latitude
-				event.Context.Location.Longitude = city.Location.Longitude
+				event.Context.Location.City = record.City.Names.EN
+				event.Context.Location.Latitude = record.Location.Latitude
+				event.Context.Location.Longitude = record.Location.Longitude
 			}
 		}
 	} else if loc.Country != "" {
