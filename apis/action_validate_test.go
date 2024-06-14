@@ -72,21 +72,22 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 		{format: "Excel"},
 		{format: "ISO8601"},
 		{format: "'%'"},
+		{format: "'''"},
+		{format: "'a'"},
+		{format: "'YYYY-MM-DD'"},
 
 		// Invalid.
-		{format: "'", err: `last change time format "'" is not a valid format`},
-		{format: "'''", err: `last change time format "'''" is not a valid format`},
-		{format: "", err: "last change time format cannot be empty"},
+		{format: "'", err: "last change time strptime format does not end with \"'\""},
+		{format: "", err: "last change time format \"\" is not a valid format"},
 		{format: "Date", err: `last change time format "Date" is not a valid format`},
 		{format: "excel", err: `last change time format "excel" is not a valid format`},
 		{format: "iso8601", err: `last change time format "iso8601" is not a valid format`},
-		{format: "%Y", err: `last change time strptime format must be enclosed between "'" characters`},
-		{format: "'%Y", err: `last change time strptime format must be enclosed between "'" characters`},
-		{format: "%Y'", err: `last change time strptime format must be enclosed between "'" characters`},
-		{format: "\xc3\x28", err: "last change time format must be UTF-8 valid"},
-		{format: "''", err: `last change time format "''" is not a valid format`},
-		{format: "'YYYY-MM-DD'", err: `last change time format "'YYYY-MM-DD'" is not a valid format`},
-		{format: "'%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y'", err: "last change time format is longer than 64 runes"},
+		{format: "%Y", err: "last change time format \"%Y\" is not a valid format"},
+		{format: "'%Y", err: "last change time strptime format does not end with \"'\""},
+		{format: "%Y'", err: "last change time format \"%Y'\" is not a valid format"},
+		{format: "\xc3\x28", err: "last change time format \"\\xc3(\" is not a valid format"},
+		{format: "''", err: "last change time strptime format is empty"},
+		{format: "'%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y'", err: "last change time strptime format is longer than 64 runes"},
 	}
 	for _, test := range tests {
 		t.Run(test.format, func(t *testing.T) {

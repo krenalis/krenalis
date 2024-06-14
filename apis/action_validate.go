@@ -612,20 +612,20 @@ func validateLastChangeTimeFormat(format string) error {
 		"Excel":
 		return nil
 	}
-	if format == "" {
-		return errors.New("last change time format cannot be empty")
-	}
-	if !utf8.ValidString(format) {
-		return errors.New("last change time format must be UTF-8 valid")
-	}
-	if utf8.RuneCountInString(format) > 64 {
-		return errors.New("last change time format is longer than 64 runes")
-	}
-	if !strings.Contains(format, "%") {
+	if format == "" || format[0] != '\'' {
 		return fmt.Errorf("last change time format %q is not a valid format", format)
 	}
-	if format[0] != '\'' || format[len(format)-1] != '\'' {
-		return fmt.Errorf("last change time strptime format must be enclosed between \"'\" characters")
+	if len(format) == 1 || format[len(format)-1] != '\'' {
+		return fmt.Errorf("last change time strptime format does not end with \"'\"")
+	}
+	if len(format) == 2 {
+		return fmt.Errorf("last change time strptime format is empty")
+	}
+	if !utf8.ValidString(format) {
+		return errors.New("last change time strptime format contains invalid UTF-8 characters")
+	}
+	if utf8.RuneCountInString(format) > 64 {
+		return errors.New("last change time strptime format is longer than 64 runes")
 	}
 	return nil
 }
