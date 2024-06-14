@@ -312,6 +312,10 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				continue
 			}
 			mapEvent := event.ToMap()
+			ok, err := filterApplies(action.Filter, mapEvent)
+			if err != nil || !ok {
+				continue
+			}
 			var properties map[string]any
 			// If the action specifies mappings, apply them to the event and
 			// obtain the properties.
@@ -339,7 +343,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				continue
 			}
 			// Write the user identity on the data warehouse.
-			err := iw.Write(datastore.Identity{
+			err = iw.Write(datastore.Identity{
 				Action:         action.ID,
 				ID:             event.UserId,
 				AnonymousID:    event.AnonymousId,

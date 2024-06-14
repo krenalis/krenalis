@@ -666,7 +666,10 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	const fields: ActionTypeField[] = [];
 	if (
 		(connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') ||
-		(connection.type === 'Database' && connection.role === 'Destination')
+		(connection.type === 'Database' && connection.role === 'Destination') ||
+		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
+			connection.role === 'Source' &&
+			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
 	) {
 		fields.push('Filter');
 	}

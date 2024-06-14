@@ -346,6 +346,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		filtersAllowed = c.Role == state.Destination
 	case state.FileStorageType:
 		filtersAllowed = targetUsersOrGroups && c.Role == state.Destination
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		filtersAllowed = targetUsersOrGroups && c.Role == state.Source
 	}
 	if action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
