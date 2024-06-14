@@ -560,8 +560,8 @@ func parseTimestamp(format, timestamp string) (time.Time, error) {
 //
 // To see a list of accepted format values, see the documentation of
 // 'parseTimestamp'.
-func parseTimestampColumn(name string, typ types.Type, format string, value any, layouts *state.TimeLayouts) (time.Time, error) {
-	timestamp, err := normalize(name, typ, value, false, layouts)
+func parseTimestampColumn(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
+	timestamp, err := normalize(name, typ, value, nullable, layouts)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -575,7 +575,7 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any,
 		}
 		return timestamp, nil
 	case string:
-		ts, err := parseTimestamp(format, value.(string))
+		ts, err := parseTimestamp(format, timestamp)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
@@ -590,7 +590,7 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any,
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 		}
-		ts, err := parseTimestamp(format, value.(string))
+		ts, err := parseTimestamp(format, s)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}

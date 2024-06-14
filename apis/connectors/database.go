@@ -477,7 +477,7 @@ func (sv recordsScanValue) Scan(src any) error {
 		if src == nil {
 			return errors.New("last change time value is NULL")
 		}
-		lastChangeTime, err := parseTimestampColumn(p.Name, p.Type, sv.lastChangeTimeFormat, src, sv.timeLayouts)
+		lastChangeTime, err := parseTimestampColumn(p.Name, p.Type, sv.lastChangeTimeFormat, src, p.Nullable, sv.timeLayouts)
 		if err != nil {
 			return err
 		}
