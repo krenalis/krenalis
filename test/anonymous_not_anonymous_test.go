@@ -110,8 +110,8 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	var action1Found, action2Found bool
 	for _, identity := range identities {
-		if identity.IdentityId.Value != "" {
-			t.Fatalf("expected no identity ID, got %v", identity.IdentityId)
+		if identity.ID != "" {
+			t.Fatalf("expected no identity ID, got %v", identity.ID)
 		}
 		switch identity.Action {
 		case action1:
@@ -142,7 +142,7 @@ waitLoop:
 	for {
 		identities, _ := c.ConnectionIdentities(javaScriptID, 0, 100)
 		for _, identity := range identities {
-			if identity.IdentityId.Value != "" {
+			if identity.ID != "" {
 				break waitLoop
 			}
 		}
