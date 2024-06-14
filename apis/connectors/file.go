@@ -485,7 +485,7 @@ func (rw *recordWriter) Record(record []any) error {
 	lastChangeTime := rw.storageLastChangeTime
 	if i := rw.lastChangeTime.index; i >= 0 {
 		p := rw.properties[i]
-		lastChangeTime, err = parseTimestampColumn(p.Name, p.Type, rw.lastChangeTime.property.Format, record[i], p.Nullable, rw.timeLayouts)
+		lastChangeTime, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.lastChangeTime.property.Format, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil
@@ -541,7 +541,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	lastChangeTime := rw.storageLastChangeTime
 	if i := rw.lastChangeTime.index; i >= 0 {
 		p := rw.properties[i]
-		lastChangeTime, err = parseTimestampColumn(p.Name, p.Type, rw.lastChangeTime.property.Format, record[p.Name], p.Nullable, rw.timeLayouts)
+		lastChangeTime, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.lastChangeTime.property.Format, record[p.Name], p.Nullable, rw.timeLayouts)
 		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil
@@ -600,7 +600,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 	lastChangeTime := rw.storageLastChangeTime
 	if i := rw.lastChangeTime.index; i >= 0 {
 		p := rw.properties[i]
-		lastChangeTime, err = parseTimestampColumn(p.Name, p.Type, rw.lastChangeTime.property.Format, record[i], p.Nullable, rw.timeLayouts)
+		lastChangeTime, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.lastChangeTime.property.Format, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil

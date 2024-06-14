@@ -484,20 +484,14 @@ func isExcelSimpleFloat(s string) bool {
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
-// parseTimestamp parses a timestamp with the given format.
+// parseLastChangeTimePropertyWithFormat parses a last change time value with
+// the given format.
 //
-// Accepted values for format are:
+// For the accepted formats, see the 'apis.validateLastChangeTimeWithFormat'
+// function.
 //
-//   - "DateTime", to parse timestamps in the format "2006-01-02 15:04:05"
-//   - "DateOnly", to parse date-only timestamps in the format "2006-01-02"
-//   - "ISO8601", to parse the timestamp as a ISO 8601 timestamp.
-//   - "Excel", to parse the timestamp as a string representing a float value
-//     stored in a Excel cell representing a date / datetime.
-//   - a strptime format, enclosed by single quote characters, compatible with
-//     the standard C89 functions strptime/strftime.
-//
-// NOTE: keep in sync with the function 'apis.validateTimestampFormat'.
-func parseTimestamp(format, timestamp string) (time.Time, error) {
+// NOTE: keep in sync with 'apis.validateLastChangeTimeFormat'.
+func parseLastChangeTimePropertyWithFormat(format, timestamp string) (time.Time, error) {
 	switch format {
 	case "DateTime":
 		dt, err := time.Parse("2006-01-02 15:04:05", timestamp)
@@ -555,12 +549,12 @@ func parseTimestamp(format, timestamp string) (time.Time, error) {
 	}
 }
 
-// parseTimestampColumn parses a timestamp column value. If the timestamp cannot
-// be parsed or it is not valid, returns an error.
+// parseLastChangeTimeProperty parses a last change time property value. If the
+// value cannot be parsed, or it is not valid, returns an error.
 //
-// To see a list of accepted format values, see the documentation of
-// 'parseTimestamp'.
-func parseTimestampColumn(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
+// For the accepted formats, see the 'apis.validateLastChangeTimeWithFormat'
+// function.
+func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
 	timestamp, err := normalize(name, typ, value, nullable, layouts)
 	if err != nil {
 		return time.Time{}, err
@@ -575,7 +569,7 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any,
 		}
 		return timestamp, nil
 	case string:
-		ts, err := parseTimestamp(format, timestamp)
+		ts, err := parseLastChangeTimePropertyWithFormat(format, timestamp)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}
@@ -590,7 +584,7 @@ func parseTimestampColumn(name string, typ types.Type, format string, value any,
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
 		}
-		ts, err := parseTimestamp(format, s)
+		ts, err := parseLastChangeTimePropertyWithFormat(format, s)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
 		}

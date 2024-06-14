@@ -11,6 +11,7 @@ package apis
 // function/method used exclusively by it.
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -258,7 +259,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 	// Validate the last change time format.
 	if action.LastChangeTimeFormat != "" {
-		if err := validateTimestampFormat(action.LastChangeTimeFormat); err != nil {
+		if err := validateLastChangeTimeFormat(action.LastChangeTimeFormat); err != nil {
 			return errors.BadRequest(err.Error())
 		}
 	}
@@ -586,4 +587,45 @@ func unusedProperties(schema types.Type, used []types.Path) []string {
 	props := maps.Keys(notUsed)
 	slices.Sort(props)
 	return props
+}
+
+// validateLastChangeTimeFormat validates the given last change time format for
+// importing files and database rows, returning an error in case the format is
+// not valid.
+//
+// Valid formats are
+//
+//   - "DateTime": the time format "2006-01-02 15:04:05"
+//   - "DateOnly": the time format "2006-01-02"
+//   - "ISO8601": the ISO 8601 format
+//   - "Excel": the Excel format, a float value stored in an Excel cell representing a date / datetime
+//   - "'...'": the strftime() function format, the format must be enclosed by single quote characters
+//
+// NOTE: keep in sync with the function
+// 'apis/connectors.parseLastChangeTimeWithFormat'.
+func validateLastChangeTimeFormat(format string) error {
+	switch format {
+	case
+		"DateTime",
+		"DateOnly",
+		"ISO8601",
+		"Excel":
+		return nil
+	}
+	if format == "" {
+		return errors.New("last change time format cannot be empty")
+	}
+	if !utf8.ValidString(format) {
+		return errors.New("last change time format must be UTF-8 valid")
+	}
+	if utf8.RuneCountInString(format) > 64 {
+		return errors.New("last change time format is longer than 64 runes")
+	}
+	if !strings.Contains(format, "%") {
+		return fmt.Errorf("last change time format %q is not a valid format", format)
+	}
+	if format[0] != '\'' || format[len(format)-1] != '\'' {
+		return fmt.Errorf("last change time strptime format must be enclosed between \"'\" characters")
+	}
+	return nil
 }

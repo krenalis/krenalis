@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
@@ -967,35 +966,4 @@ func transformationFunctionName(action int, language state.Language) string {
 		panic("unexpected language")
 	}
 	return "action-" + strconv.Itoa(action) + ext
-}
-
-// validateTimestampFormat validates the given timestamp format for importing
-// files, returning an error in case the format is not valid.
-//
-// NOTE: keep in sync with the function 'apis/connectors.parseTimestamp'.
-func validateTimestampFormat(format string) error {
-	switch format {
-	case
-		"DateTime",
-		"DateOnly",
-		"ISO8601",
-		"Excel":
-		return nil
-	}
-	if format == "" {
-		return errors.New("timestamp format cannot be empty")
-	}
-	if !utf8.ValidString(format) {
-		return errors.New("timestamp format must be UTF-8 valid")
-	}
-	if utf8.RuneCountInString(format) > 64 {
-		return errors.New("timestamp format is longer than 64 runes")
-	}
-	if !strings.Contains(format, "%") {
-		return fmt.Errorf("timestamp format %q is not a valid timestamp format", format)
-	}
-	if format[0] != '\'' || format[len(format)-1] != '\'' {
-		return fmt.Errorf("timestamp strptime format must be enclosed between \"'\" characters")
-	}
-	return nil
 }

@@ -152,7 +152,7 @@ func Test_parseTimestamp(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := parseTimestamp(test.format, test.value)
+			got, err := parseLastChangeTimePropertyWithFormat(test.format, test.value)
 			var gotErr string
 			if err != nil {
 				gotErr = err.Error()
