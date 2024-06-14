@@ -505,9 +505,7 @@ func (rw *recordWriter) Record(record []any) error {
 	if rw.lastChangeTimeProperty.name != "" {
 		ts := record[rw.lastChangeTimeProperty.index]
 		lastChangeTime, err = parseTimestampColumn(rw.lastChangeTimeProperty.name, rw.lastChangeTimeProperty.typ, rw.lastChangeTimeProperty.format, ts, rw.timeLayouts)
-		if err != nil {
-			rw.record.Err = err
-		} else if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+		if err == nil && !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
 			// Skip the record because it is older than the specified starting time.
 			return nil
 		}
