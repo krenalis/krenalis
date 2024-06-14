@@ -225,6 +225,9 @@ func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
 	f(cc)
 	state.mu.Lock()
 	state.connections[id] = cc
+	for _, key := range c.Keys {
+		state.connectionsByKey[key] = cc
+	}
 	state.mu.Unlock()
 	// Update the workspaces.
 	ws := cc.workspace
