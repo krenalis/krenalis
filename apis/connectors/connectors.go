@@ -531,9 +531,10 @@ func parseIdentityProperty(name string, typ types.Type, value any, layouts *stat
 }
 
 // parseLastChangeTimeProperty parses a last change time property value. If the
-// value cannot be parsed, or it is not valid, returns an error.
+// value cannot be parsed or is not valid, it returns an error. If the value is
+// valid but nil and nullable is true, it returns the zero time and a nil error.
 //
-// For the accepted formats, see the 'apis.validateLastChangeTimeWithFormat'
+// For accepted formats, refer to the 'apis.validateLastChangeTimeWithFormat'
 // function.
 func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
 	timestamp, err := normalize(name, typ, value, nullable, layouts)
@@ -542,7 +543,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 	}
 	switch timestamp := timestamp.(type) {
 	case nil:
-		return time.Time{}, errors.New("timestamp value is null")
+		return time.Time{}, nil
 	case time.Time:
 		err = validateLastChangeTime(timestamp)
 		if err != nil {
