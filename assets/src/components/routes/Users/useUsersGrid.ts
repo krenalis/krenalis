@@ -18,7 +18,7 @@ const useUsersGrid = (
 			const isSelected = userCopy.id === selectedUser;
 			const row: GridRow = {
 				onClick: () => onUserClick(user.id),
-				cells: Object.values(userCopy.properties),
+				cells: [userCopy.lastChangeTime, ...Object.values(userCopy.properties)],
 				selected: isSelected,
 			};
 			rows.push(row);
@@ -29,6 +29,10 @@ const useUsersGrid = (
 	const userColumns = useMemo(() => {
 		// compute the columns for the grid component.
 		const userColumns: GridColumn[] = [];
+		userColumns.push({
+			name: 'Last Change Time',
+			type: 'DateTime',
+		});
 		for (const p of usersProperties) {
 			if (p.isUsed) {
 				userColumns.push({

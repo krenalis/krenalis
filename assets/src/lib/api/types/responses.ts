@@ -84,6 +84,7 @@ interface Filter {
 
 interface ResponseUser {
 	id: string;
+	lastChangeTime: string;
 	properties: Record<string, any>;
 }
 

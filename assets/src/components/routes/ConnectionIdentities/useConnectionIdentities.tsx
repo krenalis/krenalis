@@ -56,7 +56,7 @@ const useConnectionIdentities = () => {
 
 		const columns: GridColumn[] = [
 			{
-				name: 'Last change time',
+				name: 'Last Change Time',
 				type: 'DateTime',
 			},
 			{
