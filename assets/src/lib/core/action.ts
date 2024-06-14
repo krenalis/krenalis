@@ -636,6 +636,9 @@ const computeDefaultAction = (
 	};
 	if (fields.includes('Query')) {
 		action.Query = connection.connector.sampleQuery;
+		action.IdentityProperty = '';
+		action.LastChangeTimeProperty = '';
+		action.LastChangeTimeFormat = '';
 	}
 	if (fields.includes('File')) {
 		action.Path = '';
