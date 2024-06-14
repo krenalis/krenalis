@@ -523,7 +523,14 @@ func (rw *recordWriter) Record(record []any) error {
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
-	// Normalize the properties.
+	// Get the identity property.
+	if rw.identityProperty.name != "" {
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+		if err != nil {
+			rw.record.Err = err
+		}
+	}
+	// Get the properties.
 	if rw.record.Err == nil {
 		for i, p := range rw.properties {
 			j := rw.columnIndexOf[i]
@@ -533,13 +540,6 @@ func (rw *recordWriter) Record(record []any) error {
 				break
 			}
 			rw.record.Properties[p.Name] = value
-		}
-	}
-	// Parse the identity property.
-	if rw.identityProperty.name != "" {
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
-		if err != nil && rw.record.Err != nil {
-			rw.record.Err = err
 		}
 	}
 	rw.limit--
@@ -576,7 +576,14 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
-	// Normalize the properties.
+	// Get the identity property.
+	if rw.identityProperty.name != "" {
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
+		if err != nil {
+			rw.record.Err = err
+		}
+	}
+	// Get the properties.
 	if rw.record.Err == nil {
 		for _, p := range rw.properties {
 			value, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
@@ -585,13 +592,6 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 				break
 			}
 			rw.record.Properties[p.Name] = value
-		}
-	}
-	// Parse the identity property.
-	if rw.identityProperty.name != "" {
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.name], rw.timeLayouts)
-		if err != nil && rw.record.Err != nil {
-			rw.record.Err = err
 		}
 	}
 	rw.limit--
@@ -631,7 +631,14 @@ func (rw *recordWriter) RecordString(record []string) error {
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
-	// Normalize the properties.
+	// Get the identity property.
+	if rw.identityProperty.name != "" {
+		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
+		if err != nil {
+			rw.record.Err = err
+		}
+	}
+	// Get the properties.
 	if rw.record.Err == nil {
 		for i, p := range rw.properties {
 			j := rw.columnIndexOf[i]
@@ -641,13 +648,6 @@ func (rw *recordWriter) RecordString(record []string) error {
 				break
 			}
 			rw.record.Properties[p.Name] = value
-		}
-	}
-	// Parse the identity property.
-	if rw.identityProperty.name != "" {
-		rw.record.ID, err = parseIdentityProperty(rw.identityProperty.name, rw.identityProperty.typ, record[rw.identityProperty.index], rw.timeLayouts)
-		if err != nil && rw.record.Err != nil {
-			rw.record.Err = err
 		}
 	}
 	rw.limit--
