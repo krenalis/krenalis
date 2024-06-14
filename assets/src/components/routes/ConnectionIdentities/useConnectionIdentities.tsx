@@ -5,6 +5,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { UserIdentity } from '../../../lib/api/types/user';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const useConnectionIdentities = () => {
 	const [identities, setIdentities] = useState<UserIdentity[]>();
@@ -64,7 +65,7 @@ const useConnectionIdentities = () => {
 				explanation: 'The ID of the action which imported this identity (TODO: this will be revised)',
 			},
 			{
-				name: identities[0].IdentityId.Label,
+				name: connection.connector.getIdentityIDLabel(),
 			},
 		];
 		if (connection.hasAnonymousIdentifiers) {
@@ -76,13 +77,24 @@ const useConnectionIdentities = () => {
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
 			const row: GridRow = {
-				cells: [identity.LastChangeTime, identity.Action, identity.IdentityId.Value],
-				key: identity.IdentityId.Value,
+				cells: [
+					identity.lastChangeTime,
+					identity.action,
+					identity.id ? (
+						identity.id
+					) : (
+						<span className='connection-identities__anonymous-identity'>
+							<SlIcon name='incognito' />
+							anonymous
+						</span>
+					),
+				],
+				key: identity.id,
 			};
 			if (connection.hasAnonymousIdentifiers) {
 				const anonymousIds: ReactNode[] = [];
-				if (identity.AnonymousIds != null) {
-					for (const id of identity.AnonymousIds) {
+				if (identity.anonymousIds != null) {
+					for (const id of identity.anonymousIds) {
 						anonymousIds.push(<code>{id}</code>);
 					}
 				}

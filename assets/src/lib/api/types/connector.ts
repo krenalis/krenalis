@@ -22,6 +22,7 @@ interface Connector {
 	TermForGroups: string;
 	SendingMode: SendingMode | null;
 	Targets: Record<ActionTarget, boolean>;
+	IdentityIDLabel: string;
 }
 
 export type { Connector, ConnectorType, WebhooksPer, SendingMode };

@@ -135,11 +135,11 @@ type User struct {
 }
 
 type UserIdentity struct {
-	Connection     int
-	Action         int
-	IdentityId     LabelValue
-	AnonymousIds   []string
-	LastChangeTime time.Time
+	Connection     int       // do not use in tests. Currently, this serves just for the UI.
+	Action         int       `json:"action"`
+	ID             string    `json:"id"`
+	AnonymousIds   []string  `json:"anonymousIds"`
+	LastChangeTime time.Time `json:"lastChangeTime"`
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

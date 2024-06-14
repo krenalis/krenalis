@@ -115,18 +115,12 @@ interface UserEvent {
 
 type UserTraits = Record<string, any>;
 
-interface UserIdentityLabelValue {
-	Label: string;
-	Value: string;
-}
-
 interface UserIdentity {
-	Action: number;
-	Connection: number;
-	IdentityId: UserIdentityLabelValue;
-	DisplayedProperty: string;
-	AnonymousIds: string[] | null;
-	LastChangeTime: string;
+	action: number;
+	connection: number;
+	id: string;
+	anonymousIds: string[] | null;
+	lastChangeTime: string;
 }
 
 interface User {

@@ -217,9 +217,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		dummyIdentity := identities[0]
 		dummyIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
+			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
 			Action:         dummyAction,
-			Connection:     dummy,
-			IdentityId:     chichitester.LabelValue{Label: "Dummy Unique ID", Value: "dummy1"},
+			ID:             "dummy1",
 			AnonymousIds:   nil,
 			LastChangeTime: time.Time{},
 		})
@@ -228,12 +228,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		csvIdentity := identities[1]
 		assertEqualIdentity(csvIdentity, chichitester.UserIdentity{
-			Action:     csvAction,
-			Connection: fs,
-			IdentityId: chichitester.LabelValue{
-				Label: "ID",
-				Value: "1",
-			},
+			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
+			Action:         csvAction,
+			ID:             "1",
 			AnonymousIds:   nil,
 			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
 		})
@@ -243,9 +240,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity := identities[2]
 		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
+			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
 			Action:         javascriptUsersAction,
-			Connection:     javaScript,
-			IdentityId:     chichitester.LabelValue{Label: "User ID", Value: "f4ca124298"},
+			ID:             "f4ca124298",
 			AnonymousIds:   []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			LastChangeTime: time.Time{},
 		})

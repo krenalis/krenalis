@@ -65,8 +65,8 @@ func TestImportFromTwoDummies(t *testing.T) {
 			t.Fatalf("expected count 10, got %d", count)
 		}
 		for _, identity := range identities {
-			if identity.Connection != dummy1 {
-				t.Fatalf("unexpected connection %d, expecting %d", identity.Connection, dummy1)
+			if identity.Action != action1 {
+				t.Fatalf("unexpected action %d, expecting %d", identity.Action, action1)
 			}
 		}
 		identities, count = c.ConnectionIdentities(dummy2, 0, 100)
@@ -74,8 +74,8 @@ func TestImportFromTwoDummies(t *testing.T) {
 			t.Fatalf("expected count 10, got %d", count)
 		}
 		for _, identity := range identities {
-			if identity.Connection != dummy2 {
-				t.Fatalf("unexpected connection %d, expecting %d", identity.Connection, dummy2)
+			if identity.Action != action2 {
+				t.Fatalf("unexpected action %d, expecting %d", identity.Action, action2)
 			}
 		}
 	}

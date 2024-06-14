@@ -235,10 +235,10 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 							spinner
 						) : identities && identities.length > 0 ? (
 							identities.map((identity) => {
-								const connection = connections.find((c) => c.id === identity.Connection);
+								const connection = connections.find((c) => c.id === identity.connection);
 								const logo = getConnectorLogo(connection.connector.icon);
 								return (
-									<div className='user-drawer__identity' key={identity.LastChangeTime}>
+									<div className='user-drawer__identity' key={identity.lastChangeTime}>
 										<Link path={`connections/${connection.id}/actions`}>
 											<div className='user-drawer__identity-connection-logo'>{logo}</div>
 										</Link>
@@ -250,7 +250,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 													</div>
 												</Link>
 												<div className='user-drawer__identity-date'>
-													{new Date(toJSDateString(identity.LastChangeTime)).toLocaleString(
+													{new Date(toJSDateString(identity.lastChangeTime)).toLocaleString(
 														'it-IT',
 														{
 															timeZone: 'Europe/Rome',
@@ -259,14 +259,17 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 												</div>
 											</div>
 											<div className='user-drawer__action'>
-												Imported from action: <code>{identity.Action}</code>
+												Imported from action: <code>{identity.action}</code>
 											</div>
-											<div className='user-drawer__identity-id'>
-												{identity.IdentityId.Label}: <code>{identity.IdentityId.Value}</code>
-											</div>
-											{identity.AnonymousIds !== null && (
+											{identity.id && (
+												<div className='user-drawer__identity-id'>
+													{connection.connector.getIdentityIDLabel()}:{' '}
+													<code>{identity.id}</code>
+												</div>
+											)}
+											{identity.anonymousIds !== null && (
 												<div className='user-drawer__identity-anonymous-ids'>
-													Anonymous IDs: <code>{identity.AnonymousIds.join(', ')}</code>
+													Anonymous IDs: <code>{identity.anonymousIds.join(', ')}</code>
 												</div>
 											)}
 										</div>

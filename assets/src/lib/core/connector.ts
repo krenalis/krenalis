@@ -18,6 +18,7 @@ class TransformedConnector {
 	termForGroups: string;
 	SendingMode: SendingMode | null;
 	targets: Record<ActionTarget, boolean>;
+	identityIDLabel: string;
 
 	constructor(
 		name: string,
@@ -35,6 +36,7 @@ class TransformedConnector {
 		termForGroups: string,
 		SendingMode: SendingMode,
 		targets: Record<ActionTarget, boolean>,
+		identityIDLabel: string,
 	) {
 		this.name = name;
 		this.type = type;
@@ -51,6 +53,7 @@ class TransformedConnector {
 		this.termForGroups = termForGroups;
 		this.SendingMode = SendingMode;
 		this.targets = targets;
+		this.identityIDLabel = identityIDLabel;
 	}
 
 	get isApp() {
@@ -94,6 +97,21 @@ class TransformedConnector {
 			default:
 				return [this.SendingMode];
 		}
+	}
+
+	getIdentityIDLabel(): string {
+		let identityIDLabel: string = '';
+		if (this.isApp) {
+			identityIDLabel = this.identityIDLabel;
+			if (identityIDLabel === '') {
+				identityIDLabel = 'ID';
+			}
+		} else if (this.isDatabase || this.isFileStorage) {
+			identityIDLabel = 'ID';
+		} else if (this.isMobile || this.isServer || this.isWebsite) {
+			identityIDLabel = 'User ID';
+		}
+		return identityIDLabel;
 	}
 }
 

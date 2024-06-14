@@ -112,27 +112,22 @@ func Test_UserIdentities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for user with GID %s that has"+
-					" connection = %d, identity ID = %v and last change time = %q",
-				user.ID, identity.Connection, identity.IdentityId, identity.LastChangeTime)
+					" action = %d, identity ID = %v and last change time = %q",
+				user.ID, identity.Action, identity.ID, identity.LastChangeTime)
 
 			var idPrefix string
-			switch identity.Connection {
-			case fs1:
+			switch identity.Action {
+			case action1:
 				idPrefix = "users1_"
-			case fs2:
+			case action2:
 				idPrefix = "users2_"
 			default:
-				t.Fatalf("unexpected connection %d", identity.Connection)
+				t.Fatalf("unexpected action %d", identity.Action)
 			}
 
 			// Check the identity ID label.
-			id := identity.IdentityId
-			const expectedIdentityIDLabel = "ID"
-			if expectedIdentityIDLabel != id.Label {
-				t.Fatalf("expected identity ID label %q, got %q", expectedIdentityIDLabel, id.Label)
-			}
-			if !strings.HasPrefix(id.Value, idPrefix) {
-				t.Fatalf("unexpected identity ID %q, it should have prefix %q", id, idPrefix)
+			if !strings.HasPrefix(identity.ID, idPrefix) {
+				t.Fatalf("unexpected identity ID %q, it should have prefix %q", identity.ID, idPrefix)
 			}
 
 			totalIdentities++

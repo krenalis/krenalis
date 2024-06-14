@@ -1752,21 +1752,21 @@ func isValidDisplayedPropertyName(property string) bool {
 	return true
 }
 
-type labelValue struct {
-	Label string
-	Value string
-}
-
 // UserIdentity represents a user identity.
 //
 // TODO(Gianluca): this type should be reviewed. See the issue
 // https://github.com/open2b/chichi/issues/791.
 type UserIdentity struct {
-	Connection     int
-	Action         int
-	IdentityId     labelValue // zero struct for identities imported from anonymous events.
-	AnonymousIds   []string   // nil for identities not imported from events.
-	LastChangeTime time.Time
+	// TODO(Gianluca): the Connection field is kept here redundantly (the action
+	// is already there) because the UI does not currently have the Action =>
+	// Connection mapping available, and it would be very inconvenient to
+	// retrieve this information where it is needed. When it will have it in the
+	// future, we will remove this field.
+	Connection     int       `json:"connection"`
+	Action         int       `json:"action"`
+	ID             string    `json:"id"`           // empty string for identities imported from anonymous events.
+	AnonymousIds   []string  `json:"anonymousIds"` // nil for identities not imported from events.
+	LastChangeTime time.Time `json:"lastChangeTime"`
 }
 
 // userIdentities returns the user identities matching the provided filter and
@@ -1831,28 +1831,6 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		// Determine the value for the identity ID.
 		identityID := record["__identity_id__"].(string)
 
-		// Determine the label for the Identity ID, except for the case of
-		// "anonymous identities", which are identities imported from anonymous
-		// events. In that case, both the Identity ID value and label must be
-		// empty.
-		var identityIDLabel string
-		if identityID != "" {
-			c := conn.Connector()
-			switch c.Type {
-			case state.AppType:
-				identityIDLabel = c.IdentityIDLabel
-				if identityIDLabel == "" {
-					identityIDLabel = "ID"
-				}
-			case state.DatabaseType, state.FileStorageType:
-				identityIDLabel = "ID"
-			case state.MobileType, state.ServerType, state.WebsiteType:
-				identityIDLabel = "User ID"
-			default:
-				return nil, 0, fmt.Errorf("unexpected connector type %v", c.Type)
-			}
-		}
-
 		// Determine the anonymous IDs.
 		var anonIDs []string
 		if ids, ok := record["__anonymous_ids__"].([]any); ok {
@@ -1877,12 +1855,9 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 		lastChangeTime := record["__last_change_time__"].(time.Time)
 
 		identities = append(identities, UserIdentity{
-			Connection: connID,
-			Action:     actionID,
-			IdentityId: labelValue{
-				Label: identityIDLabel,
-				Value: identityID,
-			},
+			Connection:     connID,
+			Action:         actionID,
+			ID:             identityID,
 			AnonymousIds:   anonIDs,
 			LastChangeTime: lastChangeTime,
 		})

@@ -60,8 +60,5 @@ func TestImportFromDatabase(t *testing.T) {
 		if identity.Action != importUsers {
 			t.Fatalf("expected identity action %d, got %d", importUsers, identity.Action)
 		}
-		if identity.Connection != pgSQL {
-			t.Fatalf("expected identity connection %d, got %d", pgSQL, identity.Connection)
-		}
 	}
 }

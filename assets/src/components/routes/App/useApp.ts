@@ -92,6 +92,7 @@ const useApp = (
 						c.TermForGroups,
 						c.SendingMode,
 						c.Targets,
+						c.IdentityIDLabel,
 					),
 				);
 			}
