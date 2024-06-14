@@ -1,0 +1,164 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2024 Open2b
+//
+
+package test
+
+import (
+	"testing"
+	"time"
+
+	"github.com/open2b/chichi/test/chichitester"
+	"github.com/open2b/chichi/types"
+	"github.com/segmentio/analytics-go/v3"
+)
+
+func TestAnonymousNotAnonymous(t *testing.T) {
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := chichitester.InitAndLaunch(t)
+	defer c.Stop()
+
+	// Create a JavaScript connection and get its key.
+	var javaScriptKey string
+	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
+	keys := c.ConnectionKeys(javaScriptID)
+	if len(keys) != 1 {
+		t.Fatalf("expecting one key, got %d keys", len(keys))
+	}
+	javaScriptKey = keys[0]
+
+	// Add a first action, with a filter.
+	action1 := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+		Name:     "Action 1",
+		Enabled:  true,
+		InSchema: types.Type{},
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Nullable: true},
+		}),
+		Filter: &chichitester.Filter{
+			Logical: "any",
+			Conditions: []chichitester.FilterCondition{
+				{Property: "messageId", Operator: "is", Value: "message1"}, // message of the anonymous identity
+				{Property: "messageId", Operator: "is", Value: "message3"}, // message of the not-anonymous identity
+			},
+		},
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "traits.email",
+			},
+		},
+	})
+
+	// Add a second action, which imports identities from events with a
+	// different filter than the first action.
+	action2 := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+		Name:     "Action 1",
+		Enabled:  true,
+		InSchema: types.Type{},
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Nullable: true},
+		}),
+		Filter: &chichitester.Filter{
+			Logical: "any",
+			Conditions: []chichitester.FilterCondition{
+				{Property: "messageId", Operator: "is", Value: "message2"}, // message of the anonymous identity
+			},
+		},
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "traits.email",
+			},
+		},
+	})
+
+	// Import two anonymous identities; each will need to be imported from its
+	// own action.
+	c.SendEvent(javaScriptKey, analytics.Identify{
+		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
+		MessageId:   "message1",
+		Traits:      analytics.NewTraits().SetAge(20),
+	})
+
+	c.SendEvent(javaScriptKey, analytics.Identify{
+		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
+		MessageId:   "message2",
+		Traits:      analytics.NewTraits().SetAge(20),
+	})
+
+	// Wait for the 2 identities to be imported successfully.
+	attempts := 0
+	var identities []chichitester.UserIdentity
+	for {
+		var count int
+		identities, count = c.ConnectionIdentities(javaScriptID, 0, 100)
+		if count == 2 {
+			break
+		}
+		attempts += 1
+		if attempts > 10 {
+			t.Fatal("too many failed attempts waiting for the identities to be written on the data warehouse")
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	var action1Found, action2Found bool
+	for _, identity := range identities {
+		if identity.IdentityId.Value != "" {
+			t.Fatalf("expected no identity ID, got %v", identity.IdentityId)
+		}
+		switch identity.Action {
+		case action1:
+			action1Found = true
+		case action2:
+			action2Found = true
+		default:
+			t.Fatalf("unexpected identity with action %d", identity.Action)
+		}
+	}
+	if !action1Found {
+		t.Fatal("identity for action 1 not found")
+	}
+	if !action2Found {
+		t.Fatal("identity for action 2 not found")
+	}
+
+	// Log in the user of the first action.
+	c.SendEvent(javaScriptKey, analytics.Identify{
+		UserId:      "user-id-1234",
+		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
+		MessageId:   "message3",
+		Traits:      analytics.NewTraits().SetAge(20),
+	})
+
+	attempts = 0
+waitLoop:
+	for {
+		identities, _ := c.ConnectionIdentities(javaScriptID, 0, 100)
+		for _, identity := range identities {
+			if identity.IdentityId.Value != "" {
+				break waitLoop
+			}
+		}
+		attempts += 1
+		if attempts > 10 {
+			t.Fatal("too many failed attempts waiting for the not-anonymous identity to be written on the data warehouse")
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// Make sure there are only 2 identities, as the anonymous identity imported
+	// by the first action must have been deleted during the merge of the
+	// non-anonymous identity.
+	_, count := c.ConnectionIdentities(javaScriptID, 0, 100)
+	if count != 2 {
+		t.Fatalf("expected a total of 2 identities, got %d", count)
+	}
+
+}

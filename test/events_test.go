@@ -52,8 +52,8 @@ func TestEvents(t *testing.T) {
 	c.ExecuteAction(dummySrc, importUsersID, true)
 	c.WaitActionsToFinish(dummySrc)
 
-	// Add a JavaScript connection with two actions (one for importing events,
-	// one for importing user identities) and retrieve its key.
+	// Add a JavaScript connection with 2 actions (one for importing events, one
+	// for importing user identities) and retrieve its key.
 	var javaScriptID int
 	var javaScriptKey string
 	{
