@@ -534,6 +534,8 @@ func parseIdentityProperty(name string, typ types.Type, value any, layouts *stat
 // value cannot be parsed or is not valid, it returns an error. If the value is
 // valid but nil and nullable is true, it returns the zero time and a nil error.
 //
+// format must be a valid change time format.
+//
 // For accepted formats, refer to the 'apis.validateLastChangeTimeWithFormat'
 // function.
 func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
@@ -553,7 +555,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 	case string:
 		ts, err := parseLastChangeTimePropertyWithFormat(format, timestamp)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+			return time.Time{}, err
 		}
 		err = validateLastChangeTime(ts)
 		if err != nil {
@@ -564,11 +566,11 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 		var s string
 		err := json.Unmarshal(timestamp, &s)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+			return time.Time{}, fmt.Errorf("last change time is not a JSON string")
 		}
 		ts, err := parseLastChangeTimePropertyWithFormat(format, s)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp %q does not conform to the %q format", value, format)
+			return time.Time{}, err
 		}
 		err = validateLastChangeTime(ts)
 		if err != nil {
@@ -576,7 +578,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 		}
 		return ts, nil
 	}
-	return time.Time{}, fmt.Errorf("timestamp value is not a JSON string")
+	return time.Time{}, fmt.Errorf("last change time is not a JSON string")
 }
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -591,37 +593,37 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 func parseLastChangeTimePropertyWithFormat(format, timestamp string) (time.Time, error) {
 	switch format {
 	case "DateTime":
-		dt, err := time.Parse("2006-01-02 15:04:05", timestamp)
+		dt, err := time.Parse(time.DateTime, timestamp)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp has not the format '2006-01-02 15:04:05'")
+			return time.Time{}, fmt.Errorf("last change time does not conform to the DateTime format")
 		}
 		return dt.UTC(), nil
 	case "DateOnly":
-		date, err := time.Parse("2006-01-02", timestamp)
+		date, err := time.Parse(time.DateOnly, timestamp)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("timestamp has not the format '2006-01-02'")
+			return time.Time{}, fmt.Errorf("last change time does not conform to the DateOnly format")
 		}
 		return date.UTC(), nil
 	case "ISO8601":
 		dt, err := iso8601.ParseString(timestamp)
 		if err != nil {
-			return time.Time{}, errors.New("timestamp format is not compatible with ISO 8601")
+			return time.Time{}, fmt.Errorf("last change time does not conform to the ISO8601 format")
 		}
 		return dt.UTC(), err
 	case "Excel":
 		if !isExcelSimpleFloat(timestamp) {
-			return time.Time{}, errors.New("invalid timestamp for Excel")
+			return time.Time{}, errors.New("last change time does not conform to the Excel format")
 		}
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datetime-function-812ad674-f7dd-4f31-9245-e79cfa358a4e
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
 		days, err := strconv.ParseFloat(timestamp, 64)
 		if err != nil {
-			return time.Time{}, errors.New("invalid timestamp for Excel")
+			return time.Time{}, errors.New("last change time does not conform to the Excel format")
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
-			return time.Time{}, errors.New("invalid timestamp for Excel")
+			return time.Time{}, errors.New("last change time does not conform to the Excel format")
 		}
 		if days > 60 {
 			days--
@@ -630,17 +632,9 @@ func parseLastChangeTimePropertyWithFormat(format, timestamp string) (time.Time,
 		t := excelEpoch.Add(d)
 		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
 	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
-		f, ok := strings.CutPrefix(format, "'")
-		if !ok {
-			return time.Time{}, fmt.Errorf("invalid format %q", format)
-		}
-		f, ok = strings.CutSuffix(f, "'")
-		if !ok {
-			return time.Time{}, fmt.Errorf("invalid format %q", format)
-		}
-		t, err := timefmt.Parse(timestamp, f)
+		t, err := timefmt.Parse(timestamp, format[1:len(format)-1])
 		if err != nil {
-			return time.Time{}, err
+			return time.Time{}, fmt.Errorf("last change time does not conform to the %q format", format)
 		}
 		return t.UTC(), nil
 	}

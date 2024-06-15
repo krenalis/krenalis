@@ -31,7 +31,7 @@ func Test_parseTimestamp(t *testing.T) {
 			name:        "DateTime but an empty string is passed",
 			format:      "DateTime",
 			value:       "",
-			expectedErr: `timestamp has not the format '2006-01-02 15:04:05'`,
+			expectedErr: "last change time does not conform to the DateTime format",
 		},
 		{
 			name:     "DateOnly",
@@ -43,7 +43,7 @@ func Test_parseTimestamp(t *testing.T) {
 			name:        "DateOnly but hour-minute-second is passed",
 			format:      "DateOnly",
 			value:       "2033-12-14 13:32:12",
-			expectedErr: `timestamp has not the format '2006-01-02'`,
+			expectedErr: "last change time does not conform to the DateOnly format",
 		},
 		{
 			name:     "ISO8601",
@@ -73,7 +73,7 @@ func Test_parseTimestamp(t *testing.T) {
 			name:        "ISO8601 - wrong value format",
 			format:      "ISO8601",
 			value:       "2033-12-14T13-",
-			expectedErr: "timestamp format is not compatible with ISO 8601",
+			expectedErr: "last change time does not conform to the ISO8601 format",
 		},
 		{
 			name:     "Excel",
@@ -85,13 +85,13 @@ func Test_parseTimestamp(t *testing.T) {
 			name:        "Excel - invalid timestamp (1)",
 			format:      "Excel",
 			value:       "2000-01-02",
-			expectedErr: "invalid timestamp for Excel",
+			expectedErr: "last change time does not conform to the Excel format",
 		},
 		{
 			name:        "Excel - invalid timestamp (2)",
 			format:      "Excel",
 			value:       "12.34.45",
-			expectedErr: "invalid timestamp for Excel",
+			expectedErr: "last change time does not conform to the Excel format",
 		},
 		{
 			name:     "Excel - only date",
@@ -130,24 +130,6 @@ func Test_parseTimestamp(t *testing.T) {
 			format:   `''%Y-%m-%d''`,
 			value:    "'2033-12-14'",
 			expected: time.Date(2033, 12, 14, 0, 0, 0, 0, time.UTC),
-		},
-		{
-			name:        "Invalid format (1)",
-			format:      "",
-			value:       "2033-12-14T13:52Z",
-			expectedErr: `invalid format ""`,
-		},
-		{
-			name:        "Invalid format (2)",
-			format:      "iso8601", // must be uppercase.
-			value:       "2033-12-14T13:52Z",
-			expectedErr: `invalid format "iso8601"`,
-		},
-		{
-			name:        "Invalid format (2)",
-			format:      `"%Y-%m-%d"`,
-			value:       "2033-12-14",
-			expectedErr: `invalid format "\"%Y-%m-%d\""`,
 		},
 	}
 	for _, test := range tests {
