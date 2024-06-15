@@ -627,5 +627,8 @@ func validateLastChangeTimeFormat(format string) error {
 	if utf8.RuneCountInString(format) > 64 {
 		return errors.New("last change time strptime format is longer than 64 runes")
 	}
+	if containsNUL(format) {
+		return errors.New("last change time format contains the NUL rune")
+	}
 	return nil
 }

@@ -88,6 +88,7 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 		{format: "\xc3\x28", err: "last change time format \"\\xc3(\" is not a valid format"},
 		{format: "''", err: "last change time strptime format is empty"},
 		{format: "'%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y'", err: "last change time strptime format is longer than 64 runes"},
+		{format: "'\x00'", err: "last change time format contains the NUL rune"},
 	}
 	for _, test := range tests {
 		t.Run(test.format, func(t *testing.T) {
