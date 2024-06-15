@@ -539,44 +539,44 @@ func parseIdentityProperty(name string, typ types.Type, value any, layouts *stat
 // For accepted formats, refer to the 'apis.validateLastChangeTimeWithFormat'
 // function.
 func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
-	timestamp, err := normalize(name, typ, value, nullable, layouts)
+	v, err := normalize(name, typ, value, nullable, layouts)
 	if err != nil {
 		return time.Time{}, err
 	}
-	switch timestamp := timestamp.(type) {
+	switch v := v.(type) {
 	case nil:
 		return time.Time{}, nil
 	case time.Time:
-		err = validateLastChangeTime(timestamp)
+		err = validateLastChangeTime(v)
 		if err != nil {
 			return time.Time{}, err
 		}
-		return timestamp, nil
+		return v, nil
 	case string:
-		ts, err := parseLastChangeTimePropertyWithFormat(format, timestamp)
+		t, err := parseLastChangeTimePropertyWithFormat(format, v)
 		if err != nil {
 			return time.Time{}, err
 		}
-		err = validateLastChangeTime(ts)
+		err = validateLastChangeTime(t)
 		if err != nil {
 			return time.Time{}, err
 		}
-		return ts, nil
+		return t, nil
 	case json.RawMessage:
 		var s string
-		err := json.Unmarshal(timestamp, &s)
+		err := json.Unmarshal(v, &s)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time is not a JSON string")
 		}
-		ts, err := parseLastChangeTimePropertyWithFormat(format, s)
+		t, err := parseLastChangeTimePropertyWithFormat(format, s)
 		if err != nil {
 			return time.Time{}, err
 		}
-		err = validateLastChangeTime(ts)
+		err = validateLastChangeTime(t)
 		if err != nil {
 			return time.Time{}, err
 		}
-		return ts, nil
+		return t, nil
 	}
 	return time.Time{}, fmt.Errorf("last change time is not a JSON string")
 }
@@ -590,34 +590,34 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 // function.
 //
 // NOTE: keep in sync with 'apis.validateLastChangeTimeFormat'.
-func parseLastChangeTimePropertyWithFormat(format, timestamp string) (time.Time, error) {
+func parseLastChangeTimePropertyWithFormat(format, v string) (time.Time, error) {
 	switch format {
 	case "DateTime":
-		dt, err := time.Parse(time.DateTime, timestamp)
+		dt, err := time.Parse(time.DateTime, v)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time does not conform to the DateTime format")
 		}
 		return dt.UTC(), nil
 	case "DateOnly":
-		date, err := time.Parse(time.DateOnly, timestamp)
+		date, err := time.Parse(time.DateOnly, v)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time does not conform to the DateOnly format")
 		}
 		return date.UTC(), nil
 	case "ISO8601":
-		dt, err := iso8601.ParseString(timestamp)
+		dt, err := iso8601.ParseString(v)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time does not conform to the ISO8601 format")
 		}
 		return dt.UTC(), err
 	case "Excel":
-		if !isExcelSimpleFloat(timestamp) {
+		if !isExcelSimpleFloat(v) {
 			return time.Time{}, errors.New("last change time does not conform to the Excel format")
 		}
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datetime-function-812ad674-f7dd-4f31-9245-e79cfa358a4e
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
-		days, err := strconv.ParseFloat(timestamp, 64)
+		days, err := strconv.ParseFloat(v, 64)
 		if err != nil {
 			return time.Time{}, errors.New("last change time does not conform to the Excel format")
 		}
@@ -632,7 +632,7 @@ func parseLastChangeTimePropertyWithFormat(format, timestamp string) (time.Time,
 		t := excelEpoch.Add(d)
 		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
 	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
-		t, err := timefmt.Parse(timestamp, format[1:len(format)-1])
+		t, err := timefmt.Parse(v, format[1:len(format)-1])
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time does not conform to the %q format", format)
 		}

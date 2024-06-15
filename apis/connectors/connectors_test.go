@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func Test_parseTimestamp(t *testing.T) {
+func Test_parseLastChangeTimeProperty(t *testing.T) {
 	tests := []struct {
 		name        string
 		format      string
