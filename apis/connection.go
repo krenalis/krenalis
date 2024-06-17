@@ -912,7 +912,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	// Execute the query.
 	replacer := func(name string) (string, bool) {
-		if strings.ToLower(name) == "limit" {
+		if name == "limit" {
 			return strconv.Itoa(limit), true
 		}
 		return "", false
