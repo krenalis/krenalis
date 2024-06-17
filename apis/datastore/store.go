@@ -354,8 +354,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	// Determine the identifiers columns.
 	identifiers := make([]warehouses.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
-		path := strings.Split(ident, ".")
-		identifier, err := ws.UserSchema.PropertyByPath(path)
+		identifier, err := ws.UserSchema.PropertyByPath(ident)
 		if err != nil {
 			return err
 		}
@@ -363,7 +362,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 			return fmt.Errorf("identifier %q has a not allowed type %v", identifier.Name, identifier.Type)
 		}
 		identifiers[i] = warehouses.Column{
-			Name:     strings.Join(path, "_"),
+			Name:     strings.ReplaceAll(ident, ".", "_"),
 			Type:     identifier.Type,
 			Nullable: identifier.Nullable,
 		}

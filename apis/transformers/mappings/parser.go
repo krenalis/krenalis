@@ -354,8 +354,8 @@ Number:
 
 // parsePath parses a path and returns the parsed path and the remaining
 // unparsed source. It expects that src starts with 'a'-'z', 'A'-'Z', or '_'.
-func parsePath(src string) (types.Path, string, error) {
-	path := make(types.Path, 0, 1)
+func parsePath(src string) (path, string, error) {
+	path := make(path, 0, 1)
 	s := 0
 	i := 1
 	for ; i < len(src); i++ {

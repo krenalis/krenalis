@@ -411,7 +411,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, errors.BadRequest("schema is non an object")
 	}
-	var properties []types.Path
+	var properties []string
 	for _, expression := range expressions {
 		if expression.Value == "" {
 			return nil, errors.BadRequest("expression value is empty")
@@ -427,9 +427,9 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 		properties = append(properties, expressionProperties...)
 	}
 	// Remove duplicated properties.
-	m := map[string]types.Path{}
+	m := map[string]string{}
 	for _, prop := range properties {
-		m[prop.String()] = prop
+		m[prop] = prop
 	}
 	uniqueProperties := []string{}
 	for s := range m {
@@ -566,11 +566,10 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	switch {
 	case transformation.Mapping != nil:
 		for path, expr := range transformation.Mapping {
-			outPath, err := types.ParsePropertyPath(path)
-			if err != nil {
+			if !types.IsValidPropertyPath(path) {
 				return nil, errors.BadRequest("output mapped property %q is not valid", path)
 			}
-			p, err := outSchema.PropertyByPath(outPath)
+			p, err := outSchema.PropertyByPath(path)
 			if err != nil {
 				err := err.(types.PathNotExistError)
 				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)

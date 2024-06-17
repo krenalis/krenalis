@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -92,20 +93,13 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		pp := transformer.Properties()
 		if action.MatchingProperties != nil {
 			internal := action.MatchingProperties.Internal
-			var found bool
-			for _, path := range pp {
-				if len(path) == 1 && path[0] == internal {
-					found = true
-					break
-				}
-			}
-			if !found {
-				pp = append(pp, types.Path{internal})
+			if !slices.Contains(pp, internal) {
+				pp = append(pp, internal)
 			}
 		}
 		properties = make([]string, len(pp))
 		for i, p := range pp {
-			properties[i] = p.String()
+			properties[i] = p
 		}
 	} else {
 		properties = schema.PropertiesNames()

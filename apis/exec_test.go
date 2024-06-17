@@ -10,50 +10,48 @@ package apis
 import (
 	"reflect"
 	"testing"
-
-	"github.com/open2b/chichi/types"
 )
 
 func Test_readPropertyFrom(t *testing.T) {
 	cases := []struct {
 		m          map[string]any
-		prop       types.Path
+		prop       string
 		expectedV  any
 		expectedOk bool
 	}{
 		{
 			m:          map[string]any{},
-			prop:       types.Path{"email"},
+			prop:       "email",
 			expectedV:  nil,
 			expectedOk: false,
 		},
 		{
 			m:          map[string]any{"email": "hello@example.com"},
-			prop:       types.Path{"email"},
+			prop:       "email",
 			expectedV:  "hello@example.com",
 			expectedOk: true,
 		},
 		{
 			m:          map[string]any{"traits": map[string]any{"email": "world@example.com"}},
-			prop:       types.Path{"traits", "email"},
+			prop:       "traits.email",
 			expectedV:  "world@example.com",
 			expectedOk: true,
 		},
 		{
 			m:          map[string]any{"traits": nil},
-			prop:       types.Path{"traits", "email"},
+			prop:       "traits.email",
 			expectedV:  nil,
 			expectedOk: false,
 		},
 		{
 			m:          map[string]any{"traits": 42},
-			prop:       types.Path{"traits", "email"},
+			prop:       "traits.email",
 			expectedV:  nil,
 			expectedOk: false,
 		},
 		{
 			m:          map[string]any{"traits": map[string]any{"email": "world@example.com"}},
-			prop:       types.Path{"traits", "name"},
+			prop:       "traits.name",
 			expectedV:  nil,
 			expectedOk: false,
 		},

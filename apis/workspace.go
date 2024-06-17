@@ -1925,7 +1925,7 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 // not valid.
 func validatePrimarySources(schema types.Type, primarySources map[string]int) error {
 	for path, source := range primarySources {
-		_, err := schema.PropertyByPath(strings.Split(path, "."))
+		_, err := schema.PropertyByPath(path)
 		if err != nil {
 			return err
 		}

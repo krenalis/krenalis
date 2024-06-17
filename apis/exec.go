@@ -12,13 +12,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/postgres"
 	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
 )
 
 // addExecution adds an execution to the action.
@@ -157,18 +157,20 @@ func (err actionExecutionError) Error() string {
 // readPropertyFrom reads the property with the given path from m, returning its
 // value (if found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.
-func readPropertyFrom(m map[string]any, path types.Path) (any, bool) {
-	name := path[0]
-	v, ok := m[name]
-	if !ok {
-		return nil, false
+func readPropertyFrom(m map[string]any, path string) (any, bool) {
+	var name string
+	for {
+		name, path, _ = strings.Cut(path, ".")
+		v, ok := m[name]
+		if !ok {
+			return nil, false
+		}
+		if path == "" {
+			return v, true
+		}
+		m, ok = v.(map[string]any)
+		if !ok {
+			return nil, false
+		}
 	}
-	if len(path) == 1 {
-		return v, ok
-	}
-	obj, ok := v.(map[string]any)
-	if !ok {
-		return nil, false
-	}
-	return readPropertyFrom(obj, path[1:])
 }

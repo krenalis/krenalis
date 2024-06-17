@@ -49,7 +49,7 @@ func (err RepeatedPropertyNameError) Error() string {
 
 // PathNotExistError is returned by PropertyByPath when the path does not exist.
 type PathNotExistError struct {
-	Path Path
+	Path string
 }
 
 func (err PathNotExistError) Error() string {
@@ -200,27 +200,6 @@ var _ interface {
 	json.Marshaler
 	json.Unmarshaler
 } = (*Property)(nil)
-
-// Path represents a property path.
-type Path []string
-
-// String returns the string representation of p.
-func (p Path) String() string {
-	return strings.Join(p, ".")
-}
-
-// Equals reports whether path is equal to p.
-func (p Path) Equals(path Path) bool {
-	if len(p) != len(path) {
-		return false
-	}
-	for i, name := range p {
-		if name != path[i] {
-			return false
-		}
-	}
-	return true
-}
 
 // Type represents a type.
 type Type struct {
@@ -506,25 +485,6 @@ func IsValidPropertyPath(path string) bool {
 		path = path[i+1:]
 	}
 	return false
-}
-
-// ErrPathInvalid is the error returned by ParsePropertyPath is the path is not
-// valid.
-var ErrPathInvalid = errors.New("property path is not valid")
-
-// ParsePropertyPath parses a property path and returns its representation as
-// a Path. It returns the ErrPathInvalid error if the path is not valid.
-func ParsePropertyPath(path string) (Path, error) {
-	pp := strings.Split(path, ".")
-	if len(pp) == 0 {
-		return nil, ErrPathInvalid
-	}
-	for _, p := range pp {
-		if !IsValidPropertyPath(p) {
-			return nil, ErrPathInvalid
-		}
-	}
-	return pp, nil
 }
 
 // AsRole returns an object type with the properties of typ but that are
@@ -1075,41 +1035,37 @@ func (t Type) WithUnique() Type {
 }
 
 // PropertyByPath returns the property with the given path, or a
-// PathNotExistError error if the path does not exist.
-// Panics if t is not an Object type, path is empty or a property name within it
-// is not a valid property name.
-func (t Type) PropertyByPath(path Path) (Property, error) {
+// PathNotExistError error if the property does not exist.
+// Panics if t is not an Object type or path is not a valid path.
+func (t Type) PropertyByPath(path string) (Property, error) {
 	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-Object type")
 	}
-	if len(path) == 0 {
-		panic("path must contain at least one name")
-	}
-	last := len(path) - 1
-	var i int
-	var name string
-	for i, name = range path {
+	name, rest := "", path
+Rest:
+	for {
+		name, rest, _ = strings.Cut(rest, ".")
 		if t.kind != ObjectKind {
 			break
 		}
-		for _, prop := range t.vl.([]Property) {
-			if prop.Name != name {
+		properties := t.vl.([]Property)
+		for j := 0; j < len(properties); j++ {
+			if properties[j].Name != name {
 				continue
 			}
-			if i == last {
-				return prop, nil
+			if rest == "" {
+				return properties[j], nil
 			}
-			t = prop.Type
-			break
+			t = properties[j].Type
+			continue Rest
 		}
+		break
 	}
-	// Not found.
-	for _, p := range path[i:] {
-		if !IsValidPropertyName(p) {
-			panic("invalid property path")
-		}
+	if !IsValidPropertyPath(path) {
+		panic("invalid property path")
 	}
-	return Property{}, PathNotExistError{path[:i+1]}
+	path = strings.TrimSuffix(strings.TrimSuffix(path, rest), ".")
+	return Property{}, PathNotExistError{path}
 }
 
 // Property returns the property with the given name and a boolean value

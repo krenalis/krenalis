@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
 )
 
 // filterApplies reports whether the filter applies to props, which can be an
@@ -23,7 +22,7 @@ func filterApplies(filter *state.Filter, props map[string]any) (bool, error) {
 		return true, nil
 	}
 	for _, cond := range filter.Conditions {
-		value, ok := readPropertyFrom(props, strings.Split(cond.Property, "."))
+		value, ok := readPropertyFrom(props, cond.Property)
 		if !ok {
 			return false, fmt.Errorf("property %q not found", cond.Property)
 		}
@@ -51,18 +50,20 @@ func filterApplies(filter *state.Filter, props map[string]any) (bool, error) {
 // readPropertyFrom reads the property with the given path from m, returning its
 // value (if found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.
-func readPropertyFrom(m map[string]any, path types.Path) (any, bool) {
-	name := path[0]
-	v, ok := m[name]
-	if !ok {
-		return nil, false
+func readPropertyFrom(m map[string]any, path string) (any, bool) {
+	var name string
+	for {
+		name, path, _ = strings.Cut(path, ".")
+		v, ok := m[name]
+		if !ok {
+			return nil, false
+		}
+		if path == "" {
+			return v, true
+		}
+		m, ok = v.(map[string]any)
+		if !ok {
+			return nil, false
+		}
 	}
-	if len(path) == 1 {
-		return v, ok
-	}
-	obj, ok := v.(map[string]any)
-	if !ok {
-		return nil, false
-	}
-	return readPropertyFrom(obj, path[1:])
 }

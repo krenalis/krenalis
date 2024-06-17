@@ -8,6 +8,7 @@
 package mappings
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,6 +72,10 @@ type Expression struct {
 	timeLayouts *state.TimeLayouts
 }
 
+// path represents a property path or a function name.
+// See 'part.path' for documentation.
+type path []string
+
 // part represents an expression part within an Expression. An expression part
 // can take different forms:
 //
@@ -93,7 +98,7 @@ type part struct {
 	//   - If it was denoted with an indexing (e.g., a["b"]), it is enclosed in '[' and ']'.
 	//   - If it was denoted by '?', it ends with '?'.
 	// Examples of path elements: "x", "[x]" ":x", ":[$a]", ":x?", ":[x]?".
-	path []string
+	path path
 
 	// Function call arguments.
 	args [][]part
@@ -178,27 +183,10 @@ func (expr *Expression) Eval(values map[string]any) (any, error) {
 // be unique. If no property are present, it returns nil.
 //
 // If the expression contains a map or JSON indexing, Properties does not return
-// the key. For example, for the expression x.y.z, it returns {{"x"}} if x is a
-// JSON object, and returns {{"x", "z"}} if x is a map of objects.
-func (expr *Expression) Properties() []types.Path {
-	properties := appendProperties(nil, expr.parts)
-	if len(properties) <= 1 {
-		return properties
-	}
-	uniqueProperties := make([]types.Path, 0, len(properties))
-	for _, property := range properties {
-		var exists bool
-		for _, p := range uniqueProperties {
-			if p.Equals(property) {
-				exists = true
-				break
-			}
-		}
-		if !exists {
-			uniqueProperties = append(uniqueProperties, property)
-		}
-	}
-	return uniqueProperties
+// the key. For example, for the expression x.y.z, it returns {"x"} if x is a
+// JSON object, and returns {"x.z"} if x is a map of objects.
+func (expr *Expression) Properties() []string {
+	return appendProperties(nil, expr.parts)
 }
 
 // Mapping represents a mapping transformer.
@@ -207,7 +195,7 @@ type Mapping struct {
 }
 
 type mappingExpr struct {
-	path types.Path
+	path string
 	expr *Expression
 }
 
@@ -235,8 +223,7 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.TimeLa
 	// Compile the expressions.
 	mappingExpressions := make([]mappingExpr, len(expressions))
 	i := 0
-	for name, expr := range expressions {
-		path := strings.Split(name, ".")
+	for path, expr := range expressions {
 		mappingExpressions[i].path = path
 		p, err := dt.PropertyByPath(path)
 		if err != nil {
@@ -250,28 +237,13 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.TimeLa
 	}
 	// Sort the expressions based on their paths
 	// and ensure that no two paths have the same prefix.
-	var err error
 	slices.SortFunc(mappingExpressions, func(a, b mappingExpr) int {
-		last := len(b.path) - 1
-		for i, name := range a.path {
-			n := b.path[i]
-			switch {
-			case name < n:
-				return -1
-			case name > n:
-				return 1
-			}
-			if i == last {
-				break
-			}
-		}
-		if err == nil {
-			err = fmt.Errorf("paths %q and %q have the same prefix", a.path, b.path)
-		}
-		return 0
+		return cmp.Compare(a.path, b.path)
 	})
-	if err != nil {
-		return nil, err
+	for i, expr := range mappingExpressions[1:] {
+		if prev := mappingExpressions[i]; strings.HasPrefix(expr.path, prev.path) {
+			return nil, fmt.Errorf("paths %q and %q have the same prefix", expr.path, prev.path)
+		}
 	}
 	return &Mapping{expressions: mappingExpressions}, nil
 }
@@ -281,30 +253,14 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.TimeLa
 // to be unique. If no property are present, it returns nil.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
-// the key. For example, for the expression x.y.z, it returns {{"x"}} if x is a
-// JSON object, and returns {{"x", "z"}} if x is a map of objects.
-func (mapping *Mapping) Properties() []types.Path {
-	var properties []types.Path
+// the key. For example, for the expression x.y.z, it returns {"x"} if x is a
+// JSON object, and returns {"x.z"} if x is a map of objects.
+func (mapping *Mapping) Properties() []string {
+	var properties []string
 	for _, expr := range mapping.expressions {
 		properties = appendProperties(properties, expr.expr.parts)
 	}
-	if len(properties) <= 1 {
-		return properties
-	}
-	uniqueProperties := make([]types.Path, 0, len(properties))
-	for _, property := range properties {
-		var exists bool
-		for _, p := range uniqueProperties {
-			if p.Equals(property) {
-				exists = true
-				break
-			}
-		}
-		if !exists {
-			uniqueProperties = append(uniqueProperties, property)
-		}
-	}
-	return uniqueProperties
+	return properties
 }
 
 // Transform transforms value, that must conform to the expression's source
@@ -319,41 +275,48 @@ func (mapping *Mapping) Properties() []types.Path {
 // returns an error value implementing the ValidationError interface of apis.
 func (mapping *Mapping) Transform(value map[string]any) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
-	for _, t := range mapping.expressions {
-		v, err := t.expr.Eval(value)
+	for _, e := range mapping.expressions {
+		v, err := e.expr.Eval(value)
 		if err != nil {
 			if err, ok := err.(*invalidConversionError); ok {
 				return nil, &validationError{
-					path: t.path.String(),
+					path: e.path,
 					msg:  err.Error(),
 				}
 			}
 			return nil, err
 		}
 		if v != Void {
-			storeValue(out, t.path, v)
+			storeValue(out, e.path, v)
 		}
 	}
 	return out, nil
 }
 
-// appendProperties appends the properties in expression to properties.
-func appendProperties(properties []types.Path, expression []part) []types.Path {
+// appendProperties appends the properties from expression to properties, if
+// they do not already exist in it.
+func appendProperties(properties []string, expression []part) []string {
 	for _, expr := range expression {
 		if expr.path == nil {
 			continue
 		}
 		if expr.args == nil {
-			path := make(types.Path, 0, len(expr.path))
+			var b strings.Builder
 			for _, name := range expr.path {
 				if name[0] != ':' {
 					if name[0] == '[' {
 						name = name[1 : len(name)-1]
 					}
-					path = append(path, name)
+					if b.Len() > 0 {
+						b.WriteByte('.')
+					}
+					b.WriteString(name)
 				}
 			}
-			properties = append(properties, path)
+			property := b.String()
+			if !slices.Contains(properties, property) {
+				properties = append(properties, property)
+			}
 			continue
 		}
 		for _, arg := range expr.args {
@@ -426,7 +389,7 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 
 // valueOf returns the value at the given path in values.
 // It returns an error if the path does not exist.
-func valueOf(path types.Path, values map[string]any) (any, error) {
+func valueOf(path path, values map[string]any) (any, error) {
 	var v any
 	var ok bool
 	last := len(path) - 1
@@ -567,16 +530,14 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 }
 
 // storeValue stores v in value at the given path.
-func storeValue(value map[string]any, path types.Path, v any) {
-	if len(path) == 1 {
-		value[path[0]] = v
-		return
-	}
-	last := len(path) - 1
-	for i, name := range path {
-		if i == last {
+func storeValue(value map[string]any, path string, v any) {
+	var ok bool
+	var name string
+	for {
+		name, path, ok = strings.Cut(path, ".")
+		if !ok {
 			value[name] = v
-			continue
+			break
 		}
 		object, ok := value[name].(map[string]any)
 		if !ok {

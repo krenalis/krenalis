@@ -42,19 +42,19 @@ func TestEval(t *testing.T) {
 		{[]part{{value: ``, typ: types.Text()}}, "", types.Text(), nil},
 		{[]part{{value: `a`, typ: types.Text()}}, "a", types.Text(), nil},
 		{[]part{{value: n, typ: dt}}, n, dt, nil},
-		{[]part{{path: types.Path{"a"}, typ: types.Int(32)}}, 165, types.Int(32), nil},
-		{[]part{{path: types.Path{"b", "c"}, typ: types.Text()}}, "foo", types.Text(), nil},
-		{[]part{{path: types.Path{"b", "e"}, typ: types.Int(32)}}, 1024, types.Int(32), nil},
-		{[]part{{value: `a`, path: types.Path{"a"}, typ: types.Int(32)}}, "a165", types.Text(), nil},
-		{[]part{{path: types.Path{"coalesce"}, args: [][]part{
-			{{path: types.Path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
+		{[]part{{path: path{"a"}, typ: types.Int(32)}}, 165, types.Int(32), nil},
+		{[]part{{path: path{"b", "c"}, typ: types.Text()}}, "foo", types.Text(), nil},
+		{[]part{{path: path{"b", "e"}, typ: types.Int(32)}}, 1024, types.Int(32), nil},
+		{[]part{{value: `a`, path: path{"a"}, typ: types.Int(32)}}, "a165", types.Text(), nil},
+		{[]part{{path: path{"coalesce"}, args: [][]part{
+			{{path: path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
 			{{value: "foo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]part{{path: types.Path{"coalesce"}, args: [][]part{
-			{{path: types.Path{"d"}, typ: types.Text()}},
-			{{path: types.Path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
+		{[]part{{path: path{"coalesce"}, args: [][]part{
+			{{path: path{"d"}, typ: types.Text()}},
+			{{path: path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]part{{value: ``, typ: types.Text()}, {path: types.Path{"a"}, typ: types.Int(32)}}, "165", types.Text(), nil},
+		{[]part{{value: ``, typ: types.Text()}, {path: path{"a"}, typ: types.Int(32)}}, "165", types.Text(), nil},
 	}
 
 	for i, test := range tests {
@@ -376,22 +376,22 @@ func TestPropertyPaths(t *testing.T) {
 
 	tests := []struct {
 		src      string
-		expected []types.Path
+		expected []string
 	}{
 		{`"a"`, nil},
-		{`a`, []types.Path{{"a"}}},
-		{`a.b.c`, []types.Path{{"a", "b", "c"}}},
-		{`b c`, []types.Path{{"b"}, {"c"}}},
-		{`d['foo']`, []types.Path{{"d"}}},
-		{`d.boo.e`, []types.Path{{"d", "e"}}},
-		{`e`, []types.Path{{"e"}}},
-		{`e.foo`, []types.Path{{"e"}}},
-		{`e.foo?.boo`, []types.Path{{"e"}}},
-		{`f.foo`, []types.Path{{"f"}}},
-		{`f.foo.boo`, []types.Path{{"f"}}},
+		{`a`, []string{"a"}},
+		{`a.b.c`, []string{"a.b.c"}},
+		{`b c`, []string{"b", "c"}},
+		{`d['foo']`, []string{"d"}},
+		{`d.boo.e`, []string{"d.e"}},
+		{`e`, []string{"e"}},
+		{`e.foo`, []string{"e"}},
+		{`e.foo?.boo`, []string{"e"}},
+		{`f.foo`, []string{"f"}},
+		{`f.foo.boo`, []string{"f"}},
 		{`coalesce("a", 5)`, nil},
-		{`coalesce(a.b.c, 5) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
-		{`coalesce(a.b.c, coalesce(b)) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
+		{`coalesce(a.b.c, 5) a.b.c b`, []string{"a.b.c", "b"}},
+		{`coalesce(a.b.c, coalesce(b)) a.b.c b`, []string{"a.b.c", "b"}},
 	}
 
 	for _, test := range tests {
@@ -431,32 +431,32 @@ func TestValueOf(t *testing.T) {
 	}
 
 	tests := []struct {
-		path     types.Path
+		path     path
 		expected any
 		err      error
 	}{
-		{types.Path{"a"}, 5, nil},
-		{types.Path{"[a]"}, 5, nil},
-		{types.Path{"b", "c"}, "foo", nil},
-		{types.Path{"b", "[c]"}, "foo", nil},
-		{types.Path{"b", "d", ":e"}, []any{1}, nil},
-		{types.Path{"b", "d", ":[:e]"}, []any{2}, nil},
-		{types.Path{"b", "d", ":[e]]"}, []any{3}, nil},
-		{types.Path{"g"}, json.Number("12.53"), nil},
-		{types.Path{"g", ":x"}, nil, errors.New(`invalid g.x: g is not a JSON object, it is a JSON number`)},
-		{types.Path{"g", ":[x]"}, nil, errors.New(`invalid g["x"]: g is not a JSON object, it is a JSON number`)},
-		{types.Path{"h", ":i"}, true, nil},
-		{types.Path{"h", ":i?"}, true, nil},
-		{types.Path{"h", ":[i?]?"}, 5, nil},
-		{types.Path{"h", ":[:i?]"}, "boo", nil},
-		{types.Path{"h", ":[:i?]?"}, "boo", nil},
-		{types.Path{"h", ":[[i]"}, "foo", nil},
-		{types.Path{"h", ":[[i]?"}, "foo", nil},
-		{types.Path{"h", ":[i]]"}, "zoo", nil},
-		{types.Path{"h", ":[i]]?"}, "zoo", nil},
-		{types.Path{"h", ":i", ":x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
-		{types.Path{"h", ":i", ":x?"}, nil, errVoid},
-		{types.Path{"h", ":i", ":[x]?"}, nil, errVoid},
+		{path{"a"}, 5, nil},
+		{path{"[a]"}, 5, nil},
+		{path{"b", "c"}, "foo", nil},
+		{path{"b", "[c]"}, "foo", nil},
+		{path{"b", "d", ":e"}, []any{1}, nil},
+		{path{"b", "d", ":[:e]"}, []any{2}, nil},
+		{path{"b", "d", ":[e]]"}, []any{3}, nil},
+		{path{"g"}, json.Number("12.53"), nil},
+		{path{"g", ":x"}, nil, errors.New(`invalid g.x: g is not a JSON object, it is a JSON number`)},
+		{path{"g", ":[x]"}, nil, errors.New(`invalid g["x"]: g is not a JSON object, it is a JSON number`)},
+		{path{"h", ":i"}, true, nil},
+		{path{"h", ":i?"}, true, nil},
+		{path{"h", ":[i?]?"}, 5, nil},
+		{path{"h", ":[:i?]"}, "boo", nil},
+		{path{"h", ":[:i?]?"}, "boo", nil},
+		{path{"h", ":[[i]"}, "foo", nil},
+		{path{"h", ":[[i]?"}, "foo", nil},
+		{path{"h", ":[i]]"}, "zoo", nil},
+		{path{"h", ":[i]]?"}, "zoo", nil},
+		{path{"h", ":i", ":x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
+		{path{"h", ":i", ":x?"}, nil, errVoid},
+		{path{"h", ":i", ":[x]?"}, nil, errVoid},
 	}
 
 	for _, test := range tests {
@@ -484,31 +484,31 @@ func TestValueOf(t *testing.T) {
 func Test_storeValue(t *testing.T) {
 	tests := []struct {
 		value    map[string]any
-		path     types.Path
+		path     string
 		v        any
 		expected map[string]any
 	}{
 		{
 			value:    map[string]any{},
-			path:     types.Path{"email"},
+			path:     "email",
 			v:        "test@example.com",
 			expected: map[string]any{"email": "test@example.com"},
 		},
 		{
 			value:    map[string]any{},
-			path:     types.Path{"user", "email"},
+			path:     "user.email",
 			v:        "test@example.com",
 			expected: map[string]any{"user": map[string]any{"email": "test@example.com"}},
 		},
 		{
 			value:    map[string]any{"user": map[string]any{"name": "Mike"}},
-			path:     types.Path{"user", "email"},
+			path:     "user.email",
 			v:        "test@example.com",
 			expected: map[string]any{"user": map[string]any{"name": "Mike", "email": "test@example.com"}},
 		},
 		{
 			value:    map[string]any{"user": map[string]any{"address": map[string]any{"city": "Milan"}}},
-			path:     types.Path{"user", "address", "zip"},
+			path:     "user.address.zip",
 			v:        "20122",
 			expected: map[string]any{"user": map[string]any{"address": map[string]any{"city": "Milan", "zip": "20122"}}},
 		},

@@ -333,7 +333,7 @@ func Test_PropertyByPath(t *testing.T) {
 	cases := []struct {
 		name     string
 		t        Type
-		path     Path
+		path     string
 		expected Property
 		err      error
 	}{
@@ -342,7 +342,7 @@ func Test_PropertyByPath(t *testing.T) {
 			t: Object([]Property{
 				{Name: "first_name", Type: Text()},
 			}),
-			path:     Path{"first_name"},
+			path:     "first_name",
 			expected: Property{Name: "first_name", Type: Text()},
 			err:      nil,
 		},
@@ -351,7 +351,7 @@ func Test_PropertyByPath(t *testing.T) {
 			t: Object([]Property{
 				{Name: "first_name", Type: Text()},
 			}),
-			path:     Path{"email"},
+			path:     "email",
 			expected: Property{},
 			err:      errors.New("property path \"email\" does not exist"),
 		},
@@ -362,7 +362,7 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "street", Type: Text()},
 				})},
 			}),
-			path: Path{"billing_address"},
+			path: "billing_address",
 			expected: Property{
 				Name: "billing_address", Type: Object([]Property{
 					{Name: "street", Type: Text()},
@@ -376,7 +376,7 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "street", Type: Text()},
 				})},
 			}),
-			path:     Path{"billing_address", "street"},
+			path:     "billing_address.street",
 			expected: Property{Name: "street", Type: Text()},
 			err:      nil,
 		},
@@ -387,7 +387,7 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "street", Type: Text()},
 				})},
 			}),
-			path:     Path{"billing_address", "city"},
+			path:     "billing_address.city",
 			expected: Property{},
 			err:      errors.New("property path \"billing_address.city\" does not exist"),
 		},
@@ -401,9 +401,20 @@ func Test_PropertyByPath(t *testing.T) {
 					})},
 				})},
 			}),
-			path:     Path{"movie", "director", "last_name"},
+			path:     "movie.director.last_name",
 			expected: Property{Name: "last_name", Type: Text()},
 			err:      nil,
+		},
+		{
+			name: "path with four components - second component of path is not an Object",
+			t: Object([]Property{
+				{Name: "movie", Type: Object([]Property{
+					{Name: "writer", Type: Text()},
+				})},
+			}),
+			path:     "movie.writer.address.last_name",
+			expected: Property{},
+			err:      errors.New("property path \"movie.writer.address\" does not exist"),
 		},
 		{
 			name: "path with three components - second component of path is not an Object",
@@ -416,7 +427,7 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "writer", Type: Text()},
 				})},
 			}),
-			path:     Path{"movie", "writer", "last_name"},
+			path:     "movie.writer.last_name",
 			expected: Property{},
 			err:      errors.New("property path \"movie.writer.last_name\" does not exist"),
 		},
@@ -441,49 +452,6 @@ func Test_PropertyByPath(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_ParsePropertyPath(t *testing.T) {
-
-	tests := []struct {
-		Path     string
-		Expected []string
-	}{
-		{"", nil},
-		{".", nil},
-		{"foo", []string{"foo"}},
-		{"foo.boo", []string{"foo", "boo"}},
-		{".boo", nil},
-		{"foo.", nil},
-		{"à.boo", nil},
-		{"a.b.c", []string{"a", "b", "c"}},
-		{"a . b . c", nil},
-	}
-
-	for _, test := range tests {
-		got, err := ParsePropertyPath(test.Path)
-		if err != nil {
-			if test.Expected != nil {
-				t.Errorf("%q: expected value %#v, got error %q", test.Path, test.Expected, err)
-			}
-			if err != ErrPathInvalid {
-				t.Errorf("%q: expected error ErrPathInvalid, got %q", test.Path, err)
-			}
-			continue
-		}
-		if test.Expected == nil {
-			t.Errorf("%q: expected ErrPathInvalid error, got value %#v", test.Path, got)
-		}
-		if len(test.Expected) != len(got) {
-			t.Errorf("%q: expected %#v, got %#v", test.Path, test.Expected, got)
-		}
-		for i, v := range test.Expected {
-			if v != got[i] {
-				t.Errorf("%q: expected %#v, got %#v", test.Path, test.Expected, got)
-			}
-		}
-	}
-
 }
 
 func Test_NumProperties(t *testing.T) {

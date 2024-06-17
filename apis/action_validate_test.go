@@ -17,26 +17,21 @@ import (
 func Test_unusedProperties(t *testing.T) {
 	cases := []struct {
 		schema   types.Type
-		paths    []types.Path
+		paths    []string
 		expected []string
 	}{
 		{
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.Text()},
 			}),
-			paths: []types.Path{
-				{"first_name"},
-			},
+			paths: []string{"first_name"},
 		},
 		{
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.Text()},
 				{Name: "last_name", Type: types.Text()},
 			}),
-			paths: []types.Path{
-				{"first_name"},
-				{"last_name"},
-			},
+			paths: []string{"first_name", "last_name"},
 		},
 		{
 			schema: types.Object([]types.Property{

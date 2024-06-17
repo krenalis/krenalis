@@ -45,20 +45,19 @@ type FilterCondition struct {
 // repeated. It returns an error if filter is not valid. In particular, it
 // returns a types.PathNotExistError if a path does not exist.
 // It panics if filter is nil or schema is not valid.
-func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
+func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 	if op := filter.Logical; op != "all" && op != "any" {
 		return nil, fmt.Errorf("invalid logical operator %q", op)
 	}
 	if len(filter.Conditions) == 0 {
 		return nil, errors.New("conditions are missing")
 	}
-	properties := make([]types.Path, len(filter.Conditions))
+	properties := make([]string, len(filter.Conditions))
 	for i, cond := range filter.Conditions {
-		path, err := types.ParsePropertyPath(cond.Property)
-		if err != nil {
-			return nil, err
+		if !types.IsValidPropertyPath(cond.Property) {
+			return nil, errors.New("property path is not valid")
 		}
-		property, err := schema.PropertyByPath(path)
+		property, err := schema.PropertyByPath(cond.Property)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +172,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]types.Path, error) {
 		if !valid {
 			return nil, fmt.Errorf("invalid value for property %s", cond.Property)
 		}
-		properties[i] = path
+		properties[i] = cond.Property
 	}
 	return properties, nil
 }

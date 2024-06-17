@@ -23,8 +23,6 @@ import (
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/apis/transformers/mappings"
 	"github.com/open2b/chichi/types"
-
-	"golang.org/x/exp/maps"
 )
 
 // validateActionToSet validates the action to set (when adding or setting an
@@ -78,7 +76,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		return errors.BadRequest("out schema, if provided, must be an object")
 	}
 	// Validate the filter.
-	var usedInPaths []types.Path
+	var usedInPaths []string
 	if action.Filter != nil {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
@@ -94,7 +92,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		return errors.BadRequest("action cannot have both mappings and transformation")
 	}
 	// Validate the mapping.
-	var usedOutPaths []types.Path
+	var usedOutPaths []string
 	var mappingInProperties int
 	if mapping := action.Transformation.Mapping; mapping != nil {
 		if len(mapping) == 0 {
@@ -115,10 +113,9 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		mappingInProperties = len(inProps)
 		usedInPaths = append(usedInPaths, inProps...)
 		// Output properties.
-		for m := range mapping {
-			path, err := types.ParsePropertyPath(m)
-			if err != nil {
-				return errors.BadRequest("invalid property path %q", m)
+		for path := range mapping {
+			if !types.IsValidPropertyPath(path) {
+				return errors.BadRequest("invalid property path %q", path)
 			}
 			usedOutPaths = append(usedOutPaths, path)
 		}
@@ -221,7 +218,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if !canBeUsedAsAsMatchingProp(internal.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", internal.Type)
 		}
-		usedInPaths = append(usedInPaths, types.Path{props.Internal})
+		usedInPaths = append(usedInPaths, props.Internal)
 		// Validate the external matching property.
 		if !types.IsValidPropertyName(props.External.Name) {
 			return errors.BadRequest("external matching property %q is not a valid property name", props.External.Name)
@@ -394,7 +391,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		default:
 			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
 		}
-		usedInPaths = append(usedInPaths, types.Path{action.IdentityProperty})
+		usedInPaths = append(usedInPaths, action.IdentityProperty)
 		// Validate the last change time property and format.
 		var requiresLastChangeTimeFormat bool
 		if action.LastChangeTimeProperty != "" {
@@ -409,7 +406,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			default:
 				return errors.BadRequest("last change time property %q has kind %s instead of DateTime, Date, JSON, or Text", action.LastChangeTimeProperty, k)
 			}
-			usedInPaths = append(usedInPaths, types.Path{action.LastChangeTimeProperty})
+			usedInPaths = append(usedInPaths, action.LastChangeTimeProperty)
 		}
 		if !requiresLastChangeTimeFormat && action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
@@ -441,8 +438,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if action.FileOrderingPropertyPath == "" {
 			return errors.BadRequest("file ordering property path cannot be empty when exporting users to file")
 		}
-		path := types.Path(strings.Split(action.FileOrderingPropertyPath, "."))
-		p, err := outSchema.PropertyByPath(path)
+		p, err := outSchema.PropertyByPath(action.FileOrderingPropertyPath)
 		if err != nil {
 			return errors.BadRequest("file ordering property path cannot be found in action's output schema: %s", err)
 		}
@@ -572,21 +568,25 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 
 // unusedProperties returns the names of the unused properties in schema, if
 // there is at least one, otherwise returns nil. schema must be valid.
-func unusedProperties(schema types.Type, used []types.Path) []string {
-	schemaProps := schema.PropertiesNames()
-	notUsed := make(map[string]struct{}, len(schemaProps))
-	for _, p := range schemaProps {
-		notUsed[p] = struct{}{}
+func unusedProperties(schema types.Type, used []string) []string {
+	isUsed := make(map[string]bool, len(used))
+	for _, p := range used {
+		name, _, _ := strings.Cut(p, ".")
+		isUsed[name] = true
 	}
-	for _, path := range used {
-		delete(notUsed, path[0])
+	var unused []string
+	for _, p := range schema.Properties() {
+		if isUsed[p.Name] {
+			continue
+		}
+		if unused == nil {
+			unused = []string{p.Name}
+		} else {
+			unused = append(unused, p.Name)
+		}
 	}
-	if len(notUsed) == 0 {
-		return nil
-	}
-	props := maps.Keys(notUsed)
-	slices.Sort(props)
-	return props
+	slices.Sort(unused)
+	return unused
 }
 
 // validateLastChangeTimeFormat validates the given last change time format for

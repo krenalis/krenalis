@@ -1446,11 +1446,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		switch {
 		case transformation.Mapping != nil:
 			for path, expr := range transformation.Mapping {
-				outPath, err := types.ParsePropertyPath(path)
-				if err != nil {
+				if !types.IsValidPropertyPath(path) {
 					return nil, errors.BadRequest("output mapped property %q is not valid", path)
 				}
-				p, err := outSchema.PropertyByPath(outPath)
+				p, err := outSchema.PropertyByPath(path)
 				if err != nil {
 					err := err.(types.PathNotExistError)
 					return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
