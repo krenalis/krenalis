@@ -772,13 +772,12 @@ type ActionToSet struct {
 	//
 	// In case it is provided, accepted values are:
 	//
-	//   - "DateTime", to parse timestamps in the format "2006-01-02 15:04:05"
-	//   - "DateOnly", to parse date-only timestamps in the format "2006-01-02"
-	//   - "ISO8601", to parse timestamps as a ISO 8601 timestamps.
-	//   - "Excel", to parse timestamps as strings representing a float value
-	//     stored in a Excel cell representing a date / datetime.
-	//   - a strptime format, enclosed by single quote characters, compatible
-	//     with the standard C89 functions strptime/strftime.
+	//   - "ISO8601": the ISO 8601 format
+	//   - "Excel": the Excel format, a float value stored in an Excel cell
+	//     representing a date/datetime
+	//   - a string containing a '%' character: the strftime() function format
+	//
+	// "Excel" format is only allowed for file actions.
 	//
 	// It cannot be longer than 64 runes.
 	LastChangeTimeFormat string
