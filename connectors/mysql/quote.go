@@ -49,6 +49,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 	case decimal.Decimal:
 		b.WriteString(v.String())
 	case time.Time:
+		b.WriteByte('"')
 		switch t.Kind() {
 		case types.DateTimeKind:
 			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
@@ -57,6 +58,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		case types.TimeKind:
 			b.WriteString(v.Format("15:04:05.999999"))
 		}
+		b.WriteByte('"')
 	case bool:
 		if v {
 			b.WriteString("1")
