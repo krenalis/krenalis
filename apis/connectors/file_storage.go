@@ -113,7 +113,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		}
 	}
 
-	rw := newRecordWriter(file.Name, types.Type{}, "", LastChangeTimeProperty{}, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
+	rw := newRecordWriter(file.Name, nil, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
 	var records []map[string]any
 	var recordErr error
 	rw.setYieldFunc(func(record Record) bool {
