@@ -115,7 +115,7 @@ func TestIdentityResolution2(t *testing.T) {
 			},
 			IdentityProperty:       "email",
 			LastChangeTimeProperty: "last_change_time",
-			LastChangeTimeFormat:   "DateTime",
+			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 			Connector:              "JSON",
 			UIValues:               []byte("{}"),
 		})

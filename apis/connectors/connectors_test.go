@@ -22,30 +22,6 @@ func Test_parseLastChangeTimeProperty(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			name:     "DateTime",
-			format:   "DateTime",
-			value:    "2033-12-14 13:52:00",
-			expected: time.Date(2033, 12, 14, 13, 52, 0, 0, time.UTC),
-		},
-		{
-			name:        "DateTime but an empty string is passed",
-			format:      "DateTime",
-			value:       "",
-			expectedErr: "last change time does not conform to the DateTime format",
-		},
-		{
-			name:     "DateOnly",
-			format:   "DateOnly",
-			value:    "2033-12-14",
-			expected: time.Date(2033, 12, 14, 0, 0, 0, 0, time.UTC),
-		},
-		{
-			name:        "DateOnly but hour-minute-second is passed",
-			format:      "DateOnly",
-			value:       "2033-12-14 13:32:12",
-			expectedErr: "last change time does not conform to the DateOnly format",
-		},
-		{
 			name:     "ISO8601",
 			format:   "ISO8601",
 			value:    "2033-12-14T13:52Z",
@@ -107,29 +83,21 @@ func Test_parseLastChangeTimeProperty(t *testing.T) {
 		},
 		{
 			name:     "strptime - only date (1)",
-			format:   "'%d %m %Y'",
+			format:   "%d %m %Y",
 			value:    "14 12 2033",
 			expected: time.Date(2033, 12, 14, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			name:     "strptime - only date (2)",
-			format:   "'%Y-%m-%d'",
+			format:   "%Y-%m-%d",
 			value:    "2033-12-14",
 			expected: time.Date(2033, 12, 14, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			name:     "strptime - date and time",
-			format:   "'%Y-%m-%d %H:%M:%S'",
+			format:   "%Y-%m-%d %H:%M:%S",
 			value:    "2033-12-14 09:56:35",
 			expected: time.Date(2033, 12, 14, 9, 56, 35, 0, time.UTC),
-		},
-		{
-			name: "strptime - format and value are enclosed in single quotes and that should be valid",
-			// Note the "double" single quotes: a single quote surrounding the
-			// format, and a single quote which is part of the format itself.
-			format:   `''%Y-%m-%d''`,
-			value:    "'2033-12-14'",
-			expected: time.Date(2033, 12, 14, 0, 0, 0, 0, time.UTC),
 		},
 	}
 	for _, test := range tests {

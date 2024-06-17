@@ -62,8 +62,6 @@ const defaultTransformationParameterByTarget = {
 };
 
 const lastChangeTimeFormats = {
-	dateTime: 'DateTime',
-	dateOnly: 'DateOnly',
 	iso8601: 'ISO8601',
 	excel: 'Excel',
 };
@@ -86,6 +84,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		setMode,
 		setIsSaveHidden,
 		isFileConnectorChanged,
+		isEditing,
 	} = useContext(ActionContext);
 
 	const mappingListRef = useRef(null);
@@ -144,7 +143,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (hasIdentityAndTimestamp && isFirstCompilation.current) {
+		if (hasIdentityAndTimestamp && isFirstCompilation.current && !isEditing) {
 			// precompile the 'IdentityProperty' and 'lastChangeTimeProperty'
 			// fields, if possible.
 			const a = { ...action };
@@ -158,7 +157,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			if (hasLastChangeTimeProperty) {
 				a.LastChangeTimeProperty = 'timestamp';
 				if (doesLastChangeTimePropertyNeedFormat(a.LastChangeTimeProperty, actionType.InputSchema)) {
-					a.LastChangeTimeFormat = lastChangeTimeFormats['dateTime'];
+					a.LastChangeTimeFormat = '';
 				}
 			}
 			setAction(a);
@@ -454,8 +453,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 										disabled={!needFormat}
 										size='small'
 									>
-										<SlOption value='dateTime'>2006-01-02 15:04:05</SlOption>
-										<SlOption value='dateOnly'>2006-01-02</SlOption>
 										<SlOption value='iso8601'>ISO 8601</SlOption>
 										{fileConnector?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
 										<SlOption value='custom'>Custom...</SlOption>

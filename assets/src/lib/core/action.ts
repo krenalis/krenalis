@@ -493,7 +493,6 @@ const transformInActionToSet = async (
 		}
 	}
 
-	let lastChangeTimeFormat: string | undefined;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
 		if (action.IdentityProperty == null || action.IdentityProperty === '') {
 			throw new Error('User identifier cannot be empty');
@@ -518,22 +517,13 @@ const transformInActionToSet = async (
 				inSchema.properties.push(lastChangeTimeProperty.full);
 			}
 			if (doesLastChangeTimePropertyNeedFormat(action.LastChangeTimeProperty, actionType.InputSchema)) {
-				if (
-					action.LastChangeTimeFormat !== 'ISO8601' &&
-					action.LastChangeTimeFormat !== 'Excel' &&
-					action.LastChangeTimeFormat !== 'DateTime' &&
-					action.LastChangeTimeFormat !== 'DateOnly'
-				) {
+				if (action.LastChangeTimeFormat !== 'ISO8601' && action.LastChangeTimeFormat !== 'Excel') {
 					// the format is custom.
 					try {
 						validateCustomLastChangeTimeFormat(action.LastChangeTimeFormat);
 					} catch (err) {
 						throw err;
 					}
-					// custom format must be wrapped in single quotes.
-					lastChangeTimeFormat = `'${action.LastChangeTimeFormat}'`;
-				} else {
-					lastChangeTimeFormat = action.LastChangeTimeFormat;
 				}
 			}
 		}
@@ -600,7 +590,7 @@ const transformInActionToSet = async (
 		exportMode: action.ExportMode,
 		IdentityProperty: action.IdentityProperty,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
-		LastChangeTimeFormat: lastChangeTimeFormat,
+		LastChangeTimeFormat: action.LastChangeTimeFormat,
 		matchingProperties: matchingProperties,
 		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
 		Compression: action.Compression,

@@ -70,7 +70,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
-				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
@@ -100,7 +100,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
-				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
@@ -176,7 +176,7 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 				LastChangeTimeProperty: "timestamp",
-				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
@@ -246,7 +246,7 @@ func TestActionsCreation(t *testing.T) {
 				Path:                   "users.csv",
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
-				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
@@ -274,7 +274,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
-				LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
 				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",

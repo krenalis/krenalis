@@ -592,18 +592,6 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 // NOTE: keep in sync with 'apis.validateLastChangeTimeFormat'.
 func parseLastChangeTimePropertyWithFormat(format, v string) (time.Time, error) {
 	switch format {
-	case "DateTime":
-		dt, err := time.Parse(time.DateTime, v)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("last change time does not conform to the DateTime format")
-		}
-		return dt.UTC(), nil
-	case "DateOnly":
-		date, err := time.Parse(time.DateOnly, v)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("last change time does not conform to the DateOnly format")
-		}
-		return date.UTC(), nil
 	case "ISO8601":
 		dt, err := iso8601.ParseString(v)
 		if err != nil {
@@ -632,7 +620,7 @@ func parseLastChangeTimePropertyWithFormat(format, v string) (time.Time, error) 
 		t := excelEpoch.Add(d)
 		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
 	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
-		t, err := timefmt.Parse(v, format[1:len(format)-1])
+		t, err := timefmt.Parse(v, format)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time does not conform to the %q format", format)
 		}

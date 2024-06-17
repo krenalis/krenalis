@@ -107,7 +107,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			},
 			IdentityProperty:       "csv_id",
 			LastChangeTimeProperty: "timestamp",
-			LastChangeTimeFormat:   "'%Y-%m-%d %H:%M:%S'",
+			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 			Connector:              "CSV",
 			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
 				"Comma":          ",",

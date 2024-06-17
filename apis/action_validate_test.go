@@ -61,29 +61,20 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 		err    string
 	}{
 		// Valid.
-		{format: "DateTime"},
-		{format: "DateOnly"},
-		{format: "'%Y'"},
-		{format: "Excel"},
 		{format: "ISO8601"},
-		{format: "'%'"},
-		{format: "'''"},
-		{format: "'a'"},
-		{format: "'YYYY-MM-DD'"},
+		{format: "Excel"},
+		{format: "%Y-%m-%d %H:%M:%S"},
+		{format: "%Y-%m-%d"},
+		{format: "%Y"},
+		{format: "%"},
 
 		// Invalid.
-		{format: "'", err: "last change time strptime format does not end with \"'\""},
-		{format: "", err: "last change time format \"\" is not a valid format"},
-		{format: "Date", err: `last change time format "Date" is not a valid format`},
-		{format: "excel", err: `last change time format "excel" is not a valid format`},
-		{format: "iso8601", err: `last change time format "iso8601" is not a valid format`},
-		{format: "%Y", err: "last change time format \"%Y\" is not a valid format"},
-		{format: "'%Y", err: "last change time strptime format does not end with \"'\""},
-		{format: "%Y'", err: "last change time format \"%Y'\" is not a valid format"},
-		{format: "\xc3\x28", err: "last change time format \"\\xc3(\" is not a valid format"},
-		{format: "''", err: "last change time strptime format is empty"},
-		{format: "'%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y'", err: "last change time strptime format is longer than 64 runes"},
-		{format: "'\x00'", err: "last change time format contains the NUL rune"},
+		{format: "", err: "last change time format is empty"},
+		{format: "iso8601", err: `last change time format "iso8601" is not valid`},
+		{format: "excel", err: `last change time format "excel" is not valid`},
+		{format: "Y-m-d", err: `last change time format "Y-m-d" is not valid`},
+		{format: "%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y", err: "last change time format is longer than 64 runes"},
+		{format: "%Y-%m-%d\x00%H:%M:%S", err: "last change time format contains the NUL rune"},
 	}
 	for _, test := range tests {
 		t.Run(test.format, func(t *testing.T) {

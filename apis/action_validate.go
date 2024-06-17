@@ -595,37 +595,30 @@ func unusedProperties(schema types.Type, used []string) []string {
 //
 // Valid formats are
 //
-//   - "DateTime": the time format "2006-01-02 15:04:05"
-//   - "DateOnly": the time format "2006-01-02"
 //   - "ISO8601": the ISO 8601 format
-//   - "Excel": the Excel format, a float value stored in an Excel cell representing a date / datetime
-//   - "'...'": the strftime() function format, the format must be enclosed by single quote characters
+//   - "Excel": the Excel format, a float value stored in an Excel cell representing a date/datetime
+//   - a string containing a '%' character: the strftime() function format
 //
 // NOTE: keep in sync with the function
-// 'apis/connectors.parseLastChangeTimeWithFormat'.
+// 'apis/connectors.parseLastChangeTimePropertyWithFormat'.
 func validateLastChangeTimeFormat(format string) error {
 	switch format {
 	case
-		"DateTime",
-		"DateOnly",
 		"ISO8601",
 		"Excel":
 		return nil
 	}
-	if format == "" || format[0] != '\'' {
-		return fmt.Errorf("last change time format %q is not a valid format", format)
-	}
-	if len(format) == 1 || format[len(format)-1] != '\'' {
-		return fmt.Errorf("last change time strptime format does not end with \"'\"")
-	}
-	if len(format) == 2 {
-		return fmt.Errorf("last change time strptime format is empty")
-	}
-	if !utf8.ValidString(format) {
-		return errors.New("last change time strptime format contains invalid UTF-8 characters")
+	if format == "" {
+		return errors.New("last change time format is empty")
 	}
 	if utf8.RuneCountInString(format) > 64 {
-		return errors.New("last change time strptime format is longer than 64 runes")
+		return errors.New("last change time format is longer than 64 runes")
+	}
+	if !utf8.ValidString(format) {
+		return errors.New("last change time format contains invalid UTF-8 characters")
+	}
+	if !strings.Contains(format, "%") {
+		return fmt.Errorf("last change time format %q is not valid", format)
 	}
 	if containsNUL(format) {
 		return errors.New("last change time format contains the NUL rune")
