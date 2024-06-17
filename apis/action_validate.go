@@ -410,8 +410,13 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 		if !requiresLastChangeTimeFormat && action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
-		} else if requiresLastChangeTimeFormat && action.LastChangeTimeFormat == "" {
-			return errors.BadRequest("last change time format is required")
+		} else if requiresLastChangeTimeFormat {
+			if action.LastChangeTimeFormat == "" {
+				return errors.BadRequest("last change time format is required")
+			}
+			if connector.Type == state.DatabaseType && action.LastChangeTimeFormat == "Excel" {
+				return errors.BadRequest("last change time format cannot be Excel for database actions")
+			}
 		}
 	} else {
 		if action.IdentityProperty != "" {
