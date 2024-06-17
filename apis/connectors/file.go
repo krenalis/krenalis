@@ -428,7 +428,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	}
 	fileSchema, err := types.ObjectOf(columns)
 	if err != nil {
-		return fmt.Errorf("connector %s has returned invalid columns: %s", rw.connector, err)
+		return rewriteColumnErrors(err)
 	}
 	// Check that the schema, if valid, is aligned with the file's schema.
 	if rw.schema.Valid() {

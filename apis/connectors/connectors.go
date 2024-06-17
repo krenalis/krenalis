@@ -482,6 +482,22 @@ func isExcelSimpleFloat(s string) bool {
 	return true
 }
 
+// Ordinal returns the ordinal form of n.
+func ordinal(n int) string {
+	if n >= 11 && n <= 13 {
+		return fmt.Sprintf("%dth", n)
+	}
+	switch n % 10 {
+	case 1:
+		return fmt.Sprintf("%dst", n)
+	case 2:
+		return fmt.Sprintf("%dnd", n)
+	case 3:
+		return fmt.Sprintf("%drd", n)
+	}
+	return fmt.Sprintf("%dth", n)
+}
+
 // parseIdentityProperty parses the value for the identity property.
 func parseIdentityProperty(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
 	id, err := normalize(name, typ, value, false, layouts)
@@ -626,6 +642,20 @@ func parseLastChangeTimePropertyWithFormat(format, v string) (time.Time, error) 
 		}
 		return t.UTC(), nil
 	}
+}
+
+// rewriteColumnErrors updates error messages for types.InvalidPropertyNameError
+// and types.RepeatedPropertyNameError to enhance clarity. All other errors are
+// returned unchanged.
+func rewriteColumnErrors(err error) error {
+	switch e := err.(type) {
+	case types.InvalidPropertyNameError:
+		err = fmt.Errorf("the %s column has an invalid name: %q. Column names must start with a letter or underscore [A-Za-z_]"+
+			" and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", ordinal(e.Index+1), e.Name)
+	case types.RepeatedPropertyNameError:
+		err = fmt.Errorf("the names of the %s and %s columns are the same: %q", ordinal(e.Index1+1), ordinal(e.Index2+1), e.Name)
+	}
+	return err
 }
 
 // setActionSettings sets the settings of the provided action.

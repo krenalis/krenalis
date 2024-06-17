@@ -942,16 +942,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
 
-	schema, err := types.ObjectOf(rows.Columns())
-	if err != nil {
-		switch e := err.(type) {
-		case types.InvalidPropertyNameError:
-			err = errors.Unprocessable(DatabaseFailed, "the %s column has an invalid name: %q", ordinal(e.Index+1), e.Name)
-		case types.RepeatedPropertyNameError:
-			err = errors.Unprocessable(DatabaseFailed, "the names of the %s and %s columns are the same: %q", ordinal(e.Index1+1), ordinal(e.Index2+1), e.Name)
-		}
-		return nil, types.Type{}, err
-	}
+	schema := types.Object(rows.Columns())
+
 	marshaledRows, err := encoding.MarshalSlice(schema, results)
 	if err != nil {
 		return nil, types.Type{}, err
@@ -2154,22 +2146,6 @@ func deserializeCursor(cursor string) (time.Time, error) {
 	}
 	// TODO(marco): validate the cursor's fields.
 	return c, nil
-}
-
-// Ordinal returns the ordinal form of n.
-func ordinal(n int) string {
-	if n >= 11 && n <= 13 {
-		return fmt.Sprintf("%dth", n)
-	}
-	switch n % 10 {
-	case 1:
-		return fmt.Sprintf("%dst", n)
-	case 2:
-		return fmt.Sprintf("%dnd", n)
-	case 3:
-		return fmt.Sprintf("%drd", n)
-	}
-	return fmt.Sprintf("%dth", n)
 }
 
 // serializeCursor serializes a cursor to be returned by the API.

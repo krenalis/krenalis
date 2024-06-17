@@ -70,10 +70,8 @@ func (database *Database) Columns(ctx context.Context, table string) ([]types.Pr
 	if err != nil {
 		return nil, err
 	}
-	for _, column := range columns {
-		if err := isValidColumnName(column.Name); err != nil {
-			return nil, err
-		}
+	if _, err = types.ObjectOf(columns); err != nil {
+		return nil, rewriteColumnErrors(err)
 	}
 	return columns, nil
 }
@@ -97,11 +95,9 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	if err != nil {
 		return nil, err
 	}
-	for _, column := range columns {
-		if err := isValidColumnName(column.Name); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
+	if _, err = types.ObjectOf(columns); err != nil {
+		_ = rows.Close()
+		return nil, rewriteColumnErrors(err)
 	}
 	return newRows(rows, columns, database.timeLayouts), nil
 }
@@ -137,12 +133,6 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if err != nil {
 		return nil, err
 	}
-	for _, column := range columns {
-		if err = isValidColumnName(column.Name); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-	}
 	var records Records
 	defer func() {
 		if records == nil {
@@ -177,7 +167,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	// Check that schema is aligned with the query's schema.
 	querySchema, err := types.ObjectOf(columns)
 	if err != nil {
-		return nil, fmt.Errorf("connector %s has returned invalid columns: %s", database.connector, err)
+		return nil, rewriteColumnErrors(err)
 	}
 	err = checkSchemaAlignment(action.InSchema, querySchema)
 	if err != nil {
@@ -492,17 +482,5 @@ func (sv recordsScanValue) Scan(src any) error {
 		return err
 	}
 	sv.record.Properties[p.Name] = value
-	return nil
-}
-
-// isValidColumnName reports whether name is a valid column name.
-// A column name must follow the same rules as a property name:
-//   - start with [A-Za-z_]
-//   - subsequently contain only [A-Za-z0-9_]
-func isValidColumnName(name string) error {
-	if !types.IsValidPropertyPath(name) {
-		return fmt.Errorf("column name %q is not valid. Column names must start with a letter or underscore [A-Za-z_]"+
-			" and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", name)
-	}
 	return nil
 }
