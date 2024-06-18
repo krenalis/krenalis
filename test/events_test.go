@@ -117,9 +117,8 @@ func TestEvents(t *testing.T) {
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
-	// Trigger the identity resolution, so that the events GID are updated.
-	c.ExecuteAction(dummySrc, importUsersID, true)
-	c.WaitActionsToFinish(dummySrc)
+	// Run the identity resolution, so that the events GID are updated.
+	c.RunIdentityResolution()
 
 	// Retrieve the user imported from the event.
 	users, _, count := c.Users([]string{"email"}, "", 0, 100)
