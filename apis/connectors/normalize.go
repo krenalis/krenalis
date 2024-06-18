@@ -534,9 +534,8 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.ObjectKind:
 		if src, ok := src.(map[string]any); ok {
-			properties := types.Properties(typ)
 			var err error
-			for _, p := range properties {
+			for _, p := range typ.Properties() {
 				value, ok := src[p.Name]
 				if !ok {
 					return nil, fmt.Errorf(`there is not a value for the "%s.%s" property`, name, p.Name)
@@ -546,10 +545,10 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 					return nil, err
 				}
 			}
-			if len(src) != len(properties) {
+			if len(src) != typ.NumProperties() {
 			SRC:
 				for name := range src {
-					for _, p := range properties {
+					for _, p := range typ.Properties() {
 						if p.Name == name {
 							continue SRC
 						}

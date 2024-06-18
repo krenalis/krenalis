@@ -117,7 +117,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range propertiesToColumns(types.Properties(newProp.Type)) {
+				for _, c := range propertiesToColumns(newProp.Type) {
 					operations = append(operations, warehouses.AlterSchemaOperation{
 						Operation: warehouses.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
@@ -138,7 +138,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They do not appear in "rePaths".
 		p := newPropsByName[addedName]
 		if p.Type.Kind() == types.ObjectKind {
-			for _, c := range propertiesToColumns(types.Properties(p.Type)) {
+			for _, c := range propertiesToColumns(p.Type) {
 				operations = append(operations, warehouses.AlterSchemaOperation{
 					Operation: warehouses.OperationAddColumn,
 					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
@@ -208,7 +208,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					Column:    pathToColumn(keptPath),
 				})
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range propertiesToColumns(types.Properties(newProp.Type)) {
+				for _, c := range propertiesToColumns(newProp.Type) {
 					operations = append(operations, warehouses.AlterSchemaOperation{
 						Operation: warehouses.OperationAddColumn,
 						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
@@ -239,7 +239,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range propertiesToColumns(types.Properties(newProp.Type)) {
+				for _, c := range propertiesToColumns(newProp.Type) {
 					operations = append(operations, warehouses.AlterSchemaOperation{
 						Operation: warehouses.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
@@ -336,16 +336,16 @@ func pathToColumn(path string) string {
 	return strings.ReplaceAll(path, ".", "_")
 }
 
-// propertiesToColumns returns the columns of properties.
-func propertiesToColumns(properties []types.Property) []warehouses.Column {
+// propertiesToColumns returns the columns of properties of t.
+func propertiesToColumns(t types.Type) []warehouses.Column {
 
 	// NOTE: keep in sync with the copy of this function in the package
 	// "datastore".
 
-	columns := make([]warehouses.Column, 0, len(properties))
-	for _, p := range properties {
+	columns := make([]warehouses.Column, 0, t.NumProperties())
+	for _, p := range t.Properties() {
 		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range propertiesToColumns(types.Properties(p.Type)) {
+			for _, column := range propertiesToColumns(p.Type) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}

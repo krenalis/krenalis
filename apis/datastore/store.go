@@ -134,7 +134,7 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 	if store.Mode() == state.Inspection {
 		return ErrInspectionMode
 	}
-	userColumns := propertiesToColumns(types.Properties(userSchema))
+	userColumns := propertiesToColumns(userSchema)
 	return store.warehouse.AlterSchema(ctx, userColumns, operations)
 }
 
@@ -153,7 +153,7 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 // error.
 func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
-	userColumns := propertiesToColumns(types.Properties(userSchema))
+	userColumns := propertiesToColumns(userSchema)
 	return store.warehouse.AlterSchemaQueries(ctx, userColumns, operations)
 }
 
@@ -365,7 +365,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the user columns.
-	userColumns := propertiesToColumns(types.Properties(ws.UserSchema))
+	userColumns := propertiesToColumns(ws.UserSchema)
 
 	// Determine the primary sources for every user column.
 	userPrimarySources := make(map[string]int, len(ws.UserPrimarySources))

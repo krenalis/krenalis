@@ -441,8 +441,9 @@ func verifySchemaCompatibilityForSendEvents(t1, t2 types.Type) error {
 	if !t1.Valid() || !t2.Valid() {
 		switch {
 		case t1.Valid():
-			properties := types.Properties(t1)
-			return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, properties[0].Name)}
+			for _, p1 := range t1.Properties() {
+				return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, p1.Name)}
+			}
 		case t2.Valid():
 			for _, p2 := range t2.Properties() {
 				if p2.Required {

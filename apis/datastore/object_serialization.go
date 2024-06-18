@@ -16,16 +16,16 @@ import (
 	"github.com/open2b/chichi/types"
 )
 
-// propertiesToColumns returns the columns of properties.
-func propertiesToColumns(properties []types.Property) []warehouses.Column {
+// propertiesToColumns returns the columns of properties of t.
+func propertiesToColumns(t types.Type) []warehouses.Column {
 
 	// NOTE: keep in sync with the copy of this function in the package
 	// "diffschemas".
 
-	columns := make([]warehouses.Column, 0, len(properties))
-	for _, p := range properties {
+	columns := make([]warehouses.Column, 0, t.NumProperties())
+	for _, p := range t.Properties() {
 		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range propertiesToColumns(types.Properties(p.Type)) {
+			for _, column := range propertiesToColumns(p.Type) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}
