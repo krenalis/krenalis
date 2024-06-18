@@ -153,12 +153,34 @@ waitLoop:
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	// Make sure there are only 2 identities, as the anonymous identity imported
-	// by the first action must have been deleted during the merge of the
-	// non-anonymous identity.
-	_, count := c.ConnectionIdentities(javaScriptID, 0, 100)
-	if count != 2 {
-		t.Fatalf("expected a total of 2 identities, got %d", count)
+	// Make sure there is only one identity now, as both the anonymous
+	// identities, each imported by its own action, have been deleted.
+	identities, count := c.ConnectionIdentities(javaScriptID, 0, 100)
+	if count != 1 {
+		t.Fatalf("expected just one identity, got %d", count)
+	}
+
+	// Check that the only existing identity is correct.
+	identity := identities[0]
+	if identity.Action != action1 {
+		t.Fatalf("identity should have action %d, got %d instead", action1, identity.Action)
+	}
+	if len(identity.AnonymousIds) != 1 {
+		t.Fatalf("action should have just one anonymous ID, got %d instead", len(identity.AnonymousIds))
+	}
+	anonID := identity.AnonymousIds[0]
+	if anonID != "f3421606-a5a4-4027-bc81-50aedae5ccf3" {
+		t.Fatalf("unexpected anonymous ID %q", anonID)
+	}
+
+	// Run the Identity Resolution explicitly (even though technically it should
+	// have already been done implicitly during import).
+	c.RunIdentityResolution()
+
+	// Check that there is actually only one user in the workspace.
+	_, _, count = c.Users([]string{"email"}, "", 0, 100)
+	if count != 1 {
+		t.Fatalf("expecting only one user in the workspace, got %d instead", count)
 	}
 
 }

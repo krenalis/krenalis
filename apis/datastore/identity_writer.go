@@ -29,31 +29,37 @@ type Identity struct {
 	LastChangeTime time.Time              // Last change time in UTC.
 }
 
-// IdentityWriter writes user identities into the data warehouse. It deletes an
-// anonymous identity when a non-anonymous identity with the same Anonymous ID
-// is written.
+// IdentityWriter writes user identities into the data warehouse. It deletes the
+// anonymous identities when a non-anonymous identity with the same Anonymous ID
+// on the same connection is written.
 type IdentityWriter struct {
-	store      *Store
-	connection int
-	ack        IdentityWriterAckFunc
-	flatter    *flatter
-	columns    map[string]warehouses.Column
-	rows       []map[string]any
-	ackIDs     []string
-	closed     bool
+	store             *Store
+	connection        int
+	connectionActions []int // IDs of the actions of the connection.
+	ack               IdentityWriterAckFunc
+	flatter           *flatter
+	columns           map[string]warehouses.Column
+	rows              []map[string]any
+	ackIDs            []string
+	closed            bool
 }
 
 // newIdentityWriter returns a new identity writer to write identities for the
 // provided action.
 func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *IdentityWriter {
-	connection := action.Connection().ID
+	connection := action.Connection()
 	schema := action.OutSchema
+	var connectionActions []int
+	for _, action := range connection.Actions() {
+		connectionActions = append(connectionActions, action.ID)
+	}
 	iw := IdentityWriter{
-		store:      store,
-		connection: connection,
-		ack:        ack,
-		flatter:    newFlatter(schema, store.userColumnByProperty()),
-		columns:    map[string]warehouses.Column{},
+		store:             store,
+		connection:        connection.ID,
+		connectionActions: connectionActions,
+		ack:               ack,
+		flatter:           newFlatter(schema, store.userColumnByProperty()),
+		columns:           map[string]warehouses.Column{},
 	}
 	return &iw
 }
@@ -112,15 +118,20 @@ func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 	isEvent := identity.AnonymousID != ""
 	isAnonymous := identity.ID == ""
 	if isEvent && !isAnonymous {
-		// Delete the anonymous identity with the same AnonymousId of the non-anonymous identity.
-		iw.rows = append(iw.rows, map[string]any{
-			"$deleted":             true,
-			"__action__":           identity.Action,
-			"__is_anonymous__":     true,
-			"__identity_id__":      identity.AnonymousID,
-			"__connection__":       iw.connection,
-			"__last_change_time__": identity.LastChangeTime,
-		})
+		// Delete anonymous identities with the same anonymous ID as the
+		// incoming non-anonymous identity. The identities to be deleted must be
+		// deleted from all actions in the connection, not just from the action
+		// from which the identity is being imported.
+		for _, action := range iw.connectionActions {
+			iw.rows = append(iw.rows, map[string]any{
+				"$deleted":             true,
+				"__action__":           action,
+				"__is_anonymous__":     true,
+				"__identity_id__":      identity.AnonymousID,
+				"__connection__":       iw.connection,
+				"__last_change_time__": identity.LastChangeTime,
+			})
+		}
 	}
 	var row map[string]any
 	if iw.flatter == nil {
