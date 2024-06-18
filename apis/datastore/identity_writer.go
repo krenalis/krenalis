@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
 	"golang.org/x/exp/maps"
@@ -43,17 +44,16 @@ type IdentityWriter struct {
 }
 
 // newIdentityWriter returns a new identity writer to write identities for the
-// provided connection. If schema is valid, the identities will be validated
-// again the provided schema.
-func newIdentityWriter(store *Store, connection int, schema types.Type, ack IdentityWriterAckFunc) *IdentityWriter {
+// provided action.
+func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *IdentityWriter {
+	connection := action.Connection().ID
+	schema := action.OutSchema
 	iw := IdentityWriter{
 		store:      store,
 		connection: connection,
 		ack:        ack,
+		flatter:    newFlatter(schema, store.userColumnByProperty()),
 		columns:    map[string]warehouses.Column{},
-	}
-	if schema.Valid() {
-		iw.flatter = newFlatter(schema, store.userColumnByProperty())
 	}
 	return &iw
 }

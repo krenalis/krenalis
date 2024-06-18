@@ -263,19 +263,17 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
 
-// IdentityWriter returns an identity writer for writing user identities with
-// the given schema, relative to the connection, on the data warehouse. ack is
-// the ack function (see the documentation of IdentityWriter for more details
-// about it).
+// IdentityWriter returns an identity writer for writing user identities,
+// relative to the action, on the data warehouse. ack is the ack function (see
+// the documentation of IdentityWriter for more details about it).
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If it is in maintenance mode, it returns the
-// ErrMaintenanceMode error.
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
 // It panics if the ack function is nil.
 //
 // TODO(marco): ack is currently not implemented.
-func (store *Store) IdentityWriter(schema types.Type, connection int, ack IdentityWriterAckFunc) (*IdentityWriter, error) {
+func (store *Store) IdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*IdentityWriter, error) {
 	if ack == nil {
 		panic("nil ack function")
 	}
@@ -286,7 +284,7 @@ func (store *Store) IdentityWriter(schema types.Type, connection int, ack Identi
 	case state.Maintenance:
 		return nil, ErrMaintenanceMode
 	}
-	return newIdentityWriter(store, connection, schema, ack), nil
+	return newIdentityWriter(store, action, ack), nil
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
