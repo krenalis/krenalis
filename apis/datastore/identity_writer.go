@@ -48,7 +48,6 @@ type IdentityWriter struct {
 // provided action.
 func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *IdentityWriter {
 	connection := action.Connection()
-	schema := action.OutSchema
 	var connectionActions []int
 	for _, action := range connection.Actions() {
 		connectionActions = append(connectionActions, action.ID)
@@ -59,8 +58,14 @@ func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAck
 		connection:        connection.ID,
 		connectionActions: connectionActions,
 		ack:               ack,
-		flatter:           newFlatter(schema, store.userColumnByProperty()),
 		columns:           map[string]warehouses.Column{},
+	}
+	// An action's OutSchema may be invalid if the action (1) imports identities
+	// from events and (2) has no mapping, so it imports identities without
+	// properties. In that case, the flatter should not be initialized.
+	if schema := action.OutSchema; schema.Valid() {
+		schema := action.OutSchema
+		iw.flatter = newFlatter(schema, store.userColumnByProperty())
 	}
 	return &iw
 }

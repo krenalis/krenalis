@@ -189,4 +189,20 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
+	// Test importing a user identity with an action that has no mapping.
+	javaScript2ID := c.AddJavaScriptSource("JavaScript (source 2)", "example.com", nil)
+	javaScript2Key := c.ConnectionKeys(javaScript2ID)[0]
+	c.AddAction(javaScript2ID, "Users", chichitester.ActionToSet{
+		Name:    "JavaScript",
+		Enabled: true,
+	})
+	c.SendEvent(javaScript2Key, analytics.Identify{
+		UserId:      "Zny0kLMyz",
+		AnonymousId: "bd857fe0-8f62-4d36-8e47-0161db0cc513",
+	})
+	_, count = c.ConnectionIdentities(javaScript2ID, 0, 100)
+	if count != 1 {
+		t.Fatalf("expected one identity, got %d", count)
+	}
+
 }
