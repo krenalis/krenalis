@@ -59,6 +59,20 @@ type Database interface {
 	// Columns returns the columns of the given table.
 	Columns(ctx context.Context, table string) ([]types.Property, error)
 
+	// LastChangeTimeCondition returns the query condition used for the
+	// last_change_time placeholder in the form "column >= value" or, if column is
+	// empty, a true value.
+	//
+	// column, if not empty, is the name of the column, typ is its type (can be
+	// DateTime, Date, JSON, or Text), and value is the value for the condition:
+	//
+	//   - for DateTime and Date types, it is a time.Time value.
+	//   - for JSON and Text types, it is a string value.
+	//
+	// For example, it could return `"updated_at" >= '2024-06-18 16:12:25'` or
+	// `TRUE`.
+	LastChangeTimeCondition(column string, typ types.Type, value any) string
+
 	// Query executes the given query and returns the resulting rows and columns.
 	Query(ctx context.Context, query string) (Rows, []types.Property, error)
 

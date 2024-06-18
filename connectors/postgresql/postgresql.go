@@ -40,7 +40,7 @@ var _ interface {
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:        "PostgreSQL",
-		SampleQuery: "SELECT *\nFROM users\nLIMIT ${limit}\n",
+		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
 		Icon:        icon,
 	}, New)
 }
@@ -104,6 +104,20 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]types.Proper
 		return nil, fmt.Errorf("table '%s' does not exist", table)
 	}
 	return columns, nil
+}
+
+// LastChangeTimeCondition returns the query condition used for the
+// last_change_time placeholder in the form "column >= value" or, if column is
+// empty, a true value.
+func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, value any) string {
+	if column == "" {
+		return "TRUE"
+	}
+	b := strings.Builder{}
+	b.WriteString(quoteColumn(column))
+	b.WriteString(` >= `)
+	quoteValue(&b, value, typ)
+	return b.String()
 }
 
 // Query executes the given query and returns the resulting rows and columns.

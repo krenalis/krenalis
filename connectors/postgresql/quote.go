@@ -19,6 +19,11 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// quoteColumn quotes a column name.
+func quoteColumn(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
 // quoteTable quotes a table name.
 func quoteTable(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`

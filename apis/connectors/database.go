@@ -76,6 +76,34 @@ func (database *Database) Columns(ctx context.Context, table string) ([]types.Pr
 	return columns, nil
 }
 
+// LastChangeTimeCondition returns the query condition, for the given action,
+// used for the last_change_time placeholder in the form "column >= value" or
+// "TRUE". If action is nil, it returns the placeholder in the "TRUE" form.
+func (database *Database) LastChangeTimeCondition(action *state.Action) (string, error) {
+	if database.err != nil {
+		return "", database.err
+	}
+	if action == nil {
+		return database.inner.LastChangeTimeCondition("", types.Type{}, nil), nil
+	}
+	property := action.LastChangeTimeProperty
+	if property == "" || action.UserCursor.IsZero() {
+		return database.inner.LastChangeTimeCondition("", types.Type{}, nil), nil
+	}
+	p, _ := action.InSchema.Property(property)
+	cursor := action.UserCursor
+	var value any
+	switch p.Type.Kind() {
+	case types.DateTimeKind:
+		value = cursor
+	case types.DateKind:
+		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
+	case types.TextKind, types.JSONKind:
+		value = formatLastChangeTimeProperty(action.LastChangeTimeFormat, action.UserCursor)
+	}
+	return database.inner.LastChangeTimeCondition(property, p.Type, value), nil
+}
+
 // Query executes a query and returns the resulting rows.
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a PlaceholderError error may be returned in case of
@@ -143,19 +171,19 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	var identityProperty, lastChangeTimeProperty types.Property
 	for _, c := range columns {
 		if c.Name == action.IdentityProperty {
-			property, _ := action.InSchema.Property(action.IdentityProperty)
-			if c.Type.Kind() != property.Type.Kind() {
+			p, _ := action.InSchema.Property(c.Name)
+			if c.Type.Kind() != p.Type.Kind() {
 				return nil, &SchemaError{""}
 			}
-			identityProperty = property
+			identityProperty = p
 		}
-		if action.LastChangeTimeProperty != "" && c.Name == action.LastChangeTimeProperty {
-			property, _ := action.InSchema.Property(action.LastChangeTimeProperty)
-			if c.Type.Kind() != property.Type.Kind() {
+		if c.Name == action.LastChangeTimeProperty {
+			p, _ := action.InSchema.Property(c.Name)
+			if c.Type.Kind() != p.Type.Kind() {
 				return nil, &SchemaError{fmt.Sprintf(`last change time property %q has type %s instead of %s`,
-					action.LastChangeTimeProperty, c.Type.Kind(), property.Type.Kind())}
+					c.Name, c.Type.Kind(), p.Type.Kind())}
 			}
-			lastChangeTimeProperty = property
+			lastChangeTimeProperty = p
 		}
 	}
 	if identityProperty.Name == "" {
@@ -173,10 +201,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if err != nil {
 		return nil, err
 	}
-
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, types.Properties(action.InSchema), identityProperty,
-		lastChangeTimeProperty, action.LastChangeTimeFormat, database.timeLayouts)
+	records = newDatabaseRecords(rows, columns, action, database.timeLayouts)
 	return records, nil
 }
 
@@ -328,34 +354,21 @@ func (sv queryScanValue) Scan(src any) error {
 
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
-	columns              []types.Property
-	rows                 chichi.Rows
-	propertyOf           map[string]types.Property
-	dst                  []any
-	identityProperty     types.Property
-	lastChangeTime       types.Property
-	lastChangeTimeFormat string
-	timeLayouts          *state.TimeLayouts
-	last                 bool
-	err                  error
-	closed               bool
+	rows        chichi.Rows
+	columns     []types.Property
+	action      *state.Action
+	timeLayouts *state.TimeLayouts
+	last        bool
+	err         error
+	closed      bool
 }
 
-func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
-	identityProperty, lastChangeTimeProperty types.Property, lastChangeTimeFormat string,
-	layouts *state.TimeLayouts) *databaseRecords {
+func newDatabaseRecords(rows chichi.Rows, columns []types.Property, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
 	records := databaseRecords{
-		columns:              columns,
-		rows:                 rows,
-		dst:                  make([]any, len(columns)),
-		propertyOf:           make(map[string]types.Property, len(properties)),
-		identityProperty:     identityProperty,
-		lastChangeTime:       lastChangeTimeProperty,
-		lastChangeTimeFormat: lastChangeTimeFormat,
-		timeLayouts:          layouts,
-	}
-	for _, p := range properties {
-		records.propertyOf[p.Name] = p
+		rows:        rows,
+		columns:     columns,
+		action:      action,
+		timeLayouts: layouts,
 	}
 	return &records
 }
@@ -363,16 +376,42 @@ func newDatabaseRecords(rows chichi.Rows, columns, properties []types.Property,
 func (r *databaseRecords) All(ctx context.Context) Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
-			r.err = errors.New("connectors: For called on a closed Records")
 			return
 		}
-		var record Record
 		defer r.Close()
+		n := 0 // number of properties per record
+		var identityIndex = -1
+		var lastChangeTimeIndex = -1
+		scanner := scanner{
+			values: make([]any, len(r.columns)),
+		}
+		dest := make([]any, len(r.columns))
+		properties := make([]types.Property, len(r.columns))
+		for i, c := range r.columns {
+			dest[i] = &scanner
+			p, ok := r.action.InSchema.Property(c.Name)
+			if !ok {
+				continue
+			}
+			properties[i] = p
+			if p.Name == r.action.IdentityProperty {
+				identityIndex = i
+			}
+			if p.Name == r.action.LastChangeTimeProperty {
+				lastChangeTimeIndex = i
+			}
+			n++
+		}
+		// Read the rows.
+		var record Record
+	Rows:
 		for r.rows.Next() {
 			if record.Properties != nil || record.Err != nil {
 				if !yield(record) {
 					return
 				}
+				record.Properties = nil
+				record.Err = nil
 			}
 			select {
 			case <-ctx.Done():
@@ -380,26 +419,60 @@ func (r *databaseRecords) All(ctx context.Context) Seq[Record] {
 				return
 			default:
 			}
-			record = Record{
-				Properties: make(map[string]any, len(r.propertyOf)),
+			if err := r.rows.Scan(dest...); err != nil {
+				record.Err = err
+				scanner.reset()
+				continue Rows
 			}
-			for i, c := range r.columns {
-				p := r.propertyOf[c.Name]
-				r.dst[i] = recordsScanValue{
-					property:             p,
-					record:               &record,
-					identityProperty:     r.identityProperty,
-					lastChangeTime:       r.lastChangeTime,
-					lastChangeTimeFormat: r.lastChangeTimeFormat,
-					timeLayouts:          r.timeLayouts,
+			// Get the last change time.
+			if lastChangeTimeIndex >= 0 {
+				v := scanner.values[lastChangeTimeIndex]
+				if v == nil {
+					record.Err = errors.New("last change time value is NULL")
+					continue Rows
 				}
-			}
-			if err := r.rows.Scan(r.dst...); err != nil {
-				r.err = err
-				return
+				p := properties[lastChangeTimeIndex]
+				var err error
+				record.LastChangeTime, err = parseLastChangeTimeProperty(p.Name, p.Type, r.action.LastChangeTimeFormat, v, p.Nullable, r.timeLayouts)
+				if err != nil {
+					record.Err = err
+					continue Rows
+				}
+				if !record.LastChangeTime.IsZero() && record.LastChangeTime.Before(r.action.UserCursor) {
+					continue Rows
+				}
 			}
 			if record.LastChangeTime.IsZero() {
 				record.LastChangeTime = time.Now().UTC()
+			}
+			// Get the identity.
+			if identityIndex >= 0 {
+				v := scanner.values[identityIndex]
+				if v == nil {
+					record.Err = errors.New("identity value is NULL")
+					continue Rows
+				}
+				p := properties[identityIndex]
+				id, err := parseIdentityProperty(p.Name, p.Type, v, r.timeLayouts)
+				if err != nil {
+					record.Err = err
+					continue Rows
+				}
+				record.ID = id
+			}
+			// Get the properties.
+			record.Properties = make(map[string]any, n)
+			for i, v := range scanner.values {
+				p := properties[i]
+				if p.Name == "" {
+					continue
+				}
+				value, err := normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
+				if err != nil {
+					record.Err = err
+					continue Rows
+				}
+				record.Properties[p.Name] = value
 			}
 		}
 		if record.Properties != nil || record.Err != nil {
@@ -434,53 +507,20 @@ func (r *databaseRecords) Last() bool {
 	return r.last
 }
 
-// recordsScanValue implements the sql.Scanner interface to read the database
-// values from a database connector.
-type recordsScanValue struct {
-	property             types.Property
-	record               *Record
-	identityProperty     types.Property
-	lastChangeTime       types.Property
-	lastChangeTimeFormat string
-	timeLayouts          *state.TimeLayouts
+// scanner implements the sql.Scanner interface to read the database values from
+// a database connector.
+type scanner struct {
+	index  int
+	values []any
 }
 
-func (sv recordsScanValue) Scan(src any) error {
-	p := sv.property
-
-	if !p.Type.Valid() {
-		return nil
-	}
-
-	switch p.Name {
-	case sv.identityProperty.Name:
-		if src == nil {
-			return errors.New("identity value is NULL")
-		}
-		id, err := parseIdentityProperty(p.Name, p.Type, src, sv.timeLayouts)
-		if err != nil {
-			return err
-		}
-		sv.record.ID = id
-		return nil
-	case sv.lastChangeTime.Name:
-		if src == nil {
-			return errors.New("last change time value is NULL")
-		}
-		var err error
-		sv.record.LastChangeTime, err = parseLastChangeTimeProperty(p.Name, p.Type, sv.lastChangeTimeFormat, src, p.Nullable, sv.timeLayouts)
-		if err != nil {
-			return err
-		}
-		if sv.record.LastChangeTime.IsZero() {
-			sv.record.LastChangeTime = time.Now().UTC()
-		}
-		return nil
-	}
-	value, err := normalize(p.Name, p.Type, src, p.Nullable, sv.timeLayouts)
-	if err != nil {
-		return err
-	}
-	sv.record.Properties[p.Name] = value
+func (sv *scanner) Scan(src any) error {
+	sv.values[sv.index] = src
+	sv.index++
+	sv.index %= len(sv.values)
 	return nil
+}
+
+func (sv *scanner) reset() {
+	sv.index = 0
 }

@@ -58,14 +58,18 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		}
 		records, err = this.app().Users(ctx, action.InSchema, lastChangeTime)
 	case state.DatabaseType:
+		database := this.database()
+		defer database.Close()
 		replacer := func(name string) (string, bool) {
-			if name == "limit" {
+			switch name {
+			case "last_change_time":
+				v, _ := database.LastChangeTimeCondition(action)
+				return v, true
+			case "limit":
 				return strconv.FormatUint(math.MaxInt64, 10), true
 			}
 			return "", false
 		}
-		database := this.database()
-		defer database.Close()
 		records, err = database.Records(ctx, action, replacer)
 	case state.FileStorageType:
 		var lastChangeTime time.Time
@@ -123,7 +127,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		stats.Passed(statistics.Receiving)
 		stats.Passed(statistics.InputValidation)
 
-		if (connector.Type == state.AppType || connector.Type == state.FileStorageType) && user.LastChangeTime.After(cursor) {
+		if user.LastChangeTime.After(cursor) {
 			cursor = user.LastChangeTime
 		}
 
@@ -173,11 +177,9 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			}
 
 			// Set the user cursor.
-			if connector.Type == state.AppType || connector.Type == state.FileStorageType {
-				err = this.setUserCursor(ctx, cursor)
-				if err != nil {
-					return actionExecutionError{err}
-				}
+			err = this.setUserCursor(ctx, cursor)
+			if err != nil {
+				return actionExecutionError{err}
 			}
 
 			clear(users)

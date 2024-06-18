@@ -459,6 +459,22 @@ func checkTypeAlignment(name string, t1, t2 types.Type) error {
 // Keep in sync with the events.maxSettingsLen constant.
 const maxSettingsLen = 10_000
 
+// formatLastChangeTimeProperty formats a time.Time value with the given format.
+// Excel formal is not allowed.
+//
+// format must be a valid change time format; for accepted formats, refer to the
+// 'apis.validateLastChangeTimeFormat' function.
+func formatLastChangeTimeProperty(format string, t time.Time) string {
+	switch format {
+	case "ISO8601":
+		return t.Format(time.RFC3339)
+	case "Excel":
+		panic("unexpected Excel format")
+	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
+		return timefmt.Format(t, format)
+	}
+}
+
 // isExcelSimpleFloat reports whether s is a string representing a float value
 // encoding an Excel date / datetime value.
 func isExcelSimpleFloat(s string) bool {
@@ -548,12 +564,11 @@ func parseIdentityProperty(name string, typ types.Type, value any, layouts *stat
 
 // parseLastChangeTimeProperty parses a last change time property value. If the
 // value cannot be parsed or is not valid, it returns an error. If the value is
-// valid but nil and nullable is true, it returns the zero time and a nil error.
+// valid but nil, and nullable is true, it returns the zero time and a nil
+// error.
 //
-// format must be a valid change time format.
-//
-// For accepted formats, refer to the 'apis.validateLastChangeTimeWithFormat'
-// function.
+// format must be a valid change time format; for accepted formats, refer to the
+// 'apis.validateLastChangeTimeFormat' function.
 func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
 	v, err := normalize(name, typ, value, nullable, layouts)
 	if err != nil {
@@ -602,10 +617,8 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 // parseLastChangeTimePropertyWithFormat parses a last change time value with
 // the given format.
 //
-// For the accepted formats, see the 'apis.validateLastChangeTimeWithFormat'
-// function.
-//
-// NOTE: keep in sync with 'apis.validateLastChangeTimeFormat'.
+// format must be a valid change time format; for accepted formats, refer to the
+// 'apis.validateLastChangeTimeFormat' function.
 func parseLastChangeTimePropertyWithFormat(format, v string) (time.Time, error) {
 	switch format {
 	case "ISO8601":

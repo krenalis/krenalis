@@ -45,8 +45,15 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]types.Proper
 	// ...
 }
 
+// LastChangeTimeCondition returns the query condition used for the
+// last_change_time placeholder in the form "column >= value" or, if column is
+// empty, a true value.
+func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, value any) string {
+	// ...
+}
+
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (Rows, []types.Property, error) {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
 	// ...
 }
 
@@ -132,6 +139,60 @@ Columns(ctx context.Context, table string) ([]types.Property, error)
 Chichi invokes the `Columns` method when creating or updating a database destination action, retrieving the columns of the table to which data should be exported.
 
 The `Columns` method returns the table's columns as a slice of `Property` values, detailing the names and types of each column. 
+
+### LastChangeTimeCondition method
+
+```go
+LastChangeTimeCondition(column string, typ types.Type, value any) string
+```
+
+Chichi calls the `LastChangeTimeCondition` method to construct the value for the `last_change_time` placeholder. The `last_change_time` placeholder is used in a query to implement a cursor, returning only the rows starting from a specified time.
+
+The value of the `last_change_time` placeholder is a condition that can be used in a `WHERE` statement, like `"updated_at" >= '2024-03-16 09:26:33'`. `LastChangeTimeCondition` receives the name of the column, its type, and the value. The type can only be `DateTime`, `Date`, `JSON`, and `Text`. For the `DateTime` and `Date` types, the value is of type `time.Time` set to UTC, while for the `JSON` and `Text` types, the value is of type `string`. `LastChangeTimeCondition` must construct the condition based on these parameters.
+
+As a special case, if `column` is empty, it must return an always true condition, usually returning `"TRUE"`. This occurs when the query should not limit the rows returned.
+
+#### Examples
+
+Let's take the following query as an example:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE ${last_change_time}
+LIMIT ${limit}
+```
+
+Suppose the `limit` placeholder is 1000.
+
+The call `LastChangeTimeCondition("updated_at", types.DateTime(), time.Date(2024, 6, 18, 16, 12, 25, 837, time.UTC))` might return `"\"updated_at\" >= '2024-06-18 16:12:25.837'"` and the query would become:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE "updated_at" >= '2024-06-18 16:12:25.837'
+LIMIT 1000
+```
+
+The call `LastChangeTimeCondition("timestamp", types.Text(), "2014-07-18T16:12:25")` might return `"\"timestamp\" >= '2024-06-18T16:12:25'"` and the query would become:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE "timestamp" >= '2024-06-18T16:12:25'
+LIMIT 1000
+```
+
+Note that if the value is a string, `LastChangeTimeCondition` simply needs to quote the string.
+
+The call `LastChangeTimeCondition("", time.Time{}, nil)` might return `"TRUE"` and the query would become:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE TRUE
+LIMIT 1000
+```
 
 ### Query method
 

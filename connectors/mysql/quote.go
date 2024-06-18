@@ -19,6 +19,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// quoteColumn quotes a column name.
+func quoteColumn(name string) (string, error) {
+	if strings.Contains(name, "`") {
+		return "", errors.New("column name contains a backtick character")
+	}
+	return "`" + name + "`", nil
+}
+
 // quoteTable quotes a table name.
 func quoteTable(name string) (string, error) {
 	if strings.Contains(name, "`") {

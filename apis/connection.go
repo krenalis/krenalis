@@ -911,13 +911,17 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	}
 
 	// Execute the query.
+	database := this.database()
 	replacer := func(name string) (string, bool) {
-		if name == "limit" {
+		switch name {
+		case "last_change_time":
+			v, _ := database.LastChangeTimeCondition(nil)
+			return v, true
+		case "limit":
 			return strconv.Itoa(limit), true
 		}
 		return "", false
 	}
-	database := this.database()
 	defer database.Close()
 	rows, err := database.Query(ctx, query, replacer)
 	if err != nil {

@@ -38,7 +38,7 @@ var _ interface {
 func init() {
 	chichi.RegisterDatabase(chichi.DatabaseInfo{
 		Name:        "MySQL",
-		SampleQuery: "SELECT *\nFROM users\nLIMIT ${limit}\n",
+		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
 		Icon:        icon,
 	}, New)
 }
@@ -85,6 +85,25 @@ func (my *MySQL) Columns(ctx context.Context, table string) ([]types.Property, e
 		return nil, err
 	}
 	return columns, nil
+}
+
+// LastChangeTimeCondition returns the query condition used for the
+// last_change_time placeholder in the form "column >= value" or, if column is
+// empty, a true value.
+func (my *MySQL) LastChangeTimeCondition(column string, typ types.Type, value any) string {
+	if column == "" {
+		return "TRUE"
+	}
+	var err error
+	column, err = quoteColumn(column)
+	if err != nil {
+		panic(err)
+	}
+	b := strings.Builder{}
+	b.WriteString(column)
+	b.WriteString(` >= `)
+	quoteValue(&b, value, typ)
+	return b.String()
 }
 
 // Query executes the given query and returns the resulting rows and columns.

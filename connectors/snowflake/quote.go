@@ -8,8 +8,17 @@
 package snowflake
 
 import (
+	"fmt"
 	"strings"
+	"time"
+
+	"github.com/open2b/chichi/types"
 )
+
+// quoteColumn quotes a column name.
+func quoteColumn(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
 
 // quoteTable quotes a table name.
 func quoteTable(name string) string {
@@ -59,4 +68,28 @@ func quoteString(b *strings.Builder, s string) {
 		}
 	}
 	b.WriteByte('\'')
+}
+
+// quoteValue quotes v and writes it into b.
+// It only supports the DateTime, Date, JSON, and Text types, and for JSON only
+// a string value.
+func quoteValue(b *strings.Builder, v any, t types.Type) {
+	switch t.Kind() {
+	case types.DateTimeKind:
+		b.WriteByte('\'')
+		b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.000000000"))
+		b.WriteByte('\'')
+	case types.DateKind:
+		b.WriteByte('\'')
+		b.WriteString(v.(time.Time).Format("2006-01-02"))
+		b.WriteByte('\'')
+	case types.JSONKind:
+		b.WriteString("TO_VARIANT(")
+		quoteString(b, v.(string))
+		b.WriteString(")")
+	case types.TextKind:
+		quoteString(b, v.(string))
+	default:
+		panic(fmt.Errorf("unsupported value type %s", t.Kind()))
+	}
 }
