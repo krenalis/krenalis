@@ -224,11 +224,11 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.TimeLa
 	mappingExpressions := make([]mappingExpr, len(expressions))
 	i := 0
 	for path, expr := range expressions {
-		mappingExpressions[i].path = path
 		p, err := dt.PropertyByPath(path)
 		if err != nil {
 			return nil, err
 		}
+		mappingExpressions[i].path = path
 		mappingExpressions[i].expr, err = Compile(expr, st, p.Type, p.Required, p.Nullable, layouts)
 		if err != nil {
 			return nil, err

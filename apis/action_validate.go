@@ -23,6 +23,8 @@ import (
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/apis/transformers/mappings"
 	"github.com/open2b/chichi/types"
+
+	"golang.org/x/exp/maps"
 )
 
 // validateActionToSet validates the action to set (when adding or setting an
@@ -108,17 +110,12 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
-		// Input properties.
+		// Input property paths.
 		inProps := transformer.Properties()
 		mappingInProperties = len(inProps)
 		usedInPaths = append(usedInPaths, inProps...)
-		// Output properties.
-		for path := range mapping {
-			if !types.IsValidPropertyPath(path) {
-				return errors.BadRequest("invalid property path %q", path)
-			}
-			usedOutPaths = append(usedOutPaths, path)
-		}
+		// Output property paths.
+		usedOutPaths = maps.Keys(mapping)
 	}
 	// Validate the transformation.
 	if function := action.Transformation.Function; function != nil {
