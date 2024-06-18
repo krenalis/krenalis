@@ -22,7 +22,6 @@ import (
 
 // Identity is an identity
 type Identity struct {
-	Action         int                    // Action from which the identity has been imported.
 	ID             string                 // Identifier of the identity; it is empty for anonymous identities.
 	AnonymousID    string                 // AnonymousID of identities received via events.
 	Properties     map[string]interface{} // Properties of the user schema.
@@ -34,6 +33,7 @@ type Identity struct {
 // on the same connection is written.
 type IdentityWriter struct {
 	store             *Store
+	action            int
 	connection        int
 	connectionActions []int // IDs of the actions of the connection.
 	ack               IdentityWriterAckFunc
@@ -55,6 +55,7 @@ func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAck
 	}
 	iw := IdentityWriter{
 		store:             store,
+		action:            action.ID,
 		connection:        connection.ID,
 		connectionActions: connectionActions,
 		ack:               ack,
@@ -140,7 +141,7 @@ func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 		row = identity.Properties
 		iw.flatter.flat(row, iw.columns)
 	}
-	row["__action__"] = identity.Action
+	row["__action__"] = iw.action
 	row["__is_anonymous__"] = isAnonymous
 	row["__connection__"] = iw.connection
 	if isEvent && !isAnonymous {

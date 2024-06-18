@@ -344,7 +344,6 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			}
 			// Write the user identity on the data warehouse.
 			err = iw.Write(datastore.Identity{
-				Action:         action.ID,
 				ID:             event.UserId,
 				AnonymousID:    event.AnonymousId,
 				Properties:     properties,
