@@ -127,7 +127,7 @@ func (organization organization) Workspace(_ http.ResponseWriter, r *http.Reques
 		return nil, err
 	}
 	v := r.PathValue("workspace")
-	if v == "" || v[0] == '+' {
+	if v[0] == '+' {
 		return nil, errors.NotFound("")
 	}
 	id, _ := strconv.Atoi(v)

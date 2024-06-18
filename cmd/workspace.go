@@ -151,7 +151,7 @@ func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	v := r.PathValue("connection")
-	if v == "" || v[0] == '+' {
+	if v[0] == '+' {
 		return nil, errors.NotFound("")
 	}
 	id, _ := strconv.Atoi(v)
