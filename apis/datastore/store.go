@@ -159,9 +159,8 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Typ
 
 // AddEvents adds events to the store.
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If it is in maintenance mode, it returns the
-// ErrMaintenanceMode error.
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (store *Store) AddEvents(events [][]any) error {
 	switch store.Mode() {
 	case state.Inspection:
@@ -178,10 +177,10 @@ func (store *Store) AddEvents(events [][]any) error {
 
 // DeleteConnectionIdentities deletes the identities of a connection.
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If it is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
 func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection int) error {
 	store.mustBeOpen()
 	switch store.Mode() {
@@ -290,9 +289,9 @@ func (store *Store) IdentityWriter(action *state.Action, ack IdentityWriterAckFu
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If an error occurs with the data warehouse, it returns a
+// *DataWarehouseError error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
 	if store.Mode() == state.Inspection {
@@ -311,9 +310,8 @@ func (store *Store) Mode() state.WarehouseMode {
 
 // RunIdentityResolution runs the Identity Resolution.
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If it is in maintenance mode, it returns the
-// ErrMaintenanceMode error.
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (store *Store) RunIdentityResolution(ctx context.Context) error {
 
 	switch store.Mode() {
@@ -381,10 +379,10 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 
 // SetDestinationUser sets the destination user for an action.
 //
-// If the data warehouse is in inspection mode, it returns the
-// ErrInspectionMode error. If it is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
 func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
 	switch store.Mode() {
