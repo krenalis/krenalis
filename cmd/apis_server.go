@@ -122,7 +122,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"POST   /api/workspaces/{workspace}/connections/{connection}/actions/{action}/ui-event":          action.ServeUI,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/app-users":                          connection.AppUsers,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/events/connections/{connection2}":   connection.AddEventConnection,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/events/send-previous":               connection.PreviewSendEvent,
+		"POST   /api/workspaces/{workspace}/connections/{connection}/events/send-previews":               connection.PreviewSendEvent,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/identities":                         connection.Identities,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.GenerateKey,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/query/executions":                   connection.ExecQuery,
