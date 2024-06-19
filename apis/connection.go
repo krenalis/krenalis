@@ -1467,7 +1467,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			return nil, errors.BadRequest("mapping (or transformation) is required")
 		}
 
-		// Create a temporary transformer.
+		// Create a temporary function transformer provider.
 		var provider transformers.Provider
 		var function *state.TransformationFunction
 		if transformation.Function != nil {
