@@ -55,6 +55,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		inSchema = events.Schema
 	}
 
+	dispatchEventsToApps := c.Role == state.Destination && target == state.Events && c.Connector().Type == state.AppType
+
 	// First, do formal validations.
 
 	// Validate the name.
@@ -100,7 +102,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if len(mapping) == 0 {
 			return errors.BadRequest("transformation mapping must have mapped properties")
 		}
-		if !inSchema.Valid() {
+		if !inSchema.Valid() && !dispatchEventsToApps {
 			return errors.BadRequest("input schema is required by the mapping")
 		}
 		if !outSchema.Valid() {
@@ -119,7 +121,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 	// Validate the transformation.
 	if function := action.Transformation.Function; function != nil {
-		if !inSchema.Valid() {
+		if !inSchema.Valid() && !dispatchEventsToApps {
 			return errors.BadRequest("input schema is required by the transformation")
 		}
 		if !outSchema.Valid() {
@@ -529,10 +531,10 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	if transformationMandatory && !haveTransformation {
 		return errors.BadRequest("action must have a transformation")
 	}
-	if action.Transformation.Mapping != nil && mappingInProperties == 0 {
+	if action.Transformation.Mapping != nil && mappingInProperties == 0 && !dispatchEventsToApps {
 		return errors.BadRequest("transformation must map at least one property")
 	}
-	if action.Transformation.Function != nil && !inSchema.Valid() {
+	if action.Transformation.Function != nil && !inSchema.Valid() && !dispatchEventsToApps {
 		return errors.BadRequest("transformation function must have at least one input property")
 	}
 
