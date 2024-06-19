@@ -949,18 +949,11 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 // used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the
 // invalid schema.
-func (this *Workspace) IdentifiersSchema(ctx context.Context) (types.Type, error) {
+func (this *Workspace) IdentifiersSchema() types.Type {
 	this.apis.mustBeOpen()
-	var properties []types.Property
-	for _, p := range this.workspace.UserSchema.Properties() {
-		if datastore.CanBeIdentifier(p.Type) {
-			properties = append(properties, p)
-		}
-	}
-	if len(properties) == 0 {
-		return types.Type{}, nil
-	}
-	return types.Object(properties), nil
+	return types.SubsetFunc(this.workspace.UserSchema, func(p types.Property) bool {
+		return datastore.CanBeIdentifier(p.Type)
+	})
 }
 
 // InitWarehouse initializes the data warehouse of the workspace by creating the

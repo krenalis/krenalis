@@ -216,7 +216,7 @@ func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	return ws.IdentifiersSchema(r.Context())
+	return ws.IdentifiersSchema(), nil
 }
 
 // InitWarehouse initializes a data warehouse of the workspace by creating the

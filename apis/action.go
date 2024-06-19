@@ -906,16 +906,9 @@ func importsUserIdentitiesFromEvents(connectorType state.ConnectorType, role sta
 // Returns an invalid schema in case none of the properties of schema can be
 // used.
 func onlyForMatching(schema types.Type) types.Type {
-	props := []types.Property{}
-	for _, p := range schema.Properties() {
-		if canBeUsedAsAsMatchingProp(p.Type.Kind()) {
-			props = append(props, p)
-		}
-	}
-	if len(props) == 0 {
-		return types.Type{}
-	}
-	return types.Object(props)
+	return types.SubsetFunc(schema, func(p types.Property) bool {
+		return canBeUsedAsAsMatchingProp(p.Type.Kind())
+	})
 }
 
 // shouldResetCursor reports whether the cursor of an action should be reset if
