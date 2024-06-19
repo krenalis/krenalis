@@ -262,9 +262,10 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
 
-// IdentityWriter returns an identity writer for writing user identities,
-// relative to the action, on the data warehouse. ack is the ack function (see
-// the documentation of IdentityWriter for more details about it).
+// BatchIdentityWriter returns an identity writer for writing user identities,
+// relative to the action, on the data warehouse, in case of importing
+// identities in batch. ack is the ack function (see the documentation of
+// IdentityWriter for more details about it).
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
@@ -272,7 +273,7 @@ type IdentityWriterAckFunc func(ids []string, err error)
 // It panics if the ack function is nil.
 //
 // TODO(marco): ack is currently not implemented.
-func (store *Store) IdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*IdentityWriter, error) {
+func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 	if ack == nil {
 		panic("nil ack function")
 	}
@@ -283,7 +284,32 @@ func (store *Store) IdentityWriter(action *state.Action, ack IdentityWriterAckFu
 	case state.Maintenance:
 		return nil, ErrMaintenanceMode
 	}
-	return newIdentityWriter(store, action, ack), nil
+	return newBatchIdentityWriter(store, action, ack), nil
+}
+
+// EventIdentityWriter returns an identity writer for writing user identities,
+// relative to the action, on the data warehouse, in case of importing
+// identities from events. ack is the ack function (see the documentation of
+// IdentityWriter for more details about it).
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+//
+// It panics if the ack function is nil.
+//
+// TODO(marco): ack is currently not implemented.
+func (store *Store) EventIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*EventIdentityWriter, error) {
+	if ack == nil {
+		panic("nil ack function")
+	}
+	store.mustBeOpen()
+	switch store.Mode() {
+	case state.Inspection:
+		return nil, ErrInspectionMode
+	case state.Maintenance:
+		return nil, ErrMaintenanceMode
+	}
+	return newEventIdentityWriter(store, action, ack), nil
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the

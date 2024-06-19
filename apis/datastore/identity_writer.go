@@ -28,44 +28,31 @@ type Identity struct {
 	LastChangeTime time.Time              // Last change time in UTC.
 }
 
-// IdentityWriter writes user identities into the data warehouse. It deletes the
-// anonymous identities when a non-anonymous identity with the same Anonymous ID
-// on the same connection is written.
-type IdentityWriter struct {
-	store             *Store
-	action            int
-	connection        int
-	connectionActions []int // IDs of the actions of the connection.
-	ack               IdentityWriterAckFunc
-	flatter           *flatter
-	columns           map[string]warehouses.Column
-	rows              []map[string]any
-	ackIDs            []string
-	closed            bool
+// BatchIdentityWriter writes user identities into the data warehouse in the
+// case when identities are imported in batch.
+type BatchIdentityWriter struct {
+	store      *Store
+	action     int
+	connection int
+	ack        IdentityWriterAckFunc
+	flatter    *flatter
+	columns    map[string]warehouses.Column
+	rows       []map[string]any
+	ackIDs     []string
+	closed     bool
 }
 
-// newIdentityWriter returns a new identity writer to write identities for the
-// provided action.
-func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *IdentityWriter {
+// newBatchIdentityWriter returns a new identity writer to write identities for
+// the provided action in the case when identities are imported in batch.
+func newBatchIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *BatchIdentityWriter {
 	connection := action.Connection()
-	var connectionActions []int
-	for _, action := range connection.Actions() {
-		connectionActions = append(connectionActions, action.ID)
-	}
-	iw := IdentityWriter{
-		store:             store,
-		action:            action.ID,
-		connection:        connection.ID,
-		connectionActions: connectionActions,
-		ack:               ack,
-		columns:           map[string]warehouses.Column{},
-	}
-	// An action's OutSchema may be invalid if the action (1) imports identities
-	// from events and (2) has no mapping, so it imports identities without
-	// properties. In that case, the flatter should not be initialized.
-	if schema := action.OutSchema; schema.Valid() {
-		schema := action.OutSchema
-		iw.flatter = newFlatter(schema, store.userColumnByProperty())
+	iw := BatchIdentityWriter{
+		store:      store,
+		action:     action.ID,
+		connection: connection.ID,
+		flatter:    newFlatter(action.OutSchema, store.userColumnByProperty()),
+		ack:        ack,
+		columns:    map[string]warehouses.Column{},
 	}
 	return &iw
 }
@@ -78,7 +65,7 @@ func newIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAck
 // is returned.
 //
 // If the writer is already closed, it does nothing and returns immediately.
-func (iw *IdentityWriter) Close(ctx context.Context) error {
+func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	if iw.closed {
 		return nil
 	}
@@ -86,18 +73,7 @@ func (iw *IdentityWriter) Close(ctx context.Context) error {
 	if iw.rows == nil {
 		return nil
 	}
-	columns := make([]warehouses.Column, 6+len(iw.columns))
-	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
-	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Text()}
-	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
-	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columnsNames := maps.Keys(iw.columns)
-	slices.Sort(columnsNames)
-	for i, name := range columnsNames {
-		columns[i+6] = iw.columns[name]
-	}
+	columns := identitiesMergeColumns(iw.columns)
 	err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
 	if err != nil {
 		return err
@@ -117,13 +93,107 @@ func (iw *IdentityWriter) Close(ctx context.Context) error {
 // the ack function with the ackID of the written identities and a nil error.
 //
 // It panics if called on a closed writer.
-func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
+func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
 	}
-	isEvent := identity.AnonymousID != ""
+	row := identity.Properties
+	iw.flatter.flat(row, iw.columns)
+	row["__action__"] = iw.action
+	row["__is_anonymous__"] = false
+	row["__connection__"] = iw.connection
+	row["__identity_id__"] = identity.ID
+	row["__last_change_time__"] = identity.LastChangeTime
+	iw.rows = append(iw.rows, row)
+	iw.ackIDs = append(iw.ackIDs, ackID)
+	return nil
+}
+
+// BatchIdentityWriter writes user identities into the data warehouse. It
+// deletes the anonymous identities when a non-anonymous identity with the same
+// Anonymous ID on the same connection is written.
+type EventIdentityWriter struct {
+	store             *Store
+	action            int
+	connection        int
+	connectionActions []int // IDs of the actions of the connection.
+	ack               IdentityWriterAckFunc
+	flatter           *flatter
+	columns           map[string]warehouses.Column
+	rows              []map[string]any
+	ackIDs            []string
+	closed            bool
+}
+
+// newEventIdentityWriter returns a new identity writer to write identities for
+// the provided action, in case when identities are imported from events.
+func newEventIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *EventIdentityWriter {
+	connection := action.Connection()
+	var connectionActions []int
+	for _, action := range connection.Actions() {
+		connectionActions = append(connectionActions, action.ID)
+	}
+	iw := EventIdentityWriter{
+		store:             store,
+		action:            action.ID,
+		connection:        connection.ID,
+		connectionActions: connectionActions,
+		ack:               ack,
+		columns:           map[string]warehouses.Column{},
+	}
+	// An action's OutSchema may be invalid if the action on events has no
+	// mapping, so it imports identities without properties. In that case, the
+	// flatter should not be initialized.
+	if schema := action.OutSchema; schema.Valid() {
+		schema := action.OutSchema
+		iw.flatter = newFlatter(schema, store.userColumnByProperty())
+	}
+	return &iw
+}
+
+// Close closes the Writer, ensuring the completion of all pending or ongoing
+// write operations. In the event of a canceled context, it interrupts ongoing
+// writes, discards pending ones, and returns.
+//
+// In case an error occurs with the data warehouse, a DataWarehouseError error
+// is returned.
+//
+// If the writer is already closed, it does nothing and returns immediately.
+func (iw *EventIdentityWriter) Close(ctx context.Context) error {
+	if iw.closed {
+		return nil
+	}
+	iw.closed = true
+	if iw.rows == nil {
+		return nil
+	}
+	columns := identitiesMergeColumns(iw.columns)
+	err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
+	if err != nil {
+		return err
+	}
+	iw.ack(iw.ackIDs, nil)
+	return nil
+}
+
+// Write writes a user identity. If a valid user schema has been provided, the
+// properties must comply with it. It returns immediately, deferring the
+// validation of the properties and the actual write operation to a later time.
+//
+// If an error occurs during validation of the properties, it calls the ack
+// function with the value of ackID and the error.
+//
+// When a batch of event identities has been written to the data warehouse, it
+// calls the ack function with the ackID of the written identities and a nil
+// error.
+//
+// It panics if called on a closed writer.
+func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
+	if iw.closed {
+		panic("call Write on a closed identity writer")
+	}
 	isAnonymous := identity.ID == ""
-	if isEvent && !isAnonymous {
+	if !isAnonymous {
 		// Delete anonymous identities with the same anonymous ID as the
 		// incoming non-anonymous identity. The identities to be deleted must be
 		// deleted from all actions in the connection, not just from the action
@@ -149,7 +219,7 @@ func (iw *IdentityWriter) Write(identity Identity, ackID string) error {
 	row["__action__"] = iw.action
 	row["__is_anonymous__"] = isAnonymous
 	row["__connection__"] = iw.connection
-	if isEvent && !isAnonymous {
+	if !isAnonymous {
 		row["__anonymous_ids__"] = []string{identity.AnonymousID}
 	}
 	if isAnonymous {
@@ -220,4 +290,22 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns 
 			ff.flatRec(false, root, v.(map[string]any), columns)
 		}
 	}
+}
+
+// identitiesMergeColumns returns the columns to be used during the identities
+// merge operation, both when importing in batch and from events.
+func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
+	columns := make([]warehouses.Column, 6+len(iwColumns))
+	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
+	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Text()}
+	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
+	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
+	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	columnsNames := maps.Keys(iwColumns)
+	slices.Sort(columnsNames)
+	for i, name := range columnsNames {
+		columns[i+6] = iwColumns[name]
+	}
+	return columns
 }

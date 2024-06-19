@@ -88,8 +88,8 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	}
 	defer records.Close()
 
-	// Instantiate an identity writer.
-	iw, err := this.connection.store.IdentityWriter(action, func(ids []string, err error) {
+	// Instantiate a batch identity writer.
+	iw, err := this.connection.store.BatchIdentityWriter(action, func(ids []string, err error) {
 		if err != nil {
 			stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
 			return
