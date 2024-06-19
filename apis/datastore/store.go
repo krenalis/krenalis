@@ -271,8 +271,6 @@ type IdentityWriterAckFunc func(ids []string, err error)
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
 // It panics if the ack function is nil.
-//
-// TODO(marco): ack is currently not implemented.
 func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 	if ack == nil {
 		panic("nil ack function")
@@ -296,8 +294,6 @@ func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriter
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
 // It panics if the ack function is nil.
-//
-// TODO(marco): ack is currently not implemented.
 func (store *Store) EventIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*EventIdentityWriter, error) {
 	if ack == nil {
 		panic("nil ack function")
