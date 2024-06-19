@@ -501,6 +501,40 @@ func Test_Properties(t *testing.T) {
 
 }
 
+func Test_SubsetFunc(t *testing.T) {
+	o := Object([]Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "c", Type: Array(Text())},
+		{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))},
+	})
+	expected := Object([]Property{
+		{Name: "a", Type: Text()},
+		{Name: "c", Type: Array(Text())},
+	})
+	got := SubsetFunc(o, func(p Property) bool {
+		return p.Name == "a" || p.Name == "c"
+	})
+	if err := sameType(expected, got); err != nil {
+		t.Fatalf("expected %v, got %v", expected, got)
+	}
+	got = SubsetFunc(o, func(p Property) bool {
+		return false
+	})
+	if got.Valid() {
+		t.Fatalf("expected invalid type, got %v", got)
+	}
+}
+
 func Test_Walk(t *testing.T) {
 	properties := []Property{
 		{Name: "a", Type: Text()},
