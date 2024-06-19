@@ -220,7 +220,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chic
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Required: true},
 			{Name: "itemName", Type: types.Text()},
 			{Name: "itemId", Type: types.Int(32)},
 		}), nil
