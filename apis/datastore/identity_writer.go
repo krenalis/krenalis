@@ -50,7 +50,7 @@ func newBatchIdentityWriter(store *Store, action *state.Action, ack IdentityWrit
 		store:      store,
 		action:     action.ID,
 		connection: connection.ID,
-		flatter:    newFlatter(action.OutSchema, store.userColumnByProperty()),
+		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
 		ack:        ack,
 		columns:    map[string]warehouses.Column{},
 	}
@@ -146,7 +146,7 @@ func newEventIdentityWriter(store *Store, action *state.Action, ack IdentityWrit
 	// flatter should not be initialized.
 	if schema := action.OutSchema; schema.Valid() {
 		schema := action.OutSchema
-		iw.flatter = newFlatter(schema, store.userColumnByProperty())
+		iw.flatter = newFlatter(schema, store.identityColumnByProperty())
 	}
 	return &iw
 }
