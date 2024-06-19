@@ -375,14 +375,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	span.Log("action validated successfully")
 
 	n := state.SetAction{
-		ID:        this.action.ID,
-		Name:      action.Name,
-		Enabled:   action.Enabled,
-		InSchema:  inSchema,
-		OutSchema: action.OutSchema,
-		Transformation: state.Transformation{
-			Mapping: action.Transformation.Mapping,
-		},
+		ID:                       this.action.ID,
+		Name:                     action.Name,
+		Enabled:                  action.Enabled,
+		InSchema:                 inSchema,
+		OutSchema:                action.OutSchema,
+		Transformation:           toStateTransformation(action.Transformation),
 		Query:                    action.Query,
 		Connector:                action.Connector,
 		Path:                     action.Path,
@@ -395,15 +393,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
-	}
-	if function := action.Transformation.Function; function != nil {
-		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
-		switch function.Language {
-		case "JavaScript":
-			n.Transformation.Function.Language = state.JavaScript
-		case "Python":
-			n.Transformation.Function.Language = state.Python
-		}
 	}
 	if n.Transformation.Mapping != nil || n.Transformation.Function != nil {
 		n.ResetUserCursor = shouldResetCursor(this.action.Transformation, n.Transformation)
@@ -948,6 +937,26 @@ func shouldResetCursor(t1, t2 state.Transformation) bool {
 		}
 	}
 	return false
+}
+
+// toStateTransformation gets a transformation and returns it as a
+// state.Transformation value. It does not copy the nested data.
+func toStateTransformation(transformation Transformation) state.Transformation {
+	var tr state.Transformation
+	if function := transformation.Function; function != nil {
+		tr.Function = &state.TransformationFunction{
+			Source: function.Source,
+		}
+		switch function.Language {
+		case "JavaScript":
+			tr.Function.Language = state.JavaScript
+		case "Python":
+			tr.Function.Language = state.Python
+		}
+	} else {
+		tr.Mapping = transformation.Mapping
+	}
+	return tr
 }
 
 // transformationFunctionName returns the name the transformation function for

@@ -483,18 +483,16 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	n := state.AddAction{
-		Connection:     this.connection.ID,
-		Target:         state.Target(target),
-		Name:           action.Name,
-		Enabled:        action.Enabled,
-		EventType:      eventType,
-		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
-		SchedulePeriod: 60,
-		InSchema:       inSchema,
-		OutSchema:      action.OutSchema,
-		Transformation: state.Transformation{
-			Mapping: action.Transformation.Mapping,
-		},
+		Connection:               this.connection.ID,
+		Target:                   state.Target(target),
+		Name:                     action.Name,
+		Enabled:                  action.Enabled,
+		EventType:                eventType,
+		ScheduleStart:            int16(mathrand.Intn(24 * 60)),
+		SchedulePeriod:           60,
+		InSchema:                 inSchema,
+		OutSchema:                action.OutSchema,
+		Transformation:           toStateTransformation(action.Transformation),
 		Query:                    action.Query,
 		Connector:                action.Connector,
 		Path:                     action.Path,
@@ -507,15 +505,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
-	}
-	if function := action.Transformation.Function; function != nil {
-		n.Transformation.Function = &state.TransformationFunction{Source: function.Source}
-		switch function.Language {
-		case "JavaScript":
-			n.Transformation.Function.Language = state.JavaScript
-		case "Python":
-			n.Transformation.Function.Language = state.Python
-		}
 	}
 
 	// Add the filter to the notification and marshal it.
