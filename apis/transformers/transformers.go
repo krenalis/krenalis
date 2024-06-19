@@ -27,7 +27,7 @@ type Transformer struct {
 // layouts used to format DateTime, Date, and Time values as strings.
 //
 // For mappings, it returns a types.PathNotExistError error if a path in
-// expressions does not exist in the source schema.
+// expressions does not exist in the input schema.
 func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if !outSchema.Valid() {
