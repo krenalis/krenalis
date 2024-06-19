@@ -59,7 +59,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	// Add a second action, which imports identities from events with a
 	// different filter than the first action.
 	action2 := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
-		Name:     "Action 1",
+		Name:     "Action 2",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
