@@ -69,16 +69,14 @@ func New(st *state.State) *Datastore {
 			if ws.Warehouse == nil {
 				continue
 			}
-			go func(ws *state.Workspace) {
-				store, err := newStore(ds, ws)
-				if err != nil {
-					slog.Error("cannot create a store", "err", err)
-					return
-				}
-				ds.mu.Lock()
-				ds.store[ws.ID] = store
-				ds.mu.Unlock()
-			}(ws)
+			store, err := newStore(ds, ws)
+			if err != nil {
+				slog.Error("cannot create a store", "err", err)
+				continue
+			}
+			ds.mu.Lock()
+			ds.store[ws.ID] = store
+			ds.mu.Unlock()
 		}
 	}
 	return ds
