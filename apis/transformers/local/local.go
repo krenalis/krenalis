@@ -36,7 +36,7 @@ type Settings struct {
 	FunctionsDir     string
 }
 
-func New(settings Settings) transformers.Function {
+func New(settings Settings) transformers.Provider {
 	return &function{settings: settings}
 }
 

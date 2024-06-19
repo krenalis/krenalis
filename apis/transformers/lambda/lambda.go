@@ -54,9 +54,9 @@ type Settings struct {
 	}
 }
 
-// New returns a new function for Lambda with the given settings.
+// New returns a new provider for Lambda with the given settings.
 // Supports every Node and Python 3 runtime.
-func New(settings Settings) transformers.Function {
+func New(settings Settings) transformers.Provider {
 	return &function{settings: settings}
 }
 

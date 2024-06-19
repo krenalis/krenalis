@@ -76,7 +76,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	var err error
 	var transformer *transformers.Transformer
 	if tr := this.action.Transformation; tr.Mapping != nil || tr.Function != nil {
-		transformer, err = transformers.New(action.InSchema, action.OutSchema, tr, action.ID, this.apis.functionTransformer, &connector.TimeLayouts)
+		transformer, err = transformers.New(action.InSchema, action.OutSchema, tr, action.ID, this.apis.transformerProvider, &connector.TimeLayouts)
 		if err != nil {
 			return err
 		}

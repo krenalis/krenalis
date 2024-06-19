@@ -60,7 +60,7 @@ type APIs struct {
 		observer   *collector.Observer
 		dispatcher *dispatcher.Dispatcher
 	}
-	functionTransformer transformers.Function
+	transformerProvider transformers.Provider
 	mu                  sync.Mutex // for the scheduler field
 	scheduler           *scheduler
 	smtp                *SMTPConfig
@@ -163,9 +163,9 @@ func New(conf *Config) (*APIs, error) {
 	// Create a transformer.
 	switch c := conf.Transformer.(type) {
 	case LambdaConfig:
-		apis.functionTransformer = lambda.New(lambda.Settings(c))
+		apis.transformerProvider = lambda.New(lambda.Settings(c))
 	case LocalConfig:
-		apis.functionTransformer = local.New(local.Settings(c))
+		apis.transformerProvider = local.New(local.Settings(c))
 	case nil:
 	default:
 		return nil, errors.New("invalid transformer")
@@ -192,13 +192,13 @@ func New(conf *Config) (*APIs, error) {
 	apis.statistics = statistics.New(db)
 
 	// Init the events.
-	apis.events.dispatcher, err = dispatcher.New(db, apis.state, apis.functionTransformer, apis.connectors)
+	apis.events.dispatcher, err = dispatcher.New(db, apis.state, apis.transformerProvider, apis.connectors)
 	if err != nil {
 		apis.datastore.Close()
 		apis.state.Close()
 		return nil, err
 	}
-	apis.events.collector, err = collector.New(db, apis.state, apis.datastore, apis.functionTransformer, apis.events.dispatcher, apis.statistics)
+	apis.events.collector, err = collector.New(db, apis.state, apis.datastore, apis.transformerProvider, apis.events.dispatcher, apis.statistics)
 	if err != nil {
 		apis.events.dispatcher.Close()
 		apis.datastore.Close()
@@ -583,14 +583,14 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		if transformation.Function.Source == "" {
 			return nil, errors.BadRequest("transformation source is empty")
 		}
-		tr := apis.functionTransformer
+		provider := apis.transformerProvider
 		switch transformation.Function.Language {
 		case "JavaScript":
-			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
+			if provider == nil || !provider.SupportLanguage(state.JavaScript) {
 				return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
 			}
 		case "Python":
-			if tr == nil || !tr.SupportLanguage(state.Python) {
+			if provider == nil || !provider.SupportLanguage(state.Python) {
 				return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
 			}
 		case "":
@@ -606,8 +606,8 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
 
-	// Create a temporary transformer.
-	var transformer transformers.Function
+	// Create a temporary function transformer provider.
+	var provider transformers.Provider
 	var function *state.TransformationFunction
 	if transformation.Function != nil {
 		function = &state.TransformationFunction{
@@ -623,7 +623,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			name += ".py"
 			function.Language = state.Python
 		}
-		transformer = newTemporaryTransformer(name, transformation.Function.Source, apis.functionTransformer)
+		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)
 	}
 
 	// Transform the data.
@@ -632,7 +632,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		Mapping:  transformation.Mapping,
 		Function: function,
 	}
-	m, err := transformers.New(inSchema, outSchema, tr, action, transformer, nil)
+	m, err := transformers.New(inSchema, outSchema, tr, action, provider, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -653,14 +653,14 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 // TransformationLanguages returns the supported transformation languages.
 // Possible returned languages are "JavaScript" and "Python".
 func (apis *APIs) TransformationLanguages() []string {
-	if apis.functionTransformer == nil {
+	if apis.transformerProvider == nil {
 		return []string{}
 	}
 	languages := make([]string, 0, 2)
-	if apis.functionTransformer.SupportLanguage(state.JavaScript) {
+	if apis.transformerProvider.SupportLanguage(state.JavaScript) {
 		languages = append(languages, "JavaScript")
 	}
-	if apis.functionTransformer.SupportLanguage(state.Python) {
+	if apis.transformerProvider.SupportLanguage(state.Python) {
 		languages = append(languages, "Python")
 	}
 	return languages
@@ -709,12 +709,12 @@ func (apis *APIs) onElectLeader(n state.ElectLeader) {
 
 // onDeleteAction is called when an action is deleted.
 func (apis *APIs) onDeleteAction(n state.DeleteAction) {
-	if apis.state.IsLeader() && apis.functionTransformer != nil {
+	if apis.state.IsLeader() && apis.transformerProvider != nil {
 		go func() {
 			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
-				if apis.functionTransformer.SupportLanguage(language) {
+				if apis.transformerProvider.SupportLanguage(language) {
 					name := transformationFunctionName(n.ID, language)
-					err := apis.functionTransformer.Delete(apis.close.ctx, name)
+					err := apis.transformerProvider.Delete(apis.close.ctx, name)
 					if err != nil {
 						slog.Debug("cannot delete transformer function", "name", name, "err", err)
 					}

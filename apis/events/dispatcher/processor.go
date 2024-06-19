@@ -34,22 +34,22 @@ type processor struct {
 		in  chan *dispatchingEvent
 		out chan *dispatchingEvent
 	}
-	connectors  *connectors.Connectors
-	transformer transformers.Function
-	close       struct {
+	connectors          *connectors.Connectors
+	transformerProvider transformers.Provider
+	close               struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 	}
 }
 
 // newProcessor returns a new processor.
-func newProcessor(db *postgres.DB, st *state.State, connectors *connectors.Connectors, transformer transformers.Function) (*processor, error) {
+func newProcessor(db *postgres.DB, st *state.State, connectors *connectors.Connectors, provider transformers.Provider) (*processor, error) {
 
 	processor := processor{
-		db:          db,
-		state:       st,
-		connectors:  connectors,
-		transformer: transformer,
+		db:                  db,
+		state:               st,
+		connectors:          connectors,
+		transformerProvider: provider,
 	}
 	processor.events.in = make(chan *dispatchingEvent, pipeSize)
 	processor.events.out = make(chan *dispatchingEvent, pipeSize)
@@ -83,7 +83,7 @@ func (processor *processor) worker() {
 			action := event.action
 			var extra map[string]any
 			if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
-				transformer, err := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, processor.transformer, nil)
+				transformer, err := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, processor.transformerProvider, nil)
 				if err != nil {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue

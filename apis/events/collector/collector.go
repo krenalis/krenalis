@@ -104,29 +104,29 @@ type collectedEvent struct {
 // A Collector collects events, persists them in the database and sends them to
 // the dispatcher.
 type Collector struct {
-	db          *postgres.DB
-	state       *state.State
-	datastore   *datastore.Datastore
-	statistics  *statistics.Collector
-	observer    *Observer
-	messageIds  sync.Map
-	transformer transformers.Function
-	dispatcher  *dispatcher.Dispatcher
-	maxmindDB   *maxminddb.Reader
+	db                  *postgres.DB
+	state               *state.State
+	datastore           *datastore.Datastore
+	statistics          *statistics.Collector
+	observer            *Observer
+	messageIds          sync.Map
+	transformerProvider transformers.Provider
+	dispatcher          *dispatcher.Dispatcher
+	maxmindDB           *maxminddb.Reader
 }
 
 // New returns a new event collector. It receives HTTP requests from mobile,
 // server and website sources and sends them to the dispatcher.
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Function, dispatcher *dispatcher.Dispatcher, stats *statistics.Collector) (*Collector, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, stats *statistics.Collector) (*Collector, error) {
 	var collector = Collector{
-		db:          db,
-		state:       st,
-		datastore:   ds,
-		statistics:  stats,
-		observer:    newObserver(db),
-		messageIds:  sync.Map{},
-		transformer: transformer,
-		dispatcher:  dispatcher,
+		db:                  db,
+		state:               st,
+		datastore:           ds,
+		statistics:          stats,
+		observer:            newObserver(db),
+		messageIds:          sync.Map{},
+		transformerProvider: provider,
+		dispatcher:          dispatcher,
 	}
 	var err error
 	collector.maxmindDB, err = maxminddb.Open(maxmindDBPath)
@@ -321,7 +321,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			// obtain the properties.
 			if m := action.Transformation.Mapping; m != nil {
 				transformation := state.Transformation{Mapping: m}
-				transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformer, nil)
+				transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformerProvider, nil)
 				if err != nil {
 					return err
 				}

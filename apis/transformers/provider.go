@@ -31,14 +31,14 @@ type Result struct {
 	Err   error
 }
 
-// A Function represents a transformer function.
+// A Provider represents a function transformer provider.
 //
 // A function name must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_-]
 //   - terminate with ".js", for JavaScript functions, or with ".py" for Python
 //     functions
-type Function interface {
+type Provider interface {
 
 	// Call calls the function with the given name and version for each value and
 	// returns the result of each invocation. Each element of values is supposed to

@@ -466,7 +466,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Validate the action.
-	err := validateActionToSet(action, state.Target(target), this.connection, fileConnector, this.apis.functionTransformer)
+	err := validateActionToSet(action, state.Target(target), this.connection, fileConnector, this.apis.transformerProvider)
 	if err != nil {
 		return 0, err
 	}
@@ -565,7 +565,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	var function state.TransformationFunction
 	if n.Transformation.Function != nil {
 		name := transformationFunctionName(n.ID, n.Transformation.Function.Language)
-		version, err := this.apis.functionTransformer.Create(ctx, name, n.Transformation.Function.Source)
+		version, err := this.apis.transformerProvider.Create(ctx, name, n.Transformation.Function.Source)
 		if err != nil {
 			return 0, err
 		}
@@ -1448,14 +1448,14 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			if transformation.Function.Source == "" {
 				return nil, errors.BadRequest("transformation source is empty")
 			}
-			tr := this.apis.functionTransformer
+			provider := this.apis.transformerProvider
 			switch transformation.Function.Language {
 			case "JavaScript":
-				if tr == nil || !tr.SupportLanguage(state.JavaScript) {
+				if provider == nil || !provider.SupportLanguage(state.JavaScript) {
 					return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
 				}
 			case "Python":
-				if tr == nil || !tr.SupportLanguage(state.Python) {
+				if provider == nil || !provider.SupportLanguage(state.Python) {
 					return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
 				}
 			case "":
@@ -1468,7 +1468,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 
 		// Create a temporary transformer.
-		var transformer transformers.Function
+		var provider transformers.Provider
 		var function *state.TransformationFunction
 		if transformation.Function != nil {
 			function = &state.TransformationFunction{
@@ -1484,7 +1484,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				name += ".py"
 				function.Language = state.Python
 			}
-			transformer = newTemporaryTransformer(name, transformation.Function.Source, this.apis.functionTransformer)
+			provider = newTempTransformerProvider(name, transformation.Function.Source, this.apis.transformerProvider)
 		}
 
 		// Transform the values.
@@ -1493,7 +1493,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			Mapping:  transformation.Mapping,
 			Function: function,
 		}
-		m, err := transformers.New(inSchema, outSchema, tr, action, transformer, nil)
+		m, err := transformers.New(inSchema, outSchema, tr, action, provider, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2153,44 +2153,46 @@ func serializeCursor(cursor time.Time) (string, error) {
 	return hex.EncodeToString(b.Bytes()), nil
 }
 
-// temporaryTransformer is a transformers.Function that creates a function
-// at each call and deletes it after the call returns. Any call to a method that
-// is not CallFunction panics.
-type temporaryTransformer struct {
-	name        string                // function name.
-	source      string                // source code.
-	transformer transformers.Function // underlying transformer.
+// tempTransformerProvider is a function transformer provider that creates a
+// function at each call and deletes it after the call returns. Any call to a
+// method that is not CallFunction panics.
+type tempTransformerProvider struct {
+	name     string                // function name.
+	source   string                // source code.
+	provider transformers.Provider // underlying transformer provider.
 }
 
-func newTemporaryTransformer(name, source string, transformer transformers.Function) *temporaryTransformer {
-	return &temporaryTransformer{name, source, transformer}
+func newTempTransformerProvider(name, source string, provider transformers.Provider) *tempTransformerProvider {
+	return &tempTransformerProvider{name, source, provider}
 }
 
-func (tp *temporaryTransformer) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
-	version, err := tp.transformer.Create(ctx, tp.name, tp.source)
+func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+	version, err := tp.provider.Create(ctx, tp.name, tp.source)
 	if err != nil {
 		return nil, nil
 	}
 	defer func() {
 		go func() {
-			err := tp.transformer.Delete(context.Background(), tp.name)
+			err := tp.provider.Delete(context.Background(), tp.name)
 			if err != nil {
 				slog.Warn("cannot delete transformation function", "name", tp.name, "err", err)
 			}
 		}()
 	}()
-	return tp.transformer.Call(ctx, tp.name, version, inSchema, outSchema, values)
+	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, values)
 }
 
-func (tp *temporaryTransformer) Close(_ context.Context) error { panic("not supported") }
-func (tp *temporaryTransformer) Create(_ context.Context, _, _ string) (string, error) {
+func (tp *tempTransformerProvider) Close(_ context.Context) error { panic("not supported") }
+func (tp *tempTransformerProvider) Create(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
 }
-func (tp *temporaryTransformer) Delete(_ context.Context, _ string) error {
+func (tp *tempTransformerProvider) Delete(_ context.Context, _ string) error {
 	panic("not supported")
 }
-func (tp *temporaryTransformer) SupportLanguage(_ state.Language) bool { panic("not supported") }
-func (tp *temporaryTransformer) Update(_ context.Context, _, _ string) (string, error) {
+func (tp *tempTransformerProvider) SupportLanguage(_ state.Language) bool {
+	panic("not supported")
+}
+func (tp *tempTransformerProvider) Update(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
 }
 

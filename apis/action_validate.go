@@ -39,7 +39,7 @@ import (
 //
 // It returns an errors.UnprocessableError error with code LanguageNotSupported,
 // if the transformation language is not supported.
-func validateActionToSet(action ActionToSet, target state.Target, c *state.Connection, fileConnector *state.Connector, tr transformers.Function) error {
+func validateActionToSet(action ActionToSet, target state.Target, c *state.Connection, fileConnector *state.Connector, provider transformers.Provider) error {
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
@@ -133,11 +133,11 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 		switch function.Language {
 		case "JavaScript":
-			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
+			if provider == nil || !provider.SupportLanguage(state.JavaScript) {
 				return errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language is not supported")
 			}
 		case "Python":
-			if tr == nil || !tr.SupportLanguage(state.Python) {
+			if provider == nil || !provider.SupportLanguage(state.Python) {
 				return errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
 			}
 		case "":

@@ -51,9 +51,9 @@ type Result struct {
 }
 
 // New returns new dispatcher.
-func New(db *postgres.DB, st *state.State, transformer transformers.Function, connectors *connectors.Connectors) (*Dispatcher, error) {
+func New(db *postgres.DB, st *state.State, provider transformers.Provider, connectors *connectors.Connectors) (*Dispatcher, error) {
 
-	processor, err := newProcessor(db, st, connectors, transformer)
+	processor, err := newProcessor(db, st, connectors, provider)
 	if err != nil {
 		return nil, err
 	}

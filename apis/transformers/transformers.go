@@ -16,19 +16,19 @@ type Transformer struct {
 	inSchema, outSchema types.Type
 	mapping             *mappings.Mapping
 	transformation      state.Transformation
-	function            Function
+	provider            Provider
 	action              int
 }
 
 // New returns a new transformer that transforms properties from inSchema to
 // outSchema using the given transformation for the action with the provided
-// identifier. function is the transformer function to use for function
+// identifier. provider is the transformer provider to use for function
 // transformations and is nil for mappings. If not nil, layouts represent the
 // layouts used to format DateTime, Date, and Time values as strings.
 //
 // For mappings, it returns a types.PathNotExistError error if a path in
 // expressions does not exist in the source schema.
-func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, function Function, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if !outSchema.Valid() {
 		return nil, errors.New("output schema is not valid")
@@ -38,7 +38,7 @@ func New(inSchema, outSchema types.Type, transformation state.Transformation, ac
 		inSchema:       inSchema,
 		outSchema:      outSchema,
 		transformation: transformation,
-		function:       function,
+		provider:       provider,
 		action:         action,
 	}
 
@@ -84,7 +84,7 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 
 	// Transform using a function.
 	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
-	results, err := transformer.function.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, []map[string]any{values})
+	results, err := transformer.provider.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
 			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
@@ -134,7 +134,7 @@ func (transformer *Transformer) TransformValues(ctx context.Context, values []ma
 
 	// Transform using a function.
 	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
-	results, err := transformer.function.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, values)
+	results, err := transformer.provider.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, values)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
 			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))

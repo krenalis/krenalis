@@ -31,7 +31,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	execution, _ := action.Execution()
 
 	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
-		this.apis.functionTransformer, nil)
+		this.apis.transformerProvider, nil)
 	if err != nil {
 		return err
 	}

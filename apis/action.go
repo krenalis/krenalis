@@ -361,7 +361,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	c := this.action.Connection()
 
 	// Validate the action.
-	err := validateActionToSet(action, this.action.Target, c, fileConnector, this.apis.functionTransformer)
+	err := validateActionToSet(action, this.action.Target, c, fileConnector, this.apis.transformerProvider)
 	if err != nil {
 		return err
 	}
@@ -480,9 +480,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	if fn := n.Transformation.Function; fn != nil {
 		if this.action.Transformation.Function == nil {
 			name := transformationFunctionName(n.ID, fn.Language)
-			version, err := this.apis.functionTransformer.Create(ctx, name, fn.Source)
+			version, err := this.apis.transformerProvider.Create(ctx, name, fn.Source)
 			if err == transformers.ErrFunctionExist {
-				version, err = this.apis.functionTransformer.Update(ctx, name, fn.Source)
+				version, err = this.apis.transformerProvider.Update(ctx, name, fn.Source)
 			}
 			if err != nil {
 				return err
@@ -490,9 +490,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			n.Transformation.Function.Version = version
 		} else if this.action.Transformation.Function.Source != fn.Source || this.action.Transformation.Function.Language != fn.Language {
 			name := transformationFunctionName(n.ID, fn.Language)
-			version, err := this.apis.functionTransformer.Update(ctx, name, fn.Source)
+			version, err := this.apis.transformerProvider.Update(ctx, name, fn.Source)
 			if err == transformers.ErrFunctionNotExist {
-				version, err = this.apis.functionTransformer.Create(ctx, name, fn.Source)
+				version, err = this.apis.transformerProvider.Create(ctx, name, fn.Source)
 			}
 			if err != nil {
 				return err
@@ -645,7 +645,7 @@ func (this *Action) isLanguageSupported() bool {
 	if transformation == nil {
 		return true
 	}
-	if this.apis.functionTransformer != nil && this.apis.functionTransformer.SupportLanguage(transformation.Language) {
+	if this.apis.transformerProvider != nil && this.apis.transformerProvider.SupportLanguage(transformation.Language) {
 		return true
 	}
 	return false
