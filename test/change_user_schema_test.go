@@ -30,7 +30,7 @@ func TestChangeUserSchema(t *testing.T) {
 	defer c.Stop()
 
 	ws := c.Workspace()
-	if n := ws.UserSchema.NumProperties(); n != 10 {
+	if n := types.NumProperties(ws.UserSchema); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 
@@ -60,7 +60,7 @@ func TestChangeUserSchema(t *testing.T) {
 	c.ChangeUserSchema(file.Schema, file.PrimarySources, file.RePaths) // this should do nothing.
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.NumProperties(); n != 10 {
+	if n := types.NumProperties(ws.UserSchema); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 
@@ -84,7 +84,7 @@ func TestChangeUserSchema(t *testing.T) {
 	c.ChangeUserSchema(schema, nil, nil)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.NumProperties(); n != 11 {
+	if n := types.NumProperties(ws.UserSchema); n != 11 {
 		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
 

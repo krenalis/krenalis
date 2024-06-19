@@ -342,7 +342,7 @@ func propertiesToColumns(t types.Type) []warehouses.Column {
 	// NOTE: keep in sync with the copy of this function in the package
 	// "datastore".
 
-	columns := make([]warehouses.Column, 0, t.NumProperties())
+	columns := make([]warehouses.Column, 0, types.NumProperties(t))
 	for _, p := range t.Properties() {
 		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range propertiesToColumns(p.Type) {

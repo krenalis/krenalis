@@ -214,7 +214,7 @@ func (database *Database) Writer(table string, schema types.Type, ack AckFunc) (
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	columns := make([]types.Property, 1+schema.NumProperties())
+	columns := make([]types.Property, 1+types.NumProperties(schema))
 	columns[0] = types.Property{Name: "id", Type: types.Int(32)}
 	for i, p := range schema.Properties() {
 		columns[i+1] = p

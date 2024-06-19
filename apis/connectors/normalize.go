@@ -545,7 +545,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 					return nil, err
 				}
 			}
-			if len(src) != typ.NumProperties() {
+			if len(src) != types.NumProperties(typ) {
 			SRC:
 				for name := range src {
 					for _, p := range typ.Properties() {

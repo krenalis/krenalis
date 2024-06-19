@@ -460,7 +460,7 @@ func Test_NumProperties(t *testing.T) {
 		{Name: "b", Type: Text()},
 		{Name: "c", Type: Text()},
 	}
-	if got := Object(properties).NumProperties(); len(properties) != got {
+	if got := NumProperties(Object(properties)); len(properties) != got {
 		t.Errorf("expected %d, got %d", len(properties), got)
 	}
 }

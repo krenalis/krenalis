@@ -1102,15 +1102,6 @@ func (t Type) Properties() Seq2[int, Property] {
 	}
 }
 
-// NumProperties returns the count of properties in t.
-// Panics if t is not an Object type.
-func (t Type) NumProperties() int {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
-	}
-	return len(t.vl.([]Property))
-}
-
 // Elem returns a type's element type.
 // Panics if t is not an Array or Map type.
 func (t Type) Elem() Type {
@@ -1164,6 +1155,15 @@ func (t Type) EqualTo(t2 Type) bool {
 		return ok && vl1.String() == vl2.String()
 	}
 	panic("unreachable code")
+}
+
+// NumProperties returns the count of properties in t.
+// Panics if t is not an Object type.
+func NumProperties(t Type) int {
+	if t.kind != ObjectKind {
+		panic("cannot get the properties of a non-Object type")
+	}
+	return len(t.vl.([]Property))
 }
 
 // Properties returns the properties of the Object type t.
