@@ -1192,17 +1192,28 @@ func PropertyNames(t Type) []string {
 // SubsetFunc returns a subset of the object t, including only the properties
 // for which f returns true, maintaining their original order in type t.
 // If f returns false for all properties, it returns an invalid schema.
-// It panics if t is not an object, or f is nil
+// It panics if t is not an object, or f is nil.
 func SubsetFunc(t Type, f func(p Property) bool) Type {
 	if t.kind != ObjectKind {
 		panic("cannot get a subset of a non-Object type")
 	}
 	var ps []Property
 	pp := t.vl.([]Property)
+	all := true
 	for i := 0; i < len(pp); i++ {
 		if f(pp[i]) {
-			ps = append(ps, pp[i])
+			if !all {
+				ps = append(ps, pp[i])
+			}
+		} else if all {
+			if i > 0 {
+				ps = append(pp[:0:0], pp[:i]...)
+			}
+			all = false
 		}
+	}
+	if all {
+		return t
 	}
 	if ps == nil {
 		return Type{}
