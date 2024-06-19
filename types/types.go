@@ -1111,20 +1111,6 @@ func (t Type) NumProperties() int {
 	return len(t.vl.([]Property))
 }
 
-// PropertiesNames returns the names of the properties of the Object t.
-// Panics if t is not an Object type.
-func (t Type) PropertiesNames() []string {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties names of a non-Object type")
-	}
-	properties := t.vl.([]Property)
-	names := make([]string, len(properties))
-	for i, p := range properties {
-		names[i] = p.Name
-	}
-	return names
-}
-
 // Elem returns a type's element type.
 // Panics if t is not an Array or Map type.
 func (t Type) Elem() Type {
@@ -1187,6 +1173,20 @@ func Properties(t Type) []Property {
 		panic("cannot get the properties of a non-Object type")
 	}
 	return slices.Clone(t.vl.([]Property))
+}
+
+// PropertyNames returns the names of the properties of the Object t.
+// Panics if t is not an Object type.
+func PropertyNames(t Type) []string {
+	if t.kind != ObjectKind {
+		panic("cannot get the property names of a non-Object type")
+	}
+	pp := t.vl.([]Property)
+	names := make([]string, len(pp))
+	for i := 0; i < len(pp); i++ {
+		names[i] = pp[i].Name
+	}
+	return names
 }
 
 // SubsetFunc returns a subset of the object t, including only the properties

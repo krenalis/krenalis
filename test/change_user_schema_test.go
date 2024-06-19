@@ -134,7 +134,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	// Set a primary source for the first property.
-	firstProperty := file.Schema.PropertiesNames()[0]
+	firstProperty := types.PropertyNames(file.Schema)[0]
 	primarySource := c.AddDummy("Primary Source", chichitester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
 	c.ChangeUserSchema(file.Schema, primarySources, nil)

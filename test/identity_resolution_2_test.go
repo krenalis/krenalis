@@ -139,7 +139,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Check that there is only one user, and that its properties have been
 	// merged correctly.
 
-	users, _, count := c.Users(schema.PropertiesNames(), "", 0, 100)
+	users, _, count := c.Users(types.PropertyNames(schema), "", 0, 100)
 	if count != 1 {
 		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
 	}
@@ -171,7 +171,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	c.RunIdentityResolution()
 
-	users, _, count = c.Users(schema.PropertiesNames(), "", 0, 100)
+	users, _, count = c.Users(types.PropertyNames(schema), "", 0, 100)
 	if count != 1 {
 		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
 	}

@@ -102,7 +102,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			properties[i] = p
 		}
 	} else {
-		properties = schema.PropertiesNames()
+		properties = types.PropertyNames(schema)
 	}
 
 	// Determine the "order by" property.

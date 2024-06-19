@@ -90,8 +90,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	//   They appear in "rePaths" (the key is the name of the property that
 	//   "occupied the name", the value is the name of the deleted property).
 
-	oldNames := oldSchema.PropertiesNames()
-	newNames := newSchema.PropertiesNames()
+	oldNames := types.PropertyNames(oldSchema)
+	newNames := types.PropertyNames(newSchema)
 
 	addedNames := difference(newNames, oldNames)
 	droppedNames := difference(oldNames, newNames)

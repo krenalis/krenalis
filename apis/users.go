@@ -11,12 +11,14 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/encoding"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
+	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // User represents a user.
@@ -53,7 +55,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 
 	// Retrieve the events records.
 	evs, err := this.store.Events(ctx, datastore.Query{
-		Properties: events.Schema.PropertiesNames(),
+		Properties: types.PropertyNames(events.Schema),
 		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 			Property: "user",
 			Operator: "is",
@@ -153,7 +155,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
-	properties := this.workspace.UserSchema.PropertiesNames()
+	properties := types.PropertyNames(this.workspace.UserSchema)
 	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
 		Property: "__id__",
 		Operator: "is",
