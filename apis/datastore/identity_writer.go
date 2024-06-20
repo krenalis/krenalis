@@ -132,6 +132,10 @@ func newEventIdentityWriter(store *Store, action *state.Action, ack IdentityWrit
 	connection := action.Connection()
 	var connectionActions []int
 	for _, action := range connection.Actions() {
+		// TODO(Gianluca): this should be limited only to actions that may have
+		// imported anonymous users. Instead of fixing it here, however, it
+		// might be better to fix it directly in the PR
+		// https://github.com/open2b/chichi/pull/826.
 		connectionActions = append(connectionActions, action.ID)
 	}
 	iw := EventIdentityWriter{
