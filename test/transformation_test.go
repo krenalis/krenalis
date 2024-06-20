@@ -55,7 +55,9 @@ def transform(user: dict) -> dict:
 		"first_name": user["firstName"],
 		"gender": gender,
 	}`,
-				Language: "Python",
+				Language:      "Python",
+				InProperties:  []string{"firstName", "email"},
+				OutProperties: []string{"email", "first_name", "gender"},
 			},
 		},
 	})

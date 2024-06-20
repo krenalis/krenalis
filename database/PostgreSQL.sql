@@ -85,6 +85,8 @@ CREATE TABLE actions (
     transformation_source text NOT NULL DEFAULT '',
     transformation_language transformation_language NOT NULL,
     transformation_version varchar(128) NOT NULL DEFAULT '',
+    transformation_in_properties varchar[] DEFAULT NULL,
+    transformation_out_properties varchar[] DEFAULT NULL,
     query text NOT NULL DEFAULT '',
     connector varchar DEFAULT NULL,
     path varchar(1024) NOT NULL DEFAULT '',

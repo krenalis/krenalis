@@ -321,10 +321,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			// obtain the properties.
 			if m := action.Transformation.Mapping; m != nil {
 				transformation := state.Transformation{Mapping: m}
-				transformer, err := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformerProvider, nil)
-				if err != nil {
-					return err
-				}
+				transformer := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformerProvider, nil)
 				properties, err = transformer.Transform(ctx, mapEvent)
 				if err != nil {
 					if _, ok := err.(ValidationError); ok {

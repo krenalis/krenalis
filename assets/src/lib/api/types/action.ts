@@ -18,6 +18,8 @@ interface Transformation {
 interface TransformationFunction {
 	Source: string;
 	Language: string;
+	InProperties: string[];
+	OutProperties: string[];
 }
 
 interface ExpressionToBeExtracted {

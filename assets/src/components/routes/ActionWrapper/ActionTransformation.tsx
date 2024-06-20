@@ -190,6 +190,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					defaultTransformationParameterByTarget[actionType.Target],
 				),
 				Language: selectedLanguage,
+				InProperties: [],
+				OutProperties: [],
 			};
 			setAction(a);
 		}
@@ -245,6 +247,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		a.Transformation.Function = {
 			Source: source,
 			Language: selectedLanguage,
+			InProperties: [],
+			OutProperties: [],
 		};
 		setAction(a);
 	};
@@ -628,6 +632,8 @@ const TransformationBox = ({
 						defaultTransformationParameterByTarget[actionType.Target],
 					),
 					Language: pendingMode.current,
+					InProperties: [],
+					OutProperties: [],
 				};
 				setSelectedLanguage(pendingMode.current);
 				setAction(a);

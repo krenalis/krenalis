@@ -13,8 +13,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/open2b/chichi/types"
+
+	"github.com/google/uuid"
 )
 
 // These data types are copy-paste of the types defined within the APIs.
@@ -321,8 +322,10 @@ type Transformation struct {
 }
 
 type TransformationFunction struct {
-	Source   string
-	Language Language
+	Source        string
+	Language      Language
+	InProperties  []string
+	OutProperties []string
 }
 
 type Workspace struct {

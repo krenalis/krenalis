@@ -13,11 +13,12 @@ import (
 
 // Transformer represents a transformer.
 type Transformer struct {
-	inSchema, outSchema types.Type
-	mapping             *mappings.Mapping
-	transformation      state.Transformation
-	provider            Provider
-	action              int
+	inSchema  types.Type
+	outSchema types.Type
+	mapping   *mappings.Mapping
+	function  *state.TransformationFunction
+	action    int
+	provider  Provider
 }
 
 // New returns a new transformer that transforms properties from inSchema to
@@ -26,32 +27,34 @@ type Transformer struct {
 // transformations and is nil for mappings. If not nil, layouts represent the
 // layouts used to format DateTime, Date, and Time values as strings.
 //
-// For mappings, it returns a types.PathNotExistError error if a path in
-// expressions does not exist in the input schema.
-func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
+// For functions, only the property names listed in 'transformation.Function'
+// are processed from the given schemas.
+func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, provider Provider, layouts *state.TimeLayouts) *Transformer {
 
-	if !outSchema.Valid() {
-		return nil, errors.New("output schema is not valid")
+	transformer := Transformer{
+		action:   action,
+		provider: provider,
 	}
 
-	m := Transformer{
-		inSchema:       inSchema,
-		outSchema:      outSchema,
-		transformation: transformation,
-		provider:       provider,
-		action:         action,
-	}
-
-	// Mapping.
-	if transformation.Mapping != nil {
-		var err error
-		m.mapping, err = mappings.New(transformation.Mapping, inSchema, outSchema, layouts)
+	if m := transformation.Mapping; m != nil {
+		transformer.inSchema = inSchema
+		transformer.outSchema = outSchema
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, layouts)
 		if err != nil {
-			return nil, err
+			panic(fmt.Sprintf("unexpected error building a mapping: %s", err))
 		}
+		transformer.mapping = mapping
+	} else if fn := transformation.Function; fn != nil {
+		transformer.function = fn
+		if len(fn.InProperties) > 0 {
+			transformer.inSchema = schemaSubset(inSchema, fn.InProperties)
+		}
+		transformer.outSchema = schemaSubset(outSchema, fn.OutProperties)
+	} else {
+		panic(errors.New("there is no transformation"))
 	}
 
-	return &m, nil
+	return &transformer
 }
 
 // Properties returns the properties in the mapping expressions. It calls the
@@ -83,11 +86,11 @@ func (transformer *Transformer) Transform(ctx context.Context, values map[string
 	}
 
 	// Transform using a function.
-	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
-	results, err := transformer.provider.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, []map[string]any{values})
+	funcName := transformationFunctionName(transformer.action, transformer.function.Language)
+	results, err := transformer.provider.Call(ctx, funcName, transformer.function.Version, transformer.inSchema, transformer.outSchema, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
-			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
+			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.function.Language.String(), err))
 		}
 		return nil, err
 	}
@@ -133,16 +136,32 @@ func (transformer *Transformer) TransformValues(ctx context.Context, values []ma
 	}
 
 	// Transform using a function.
-	funcName := transformationFunctionName(transformer.action, transformer.transformation.Function.Language)
-	results, err := transformer.provider.Call(ctx, funcName, transformer.transformation.Function.Version, transformer.inSchema, transformer.outSchema, values)
+	funcName := transformationFunctionName(transformer.action, transformer.function.Language)
+	results, err := transformer.provider.Call(ctx, funcName, transformer.function.Version, transformer.inSchema, transformer.outSchema, values)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
-			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.transformation.Function.Language.String(), err))
+			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.function.Language.String(), err))
 		}
 		return nil, err
 	}
 
 	return results, nil
+}
+
+// schemaSubset returns a subset of schema containing only the properties
+// specified in properties, preserving their original order in schema.
+// The parameter io specifies whether the operation relates to "input" or
+// "output" and is used solely for error messages.
+// This function panics if schema is not an object type.
+func schemaSubset(schema types.Type, properties []string) types.Type {
+	has := make(map[string]struct{}, len(properties))
+	for _, name := range properties {
+		has[name] = struct{}{}
+	}
+	return types.SubsetFunc(schema, func(p types.Property) bool {
+		_, ok := has[p.Name]
+		return ok
+	})
 }
 
 // transformationFunctionName returns the name the transformation function for

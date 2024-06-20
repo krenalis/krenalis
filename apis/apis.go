@@ -540,6 +540,20 @@ func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	apis.events.collector.ServeHTTP(w, r)
 }
 
+// DataTransformation represents transformation passed to (*APIs).TransformData
+// and (*Connection).PreviewSendEvent methods.
+type DataTransformation struct {
+	Mapping  map[string]string
+	Function *DataTransformationFunction
+}
+
+// DataTransformationFunction represents transformation function passed to
+// (*APIs).TransformData and (*Connection).PreviewSendEvent methods.
+type DataTransformationFunction struct {
+	Source   string
+	Language Language
+}
+
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data. inSchema is the schema of data, and
 // outSchema is the schema of the transformed data. Only one of mapping and
@@ -549,7 +563,7 @@ func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation Transformation) ([]byte, error) {
+func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation) ([]byte, error) {
 
 	apis.mustBeOpen()
 
@@ -580,11 +594,12 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			}
 		}
 	case transformation.Function != nil:
-		if transformation.Function.Source == "" {
+		function := transformation.Function
+		if function.Source == "" {
 			return nil, errors.BadRequest("transformation source is empty")
 		}
 		provider := apis.transformerProvider
-		switch transformation.Function.Language {
+		switch function.Language {
 		case "JavaScript":
 			if provider == nil || !provider.SupportLanguage(state.JavaScript) {
 				return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
@@ -596,7 +611,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		case "":
 			return nil, errors.BadRequest("transformation language is empty")
 		default:
-			return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
+			return nil, errors.BadRequest("transformation language %q is not valid", function.Language)
 		}
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")
@@ -623,20 +638,18 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			name += ".py"
 			function.Language = state.Python
 		}
+		function.InProperties = types.PropertyNames(inSchema)
+		function.OutProperties = types.PropertyNames(outSchema)
 		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)
 	}
 
 	// Transform the data.
-	action := 1 // no matter the action, it will be overwritten by the temporary transformation.
 	tr := state.Transformation{
 		Mapping:  transformation.Mapping,
 		Function: function,
 	}
-	m, err := transformers.New(inSchema, outSchema, tr, action, provider, nil)
-	if err != nil {
-		return nil, err
-	}
-	value, err = m.Transform(ctx, value)
+	transformer := transformers.New(inSchema, outSchema, tr, 0, provider, nil)
+	value, err = transformer.Transform(ctx, value)
 	if err != nil {
 		if err, ok := err.(transformers.FunctionExecutionError); ok {
 			return nil, errors.Unprocessable(TransformationFailed, err.Error())

@@ -21,7 +21,6 @@ import (
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
-	"github.com/open2b/chichi/apis/transformers/mappings"
 	"github.com/open2b/chichi/types"
 
 	"golang.org/x/exp/maps"
@@ -108,10 +107,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		transformer, err := mappings.New(mapping, inSchema, outSchema, nil)
-		if err != nil {
-			return errors.BadRequest("invalid mapping: %s", err)
-		}
+		transformer := transformers.New(inSchema, outSchema, state.Transformation{Mapping: mapping}, 0, nil, nil)
 		// Input property paths.
 		inProps := transformer.Properties()
 		mappingInProperties = len(inProps)
@@ -147,6 +143,16 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		default:
 			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
 		}
+		err := validateTransformationFunctionProperties("input", inSchema, function.InProperties, dispatchEventsToApps)
+		if err != nil {
+			return errors.BadRequest("%s", err.Error())
+		}
+		err = validateTransformationFunctionProperties("output", outSchema, function.OutProperties, dispatchEventsToApps)
+		if err != nil {
+			return errors.BadRequest("%s", err.Error())
+		}
+		usedInPaths = append(usedInPaths, function.InProperties...)
+		usedOutPaths = function.OutProperties
 	}
 	// Validate the path.
 	if action.Path != "" {
@@ -626,6 +632,50 @@ func validateLastChangeTimeFormat(format string) error {
 	}
 	if containsNUL(format) {
 		return errors.New("last change time format contains the NUL rune")
+	}
+	return nil
+}
+
+// validateTransformationFunctionProperties validates the transformation
+// function properties of an action.
+//
+// io specifies whether the validation relates to "input" or "output", schema is
+// the schema of the input or output action, properties are the function
+// properties for input or output, and dispatchEventsToApps indicates if the
+// action dispatches events to apps.
+//
+// It panics if the schema is valid and is not an Object
+func validateTransformationFunctionProperties(io string, schema types.Type, properties []string, dispatchEventsToApps bool) error {
+	if len(properties) == 0 {
+		if properties == nil {
+			return fmt.Errorf("function transformation %s properties cannot be null", io)
+		}
+		if dispatchEventsToApps && io == "input" {
+			return nil
+		}
+		return fmt.Errorf("there are no function transformation %s properties", io)
+	}
+	has := make(map[string]struct{}, len(properties))
+	for _, name := range properties {
+		if _, ok := has[name]; ok {
+			return fmt.Errorf("function transformation %s property %q is repeated", io, name)
+		}
+		has[name] = struct{}{}
+	}
+	if schema.Valid() {
+		for _, p := range schema.Properties() {
+			delete(has, p.Name)
+		}
+	}
+	if len(has) > 0 {
+		for _, name := range properties {
+			if _, ok := has[name]; ok {
+				if !types.IsValidPropertyName(name) {
+					return fmt.Errorf("function transformation %s property name %q is not valid", io, name)
+				}
+				return fmt.Errorf("function transformation %s property %q does not exist in schema", io, name)
+			}
+		}
 	}
 	return nil
 }

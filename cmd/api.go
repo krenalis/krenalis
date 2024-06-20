@@ -110,7 +110,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		Data           rawJSON
 		InSchema       types.Type
 		OutSchema      types.Type
-		Transformation apis.Transformation
+		Transformation apis.DataTransformation
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {

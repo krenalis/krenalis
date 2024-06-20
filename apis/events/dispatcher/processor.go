@@ -83,11 +83,8 @@ func (processor *processor) worker() {
 			action := event.action
 			var extra map[string]any
 			if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
-				transformer, err := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, processor.transformerProvider, nil)
-				if err != nil {
-					processor.setEventWithError(event.Id, action.ID, err)
-					continue
-				}
+				transformer := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, processor.transformerProvider, nil)
+				var err error
 				extra, err = transformer.Transform(ctx, event.ToMap())
 				if err != nil {
 					processor.setEventWithError(event.Id, action.ID, err)

@@ -625,18 +625,19 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
-			"transformation_source, transformation_language, transformation_version, query,\n" +
-			"connector, path, sheet, compression, settings, table_name, identity_property,\n" +
-			"last_change_time_property, last_change_time_format, file_ordering_property_path, export_mode,\n" +
-			"matching_properties_internal, matching_properties_external, export_on_duplicated_users)\n" +
+			"transformation_source, transformation_language, transformation_version, transformation_in_properties,\n" +
+			"transformation_out_properties, query, connector, path, sheet, compression, settings, table_name," +
+			"identity_property, last_change_time_property, last_change_time_format, file_ordering_property_path," +
+			"export_mode, matching_properties_internal, matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
-			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)"
+			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-			string(filter), mapping, function.Source, function.Language, function.Version,
-			n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath,
-			n.ExportMode, string(matchPropInternal), string(matchPropExternal), n.ExportOnDuplicatedUsers)
+			string(filter), mapping, function.Source, function.Language, function.Version, function.InProperties,
+			function.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
+			n.TableName, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
+			n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
@@ -1366,7 +1367,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 //     type's schema.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event *ObservedEvent, transformation Transformation, outSchema types.Type) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event *ObservedEvent, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1484,20 +1485,18 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				name += ".py"
 				function.Language = state.Python
 			}
+			function.InProperties = types.PropertyNames(inSchema)
+			function.OutProperties = types.PropertyNames(outSchema)
 			provider = newTempTransformerProvider(name, transformation.Function.Source, this.apis.transformerProvider)
 		}
 
 		// Transform the values.
-		action := 1 // no matter the action, it will be overwritten by the temporary transformation.
 		tr := state.Transformation{
 			Mapping:  transformation.Mapping,
 			Function: function,
 		}
-		m, err := transformers.New(inSchema, outSchema, tr, action, provider, nil)
-		if err != nil {
-			return nil, err
-		}
-		extra, err = m.Transform(ctx, ev.ToMap())
+		transformer := transformers.New(inSchema, outSchema, tr, 0, provider, nil)
+		extra, err = transformer.Transform(ctx, ev.ToMap())
 		if err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())

@@ -396,6 +396,9 @@ const transformInActionToSet = async (
 	let func: TransformationFunction;
 	let query: string;
 
+	const isDestinationFileOnUsers =
+		connection.isDestination && connection.isFileStorage && actionType.Target === 'Users';
+
 	const flattenedInputSchema = flattenSchema(actionType.InputSchema);
 	const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
 
@@ -443,19 +446,17 @@ const transformInActionToSet = async (
 			mapping = mappingToSave;
 		}
 		inSchema = inputSchema;
-		outSchema = outputSchema;
-	}
-
-	if (action.Transformation.Function != null) {
+		outSchema = isDestinationFileOnUsers ? actionType.InputSchema : outputSchema;
+	} else if (action.Transformation.Function != null) {
 		inSchema = actionType.InputSchema;
-		outSchema = actionType.OutputSchema;
+		outSchema = isDestinationFileOnUsers ? actionType.InputSchema : actionType.OutputSchema;
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
+			InProperties: inSchema.properties === null ? [] : inSchema.properties.map((p) => p.name),
+			OutProperties: outSchema.properties!.map((p) => p.name),
 		};
-	}
-
-	if (connection.isDestination && connection.isFileStorage && actionType.Target === 'Users') {
+	} else if (isDestinationFileOnUsers) {
 		outSchema = actionType.InputSchema;
 	}
 

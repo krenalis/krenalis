@@ -49,7 +49,9 @@ def transform(user: dict) -> dict:
 			"idfa": email + "-idfa",
 		}
 	}`,
-				Language: "Python",
+				Language:      "Python",
+				InProperties:  []string{"email"},
+				OutProperties: []string{"email", "ios"},
 			},
 		},
 	})

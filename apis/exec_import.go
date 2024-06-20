@@ -30,12 +30,10 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	connector := connection.Connector()
 	execution, _ := action.Execution()
 
-	transformer, err := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
+	transformer := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
 		this.apis.transformerProvider, nil)
-	if err != nil {
-		return err
-	}
 
+	var err error
 	var records connectors.Records
 
 	switch connector.Type {

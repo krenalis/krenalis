@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -65,8 +66,10 @@ type Language string
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source   string
-	Language Language
+	Source        string
+	Language      Language
+	InProperties  []string
+	OutProperties []string
 }
 
 // Transformation represents a transformation.
@@ -125,8 +128,10 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	}
 	if function := action.Transformation.Function; function != nil {
 		this.Transformation.Function = &TransformationFunction{
-			Source:   function.Source,
-			Language: Language(function.Language.String()),
+			Source:        function.Source,
+			Language:      Language(function.Language.String()),
+			InProperties:  slices.Clone(function.InProperties),
+			OutProperties: slices.Clone(function.OutProperties),
 		}
 	}
 	if action.Query != "" {
@@ -525,18 +530,19 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
-			"transformation_version = $9, query = $10, connector = $11, path = $12, "+
-			"sheet = $13, compression = $14, settings = $15, table_name = $16, identity_property = $17, "+
-			"user_cursor = CASE WHEN $18 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
-			"last_change_time_property = $19, last_change_time_format = $20, "+
-			"file_ordering_property_path = $21, export_mode = $22, matching_properties_internal = $23, "+
-			"matching_properties_external = $24, export_on_duplicated_users = $25\nWHERE id = $26",
+			"transformation_version = $9, transformation_in_properties = $10, transformation_out_properties = $11,"+
+			"query = $12, connector = $13, path = $14, sheet = $15, compression = $16, settings = $17,"+
+			"table_name = $18, identity_property = $19, user_cursor = CASE WHEN $20 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
+			"last_change_time_property = $21, last_change_time_format = $22, file_ordering_property_path = $23,"+
+			"export_mode = $24, matching_properties_internal = $25, matching_properties_external = $26,"+
+			"export_on_duplicated_users = $27\nWHERE id = $28",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
-			function.Source, function.Language, function.Version, n.Query, connectorName,
-			n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.IdentityProperty, n.ResetUserCursor, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
-			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
-			string(matchPropExternal), n.ExportOnDuplicatedUsers, n.ID,
+			function.Source, function.Language, function.Version, function.InProperties,
+			function.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression,
+			string(n.Settings), n.TableName, n.IdentityProperty, n.ResetUserCursor,
+			n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath,
+			n.ExportMode, string(matchPropInternal), string(matchPropExternal),
+			n.ExportOnDuplicatedUsers, n.ID,
 		)
 		if err != nil {
 			return err
@@ -932,13 +938,18 @@ func shouldResetCursor(t1, t2 state.Transformation) bool {
 	return false
 }
 
-// toStateTransformation gets a transformation and returns it as a
-// state.Transformation value. It does not copy the nested data.
+// toStateTransformation converts a transformation to a state.Transformation
+// value. It does not perform a deep copy and may modify the passed
+// transformation.
 func toStateTransformation(transformation Transformation) state.Transformation {
 	var tr state.Transformation
 	if function := transformation.Function; function != nil {
+		slices.Sort(function.InProperties)
+		slices.Sort(function.OutProperties)
 		tr.Function = &state.TransformationFunction{
-			Source: function.Source,
+			Source:        function.Source,
+			InProperties:  function.InProperties,
+			OutProperties: function.OutProperties,
 		}
 		switch function.Language {
 		case "JavaScript":

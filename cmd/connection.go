@@ -213,7 +213,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	var body struct {
 		EventType      string
 		Event          *apis.ObservedEvent
-		Transformation apis.Transformation
+		Transformation apis.DataTransformation
 		OutSchema      types.Type
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
