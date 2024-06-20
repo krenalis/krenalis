@@ -648,7 +648,7 @@ const computeDefaultAction = (
 		action.ExportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
 	}
 	if (fields.includes('MatchingProperties')) {
-		action.MatchingProperties = { Internal: null, External: null };
+		action.MatchingProperties = { Internal: '', External: '' };
 	}
 	if (fields.includes('ExportOnDuplicatedUsers')) {
 		action.ExportOnDuplicatedUsers = false;
