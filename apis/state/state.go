@@ -256,6 +256,14 @@ func (state *State) Workspace(id int) (*Workspace, bool) {
 	return ws, ok
 }
 
+// Workspaces returns all the workspaces.
+func (state *State) Workspaces() []*Workspace {
+	state.mu.Lock()
+	workspaces := maps.Values(state.workspaces)
+	state.mu.Unlock()
+	return workspaces
+}
+
 // Organization represents an organization.
 type Organization struct {
 	mu         *sync.Mutex
