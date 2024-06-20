@@ -74,9 +74,7 @@ func New(st *state.State) *Datastore {
 				slog.Error("cannot create a store", "err", err)
 				continue
 			}
-			ds.mu.Lock()
 			ds.store[ws.ID] = store
-			ds.mu.Unlock()
 		}
 	}
 	return ds
