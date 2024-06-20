@@ -25,6 +25,8 @@ import (
 	"github.com/open2b/chichi/apis/transformers"
 	"github.com/open2b/chichi/telemetry"
 	"github.com/open2b/chichi/types"
+
+	"golang.org/x/exp/maps"
 )
 
 // Action represents an action of a connection.
@@ -399,9 +401,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
-	if n.Transformation.Mapping != nil || n.Transformation.Function != nil {
-		n.ResetUserCursor = shouldResetCursor(this.action.Transformation, n.Transformation)
-	}
 
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -508,6 +507,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			// It will be verified during the transaction and assigned the current version.
 		}
 	}
+
+	// Check if the cursor needs to be reset.
+	n.ResetUserCursor = shouldResetCursor(this.action, &n)
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		var function state.TransformationFunction
@@ -917,23 +919,77 @@ func onlyForMatching(schema types.Type) types.Type {
 	})
 }
 
-// shouldResetCursor reports whether the cursor of an action should be reset if
-// the transformation of the action changes from t1 to t2.
-func shouldResetCursor(t1, t2 state.Transformation) bool {
-	if t1.Mapping == nil && t2.Mapping != nil {
+// shouldResetCursor reports whether the cursor of an action should be reset
+// based on whether the notification n is used to modify the action.
+func shouldResetCursor(a *state.Action, n *state.SetAction) bool {
+	if c := a.Connection(); c.Role != state.Source || a.Target != state.Users {
+		return false
+	}
+	if a.Query != n.Query {
 		return true
 	}
-	if t1.Function == nil && t2.Function != nil {
+	if c := a.Connector(); c != nil && c.Name != n.Connector {
 		return true
 	}
-	if t1.Function != nil {
-		return t1.Function != t2.Function
+	if a.Path != n.Path || a.Sheet != n.Sheet {
+		return true
 	}
-	for out, in2 := range t2.Mapping {
-		in1, ok := t1.Mapping[out]
-		if !ok || in1 != in2 {
+	if !bytes.Equal(a.Settings, n.Settings) {
+		return true
+	}
+	if a.IdentityProperty != n.IdentityProperty {
+		return true
+	}
+	if a.IdentityProperty != n.IdentityProperty {
+		return true
+	}
+	if a.LastChangeTimeProperty != n.LastChangeTimeProperty {
+		return true
+	}
+	if a.LastChangeTimeFormat != n.LastChangeTimeFormat {
+		return true
+	}
+	// Check the filters.
+	if a.Filter != nil || n.Filter != nil {
+		if a.Filter == nil || n.Filter == nil {
 			return true
 		}
+		if a.Filter.Logical != n.Filter.Logical {
+			return true
+		}
+		if !slices.Equal(a.Filter.Conditions, n.Filter.Conditions) {
+			return true
+		}
+	}
+	// Check the transformations.
+	t1 := a.Transformation
+	t2 := n.Transformation
+	if !maps.Equal(t1.Mapping, t2.Mapping) {
+		return true
+	}
+	if f1, f2 := t1.Function, t2.Function; f1 != nil || f2 != nil {
+		if f1 == nil || f2 == nil {
+			return true
+		}
+		if f1.Source != f2.Source {
+			return true
+		}
+		if f1.Language != f2.Language {
+			return true
+		}
+		if !slices.Equal(f1.InProperties, f2.InProperties) {
+			return true
+		}
+		if !slices.Equal(f1.OutProperties, f2.OutProperties) {
+			return true
+		}
+	}
+	// Check the schemas.
+	if !a.InSchema.EqualTo(n.InSchema) {
+		return true
+	}
+	if !a.OutSchema.EqualTo(n.OutSchema) {
+		return true
 	}
 	return false
 }
