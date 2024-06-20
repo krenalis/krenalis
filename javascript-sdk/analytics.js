@@ -826,7 +826,7 @@ class ElectionsState {
 // typesOf returns a string representing the types of the elements of the array
 // arr, 'object' for non-null Object values and 'string' for all the other
 // values. If arr is empty, it returns an empty string. For example, if arr is
-// ['a', null, 5, {}], it returns 'string,object,string,object'.
+// ['a', null, 5, {}], it returns 'string,string,string,object'.
 // If arr is not an array, it throws an error.
 function typesOf(arr) {
 	return arr.map((v) => typeof v === 'object' && v != null ? 'object' : 'string').join(',')
