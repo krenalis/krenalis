@@ -109,9 +109,10 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	return nil
 }
 
-// BatchIdentityWriter writes user identities into the data warehouse. It
-// deletes the anonymous identities when a non-anonymous identity with the same
-// Anonymous ID on the same connection is written.
+// EventIdentityWriter writes user identities into the data warehouse, in case
+// when identities are imported from events.. It deletes the anonymous
+// identities when a non-anonymous identity with the same Anonymous ID on the
+// same connection is written.
 type EventIdentityWriter struct {
 	store             *Store
 	action            int
