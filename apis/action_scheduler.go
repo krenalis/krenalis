@@ -149,51 +149,62 @@ func (sc *scheduler) Shutdown(ctx context.Context) {
 }
 
 // onAddAction is called when an action is added to the state.
-func (sc *scheduler) onAddAction(n state.AddAction) {
+func (sc *scheduler) onAddAction(n state.AddAction) func() {
 	action, _ := sc.apis.state.Action(n.ID)
 	if sc.toSchedule(action) {
+		return func() {
+			sc.mu.Lock()
+			sc._addAction(action)
+			sc.mu.Unlock()
+		}
+	}
+	return nil
+}
+
+// onDeleteAction is called when an action is deleted from the state.
+func (sc *scheduler) onDeleteAction(n state.DeleteAction) func() {
+	return func() {
 		sc.mu.Lock()
-		sc._addAction(action)
+		sc._removeAction(n.ID)
 		sc.mu.Unlock()
 	}
 }
 
-// onDeleteAction is called when an action is deleted from the state.
-func (sc *scheduler) onDeleteAction(n state.DeleteAction) {
-	sc.mu.Lock()
-	sc._removeAction(n.ID)
-	sc.mu.Unlock()
-}
-
 // onDeleteConnection is called when a connection is deleted from the state.
-func (sc *scheduler) onDeleteConnection(n state.DeleteConnection) {
-	sc.mu.Lock()
-	sc._removeActions()
-	sc.mu.Unlock()
+func (sc *scheduler) onDeleteConnection(n state.DeleteConnection) func() {
+	return func() {
+		sc.mu.Lock()
+		sc._removeActions()
+		sc.mu.Unlock()
+	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted from the state.
-func (sc *scheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
-	sc.mu.Lock()
-	sc._removeActions()
-	sc.mu.Unlock()
+func (sc *scheduler) onDeleteWorkspace(n state.DeleteWorkspace) func() {
+	return func() {
+		sc.mu.Lock()
+		sc._removeActions()
+		sc.mu.Unlock()
+	}
 }
 
 // onSetActionSchedulePeriod is called when the schedule period of an action is
 // set.
-func (sc *scheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) {
+func (sc *scheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) func() {
 	action, _ := sc.apis.state.Action(n.ID)
 	index, ok := sc.indexes[n.ID]
 	if !ok {
-		return
+		return nil
 	}
 	if periods[index.i] == action.SchedulePeriod {
-		return
+		return nil
 	}
-	sc.mu.Lock()
-	sc._removeAction(n.ID)
-	sc._addAction(action)
-	sc.mu.Unlock()
+	return func() {
+		sc.mu.Lock()
+		sc._removeAction(n.ID)
+		sc._addAction(action)
+		sc.mu.Unlock()
+	}
 }
 
 // toExecute reports whether action can be executed.
@@ -229,7 +240,7 @@ func (sc *scheduler) toSchedule(action *state.Action) bool {
 
 // _addAction adds action to the scheduler.
 //
-// It must be called holding the sc.mu mutex.
+// It must be called when the state is frozen and holding the sc.mu mutex.
 func (sc *scheduler) _addAction(action *state.Action) {
 	i := periodIndex(action.SchedulePeriod)
 	j := action.ScheduleStart % action.SchedulePeriod
@@ -240,7 +251,7 @@ func (sc *scheduler) _addAction(action *state.Action) {
 // _removeAction removes the action with identifier id from the scheduler.
 // If the action does not exist it does nothing.
 //
-// It must be called holding the sc.mu mutex.
+// It must be called when the state is frozen and holding the sc.mu mutex.
 func (sc *scheduler) _removeAction(id int) {
 	index, ok := sc.indexes[id]
 	if !ok {
@@ -263,7 +274,7 @@ func (sc *scheduler) _removeAction(id int) {
 
 // _removeActions removes from the scheduler the actions that no longer exist.
 //
-// It must be called holding the sc.mu mutex.
+// It must be called when the state is frozen and holding the sc.mu mutex.
 func (sc *scheduler) _removeActions() {
 	for id := range sc.indexes {
 		if _, ok := sc.apis.state.Action(id); !ok {

@@ -150,65 +150,72 @@ func (ds *Datastore) mustBeOpen() {
 	}
 }
 
-func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
-	ds.mu.Lock()
-	store, ok := ds.store[n.Workspace]
-	ds.mu.Unlock()
-	if ok {
-		store.columnByProperty.mu.Lock()
-		store.columnByProperty.user = columnByProperty(n.UserSchema)
-		store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
-		store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-		store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
-		store.columnByProperty.mu.Unlock()
+func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) func() {
+	return func() {
+		ds.mu.Lock()
+		store, ok := ds.store[n.Workspace]
+		ds.mu.Unlock()
+		if ok {
+			store.columnByProperty.mu.Lock()
+			store.columnByProperty.user = columnByProperty(n.UserSchema)
+			store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
+			store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+			store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
+			store.columnByProperty.mu.Unlock()
+		}
 	}
 }
 
-func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
-	// Change the data warehouse mode of the current store.
-	if n.Warehouse != nil {
+func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
+	return func() {
+		// Change the data warehouse mode of the current store.
+		if n.Warehouse != nil {
+			ds.mu.Lock()
+			store := ds.store[n.Workspace]
+			ds.mu.Unlock()
+			if store != nil {
+				store.mu.Lock()
+				store.mode = n.Warehouse.Mode
+				store.mu.Unlock()
+			}
+		}
+		// Replace the current store with a new store.
+		var err error
+		var nextStore *Store
+		ws, _ := ds.state.Workspace(n.Workspace)
+		if ws.Warehouse != nil {
+			nextStore, err = newStore(ds, ws)
+			if err != nil {
+				go func(workspace int, err error) {
+					slog.Error("cannot create a new store", "workspace", workspace, "err", err)
+				}(ws.ID, err)
+			}
+		}
+		ds.mu.Lock()
+		prevStore := ds.store[ws.ID]
+		ds.store[ws.ID] = nextStore
+		ds.mu.Unlock()
+		// Close the previous store.
+		if prevStore != nil {
+			go func(workspace int) {
+				err := prevStore.close()
+				if err != nil {
+					slog.Error("cannot close store", "workspace", workspace, "err", err)
+				}
+			}(ws.ID)
+		}
+	}
+}
+
+func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) func() {
+	return func() {
+		// Change the data warehouse mode.
 		ds.mu.Lock()
 		store := ds.store[n.Workspace]
 		ds.mu.Unlock()
-		if store != nil {
-			store.mu.Lock()
-			store.mode = n.Warehouse.Mode
-			store.mu.Unlock()
-		}
-	}
-	// Replace the current store with a new store.
-	ws, _ := ds.state.Workspace(n.Workspace)
-	go ds.setStore(ws)
-}
-
-func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) {
-	// Change the data warehouse mode.
-	ds.mu.Lock()
-	store := ds.store[n.Workspace]
-	ds.mu.Unlock()
-	store.mu.Lock()
-	store.mode = n.Mode
-	store.mu.Unlock()
-}
-
-func (ds *Datastore) setStore(ws *state.Workspace) {
-	var err error
-	var nextStore *Store
-	if ws.Warehouse != nil {
-		nextStore, err = newStore(ds, ws)
-		if err != nil {
-			slog.Error("cannot create a new store", "workspace", ws.ID, "err", err)
-		}
-	}
-	ds.mu.Lock()
-	prevStore := ds.store[ws.ID]
-	ds.store[ws.ID] = nextStore
-	ds.mu.Unlock()
-	if prevStore != nil {
-		err = prevStore.close()
-		if err != nil {
-			slog.Error("cannot close store", "workspace", ws.ID, "err", err)
-		}
+		store.mu.Lock()
+		store.mode = n.Mode
+		store.mu.Unlock()
 	}
 }
 

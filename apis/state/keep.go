@@ -28,35 +28,35 @@ const logNotifications = false
 // It must be called before Keep is called or in a listener execution.
 func (state *State) AddListener(listener any) {
 	switch l := listener.(type) {
-	case func(AddAction):
+	case func(AddAction) func():
 		state.listeners.AddAction = append(state.listeners.AddAction, l)
-	case func(AddConnection):
+	case func(AddConnection) func():
 		state.listeners.AddConnection = append(state.listeners.AddConnection, l)
-	case func(DeleteAction):
+	case func(DeleteAction) func():
 		state.listeners.DeleteAction = append(state.listeners.DeleteAction, l)
-	case func(DeleteConnection):
+	case func(DeleteConnection) func():
 		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
-	case func(DeleteWorkspace):
+	case func(DeleteWorkspace) func():
 		state.listeners.DeleteWorkspace = append(state.listeners.DeleteWorkspace, l)
-	case func(ElectLeader):
+	case func(ElectLeader) func():
 		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
-	case func(ExecuteAction):
+	case func(ExecuteAction) func():
 		state.listeners.ExecuteAction = append(state.listeners.ExecuteAction, l)
-	case func(SetAction):
+	case func(SetAction) func():
 		state.listeners.SetAction = append(state.listeners.SetAction, l)
-	case func(SetActionSchedulePeriod):
+	case func(SetActionSchedulePeriod) func():
 		state.listeners.SetActionSchedulePeriod = append(state.listeners.SetActionSchedulePeriod, l)
-	case func(SetConnection):
+	case func(SetConnection) func():
 		state.listeners.SetConnection = append(state.listeners.SetConnection, l)
-	case func(SetConnectionSettings):
+	case func(SetConnectionSettings) func():
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
-	case func(SetWarehouse):
+	case func(SetWarehouse) func():
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
-	case func(SetWarehouseMode):
+	case func(SetWarehouseMode) func():
 		state.listeners.SetWarehouseMode = append(state.listeners.SetWarehouseMode, l)
-	case func(SetWorkspace):
+	case func(SetWorkspace) func():
 		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
-	case func(schema SetWorkspaceUserSchema):
+	case func(schema SetWorkspaceUserSchema) func():
 		state.listeners.SetWorkspaceUserSchema = append(state.listeners.SetWorkspaceUserSchema, l)
 	default:
 		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
@@ -351,9 +351,7 @@ func (state *State) addAction(n notification) {
 	c.mu.Lock()
 	c.actions[e.ID] = action
 	c.mu.Unlock()
-	for _, listener := range state.listeners.AddAction {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.AddAction)
 }
 
 // AddConnection is the event sent when a new connection is added.
@@ -458,9 +456,7 @@ func (state *State) addConnection(n notification) {
 			ec.EventConnections = addEventConnection(ec.EventConnections, c.ID)
 		})
 	}
-	for _, listener := range state.listeners.AddConnection {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.AddConnection)
 }
 
 // AddConnectionKey is the event sent when a connection key is added.
@@ -568,9 +564,7 @@ func (state *State) deleteAction(n notification) {
 	c.mu.Lock()
 	delete(c.actions, e.ID)
 	c.mu.Unlock()
-	for _, listener := range state.listeners.DeleteAction {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.DeleteAction)
 }
 
 // DeleteConnection is the event sent when a connection is deleted.
@@ -632,9 +626,7 @@ func (state *State) deleteConnection(n notification) {
 			ec.EventConnections = removeEventConnection(ec.EventConnections, e.ID)
 		})
 	}
-	for _, listener := range state.listeners.DeleteConnection {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.DeleteConnection)
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
@@ -671,9 +663,7 @@ func (state *State) deleteWorkspace(n notification) {
 		delete(state.accounts, a.ID)
 	}
 	state.mu.Unlock()
-	for _, listener := range state.listeners.DeleteWorkspace {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.DeleteWorkspace)
 }
 
 // ElectLeader is the event sent when a leader is elected.
@@ -699,9 +689,7 @@ func (state *State) electLeader(n notification) {
 	state.election = election
 	state.mu.Unlock()
 	if e.Leader != previous {
-		for _, listener := range state.listeners.ElectLeader {
-			listener(e)
-		}
+		notifyListeners(e, state.listeners.ElectLeader)
 	}
 }
 
@@ -758,9 +746,7 @@ func (state *State) executeAction(n notification) {
 		StartTime: e.StartTime,
 	}
 	a.mu.Unlock()
-	for _, listener := range state.listeners.ExecuteAction {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.ExecuteAction)
 }
 
 // LoadState is the event sent when a state is loaded.
@@ -965,9 +951,7 @@ func (state *State) setAction(n notification) {
 		a.MatchingProperties = e.MatchingProperties
 		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers
 	})
-	for _, listener := range state.listeners.SetAction {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetAction)
 }
 
 // SetActionSchedulePeriod is the event sent when the schedule period of an
@@ -986,9 +970,7 @@ func (state *State) setActionSchedulePeriod(n notification) {
 	state.replaceAction(e.ID, func(a *Action) {
 		a.SchedulePeriod = e.SchedulePeriod
 	})
-	for _, listener := range state.listeners.SetActionSchedulePeriod {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetActionSchedulePeriod)
 }
 
 // SetActionSettings is the event sent when the settings of an action is
@@ -1067,9 +1049,7 @@ func (state *State) setConnection(n notification) {
 		c.SendingMode = e.SendingMode
 		c.WebsiteHost = e.WebsiteHost
 	})
-	for _, listener := range state.listeners.SetConnection {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetConnection)
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is
@@ -1088,9 +1068,7 @@ func (state *State) setConnectionSettings(n notification) {
 	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Settings = e.Settings
 	})
-	for _, listener := range state.listeners.SetConnectionSettings {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetConnectionSettings)
 }
 
 // SetWarehouse is the event sent when the settings of a data warehouse are
@@ -1109,9 +1087,7 @@ func (state *State) setWarehouse(n notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = e.Warehouse
 	})
-	for _, listener := range state.listeners.SetWarehouse {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetWarehouse)
 }
 
 // SetWarehouseMode is the event sent when the mode of a data warehouse is
@@ -1134,9 +1110,7 @@ func (state *State) setWarehouseMode(n notification) {
 			Settings: w.Warehouse.Settings,
 		}
 	})
-	for _, listener := range state.listeners.SetWarehouseMode {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetWarehouseMode)
 }
 
 // SetWorkspace is the event sent when the name, the privacy region and the
@@ -1159,9 +1133,7 @@ func (state *State) setWorkspace(n notification) {
 		w.PrivacyRegion = e.PrivacyRegion
 		w.DisplayedProperties = e.DisplayedProperties
 	})
-	for _, listener := range state.listeners.SetWorkspace {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetWorkspace)
 }
 
 // SetWorkspaceIdentifiers is the event sent when the identifiers of a workspace
@@ -1200,9 +1172,7 @@ func (state *State) setWorkspaceUserSchema(n notification) {
 		w.UserSchema = e.UserSchema
 		w.UserPrimarySources = e.PrimarySources
 	})
-	for _, listener := range state.listeners.SetWorkspaceUserSchema {
-		listener(e)
-	}
+	notifyListeners(e, state.listeners.SetWorkspaceUserSchema)
 }
 
 // addEventConnection adds id to connections. It returns a copy of connections
@@ -1225,6 +1195,24 @@ func addEventConnection(connections []int, id int) []int {
 		cc[j] = id
 	}
 	return cc
+}
+
+// notifyListeners notifies all listeners of a notification.
+func notifyListeners[T func(N) func(), N any](notification N, listeners []T) {
+	if len(listeners) == 0 {
+		return
+	}
+	wg := sync.WaitGroup{}
+	for _, listener := range listeners {
+		if f := listener(notification); f != nil {
+			wg.Add(1)
+			go func() {
+				f()
+				wg.Done()
+			}()
+		}
+	}
+	wg.Wait()
 }
 
 // removeEventConnection removes id from connections. It returns a copy of

@@ -82,6 +82,7 @@ type Store struct {
 }
 
 // newStore returns a new Store for the workspace ws.
+// It must be called when the state is frozen.
 func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store := &Store{
 		ds:        ds,

@@ -703,25 +703,26 @@ func (apis *APIs) mustBeOpen() {
 }
 
 // onElectLeader is called when a new leader is elected.
-func (apis *APIs) onElectLeader(n state.ElectLeader) {
-	if apis.state.IsLeader() {
-		s := newScheduler(apis)
+func (apis *APIs) onElectLeader(n state.ElectLeader) func() {
+	return func() {
+		if apis.state.IsLeader() {
+			s := newScheduler(apis)
+			apis.mu.Lock()
+			apis.scheduler = s
+			apis.mu.Unlock()
+		}
 		apis.mu.Lock()
-		apis.scheduler = s
+		s := apis.scheduler
+		apis.scheduler = nil
 		apis.mu.Unlock()
-		return
-	}
-	apis.mu.Lock()
-	s := apis.scheduler
-	apis.scheduler = nil
-	apis.mu.Unlock()
-	if s != nil {
-		go s.Shutdown(apis.close.ctx)
+		if s != nil {
+			go s.Shutdown(apis.close.ctx)
+		}
 	}
 }
 
 // onDeleteAction is called when an action is deleted.
-func (apis *APIs) onDeleteAction(n state.DeleteAction) {
+func (apis *APIs) onDeleteAction(n state.DeleteAction) func() {
 	if apis.state.IsLeader() && apis.transformerProvider != nil {
 		go func() {
 			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
@@ -735,23 +736,26 @@ func (apis *APIs) onDeleteAction(n state.DeleteAction) {
 			}
 		}()
 	}
+	return nil
 }
 
 // onExecuteAction is called when an action is executed.
-func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
+func (apis *APIs) onExecuteAction(n state.ExecuteAction) func() {
 	if !apis.state.IsLeader() {
-		return
+		return nil
 	}
-	action, _ := apis.state.Action(n.Action)
-	c := action.Connection()
-	store := apis.datastore.Store(c.Workspace().ID)
-	connection := &Connection{apis: apis, store: store, connection: c}
-	a := &Action{apis: apis, action: action, connection: connection}
-	apis.close.Add(1)
-	go func() {
-		defer apis.close.Done()
-		a.exec(apis.close.ctx)
-	}()
+	return func() {
+		action, _ := apis.state.Action(n.Action)
+		c := action.Connection()
+		store := apis.datastore.Store(c.Workspace().ID)
+		connection := &Connection{apis: apis, store: store, connection: c}
+		a := &Action{apis: apis, action: action, connection: connection}
+		apis.close.Add(1)
+		go func() {
+			defer apis.close.Done()
+			a.exec(apis.close.ctx)
+		}()
+	}
 }
 
 func containsNUL(s string) bool {
