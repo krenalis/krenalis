@@ -410,6 +410,9 @@ const transformInActionToSet = async (
 		for (const k in action.Transformation.Mapping) {
 			const v = action.Transformation.Mapping[k];
 			if (v.value === '') {
+				if (v.required) {
+					throw new Error(`Required property "${k}" cannot be empty`);
+				}
 				continue;
 			}
 			if (v.error && v.error !== '') {
