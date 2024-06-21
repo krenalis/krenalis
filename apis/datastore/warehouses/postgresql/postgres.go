@@ -455,7 +455,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(c.Name)
 		b.WriteString(`" = `)
 		if c.Name == "__anonymous_ids__" {
-			b.WriteString(`CASE WHEN s."__anonymous_ids__"[1] = ANY(d."__anonymous_ids__") THEN d."__anonymous_ids__" ELSE d."__anonymous_ids__" || s."__anonymous_ids__"[1] END`)
+			b.WriteString(`CASE WHEN s."__anonymous_ids__" IS NULL OR s."__anonymous_ids__"[1] = ANY(d."__anonymous_ids__") THEN d."__anonymous_ids__" ELSE d."__anonymous_ids__" || s."__anonymous_ids__"[1] END`)
 		} else {
 			b.WriteString(`s."`)
 			b.WriteString(c.Name)

@@ -169,7 +169,7 @@ type Warehouse interface {
 	//   __last_change_time__
 	//
 	// If there is the __anonymous_ids__ column, its values can contain at most one
-	// element and this element is appended in the identity table if it does not
+	// non-NULL element, which is appended in the identity table if it does not
 	// already exist.
 	//
 	// rows are the rows to update or add if not already present. If a row contains
