@@ -159,14 +159,18 @@ type Warehouse interface {
 	Merge(ctx context.Context, table MergeTable, rows [][]any, deleted []any) error
 
 	// MergeIdentities merges existing identities, deletes them, and inserts new
-	// ones. cols are the columns whose values are present in the rows and contain
-	// at least the columns:
+	// ones. columns are the columns whose values are present in the rows and
+	// contain at least the columns:
 	//
 	//   __action__
 	//   __is_anonymous__
 	//   __identity_id__
 	//   __connection__
 	//   __last_change_time__
+	//
+	// If there is the __anonymous_ids__ column, its values can contain at most one
+	// element and this element is appended in the identity table if it does not
+	// already exist.
 	//
 	// rows are the rows to update or add if not already present. If a row contains
 	// the "$deleted" column with value true, then the matching row in the
