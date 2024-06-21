@@ -25,7 +25,8 @@ import (
 const logNotifications = false
 
 // AddListener adds a notification listener.
-// It must be called before Keep is called or in a listener execution.
+// It must be called when the state is frozen, i.e., before Keep is called,
+// during a listener execution, or between calls to Freeze and Unfreeze.
 func (state *State) AddListener(listener any) {
 	switch l := listener.(type) {
 	case func(AddAction) func():
@@ -91,6 +92,7 @@ func (state *State) keepState() {
 			}
 			continue
 		}
+		state.changing.Lock()
 		switch n.Name {
 		case "AddAction":
 			state.addAction(n)
@@ -155,6 +157,7 @@ func (state *State) keepState() {
 		default:
 			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
+		state.changing.Unlock()
 		if n.Ack != nil {
 			n.Ack <- struct{}{}
 		}
@@ -345,6 +348,7 @@ func (state *State) addAction(n notification) {
 		MatchingProperties:       e.MatchingProperties,
 		ExportOnDuplicatedUsers:  e.ExportOnDuplicatedUsers,
 	}
+
 	state.mu.Lock()
 	state.actions[e.ID] = action
 	state.mu.Unlock()
@@ -352,6 +356,7 @@ func (state *State) addAction(n notification) {
 	c.actions[e.ID] = action
 	c.mu.Unlock()
 	notifyListeners(e, state.listeners.AddAction)
+
 }
 
 // AddConnection is the event sent when a new connection is added.

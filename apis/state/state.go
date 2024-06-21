@@ -37,6 +37,7 @@ type State struct {
 	mu               *sync.Mutex
 	db               *postgres.DB
 	syncing          bool // reports whether the keeper has started synchronizing the state.
+	changing         *sync.RWMutex
 	election         election
 	organizations    map[int]*Organization
 	connectors       map[string]*Connector
@@ -93,6 +94,7 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 		id:               id,
 		db:               db,
 		mu:               new(sync.Mutex),
+		changing:         new(sync.RWMutex),
 		organizations:    map[int]*Organization{},
 		connectors:       map[string]*Connector{},
 		workspaces:       map[int]*Workspace{},
@@ -115,6 +117,20 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 	}
 
 	return state, nil
+}
+
+// Account returns the account with identifier id.
+// The boolean return value reports whether the account exists.
+func (state *State) Account(id int) (*Account, bool) {
+	// TODO(marco): optimize.
+	for _, o := range state.Organizations() {
+		for _, ws := range o.Workspaces() {
+			if a, ok := ws.Account(id); ok {
+				return a, true
+			}
+		}
+	}
+	return nil, false
 }
 
 // Action returns the action with identifier id.
@@ -200,6 +216,14 @@ func (state *State) Connectors() []*Connector {
 	return connectors
 }
 
+// Freeze freezes the state. If the state is updating, the calling goroutine
+// blocks until the update and the corresponding calls to the listeners are
+// completed. When the state is frozen, no changes are made to the state. For
+// each call to Freeze, a call to Unfreeze must be made to unfreeze the state.
+func (state *State) Freeze() {
+	state.changing.RLock()
+}
+
 // IsLeader reports whether this node is the leader.
 func (state *State) IsLeader() bool {
 	state.mu.Lock()
@@ -233,18 +257,9 @@ func (state *State) Organizations() []*Organization {
 	return organizations
 }
 
-// Account returns the account with identifier id.
-// The boolean return value reports whether the account exists.
-func (state *State) Account(id int) (*Account, bool) {
-	// TODO(marco): optimize.
-	for _, o := range state.Organizations() {
-		for _, ws := range o.Workspaces() {
-			if a, ok := ws.Account(id); ok {
-				return a, true
-			}
-		}
-	}
-	return nil, false
+// Unfreeze unfreezes the state if there are no more pending Unfreeze calls.
+func (state *State) Unfreeze() {
+	state.changing.RUnlock()
 }
 
 // Workspace returns the workspace with identifier id.
