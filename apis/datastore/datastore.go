@@ -61,6 +61,11 @@ func New(st *state.State) *Datastore {
 		state: st,
 		store: map[int]*Store{},
 	}
+
+	// Add listeners.
+	ds.state.AddListener(ds.onAddAction)
+	ds.state.AddListener(ds.onDeleteAction)
+	ds.state.AddListener(ds.onSetAction)
 	ds.state.AddListener(ds.onSetWarehouse)
 	ds.state.AddListener(ds.onSetWarehouseMode)
 	ds.state.AddListener(ds.onSetWorkspaceUserSchema)
@@ -150,19 +155,58 @@ func (ds *Datastore) mustBeOpen() {
 	}
 }
 
-func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) func() {
+// onAddAction is called when an action is added.
+func (ds *Datastore) onAddAction(n state.AddAction) func() {
+	connection, _ := ds.state.Connection(n.Connection)
+	ws := connection.Workspace()
+	ds.mu.Lock()
+	store, ok := ds.store[ws.ID]
+	ds.mu.Unlock()
+	if !ok {
+		return nil
+	}
 	return func() {
-		ds.mu.Lock()
-		store, ok := ds.store[n.Workspace]
-		ds.mu.Unlock()
-		if ok {
-			store.columnByProperty.mu.Lock()
-			store.columnByProperty.user = columnByProperty(n.UserSchema)
-			store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
-			store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-			store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
-			store.columnByProperty.mu.Unlock()
-		}
+		store.onAddAction(n)
+	}
+}
+
+// onDeleteAction is called when an action is deleted.
+func (ds *Datastore) onDeleteAction(n state.DeleteAction) func() {
+	ws := n.Action().Connection().Workspace()
+	ds.mu.Lock()
+	store, ok := ds.store[ws.ID]
+	ds.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return func() {
+		store.onDeleteAction(n)
+	}
+}
+
+// onSetAction is called when an action is set.
+func (ds *Datastore) onSetAction(n state.SetAction) func() {
+	action, _ := ds.state.Action(n.ID)
+	ws := action.Connection().Workspace()
+	ds.mu.Lock()
+	store, ok := ds.store[ws.ID]
+	ds.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return store.onSetAction(n)
+}
+
+// onSetWorkspaceUserSchema is called when a workspace's user schema is set.
+func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) func() {
+	ds.mu.Lock()
+	store, ok := ds.store[n.Workspace]
+	ds.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return func() {
+		store.onSetWorkspaceUserSchema(n)
 	}
 }
 

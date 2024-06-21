@@ -9,8 +9,10 @@ package datastore
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
@@ -114,46 +116,17 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 // identities when a non-anonymous identity with the same Anonymous ID on the
 // same connection is written.
 type EventIdentityWriter struct {
-	store             *Store
-	action            int
-	connection        int
-	connectionActions []int // IDs of the actions of the connection.
-	ack               IdentityWriterAckFunc
-	flatter           *flatter
-	columns           map[string]warehouses.Column
-	rows              []map[string]any
-	ackIDs            []string
-	closed            bool
-}
-
-// newEventIdentityWriter returns a new identity writer to write identities for
-// the provided action, in case when identities are imported from events.
-func newEventIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *EventIdentityWriter {
-	connection := action.Connection()
-	var connectionActions []int
-	for _, action := range connection.Actions() {
-		// TODO(Gianluca): this should be limited only to actions that may have
-		// imported anonymous users. Instead of fixing it here, however, it
-		// might be better to fix it directly in the PR
-		// https://github.com/open2b/chichi/pull/826.
-		connectionActions = append(connectionActions, action.ID)
-	}
-	iw := EventIdentityWriter{
-		store:             store,
-		action:            action.ID,
-		connection:        connection.ID,
-		connectionActions: connectionActions,
-		ack:               ack,
-		columns:           map[string]warehouses.Column{},
-	}
-	// An action's OutSchema may be invalid if the action on events has no
-	// mapping, so it imports identities without properties. In that case, the
-	// flatter should not be initialized.
-	if schema := action.OutSchema; schema.Valid() {
-		schema := action.OutSchema
-		iw.flatter = newFlatter(schema, store.identityColumnByProperty())
-	}
-	return &iw
+	store      *Store
+	connection int
+	ack        IdentityWriterAckFunc
+	columns    map[string]warehouses.Column
+	rows       []map[string]any
+	ackIDs     []string
+	closed     bool
+	mu         sync.Mutex       // for the 'action', 'actions' and 'flatter' fields.
+	action     int              // access using 'mu'. If 0, it means that the action does not exist anymore.
+	actions    map[int]struct{} // actions of the action's connection. Access using 'mu'.
+	flatter    *flatter         // access using 'mu'. Nil for actions that import identities from events with no transformations.
 }
 
 // Close closes the Writer, ensuring the completion of all pending or ongoing
@@ -188,6 +161,8 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 // If an error occurs during validation of the properties, it calls the ack
 // function with the value of ackID and the error.
 //
+// If the action of iw does not exist anymore, returns an error.
+//
 // When a batch of event identities has been written to the data warehouse, it
 // calls the ack function with the ackID of the written identities and a nil
 // error.
@@ -197,13 +172,25 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
 	}
+
+	// Read the action from iw and check if it has been deleted.
+	iw.mu.Lock()
+	action := iw.action
+	iw.mu.Unlock()
+	if action == 0 {
+		return errors.New("action does not exist anymore")
+	}
+
 	isAnonymous := identity.ID == ""
 	if !isAnonymous {
 		// Delete anonymous identities with the same anonymous ID as the
 		// incoming non-anonymous identity. The identities to be deleted must be
 		// deleted from all actions in the connection, not just from the action
 		// from which the identity is being imported.
-		for _, action := range iw.connectionActions {
+		iw.mu.Lock()
+		actions := iw.actions
+		iw.mu.Unlock()
+		for action := range actions {
 			iw.rows = append(iw.rows, map[string]any{
 				"$deleted":             true,
 				"__action__":           action,
@@ -214,14 +201,17 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 			})
 		}
 	}
+	iw.mu.Lock()
+	flatter := iw.flatter
+	iw.mu.Unlock()
 	var row map[string]any
-	if iw.flatter == nil {
+	if flatter == nil {
 		row = map[string]any{}
 	} else {
 		row = identity.Properties
-		iw.flatter.flat(row, iw.columns)
+		flatter.flat(row, iw.columns)
 	}
-	row["__action__"] = iw.action
+	row["__action__"] = action
 	row["__is_anonymous__"] = isAnonymous
 	row["__connection__"] = iw.connection
 	if !isAnonymous {
@@ -236,6 +226,70 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	iw.rows = append(iw.rows, row)
 	iw.ackIDs = append(iw.ackIDs, ackID)
 	return nil
+}
+
+// onAddAction is called when an action of the connection of iw's action is
+// added.
+//
+// The notification is propagated by the Store.onAddAction method.
+func (iw *EventIdentityWriter) onAddAction(n state.AddAction) {
+	iw.mu.Lock()
+	iw.actions[n.ID] = struct{}{}
+	iw.mu.Unlock()
+}
+
+// onDeleteAction is called when an action of the connection of iw's action is
+// deleted.
+//
+// The notification is propagated by the Store.onDeleteAction method.
+func (iw *EventIdentityWriter) onDeleteAction(n state.DeleteAction) {
+	iw.mu.Lock()
+	delete(iw.actions, n.ID)
+	if n.ID == iw.action {
+		iw.action = 0
+	}
+	iw.mu.Unlock()
+
+}
+
+// onSetAction is called when an action of the connection of iw's action is set.
+//
+// The notification is propagated by the Store.onSetAction method.
+func (iw *EventIdentityWriter) onSetAction(n state.SetAction) {
+	identityColumns := iw.store.identityColumnByProperty()
+	var flatter *flatter
+	if n.OutSchema.Valid() {
+		// The action's out schema is invalid when importing identities from
+		// events without any transformation in the action.
+		flatter = newFlatter(n.OutSchema, identityColumns)
+	}
+	iw.mu.Lock()
+	iw.flatter = flatter
+	iw.mu.Unlock()
+}
+
+// onSetWorkspaceUserSchema is called when the user schema of the workspace of
+// the iw's connection is set.
+//
+// The notification is propagated by the Store.onSetWorkspaceUserSchema method.
+func (iw *EventIdentityWriter) onSetWorkspaceUserSchema(_ state.SetWorkspaceUserSchema) {
+	iw.mu.Lock()
+	actionID := iw.action
+	iw.mu.Unlock()
+	if actionID == 0 {
+		return
+	}
+	action, _ := iw.store.ds.state.Action(actionID)
+	identityColumns := iw.store.identityColumnByProperty()
+	var flatter *flatter
+	if action.OutSchema.Valid() {
+		// The action's out schema is invalid when importing identities from
+		// events without any transformation in the action.
+		flatter = newFlatter(action.OutSchema, identityColumns)
+	}
+	iw.mu.Lock()
+	iw.flatter = flatter
+	iw.mu.Unlock()
 }
 
 // flatter allows flattening a map[string]any containing user schema properties

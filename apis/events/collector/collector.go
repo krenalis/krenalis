@@ -294,7 +294,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 
 		// Instantiate an event identity writer for writing the user identities.
 		ctx := context.Background()
-		iw, err := store.EventIdentityWriter(action, func(ids []string, err error) {
+		iw, err := store.EventIdentityWriter(action.ID, func(ids []string, err error) {
 			if err != nil {
 				stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
 				return
