@@ -223,7 +223,7 @@ func checkSchemaAlignment(schema types.Type, columnByProperty map[string]warehou
 		if !ok {
 			return &SchemaError{Msg: fmt.Sprintf(`%q property no longer exists`, path)}
 		}
-		if !p.Type.EqualTo(c.Type) {
+		if !types.Equal(p.Type, c.Type) {
 			return &SchemaError{Msg: fmt.Sprintf(`type of the %q property has been changed from %s to %s`, path, c.Type, p.Type)}
 		}
 	}

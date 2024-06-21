@@ -67,7 +67,7 @@ func TestTypes(t *testing.T) {
 			}
 			t.Errorf("%s: expecting an invalid type, got a valid type: %#v", test.s, got)
 		}
-		if !got.EqualTo(test.t) {
+		if !types.Equal(got, test.t) {
 			t.Errorf("%s: unexpected type: %#v", test.s, got)
 		}
 	}

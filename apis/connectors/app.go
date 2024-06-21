@@ -459,7 +459,7 @@ func verifySchemaCompatibilityForSendEvents(t1, t2 types.Type) error {
 	// t1 and t2 are valid.
 	var verify func(name string, t1, t2 types.Type) error
 	verify = func(name string, t1, t2 types.Type) error {
-		if t1.EqualTo(t2) {
+		if types.Equal(t1, t2) {
 			return nil
 		}
 		pt1 := t1.Kind()

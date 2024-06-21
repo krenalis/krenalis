@@ -98,7 +98,7 @@ func TestPropertiesToColumns(t *testing.T) {
 		if c.Name != e.Name {
 			t.Fatalf("expected column name %q, got %q", e.Name, c.Name)
 		}
-		if !c.Type.EqualTo(e.Type) {
+		if !types.Equal(c.Type, e.Type) {
 			t.Fatalf("type of column %q is not the expected one", e.Name)
 		}
 	}
@@ -137,7 +137,7 @@ func Test_PropertyPathToColumn(t *testing.T) {
 			if col.Name != test.col.Name {
 				t.Fatalf("expected column name %q, got %q", test.col.Name, col.Name)
 			}
-			if !col.Type.EqualTo(test.col.Type) {
+			if !types.Equal(col.Type, test.col.Type) {
 				t.Fatalf("expected column type %s, got %s", test.col.Type, col.Type)
 			}
 		})

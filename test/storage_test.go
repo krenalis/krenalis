@@ -79,7 +79,7 @@ func TestStorage(t *testing.T) {
 		{Name: "first_name", Type: types.Text()},
 		{Name: "last_name", Type: types.Text()},
 	})
-	if !expectedSchema.EqualTo(schema) {
+	if !types.Equal(expectedSchema, schema) {
 		t.Fatal("schemas do not match")
 	}
 

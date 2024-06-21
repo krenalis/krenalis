@@ -492,7 +492,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				return nil, errInvalidConversion
 			}
 			it := dt.Elem()
-			if !st.EqualTo(it) {
+			if !types.Equal(st, it) {
 				var err error
 				v, err = convert(v, st, it, false, layouts)
 				if err != nil {
@@ -532,7 +532,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			if !it1.EqualTo(it2) {
+			if !types.Equal(it1, it2) {
 				var err error
 				for i, item := range s {
 					s[i], err = convert(item, it1, it2, false, layouts)
@@ -558,7 +558,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		switch spt {
 		case types.ObjectKind:
 			obj := v.(map[string]any)
-			if st.EqualTo(dt) {
+			if types.Equal(st, dt) {
 				return obj, nil
 			}
 			for name, value := range obj {
@@ -615,7 +615,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
 			m := v.(map[string]any)
-			if vt1.EqualTo(vt2) {
+			if types.Equal(vt1, vt2) {
 				return m, nil
 			}
 			var err error

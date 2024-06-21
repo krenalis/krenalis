@@ -112,7 +112,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			oldName := propPathToName(oldPath)
 			oldProp := oldPropsByName[oldName]
 			newProp := newPropsByName[addedName]
-			if !oldProp.Type.EqualTo(newProp.Type) {
+			if !types.Equal(oldProp.Type, newProp.Type) {
 				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
 			}
 			newNameOf[oldName] = addedName
@@ -234,7 +234,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				Operation: warehouses.OperationDropColumn,
 				Column:    pathToColumn(keptPath),
 			})
-			if !oldProp.Type.EqualTo(newProp.Type) {
+			if !types.Equal(oldProp.Type, newProp.Type) {
 				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
@@ -268,7 +268,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			continue
 		}
 
-		if !oldProp.Type.EqualTo(newProp.Type) {
+		if !types.Equal(oldProp.Type, newProp.Type) {
 			return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
 		}
 

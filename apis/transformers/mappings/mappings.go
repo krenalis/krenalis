@@ -502,7 +502,7 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		if !t0.EqualTo(t1) {
+		if !types.Equal(t0, t1) {
 			v0, err = convert(v0, t0, t1, true, layouts)
 			if err != nil {
 				if err == errInvalidConversion {

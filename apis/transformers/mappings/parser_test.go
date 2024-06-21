@@ -237,7 +237,7 @@ func TestParseValue(t *testing.T) {
 		if got != test.expectedValue {
 			t.Fatalf("%q. expected value %#v, got %#v", test.src, test.expectedValue, got)
 		}
-		if !typ.EqualTo(test.expectedType) {
+		if !types.Equal(typ, test.expectedType) {
 			if typ.Valid() {
 				t.Fatalf("%q. expected type %s, got %s", test.src, test.expectedType, typ)
 			}

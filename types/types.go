@@ -1111,21 +1111,21 @@ func (t Type) Elem() Type {
 	return t.vl.(Type)
 }
 
-// EqualTo reports whether t is equals to t2.
-func (t Type) EqualTo(t2 Type) bool {
-	almostEqual := t.kind == t2.kind && t.size == t2.size && t.unique == t2.unique && t.real == t2.real && t.p == t2.p && t.s == t2.s
+// Equal reports whether two types are equal.
+func Equal(t1, t2 Type) bool {
+	almostEqual := t1.kind == t2.kind && t1.size == t2.size && t1.unique == t2.unique && t1.real == t2.real && t1.p == t2.p && t1.s == t2.s
 	if !almostEqual {
 		return false
 	}
-	if t.vl == nil && t2.vl == nil {
+	if t1.vl == nil && t2.vl == nil {
 		return true
 	}
-	if (t.vl == nil) != (t2.vl == nil) {
+	if (t1.vl == nil) != (t2.vl == nil) {
 		return false
 	}
-	switch vl1 := t.vl.(type) {
+	switch vl1 := t1.vl.(type) {
 	case Type:
-		return vl1.EqualTo(t2.vl.(Type))
+		return Equal(vl1, t2.vl.(Type))
 	case intRange, uintRange, floatRange, decimalRange, string:
 		return vl1 == t2.vl
 	case []Property:
@@ -1142,7 +1142,7 @@ func (t Type) EqualTo(t2 Type) bool {
 				p1.Required != p2.Required ||
 				p1.Nullable != p2.Nullable ||
 				p1.Note != p2.Note ||
-				!p1.Type.EqualTo(p2.Type) {
+				!Equal(p1.Type, p2.Type) {
 				return false
 			}
 		}

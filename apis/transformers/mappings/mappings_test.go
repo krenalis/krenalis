@@ -74,7 +74,7 @@ func TestEval(t *testing.T) {
 		if !reflect.DeepEqual(got, test.expectedValue) {
 			t.Fatalf("%d. unexpected value\nexpected %#v\ngot      %#v", i+1, test.expectedValue, got)
 		}
-		if !typ.EqualTo(test.expectedType) {
+		if !types.Equal(typ, test.expectedType) {
 			if typ.Valid() {
 				t.Fatalf("%d. expected type %s, got %s", i+1, test.expectedType, typ)
 			}

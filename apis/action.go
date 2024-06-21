@@ -985,10 +985,10 @@ func shouldResetCursor(a *state.Action, n *state.SetAction) bool {
 		}
 	}
 	// Check the schemas.
-	if !a.InSchema.EqualTo(n.InSchema) {
+	if !types.Equal(a.InSchema, n.InSchema) {
 		return true
 	}
-	if !a.OutSchema.EqualTo(n.OutSchema) {
+	if !types.Equal(a.OutSchema, n.OutSchema) {
 		return true
 	}
 	return false
