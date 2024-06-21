@@ -8,8 +8,6 @@ export class Analytics {
 		callback?: () => void,
 	): Promise<SentEvent>
 
-	anonymize(): Promise<SentEvent>
-
 	close(): void
 
 	debug(on: boolean): void
@@ -66,7 +64,7 @@ export class Analytics {
 
 	ready(callback?: () => void): Promise<void>
 
-	reset(): void
+	reset(all?: boolean): void
 
 	screen(
 		name: string,

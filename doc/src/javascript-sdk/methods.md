@@ -1,6 +1,6 @@
 # JavaScript SDK Methods
 
-The JavaScript SDK is equipped to handle all essential event calls, including `page`, `screen`, `track`, `identify`, `anonymize`, and `group`. Furthermore, it offers functionalities to efficiently manage sessions and user/group information.
+The JavaScript SDK is equipped to handle all essential event calls, including `page`, `screen`, `track`, `identify`, and `group`. Furthermore, it offers functionalities to efficiently manage sessions and user/group information.
 
 With these capabilities, you can seamlessly track and analyze user interactions across different platforms, facilitating a comprehensive understanding of user behavior and engagement.
 
@@ -10,7 +10,6 @@ Below the JavaScript SDK methods:
 - [screen](#screen)
 - [track](#track)
 - [identify](#identify)
-- [anonymize](#anonymize)
 - [group](#group)
 - [user](#user)
 - [setAnonymousId](#setanonymousid)
@@ -266,39 +265,6 @@ For the previous example, we can have three scenarios:
 * If the user is currently non-anonymous and has the same User ID as the provided one, the provided traits are added to the current traits. If a provided trait has the value `undefined`, the corresponding trait is removed.
 
 > To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](../events/identify.md) call, use the [`user().traits`](user-class.md#traits) method.  
-
-## anonymize
-
-The anonymize method implements the [anonymize call](../events/anonymize.md).
-
-The anonymize call serves the purpose of anonymizing a previously identified user. By invoking this function, traits associated with the identified individual, such as name and email, are removed. This action ensures a user's transition from a known, identified state to an anonymous one, allowing for privacy considerations and data protection.
-
-#### Syntax
-
-```javascript
-anonymize()
-```
-
-<details>
-<summary>TypeScript syntax</summary>
-
-```typescript
-anonymize(): Promise<SentEvent>
-```
-
-</details>
-
-#### Parameters
-
-There is no parameters.
-
-It returns a `Promise` that resolve when the event has queued. If the browser does not support promises and a polyfill has not been installed, it returns `undefined`.
-
-#### Example
-
-```javascript
-chichiAnalytics.anonymize().then(() => console.log('user has been anonymized'));
-```
 
 ## group
 
@@ -570,33 +536,33 @@ await chichiAnalytics.ready();
 
 ## reset
 
-The `reset` method resets the user and group identifiers, and traits removing them from the storage. It also resets the Anonymous ID by generating a new one, and ends the session if one exists.
-
-> See also the [anonymize](#anonymize) method and the [differences between reset and anonymize](../events/anonymize.md#reset-vs-anonymize). 
+The `reset` method resets the user and group identifiers, and updates or removes the Anonymous ID and traits according to the strategy. If `all` is true it always resets the Anonymous ID by generating a new one, and ends the session if one exists, regardless of the strategy.
 
 #### Syntax
 
 ```javascript
-reset()
+reset(all)
 ```
 
 <details>
 <summary>TypeScript syntax</summary>
 
 ```typescript
-reset(): void
+reset(all?: boolean): void
 ```
 
 </details>
 
 #### Parameters
 
-There are no parameters.
+| Name       | Type      | Required                               | Description                                                                             |
+|------------|-----------|----------------------------------------|-----------------------------------------------------------------------------------------|
+| `all`       | `Boolean` |                                       | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy |
 
 #### Example
 
 ```javascript
-chichiAnalytics.reset();
+chichiAnalytics.reset(true);
 ```
 
 ## debug

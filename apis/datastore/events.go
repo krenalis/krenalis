@@ -107,7 +107,7 @@ var eventsColumnsForMerge = []warehouses.Column{
 	{Name: "source", Type: types.Int(32)},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text().WithValues("alias", "anonymize", "identify", "group", "page", "screen", "track")},
+	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	{Name: "user_id", Type: types.Text()},
 }
 
@@ -175,6 +175,6 @@ var eventColumnByProperty = map[string]warehouses.Column{
 	"source":                           {Name: "source", Type: types.Int(32)},
 	"timestamp":                        {Name: "timestamp", Type: types.DateTime()},
 	"traits":                           {Name: "traits", Type: types.JSON()},
-	"type":                             {Name: "type", Type: types.Text().WithValues("alias", "anonymize", "identify", "group", "page", "screen", "track")},
+	"type":                             {Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	"userId":                           {Name: "user_id", Type: types.Text()},
 }

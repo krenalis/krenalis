@@ -11,7 +11,6 @@
     - [screen call](events/screen.md)
     - [track call](events/track.md)
     - [identify call](events/identify.md)
-    - [anonymize call](events/anonymize.md)
     - [group call](events/group.md)
     - [Session Tracking](events/session-tracking.md)
 - [JavaScript SDK](./javascript-sdk.md)

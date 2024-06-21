@@ -477,7 +477,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	switch method {
 	case "batch", "b":
 		method = "batch"
-	case "alias", "anonymize", "group", "identify", "page", "screen", "track":
+	case "alias", "group", "identify", "page", "screen", "track":
 	default:
 		return errNotFound
 	}
@@ -668,8 +668,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 }
 
 // validateEvent validates the given method and event and returns an error if
-// they are not valid. method can be "alias", "anonymize", "identify", "group",
-// "page", "screen", "track", or "batch".
+// they are not valid. method can be "alias", "identify", "group", "page",
+// "screen", "track", or "batch".
 func validateEvent(method string, event *collectedEvent) error {
 
 	// Type.

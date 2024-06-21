@@ -106,20 +106,6 @@ class Analytics {
 		return this.#send('alias', this.#setAliasArguments, arguments)
 	}
 
-	// anonymize sends an anonymize event, anonymizes the user's identity by
-	// removing the User ID, and updates or removes the Anonymous ID and traits
-	// according to the strategy.
-	anonymize() {
-		const event = this.#send('anonymize', this.#setAnonymizeArguments, arguments)
-		if (this.#options.strategy === 'AC-B') {
-			this.#storage.setUserId()
-			this.#storage.restore()
-		} else {
-			this.#reset(this.#options.strategy.indexOf('-C') > 0)
-		}
-		return event
-	}
-
 	// close closes the Analytics instance.
 	// It tries to preserve the queue in the localStorage before returning.
 	close() {
@@ -195,11 +181,26 @@ class Analytics {
 		}
 	}
 
-	// reset resets the user and group identifiers, and traits removing them
-	// from the storage. It also resets the Anonymous ID by generating a new
-	// one, and ends the session if one exists.
-	reset() {
-		this.#reset(true)
+	// reset resets the user and group identifiers, and updates or
+	// removes the Anonymous ID and traits according to the strategy. If
+	// "all" is true it always resets the Anonymous ID by generating a
+	// new one, and ends the session if one exists, regardless of the
+	// strategy.
+	reset(all) {
+		if (!all && this.#options.strategy === 'AC-B') {
+			this.#storage.setUserId()
+			this.#storage.restore()
+			return
+		}
+		this.#storage.setUserId()
+		this.#storage.setGroupId()
+		this.#storage.setTraits('user')
+		this.#storage.setTraits('group')
+		this.#storage.removeSuspended()
+		if (all || this.#options.strategy.indexOf('-C') > 0) {
+			this.#storage.setAnonymousId()
+			this.#session.end()
+		}
 	}
 
 	// screen sends a screen event.
@@ -330,20 +331,6 @@ class Analytics {
 		}
 	}
 
-	// reset is similar to the public reset method, but if 'all' is false, it
-	// does not reset the Anonymous ID and does not end the session.
-	#reset(all) {
-		this.#storage.setUserId()
-		this.#storage.setGroupId()
-		this.#storage.setTraits('user')
-		this.#storage.setTraits('group')
-		this.#storage.removeSuspended()
-		if (all) {
-			this.#storage.setAnonymousId()
-			this.#session.end()
-		}
-	}
-
 	// send sends an event of the given type, setting the arguments args with
 	// the setArgs function.
 	#send(type, setArgs, args) {
@@ -464,8 +451,6 @@ class Analytics {
 					this.#mergeTraits(this.#user, event, event.traits)
 				}
 				break
-			case 'anonymize':
-				event.userId = null
 		}
 
 		event.messageId = uuid()
@@ -565,13 +550,6 @@ class Analytics {
 				throw new Error('Invalid arguments')
 		}
 		return options
-	}
-
-	// setAnonymizeArguments sets the arguments for anonymize calls.
-	#setAnonymizeArguments(_data, a) {
-		if (a.length > 0) {
-			throw new Error('Invalid arguments')
-		}
 	}
 
 	// setIdentifyArguments sets the arguments for identify calls.

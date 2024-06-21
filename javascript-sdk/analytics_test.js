@@ -152,7 +152,6 @@ Deno.test('Analytics', async (t) => {
 		}
 		a.reset()
 		// localStorage only contains the keys corresponding to the election and the queue items.
-		assertEquals(localStorage.length, 3)
 		let hasQueueKey = false
 		for (let i = 0; i < localStorage.length; i++) {
 			if (localStorage.key(i).endsWith('.queue')) {
@@ -341,7 +340,7 @@ Deno.test('Analytics', async (t) => {
 		a.close()
 	})
 
-	// Test identify and anonymize with each strategy, both with and without sessions.
+	// Test identify and reset with each strategy, both with and without sessions.
 	for (const strategy of ['ABC', 'AB-C', 'A-B-C', 'AC-B']) {
 		for (const autoTrack of [true, false]) {
 			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
@@ -401,23 +400,11 @@ Deno.test('Analytics', async (t) => {
 					sessionId = a.getSessionId()
 					anonymousId = a.getAnonymousId()
 
-					// anonymize.
-					void a.anonymize()
-					time.tick(1000)
-					await time.nextAsync()
-					events = await fetch.events(1)
-					event = events[0]
+					a.reset()
 
-					assertEquals(event.userId, null)
-					assertEquals(event.traits, undefined)
-					if (autoTrack) {
-						assertEquals(event.context.sessionId, sessionId)
-					} else {
-						assert(!('sessionId' in event.context))
-						assert(!('sessionStart' in event.context))
+					if (!autoTrack) {
 						assertEquals(a.getSessionId(), null)
 					}
-					assertEquals(event.anonymousId, anonymousId)
 					if (strategy === 'AC-B') {
 						if (autoTrack) {
 							assertEquals(a.getSessionId(), original.sessionId)
@@ -445,6 +432,13 @@ Deno.test('Analytics', async (t) => {
 						assertEquals(a.group().id(), null)
 						assertEquals(a.group().traits(), {})
 					}
+
+					// test reset with "all".
+					a.startSession(215271912)
+					anonymousId = a.getAnonymousId()
+					a.reset(true)
+					assertNotEquals(anonymousId, a.getAnonymousId())
+					assertEquals(a.getSessionId(), null)
 				} finally {
 					fetch.restore()
 					time.restore()

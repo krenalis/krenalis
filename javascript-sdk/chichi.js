@@ -23,7 +23,6 @@ function main() {
 	void a.ready(function () {
 		const methods = [
 			'alias',
-			'anonymize',
 			'close',
 			'debug',
 			'endSession',

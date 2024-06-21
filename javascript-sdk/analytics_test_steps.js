@@ -551,24 +551,6 @@ const steps = [
 		},
 		error: new Error('Invalid arguments'),
 	},
-	// Anonymize.
-	{
-		name: `anonymize()`,
-		call: (analytics) => {
-			analytics.user().id('603614922')
-			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' })
-			analytics.anonymize()
-		},
-		event: {
-			type: 'anonymize',
-			timestamp,
-			messageId,
-			anonymousId,
-			context,
-			integrations,
-			userId,
-		},
-	},
 	// Group.
 	{
 		name: `group(groupId)`,
