@@ -4,26 +4,23 @@ package lambda
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	internalauth "github.com/aws/aws-sdk-go-v2/internal/auth"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
-	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithysync "github.com/aws/smithy-go/sync"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"sync"
 )
 
 // Configure your Lambda functions to stream response payloads back to clients.
-// For more information, see Configuring a Lambda function to stream responses (https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html)
-// . This operation requires permission for the lambda:InvokeFunction (https://docs.aws.amazon.com/IAM/latest/UserGuide/list_awslambda.html)
-// action. For details on how to set up permissions for cross-account invocations,
-// see Granting function access to other accounts (https://docs.aws.amazon.com/lambda/latest/dg/access-control-resource-based.html#permissions-resource-xaccountinvoke)
-// .
+// For more information, see [Configuring a Lambda function to stream responses].
+//
+// This operation requires permission for the [lambda:InvokeFunction] action. For details on how to set
+// up permissions for cross-account invocations, see [Granting function access to other accounts].
+//
+// [Configuring a Lambda function to stream responses]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html
+// [lambda:InvokeFunction]: https://docs.aws.amazon.com/IAM/latest/UserGuide/list_awslambda.html
+// [Granting function access to other accounts]: https://docs.aws.amazon.com/lambda/latest/dg/access-control-resource-based.html#permissions-resource-xaccountinvoke
 func (c *Client) InvokeWithResponseStream(ctx context.Context, params *InvokeWithResponseStreamInput, optFns ...func(*Options)) (*InvokeWithResponseStreamOutput, error) {
 	if params == nil {
 		params = &InvokeWithResponseStreamInput{}
@@ -41,10 +38,16 @@ func (c *Client) InvokeWithResponseStream(ctx context.Context, params *InvokeWit
 
 type InvokeWithResponseStreamInput struct {
 
-	// The name of the Lambda function. Name formats
+	// The name or ARN of the Lambda function.
+	//
+	// Name formats
+	//
 	//   - Function name – my-function .
+	//
 	//   - Function ARN – arn:aws:lambda:us-west-2:123456789012:function:my-function .
+	//
 	//   - Partial ARN – 123456789012:function:my-function .
+	//
 	// The length constraint applies only to the full ARN. If you specify only the
 	// function name, it is limited to 64 characters in length.
 	//
@@ -56,9 +59,11 @@ type InvokeWithResponseStreamInput struct {
 	ClientContext *string
 
 	// Use one of the following options:
+	//
 	//   - RequestResponse (default) – Invoke the function synchronously. Keep the
 	//   connection open until the function returns a response or times out. The API
 	//   operation response includes the function response and additional data.
+	//
 	//   - DryRun – Validate parameter values and verify that the IAM user or role has
 	//   permission to invoke the function.
 	InvocationType types.ResponseStreamingInvocationType
@@ -67,9 +72,10 @@ type InvokeWithResponseStreamInput struct {
 	// synchronously invoked functions only.
 	LogType types.LogType
 
-	// The JSON that you want to provide to your Lambda function as input. You can
-	// enter the JSON directly. For example, --payload '{ "key": "value" }' . You can
-	// also specify a file path. For example, --payload file://payload.json .
+	// The JSON that you want to provide to your Lambda function as input.
+	//
+	// You can enter the JSON directly. For example, --payload '{ "key": "value" }' .
+	// You can also specify a file path. For example, --payload file://payload.json .
 	Payload []byte
 
 	// The alias name.
@@ -106,6 +112,9 @@ func (o *InvokeWithResponseStreamOutput) GetStream() *InvokeWithResponseStreamEv
 }
 
 func (c *Client) addOperationInvokeWithResponseStreamMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestjson1_serializeOpInvokeWithResponseStream{}, middleware.After)
 	if err != nil {
 		return err
@@ -114,6 +123,10 @@ func (c *Client) addOperationInvokeWithResponseStreamMiddlewares(stack *middlewa
 	if err != nil {
 		return err
 	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "InvokeWithResponseStream"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
 	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
@@ -123,34 +136,37 @@ func (c *Client) addOperationInvokeWithResponseStreamMiddlewares(stack *middlewa
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
+	if err = addClientRequestID(stack); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
+	if err = addComputeContentLength(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
+	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetryMiddlewares(stack, options); err != nil {
+	if err = addRetry(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
+	if err = addRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
-		return err
-	}
-	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
+	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
-	if err = addInvokeWithResponseStreamResolveEndpointMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
 		return err
 	}
 	if err = addOpInvokeWithResponseStreamValidationMiddleware(stack); err != nil {
@@ -159,7 +175,7 @@ func (c *Client) addOperationInvokeWithResponseStreamMiddlewares(stack *middlewa
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opInvokeWithResponseStream(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+	if err = addRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -171,7 +187,7 @@ func (c *Client) addOperationInvokeWithResponseStreamMiddlewares(stack *middlewa
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
-	if err = addendpointDisableHTTPSMiddleware(stack, options); err != nil {
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
 	return nil
@@ -181,7 +197,6 @@ func newServiceMetadataMiddleware_opInvokeWithResponseStream(region string) *aws
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "lambda",
 		OperationName: "InvokeWithResponseStream",
 	}
 }
@@ -284,127 +299,4 @@ func (es *InvokeWithResponseStreamEventStream) waitStreamClose() {
 		es.Close()
 
 	}
-}
-
-type opInvokeWithResponseStreamResolveEndpointMiddleware struct {
-	EndpointResolver EndpointResolverV2
-	BuiltInResolver  builtInParameterResolver
-}
-
-func (*opInvokeWithResponseStreamResolveEndpointMiddleware) ID() string {
-	return "ResolveEndpointV2"
-}
-
-func (m *opInvokeWithResponseStreamResolveEndpointMiddleware) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
-	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
-) {
-	if awsmiddleware.GetRequiresLegacyEndpoints(ctx) {
-		return next.HandleSerialize(ctx, in)
-	}
-
-	req, ok := in.Request.(*smithyhttp.Request)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown transport type %T", in.Request)
-	}
-
-	if m.EndpointResolver == nil {
-		return out, metadata, fmt.Errorf("expected endpoint resolver to not be nil")
-	}
-
-	params := EndpointParameters{}
-
-	m.BuiltInResolver.ResolveBuiltIns(&params)
-
-	var resolvedEndpoint smithyendpoints.Endpoint
-	resolvedEndpoint, err = m.EndpointResolver.ResolveEndpoint(ctx, params)
-	if err != nil {
-		return out, metadata, fmt.Errorf("failed to resolve service endpoint, %w", err)
-	}
-
-	req.URL = &resolvedEndpoint.URI
-
-	for k := range resolvedEndpoint.Headers {
-		req.Header.Set(
-			k,
-			resolvedEndpoint.Headers.Get(k),
-		)
-	}
-
-	authSchemes, err := internalauth.GetAuthenticationSchemes(&resolvedEndpoint.Properties)
-	if err != nil {
-		var nfe *internalauth.NoAuthenticationSchemesFoundError
-		if errors.As(err, &nfe) {
-			// if no auth scheme is found, default to sigv4
-			signingName := "lambda"
-			signingRegion := m.BuiltInResolver.(*builtInResolver).Region
-			ctx = awsmiddleware.SetSigningName(ctx, signingName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
-
-		}
-		var ue *internalauth.UnSupportedAuthenticationSchemeSpecifiedError
-		if errors.As(err, &ue) {
-			return out, metadata, fmt.Errorf(
-				"This operation requests signer version(s) %v but the client only supports %v",
-				ue.UnsupportedSchemes,
-				internalauth.SupportedSchemes,
-			)
-		}
-	}
-
-	for _, authScheme := range authSchemes {
-		switch authScheme.(type) {
-		case *internalauth.AuthenticationSchemeV4:
-			v4Scheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4)
-			var signingName, signingRegion string
-			if v4Scheme.SigningName == nil {
-				signingName = "lambda"
-			} else {
-				signingName = *v4Scheme.SigningName
-			}
-			if v4Scheme.SigningRegion == nil {
-				signingRegion = m.BuiltInResolver.(*builtInResolver).Region
-			} else {
-				signingRegion = *v4Scheme.SigningRegion
-			}
-			if v4Scheme.DisableDoubleEncoding != nil {
-				// The signer sets an equivalent value at client initialization time.
-				// Setting this context value will cause the signer to extract it
-				// and override the value set at client initialization time.
-				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4Scheme.DisableDoubleEncoding)
-			}
-			ctx = awsmiddleware.SetSigningName(ctx, signingName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
-			break
-		case *internalauth.AuthenticationSchemeV4A:
-			v4aScheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4A)
-			if v4aScheme.SigningName == nil {
-				v4aScheme.SigningName = aws.String("lambda")
-			}
-			if v4aScheme.DisableDoubleEncoding != nil {
-				// The signer sets an equivalent value at client initialization time.
-				// Setting this context value will cause the signer to extract it
-				// and override the value set at client initialization time.
-				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4aScheme.DisableDoubleEncoding)
-			}
-			ctx = awsmiddleware.SetSigningName(ctx, *v4aScheme.SigningName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, v4aScheme.SigningRegionSet[0])
-			break
-		case *internalauth.AuthenticationSchemeNone:
-			break
-		}
-	}
-
-	return next.HandleSerialize(ctx, in)
-}
-
-func addInvokeWithResponseStreamResolveEndpointMiddleware(stack *middleware.Stack, options Options) error {
-	return stack.Serialize.Insert(&opInvokeWithResponseStreamResolveEndpointMiddleware{
-		EndpointResolver: options.EndpointResolverV2,
-		BuiltInResolver: &builtInResolver{
-			Region:       options.Region,
-			UseDualStack: options.EndpointOptions.UseDualStackEndpoint,
-			UseFIPS:      options.EndpointOptions.UseFIPSEndpoint,
-			Endpoint:     options.BaseEndpoint,
-		},
-	}, "ResolveEndpoint", middleware.After)
 }

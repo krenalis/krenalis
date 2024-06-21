@@ -21,7 +21,16 @@ import (
 	"io/ioutil"
 	"math"
 	"strings"
+	"time"
 )
+
+func deserializeS3Expires(v string) (*time.Time, error) {
+	t, err := smithytime.ParseHTTPDate(v)
+	if err != nil {
+		return nil, nil
+	}
+	return &t, nil
+}
 
 type awsRestjson1_deserializeOpAddLayerVersionPermission struct {
 }
@@ -1407,6 +1416,11 @@ func awsRestjson1_deserializeOpDocumentCreateFunctionOutput(v **CreateFunctionOu
 
 		case "Layers":
 			if err := awsRestjson1_deserializeDocumentLayersReferenceList(&sv.Layers, value); err != nil {
+				return err
+			}
+
+		case "LoggingConfig":
+			if err := awsRestjson1_deserializeDocumentLoggingConfig(&sv.LoggingConfig, value); err != nil {
 				return err
 			}
 
@@ -4728,6 +4742,11 @@ func awsRestjson1_deserializeOpDocumentGetFunctionConfigurationOutput(v **GetFun
 
 		case "Layers":
 			if err := awsRestjson1_deserializeDocumentLayersReferenceList(&sv.Layers, value); err != nil {
+				return err
+			}
+
+		case "LoggingConfig":
+			if err := awsRestjson1_deserializeDocumentLoggingConfig(&sv.LoggingConfig, value); err != nil {
 				return err
 			}
 
@@ -9489,6 +9508,11 @@ func awsRestjson1_deserializeOpDocumentPublishVersionOutput(v **PublishVersionOu
 				return err
 			}
 
+		case "LoggingConfig":
+			if err := awsRestjson1_deserializeDocumentLoggingConfig(&sv.LoggingConfig, value); err != nil {
+				return err
+			}
+
 		case "MasterArn":
 			if value != nil {
 				jtv, ok := value.(string)
@@ -12052,6 +12076,11 @@ func awsRestjson1_deserializeOpDocumentUpdateFunctionCodeOutput(v **UpdateFuncti
 				return err
 			}
 
+		case "LoggingConfig":
+			if err := awsRestjson1_deserializeDocumentLoggingConfig(&sv.LoggingConfig, value); err != nil {
+				return err
+			}
+
 		case "MasterArn":
 			if value != nil {
 				jtv, ok := value.(string)
@@ -12498,6 +12527,11 @@ func awsRestjson1_deserializeOpDocumentUpdateFunctionConfigurationOutput(v **Upd
 
 		case "Layers":
 			if err := awsRestjson1_deserializeDocumentLayersReferenceList(&sv.Layers, value); err != nil {
+				return err
+			}
+
+		case "LoggingConfig":
+			if err := awsRestjson1_deserializeDocumentLoggingConfig(&sv.LoggingConfig, value); err != nil {
 				return err
 			}
 
@@ -17222,6 +17256,11 @@ func awsRestjson1_deserializeDocumentFunctionConfiguration(v **types.FunctionCon
 				return err
 			}
 
+		case "LoggingConfig":
+			if err := awsRestjson1_deserializeDocumentLoggingConfig(&sv.LoggingConfig, value); err != nil {
+				return err
+			}
+
 		case "MasterArn":
 			if value != nil {
 				jtv, ok := value.(string)
@@ -18792,6 +18831,73 @@ func awsRestjson1_deserializeDocumentLayerVersionsListItem(v **types.LayerVersio
 					return err
 				}
 				sv.Version = i64
+			}
+
+		default:
+			_, _ = key, value
+
+		}
+	}
+	*v = sv
+	return nil
+}
+
+func awsRestjson1_deserializeDocumentLoggingConfig(v **types.LoggingConfig, value interface{}) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	if value == nil {
+		return nil
+	}
+
+	shape, ok := value.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected JSON type %v", value)
+	}
+
+	var sv *types.LoggingConfig
+	if *v == nil {
+		sv = &types.LoggingConfig{}
+	} else {
+		sv = *v
+	}
+
+	for key, value := range shape {
+		switch key {
+		case "ApplicationLogLevel":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected ApplicationLogLevel to be of type string, got %T instead", value)
+				}
+				sv.ApplicationLogLevel = types.ApplicationLogLevel(jtv)
+			}
+
+		case "LogFormat":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected LogFormat to be of type string, got %T instead", value)
+				}
+				sv.LogFormat = types.LogFormat(jtv)
+			}
+
+		case "LogGroup":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected LogGroup to be of type string, got %T instead", value)
+				}
+				sv.LogGroup = ptr.String(jtv)
+			}
+
+		case "SystemLogLevel":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected SystemLogLevel to be of type string, got %T instead", value)
+				}
+				sv.SystemLogLevel = types.SystemLogLevel(jtv)
 			}
 
 		default:

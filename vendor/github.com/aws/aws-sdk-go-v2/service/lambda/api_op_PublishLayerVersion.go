@@ -4,22 +4,19 @@ package lambda
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	internalauth "github.com/aws/aws-sdk-go-v2/internal/auth"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
-	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Creates an Lambda layer (https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html)
-// from a ZIP archive. Each time you call PublishLayerVersion with the same layer
-// name, a new version is created. Add layers to your function with CreateFunction
-// or UpdateFunctionConfiguration .
+// Creates an [Lambda layer] from a ZIP archive. Each time you call PublishLayerVersion with the
+// same layer name, a new version is created.
+//
+// Add layers to your function with CreateFunction or UpdateFunctionConfiguration.
+//
+// [Lambda layer]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
 func (c *Client) PublishLayerVersion(ctx context.Context, params *PublishLayerVersionInput, optFns ...func(*Options)) (*PublishLayerVersionOutput, error) {
 	if params == nil {
 		params = &PublishLayerVersionInput{}
@@ -47,25 +44,32 @@ type PublishLayerVersionInput struct {
 	// This member is required.
 	LayerName *string
 
-	// A list of compatible instruction set architectures (https://docs.aws.amazon.com/lambda/latest/dg/foundation-arch.html)
-	// .
+	// A list of compatible [instruction set architectures].
+	//
+	// [instruction set architectures]: https://docs.aws.amazon.com/lambda/latest/dg/foundation-arch.html
 	CompatibleArchitectures []types.Architecture
 
-	// A list of compatible function runtimes (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html)
-	// . Used for filtering with ListLayers and ListLayerVersions . The following list
-	// includes deprecated runtimes. For more information, see Runtime deprecation
-	// policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy)
-	// .
+	// A list of compatible [function runtimes]. Used for filtering with ListLayers and ListLayerVersions.
+	//
+	// The following list includes deprecated runtimes. For more information, see [Runtime deprecation policy].
+	//
+	// [function runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
+	// [Runtime deprecation policy]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy
 	CompatibleRuntimes []types.Runtime
 
 	// The description of the version.
 	Description *string
 
 	// The layer's software license. It can be any of the following:
-	//   - An SPDX license identifier (https://spdx.org/licenses/) . For example, MIT .
+	//
+	//   - An [SPDX license identifier]. For example, MIT .
+	//
 	//   - The URL of a license hosted on the internet. For example,
 	//   https://opensource.org/licenses/MIT .
+	//
 	//   - The full text of the license.
+	//
+	// [SPDX license identifier]: https://spdx.org/licenses/
 	LicenseInfo *string
 
 	noSmithyDocumentSerde
@@ -73,20 +77,24 @@ type PublishLayerVersionInput struct {
 
 type PublishLayerVersionOutput struct {
 
-	// A list of compatible instruction set architectures (https://docs.aws.amazon.com/lambda/latest/dg/foundation-arch.html)
-	// .
+	// A list of compatible [instruction set architectures].
+	//
+	// [instruction set architectures]: https://docs.aws.amazon.com/lambda/latest/dg/foundation-arch.html
 	CompatibleArchitectures []types.Architecture
 
-	// The layer's compatible runtimes. The following list includes deprecated
-	// runtimes. For more information, see Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy)
-	// .
+	// The layer's compatible runtimes.
+	//
+	// The following list includes deprecated runtimes. For more information, see [Runtime deprecation policy].
+	//
+	// [Runtime deprecation policy]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy
 	CompatibleRuntimes []types.Runtime
 
 	// Details about the layer version.
 	Content *types.LayerVersionContentOutput
 
-	// The date that the layer version was created, in ISO-8601 format (https://www.w3.org/TR/NOTE-datetime)
-	// (YYYY-MM-DDThh:mm:ss.sTZD).
+	// The date that the layer version was created, in [ISO-8601 format] (YYYY-MM-DDThh:mm:ss.sTZD).
+	//
+	// [ISO-8601 format]: https://www.w3.org/TR/NOTE-datetime
 	CreatedDate *string
 
 	// The description of the version.
@@ -111,6 +119,9 @@ type PublishLayerVersionOutput struct {
 }
 
 func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestjson1_serializeOpPublishLayerVersion{}, middleware.After)
 	if err != nil {
 		return err
@@ -119,34 +130,35 @@ func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.St
 	if err != nil {
 		return err
 	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "PublishLayerVersion"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
 	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
+	if err = addClientRequestID(stack); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
+	if err = addComputeContentLength(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
+	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetryMiddlewares(stack, options); err != nil {
+	if err = addRetry(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
+	if err = addRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
-		return err
-	}
-	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
+	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -158,7 +170,13 @@ func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.St
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addPublishLayerVersionResolveEndpointMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
 		return err
 	}
 	if err = addOpPublishLayerVersionValidationMiddleware(stack); err != nil {
@@ -167,7 +185,7 @@ func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.St
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opPublishLayerVersion(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+	if err = addRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -179,7 +197,7 @@ func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.St
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
-	if err = addendpointDisableHTTPSMiddleware(stack, options); err != nil {
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
 	return nil
@@ -189,130 +207,6 @@ func newServiceMetadataMiddleware_opPublishLayerVersion(region string) *awsmiddl
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "lambda",
 		OperationName: "PublishLayerVersion",
 	}
-}
-
-type opPublishLayerVersionResolveEndpointMiddleware struct {
-	EndpointResolver EndpointResolverV2
-	BuiltInResolver  builtInParameterResolver
-}
-
-func (*opPublishLayerVersionResolveEndpointMiddleware) ID() string {
-	return "ResolveEndpointV2"
-}
-
-func (m *opPublishLayerVersionResolveEndpointMiddleware) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
-	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
-) {
-	if awsmiddleware.GetRequiresLegacyEndpoints(ctx) {
-		return next.HandleSerialize(ctx, in)
-	}
-
-	req, ok := in.Request.(*smithyhttp.Request)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown transport type %T", in.Request)
-	}
-
-	if m.EndpointResolver == nil {
-		return out, metadata, fmt.Errorf("expected endpoint resolver to not be nil")
-	}
-
-	params := EndpointParameters{}
-
-	m.BuiltInResolver.ResolveBuiltIns(&params)
-
-	var resolvedEndpoint smithyendpoints.Endpoint
-	resolvedEndpoint, err = m.EndpointResolver.ResolveEndpoint(ctx, params)
-	if err != nil {
-		return out, metadata, fmt.Errorf("failed to resolve service endpoint, %w", err)
-	}
-
-	req.URL = &resolvedEndpoint.URI
-
-	for k := range resolvedEndpoint.Headers {
-		req.Header.Set(
-			k,
-			resolvedEndpoint.Headers.Get(k),
-		)
-	}
-
-	authSchemes, err := internalauth.GetAuthenticationSchemes(&resolvedEndpoint.Properties)
-	if err != nil {
-		var nfe *internalauth.NoAuthenticationSchemesFoundError
-		if errors.As(err, &nfe) {
-			// if no auth scheme is found, default to sigv4
-			signingName := "lambda"
-			signingRegion := m.BuiltInResolver.(*builtInResolver).Region
-			ctx = awsmiddleware.SetSigningName(ctx, signingName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
-
-		}
-		var ue *internalauth.UnSupportedAuthenticationSchemeSpecifiedError
-		if errors.As(err, &ue) {
-			return out, metadata, fmt.Errorf(
-				"This operation requests signer version(s) %v but the client only supports %v",
-				ue.UnsupportedSchemes,
-				internalauth.SupportedSchemes,
-			)
-		}
-	}
-
-	for _, authScheme := range authSchemes {
-		switch authScheme.(type) {
-		case *internalauth.AuthenticationSchemeV4:
-			v4Scheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4)
-			var signingName, signingRegion string
-			if v4Scheme.SigningName == nil {
-				signingName = "lambda"
-			} else {
-				signingName = *v4Scheme.SigningName
-			}
-			if v4Scheme.SigningRegion == nil {
-				signingRegion = m.BuiltInResolver.(*builtInResolver).Region
-			} else {
-				signingRegion = *v4Scheme.SigningRegion
-			}
-			if v4Scheme.DisableDoubleEncoding != nil {
-				// The signer sets an equivalent value at client initialization time.
-				// Setting this context value will cause the signer to extract it
-				// and override the value set at client initialization time.
-				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4Scheme.DisableDoubleEncoding)
-			}
-			ctx = awsmiddleware.SetSigningName(ctx, signingName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
-			break
-		case *internalauth.AuthenticationSchemeV4A:
-			v4aScheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4A)
-			if v4aScheme.SigningName == nil {
-				v4aScheme.SigningName = aws.String("lambda")
-			}
-			if v4aScheme.DisableDoubleEncoding != nil {
-				// The signer sets an equivalent value at client initialization time.
-				// Setting this context value will cause the signer to extract it
-				// and override the value set at client initialization time.
-				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4aScheme.DisableDoubleEncoding)
-			}
-			ctx = awsmiddleware.SetSigningName(ctx, *v4aScheme.SigningName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, v4aScheme.SigningRegionSet[0])
-			break
-		case *internalauth.AuthenticationSchemeNone:
-			break
-		}
-	}
-
-	return next.HandleSerialize(ctx, in)
-}
-
-func addPublishLayerVersionResolveEndpointMiddleware(stack *middleware.Stack, options Options) error {
-	return stack.Serialize.Insert(&opPublishLayerVersionResolveEndpointMiddleware{
-		EndpointResolver: options.EndpointResolverV2,
-		BuiltInResolver: &builtInResolver{
-			Region:       options.Region,
-			UseDualStack: options.EndpointOptions.UseDualStackEndpoint,
-			UseFIPS:      options.EndpointOptions.UseFIPSEndpoint,
-			Endpoint:     options.BaseEndpoint,
-		},
-	}, "ResolveEndpoint", middleware.After)
 }

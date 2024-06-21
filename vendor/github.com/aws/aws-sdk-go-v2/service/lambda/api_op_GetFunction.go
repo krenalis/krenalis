@@ -6,12 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	internalauth "github.com/aws/aws-sdk-go-v2/internal/auth"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
-	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -40,10 +36,16 @@ func (c *Client) GetFunction(ctx context.Context, params *GetFunctionInput, optF
 
 type GetFunctionInput struct {
 
-	// The name of the Lambda function, version, or alias. Name formats
+	// The name or ARN of the Lambda function, version, or alias.
+	//
+	// Name formats
+	//
 	//   - Function name – my-function (name-only), my-function:v1 (with alias).
+	//
 	//   - Function ARN – arn:aws:lambda:us-west-2:123456789012:function:my-function .
+	//
 	//   - Partial ARN – 123456789012:function:my-function .
+	//
 	// You can append a version number or alias to any of the formats. The length
 	// constraint applies only to the full ARN. If you specify only the function name,
 	// it is limited to 64 characters in length.
@@ -63,14 +65,17 @@ type GetFunctionOutput struct {
 	// The deployment package of the function or version.
 	Code *types.FunctionCodeLocation
 
-	// The function's reserved concurrency (https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html)
-	// .
+	// The function's [reserved concurrency].
+	//
+	// [reserved concurrency]: https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html
 	Concurrency *types.Concurrency
 
 	// The configuration of the function or version.
 	Configuration *types.FunctionConfiguration
 
-	// The function's tags (https://docs.aws.amazon.com/lambda/latest/dg/tagging.html) .
+	// The function's [tags].
+	//
+	// [tags]: https://docs.aws.amazon.com/lambda/latest/dg/tagging.html
 	Tags map[string]string
 
 	// Metadata pertaining to the operation's result.
@@ -80,6 +85,9 @@ type GetFunctionOutput struct {
 }
 
 func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestjson1_serializeOpGetFunction{}, middleware.After)
 	if err != nil {
 		return err
@@ -88,34 +96,35 @@ func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, opt
 	if err != nil {
 		return err
 	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "GetFunction"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
 	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
+	if err = addClientRequestID(stack); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
+	if err = addComputeContentLength(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
+	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetryMiddlewares(stack, options); err != nil {
+	if err = addRetry(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
+	if err = addRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
-		return err
-	}
-	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
+	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -127,7 +136,13 @@ func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, opt
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addGetFunctionResolveEndpointMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetFunctionValidationMiddleware(stack); err != nil {
@@ -136,7 +151,7 @@ func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, opt
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetFunction(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+	if err = addRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -148,18 +163,11 @@ func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, opt
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
-	if err = addendpointDisableHTTPSMiddleware(stack, options); err != nil {
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
 	return nil
 }
-
-// GetFunctionAPIClient is a client that implements the GetFunction operation.
-type GetFunctionAPIClient interface {
-	GetFunction(context.Context, *GetFunctionInput, ...func(*Options)) (*GetFunctionOutput, error)
-}
-
-var _ GetFunctionAPIClient = (*Client)(nil)
 
 // FunctionActiveV2WaiterOptions are waiter options for FunctionActiveV2Waiter
 type FunctionActiveV2WaiterOptions struct {
@@ -167,7 +175,16 @@ type FunctionActiveV2WaiterOptions struct {
 	// Set of options to modify how an operation is invoked. These apply to all
 	// operations invoked for this client. Use functional options on operation call to
 	// modify this list for per operation behavior.
+	//
+	// Passing options here is functionally equivalent to passing values to this
+	// config's ClientOptions field that extend the inner client's APIOptions directly.
 	APIOptions []func(*middleware.Stack) error
+
+	// Functional options to be passed to all operations invoked by this client.
+	//
+	// Function values that modify the inner APIOptions are applied after the waiter
+	// config's own APIOptions modifiers.
+	ClientOptions []func(*Options)
 
 	// MinDelay is the minimum amount of time to delay between retries. If unset,
 	// FunctionActiveV2Waiter will use default minimum delay of 1 seconds. Note that
@@ -184,12 +201,13 @@ type FunctionActiveV2WaiterOptions struct {
 
 	// Retryable is function that can be used to override the service defined
 	// waiter-behavior based on operation output, or returned error. This function is
-	// used by the waiter to decide if a state is retryable or a terminal state. By
-	// default service-modeled logic will populate this option. This option can thus be
-	// used to define a custom waiter state with fall-back to service-modeled waiter
-	// state mutators.The function returns an error in case of a failure state. In case
-	// of retry state, this function returns a bool value of true and nil error, while
-	// in case of success it returns a bool value of false and nil error.
+	// used by the waiter to decide if a state is retryable or a terminal state.
+	//
+	// By default service-modeled logic will populate this option. This option can
+	// thus be used to define a custom waiter state with fall-back to service-modeled
+	// waiter state mutators.The function returns an error in case of a failure state.
+	// In case of retry state, this function returns a bool value of true and nil
+	// error, while in case of success it returns a bool value of false and nil error.
 	Retryable func(context.Context, *GetFunctionInput, *GetFunctionOutput, error) (bool, error)
 }
 
@@ -266,7 +284,16 @@ func (w *FunctionActiveV2Waiter) WaitForOutput(ctx context.Context, params *GetF
 		}
 
 		out, err := w.client.GetFunction(ctx, params, func(o *Options) {
+			baseOpts := []func(*Options){
+				addIsWaiterUserAgent,
+			}
 			o.APIOptions = append(o.APIOptions, apiOptions...)
+			for _, opt := range baseOpts {
+				opt(o)
+			}
+			for _, opt := range options.ClientOptions {
+				opt(o)
+			}
 		})
 
 		retryable, err := options.Retryable(ctx, params, out, err)
@@ -361,7 +388,16 @@ type FunctionExistsWaiterOptions struct {
 	// Set of options to modify how an operation is invoked. These apply to all
 	// operations invoked for this client. Use functional options on operation call to
 	// modify this list for per operation behavior.
+	//
+	// Passing options here is functionally equivalent to passing values to this
+	// config's ClientOptions field that extend the inner client's APIOptions directly.
 	APIOptions []func(*middleware.Stack) error
+
+	// Functional options to be passed to all operations invoked by this client.
+	//
+	// Function values that modify the inner APIOptions are applied after the waiter
+	// config's own APIOptions modifiers.
+	ClientOptions []func(*Options)
 
 	// MinDelay is the minimum amount of time to delay between retries. If unset,
 	// FunctionExistsWaiter will use default minimum delay of 1 seconds. Note that
@@ -378,12 +414,13 @@ type FunctionExistsWaiterOptions struct {
 
 	// Retryable is function that can be used to override the service defined
 	// waiter-behavior based on operation output, or returned error. This function is
-	// used by the waiter to decide if a state is retryable or a terminal state. By
-	// default service-modeled logic will populate this option. This option can thus be
-	// used to define a custom waiter state with fall-back to service-modeled waiter
-	// state mutators.The function returns an error in case of a failure state. In case
-	// of retry state, this function returns a bool value of true and nil error, while
-	// in case of success it returns a bool value of false and nil error.
+	// used by the waiter to decide if a state is retryable or a terminal state.
+	//
+	// By default service-modeled logic will populate this option. This option can
+	// thus be used to define a custom waiter state with fall-back to service-modeled
+	// waiter state mutators.The function returns an error in case of a failure state.
+	// In case of retry state, this function returns a bool value of true and nil
+	// error, while in case of success it returns a bool value of false and nil error.
 	Retryable func(context.Context, *GetFunctionInput, *GetFunctionOutput, error) (bool, error)
 }
 
@@ -460,7 +497,16 @@ func (w *FunctionExistsWaiter) WaitForOutput(ctx context.Context, params *GetFun
 		}
 
 		out, err := w.client.GetFunction(ctx, params, func(o *Options) {
+			baseOpts := []func(*Options){
+				addIsWaiterUserAgent,
+			}
 			o.APIOptions = append(o.APIOptions, apiOptions...)
+			for _, opt := range baseOpts {
+				opt(o)
+			}
+			for _, opt := range options.ClientOptions {
+				opt(o)
+			}
 		})
 
 		retryable, err := options.Retryable(ctx, params, out, err)
@@ -515,7 +561,16 @@ type FunctionUpdatedV2WaiterOptions struct {
 	// Set of options to modify how an operation is invoked. These apply to all
 	// operations invoked for this client. Use functional options on operation call to
 	// modify this list for per operation behavior.
+	//
+	// Passing options here is functionally equivalent to passing values to this
+	// config's ClientOptions field that extend the inner client's APIOptions directly.
 	APIOptions []func(*middleware.Stack) error
+
+	// Functional options to be passed to all operations invoked by this client.
+	//
+	// Function values that modify the inner APIOptions are applied after the waiter
+	// config's own APIOptions modifiers.
+	ClientOptions []func(*Options)
 
 	// MinDelay is the minimum amount of time to delay between retries. If unset,
 	// FunctionUpdatedV2Waiter will use default minimum delay of 1 seconds. Note that
@@ -532,12 +587,13 @@ type FunctionUpdatedV2WaiterOptions struct {
 
 	// Retryable is function that can be used to override the service defined
 	// waiter-behavior based on operation output, or returned error. This function is
-	// used by the waiter to decide if a state is retryable or a terminal state. By
-	// default service-modeled logic will populate this option. This option can thus be
-	// used to define a custom waiter state with fall-back to service-modeled waiter
-	// state mutators.The function returns an error in case of a failure state. In case
-	// of retry state, this function returns a bool value of true and nil error, while
-	// in case of success it returns a bool value of false and nil error.
+	// used by the waiter to decide if a state is retryable or a terminal state.
+	//
+	// By default service-modeled logic will populate this option. This option can
+	// thus be used to define a custom waiter state with fall-back to service-modeled
+	// waiter state mutators.The function returns an error in case of a failure state.
+	// In case of retry state, this function returns a bool value of true and nil
+	// error, while in case of success it returns a bool value of false and nil error.
 	Retryable func(context.Context, *GetFunctionInput, *GetFunctionOutput, error) (bool, error)
 }
 
@@ -614,7 +670,16 @@ func (w *FunctionUpdatedV2Waiter) WaitForOutput(ctx context.Context, params *Get
 		}
 
 		out, err := w.client.GetFunction(ctx, params, func(o *Options) {
+			baseOpts := []func(*Options){
+				addIsWaiterUserAgent,
+			}
 			o.APIOptions = append(o.APIOptions, apiOptions...)
+			for _, opt := range baseOpts {
+				opt(o)
+			}
+			for _, opt := range options.ClientOptions {
+				opt(o)
+			}
 		})
 
 		retryable, err := options.Retryable(ctx, params, out, err)
@@ -703,134 +768,17 @@ func functionUpdatedV2StateRetryable(ctx context.Context, input *GetFunctionInpu
 	return true, nil
 }
 
+// GetFunctionAPIClient is a client that implements the GetFunction operation.
+type GetFunctionAPIClient interface {
+	GetFunction(context.Context, *GetFunctionInput, ...func(*Options)) (*GetFunctionOutput, error)
+}
+
+var _ GetFunctionAPIClient = (*Client)(nil)
+
 func newServiceMetadataMiddleware_opGetFunction(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "lambda",
 		OperationName: "GetFunction",
 	}
-}
-
-type opGetFunctionResolveEndpointMiddleware struct {
-	EndpointResolver EndpointResolverV2
-	BuiltInResolver  builtInParameterResolver
-}
-
-func (*opGetFunctionResolveEndpointMiddleware) ID() string {
-	return "ResolveEndpointV2"
-}
-
-func (m *opGetFunctionResolveEndpointMiddleware) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
-	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
-) {
-	if awsmiddleware.GetRequiresLegacyEndpoints(ctx) {
-		return next.HandleSerialize(ctx, in)
-	}
-
-	req, ok := in.Request.(*smithyhttp.Request)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown transport type %T", in.Request)
-	}
-
-	if m.EndpointResolver == nil {
-		return out, metadata, fmt.Errorf("expected endpoint resolver to not be nil")
-	}
-
-	params := EndpointParameters{}
-
-	m.BuiltInResolver.ResolveBuiltIns(&params)
-
-	var resolvedEndpoint smithyendpoints.Endpoint
-	resolvedEndpoint, err = m.EndpointResolver.ResolveEndpoint(ctx, params)
-	if err != nil {
-		return out, metadata, fmt.Errorf("failed to resolve service endpoint, %w", err)
-	}
-
-	req.URL = &resolvedEndpoint.URI
-
-	for k := range resolvedEndpoint.Headers {
-		req.Header.Set(
-			k,
-			resolvedEndpoint.Headers.Get(k),
-		)
-	}
-
-	authSchemes, err := internalauth.GetAuthenticationSchemes(&resolvedEndpoint.Properties)
-	if err != nil {
-		var nfe *internalauth.NoAuthenticationSchemesFoundError
-		if errors.As(err, &nfe) {
-			// if no auth scheme is found, default to sigv4
-			signingName := "lambda"
-			signingRegion := m.BuiltInResolver.(*builtInResolver).Region
-			ctx = awsmiddleware.SetSigningName(ctx, signingName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
-
-		}
-		var ue *internalauth.UnSupportedAuthenticationSchemeSpecifiedError
-		if errors.As(err, &ue) {
-			return out, metadata, fmt.Errorf(
-				"This operation requests signer version(s) %v but the client only supports %v",
-				ue.UnsupportedSchemes,
-				internalauth.SupportedSchemes,
-			)
-		}
-	}
-
-	for _, authScheme := range authSchemes {
-		switch authScheme.(type) {
-		case *internalauth.AuthenticationSchemeV4:
-			v4Scheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4)
-			var signingName, signingRegion string
-			if v4Scheme.SigningName == nil {
-				signingName = "lambda"
-			} else {
-				signingName = *v4Scheme.SigningName
-			}
-			if v4Scheme.SigningRegion == nil {
-				signingRegion = m.BuiltInResolver.(*builtInResolver).Region
-			} else {
-				signingRegion = *v4Scheme.SigningRegion
-			}
-			if v4Scheme.DisableDoubleEncoding != nil {
-				// The signer sets an equivalent value at client initialization time.
-				// Setting this context value will cause the signer to extract it
-				// and override the value set at client initialization time.
-				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4Scheme.DisableDoubleEncoding)
-			}
-			ctx = awsmiddleware.SetSigningName(ctx, signingName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
-			break
-		case *internalauth.AuthenticationSchemeV4A:
-			v4aScheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4A)
-			if v4aScheme.SigningName == nil {
-				v4aScheme.SigningName = aws.String("lambda")
-			}
-			if v4aScheme.DisableDoubleEncoding != nil {
-				// The signer sets an equivalent value at client initialization time.
-				// Setting this context value will cause the signer to extract it
-				// and override the value set at client initialization time.
-				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4aScheme.DisableDoubleEncoding)
-			}
-			ctx = awsmiddleware.SetSigningName(ctx, *v4aScheme.SigningName)
-			ctx = awsmiddleware.SetSigningRegion(ctx, v4aScheme.SigningRegionSet[0])
-			break
-		case *internalauth.AuthenticationSchemeNone:
-			break
-		}
-	}
-
-	return next.HandleSerialize(ctx, in)
-}
-
-func addGetFunctionResolveEndpointMiddleware(stack *middleware.Stack, options Options) error {
-	return stack.Serialize.Insert(&opGetFunctionResolveEndpointMiddleware{
-		EndpointResolver: options.EndpointResolverV2,
-		BuiltInResolver: &builtInResolver{
-			Region:       options.Region,
-			UseDualStack: options.EndpointOptions.UseDualStackEndpoint,
-			UseFIPS:      options.EndpointOptions.UseFIPSEndpoint,
-			Endpoint:     options.BaseEndpoint,
-		},
-	}, "ResolveEndpoint", middleware.After)
 }

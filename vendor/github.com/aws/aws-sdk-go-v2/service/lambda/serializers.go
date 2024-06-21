@@ -93,8 +93,11 @@ func awsRestjson1_serializeOpHttpBindingsAddLayerVersionPermissionInput(v *AddLa
 		encoder.SetQuery("RevisionId").String(*v.RevisionId)
 	}
 
-	{
-		if err := encoder.SetURI("VersionNumber").Long(v.VersionNumber); err != nil {
+	if v.VersionNumber == nil {
+		return &smithy.SerializationError{Err: fmt.Errorf("input member VersionNumber must not be empty")}
+	}
+	if v.VersionNumber != nil {
+		if err := encoder.SetURI("VersionNumber").Long(*v.VersionNumber); err != nil {
 			return err
 		}
 	}
@@ -806,6 +809,13 @@ func awsRestjson1_serializeOpDocumentCreateFunctionInput(v *CreateFunctionInput,
 	if v.Layers != nil {
 		ok := object.Key("Layers")
 		if err := awsRestjson1_serializeDocumentLayerList(v.Layers, ok); err != nil {
+			return err
+		}
+	}
+
+	if v.LoggingConfig != nil {
+		ok := object.Key("LoggingConfig")
+		if err := awsRestjson1_serializeDocumentLoggingConfig(v.LoggingConfig, ok); err != nil {
 			return err
 		}
 	}
@@ -1578,8 +1588,11 @@ func awsRestjson1_serializeOpHttpBindingsDeleteLayerVersionInput(v *DeleteLayerV
 		}
 	}
 
-	{
-		if err := encoder.SetURI("VersionNumber").Long(v.VersionNumber); err != nil {
+	if v.VersionNumber == nil {
+		return &smithy.SerializationError{Err: fmt.Errorf("input member VersionNumber must not be empty")}
+	}
+	if v.VersionNumber != nil {
+		if err := encoder.SetURI("VersionNumber").Long(*v.VersionNumber); err != nil {
 			return err
 		}
 	}
@@ -2380,8 +2393,11 @@ func awsRestjson1_serializeOpHttpBindingsGetLayerVersionInput(v *GetLayerVersion
 		}
 	}
 
-	{
-		if err := encoder.SetURI("VersionNumber").Long(v.VersionNumber); err != nil {
+	if v.VersionNumber == nil {
+		return &smithy.SerializationError{Err: fmt.Errorf("input member VersionNumber must not be empty")}
+	}
+	if v.VersionNumber != nil {
+		if err := encoder.SetURI("VersionNumber").Long(*v.VersionNumber); err != nil {
 			return err
 		}
 	}
@@ -2511,8 +2527,11 @@ func awsRestjson1_serializeOpHttpBindingsGetLayerVersionPolicyInput(v *GetLayerV
 		}
 	}
 
-	{
-		if err := encoder.SetURI("VersionNumber").Long(v.VersionNumber); err != nil {
+	if v.VersionNumber == nil {
+		return &smithy.SerializationError{Err: fmt.Errorf("input member VersionNumber must not be empty")}
+	}
+	if v.VersionNumber != nil {
+		if err := encoder.SetURI("VersionNumber").Long(*v.VersionNumber); err != nil {
 			return err
 		}
 	}
@@ -4620,8 +4639,11 @@ func awsRestjson1_serializeOpHttpBindingsRemoveLayerVersionPermissionInput(v *Re
 		}
 	}
 
-	{
-		if err := encoder.SetURI("VersionNumber").Long(v.VersionNumber); err != nil {
+	if v.VersionNumber == nil {
+		return &smithy.SerializationError{Err: fmt.Errorf("input member VersionNumber must not be empty")}
+	}
+	if v.VersionNumber != nil {
+		if err := encoder.SetURI("VersionNumber").Long(*v.VersionNumber); err != nil {
 			return err
 		}
 	}
@@ -5525,6 +5547,13 @@ func awsRestjson1_serializeOpDocumentUpdateFunctionConfigurationInput(v *UpdateF
 		}
 	}
 
+	if v.LoggingConfig != nil {
+		ok := object.Key("LoggingConfig")
+		if err := awsRestjson1_serializeDocumentLoggingConfig(v.LoggingConfig, ok); err != nil {
+			return err
+		}
+	}
+
 	if v.MemorySize != nil {
 		ok := object.Key("MemorySize")
 		ok.Integer(*v.MemorySize)
@@ -6259,6 +6288,33 @@ func awsRestjson1_serializeDocumentLayerVersionContentInput(v *types.LayerVersio
 	if v.ZipFile != nil {
 		ok := object.Key("ZipFile")
 		ok.Base64EncodeBytes(v.ZipFile)
+	}
+
+	return nil
+}
+
+func awsRestjson1_serializeDocumentLoggingConfig(v *types.LoggingConfig, value smithyjson.Value) error {
+	object := value.Object()
+	defer object.Close()
+
+	if len(v.ApplicationLogLevel) > 0 {
+		ok := object.Key("ApplicationLogLevel")
+		ok.String(string(v.ApplicationLogLevel))
+	}
+
+	if len(v.LogFormat) > 0 {
+		ok := object.Key("LogFormat")
+		ok.String(string(v.LogFormat))
+	}
+
+	if v.LogGroup != nil {
+		ok := object.Key("LogGroup")
+		ok.String(*v.LogGroup)
+	}
+
+	if len(v.SystemLogLevel) > 0 {
+		ok := object.Key("SystemLogLevel")
+		ok.String(string(v.SystemLogLevel))
 	}
 
 	return nil
