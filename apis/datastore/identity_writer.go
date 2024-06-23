@@ -46,28 +46,6 @@ type BatchIdentityWriter struct {
 	closed     bool
 }
 
-// newBatchIdentityWriter returns a new identity writer to write identities for
-// the provided action in the case when identities are imported in batch.
-// It panics if the action is not in execution.
-func newBatchIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *BatchIdentityWriter {
-	connection := action.Connection()
-	execution, ok := action.Execution()
-	if !ok {
-		panic("newBatchIdentityWriter called on a non-executing action")
-	}
-	iw := BatchIdentityWriter{
-		store:      store,
-		action:     action.ID,
-		connection: connection.ID,
-		execution:  execution.ID,
-		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
-		ack:        ack,
-		purge:      execution.Reimport,
-		columns:    map[string]warehouses.Column{},
-	}
-	return &iw
-}
-
 // Close closes the Writer, ensuring the completion of all pending or ongoing
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.

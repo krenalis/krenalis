@@ -248,10 +248,9 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
 
-// BatchIdentityWriter returns an identity writer for writing user identities,
-// relative to the action, on the data warehouse, in case of importing
-// identities in batch. ack is the ack function (see the documentation of
-// IdentityWriter for more details about it).
+// BatchIdentityWriter returns an identity writer for writing user identities in
+// batch, relative to the given action (which must be in execution) on the data
+// warehouse. The ack parameter is the acknowledgment function.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
@@ -268,7 +267,22 @@ func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriter
 	case state.Maintenance:
 		return nil, ErrMaintenanceMode
 	}
-	return newBatchIdentityWriter(store, action, ack), nil
+	connection := action.Connection()
+	execution, ok := action.Execution()
+	if !ok {
+		return nil, fmt.Errorf("action is not not in execution")
+	}
+	iw := BatchIdentityWriter{
+		store:      store,
+		action:     action.ID,
+		connection: connection.ID,
+		execution:  execution.ID,
+		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
+		ack:        ack,
+		purge:      execution.Reimport,
+		columns:    map[string]warehouses.Column{},
+	}
+	return &iw, nil
 }
 
 // EventIdentityWriter returns an identity writer for writing user identities,
