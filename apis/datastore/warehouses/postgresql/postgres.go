@@ -109,19 +109,6 @@ func (warehouse *PostgreSQL) Close() error {
 	return nil
 }
 
-// DeleteConnectionIdentities deletes the identities of a connection.
-func (warehouse *PostgreSQL) DeleteConnectionIdentities(ctx context.Context, connection int) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec(ctx, `DELETE FROM "_user_identities" WHERE "__connection__" = $1`, connection)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-	return nil
-}
-
 // DestinationUsers returns the destination users of the action.
 func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	db, err := warehouse.connection()
@@ -276,7 +263,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
 	}
-	b.WriteString(`false AS "$deleted" FROM "`)
+	b.WriteString(`false AS "$purge" FROM "`)
 	b.WriteString(tableName)
 	b.WriteString("\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
@@ -308,7 +295,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		for i, c := range table.Keys {
 			columnNames[i] = c.Name
 		}
-		columnNames[len(columnNames)-1] = "$deleted"
+		columnNames[len(columnNames)-1] = "$purge"
 		rowSrc := newCopyForDeleteFrom(len(table.Keys), deleted)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
@@ -334,7 +321,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		b.WriteByte('"')
 	}
 	if len(rows) > 0 {
-		b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
+		b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
 		i := 0
 	Set:
 		for _, c := range table.Columns {
@@ -353,7 +340,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			b.WriteByte('"')
 			i++
 		}
-		b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
+		b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
@@ -385,7 +372,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 }
 
 // immutableMergeIdentitiesColumns are columns in the merge of identities that
-// are the immutable.
+// are immutable.
 var immutableMergeIdentitiesColumns = []string{
 	"__action__",
 	"__identity_id__",
@@ -414,7 +401,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
 	}
-	b.WriteString("FALSE AS \"$deleted\" FROM \"_user_identities\"\nWITH NO DATA")
+	b.WriteString("FALSE AS \"$purge\" FROM \"_user_identities\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
@@ -431,7 +418,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	for i, c := range columns {
 		columnNames[i] = c.Name
 	}
-	columnNames[len(columns)] = `$deleted`
+	columnNames[len(columns)] = `$purge`
 	_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
 	if err != nil {
 		return warehouses.Error(err)
@@ -439,10 +426,10 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 
 	// Merge the temporary table's rows with the destination table's rows.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_user_identities\" d\nUSING \"")
+	b.WriteString("MERGE INTO \"_user_identities\" AS d\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
-	b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
+	b.WriteString("\" AS s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
+	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
 	j := 0
 	for _, c := range columns {
 		if slices.Contains(immutableMergeIdentitiesColumns, c.Name) {
@@ -463,7 +450,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		}
 		j++
 	}
-	b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
+	b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
@@ -481,7 +468,8 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(c.Name)
 		b.WriteByte('"')
 	}
-	b.WriteString(")\nWHEN MATCHED THEN\n  DELETE")
+	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" IS FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
+	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS TRUE THEN\n  DELETE")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
@@ -497,6 +485,20 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 		return err
 	}
 	err = db.Ping(ctx)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
+}
+
+// PurgeIdentities purges identities associated with the provided action that
+// do not match the specified execution.
+func (warehouse *PostgreSQL) PurgeIdentities(ctx context.Context, action, execution int) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(ctx, `DELETE FROM "_user_identities" WHERE "__action__" = $1 AND "__execution__" != $2`, action, execution)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -613,8 +615,8 @@ func (c *copyForIdentities) Values() ([]any, error) {
 	for i, column := range c.columns {
 		c.values[i] = row[column.Name]
 	}
-	if deleted, _ := row["$deleted"].(bool); deleted {
-		c.values[len(c.values)-1] = true
+	if purge, ok := row["$purge"].(bool); ok {
+		c.values[len(c.values)-1] = purge
 	} else {
 		c.values[len(c.values)-1] = nil
 	}

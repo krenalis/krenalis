@@ -16,7 +16,6 @@ import (
 
 	"github.com/open2b/chichi/apis/connectors"
 	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/statistics"
 	"github.com/open2b/chichi/apis/transformers"
@@ -41,18 +40,6 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		var lastChangeTime time.Time
 		if !execution.Reimport {
 			lastChangeTime = action.UserCursor
-		}
-		if execution.Reimport {
-			err = this.connection.store.DeleteConnectionIdentities(ctx, action.Connection().ID)
-			if err != nil {
-				if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
-					return actionExecutionError{err}
-				}
-				if err, ok := err.(*warehouses.DataWarehouseError); ok {
-					return actionExecutionError{fmt.Errorf("cannot delete the already-existing identities before starting the import: %s", err)}
-				}
-				return err
-			}
 		}
 		records, err = this.app().Users(ctx, action.InSchema, lastChangeTime)
 	case state.DatabaseType:
@@ -113,6 +100,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	for user := range records.All(ctx) {
 
 		if user.Err != nil {
+			iw.Keep(user.ID)
 			if _, ok := user.Err.(ValidationError); ok {
 				stats.Passed(statistics.Receiving)
 				stats.Failed(statistics.InputValidation, user.Err.Error())

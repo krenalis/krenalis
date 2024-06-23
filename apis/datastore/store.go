@@ -178,23 +178,6 @@ func (store *Store) AddEvents(events [][]any) error {
 	return nil
 }
 
-// DeleteConnectionIdentities deletes the identities of a connection.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) DeleteConnectionIdentities(ctx context.Context, connection int) error {
-	store.mustBeOpen()
-	switch store.Mode() {
-	case state.Inspection:
-		return ErrInspectionMode
-	case state.Maintenance:
-		return ErrMaintenanceMode
-	}
-	return store.warehouse.DeleteConnectionIdentities(ctx, connection)
-}
-
 // DestinationUsers returns the external app identifiers of the destination
 // users of the action whose external matching property value matches with the
 // given property value. If it cannot be found, then an empty slice and false

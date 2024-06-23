@@ -116,11 +116,6 @@ type Warehouse interface {
 	// data warehouse's methods are in progress and no more will be made.
 	Close() error
 
-	// DeleteConnectionIdentities deletes the identities of a connection.
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
-	DeleteConnectionIdentities(ctx context.Context, connection int) error
-
 	// DestinationUsers returns the destination users of the action.
 	// In particular, returns the external app identifiers of the destination users
 	// of the action whose external matching property value matches with the given
@@ -172,10 +167,10 @@ type Warehouse interface {
 	// non-NULL element, which is appended in the identity table if it does not
 	// already exist.
 	//
-	// rows are the rows to update or add if not already present. If a row contains
-	// the "$deleted" column with value true, then the matching row in the
-	// identities table is deleted.
-	// Note that rows may be changed by this method.
+	// rows contains the rows to update or add if not already present. If a row
+	// contains the $purge column with a value of true, the matching row is purged.
+	// If the value is false, only the __execution__ column is updated to indicate
+	// that the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
 	// Normalize normalizes a value v returned by the Query method.
@@ -187,6 +182,11 @@ type Warehouse interface {
 	// In particular, it checks whether the connection to the data warehouse is
 	// active and, if necessary, establishes a new connection.
 	Ping(ctx context.Context) error
+
+	// PurgeIdentities purges identities associated with the provided action that
+	// do not match the specified execution. If an error occurs with the data
+	// warehouse, it returns a *DataWarehouseError error.
+	PurgeIdentities(ctx context.Context, action, execution int) error
 
 	// RunIdentityResolution runs the Identity Resolution.
 	//

@@ -6,6 +6,7 @@ CREATE TABLE _user_identities (
     "__connection__" integer NOT NULL,
     "__anonymous_ids__" text [],
     "__last_change_time__" timestamp NOT NULL,
+    "__execution__" integer,
     "__gid__" uuid,
     "__cluster__" serial,
     "email" varchar(300),

@@ -102,11 +102,6 @@ func (warehouse *ClickHouse) Close() error {
 	return err
 }
 
-// DeleteConnectionIdentities deletes the identities of a connection.
-func (warehouse *ClickHouse) DeleteConnectionIdentities(ctx context.Context, connection int) error {
-	panic("not implemented")
-}
-
 // DestinationUsers returns the destination users of the action.
 func (warehouse *ClickHouse) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	panic("TODO: not implemented")
@@ -164,6 +159,12 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 		return warehouses.Error(err)
 	}
 	return nil
+}
+
+// PurgeIdentities purges identities associated with the provided action that
+// do not match the specified execution.
+func (warehouse *ClickHouse) PurgeIdentities(ctx context.Context, action, execution int) error {
+	panic("not implemented")
 }
 
 // SetDestinationUser sets the destination user for an action.

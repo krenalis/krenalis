@@ -110,11 +110,6 @@ func (warehouse *Snowflake) Close() error {
 	return nil
 }
 
-// DeleteConnectionIdentities deletes the identities of a connection.
-func (warehouse *Snowflake) DeleteConnectionIdentities(ctx context.Context, connection int) error {
-	panic("not implemented")
-}
-
 // DestinationUsers returns the destination users of the action.
 func (warehouse *Snowflake) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
 	panic("not implemented")
@@ -225,7 +220,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		}
 		q.WriteString(",\n")
 	}
-	q.WriteString("\"$deleted\" BOOLEAN NOT NULL\n)")
+	q.WriteString("\"$purge\" BOOLEAN NOT NULL\n)")
 
 	conn, err := db.Conn(ctx)
 	if err != nil {
@@ -306,7 +301,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		q.WriteByte('"')
 	}
 	if len(rows) > 0 {
-		q.WriteString("\nWHEN MATCHED AND NOT s.\"$deleted\" THEN\n  UPDATE SET ")
+		q.WriteString("\nWHEN MATCHED AND NOT s.\"$purge\" THEN\n  UPDATE SET ")
 		i := 0
 	Set:
 		for _, c := range table.Columns {
@@ -325,7 +320,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			q.WriteByte('"')
 			i++
 		}
-		q.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$deleted\" THEN\n  INSERT (")
+		q.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$purge\" THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				q.WriteByte(',')
@@ -372,6 +367,12 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 		return warehouses.Error(err)
 	}
 	return nil
+}
+
+// PurgeIdentities purges identities associated with the provided action that
+// do not match the specified execution.
+func (warehouse *Snowflake) PurgeIdentities(ctx context.Context, action, execution int) error {
+	panic("not implemented")
 }
 
 // Query executes a query and returns the results as a Rows.
@@ -422,7 +423,7 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 }
 
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
-// returns it as an io.Reader. It also appends a boolean column called $deleted
+// returns it as an io.Reader. It also appends a boolean column called $purge
 // with the value of the 'deleted' argument as value for each row.
 func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool) (io.Reader, error) {
 	var b bytes.Buffer
@@ -433,7 +434,7 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 		}
 		b.WriteString(c.Name)
 	}
-	b.WriteString(",$deleted\n")
+	b.WriteString(",$purge\n")
 	for i, row := range rows {
 		if i > 0 {
 			b.WriteByte('\n')
@@ -496,7 +497,7 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 				}
 			}
 		}
-		// Add the value for the column $deleted.
+		// Add the value for the column $purge.
 		if deleted {
 			b.WriteString(",true")
 		} else {

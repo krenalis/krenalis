@@ -36,24 +36,33 @@ type BatchIdentityWriter struct {
 	store      *Store
 	action     int
 	connection int
+	execution  int
 	ack        IdentityWriterAckFunc
 	flatter    *flatter
 	columns    map[string]warehouses.Column
 	rows       []map[string]any
 	ackIDs     []string
+	purge      bool
 	closed     bool
 }
 
 // newBatchIdentityWriter returns a new identity writer to write identities for
 // the provided action in the case when identities are imported in batch.
+// It panics if the action is not in execution.
 func newBatchIdentityWriter(store *Store, action *state.Action, ack IdentityWriterAckFunc) *BatchIdentityWriter {
 	connection := action.Connection()
+	execution, ok := action.Execution()
+	if !ok {
+		panic("newBatchIdentityWriter called on a non-executing action")
+	}
 	iw := BatchIdentityWriter{
 		store:      store,
 		action:     action.ID,
 		connection: connection.ID,
+		execution:  execution.ID,
 		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
 		ack:        ack,
+		purge:      execution.Reimport,
 		columns:    map[string]warehouses.Column{},
 	}
 	return &iw
@@ -62,6 +71,9 @@ func newBatchIdentityWriter(store *Store, action *state.Action, ack IdentityWrit
 // Close closes the Writer, ensuring the completion of all pending or ongoing
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.
+//
+// In case of reimports, it purges all identities of the action for which
+// neither the Write method nor the Keep method has been called.
 //
 // In case an error occurs with the data warehouse, a DataWarehouseError error
 // is returned.
@@ -72,16 +84,42 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		return nil
 	}
 	iw.closed = true
-	if iw.rows == nil {
-		return nil
+	if iw.rows != nil {
+		columns := identitiesMergeColumns(iw.columns)
+		err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
+		if err != nil {
+			return err
+		}
+		iw.ack(iw.ackIDs, nil)
 	}
-	columns := identitiesMergeColumns(iw.columns)
-	err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
-	if err != nil {
-		return err
+	if iw.purge {
+		err := iw.store.warehouse.PurgeIdentities(ctx, iw.action, iw.execution)
+		if err != nil {
+			return err
+		}
 	}
-	iw.ack(iw.ackIDs, nil)
 	return nil
+}
+
+// Keep keeps the identity with the identifier id. Use Keep instead of Write
+// when there is no need to modify the identity, but to ensure it is not purged
+// in case of reimports.
+func (iw *BatchIdentityWriter) Keep(id string) {
+	if iw.closed {
+		panic("call Keep on a closed identity writer")
+	}
+	if !iw.purge {
+		return
+	}
+	row := map[string]any{
+		"$purge":           false,
+		"__action__":       iw.action,
+		"__is_anonymous__": false,
+		"__connection__":   iw.connection,
+		"__identity_id__":  id,
+		"__execution__":    iw.execution,
+	}
+	iw.rows = append(iw.rows, row)
 }
 
 // Write writes a user identity. If a valid user schema has been provided, the
@@ -106,6 +144,7 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	row["__connection__"] = iw.connection
 	row["__identity_id__"] = identity.ID
 	row["__last_change_time__"] = identity.LastChangeTime
+	row["__execution__"] = iw.execution
 	iw.rows = append(iw.rows, row)
 	iw.ackIDs = append(iw.ackIDs, ackID)
 	return nil
@@ -192,7 +231,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		iw.mu.Unlock()
 		for action := range actions {
 			iw.rows = append(iw.rows, map[string]any{
-				"$deleted":             true,
+				"$purge":               true,
 				"__action__":           action,
 				"__is_anonymous__":     true,
 				"__identity_id__":      identity.AnonymousID,
@@ -354,17 +393,18 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns 
 // identitiesMergeColumns returns the columns to be used during the identities
 // merge operation, both when importing in batch and from events.
 func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
-	columns := make([]warehouses.Column, 6+len(iwColumns))
+	columns := make([]warehouses.Column, 7+len(iwColumns))
 	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
 	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Text()}
 	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
 	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
 	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
 	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32)}
 	columnsNames := maps.Keys(iwColumns)
 	slices.Sort(columnsNames)
 	for i, name := range columnsNames {
-		columns[i+6] = iwColumns[name]
+		columns[i+7] = iwColumns[name]
 	}
 	return columns
 }
