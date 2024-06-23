@@ -65,6 +65,10 @@ type Query struct {
 	Limit int
 }
 
+// IdentityWriterAckFunc is the function called when a batch of user identities
+// have been written to the data warehouse.
+type IdentityWriterAckFunc func(ids []string, err error)
+
 type Store struct {
 	ds               *Datastore
 	workspace        int
@@ -178,6 +182,43 @@ func (store *Store) AddEvents(events [][]any) error {
 	return nil
 }
 
+// BatchIdentityWriter returns an identity writer for writing user identities in
+// batch, relative to the given action (which must be in execution) on the data
+// warehouse. The ack parameter is the acknowledgment function.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+//
+// It panics if the ack function is nil.
+func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+	if ack == nil {
+		panic("nil ack function")
+	}
+	store.mustBeOpen()
+	switch store.Mode() {
+	case state.Inspection:
+		return nil, ErrInspectionMode
+	case state.Maintenance:
+		return nil, ErrMaintenanceMode
+	}
+	connection := action.Connection()
+	execution, ok := action.Execution()
+	if !ok {
+		return nil, fmt.Errorf("action is not not in execution")
+	}
+	iw := BatchIdentityWriter{
+		store:      store,
+		action:     action.ID,
+		connection: connection.ID,
+		execution:  execution.ID,
+		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
+		ack:        ack,
+		purge:      execution.Reimport,
+		columns:    map[string]warehouses.Column{},
+	}
+	return &iw, nil
+}
+
 // DestinationUsers returns the external app identifiers of the destination
 // users of the action whose external matching property value matches with the
 // given property value. If it cannot be found, then an empty slice and false
@@ -227,62 +268,6 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (uuid.
 	}
 	column := strings.ReplaceAll(property, ".", "_")
 	return store.warehouse.DuplicatedUsers(ctx, column)
-}
-
-// Events returns the events according to the provided query.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
-	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, ErrMaintenanceMode
-	}
-	query.table = "events"
-	records, _, err := store.query(ctx, query, eventColumnByProperty)
-	return records, err
-}
-
-// IdentityWriterAckFunc is the function called when a batch of user identities
-// have been written to the data warehouse.
-type IdentityWriterAckFunc func(ids []string, err error)
-
-// BatchIdentityWriter returns an identity writer for writing user identities in
-// batch, relative to the given action (which must be in execution) on the data
-// warehouse. The ack parameter is the acknowledgment function.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-//
-// It panics if the ack function is nil.
-func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
-	if ack == nil {
-		panic("nil ack function")
-	}
-	store.mustBeOpen()
-	switch store.Mode() {
-	case state.Inspection:
-		return nil, ErrInspectionMode
-	case state.Maintenance:
-		return nil, ErrMaintenanceMode
-	}
-	connection := action.Connection()
-	execution, ok := action.Execution()
-	if !ok {
-		return nil, fmt.Errorf("action is not not in execution")
-	}
-	iw := BatchIdentityWriter{
-		store:      store,
-		action:     action.ID,
-		connection: connection.ID,
-		execution:  execution.ID,
-		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
-		ack:        ack,
-		purge:      execution.Reimport,
-		columns:    map[string]warehouses.Column{},
-	}
-	return &iw, nil
 }
 
 // EventIdentityWriter returns an identity writer for writing user identities,
@@ -340,6 +325,21 @@ func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc)
 	store.ds.state.Unfreeze()
 
 	return iw, nil
+}
+
+// Events returns the events according to the provided query.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
+func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
+	store.mustBeOpen()
+	if store.Mode() == state.Maintenance {
+		return nil, ErrMaintenanceMode
+	}
+	query.table = "events"
+	records, _, err := store.query(ctx, query, eventColumnByProperty)
+	return records, err
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -516,13 +516,6 @@ func (store *Store) close() error {
 	return err
 }
 
-// mustBeOpen panics if store has been closed.
-func (store *Store) mustBeOpen() {
-	if store.closed.Load() {
-		panic("apis/datastore/store is closed")
-	}
-}
-
 // identityColumnByProperty returns the map from properties to columns for the
 // identity schema.
 func (store *Store) identityColumnByProperty() map[string]warehouses.Column {
@@ -530,6 +523,78 @@ func (store *Store) identityColumnByProperty() map[string]warehouses.Column {
 	columns := store.columnByProperty.identity
 	store.columnByProperty.mu.Unlock()
 	return columns
+}
+
+// mustBeOpen panics if store has been closed.
+func (store *Store) mustBeOpen() {
+	if store.closed.Load() {
+		panic("apis/datastore/store is closed")
+	}
+}
+
+// onAddAction is called when an action of the store's workspace is added.
+//
+// The notification is propagated by the Store.onAddAction method.
+func (store *Store) onAddAction(n state.AddAction) {
+	store.mu.Lock()
+	for _, iw := range store.eventIdentityWriters {
+		if iw.connection == n.Connection {
+			iw.onAddAction(n)
+		}
+	}
+	store.mu.Unlock()
+}
+
+// onDeleteAction is called when an action of the store's workspace is deleted.
+//
+// The notification is propagated by the Store.onDeleteAction method.
+func (store *Store) onDeleteAction(n state.DeleteAction) {
+	connection := n.Action().Connection().ID
+	store.mu.Lock()
+	for _, iw := range store.eventIdentityWriters {
+		if iw.connection == connection {
+			iw.onDeleteAction(n)
+		}
+	}
+	store.mu.Unlock()
+}
+
+// onSetAction is called when an action of the store's workspace is set.
+//
+// The notification is propagated by the Store.onSetAction method.
+func (store *Store) onSetAction(n state.SetAction) func() {
+	store.mu.Lock()
+	iw, ok := store.eventIdentityWriters[n.ID]
+	store.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return func() {
+		iw.onSetAction(n)
+	}
+}
+
+// onSetWorkspaceUserSchema is called when the user schema of the store's
+// workspace is set.
+//
+// The notification is propagated by the Store.onSetWorkspaceUserSchema method.
+func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
+
+	// Update the user and the identity columns.
+	store.columnByProperty.mu.Lock()
+	store.columnByProperty.user = columnByProperty(n.UserSchema)
+	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
+	store.columnByProperty.mu.Unlock()
+
+	// Propagate the notification to the EventIdentityWriters.
+	store.mu.Lock()
+	for _, iw := range store.eventIdentityWriters {
+		iw.onSetWorkspaceUserSchema(n)
+	}
+	store.mu.Unlock()
+
 }
 
 // query executes the provided query on the data warehouse and returns an
@@ -606,69 +671,4 @@ func (store *Store) userColumnByProperty() map[string]warehouses.Column {
 	columns := store.columnByProperty.user
 	store.columnByProperty.mu.Unlock()
 	return columns
-}
-
-// onAddAction is called when an action of the store's workspace is added.
-//
-// The notification is propagated by the Store.onAddAction method.
-func (store *Store) onAddAction(n state.AddAction) {
-	store.mu.Lock()
-	for _, iw := range store.eventIdentityWriters {
-		if iw.connection == n.Connection {
-			iw.onAddAction(n)
-		}
-	}
-	store.mu.Unlock()
-}
-
-// onDeleteAction is called when an action of the store's workspace is deleted.
-//
-// The notification is propagated by the Store.onDeleteAction method.
-func (store *Store) onDeleteAction(n state.DeleteAction) {
-	connection := n.Action().Connection().ID
-	store.mu.Lock()
-	for _, iw := range store.eventIdentityWriters {
-		if iw.connection == connection {
-			iw.onDeleteAction(n)
-		}
-	}
-	store.mu.Unlock()
-}
-
-// onSetAction is called when an action of the store's workspace is set.
-//
-// The notification is propagated by the Store.onSetAction method.
-func (store *Store) onSetAction(n state.SetAction) func() {
-	store.mu.Lock()
-	iw, ok := store.eventIdentityWriters[n.ID]
-	store.mu.Unlock()
-	if !ok {
-		return nil
-	}
-	return func() {
-		iw.onSetAction(n)
-	}
-}
-
-// onSetWorkspaceUserSchema is called when the user schema of the store's
-// workspace is set.
-//
-// The notification is propagated by the Store.onSetWorkspaceUserSchema method.
-func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
-
-	// Update the user and the identity columns.
-	store.columnByProperty.mu.Lock()
-	store.columnByProperty.user = columnByProperty(n.UserSchema)
-	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
-	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
-	store.columnByProperty.mu.Unlock()
-
-	// Propagate the notification to the EventIdentityWriters.
-	store.mu.Lock()
-	for _, iw := range store.eventIdentityWriters {
-		iw.onSetWorkspaceUserSchema(n)
-	}
-	store.mu.Unlock()
-
 }
