@@ -536,7 +536,15 @@ await chichiAnalytics.ready();
 
 ## reset
 
-The `reset` method resets the user and group identifiers, and updates or removes the Anonymous ID and traits according to the strategy. If `all` is true it always resets the Anonymous ID by generating a new one, and ends the session if one exists, regardless of the strategy.
+The `reset` method resets the user and group identifiers, and updates or removes the Anonymous ID and traits according to the strategy (as detailed in the table below). If `all` is true it always resets the Anonymous ID by generating a new one, and ends the session if one exists, regardless of the strategy.
+
+| Strategy | Behavior of `reset()`                                                                                                                               |
+|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| AB-C     | Removes User ID, Group ID, user and group traits, and changes Anonymous ID and session.                                                             |
+| ABC      | Removes User ID, Group ID, and user and group traits. Does not change Anonymous ID or session.                                                      |
+| A-B-C    | Removes User ID, Group ID, user and group traits, and changes Anonymous ID and session.                                                             |
+| AC-B     | Removes User ID. Restores Anonymous ID, Group ID, user and group traits, and session to their state before the latest [`identify`](#identify) call. |
+
 
 #### Syntax
 
@@ -555,15 +563,23 @@ reset(all?: boolean): void
 
 #### Parameters
 
-| Name       | Type      | Required                               | Description                                                                             |
-|------------|-----------|----------------------------------------|-----------------------------------------------------------------------------------------|
-| `all`       | `Boolean` |                                       | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy |
+| Name       | Type      | Required | Description                                                                              |
+|------------|-----------|----------|------------------------------------------------------------------------------------------|
+| `all`      | `Boolean` |          | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy. |
 
 #### Example
 
 ```javascript
-chichiAnalytics.reset(true);
+chichiAnalytics.reset();  // same as chichiAnalytics.reset(false)
 ```
+
+#### Segment Compatibility
+
+To align with Segment's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Chichi. Note that `reset(true)` is not available in Segment.
+
+#### RudderStack Compatibility
+
+To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Chichi. The only difference is that RudderStack changes the session, while Chichi does not. In Chichi, `reset(true)` works the same way as it does in RudderStack for all strategies.
 
 ## debug
 
