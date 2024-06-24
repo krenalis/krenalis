@@ -90,4 +90,21 @@ func TestImportUsersFromFile(t *testing.T) {
 		t.Fatalf("expecting \"count\" to be %d, got %d", expectedCount, count)
 	}
 
+	// Retrieve the user identities and test them.
+	identities, count := c.ConnectionIdentities(fsID, 0, 100)
+	if count != 2 {
+		t.Fatalf("expected 2 user identities, got %d", count)
+	}
+	for _, identity := range identities {
+		if identity.Connection != fsID {
+			t.Fatalf("expected connection %d, got %d", fsID, identity.Connection)
+		}
+		if identity.Action != importUsersActionID {
+			t.Fatalf("expected action %d, got %d", importUsersActionID, identity.Action)
+		}
+		if len(identity.AnonymousIds) != 0 {
+			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIds)
+		}
+	}
+
 }
