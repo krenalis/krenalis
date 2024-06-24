@@ -1,6 +1,6 @@
 module github.com/open2b/chichi/chichi-cli
 
-go 1.22
+go 1.23
 
 replace github.com/open2b/chichi => ../
 
