@@ -524,24 +524,26 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 
 	// Check if the transformation is mandatory, with at least one input
 	// property.
-	//
-	// For mappings, at least one property path must appear in the input
-	// expressions.
-	//
-	// For transformation functions, since every property of the input schema is
-	// passed to the function, the input schema must be valid (thus it must
-	// contain at least one property).
 	transformationMandatory := targetUsersOrGroups &&
 		(connector.Type == state.AppType || connector.Type == state.DatabaseType ||
 			(c.Role == state.Source && connector.Type == state.FileStorageType))
 	if transformationMandatory && !haveTransformation {
 		return errors.BadRequest("action must have a transformation")
 	}
-	if action.Transformation.Mapping != nil && mappingInProperties == 0 && !dispatchEventsToApps {
-		return errors.BadRequest("transformation must map at least one property")
-	}
-	if action.Transformation.Function != nil && !inSchema.Valid() && !dispatchEventsToApps {
-		return errors.BadRequest("transformation function must have at least one input property")
+
+	// Transformations must have at least one property in the input schema,
+	// except when importing identities from events and when dispatching events
+	// to apps, where "constant" transformation functions are supported.
+	//
+	// TODO(Gianluca): there may be some inconsistencies in this part, regarding
+	// UI, documentation and APIs. This still needs to be made consistent.
+	if !importUserIdentitiesFromEvents && !dispatchEventsToApps {
+		if action.Transformation.Mapping != nil && mappingInProperties == 0 {
+			return errors.BadRequest("transformation must map at least one property")
+		}
+		if action.Transformation.Function != nil && len(action.Transformation.Function.InProperties) == 0 {
+			return errors.BadRequest("transformation function must have at least one input property")
+		}
 	}
 
 	// Ensure that every property in the input and output schemas have been used

@@ -26,32 +26,25 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	var javaScriptKey string
-	{
-		javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
-		keys := c.ConnectionKeys(javaScriptID)
-		if len(keys) != 1 {
-			t.Fatalf("expecting one key, got %d keys", len(keys))
-		}
-		javaScriptKey = keys[0]
-		c.AddAction(javaScriptID, "Events", chichitester.ActionToSet{
-			Name:    "JavaScript events",
-			Enabled: true,
-		})
-		c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
-			Name:     "JavaScript users",
-			Enabled:  true,
-			InSchema: types.Type{},
-			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-			}),
-			Transformation: chichitester.Transformation{
-				Mapping: map[string]string{
-					"email": "traits.email",
-				},
+	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
+	javaScriptKey := c.ConnectionKeys(javaScriptID)[0]
+	c.AddAction(javaScriptID, "Events", chichitester.ActionToSet{
+		Name:    "JavaScript events",
+		Enabled: true,
+	})
+	importUsersAction := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+		Name:     "JavaScript users",
+		Enabled:  true,
+		InSchema: types.Type{},
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Nullable: true},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "traits.email",
 			},
-		})
-	}
+		},
+	})
 
 	const eventUserEmail = "event-user@example.com"
 	c.SendEvent(javaScriptKey, analytics.Identify{
@@ -72,9 +65,8 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 
 	// Retrieve the user imported from the event.
 	users, _, count := c.Users([]string{"email"}, "", 0, 100)
-	const expectedUsersCount = 1
-	if expectedUsersCount != count {
-		t.Fatalf("expecting %d user(s), got %d", expectedUsersCount, count)
+	if 1 != count {
+		t.Fatalf("expecting one user, got %d", count)
 	}
 	found := false
 	for _, user := range users {
@@ -86,6 +78,37 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("user with email %q not found", eventUserEmail)
+	}
+
+	// Change the action to import identities through a constant mapping.
+	c.SetAction(javaScriptID, importUsersAction, chichitester.ActionToSet{
+		Name:     "JavaScript users",
+		Enabled:  true,
+		InSchema: types.Type{},
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Nullable: true},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "'a@b'", // a constant email for every user
+			},
+		},
+	})
+
+	// Send an event identify and wait for the event to be stored in the
+	// warehouse.
+	c.SendEvent(javaScriptKey, analytics.Identify{
+		UserId: "uT8VT5tx1A",
+		Traits: map[string]interface{}{
+			"email": eventUserEmail,
+		},
+	})
+	c.WaitEventsStoredIntoWarehouse(ctx, 2)
+
+	// Check that the user has been created.
+	users, _, count = c.Users([]string{"email"}, "", 0, 100)
+	if count != 2 {
+		t.Fatalf("expecting 2 users, got %d", count)
 	}
 
 }
