@@ -12,6 +12,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"math/rand"
@@ -31,6 +32,7 @@ var icon = "<svg></svg>"
 var _ interface {
 	chichi.App
 	chichi.AppEvents
+	chichi.UIHandler
 	chichi.AppRecords
 } = (*Dummy)(nil)
 
@@ -50,11 +52,18 @@ func init() {
 // New returns a new Dummy connector instance.
 func New(conf *chichi.AppConfig) (*Dummy, error) {
 	c := Dummy{conf: conf}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of Dummy connector")
+		}
+	}
 	return &c, nil
 }
 
 type Dummy struct {
-	conf *chichi.AppConfig
+	conf     *chichi.AppConfig
+	settings *Settings
 }
 
 var (
@@ -109,9 +118,13 @@ func (dummy *Dummy) Create(ctx context.Context, target chichi.Targets, propertie
 
 // EventRequest returns a request to dispatch an event to the app.
 func (dummy *Dummy) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
+	url := "https://example.com/"
+	if dummy.settings.URLForDispatchingEvents != "" {
+		url = dummy.settings.URLForDispatchingEvents
+	}
 	req := &chichi.EventRequest{
 		Method: "POST",
-		URL:    "https://example.com/",
+		URL:    url,
 		Header: http.Header{},
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -203,7 +216,9 @@ func init() {
 	usersLock.Unlock()
 }
 
-type Settings struct{}
+type Settings struct {
+	URLForDispatchingEvents string
+}
 
 // Schema returns the schema of the specified target.
 func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
@@ -248,6 +263,32 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chic
 	return types.Type{}, chichi.ErrEventTypeNotExist
 }
 
+// ServeUI serves the connector's user interface.
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+
+	switch event {
+	case "load":
+		var s Settings
+		if dummy.settings != nil {
+			s = *dummy.settings
+		}
+		values, _ = json.Marshal(s)
+	case "save":
+		return nil, dummy.saveValues(ctx, values)
+	default:
+		return nil, chichi.ErrUIEventNotExist
+	}
+
+	ui := &chichi.UI{
+		Fields: []chichi.Component{
+			&chichi.Input{Name: "URLForDispatchingEvents", Label: "URL for dispatching events", Role: chichi.Destination, Placeholder: "https://example.com"},
+		},
+		Values: values,
+	}
+
+	return ui, nil
+}
+
 // Update updates a record of the specified target.
 func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
 
@@ -278,5 +319,24 @@ func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string
 	allUsers[id] = u
 	usersLastChangeTimes[id] = time.Now().UTC()
 
+	return nil
+}
+
+// saveValues validates the user-entered values and returns the settings.
+func (dummy *Dummy) saveValues(ctx context.Context, values []byte) error {
+	var s Settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = dummy.conf.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	dummy.settings = &s
 	return nil
 }
