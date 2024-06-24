@@ -111,4 +111,43 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		t.Fatalf("expecting 2 users, got %d", count)
 	}
 
+	// Change the action to import identities through a transformation function.
+	c.SetAction(javaScriptID, importUsersAction, chichitester.ActionToSet{
+		Name:     "JavaScript users",
+		Enabled:  true,
+		InSchema: types.Type{},
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Nullable: true},
+		}),
+		Transformation: chichitester.Transformation{
+			Function: &chichitester.TransformationFunction{
+				Source: `import random
+
+def transform(event: dict) -> dict:
+	return {
+		"email": event["userId"],
+	}`,
+				Language:      "Python",
+				InProperties:  []string{"userId"},
+				OutProperties: []string{"email"},
+			},
+		},
+	})
+
+	// Send an event identify and wait for the event to be stored in the
+	// warehouse.
+	c.SendEvent(javaScriptKey, analytics.Identify{
+		UserId: "Kw5vKdDYBQ",
+		Traits: map[string]interface{}{
+			"email": eventUserEmail,
+		},
+	})
+	c.WaitEventsStoredIntoWarehouse(ctx, 3)
+
+	// Check that the user has been created.
+	users, _, count = c.Users([]string{"email"}, "", 0, 100)
+	if count != 3 {
+		t.Fatalf("expecting 2 users, got %d", count)
+	}
+
 }

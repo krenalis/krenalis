@@ -513,15 +513,6 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		return errors.BadRequest("action cannot have a transformation")
 	}
 
-	// Check the connections for which the transformation function is
-	// prohibited.
-	if haveTransformation {
-		funcForbidden := c.Role == state.Source && eventBasedConn && targetUsersOrGroups
-		if funcForbidden && action.Transformation.Function != nil {
-			return errors.BadRequest("action cannot have a transformation function")
-		}
-	}
-
 	// Check if the transformation is mandatory, with at least one input
 	// property.
 	transformationMandatory := targetUsersOrGroups &&

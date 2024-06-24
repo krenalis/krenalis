@@ -39,7 +39,6 @@
 
 * 🟢 = the action **has a transformation** and there should be **at least one input property** (other than at least one output property)
 * 🔴 = the action **does not have a transformation**
-* ➡️ = if the action has a transformation, it is a mapping, not a transformation function
 
 ```mermaid
 %%{init: {'theme':'neutral'}}%%
@@ -53,7 +52,7 @@ graph LR
 	source --> source_fileStorage(["FileStorage"]) --> source_fileStorage_users(["Users 🟢"])
 	source --> source_events_based([Mobile/Server/Website])
 	
-	source_events_based --> source_events_based_users(["Users ➡️"])
+	source_events_based --> source_events_based_users(["Users"])
 	source_events_based --> source_events_based_events(["Events 🔴"])
 	
 	dest --> dest_app([App])

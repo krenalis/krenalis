@@ -317,11 +317,10 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				continue
 			}
 			var properties map[string]any
-			// If the action specifies mappings, apply them to the event and
+			// If the action has a transformation, apply it to the event and
 			// obtain the properties.
-			if m := action.Transformation.Mapping; m != nil {
-				transformation := state.Transformation{Mapping: m}
-				transformer := transformers.New(action.InSchema, action.OutSchema, transformation, action.ID, c.transformerProvider, nil)
+			if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
+				transformer := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, c.transformerProvider, nil)
 				properties, err = transformer.Transform(ctx, mapEvent)
 				if err != nil {
 					if _, ok := err.(ValidationError); ok {

@@ -241,7 +241,7 @@ const useAction = (
 		if (isLoading) return false;
 		if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
 			if (connection.isSource) {
-				return connection.isApp || connection.isDatabase || connection.isFileStorage;
+				return connection.isApp || connection.isDatabase || connection.isFileStorage || connection.isEventBased;
 			} else {
 				return connection.isApp || connection.isDatabase;
 			}
