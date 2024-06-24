@@ -37,7 +37,7 @@ Then you can proceed with the [configuration](#configuration).
 
 Besides the requirements listed at the beginning of this page, for this installation method you will also need:
 
-   * [Go v1.22](https://go.dev/doc/install)
+   * [Go v1.23](https://go.dev/doc/install)
 
 > Chichi requires the `rangefunc` experimental function. To enable this, execute: `go env -w GOEXPERIMENT=rangefunc`
 
@@ -98,7 +98,7 @@ Proceed with the [configuration](#configuration) after completing these steps.
 Besides the requirements listed at the beginning of this page, for this installation method you also need to have:
 
 * [Git](https://git-scm.com/)
-* [Go v1.22](https://go.dev/doc/install)
+* [Go v1.23](https://go.dev/doc/install)
 
 > Chichi requires the `rangefunc` experimental function. To enable this, execute: `go env -w GOEXPERIMENT=rangefunc`
 
