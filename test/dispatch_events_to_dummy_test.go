@@ -1,0 +1,85 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2024 Open2b
+//
+
+package test
+
+import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/open2b/chichi/test/chichitester"
+	"github.com/open2b/chichi/types"
+	"github.com/segmentio/analytics-go/v3"
+)
+
+func TestDispatchEventsToDummy(t *testing.T) {
+
+	// Create an test HTTP server that will receive request sent to it from
+	// Dummy. The first received request is written on a channel.
+	request := make(chan string, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			panic(err)
+		}
+		select {
+		case request <- string(body):
+		default:
+			panic("request already written")
+		}
+	}))
+	defer ts.Close()
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := chichitester.InitAndLaunch(t)
+	defer c.Stop()
+
+	// Create a connection that exports to Dummy
+	dummyID := c.AddDummyWithSettings("Dummy", chichitester.Destination, chichitester.DummySettings{
+		URLForDispatchingEvents: ts.URL,
+	})
+	c.AddEventAction(dummyID, "send_identity", chichitester.ActionToSet{
+		Name:    "Send events",
+		Enabled: true,
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email": "'dummy@email.example.com'",
+			},
+		},
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Required: true},
+		}),
+	})
+
+	// Create a JavaScript event source connection.
+	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", []int{dummyID})
+	key := c.ConnectionKeys(javaScriptID)[0]
+
+	c.SendEvent(key, analytics.Identify{
+		UserId: "f4ca124298",
+	})
+
+	// Wait for an HTTP request to be sent to Dummy, which will then send it to
+	// the test HTTP server. Then check that the request body is correct.
+	var received string
+	select {
+	case received = <-request:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("no events received within time limit")
+	}
+	const expected = `{"email":"dummy@email.example.com"}`
+	if received != expected {
+		t.Fatalf("expected %q, but Dummy sent %q", expected, received)
+	}
+
+}

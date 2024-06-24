@@ -102,6 +102,10 @@ type DisplayedProperties struct {
 	Information string
 }
 
+type DummySettings struct {
+	URLForDispatchingEvents string
+}
+
 type ExportMode string
 
 // These variables have been introduced to simplify the writing of tests.

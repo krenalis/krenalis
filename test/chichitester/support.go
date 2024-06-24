@@ -71,6 +71,18 @@ func (c *Chichi) AddAction(conn int, target string, action ActionToSet) int {
 	return id
 }
 
+func (c *Chichi) AddEventAction(conn int, eventType string, action ActionToSet) int {
+	data := map[string]any{
+		"Target":    "Events",
+		"EventType": eventType,
+		"Action":    action,
+	}
+	var id int
+	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
+	c.MustCall("POST", method, data, &id)
+	return id
+}
+
 // AddActionErr is like AddAction but returns an error instead of panicking.
 func (c *Chichi) AddActionErr(conn int, target string, action ActionToSet) (int, error) {
 	switch target {
@@ -136,6 +148,21 @@ func (c *Chichi) AddDummy(name string, role Role) int {
 		Enabled:   true,
 		Connector: "Dummy",
 		UIValues:  []byte("{}"),
+	}
+	if role == Destination {
+		mode := Cloud
+		conn.SendingMode = &mode
+	}
+	return c.AddConnection(conn)
+}
+
+func (c *Chichi) AddDummyWithSettings(name string, role Role, settings DummySettings) int {
+	conn := ConnectionToAdd{
+		Name:      name,
+		Role:      role,
+		Enabled:   true,
+		Connector: "Dummy",
+		UIValues:  JSONEncodeUIValues(settings),
 	}
 	if role == Destination {
 		mode := Cloud
@@ -472,7 +499,7 @@ func (c *Chichi) Workspace() Workspace {
 	return ws
 }
 
-func JSONEncodeUIValues(values map[string]any) []byte {
+func JSONEncodeUIValues(values any) []byte {
 	data, err := json.Marshal(values)
 	if err != nil {
 		panic(fmt.Sprintf("cannot encode connection UI values to JSON: %s", err))
