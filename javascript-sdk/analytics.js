@@ -187,12 +187,11 @@ class Analytics {
 	// new one, and ends the session if one exists, regardless of the
 	// strategy.
 	reset(all) {
+		this.#storage.setUserId()
 		if (!all && this.#options.strategy === 'AC-B') {
-			this.#storage.setUserId()
 			this.#storage.restore()
 			return
 		}
-		this.#storage.setUserId()
 		this.#storage.setGroupId()
 		this.#storage.setTraits('user')
 		this.#storage.setTraits('group')
