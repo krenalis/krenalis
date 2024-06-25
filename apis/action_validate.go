@@ -40,7 +40,7 @@ type actionToValidate struct {
 	// role is the action's connection role.
 	role state.Role
 
-	// connectorType is the action's connector type.
+	// connectorType is the type of connector for the action's connection.
 	connectorType state.ConnectorType
 
 	// fileConnector must be set exclusively and necessarily when the connector
