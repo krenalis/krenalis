@@ -275,30 +275,29 @@ func Test_validateActionToSet(t *testing.T) {
 
 		// Actions that are invalid.
 
-		// TODO(Gianluca): commented as it panics. See
-		// https://github.com/open2b/chichi/issues/850.
-		// {
-		// 	name: "Source app action that imports users with a mapping",
-		// 	v: actionToValidate{
-		// 		action: ActionToSet{
-		// 			Name: "Import users",
-		// 			InSchema: types.Object([]types.Property{
-		// 				{Name: "email_in", Type: types.Text()},
-		// 			}),
-		// 			OutSchema: types.Object([]types.Property{
-		// 				{Name: "email_out", Type: types.Text()},
-		// 			}),
-		// 			Transformation: Transformation{
-		// 				Mapping: map[string]string{
-		// 					"not_existent_property": "email_in",
-		// 				},
-		// 			},
-		// 		},
-		// 		target:        state.Users,
-		// 		role:          state.Source,
-		// 		connectorType: state.AppType,
-		// 	},
-		// },
+		{
+			name: "Source app action that imports users with a mapping",
+			v: actionToValidate{
+				action: ActionToSet{
+					Name: "Import users",
+					InSchema: types.Object([]types.Property{
+						{Name: "email_in", Type: types.Text()},
+					}),
+					OutSchema: types.Object([]types.Property{
+						{Name: "email_out", Type: types.Text()},
+					}),
+					Transformation: Transformation{
+						Mapping: map[string]string{
+							"not_existent_property": "email_in",
+						},
+					},
+				},
+				target:        state.Users,
+				role:          state.Source,
+				connectorType: state.AppType,
+			},
+			err: `invalid mapping: property path "not_existent_property" does not exist`,
+		},
 	}
 
 	for _, test := range tests {

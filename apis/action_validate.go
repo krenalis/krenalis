@@ -21,6 +21,7 @@ import (
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/transformers/mappings"
 	"github.com/open2b/chichi/types"
 
 	"golang.org/x/exp/maps"
@@ -134,7 +135,10 @@ func validateActionToSet(v actionToValidate) error {
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		transformer := transformers.New(inSchema, outSchema, state.Transformation{Mapping: mapping}, 0, nil, nil)
+		transformer, err := mappings.New(mapping, inSchema, outSchema, nil)
+		if err != nil {
+			return errors.BadRequest("invalid mapping: %s", err)
+		}
 		// Input property paths.
 		inProps := transformer.Properties()
 		mappingInProperties = len(inProps)
