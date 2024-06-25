@@ -212,6 +212,7 @@ func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriter
 		connection: connection.ID,
 		execution:  execution.ID,
 		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
+		index:      map[identityKey]int{},
 		ack:        ack,
 		purge:      execution.Reimport,
 		columns:    map[string]warehouses.Column{},
@@ -296,6 +297,7 @@ func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc)
 	iw := &EventIdentityWriter{
 		store:   store,
 		action:  actionID,
+		index:   map[identityKey]int{},
 		ack:     ack,
 		columns: map[string]warehouses.Column{},
 		actions: map[int]struct{}{},

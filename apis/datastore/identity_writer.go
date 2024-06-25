@@ -30,6 +30,13 @@ type Identity struct {
 	LastChangeTime time.Time              // Last change time in UTC.
 }
 
+// identityKey represents a key in the _user_identities table.
+type identityKey struct {
+	action      int
+	isAnonymous bool
+	identityID  string
+}
+
 // BatchIdentityWriter writes user identities into the data warehouse in the
 // case when identities are imported in batch.
 type BatchIdentityWriter struct {
@@ -41,6 +48,7 @@ type BatchIdentityWriter struct {
 	flatter    *flatter
 	columns    map[string]warehouses.Column
 	rows       []map[string]any
+	index      map[identityKey]int
 	ackIDs     []string
 	purge      bool
 	closed     bool
@@ -89,15 +97,16 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 	if !iw.purge {
 		return
 	}
+	key := identityKey{action: iw.action, identityID: id}
 	row := map[string]any{
 		"$purge":           false,
-		"__action__":       iw.action,
+		"__action__":       key.action,
 		"__is_anonymous__": false,
+		"__identity_id__":  key.identityID,
 		"__connection__":   iw.connection,
-		"__identity_id__":  id,
 		"__execution__":    iw.execution,
 	}
-	iw.rows = append(iw.rows, row)
+	iw.addRow(key, row)
 }
 
 // Write writes a user identity. If a valid user schema has been provided, the
@@ -115,17 +124,28 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
 	}
+	key := identityKey{action: iw.action, identityID: identity.ID}
 	row := identity.Properties
 	iw.flatter.flat(row, iw.columns)
-	row["__action__"] = iw.action
+	row["__action__"] = key.action
 	row["__is_anonymous__"] = false
+	row["__identity_id__"] = key.identityID
 	row["__connection__"] = iw.connection
-	row["__identity_id__"] = identity.ID
 	row["__last_change_time__"] = identity.LastChangeTime
 	row["__execution__"] = iw.execution
-	iw.rows = append(iw.rows, row)
+	iw.addRow(key, row)
 	iw.ackIDs = append(iw.ackIDs, ackID)
 	return nil
+}
+
+// addRow adds a row to the rows, replacing an existing row with the same key.
+func (iw *BatchIdentityWriter) addRow(key identityKey, row map[string]any) {
+	if i, ok := iw.index[key]; ok {
+		iw.rows[i] = row
+		return
+	}
+	iw.index[key] = len(iw.rows)
+	iw.rows = append(iw.rows, row)
 }
 
 // EventIdentityWriter writes user identities into the data warehouse, in case
@@ -134,16 +154,18 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 // connection is written.
 type EventIdentityWriter struct {
 	store      *Store
+	action     int
 	connection int
 	ack        IdentityWriterAckFunc
 	columns    map[string]warehouses.Column
 	rows       []map[string]any
+	index      map[identityKey]int
 	ackIDs     []string
 	closed     bool
-	mu         sync.Mutex       // for the 'action', 'actions' and 'flatter' fields.
-	action     int              // access using 'mu'. If 0, it means that the action does not exist anymore.
-	actions    map[int]struct{} // actions of the action's connection. Access using 'mu'.
-	flatter    *flatter         // access using 'mu'. Nil for actions that import identities from events with no transformations.
+
+	mu      sync.Mutex       // for the 'actions' and 'flatter' fields.
+	actions map[int]struct{} // actions of the action's connection. Access using 'mu'. If nil, it means that the action does not exist anymore.
+	flatter *flatter         // access using 'mu'. nil for actions that import identities from events with no transformations.
 }
 
 // Close closes the Writer, ensuring the completion of all pending or ongoing
@@ -190,37 +212,47 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		panic("call Write on a closed identity writer")
 	}
 
-	// Read the action from iw and check if it has been deleted.
+	key := identityKey{action: iw.action}
+	if identity.ID == "" {
+		key.isAnonymous = true
+		key.identityID = identity.AnonymousID
+	} else {
+		key.identityID = identity.ID
+	}
+
 	iw.mu.Lock()
-	action := iw.action
+	actions := iw.actions
+	flatter := iw.flatter
 	iw.mu.Unlock()
-	if action == 0 {
+
+	// Check if the action has been deleted.
+	if actions == nil {
 		return errors.New("action does not exist anymore")
 	}
 
-	isAnonymous := identity.ID == ""
-	if !isAnonymous {
+	if !key.isAnonymous {
 		// Delete anonymous identities with the same anonymous ID as the
 		// incoming non-anonymous identity. The identities to be deleted must be
 		// deleted from all actions in the connection, not just from the action
 		// from which the identity is being imported.
-		iw.mu.Lock()
-		actions := iw.actions
-		iw.mu.Unlock()
 		for action := range actions {
-			iw.rows = append(iw.rows, map[string]any{
+			key := identityKey{
+				action:      action,
+				isAnonymous: true,
+				identityID:  identity.AnonymousID,
+			}
+			row := map[string]any{
 				"$purge":               true,
-				"__action__":           action,
+				"__action__":           key.action,
 				"__is_anonymous__":     true,
-				"__identity_id__":      identity.AnonymousID,
+				"__identity_id__":      key.identityID,
 				"__connection__":       iw.connection,
 				"__last_change_time__": identity.LastChangeTime,
-			})
+			}
+			iw.addRow(key, row)
 		}
 	}
-	iw.mu.Lock()
-	flatter := iw.flatter
-	iw.mu.Unlock()
+
 	var row map[string]any
 	if flatter == nil {
 		row = map[string]any{}
@@ -228,21 +260,29 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		row = identity.Properties
 		flatter.flat(row, iw.columns)
 	}
-	row["__action__"] = action
-	row["__is_anonymous__"] = isAnonymous
+	row["__action__"] = key.action
+	row["__is_anonymous__"] = key.isAnonymous
+	row["__identity_id__"] = key.identityID
 	row["__connection__"] = iw.connection
-	if !isAnonymous {
+	if !key.isAnonymous {
 		row["__anonymous_ids__"] = []string{identity.AnonymousID}
 	}
-	if isAnonymous {
-		row["__identity_id__"] = identity.AnonymousID
-	} else {
-		row["__identity_id__"] = identity.ID
-	}
 	row["__last_change_time__"] = identity.LastChangeTime
-	iw.rows = append(iw.rows, row)
+
+	iw.addRow(key, row)
 	iw.ackIDs = append(iw.ackIDs, ackID)
+
 	return nil
+}
+
+// addRow adds a row to the rows, replacing an existing row with the same key.
+func (iw *EventIdentityWriter) addRow(key identityKey, row map[string]any) {
+	if i, ok := iw.index[key]; ok {
+		iw.rows[i] = row
+		return
+	}
+	iw.index[key] = len(iw.rows)
+	iw.rows = append(iw.rows, row)
 }
 
 // onAddAction is called when an action of the connection of iw's action is
@@ -261,12 +301,12 @@ func (iw *EventIdentityWriter) onAddAction(n state.AddAction) {
 // The notification is propagated by the Store.onDeleteAction method.
 func (iw *EventIdentityWriter) onDeleteAction(n state.DeleteAction) {
 	iw.mu.Lock()
-	delete(iw.actions, n.ID)
 	if n.ID == iw.action {
-		iw.action = 0
+		iw.actions = nil
+	} else {
+		delete(iw.actions, n.ID)
 	}
 	iw.mu.Unlock()
-
 }
 
 // onSetAction is called when an action of the connection of iw's action is set.
