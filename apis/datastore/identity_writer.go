@@ -291,7 +291,9 @@ func (iw *EventIdentityWriter) addRow(key identityKey, row map[string]any) {
 // The notification is propagated by the Store.onAddAction method.
 func (iw *EventIdentityWriter) onAddAction(n state.AddAction) {
 	iw.mu.Lock()
-	iw.actions[n.ID] = struct{}{}
+	if iw.actions != nil {
+		iw.actions[n.ID] = struct{}{}
+	}
 	iw.mu.Unlock()
 }
 
