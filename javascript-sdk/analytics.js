@@ -446,7 +446,7 @@ class Analytics {
 					this.#storage.setTraits('group')
 					this.#session.end()
 				} else {
-					this.#mergeTraits(this.#user, event, event.traits)
+					event.traits = this.#mergeTraits(this.#user, event.traits)
 				}
 				break
 		}
@@ -600,26 +600,26 @@ class Analytics {
 			// (groupId)
 			case 'string':
 				event.groupId = this.#group.id(a[0] == null ? undefined : a[0])
-				this.#mergeTraits(this.#group, event)
+				event.traits = this.#group.traits()
 				break
 			// (traits)
 			case 'object':
-				this.#mergeTraits(this.#group, event, a[0])
+				event.traits = this.#mergeTraits(this.#group, a[0])
 				break
 			// (groupId, traits)
 			case 'string,object':
 				event.groupId = this.#group.id(a[0] == null ? undefined : a[0])
-				this.#mergeTraits(this.#group, event, a[1])
+				event.traits = this.#mergeTraits(this.#group, a[1])
 				break
 			// (traits, options)
 			case 'object,object':
-				this.#mergeTraits(this.#group, event, a[0])
+				event.traits = this.#mergeTraits(this.#group, a[0])
 				options = a[1]
 				break
 			// (groupId, traits, options)
 			case 'string,object,object':
 				event.groupId = this.#group.id(a[0] == null ? undefined : a[0])
-				this.#mergeTraits(this.#group, event, a[1])
+				event.traits = this.#mergeTraits(this.#group, a[1])
 				options = a[2]
 				break
 			default:
@@ -713,22 +713,24 @@ class Analytics {
 		return options
 	}
 
-	// mergeTraits merges the current user or group traits with traits, store
-	// them, and assign them to event.traits. k must be #user or #group.
-	#mergeTraits(k, event, traits) {
-		event.traits = k.traits()
-		if (traits !== undefined) {
-			for (const k in traits) {
-				const v = traits[k]
-				if (v === undefined) {
-					delete event.traits[k]
-				} else {
-					event.traits[k] = v
-				}
+	// mergeTraits merges traits into the current user's or group's traits,
+	// stores them, and returns them. If traits is undefined, it only returns
+	// the current traits. k must be either '#user' or '#group'.
+	#mergeTraits(k, traits) {
+		const ts = k.traits()
+		if (traits === undefined) {
+			return ts
+		}
+		for (const k in traits) {
+			const v = traits[k]
+			if (v === undefined) {
+				delete ts[k]
+			} else {
+				ts[k] = v
 			}
 		}
-		k.traits(event.traits)
-		event.traits = k.traits()
+		k.traits(ts)
+		return k.traits()
 	}
 }
 
