@@ -579,7 +579,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if !c.canCollectEvents(connection) {
-		c.setEventsAsReceived(evs.Batch)
+		for _, event := range evs.Batch {
+			c.setEventAsReceived(event)
+		}
 		writeOK(w, origin)
 		return nil
 	}
@@ -598,7 +600,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Set the events as received.
-	c.setEventsAsReceived(evs.Batch)
+	for _, event := range evs.Batch {
+		c.setEventAsReceived(event)
+	}
 
 	// Send a successful response to the client.
 	writeOK(w, origin)
@@ -1120,13 +1124,6 @@ func (c *Collector) removeDuplicatedEvents(events []*collectedEvent) []*collecte
 // setEventAsReceived sets the provided event as received.
 func (c *Collector) setEventAsReceived(event *collectedEvent) {
 	c.messageIds.Store(event.id, nil)
-}
-
-// setEventsAsReceived sets the provided events as received.
-func (c *Collector) setEventsAsReceived(events []*collectedEvent) {
-	for _, event := range events {
-		c.messageIds.Store(event.id, nil)
-	}
 }
 
 // storeEvents store the events in the data warehouse.
