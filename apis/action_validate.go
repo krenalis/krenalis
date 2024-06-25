@@ -43,11 +43,11 @@ type actionToValidate struct {
 	// connectorType is the type of connector for the action's connection.
 	connectorType state.ConnectorType
 
-	// fileConnector must be set exclusively and necessarily when the connector
-	// of the storage has type FileStorage, otherwise it must be the empty
-	// struct.
+	// fileConnector represents the connector details specific to file actions.
+	// It must be populated when connectorType is FileStorage; otherwise, it
+	// should be an empty struct.
 	fileConnector struct {
-		name      string // empty string when there is no file connector.
+		name      string
 		hasUI     bool
 		hasSheets bool
 	}
