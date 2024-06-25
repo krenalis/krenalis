@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -83,7 +82,7 @@ func buildAssets() error {
 	}
 
 	// Copy the UI's assets into the uiDir directory.
-	err = copyFS(uiDir, assetsFS)
+	err = os.CopyFS(uiDir, assetsFS)
 	if err != nil {
 		return fmt.Errorf("cannot copy assets: %s", err)
 	}
@@ -190,7 +189,7 @@ func buildAssets() error {
 	if err != nil {
 		return err
 	}
-	err = copyFS(filepath.Join(root, "chichi-assets"), os.DirFS(dstDir))
+	err = os.CopyFS(filepath.Join(root, "chichi-assets"), os.DirFS(dstDir))
 	if err != nil {
 		return err
 	}
@@ -318,23 +317,4 @@ func pathKey(dir, name string) string {
 func isPackagePath(name string) bool {
 	return name != "." && name != ".." && !strings.HasPrefix(name, "./") &&
 		!strings.HasPrefix(name, "../") && !strings.HasPrefix(name, "/")
-}
-
-// CopyFS copies the provided file system into the directory dir, creating it
-// if not exist.
-func copyFS(dir string, fsys fs.FS) error {
-	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		dst := filepath.Join(dir, filepath.FromSlash(path))
-		if d.IsDir() {
-			return os.MkdirAll(dst, 0755)
-		}
-		data, err := fs.ReadFile(fsys, path)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(dst, data, 0644)
-	})
 }
