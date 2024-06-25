@@ -277,7 +277,8 @@ func Test_validateActionToSet(t *testing.T) {
 
 		// Actions that are invalid.
 
-		// TODO(Gianluca): commented as it panics.
+		// TODO(Gianluca): commented as it panics. See
+		// https://github.com/open2b/chichi/issues/850.
 		// {
 		// 	name: "Source app action that imports users with a mapping",
 		// 	v: actionToValidate{
