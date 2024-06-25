@@ -153,7 +153,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 
 	s.mux = http.NewServeMux()
 	for path, serve := range paths {
-		s.mux.HandleFunc(rewrittenPath(path), func(w http.ResponseWriter, r *http.Request) {
+		s.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			response, err := serve(w, r)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
@@ -172,25 +172,6 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 	}
 
 	return s
-}
-
-// rewrittenPath returns a path rewritten with only one space between method and
-// path.
-func rewrittenPath(path string) string {
-	s := strings.IndexByte(path, ' ')
-	if s == -1 {
-		panic(fmt.Sprintf("parsing %q: it does not contain spaces", path))
-	}
-	var i int
-	for i = s + 1; i < len(path); i++ {
-		if path[i] != ' ' {
-			break
-		}
-	}
-	if i == s+1 {
-		return path
-	}
-	return path[0:s+1] + path[i:]
 }
 
 // ServeHTTP servers the API methods from HTTP.
