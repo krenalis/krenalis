@@ -421,7 +421,7 @@ class Analytics {
 					p.name = event.name
 				}
 				event.properties = p
-				this.#setUserId(event)
+				event.userId = this.#user.id()
 				break
 			}
 			case 'screen':
@@ -431,7 +431,7 @@ class Analytics {
 				}
 				/* fallthrough */
 			case 'group':
-				this.#setUserId(event)
+				event.userId = this.#user.id()
 				break
 			case 'identify':
 				if (this.#options.strategy.indexOf('-B') > 0) {
@@ -557,31 +557,31 @@ class Analytics {
 		switch (typesOf(a)) {
 			// ()
 			case '':
-				this.#setUserId(event)
+				event.userId = this.#user.id()
 				break
 			// (userId)
 			case 'string':
-				this.#setUserId(event, a[0])
+				event.userId = this.#user.id(a[0] == null ? undefined : a[0])
 				break
 			// (traits)
 			case 'object':
-				this.#setUserId(event)
+				event.userId = this.#user.id()
 				event.traits = a[0]
 				break
 			// (userId, traits)
 			case 'string,object':
-				this.#setUserId(event, a[0])
+				event.userId = this.#user.id(a[0] == null ? undefined : a[0])
 				event.traits = a[1]
 				break
 			// (traits, options)
 			case 'object,object':
-				this.#setUserId(event)
+				event.userId = this.#user.id()
 				event.traits = a[0]
 				options = a[1]
 				break
 			// (userId, traits, options)
 			case 'string,object,object':
-				this.#setUserId(event, a[0])
+				event.userId = this.#user.id(a[0] == null ? undefined : a[0])
 				event.traits = a[1]
 				options = a[2]
 				break
@@ -589,11 +589,6 @@ class Analytics {
 				throw new Error('Invalid arguments')
 		}
 		return options
-	}
-
-	// setGroup sets the groupId with id.
-	#setGroup(event, id) {
-		event.groupId = this.#group.id(id !== null ? id : undefined)
 	}
 
 	// setGroupArguments sets the arguments for group calls.
@@ -604,7 +599,7 @@ class Analytics {
 		switch (typesOf(a)) {
 			// (groupId)
 			case 'string':
-				this.#setGroup(event, a[0])
+				event.groupId = this.#group.id(a[0] == null ? undefined : a[0])
 				this.#mergeTraits(this.#group, event)
 				break
 			// (traits)
@@ -613,7 +608,7 @@ class Analytics {
 				break
 			// (groupId, traits)
 			case 'string,object':
-				this.#setGroup(event, a[0])
+				event.groupId = this.#group.id(a[0] == null ? undefined : a[0])
 				this.#mergeTraits(this.#group, event, a[1])
 				break
 			// (traits, options)
@@ -623,7 +618,7 @@ class Analytics {
 				break
 			// (groupId, traits, options)
 			case 'string,object,object':
-				this.#setGroup(event, a[0])
+				event.groupId = this.#group.id(a[0] == null ? undefined : a[0])
 				this.#mergeTraits(this.#group, event, a[1])
 				options = a[2]
 				break
@@ -734,12 +729,6 @@ class Analytics {
 		}
 		k.traits(event.traits)
 		event.traits = k.traits()
-	}
-
-	// setUserId sets the userId with id.
-
-	#setUserId(event, id) {
-		event.userId = this.#user.id(id !== null ? id : undefined)
 	}
 }
 
