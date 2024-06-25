@@ -67,10 +67,8 @@ type actionToValidate struct {
 // if the transformation language is not supported.
 func validateActionToSet(v actionToValidate) error {
 
-	action := v.action
-
-	inSchema := action.InSchema
-	outSchema := action.OutSchema
+	inSchema := v.action.InSchema
+	outSchema := v.action.OutSchema
 
 	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(v.connectorType, v.role, v.target)
 	if importUserIdentitiesFromEvents {
@@ -88,16 +86,16 @@ func validateActionToSet(v actionToValidate) error {
 	// First, do formal validations.
 
 	// Validate the name.
-	if action.Name == "" {
+	if v.action.Name == "" {
 		return errors.BadRequest("name is empty")
 	}
-	if !utf8.ValidString(action.Name) {
+	if !utf8.ValidString(v.action.Name) {
 		return errors.BadRequest("name is not UTF-8 encoded")
 	}
-	if containsNUL(action.Name) {
+	if containsNUL(v.action.Name) {
 		return errors.BadRequest("name contains NUL rune")
 	}
-	if n := utf8.RuneCountInString(action.Name); n > 60 {
+	if n := utf8.RuneCountInString(v.action.Name); n > 60 {
 		return errors.BadRequest("name is longer than 60 runes")
 	}
 	// Validate the schemas.
@@ -109,24 +107,24 @@ func validateActionToSet(v actionToValidate) error {
 	}
 	// Validate the filter.
 	var usedInPaths []string
-	if action.Filter != nil {
+	if v.action.Filter != nil {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := validateFilter(action.Filter, inSchema)
+		properties, err := validateFilter(v.action.Filter, inSchema)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
 		usedInPaths = properties
 	}
 	// An action cannot have both mappings and transformations.
-	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
+	if v.action.Transformation.Mapping != nil && v.action.Transformation.Function != nil {
 		return errors.BadRequest("action cannot have both mappings and transformation")
 	}
 	// Validate the mapping.
 	var usedOutPaths []string
 	var mappingInProperties int
-	if mapping := action.Transformation.Mapping; mapping != nil {
+	if mapping := v.action.Transformation.Mapping; mapping != nil {
 		if len(mapping) == 0 {
 			return errors.BadRequest("transformation mapping must have mapped properties")
 		}
@@ -145,7 +143,7 @@ func validateActionToSet(v actionToValidate) error {
 		usedOutPaths = maps.Keys(mapping)
 	}
 	// Validate the transformation.
-	if function := action.Transformation.Function; function != nil {
+	if function := v.action.Transformation.Function; function != nil {
 		if !inSchema.Valid() && !dispatchEventsToApps {
 			return errors.BadRequest("input schema is required by the transformation")
 		}
@@ -170,7 +168,7 @@ func validateActionToSet(v actionToValidate) error {
 		case "":
 			return errors.BadRequest("transformation language is empty")
 		default:
-			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
+			return errors.BadRequest("transformation language %q is not valid", v.action.Transformation.Function.Language)
 		}
 		err := validateTransformationFunctionProperties("input", inSchema, function.InProperties, dispatchEventsToApps)
 		if err != nil {
@@ -184,26 +182,26 @@ func validateActionToSet(v actionToValidate) error {
 		usedOutPaths = function.OutProperties
 	}
 	// Validate the path.
-	if action.Path != "" {
-		if !utf8.ValidString(action.Path) {
+	if v.action.Path != "" {
+		if !utf8.ValidString(v.action.Path) {
 			return errors.BadRequest("path is not UTF-8 encoded")
 		}
-		if containsNUL(action.Path) {
+		if containsNUL(v.action.Path) {
 			return errors.BadRequest("path contains NUL rune")
 		}
-		if n := utf8.RuneCountInString(action.Path); n > 1024 {
+		if n := utf8.RuneCountInString(v.action.Path); n > 1024 {
 			return errors.BadRequest("path is longer than 1024 runes")
 		}
 		switch v.role {
 		case state.Source:
-			_, err := connectors.ReplacePlaceholders(action.Path, func(_ string) (string, bool) {
+			_, err := connectors.ReplacePlaceholders(v.action.Path, func(_ string) (string, bool) {
 				return "", false
 			})
 			if err != nil {
 				return errors.BadRequest("placeholders syntax is not supported by source actions")
 			}
 		case state.Destination:
-			_, err := connectors.ReplacePlaceholders(action.Path, func(name string) (string, bool) {
+			_, err := connectors.ReplacePlaceholders(v.action.Path, func(name string) (string, bool) {
 				name = strings.ToLower(name)
 				return "", name == "today" || name == "now" || name == "unix"
 			})
@@ -213,31 +211,31 @@ func validateActionToSet(v actionToValidate) error {
 		}
 	}
 	// Validate the table name.
-	if action.TableName != "" {
-		if !utf8.ValidString(action.TableName) {
+	if v.action.TableName != "" {
+		if !utf8.ValidString(v.action.TableName) {
 			return errors.BadRequest("table name is not UTF-8 encoded")
 		}
-		if containsNUL(action.TableName) {
+		if containsNUL(v.action.TableName) {
 			return errors.BadRequest("table name contains NUL rune")
 		}
-		if n := utf8.RuneCountInString(action.TableName); n > 1024 {
+		if n := utf8.RuneCountInString(v.action.TableName); n > 1024 {
 			return errors.BadRequest("table name is longer than 1024 runes")
 		}
 	}
 	// Validate the sheet.
-	if action.Sheet != "" && !connectors.IsValidSheetName(action.Sheet) {
+	if v.action.Sheet != "" && !connectors.IsValidSheetName(v.action.Sheet) {
 		return errors.BadRequest("sheet name is not valid")
 	}
 	// Validate the export options.
-	if action.ExportMode != nil {
-		switch *action.ExportMode {
+	if v.action.ExportMode != nil {
+		switch *v.action.ExportMode {
 		case CreateOnly, UpdateOnly, CreateOrUpdate:
 		default:
-			return errors.BadRequest("export mode %q is not valid", *action.ExportMode)
+			return errors.BadRequest("export mode %q is not valid", *v.action.ExportMode)
 		}
 	}
-	if action.MatchingProperties != nil {
-		props := *action.MatchingProperties
+	if v.action.MatchingProperties != nil {
+		props := *v.action.MatchingProperties
 		// Validate the internal matching property.
 		if !types.IsValidPropertyName(props.Internal) {
 			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
@@ -265,41 +263,41 @@ func validateActionToSet(v actionToValidate) error {
 		}
 	}
 	// Validate the compression.
-	switch action.Compression {
+	switch v.action.Compression {
 	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
 	default:
-		return errors.BadRequest("compression %q is not valid", action.Compression)
+		return errors.BadRequest("compression %q is not valid", v.action.Compression)
 	}
 	// Validate the identity property.
-	if action.IdentityProperty != "" {
-		if !types.IsValidPropertyName(action.IdentityProperty) {
+	if v.action.IdentityProperty != "" {
+		if !types.IsValidPropertyName(v.action.IdentityProperty) {
 			return errors.BadRequest("identity property is not a valid property name")
 		}
-		if utf8.RuneCountInString(action.IdentityProperty) > 1024 {
+		if utf8.RuneCountInString(v.action.IdentityProperty) > 1024 {
 			return errors.BadRequest("identity property is longer than 1024 runes")
 		}
 	}
 	// Validate the last change time property.
-	if action.LastChangeTimeProperty != "" {
-		if !types.IsValidPropertyName(action.LastChangeTimeProperty) {
+	if v.action.LastChangeTimeProperty != "" {
+		if !types.IsValidPropertyName(v.action.LastChangeTimeProperty) {
 			return errors.BadRequest("last change time property is a not valid property name")
 		}
-		if utf8.RuneCountInString(action.LastChangeTimeProperty) > 1024 {
+		if utf8.RuneCountInString(v.action.LastChangeTimeProperty) > 1024 {
 			return errors.BadRequest("last change time property is longer than 1024 runes")
 		}
 	}
 	// Validate the last change time format.
-	if action.LastChangeTimeFormat != "" {
-		if err := validateLastChangeTimeFormat(action.LastChangeTimeFormat); err != nil {
+	if v.action.LastChangeTimeFormat != "" {
+		if err := validateLastChangeTimeFormat(v.action.LastChangeTimeFormat); err != nil {
 			return errors.BadRequest(err.Error())
 		}
 	}
 	// Validate the file ordering property path.
-	if action.FileOrderingPropertyPath != "" {
-		if !types.IsValidPropertyPath(action.FileOrderingPropertyPath) {
+	if v.action.FileOrderingPropertyPath != "" {
+		if !types.IsValidPropertyPath(v.action.FileOrderingPropertyPath) {
 			return errors.BadRequest("the specified file ordering is a not valid property path")
 		}
-		if utf8.RuneCountInString(action.FileOrderingPropertyPath) > 1024 {
+		if utf8.RuneCountInString(v.action.FileOrderingPropertyPath) > 1024 {
 			return errors.BadRequest("file ordering property path is longer than 1024 runes")
 		}
 	}
@@ -323,18 +321,18 @@ func validateActionToSet(v actionToValidate) error {
 
 	// Validate the UI values.
 	if v.fileConnector.name == "" {
-		if action.UIValues != nil {
+		if v.action.UIValues != nil {
 			return errors.BadRequest("UI values cannot be provided because %s actions have no UI", strings.ToLower(v.connectorType.String()))
 		}
 	} else {
 		if v.fileConnector.hasUI {
-			if action.UIValues == nil {
+			if v.action.UIValues == nil {
 				return errors.BadRequest("UI values must be provided because connector %s has a UI", v.fileConnector.name)
 			}
-			if !isJSONObject(action.UIValues) {
+			if !isJSONObject(v.action.UIValues) {
 				return errors.BadRequest("UI values are not a valid JSON Object")
 			}
-		} else if action.UIValues != nil {
+		} else if v.action.UIValues != nil {
 			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
 		}
 	}
@@ -345,24 +343,24 @@ func validateActionToSet(v actionToValidate) error {
 			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
 		}
 	} else {
-		if action.UIValues != nil {
+		if v.action.UIValues != nil {
 			return errors.BadRequest("UI values cannot be provided because %s actions has no UI", strings.ToLower(v.connectorType.String()))
 		}
-		if action.Compression != NoCompression {
+		if v.action.Compression != NoCompression {
 			return errors.BadRequest("actions on %s connections cannot have a compression", strings.ToLower(v.connectorType.String()))
 		}
 	}
 
 	// Check if the query is allowed.
 	if needsQuery := v.connectorType == state.DatabaseType && v.role == state.Source; needsQuery {
-		if action.Query == "" {
+		if v.action.Query == "" {
 			return errors.BadRequest("query cannot be empty for database actions")
 		}
-		if containsNUL(action.Query) {
+		if containsNUL(v.action.Query) {
 			return errors.BadRequest("query contains NUL rune")
 		}
 	} else {
-		if action.Query != "" {
+		if v.action.Query != "" {
 			return errors.BadRequest("%s actions cannot have a query", v.connectorType)
 		}
 	}
@@ -380,26 +378,26 @@ func validateActionToSet(v actionToValidate) error {
 	case state.MobileType, state.ServerType, state.WebsiteType:
 		filtersAllowed = targetUsersOrGroups && v.role == state.Source
 	}
-	if action.Filter != nil && !filtersAllowed {
+	if v.action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
 	}
 
 	// Check if the path and the sheet are allowed.
 	if v.connectorType == state.FileStorageType {
-		if action.Path == "" {
+		if v.action.Path == "" {
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
-		if v.fileConnector.hasSheets && action.Sheet == "" {
+		if v.fileConnector.hasSheets && v.action.Sheet == "" {
 			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", v.fileConnector.name)
 		}
-		if !v.fileConnector.hasSheets && action.Sheet != "" {
+		if !v.fileConnector.hasSheets && v.action.Sheet != "" {
 			return errors.BadRequest("connector %s does not have sheets", v.fileConnector.name)
 		}
 	} else {
-		if action.Path != "" {
+		if v.action.Path != "" {
 			return errors.BadRequest("%s actions cannot have a path", v.connectorType)
 		}
-		if action.Sheet != "" {
+		if v.action.Sheet != "" {
 			return errors.BadRequest("%s actions cannot have a sheet", v.connectorType)
 		}
 	}
@@ -412,53 +410,53 @@ func validateActionToSet(v actionToValidate) error {
 			return errors.BadRequest("input schema must be valid")
 		}
 		// Validate the identity property.
-		if action.IdentityProperty == "" {
+		if v.action.IdentityProperty == "" {
 			return errors.BadRequest("identity property is mandatory")
 		}
-		identityProperty, ok := inSchema.Property(action.IdentityProperty)
+		identityProperty, ok := inSchema.Property(v.action.IdentityProperty)
 		if !ok {
-			return errors.BadRequest("identity property %q not found within input schema", action.IdentityProperty)
+			return errors.BadRequest("identity property %q not found within input schema", v.action.IdentityProperty)
 		}
 		switch k := identityProperty.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
+			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", v.action.IdentityProperty, k)
 		}
-		usedInPaths = append(usedInPaths, action.IdentityProperty)
+		usedInPaths = append(usedInPaths, v.action.IdentityProperty)
 		// Validate the last change time property and format.
 		var requiresLastChangeTimeFormat bool
-		if action.LastChangeTimeProperty != "" {
-			lastChangeTime, ok := inSchema.Property(action.LastChangeTimeProperty)
+		if v.action.LastChangeTimeProperty != "" {
+			lastChangeTime, ok := inSchema.Property(v.action.LastChangeTimeProperty)
 			if !ok {
-				return errors.BadRequest("last change time property %q not found within input schema", action.LastChangeTimeProperty)
+				return errors.BadRequest("last change time property %q not found within input schema", v.action.LastChangeTimeProperty)
 			}
 			switch k := lastChangeTime.Type.Kind(); k {
 			case types.DateTimeKind, types.DateKind:
 			case types.JSONKind, types.TextKind:
 				requiresLastChangeTimeFormat = true
 			default:
-				return errors.BadRequest("last change time property %q has kind %s instead of DateTime, Date, JSON, or Text", action.LastChangeTimeProperty, k)
+				return errors.BadRequest("last change time property %q has kind %s instead of DateTime, Date, JSON, or Text", v.action.LastChangeTimeProperty, k)
 			}
-			usedInPaths = append(usedInPaths, action.LastChangeTimeProperty)
+			usedInPaths = append(usedInPaths, v.action.LastChangeTimeProperty)
 		}
-		if !requiresLastChangeTimeFormat && action.LastChangeTimeFormat != "" {
+		if !requiresLastChangeTimeFormat && v.action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
 		} else if requiresLastChangeTimeFormat {
-			if action.LastChangeTimeFormat == "" {
+			if v.action.LastChangeTimeFormat == "" {
 				return errors.BadRequest("last change time format is required")
 			}
-			if v.connectorType == state.DatabaseType && action.LastChangeTimeFormat == "Excel" {
+			if v.connectorType == state.DatabaseType && v.action.LastChangeTimeFormat == "Excel" {
 				return errors.BadRequest("last change time format cannot be Excel for database actions")
 			}
 		}
 	} else {
-		if action.IdentityProperty != "" {
+		if v.action.IdentityProperty != "" {
 			return errors.BadRequest("action cannot specify an identity property")
 		}
-		if action.LastChangeTimeProperty != "" {
+		if v.action.LastChangeTimeProperty != "" {
 			return errors.BadRequest("action cannot specify a last change time property")
 		}
-		if action.LastChangeTimeFormat != "" {
+		if v.action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
 		}
 	}
@@ -473,10 +471,10 @@ func validateActionToSet(v actionToValidate) error {
 		}
 		// Check that FileOrderingPropertyPath is defined and exists in the out
 		// schema.
-		if action.FileOrderingPropertyPath == "" {
+		if v.action.FileOrderingPropertyPath == "" {
 			return errors.BadRequest("file ordering property path cannot be empty when exporting users to file")
 		}
-		p, err := outSchema.PropertyByPath(action.FileOrderingPropertyPath)
+		p, err := outSchema.PropertyByPath(v.action.FileOrderingPropertyPath)
 		if err != nil {
 			return errors.BadRequest("file ordering property path cannot be found in action's output schema: %s", err)
 		}
@@ -495,16 +493,16 @@ func validateActionToSet(v actionToValidate) error {
 			return errors.BadRequest("file ordering property cannot have kind %s", p.Type.Kind())
 		}
 	} else {
-		if action.FileOrderingPropertyPath != "" {
+		if v.action.FileOrderingPropertyPath != "" {
 			return errors.BadRequest("actions that do not export users to files cannot specify a file ordering property path")
 		}
 	}
 
 	// Check if the table name is allowed.
 	needsTableName := v.connectorType == state.DatabaseType && v.role == state.Destination
-	if needsTableName && action.TableName == "" {
+	if needsTableName && v.action.TableName == "" {
 		return errors.BadRequest("table name cannot be empty for destination database actions")
-	} else if !needsTableName && action.TableName != "" {
+	} else if !needsTableName && v.action.TableName != "" {
 		return errors.BadRequest("table name is not allowed")
 	}
 
@@ -512,23 +510,23 @@ func validateActionToSet(v actionToValidate) error {
 	needsExportOptions := v.connectorType == state.AppType &&
 		v.role == state.Destination && v.target == state.Users
 	if needsExportOptions {
-		if action.ExportMode == nil {
+		if v.action.ExportMode == nil {
 			return errors.BadRequest("export mode cannot be nil")
 		}
-		if action.MatchingProperties == nil {
+		if v.action.MatchingProperties == nil {
 			return errors.BadRequest("matching properties cannot be nil")
 		}
-		if action.ExportOnDuplicatedUsers == nil {
+		if v.action.ExportOnDuplicatedUsers == nil {
 			return errors.BadRequest("export on duplicated users setting cannot be nil")
 		}
 	} else {
-		if action.ExportMode != nil {
+		if v.action.ExportMode != nil {
 			return errors.BadRequest("export mode must be nil")
 		}
-		if action.MatchingProperties != nil {
+		if v.action.MatchingProperties != nil {
 			return errors.BadRequest("matching properties must be nil")
 		}
-		if action.ExportOnDuplicatedUsers != nil {
+		if v.action.ExportOnDuplicatedUsers != nil {
 			return errors.BadRequest("export on duplicated users setting must be nil")
 		}
 	}
@@ -536,7 +534,7 @@ func validateActionToSet(v actionToValidate) error {
 	// Check the connections for which the transformation is prohibited.
 	transformationProhibited := (v.role == state.Source && eventBasedConn && v.target == state.Events) ||
 		(v.role == state.Destination && v.connectorType == state.FileStorageType && targetUsersOrGroups)
-	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
+	haveTransformation := v.action.Transformation.Mapping != nil || v.action.Transformation.Function != nil
 	if transformationProhibited && haveTransformation {
 		return errors.BadRequest("action cannot have a transformation")
 	}
@@ -557,17 +555,17 @@ func validateActionToSet(v actionToValidate) error {
 	// TODO(Gianluca): there may be some inconsistencies in this part, regarding
 	// UI, documentation and APIs. This still needs to be made consistent.
 	if !importUserIdentitiesFromEvents && !dispatchEventsToApps {
-		if action.Transformation.Mapping != nil && mappingInProperties == 0 {
+		if v.action.Transformation.Mapping != nil && mappingInProperties == 0 {
 			return errors.BadRequest("transformation must map at least one property")
 		}
-		if action.Transformation.Function != nil && len(action.Transformation.Function.InProperties) == 0 {
+		if v.action.Transformation.Function != nil && len(v.action.Transformation.Function.InProperties) == 0 {
 			return errors.BadRequest("transformation function must have at least one input property")
 		}
 	}
 
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).
-	if action.Transformation.Function != nil {
+	if v.action.Transformation.Function != nil {
 		// The action has a transformation function, so we do not know which
 		// properties are used; consequently, this check would always pass
 		// because we would consider every property of the schema as used.
