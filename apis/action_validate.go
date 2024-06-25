@@ -7,8 +7,8 @@
 
 package apis
 
-// This file contains the method "validateActionToSet", as well as any support
-// function/method used exclusively by it.
+// This file contains the function "validateActionToSet", as well as any support
+// type, function and/or methods used exclusively by it.
 
 import (
 	"fmt"
@@ -26,24 +26,53 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// validateActionToSet validates the action to set (when adding or setting an
-// action) for the given target, on the connection c.
+// actionToValidate represents an action to validate that is passed to the
+// function validateActionToSet.
+type actionToValidate struct {
+
+	// action is the ActionToSet to validate, both in case when adding a new
+	// action or setting an existing action.
+	action ActionToSet
+
+	// target is the target of the action.
+	target state.Target
+
+	// role is the action's connection role.
+	role state.Role
+
+	// connectorType is the action's connector type.
+	connectorType state.ConnectorType
+
+	// fileConnector must be set exclusively and necessarily when the connector
+	// of the storage has type FileStorage, otherwise it must be the empty
+	// struct.
+	fileConnector struct {
+		name      string // empty string when there is no file connector.
+		hasUI     bool
+		hasSheets bool
+	}
+
+	// provides is the transformers.Provider instantiated on the APIs.
+	provider transformers.Provider
+}
+
+// validateActionToSet validates an ActionToSet (both in case when adding a new
+// action or setting an existing action), which must be passed within the
+// actionToValidate along with additional context information.
 //
-// fileConnector must be passed exclusively and necessarily when the connector
-// of the storage has type FileStorage, otherwise it must be nil.
-//
-// tr is the transformers.Function instantiated on the APIs.
-//
-// Refer to the specifications in the file "apis/Actions.md" for more details.
+// See the documentation of actionToValidate and the documentation of its fields
+// for more details.
 //
 // It returns an errors.UnprocessableError error with code LanguageNotSupported,
 // if the transformation language is not supported.
-func validateActionToSet(action ActionToSet, target state.Target, c *state.Connection, fileConnector *state.Connector, provider transformers.Provider) error {
+func validateActionToSet(v actionToValidate) error {
+
+	action := v.action
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 
-	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(c.Connector().Type, c.Role, target)
+	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(v.connectorType, v.role, v.target)
 	if importUserIdentitiesFromEvents {
 		if inSchema.Valid() {
 			return errors.BadRequest("input schema must be invalid for actions that import user identities from events")
@@ -54,7 +83,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		inSchema = events.Schema
 	}
 
-	dispatchEventsToApps := c.Role == state.Destination && target == state.Events && c.Connector().Type == state.AppType
+	dispatchEventsToApps := v.role == state.Destination && v.target == state.Events && v.connectorType == state.AppType
 
 	// First, do formal validations.
 
@@ -131,11 +160,11 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 		switch function.Language {
 		case "JavaScript":
-			if provider == nil || !provider.SupportLanguage(state.JavaScript) {
+			if v.provider == nil || !v.provider.SupportLanguage(state.JavaScript) {
 				return errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language is not supported")
 			}
 		case "Python":
-			if provider == nil || !provider.SupportLanguage(state.Python) {
+			if v.provider == nil || !v.provider.SupportLanguage(state.Python) {
 				return errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
 			}
 		case "":
@@ -165,7 +194,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		if n := utf8.RuneCountInString(action.Path); n > 1024 {
 			return errors.BadRequest("path is longer than 1024 runes")
 		}
-		switch c.Role {
+		switch v.role {
 		case state.Source:
 			_, err := connectors.ReplacePlaceholders(action.Path, func(_ string) (string, bool) {
 				return "", false
@@ -277,15 +306,14 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 
 	// Second, do validations based on the workspace and the connection.
 
-	connector := c.Connector()
-	eventBasedConn := connector.Type == state.MobileType ||
-		connector.Type == state.ServerType ||
-		connector.Type == state.WebsiteType
+	eventBasedConn := v.connectorType == state.MobileType ||
+		v.connectorType == state.ServerType ||
+		v.connectorType == state.WebsiteType
 
 	// In case of a source connection, since its actions write on the data
 	// warehouse, the output schema cannot contain meta properties because such
 	// properties are not writable by user transformations.
-	if c.Role == state.Source && outSchema.Valid() {
+	if v.role == state.Source && outSchema.Valid() {
 		for _, p := range outSchema.Properties() {
 			if isMetaProperty(p.Name) {
 				return errors.BadRequest("output schema cannot contain meta properties")
@@ -294,39 +322,39 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 
 	// Validate the UI values.
-	if fileConnector == nil {
+	if v.fileConnector.name == "" {
 		if action.UIValues != nil {
-			return errors.BadRequest("UI values cannot be provided because %s actions have no UI", strings.ToLower(connector.Type.String()))
+			return errors.BadRequest("UI values cannot be provided because %s actions have no UI", strings.ToLower(v.connectorType.String()))
 		}
 	} else {
-		if fileConnector.HasUI {
+		if v.fileConnector.hasUI {
 			if action.UIValues == nil {
-				return errors.BadRequest("UI values must be provided because connector %s has a UI", fileConnector.Name)
+				return errors.BadRequest("UI values must be provided because connector %s has a UI", v.fileConnector.name)
 			}
 			if !isJSONObject(action.UIValues) {
 				return errors.BadRequest("UI values are not a valid JSON Object")
 			}
 		} else if action.UIValues != nil {
-			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
+			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
 		}
 	}
 
 	// Check if the UI values and the compression are allowed.
-	if connector.Type == state.FileStorageType {
-		if !fileConnector.HasUI {
-			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", fileConnector.Name)
+	if v.connectorType == state.FileStorageType {
+		if !v.fileConnector.hasUI {
+			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
 		}
 	} else {
 		if action.UIValues != nil {
-			return errors.BadRequest("UI values cannot be provided because %s actions has no UI", strings.ToLower(connector.Type.String()))
+			return errors.BadRequest("UI values cannot be provided because %s actions has no UI", strings.ToLower(v.connectorType.String()))
 		}
 		if action.Compression != NoCompression {
-			return errors.BadRequest("actions on %s connections cannot have a compression", strings.ToLower(connector.Type.String()))
+			return errors.BadRequest("actions on %s connections cannot have a compression", strings.ToLower(v.connectorType.String()))
 		}
 	}
 
 	// Check if the query is allowed.
-	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.Source; needsQuery {
+	if needsQuery := v.connectorType == state.DatabaseType && v.role == state.Source; needsQuery {
 		if action.Query == "" {
 			return errors.BadRequest("query cannot be empty for database actions")
 		}
@@ -335,50 +363,50 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 		}
 	} else {
 		if action.Query != "" {
-			return errors.BadRequest("%s actions cannot have a query", connector.Type)
+			return errors.BadRequest("%s actions cannot have a query", v.connectorType)
 		}
 	}
 
 	// Check if the filters are allowed.
-	targetUsersOrGroups := target == state.Users || target == state.Groups
+	targetUsersOrGroups := v.target == state.Users || v.target == state.Groups
 	var filtersAllowed bool
-	switch connector.Type {
+	switch v.connectorType {
 	case state.AppType:
-		filtersAllowed = c.Role == state.Destination
+		filtersAllowed = v.role == state.Destination
 	case state.DatabaseType:
-		filtersAllowed = c.Role == state.Destination
+		filtersAllowed = v.role == state.Destination
 	case state.FileStorageType:
-		filtersAllowed = targetUsersOrGroups && c.Role == state.Destination
+		filtersAllowed = targetUsersOrGroups && v.role == state.Destination
 	case state.MobileType, state.ServerType, state.WebsiteType:
-		filtersAllowed = targetUsersOrGroups && c.Role == state.Source
+		filtersAllowed = targetUsersOrGroups && v.role == state.Source
 	}
 	if action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
 	}
 
 	// Check if the path and the sheet are allowed.
-	if connector.Type == state.FileStorageType {
+	if v.connectorType == state.FileStorageType {
 		if action.Path == "" {
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
-		if fileConnector.HasSheets && action.Sheet == "" {
-			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", fileConnector.Name)
+		if v.fileConnector.hasSheets && action.Sheet == "" {
+			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", v.fileConnector.name)
 		}
-		if !fileConnector.HasSheets && action.Sheet != "" {
-			return errors.BadRequest("connector %s does not have sheets", fileConnector.Name)
+		if !v.fileConnector.hasSheets && action.Sheet != "" {
+			return errors.BadRequest("connector %s does not have sheets", v.fileConnector.name)
 		}
 	} else {
 		if action.Path != "" {
-			return errors.BadRequest("%s actions cannot have a path", connector.Type)
+			return errors.BadRequest("%s actions cannot have a path", v.connectorType)
 		}
 		if action.Sheet != "" {
-			return errors.BadRequest("%s actions cannot have a sheet", connector.Type)
+			return errors.BadRequest("%s actions cannot have a sheet", v.connectorType)
 		}
 	}
 
 	// Check the column for the identity property and for the timestamp.
-	importFromColumns := c.Role == state.Source &&
-		(connector.Type == state.DatabaseType || connector.Type == state.FileStorageType)
+	importFromColumns := v.role == state.Source &&
+		(v.connectorType == state.DatabaseType || v.connectorType == state.FileStorageType)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
@@ -419,7 +447,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 			if action.LastChangeTimeFormat == "" {
 				return errors.BadRequest("last change time format is required")
 			}
-			if connector.Type == state.DatabaseType && action.LastChangeTimeFormat == "Excel" {
+			if v.connectorType == state.DatabaseType && action.LastChangeTimeFormat == "Excel" {
 				return errors.BadRequest("last change time format cannot be Excel for database actions")
 			}
 		}
@@ -436,7 +464,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 
 	// Do some checks related to exporting users to files.
-	exportUsersToFile := connector.Type == state.FileStorageType && c.Role == state.Destination && target == state.Users
+	exportUsersToFile := v.connectorType == state.FileStorageType && v.role == state.Destination && v.target == state.Users
 	if exportUsersToFile {
 		// When exporting users to file, ensure that the output schema is valid,
 		// as it contains the properties that will be exported to the file.
@@ -473,7 +501,7 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 
 	// Check if the table name is allowed.
-	needsTableName := connector.Type == state.DatabaseType && c.Role == state.Destination
+	needsTableName := v.connectorType == state.DatabaseType && v.role == state.Destination
 	if needsTableName && action.TableName == "" {
 		return errors.BadRequest("table name cannot be empty for destination database actions")
 	} else if !needsTableName && action.TableName != "" {
@@ -481,8 +509,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 
 	// Check if the export options are needed.
-	needsExportOptions := connector.Type == state.AppType &&
-		c.Role == state.Destination && target == state.Users
+	needsExportOptions := v.connectorType == state.AppType &&
+		v.role == state.Destination && v.target == state.Users
 	if needsExportOptions {
 		if action.ExportMode == nil {
 			return errors.BadRequest("export mode cannot be nil")
@@ -506,8 +534,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	}
 
 	// Check the connections for which the transformation is prohibited.
-	transformationProhibited := (c.Role == state.Source && eventBasedConn && target == state.Events) ||
-		(c.Role == state.Destination && connector.Type == state.FileStorageType && targetUsersOrGroups)
+	transformationProhibited := (v.role == state.Source && eventBasedConn && v.target == state.Events) ||
+		(v.role == state.Destination && v.connectorType == state.FileStorageType && targetUsersOrGroups)
 	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
 	if transformationProhibited && haveTransformation {
 		return errors.BadRequest("action cannot have a transformation")
@@ -516,8 +544,8 @@ func validateActionToSet(action ActionToSet, target state.Target, c *state.Conne
 	// Check if the transformation is mandatory, with at least one input
 	// property.
 	transformationMandatory := targetUsersOrGroups &&
-		(connector.Type == state.AppType || connector.Type == state.DatabaseType ||
-			(c.Role == state.Source && connector.Type == state.FileStorageType))
+		(v.connectorType == state.AppType || v.connectorType == state.DatabaseType ||
+			(v.role == state.Source && v.connectorType == state.FileStorageType))
 	if transformationMandatory && !haveTransformation {
 		return errors.BadRequest("action must have a transformation")
 	}

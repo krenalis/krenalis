@@ -466,7 +466,19 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Validate the action.
-	err := validateActionToSet(action, state.Target(target), this.connection, fileConnector, this.apis.transformerProvider)
+	v := actionToValidate{
+		action:        action,
+		target:        state.Target(target),
+		role:          this.connection.Role,
+		connectorType: this.connection.Connector().Type,
+		provider:      this.apis.transformerProvider,
+	}
+	if fileConnector != nil {
+		v.fileConnector.name = fileConnector.Name
+		v.fileConnector.hasSheets = fileConnector.HasSheets
+		v.fileConnector.hasUI = fileConnector.HasUI
+	}
+	err := validateActionToSet(v)
 	if err != nil {
 		return 0, err
 	}
