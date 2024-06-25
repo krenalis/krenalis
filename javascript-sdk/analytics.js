@@ -514,7 +514,6 @@ class Analytics {
 				throw error
 			}
 		}
-
 	}
 
 	// setAliasArguments sets the arguments for alias calls.
