@@ -319,36 +319,27 @@ func validateActionToSet(v actionToValidate) error {
 		}
 	}
 
-	// Validate the UI values.
-	if v.fileConnector.name == "" {
-		if v.action.UIValues != nil {
-			return errors.BadRequest("UI values cannot be provided because %s actions have no UI", strings.ToLower(v.connectorType.String()))
-		}
-	} else {
-		if v.fileConnector.hasUI {
-			if v.action.UIValues == nil {
+	// Check if the UI values are allowed and are a JSON Object.
+	if v.connectorType == state.FileStorageType {
+		if v.action.UIValues == nil {
+			if v.fileConnector.hasUI {
 				return errors.BadRequest("UI values must be provided because connector %s has a UI", v.fileConnector.name)
+			}
+		} else {
+			if !v.fileConnector.hasUI {
+				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
 			}
 			if !isJSONObject(v.action.UIValues) {
 				return errors.BadRequest("UI values are not a valid JSON Object")
 			}
-		} else if v.action.UIValues != nil {
-			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
 		}
+	} else if v.action.UIValues != nil {
+		return errors.BadRequest("%s actions cannot have UI values", strings.ToLower(v.connectorType.String()))
 	}
 
-	// Check if the UI values and the compression are allowed.
-	if v.connectorType == state.FileStorageType {
-		if !v.fileConnector.hasUI {
-			return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
-		}
-	} else {
-		if v.action.UIValues != nil {
-			return errors.BadRequest("UI values cannot be provided because %s actions has no UI", strings.ToLower(v.connectorType.String()))
-		}
-		if v.action.Compression != NoCompression {
-			return errors.BadRequest("actions on %s connections cannot have a compression", strings.ToLower(v.connectorType.String()))
-		}
+	// Check if the compression is allowed.
+	if v.action.Compression != NoCompression && v.connectorType != state.FileStorageType {
+		return errors.BadRequest("%s actions cannot have compression", strings.ToLower(v.connectorType.String()))
 	}
 
 	// Check if the query is allowed.

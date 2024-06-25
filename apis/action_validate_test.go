@@ -50,6 +50,7 @@ func Test_validateActionToSet(t *testing.T) {
 				connectorType: state.AppType,
 			},
 		},
+
 		{
 			name: "Source app action that imports users with a transformation function",
 			v: actionToValidate{
@@ -80,6 +81,7 @@ func Test_validateActionToSet(t *testing.T) {
 				provider:      testProvider{},
 			},
 		},
+
 		{
 			name: "Source database action that imports users with a mapping",
 			v: actionToValidate{
@@ -107,46 +109,42 @@ func Test_validateActionToSet(t *testing.T) {
 				connectorType: state.DatabaseType,
 			},
 		},
-
-		// TODO(Gianluca): there is a validation error that prevents this case
-		// from being valid. Investigate on this.
-
-		// {
-		// 	name: "Source file action that imports users with a mapping",
-		// 	v: actionToValidate{
-		// 		action: ActionToSet{
-		// 			Name: "Import users",
-		// 			InSchema: types.Object([]types.Property{
-		// 				{Name: "id", Type: types.Int(32)},
-		// 				{Name: "timestamp", Type: types.DateTime()},
-		// 				{Name: "email_in", Type: types.Text()},
-		// 			}),
-		// 			OutSchema: types.Object([]types.Property{
-		// 				{Name: "email_out", Type: types.Text()},
-		// 			}),
-		// 			Transformation: Transformation{
-		// 				Mapping: map[string]string{
-		// 					"email_out": "email_in",
-		// 				},
-		// 			},
-		// 			Path:                   "my_file.csv",
-		// 			IdentityProperty:       "id",
-		// 			LastChangeTimeProperty: "timestamp",
-		// 		},
-		// 		target:        state.Users,
-		// 		role:          state.Source,
-		// 		connectorType: state.FileStorageType,
-		// 		fileConnector: struct {
-		// 			name      string
-		// 			hasUI     bool
-		// 			hasSheets bool
-		// 		}{
-		// 			name:      "CSV",
-		// 			hasUI:     false,
-		// 			hasSheets: false,
-		// 		},
-		// 	},
-		// },
+		{
+			name: "Source file action that imports users with a mapping",
+			v: actionToValidate{
+				action: ActionToSet{
+					Name: "Import users",
+					InSchema: types.Object([]types.Property{
+						{Name: "id", Type: types.Int(32)},
+						{Name: "timestamp", Type: types.DateTime()},
+						{Name: "email_in", Type: types.Text()},
+					}),
+					OutSchema: types.Object([]types.Property{
+						{Name: "email_out", Type: types.Text()},
+					}),
+					Transformation: Transformation{
+						Mapping: map[string]string{
+							"email_out": "email_in",
+						},
+					},
+					Path:                   "my_file.csv",
+					IdentityProperty:       "id",
+					LastChangeTimeProperty: "timestamp",
+				},
+				target:        state.Users,
+				role:          state.Source,
+				connectorType: state.FileStorageType,
+				fileConnector: struct {
+					name      string
+					hasUI     bool
+					hasSheets bool
+				}{
+					name:      "CSV",
+					hasUI:     false,
+					hasSheets: false,
+				},
+			},
+		},
 
 		{
 			name: "Source website action that imports users with a mapping",
