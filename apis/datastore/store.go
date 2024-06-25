@@ -397,7 +397,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	}
 
 	// Retrieve the IDs of the workspace connections.
-	wsConnections := store.ds.state.Connections()
+	wsConnections := ws.Connections()
 	connections := make([]int, len(wsConnections))
 	for i, c := range wsConnections {
 		connections[i] = c.ID
