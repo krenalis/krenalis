@@ -599,13 +599,21 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	// Set the events as received.
-	for _, event := range evs.Batch {
-		c.setEventAsReceived(event)
-	}
-
 	// Send a successful response to the client.
 	writeOK(w, origin)
+
+	// Set the events as received.
+	for i := 0; i < len(evs.Batch); i++ {
+		err = c.setEventAsReceived(evs.Batch[i])
+		if err != nil {
+			// Remove the event because it has already been received.
+			evs.Batch = slices.Delete(evs.Batch, i, i+1)
+			i--
+		}
+	}
+	if len(evs.Batch) == 0 {
+		return nil
+	}
 
 	batch := make([]*events.Event, len(evs.Batch))
 	for i, event := range evs.Batch {
@@ -1121,9 +1129,14 @@ func (c *Collector) removeDuplicatedEvents(events []*collectedEvent) []*collecte
 	return events
 }
 
-// setEventAsReceived sets the provided event as received.
-func (c *Collector) setEventAsReceived(event *collectedEvent) {
-	c.messageIds.Store(event.id, nil)
+// setEventAsReceived sets the provided event as received. It returns an error
+// if the event was already set as received.
+func (c *Collector) setEventAsReceived(event *collectedEvent) error {
+	_, loaded := c.messageIds.LoadOrStore(event.id, nil)
+	if loaded {
+		return errors.New("event is already set as received")
+	}
+	return nil
 }
 
 // storeEvents store the events in the data warehouse.
