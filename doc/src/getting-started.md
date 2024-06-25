@@ -39,8 +39,6 @@ Besides the requirements listed at the beginning of this page, for this installa
 
    * [Go v1.23](https://go.dev/doc/install)
 
-> Chichi requires the `rangefunc` experimental function. To enable this, execute: `go env -w GOEXPERIMENT=rangefunc`
-
 #### Steps
 
 1. **Create a new directory**
@@ -99,8 +97,6 @@ Besides the requirements listed at the beginning of this page, for this installa
 
 * [Git](https://git-scm.com/)
 * [Go v1.23](https://go.dev/doc/install)
-
-> Chichi requires the `rangefunc` experimental function. To enable this, execute: `go env -w GOEXPERIMENT=rangefunc`
 
 #### Steps
 
