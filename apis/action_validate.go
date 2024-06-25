@@ -52,7 +52,7 @@ type actionToValidate struct {
 		hasSheets bool
 	}
 
-	// provides is the transformers.Provider instantiated on the APIs.
+	// provider is the transformers.Provider instantiated on the APIs.
 	provider transformers.Provider
 }
 
