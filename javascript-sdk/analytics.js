@@ -334,8 +334,7 @@ class Analytics {
 	// the setArgs function.
 	#send(type, setArgs, args) {
 		const executor = (resolve, reject) => {
-			let event
-			const data = { type }
+			const event = { type }
 			// ES5: "Array.from" is not available.
 			args = Array.prototype.slice.call(args)
 			let callback
@@ -343,8 +342,8 @@ class Analytics {
 				callback = args.pop()
 			}
 			try {
-				const options = setArgs.call(this, data, args)
-				event = this.#sendEvent(data, options)
+				const options = setArgs.call(this, event, args)
+				this.#sendEvent(event, options)
 			} catch (error) {
 				reject(error)
 				return
@@ -516,17 +515,16 @@ class Analytics {
 			}
 		}
 
-		return event
 	}
 
 	// setAliasArguments sets the arguments for alias calls.
-	// It writes the 'userId' and 'previousId' arguments into data and
+	// It writes the 'userId' and 'previousId' arguments into event and
 	// returns the options.
-	#setAliasArguments(data, a) {
+	#setAliasArguments(event, a) {
 		if (a.length === 0) {
 			throw new Error('User is missing')
 		}
-		data.userId = this.#getAlias(a.shift())
+		event.userId = this.#getAlias(a.shift())
 		let options
 		switch (typesOf(a)) {
 			// (userId)
@@ -534,7 +532,7 @@ class Analytics {
 				break
 			// (userId, previousId)
 			case 'string':
-				data.previousId = this.#getAlias(a[0])
+				event.previousId = this.#getAlias(a[0])
 				break
 			// (userId, options)
 			case 'object':
@@ -542,7 +540,7 @@ class Analytics {
 				break
 			// (userId, previousId, options)
 			case 'string,object':
-				data.previousId = this.#getAlias(a[0])
+				event.previousId = this.#getAlias(a[0])
 				options = a[1]
 				break
 			default:
@@ -552,39 +550,39 @@ class Analytics {
 	}
 
 	// setIdentifyArguments sets the arguments for identify calls.
-	// It writes the 'userId' and 'traits' arguments into data and
+	// It writes the 'userId' and 'traits' arguments into event and
 	// returns the options.
-	#setIdentifyArguments(data, a) {
+	#setIdentifyArguments(event, a) {
 		let options
 		switch (typesOf(a)) {
 			// ()
 			case '':
-				this.#setUserId(data)
+				this.#setUserId(event)
 				break
 			// (userId)
 			case 'string':
-				this.#setUserId(data, a[0])
+				this.#setUserId(event, a[0])
 				break
 			// (traits)
 			case 'object':
-				this.#setUserId(data)
-				data.traits = a[0]
+				this.#setUserId(event)
+				event.traits = a[0]
 				break
 			// (userId, traits)
 			case 'string,object':
-				this.#setUserId(data, a[0])
-				data.traits = a[1]
+				this.#setUserId(event, a[0])
+				event.traits = a[1]
 				break
 			// (traits, options)
 			case 'object,object':
-				this.#setUserId(data)
-				data.traits = a[0]
+				this.#setUserId(event)
+				event.traits = a[0]
 				options = a[1]
 				break
 			// (userId, traits, options)
 			case 'string,object,object':
-				this.#setUserId(data, a[0])
-				data.traits = a[1]
+				this.#setUserId(event, a[0])
+				event.traits = a[1]
 				options = a[2]
 				break
 			default:
@@ -594,39 +592,39 @@ class Analytics {
 	}
 
 	// setGroup sets the groupId with id.
-	#setGroup(data, id) {
-		data.groupId = this.#group.id(id !== null ? id : undefined)
+	#setGroup(event, id) {
+		event.groupId = this.#group.id(id !== null ? id : undefined)
 	}
 
 	// setGroupArguments sets the arguments for group calls.
-	// It writes the 'groupId' and 'traits' arguments into data and
+	// It writes the 'groupId' and 'traits' arguments into event and
 	// returns the options.
-	#setGroupArguments(data, a) {
+	#setGroupArguments(event, a) {
 		let options
 		switch (typesOf(a)) {
 			// (groupId)
 			case 'string':
-				this.#setGroup(data, a[0])
-				this.#mergeTraits(this.#group, data)
+				this.#setGroup(event, a[0])
+				this.#mergeTraits(this.#group, event)
 				break
 			// (traits)
 			case 'object':
-				this.#mergeTraits(this.#group, data, a[0])
+				this.#mergeTraits(this.#group, event, a[0])
 				break
 			// (groupId, traits)
 			case 'string,object':
-				this.#setGroup(data, a[0])
-				this.#mergeTraits(this.#group, data, a[1])
+				this.#setGroup(event, a[0])
+				this.#mergeTraits(this.#group, event, a[1])
 				break
 			// (traits, options)
 			case 'object,object':
-				this.#mergeTraits(this.#group, data, a[0])
+				this.#mergeTraits(this.#group, event, a[0])
 				options = a[1]
 				break
 			// (groupId, traits, options)
 			case 'string,object,object':
-				this.#setGroup(data, a[0])
-				this.#mergeTraits(this.#group, data, a[1])
+				this.#setGroup(event, a[0])
+				this.#mergeTraits(this.#group, event, a[1])
 				options = a[2]
 				break
 			default:
@@ -636,9 +634,9 @@ class Analytics {
 	}
 
 	// setPageScreenArguments sets the arguments for page and screen calls.
-	// It writes the 'category', 'name', and 'properties' arguments into data
+	// It writes the 'category', 'name', and 'properties' arguments into events
 	// and returns the options.
-	#setPageScreenArguments(data, a) {
+	#setPageScreenArguments(event, a) {
 		let options
 		switch (typesOf(a)) {
 			// ()
@@ -646,44 +644,44 @@ class Analytics {
 				break
 			// (name)
 			case 'string':
-				data.name = a[0]
+				event.name = a[0]
 				break
 			// (properties)
 			case 'object':
-				data.properties = a[0]
+				event.properties = a[0]
 				break
 			// (category, name)
 			case 'string,string':
-				data.category = a[0]
-				data.name = a[1]
+				event.category = a[0]
+				event.name = a[1]
 				break
 			// (name, properties)
 			case 'string,object':
-				data.name = a[0]
-				data.properties = a[1]
+				event.name = a[0]
+				event.properties = a[1]
 				break
 			// (properties, options)
 			case 'object,object':
-				data.properties = a[0]
+				event.properties = a[0]
 				options = a[1]
 				break
 			// (category, name, properties)
 			case 'string,string,object':
-				data.category = a[0]
-				data.name = a[1]
-				data.properties = a[2]
+				event.category = a[0]
+				event.name = a[1]
+				event.properties = a[2]
 				break
 			// (name, properties, options)
 			case 'string,object,object':
-				data.name = a[0]
-				data.properties = a[1]
+				event.name = a[0]
+				event.properties = a[1]
 				options = a[2]
 				break
 			// (category, name, properties, options)
 			case 'string,string,object,object':
-				data.category = a[0]
-				data.name = a[1]
-				data.properties = a[2]
+				event.category = a[0]
+				event.name = a[1]
+				event.properties = a[2]
 				options = a[3]
 				break
 			default:
@@ -693,13 +691,13 @@ class Analytics {
 	}
 
 	// setTrackArguments sets the arguments for track calls.
-	// It writes the 'event' and 'properties' arguments into data and
+	// It writes the 'event' and 'properties' arguments into events and
 	// returns the options.
-	#setTrackArguments(data, a) {
+	#setTrackArguments(event, a) {
 		if (a.length === 0 || typeof a[0] != 'string') {
 			throw new Error('Event name is missing')
 		}
-		data.event = a.shift()
+		event.event = a.shift()
 		let options
 		switch (typesOf(a)) {
 			// (name)
@@ -707,11 +705,11 @@ class Analytics {
 				break
 			// (name, properties)
 			case 'object':
-				data.properties = a[0]
+				event.properties = a[0]
 				break
 			// (name, properties, options)
 			case 'object,object':
-				data.properties = a[0]
+				event.properties = a[0]
 				options = a[1]
 				break
 			default:
@@ -721,26 +719,27 @@ class Analytics {
 	}
 
 	// mergeTraits merges the current user or group traits with traits, store
-	// them, and assign them to data.traits. k must be #user or #group.
-	#mergeTraits(k, data, traits) {
-		data.traits = k.traits()
+	// them, and assign them to event.traits. k must be #user or #group.
+	#mergeTraits(k, event, traits) {
+		event.traits = k.traits()
 		if (traits !== undefined) {
 			for (const k in traits) {
 				const v = traits[k]
 				if (v === undefined) {
-					delete data.traits[k]
+					delete event.traits[k]
 				} else {
-					data.traits[k] = v
+					event.traits[k] = v
 				}
 			}
 		}
-		k.traits(data.traits)
-		data.traits = k.traits()
+		k.traits(event.traits)
+		event.traits = k.traits()
 	}
 
 	// setUserId sets the userId with id.
-	#setUserId(data, id) {
-		data.userId = this.#user.id(id !== null ? id : undefined)
+
+	#setUserId(event, id) {
+		event.userId = this.#user.id(id !== null ? id : undefined)
 	}
 }
 
