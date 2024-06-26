@@ -368,19 +368,16 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	c := this.action.Connection()
 
 	// Validate the action.
-	v := actionToValidate{
-		action:        action,
-		target:        this.action.Target,
-		role:          c.Role,
-		connectorType: c.Connector().Type,
-		provider:      this.apis.transformerProvider,
-	}
+	v := validationState{}
+	v.connection.role = c.Role
+	v.connection.connector.typ = c.Connector().Type
 	if fileConnector != nil {
 		v.fileConnector.name = fileConnector.Name
 		v.fileConnector.hasSheets = fileConnector.HasSheets
 		v.fileConnector.hasUI = fileConnector.HasUI
 	}
-	err := validateActionToSet(v)
+	v.provider = this.apis.transformerProvider
+	err := validateActionToSet(action, this.action.Target, v)
 	if err != nil {
 		return err
 	}
