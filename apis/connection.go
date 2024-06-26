@@ -469,11 +469,16 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	span.Log("action validated successfully")
 
 	connector := this.connection.Connector()
+
+	// Determine the input schema.
 	inSchema := action.InSchema
-	if importsUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target)) {
-		// The input schema is the events schema without GID because this
-		// actions imports user identities from incoming events, which, clearly,
-		// still do not have any user associated.
+	dispatchEventsToApps := dispatchesEventsToApps(connector.Type, this.connection.Role, state.Target(target))
+	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target))
+	if dispatchEventsToApps || importUserIdentitiesFromEvents {
+		// The input schema is the events schema without the GID, because both
+		// the actions that import user identities from events and the actions
+		// that dispatch events to apps have in input an event without a GID, as
+		// the GID is added to the event when it is already in the warehouse.
 		inSchema = events.Schema
 	}
 

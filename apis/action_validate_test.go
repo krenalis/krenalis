@@ -242,15 +242,8 @@ func Test_validateActionToSet(t *testing.T) {
 		{
 			name: "Destination app action that dispatches events with a mapping",
 			action: ActionToSet{
-				Name: "Dispatch events to app",
-				// TODO(Gianluca): is this correct? Currently the validation
-				// of the action accepts it like this, but shouldn't this be
-				// the event schema (and therefore the invalid schema, at
-				// the API level), as it happens for the import of
-				// identities from events?
-				InSchema: types.Object([]types.Property{
-					{Name: "traits", Type: types.JSON()},
-				}),
+				Name:     "Dispatch events to app",
+				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
 				}),

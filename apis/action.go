@@ -368,9 +368,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		return err
 	}
 
+	// Determine the input schema.
 	inSchema := action.InSchema
-	if importsUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target) {
-		// Use the schema without GID because incoming events do not have a GID.
+	dispatchEventsToApps := dispatchesEventsToApps(c.Connector().Type, c.Role, this.action.Target)
+	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target)
+	if dispatchEventsToApps || importUserIdentitiesFromEvents {
+		// The input schema is the events schema without the GID, because both
+		// the actions that import user identities from events and the actions
+		// that dispatch events to apps have in input an event without a GID, as
+		// the GID is added to the event when it is already in the warehouse.
 		inSchema = events.Schema
 	}
 
@@ -901,6 +907,13 @@ func importsUserIdentitiesFromEvents(connectorType state.ConnectorType, role sta
 		}
 	}
 	return false
+}
+
+// dispatchesEventsToApps reports whether a connector with the given type, on a
+// connection with the given role, with an action with the given target,
+// dispatches events to apps.
+func dispatchesEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Destination && target == state.Events && connectorType == state.AppType
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema

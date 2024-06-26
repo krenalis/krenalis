@@ -67,18 +67,24 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 
+	dispatchEventsToApps := dispatchesEventsToApps(v.connection.connector.typ, v.connection.role, target)
 	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
-	if importUserIdentitiesFromEvents {
+
+	// When dispatching events to apps or when importing user identities from
+	// events, the input schema must be the invalid schema.
+	if dispatchEventsToApps || importUserIdentitiesFromEvents {
 		if inSchema.Valid() {
-			return errors.BadRequest("input schema must be invalid for actions that import user identities from events")
+			if importUserIdentitiesFromEvents {
+				return errors.BadRequest("input schema must be invalid for actions that import user identities from events")
+			}
+			return errors.BadRequest("input schema must be invalid for actions that dispatch events to apps")
 		}
-		// The input schema is the events schema without GID because this
-		// actions imports user identities from incoming events, which, clearly,
-		// still do not have any user associated.
+		// The input schema is the events schema without the GID, because both
+		// the actions that import user identities from events and the actions
+		// that dispatch events to apps have in input an event without a GID, as
+		// the GID is added to the event when it is already in the warehouse.
 		inSchema = events.Schema
 	}
-
-	dispatchEventsToApps := v.connection.role == state.Destination && target == state.Events && v.connection.connector.typ == state.AppType
 
 	// Validate the action's connector.
 	actionOnFile := v.connection.connector.typ == state.FileStorageType
@@ -577,11 +583,11 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 		// The action has a transformation function, so we do not know which
 		// properties are used; consequently, this check would always pass
 		// because we would consider every property of the schema as used.
-	} else if importUserIdentitiesFromEvents {
-		// In this case the input schema is the full schema of the events, both
-		// in case of mappings and transformation, so we cannot return the error
-		// about unused properties in input schema because just a minor part of
-		// them is generally used.
+	} else if importUserIdentitiesFromEvents || dispatchEventsToApps {
+		// In these cases the input schema is the full schema of the events,
+		// both in case of mappings and transformation, so we cannot return the
+		// error about unused properties in input schema because just a minor
+		// part of them is generally used.
 		if usedOutPaths != nil {
 			if props := unusedProperties(outSchema, usedOutPaths); props != nil {
 				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))

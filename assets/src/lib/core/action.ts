@@ -568,11 +568,12 @@ const transformInActionToSet = async (
 		}
 	}
 
-	if (
-		connection.isSource &&
-		(connection.isMobile || connection.isServer || connection.isWebsite) &&
-		(actionType.Target === 'Users' || actionType.Target === 'Groups')
-	) {
+	// Actions that dispatch events to apps and actions that import user
+	// identities from events must have an invalid input schema, that
+	// implicitly represents the event schema.
+	let dispatchEventsToApps = connection.isDestination && connection.type == 'App' && actionType.Target == 'Events';
+	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.Target == 'Users';
+	if (dispatchEventsToApps || importIdentitiesFromEvents) {
 		inSchema = null;
 	}
 
