@@ -27,13 +27,13 @@ func Test_validateActionToSet(t *testing.T) {
 		action ActionToSet
 
 		// The validation state.
-		target                 state.Target
-		connectionRole         state.Role
-		connectorType          state.ConnectorType
-		fileConnectorName      string
-		fileConnectorHasUI     bool
-		fileConnectorHasSheets bool
-		provider               transformers.Provider
+		target                  state.Target
+		connectionRole          state.Role
+		connectionConnectorType state.ConnectorType
+		fileConnectorName       string
+		fileConnectorHasUI      bool
+		fileConnectorHasSheets  bool
+		provider                transformers.Provider
 
 		err string // empty string if no validation error is expected
 	}{
@@ -56,9 +56,9 @@ func Test_validateActionToSet(t *testing.T) {
 					},
 				},
 			},
-			target:         state.Users,
-			connectionRole: state.Source,
-			connectorType:  state.AppType,
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
 		},
 
 		{
@@ -84,10 +84,10 @@ func Test_validateActionToSet(t *testing.T) {
 					},
 				},
 			},
-			target:         state.Users,
-			connectionRole: state.Source,
-			connectorType:  state.AppType,
-			provider:       testProvider{},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			provider:                testProvider{},
 		},
 
 		{
@@ -111,9 +111,9 @@ func Test_validateActionToSet(t *testing.T) {
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
 			},
-			target:         state.Users,
-			connectionRole: state.Source,
-			connectorType:  state.DatabaseType,
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.DatabaseType,
 		},
 		{
 			name: "Source file action that imports users with a mapping",
@@ -136,12 +136,12 @@ func Test_validateActionToSet(t *testing.T) {
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
 			},
-			target:                 state.Users,
-			connectionRole:         state.Source,
-			connectorType:          state.FileStorageType,
-			fileConnectorName:      "CSV",
-			fileConnectorHasUI:     false,
-			fileConnectorHasSheets: false,
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorageType,
+			fileConnectorName:       "CSV",
+			fileConnectorHasUI:      false,
+			fileConnectorHasSheets:  false,
 		},
 
 		{
@@ -158,9 +158,9 @@ func Test_validateActionToSet(t *testing.T) {
 					},
 				},
 			},
-			target:         state.Users,
-			connectionRole: state.Source,
-			connectorType:  state.WebsiteType,
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.WebsiteType,
 		},
 
 		{
@@ -168,9 +168,9 @@ func Test_validateActionToSet(t *testing.T) {
 			action: ActionToSet{
 				Name: "Import events",
 			},
-			target:         state.Events,
-			connectionRole: state.Source,
-			connectorType:  state.WebsiteType,
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.WebsiteType,
 		},
 
 		{
@@ -195,9 +195,9 @@ func Test_validateActionToSet(t *testing.T) {
 				},
 				ExportOnDuplicatedUsers: &[]bool{false}[0],
 			},
-			target:         state.Users,
-			connectionRole: state.Destination,
-			connectorType:  state.AppType,
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
 		},
 
 		{
@@ -229,10 +229,10 @@ func Test_validateActionToSet(t *testing.T) {
 				},
 				ExportOnDuplicatedUsers: &[]bool{false}[0],
 			},
-			target:         state.Users,
-			connectionRole: state.Destination,
-			connectorType:  state.AppType,
-			provider:       testProvider{},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			provider:                testProvider{},
 		},
 
 		{
@@ -256,9 +256,9 @@ func Test_validateActionToSet(t *testing.T) {
 					},
 				},
 			},
-			target:         state.Events,
-			connectionRole: state.Destination,
-			connectorType:  state.AppType,
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
 		},
 
 		// Actions that are invalid.
@@ -279,10 +279,10 @@ func Test_validateActionToSet(t *testing.T) {
 					},
 				},
 			},
-			target:         state.Users,
-			connectionRole: state.Source,
-			connectorType:  state.AppType,
-			err:            `invalid mapping: property path "not_existent_property" does not exist`,
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     `invalid mapping: property path "not_existent_property" does not exist`,
 		},
 	}
 
@@ -294,12 +294,12 @@ func Test_validateActionToSet(t *testing.T) {
 			if test.connectionRole == 0 {
 				t.Fatal("invalid test: connectionRole cannot be 0")
 			}
-			if test.connectorType == 0 {
-				t.Fatal("invalid test: connectorType cannot be 0")
+			if test.connectionConnectorType == 0 {
+				t.Fatal("invalid test: connectionConnectorType cannot be 0")
 			}
 			v := validationState{}
 			v.connection.role = test.connectionRole
-			v.connection.connector.typ = test.connectorType
+			v.connection.connector.typ = test.connectionConnectorType
 			v.fileConnector.name = test.fileConnectorName
 			v.fileConnector.hasSheets = test.fileConnectorHasSheets
 			v.fileConnector.hasUI = test.fileConnectorHasUI
