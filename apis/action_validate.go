@@ -38,11 +38,13 @@ type validationState struct {
 		}
 	}
 
-	// fileConnector represents the connector details specific to file actions.
-	// It must be populated when connection.connector.typ is FileStorage;
-	// otherwise, it should be an empty struct.
-	fileConnector struct {
-		name      string
+	// connector represents the action's connector.
+	//
+	// If the actions specifies a connector name, then this must be populated
+	// according to that connector, if exists, otherwise must be the empty
+	// struct.
+	connector struct {
+		typ       state.ConnectorType
 		hasUI     bool
 		hasSheets bool
 	}
@@ -55,8 +57,11 @@ type validationState struct {
 // action or setting an existing action), for the given target and in the
 // context of the given validation state.
 //
-// It returns an errors.UnprocessableError error with code LanguageNotSupported,
-// if the transformation language is not supported.
+// It returns an errors.UnprocessableError error with code:
+//
+//   - LanguageNotSupported, if the transformation language is not supported.
+//   - ConnectorNotExist, if the action is on file and the specified file
+//     connector does not exist.
 func validateActionToSet(action ActionToSet, target state.Target, v validationState) error {
 
 	inSchema := action.InSchema
@@ -74,6 +79,23 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 	}
 
 	dispatchEventsToApps := v.connection.role == state.Destination && target == state.Events && v.connection.connector.typ == state.AppType
+
+	// Validate the action's connector.
+	actionOnFile := v.connection.connector.typ == state.FileStorageType
+	if actionOnFile && action.Connector == "" {
+		return errors.BadRequest("actions on file storage connections must have a connector")
+	}
+	if !actionOnFile && action.Connector != "" {
+		return errors.BadRequest("actions on %v connections cannot have a connector", v.connection.connector.typ)
+	}
+	if action.Connector != "" {
+		if v.connector.typ == 0 {
+			return errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", action.Connector)
+		}
+		if v.connector.typ != state.FileType {
+			return errors.BadRequest("type of the action's connector must be File, got %v", v.connector.typ)
+		}
+	}
 
 	// First, do formal validations.
 
@@ -317,12 +339,12 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 	// Check if the UI values are allowed and are a JSON Object.
 	if v.connection.connector.typ == state.FileStorageType {
 		if action.UIValues == nil {
-			if v.fileConnector.hasUI {
-				return errors.BadRequest("UI values must be provided because connector %s has a UI", v.fileConnector.name)
+			if v.connector.hasUI {
+				return errors.BadRequest("UI values must be provided because connector %s has a UI", action.Connector)
 			}
 		} else {
-			if !v.fileConnector.hasUI {
-				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", v.fileConnector.name)
+			if !v.connector.hasUI {
+				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", action.Connector)
 			}
 			if !isJSONObject(action.UIValues) {
 				return errors.BadRequest("UI values are not a valid JSON Object")
@@ -373,11 +395,11 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 		if action.Path == "" {
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
-		if v.fileConnector.hasSheets && action.Sheet == "" {
-			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", v.fileConnector.name)
+		if v.connector.hasSheets && action.Sheet == "" {
+			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", action.Connector)
 		}
-		if !v.fileConnector.hasSheets && action.Sheet != "" {
-			return errors.BadRequest("connector %s does not have sheets", v.fileConnector.name)
+		if !v.connector.hasSheets && action.Sheet != "" {
+			return errors.BadRequest("connector %s does not have sheets", action.Connector)
 		}
 	} else {
 		if action.Path != "" {

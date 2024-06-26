@@ -27,13 +27,16 @@ func Test_validateActionToSet(t *testing.T) {
 		action ActionToSet
 
 		// The validation state.
-		target                  state.Target
+		target state.Target
+
 		connectionRole          state.Role
 		connectionConnectorType state.ConnectorType
-		fileConnectorName       string
-		fileConnectorHasUI      bool
-		fileConnectorHasSheets  bool
-		provider                transformers.Provider
+
+		connectorType      state.ConnectorType
+		connectorHasUI     bool
+		connectorHasSheets bool
+
+		provider transformers.Provider
 
 		err string // empty string if no validation error is expected
 	}{
@@ -132,6 +135,7 @@ func Test_validateActionToSet(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
+				Connector:              "CSV",
 				Path:                   "my_file.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -139,9 +143,9 @@ func Test_validateActionToSet(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorageType,
-			fileConnectorName:       "CSV",
-			fileConnectorHasUI:      false,
-			fileConnectorHasSheets:  false,
+			connectorType:           state.FileType,
+			connectorHasUI:          false,
+			connectorHasSheets:      false,
 		},
 
 		{
@@ -284,6 +288,115 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			err:                     `invalid mapping: property path "not_existent_property" does not exist`,
 		},
+
+		{
+			name: "Source file action that imports users with a mapping, but no file connector is specified",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Path:                   "my_file.csv",
+				IdentityProperty:       "id",
+				LastChangeTimeProperty: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorageType,
+			err:                     "actions on file storage connections must have a connector",
+		},
+
+		{
+			name: "Source app action that imports users with a mapping, so it cannot specify a connector",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Connector: "CSV",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			connectorType:           state.FileType,
+			connectorHasUI:          false,
+			connectorHasSheets:      false,
+			err:                     "actions on App connections cannot have a connector",
+		},
+
+		{
+			name: "Source file action that imports users with a mapping, but connector does not exist",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Connector:              "NotExistentConnector",
+				Path:                   "my_file.csv",
+				IdentityProperty:       "id",
+				LastChangeTimeProperty: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorageType,
+			err:                     `connector "NotExistentConnector" does not exist`,
+		},
+		{
+			name: "Source file action that imports users with a mapping, but connector has a wrong type",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Connector:              "Dummy",
+				Path:                   "my_file.csv",
+				IdentityProperty:       "id",
+				LastChangeTimeProperty: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorageType,
+			connectorType:           state.AppType,
+			err:                     "type of the action's connector must be File, got App",
+		},
 	}
 
 	for _, test := range tests {
@@ -300,9 +413,9 @@ func Test_validateActionToSet(t *testing.T) {
 			v := validationState{}
 			v.connection.role = test.connectionRole
 			v.connection.connector.typ = test.connectionConnectorType
-			v.fileConnector.name = test.fileConnectorName
-			v.fileConnector.hasSheets = test.fileConnectorHasSheets
-			v.fileConnector.hasUI = test.fileConnectorHasUI
+			v.connector.typ = test.connectorType
+			v.connector.hasSheets = test.connectorHasSheets
+			v.connector.hasUI = test.connectorHasUI
 			v.provider = test.provider
 			err := validateActionToSet(test.action, test.target, v)
 			var gotErr string

@@ -345,24 +345,10 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
 
-	// Validate the connector.
-	actionOnFile := this.action.Connection().Connector().Type == state.FileStorageType
-	if actionOnFile && action.Connector == "" {
-		return errors.BadRequest("actions on file storage connections must have a connector")
-	}
-	if !actionOnFile && action.Connector != "" {
-		return errors.BadRequest("actions on %v connections cannot have a connector", this.action.Connection().Connector().Type)
-	}
+	// Retrieve the file connector, if specified in the action.
 	var fileConnector *state.Connector
 	if action.Connector != "" {
-		var ok bool
-		fileConnector, ok = this.apis.state.Connector(action.Connector)
-		if !ok {
-			return errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", action.Connector)
-		}
-		if fileConnector.Type != state.FileType {
-			return errors.BadRequest("type of the action's connector must be File, got %v", fileConnector.Type)
-		}
+		fileConnector, _ = this.apis.state.Connector(action.Connector)
 	}
 
 	c := this.action.Connection()
@@ -372,9 +358,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	v.connection.role = c.Role
 	v.connection.connector.typ = c.Connector().Type
 	if fileConnector != nil {
-		v.fileConnector.name = fileConnector.Name
-		v.fileConnector.hasSheets = fileConnector.HasSheets
-		v.fileConnector.hasUI = fileConnector.HasUI
+		v.connector.typ = fileConnector.Type
+		v.connector.hasSheets = fileConnector.HasSheets
+		v.connector.hasUI = fileConnector.HasUI
 	}
 	v.provider = this.apis.transformerProvider
 	err := validateActionToSet(action, this.action.Target, v)
