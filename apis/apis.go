@@ -710,6 +710,7 @@ func (apis *APIs) onElectLeader(n state.ElectLeader) func() {
 			apis.mu.Lock()
 			apis.scheduler = s
 			apis.mu.Unlock()
+			return
 		}
 		apis.mu.Lock()
 		s := apis.scheduler
