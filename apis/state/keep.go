@@ -311,7 +311,7 @@ func (state *State) addAction(n notification) {
 	c.mu.Lock()
 	c.actions[e.ID] = action
 	c.mu.Unlock()
-	notifyListeners(e, state.listeners.AddAction)
+	dispatchNotification(e, state.listeners.AddAction)
 
 }
 
@@ -417,7 +417,7 @@ func (state *State) addConnection(n notification) {
 			ec.EventConnections = addEventConnection(ec.EventConnections, c.ID)
 		})
 	}
-	notifyListeners(e, state.listeners.AddConnection)
+	dispatchNotification(e, state.listeners.AddConnection)
 }
 
 // AddConnectionKey is the event sent when a connection key is added.
@@ -525,7 +525,7 @@ func (state *State) deleteAction(n notification) {
 	c.mu.Lock()
 	delete(c.actions, e.ID)
 	c.mu.Unlock()
-	notifyListeners(e, state.listeners.DeleteAction)
+	dispatchNotification(e, state.listeners.DeleteAction)
 }
 
 // DeleteConnection is the event sent when a connection is deleted.
@@ -587,7 +587,7 @@ func (state *State) deleteConnection(n notification) {
 			ec.EventConnections = removeEventConnection(ec.EventConnections, e.ID)
 		})
 	}
-	notifyListeners(e, state.listeners.DeleteConnection)
+	dispatchNotification(e, state.listeners.DeleteConnection)
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
@@ -624,7 +624,7 @@ func (state *State) deleteWorkspace(n notification) {
 		delete(state.accounts, a.ID)
 	}
 	state.mu.Unlock()
-	notifyListeners(e, state.listeners.DeleteWorkspace)
+	dispatchNotification(e, state.listeners.DeleteWorkspace)
 }
 
 // ElectLeader is the event sent when a leader is elected.
@@ -650,7 +650,7 @@ func (state *State) electLeader(n notification) {
 	state.election = election
 	state.mu.Unlock()
 	if e.Leader != previous {
-		notifyListeners(e, state.listeners.ElectLeader)
+		dispatchNotification(e, state.listeners.ElectLeader)
 	}
 }
 
@@ -707,7 +707,7 @@ func (state *State) executeAction(n notification) {
 		StartTime: e.StartTime,
 	}
 	a.mu.Unlock()
-	notifyListeners(e, state.listeners.ExecuteAction)
+	dispatchNotification(e, state.listeners.ExecuteAction)
 }
 
 // LoadState is the event sent when a state is loaded.
@@ -912,7 +912,7 @@ func (state *State) setAction(n notification) {
 		a.MatchingProperties = e.MatchingProperties
 		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers
 	})
-	notifyListeners(e, state.listeners.SetAction)
+	dispatchNotification(e, state.listeners.SetAction)
 }
 
 // SetActionSchedulePeriod is the event sent when the schedule period of an
@@ -931,7 +931,7 @@ func (state *State) setActionSchedulePeriod(n notification) {
 	state.replaceAction(e.ID, func(a *Action) {
 		a.SchedulePeriod = e.SchedulePeriod
 	})
-	notifyListeners(e, state.listeners.SetActionSchedulePeriod)
+	dispatchNotification(e, state.listeners.SetActionSchedulePeriod)
 }
 
 // SetActionSettings is the event sent when the settings of an action is
@@ -1010,7 +1010,7 @@ func (state *State) setConnection(n notification) {
 		c.SendingMode = e.SendingMode
 		c.WebsiteHost = e.WebsiteHost
 	})
-	notifyListeners(e, state.listeners.SetConnection)
+	dispatchNotification(e, state.listeners.SetConnection)
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is
@@ -1029,7 +1029,7 @@ func (state *State) setConnectionSettings(n notification) {
 	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Settings = e.Settings
 	})
-	notifyListeners(e, state.listeners.SetConnectionSettings)
+	dispatchNotification(e, state.listeners.SetConnectionSettings)
 }
 
 // SetWarehouse is the event sent when the settings of a data warehouse are
@@ -1048,7 +1048,7 @@ func (state *State) setWarehouse(n notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = e.Warehouse
 	})
-	notifyListeners(e, state.listeners.SetWarehouse)
+	dispatchNotification(e, state.listeners.SetWarehouse)
 }
 
 // SetWarehouseMode is the event sent when the mode of a data warehouse is
@@ -1071,7 +1071,7 @@ func (state *State) setWarehouseMode(n notification) {
 			Settings: w.Warehouse.Settings,
 		}
 	})
-	notifyListeners(e, state.listeners.SetWarehouseMode)
+	dispatchNotification(e, state.listeners.SetWarehouseMode)
 }
 
 // SetWorkspace is the event sent when the name, the privacy region and the
@@ -1094,7 +1094,7 @@ func (state *State) setWorkspace(n notification) {
 		w.PrivacyRegion = e.PrivacyRegion
 		w.DisplayedProperties = e.DisplayedProperties
 	})
-	notifyListeners(e, state.listeners.SetWorkspace)
+	dispatchNotification(e, state.listeners.SetWorkspace)
 }
 
 // SetWorkspaceIdentifiers is the event sent when the identifiers of a workspace
@@ -1133,7 +1133,7 @@ func (state *State) setWorkspaceUserSchema(n notification) {
 		w.UserSchema = e.UserSchema
 		w.UserPrimarySources = e.PrimarySources
 	})
-	notifyListeners(e, state.listeners.SetWorkspaceUserSchema)
+	dispatchNotification(e, state.listeners.SetWorkspaceUserSchema)
 }
 
 // addEventConnection adds id to connections. It returns a copy of connections

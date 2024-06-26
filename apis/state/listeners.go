@@ -55,8 +55,8 @@ func (state *State) AddListener(listener any) {
 	}
 }
 
-// notifyListeners notifies all listeners of a notification.
-func notifyListeners[T func(N) func(), N any](notification N, listeners []T) {
+// dispatchNotification dispatches a notification to its listeners.
+func dispatchNotification[T func(N) func(), N any](notification N, listeners []T) {
 	if len(listeners) == 0 {
 		return
 	}
