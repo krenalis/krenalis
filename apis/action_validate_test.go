@@ -21,7 +21,7 @@ import (
 func Test_validateActionToSet(t *testing.T) {
 
 	tests := []struct {
-		name string // test name
+		name string // test name, in the form: "Role/Connection Type/Target - any additional information"
 
 		// The ActionToSet to validate.
 		action ActionToSet
@@ -44,7 +44,7 @@ func Test_validateActionToSet(t *testing.T) {
 		// Actions that are correct.
 
 		{
-			name: "Source app action that imports users with a mapping",
+			name: "Source/App/Users - with mapping",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -65,7 +65,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source app action that imports users with a transformation function",
+			name: "Source/App/Users - with transformation function",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -94,7 +94,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source database action that imports users with a mapping",
+			name: "Source/Database/Users - with mapping",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -119,7 +119,7 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.DatabaseType,
 		},
 		{
-			name: "Source file action that imports users with a mapping",
+			name: "Source/FileStorage/Users - with",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -149,7 +149,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source website action that imports users with a mapping",
+			name: "Source/Website/Users - with mapping",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Type{},
@@ -168,7 +168,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source website action that imports events",
+			name: "Source/Website/Events",
 			action: ActionToSet{
 				Name: "Import events",
 			},
@@ -178,7 +178,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Destination app action that exports users with a mapping",
+			name: "Destination/App/Users - with mapping",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -205,7 +205,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Destination app action that exports users with a transformation function",
+			name: "Destination/App/Users - with transformation",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -240,7 +240,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Destination app action that dispatches events with a mapping",
+			name: "Destination/App/Events - with a mapping",
 			action: ActionToSet{
 				Name:     "Dispatch events to app",
 				InSchema: types.Type{},
@@ -261,7 +261,7 @@ func Test_validateActionToSet(t *testing.T) {
 		// Actions that are invalid.
 
 		{
-			name: "Source app action that imports users with a mapping",
+			name: "Source/App/Users - mapping a not existent property",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -283,7 +283,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source file action that imports users with a mapping, but no file connector is specified",
+			name: "Source/FileStorage/Users - no file connector is specified",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -310,7 +310,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source app action that imports users with a mapping, so it cannot specify a connector",
+			name: "Source/App/Users - cannot specify a connector",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -336,7 +336,7 @@ func Test_validateActionToSet(t *testing.T) {
 		},
 
 		{
-			name: "Source file action that imports users with a mapping, but connector does not exist",
+			name: "Source/FileStorage/Users - connector does not exist",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -363,7 +363,7 @@ func Test_validateActionToSet(t *testing.T) {
 			err:                     `connector "NotExistentConnector" does not exist`,
 		},
 		{
-			name: "Source file action that imports users with a mapping, but connector has a wrong type",
+			name: "Source/FileStorage/Users - connector has wrong type",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
