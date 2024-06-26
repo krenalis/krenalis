@@ -249,14 +249,14 @@ func Test_validateActionToSet(t *testing.T) {
 				// the API level), as it happens for the import of
 				// identities from events?
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "traits", Type: types.JSON()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
-						"email_out": "email_in",
+						"email_out": "traits.email",
 					},
 				},
 			},
