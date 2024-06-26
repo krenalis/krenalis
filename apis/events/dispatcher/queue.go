@@ -90,11 +90,3 @@ func (q *queue) compact() {
 		}
 	}
 }
-
-// min returns the minimum value between x and y.
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
