@@ -370,6 +370,8 @@ func (store *Store) Mode() state.WarehouseMode {
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a
+// *DataWarehouseError error.
 func (store *Store) RunIdentityResolution(ctx context.Context) error {
 
 	switch store.Mode() {
