@@ -435,6 +435,30 @@ type Workspace struct {
 	DisplayedProperties DisplayedProperties
 }
 
+// Account returns the account with identifier id. The boolean return value
+// reports whether the account exists.
+func (workspace *Workspace) Account(id int) (*Account, bool) {
+	workspace.mu.Lock()
+	a, ok := workspace.accounts[id]
+	workspace.mu.Unlock()
+	return a, ok
+}
+
+// AccountByCode returns the account with the given code. The boolean return
+// value reports whether the account exists.
+func (workspace *Workspace) AccountByCode(code string) (*Account, bool) {
+	var a *Account
+	workspace.mu.Lock()
+	for _, account := range workspace.accounts {
+		if account.Code == code {
+			a = account
+			break
+		}
+	}
+	workspace.mu.Unlock()
+	return a, a != nil
+}
+
 // Connection returns the connection of the workspace with identifier id.
 // The boolean return value reports whether the connection exists.
 func (workspace *Workspace) Connection(id int) (*Connection, bool) {
@@ -463,30 +487,6 @@ func (workspace *Workspace) Organization() *Organization {
 	organization := workspace.organization
 	workspace.mu.Unlock()
 	return organization
-}
-
-// Account returns the account with identifier id. The boolean return value
-// reports whether the account exists.
-func (workspace *Workspace) Account(id int) (*Account, bool) {
-	workspace.mu.Lock()
-	a, ok := workspace.accounts[id]
-	workspace.mu.Unlock()
-	return a, ok
-}
-
-// AccountByCode returns the account with the given code. The boolean return
-// value reports whether the account exists.
-func (workspace *Workspace) AccountByCode(code string) (*Account, bool) {
-	var a *Account
-	workspace.mu.Lock()
-	for _, account := range workspace.accounts {
-		if account.Code == code {
-			a = account
-			break
-		}
-	}
-	workspace.mu.Unlock()
-	return a, a != nil
 }
 
 // PrivacyRegion represents a privacy region.
