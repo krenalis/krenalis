@@ -170,6 +170,17 @@ func (bo *Backoff) SetNextWaitTime(d time.Duration) {
 	bo.waitTime = d
 }
 
+// Stop prevents the execution of the function passed to AfterFunc.
+// It returns true if a scheduled function was successfully stopped from
+// executing, and returns false if there was no scheduled function, either
+// because AfterFunc was not called or the function has already been executed.
+func (bo *Backoff) Stop() bool {
+	if bo.timer == nil {
+		return false
+	}
+	return bo.timer.Stop()
+}
+
 // WaitTime returns the wait time for the next retry attempt in the range
 // [min, max), where min is 1ms and max is 1 + base * 2^attempt milliseconds,
 // but never greater than the cap if it has been set.

@@ -187,6 +187,29 @@ func Test_SetNextWaitTime(t *testing.T) {
 	}
 }
 
+func Test_Stop(t *testing.T) {
+	bo := New(10000)
+	if bo.Stop() {
+		t.Fatalf("expected false, got true")
+	}
+	ch := make(chan struct{})
+	bo.AfterFunc(context.Background(), func(context.Context) {
+		if bo.Stop() {
+			t.Fatalf("expected false, got true")
+		}
+		ch <- struct{}{}
+	})
+	<-ch
+	bo.SetNextWaitTime(1)
+	bo.AfterFunc(context.Background(), func(context.Context) {
+		t.Fatalf("unexpected call after the backoff has been stopped")
+	})
+	if !bo.Stop() {
+		t.Fatalf("expected true, got false")
+	}
+	time.Sleep(10)
+}
+
 func Test_WaitTime(t *testing.T) {
 	ctx := context.Background()
 	bo := New(1)
