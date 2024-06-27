@@ -86,9 +86,6 @@ func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) b
 		go func() {
 			select {
 			case <-ctx.Done():
-				if !bo.timer.Stop() {
-					<-bo.timer.C
-				}
 			case <-bo.timer.C:
 			}
 			f(ctx)
@@ -126,9 +123,6 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 		bo.waitTime = 0
 		select {
 		case <-ctx.Done():
-			if !bo.timer.Stop() {
-				<-bo.timer.C
-			}
 			return false
 		case <-bo.timer.C:
 		}
