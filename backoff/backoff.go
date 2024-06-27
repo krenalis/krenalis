@@ -76,23 +76,23 @@ func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) b
 	if bo.attempt < math.MaxInt {
 		bo.attempt++
 	}
-	if bo.waitTime > 0 {
-		if bo.timer == nil {
-			bo.timer = time.NewTimer(bo.waitTime)
-		} else {
-			bo.timer.Reset(bo.waitTime)
-		}
-		bo.waitTime = 0
-		go func() {
-			select {
-			case <-ctx.Done():
-			case <-bo.timer.C:
-			}
-			f(ctx)
-		}()
-	} else {
+	if bo.waitTime == 0 {
 		go f(ctx)
+		return true
 	}
+	if bo.timer == nil {
+		bo.timer = time.NewTimer(bo.waitTime)
+	} else {
+		bo.timer.Reset(bo.waitTime)
+	}
+	bo.waitTime = 0
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-bo.timer.C:
+		}
+		f(ctx)
+	}()
 	return true
 }
 
