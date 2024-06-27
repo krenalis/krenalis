@@ -169,13 +169,13 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Typ
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (store *Store) AddEvents(events [][]any) error {
+	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
 		return ErrInspectionMode
 	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
-	store.mustBeOpen()
 	store.mu.Lock()
 	store.events = append(store.events, events...)
 	store.mu.Unlock()
@@ -191,10 +191,10 @@ func (store *Store) AddEvents(events [][]any) error {
 //
 // It panics if the ack function is nil.
 func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+	store.mustBeOpen()
 	if ack == nil {
 		panic("nil ack function")
 	}
-	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
 		return nil, ErrInspectionMode
@@ -282,10 +282,11 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (uuid.
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc) (*EventIdentityWriter, error) {
+	store.mustBeOpen()
+
 	if ack == nil {
 		panic("nil ack function")
 	}
-	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
 		return nil, ErrInspectionMode
@@ -373,6 +374,7 @@ func (store *Store) Mode() state.WarehouseMode {
 // If an error occurs with the data warehouse, it returns a
 // *DataWarehouseError error.
 func (store *Store) RunIdentityResolution(ctx context.Context) error {
+	store.mustBeOpen()
 
 	switch store.Mode() {
 	case state.Inspection:
@@ -391,8 +393,6 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	defer func() {
 		<-store.runningIR
 	}()
-
-	store.mustBeOpen()
 
 	// Retrieve the workspace.
 	ws, ok := store.ds.state.Workspace(store.workspace)
