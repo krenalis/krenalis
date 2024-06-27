@@ -176,7 +176,7 @@ func Test_SetNextWaitTime(t *testing.T) {
 	bo.SetAttempts(5)
 	bo.SetCap(time.Second)
 	for {
-		wt := time.Duration(bo.Attempt()) * time.Millisecond
+		wt := 1 + time.Duration(bo.Attempt())*time.Millisecond
 		bo.SetNextWaitTime(wt)
 		if got := bo.WaitTime(); wt != got {
 			t.Fatalf("expected waiting time %s, got %s", wt, got)

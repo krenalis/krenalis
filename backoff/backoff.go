@@ -161,8 +161,11 @@ func (bo *Backoff) SetCap(cap time.Duration) {
 // SetNextWaitTime sets the wait time for the next attempt.
 // It panics if d is zero or negative.
 func (bo *Backoff) SetNextWaitTime(d time.Duration) {
-	if d <= 0 {
-		panic("backoff: d is negative")
+	if d == 0 {
+		panic("backoff: wait time is zero")
+	}
+	if d < 0 {
+		panic("backoff: wait time is negative")
 	}
 	bo.waitTime = d
 }
