@@ -311,6 +311,15 @@ func (iw *EventIdentityWriter) onDeleteAction(n state.DeleteAction) {
 	iw.mu.Unlock()
 }
 
+// onDeleteConnection is called the connection of the iw's action is deleted.
+//
+// The notification is propagated by the Store.onDeleteConnection method.
+func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
+	iw.mu.Lock()
+	iw.actions = nil
+	iw.mu.Unlock()
+}
+
 // onSetAction is called when an action of the connection of iw's action is set.
 //
 // The notification is propagated by the Store.onSetAction method.

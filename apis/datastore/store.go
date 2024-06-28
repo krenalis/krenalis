@@ -563,6 +563,21 @@ func (store *Store) onDeleteAction(n state.DeleteAction) {
 	store.mu.Unlock()
 }
 
+// onDeleteConnection is called when a connection of the store's workspace is
+// deleted.
+//
+// The notification is propagated by the Store.onDeleteConnection method.
+func (store *Store) onDeleteConnection(n state.DeleteConnection) {
+	connection := n.Connection()
+	store.mu.Lock()
+	for _, iw := range store.eventIdentityWriters {
+		if iw.connection == connection.ID {
+			iw.onDeleteConnection(n)
+		}
+	}
+	store.mu.Unlock()
+}
+
 // onSetAction is called when an action of the store's workspace is set.
 //
 // The notification is propagated by the Store.onSetAction method.

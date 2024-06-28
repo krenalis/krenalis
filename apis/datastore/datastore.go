@@ -65,6 +65,7 @@ func New(st *state.State) *Datastore {
 	// Add listeners.
 	ds.state.AddListener(ds.onAddAction)
 	ds.state.AddListener(ds.onDeleteAction)
+	ds.state.AddListener(ds.onDeleteConnection)
 	ds.state.AddListener(ds.onSetAction)
 	ds.state.AddListener(ds.onSetWarehouse)
 	ds.state.AddListener(ds.onSetWarehouseMode)
@@ -181,6 +182,20 @@ func (ds *Datastore) onDeleteAction(n state.DeleteAction) func() {
 	}
 	return func() {
 		store.onDeleteAction(n)
+	}
+}
+
+// onDeleteConnection is called when a connection is deleted.
+func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) func() {
+	ws := n.Connection().Workspace()
+	ds.mu.Lock()
+	store, ok := ds.store[ws.ID]
+	ds.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return func() {
+		store.onDeleteConnection(n)
 	}
 }
 
