@@ -63,7 +63,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
 		},
-
 		{
 			name: "Source/App/Users - with transformation function",
 			action: ActionToSet{
@@ -92,7 +91,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			provider:                testProvider{},
 		},
-
 		{
 			name: "Source/Database/Users - with mapping",
 			action: ActionToSet{
@@ -147,7 +145,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectorHasUI:          false,
 			connectorHasSheets:      false,
 		},
-
 		{
 			name: "Source/Website/Users - with mapping",
 			action: ActionToSet{
@@ -166,7 +163,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.WebsiteType,
 		},
-
 		{
 			name: "Source/Website/Events",
 			action: ActionToSet{
@@ -176,7 +172,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.WebsiteType,
 		},
-
 		{
 			name: "Destination/App/Users - with mapping",
 			action: ActionToSet{
@@ -203,7 +198,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.AppType,
 		},
-
 		{
 			name: "Destination/App/Users - with transformation",
 			action: ActionToSet{
@@ -238,7 +232,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			provider:                testProvider{},
 		},
-
 		{
 			name: "Destination/App/Events - with a mapping",
 			action: ActionToSet{
@@ -256,6 +249,52 @@ func Test_validateActionToSet(t *testing.T) {
 			target:                  state.Events,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.AppType,
+		},
+		// TODO(Gianluca): it's strange that in the export table there must be
+		// an "id" column, but then it is not necessary for this column to be in
+		// the action's output schema. See the issue
+		// https://github.com/open2b/chichi/issues/807.
+		{
+			name: "Destination/Database/Users - with mapping",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName: "my_users_table",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+		},
+		{
+			name: "Destination/FileStorage/Users",
+			action: ActionToSet{
+				Name:     "Export users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+					{Name: "last_name", Type: types.Text()},
+				}),
+				Connector:                "CSV",
+				Path:                     "my_output_users.csv",
+				FileOrderingPropertyPath: "email",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorageType,
+			connectorType:           state.FileType,
+			connectorHasUI:          false,
+			connectorHasSheets:      false,
 		},
 
 		// Actions that are invalid.
@@ -281,7 +320,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			err:                     `invalid mapping: property path "not_existent_property" does not exist`,
 		},
-
 		{
 			name: "Source/FileStorage/Users - no file connector is specified",
 			action: ActionToSet{
@@ -308,7 +346,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.FileStorageType,
 			err:                     "actions on file storage connections must have a connector",
 		},
-
 		{
 			name: "Source/App/Users - cannot specify a connector",
 			action: ActionToSet{
@@ -334,7 +371,6 @@ func Test_validateActionToSet(t *testing.T) {
 			connectorHasSheets:      false,
 			err:                     "actions on App connections cannot have a connector",
 		},
-
 		{
 			name: "Source/FileStorage/Users - connector does not exist",
 			action: ActionToSet{
