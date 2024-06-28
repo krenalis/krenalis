@@ -18,6 +18,13 @@ import (
 
 func TestActionsCreation(t *testing.T) {
 
+	// IMPORTANT: these tests were written before making the action validation
+	// function testable. These tests also cover the API call part and the HTTP
+	// layer, so they are not removed for these reasons. However, unless there
+	// is a particular motivation, instead of adding tests here it is better to
+	// add them on the action validation function, which is faster to test and
+	// easier to debug.
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
