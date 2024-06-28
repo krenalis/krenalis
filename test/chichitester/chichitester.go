@@ -67,8 +67,8 @@ var chichiAlreadyBuilt bool
 type TestingOption int
 
 const (
-	// DoNotPopulateUserSchema prevents the test from populating the "users"
-	// (and "user_identities") schema with testing properties.
+	// DoNotPopulateUserSchema prevents the test from populating the user schema
+	// with testing properties.
 	DoNotPopulateUserSchema TestingOption = iota + 1
 )
 
