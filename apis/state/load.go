@@ -172,7 +172,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
 			" warehouse_settings, user_schema, identifiers, privacy_region, displayed_image, displayed_first_name,"+
-			" displayed_last_name, displayed_information\n"+
+			" displayed_last_name, displayed_information, actions_to_purge\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
@@ -192,7 +192,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType, &warehouseMode,
 						&warehouseSettings, &userSchema, &ws.Identifiers, &ws.PrivacyRegion, &displayedImage,
-						&displayedFirstName, &displayedLastName, &displayedInformation); err != nil {
+						&displayedFirstName, &displayedLastName, &displayedInformation, &ws.actionsToPurge); err != nil {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]

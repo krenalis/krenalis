@@ -367,6 +367,24 @@ func (store *Store) Mode() state.WarehouseMode {
 	return mode
 }
 
+// PurgeIdentities purges the identities of the provided actions from the data
+// warehouse.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) PurgeIdentities(ctx context.Context, actions []int) error {
+	store.mustBeOpen()
+	switch store.Mode() {
+	case state.Inspection:
+		return ErrInspectionMode
+	case state.Maintenance:
+		return ErrMaintenanceMode
+	}
+	return store.warehouse.PurgeIdentities(ctx, actions, 0)
+}
+
 // RunIdentityResolution runs the Identity Resolution.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
@@ -400,13 +418,6 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 		return nil
 	}
 
-	// Retrieve the IDs of the workspace connections.
-	wsConnections := ws.Connections()
-	connections := make([]int, len(wsConnections))
-	for i, c := range wsConnections {
-		connections[i] = c.ID
-	}
-
 	// Determine the identifiers columns.
 	identifiers := make([]warehouses.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
@@ -434,7 +445,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	return store.warehouse.RunIdentityResolution(ctx, connections, identifiers, userColumns, userPrimarySources)
+	return store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
 }
 
 // SetDestinationUser sets the destination user for an action.

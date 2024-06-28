@@ -238,6 +238,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 // anymore.
 func (this *Action) Delete(ctx context.Context) error {
 	this.apis.mustBeOpen()
+	c := this.action.Connection()
 	n := state.DeleteAction{
 		ID: this.action.ID,
 	}
@@ -248,6 +249,13 @@ func (this *Action) Delete(ctx context.Context) error {
 		}
 		if result.RowsAffected() == 0 {
 			return errors.NotFound("action %d does not exist", n.ID)
+		}
+		if c.Role == state.Source && this.action.Target == state.Users {
+			_, err = tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_append(actions_to_purge, $1)"+
+				" WHERE actions_to_purge IS NOT NULL", n.ID)
+			if err != nil {
+				return err
+			}
 		}
 		return tx.Notify(ctx, n)
 	})

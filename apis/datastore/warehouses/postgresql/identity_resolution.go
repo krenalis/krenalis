@@ -22,32 +22,11 @@ import (
 var identityResolutionQueries string
 
 // RunIdentityResolution runs the Identity Resolution.
-func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
-	}
-
-	var b strings.Builder
-
-	// Delete the orphan user identities, which are the identities that belong
-	// to connections that no longer exist.
-	if len(connections) == 0 {
-		b.WriteString(`DELETE FROM "_user_identities"`)
-	} else {
-		b.WriteString(`DELETE FROM "_user_identities" WHERE "__connection__" NOT IN (`)
-		for i, connection := range connections {
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(strconv.Itoa(connection))
-		}
-		b.WriteByte(')')
-	}
-	_, err = db.Exec(ctx, b.String())
-	if err != nil {
-		return warehouses.Error(err)
 	}
 
 	// Generate the SQL function that determines if two identities are the same

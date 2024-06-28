@@ -63,6 +63,7 @@ type APIs struct {
 	transformerProvider transformers.Provider
 	mu                  sync.Mutex // for the scheduler field
 	scheduler           *schedulerManager
+	actionPurger        *actionPurger
 	smtp                *SMTPConfig
 	close               struct {
 		ctx       context.Context
@@ -206,6 +207,9 @@ func New(conf *Config) (*APIs, error) {
 	}
 	apis.events.observer = apis.events.collector.Observer()
 
+	// Create the action purger.
+	apis.actionPurger = newActionPurger(apis.state, apis.datastore)
+
 	// Create the scheduler manager.
 	apis.scheduler = newSchedulerManager(apis)
 
@@ -293,15 +297,12 @@ func (apis *APIs) Close() {
 	}
 	// Cancel the execution of actions initiated via API.
 	apis.close.cancelCtx()
-	// Close scheduler.
-	apis.mu.Lock()
-	if apis.scheduler != nil {
-		apis.scheduler.Close()
-		apis.scheduler = nil
-	}
-	apis.mu.Unlock()
+	// Close the scheduler.
+	apis.scheduler.Close()
 	// Wait for the completion of actions initiated via API.
 	apis.close.Wait()
+	// Close the action purger.
+	apis.actionPurger.Close(context.Background())
 	// Close event dispatcher, statistics, datastore and state.
 	apis.events.dispatcher.Close()
 	apis.statistics.Close(context.Background())

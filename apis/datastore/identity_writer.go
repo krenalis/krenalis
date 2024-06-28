@@ -79,7 +79,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		iw.ack(iw.ackIDs, nil)
 	}
 	if iw.purge {
-		err := iw.store.warehouse.PurgeIdentities(ctx, iw.action, iw.execution)
+		err := iw.store.warehouse.PurgeIdentities(ctx, []int{iw.action}, iw.execution)
 		if err != nil {
 			return err
 		}

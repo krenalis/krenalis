@@ -161,10 +161,30 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 	return nil
 }
 
-// PurgeIdentities purges identities associated with the provided action that
-// do not match the specified execution.
-func (warehouse *ClickHouse) PurgeIdentities(ctx context.Context, action, execution int) error {
-	panic("not implemented")
+// PurgeIdentities purges identities associated with the provided actions.
+func (warehouse *ClickHouse) PurgeIdentities(ctx context.Context, actions []int, execution int) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	var b strings.Builder
+	b.WriteString("DELETE FROM `_user_identities` WHERE `__action__` IN (")
+	for i, action := range actions {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strconv.Itoa(action))
+	}
+	b.WriteByte(')')
+	if execution != 0 {
+		b.WriteString(" AND `__execution__` != ")
+		b.WriteString(strconv.Itoa(execution))
+	}
+	err = db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // SetDestinationUser sets the destination user for an action.
@@ -184,7 +204,7 @@ func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuer
 }
 
 // RunIdentityResolution runs the Identity Resolution.
-func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	panic("TODO: not implemented")
 }
 

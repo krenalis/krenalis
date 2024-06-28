@@ -9,6 +9,7 @@ package test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/open2b/chichi/test/chichitester"
 	"github.com/open2b/chichi/types"
@@ -64,9 +65,10 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 		t.Fatalf("expected 20 users, got %d", count)
 	}
 
-	// Delete one Dummy, run the Identity Resolution and ensure that
-	// only 10 users are left.
+	// Delete one Dummy, wait for the identities to be purged, run Identity Resolution,
+	// and ensure that only 10 users remain.
 	c.DeleteConnection(dummy1)
+	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 	_, _, count = c.Users([]string{"email"}, "__id__", 0, 100)
 	if count != 10 {
@@ -76,6 +78,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Delete also the other Dummy connection; now the total count of users
 	// should be zero.
 	c.DeleteConnection(dummy2)
+	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 	_, _, count = c.Users([]string{"email"}, "__id__", 0, 100)
 	if count != 0 {

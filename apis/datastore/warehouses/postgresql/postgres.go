@@ -491,14 +491,26 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	return nil
 }
 
-// PurgeIdentities purges identities associated with the provided action that
-// do not match the specified execution.
-func (warehouse *PostgreSQL) PurgeIdentities(ctx context.Context, action, execution int) error {
+// PurgeIdentities purges identities associated with the provided actions.
+func (warehouse *PostgreSQL) PurgeIdentities(ctx context.Context, actions []int, execution int) error {
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, `DELETE FROM "_user_identities" WHERE "__action__" = $1 AND "__execution__" != $2`, action, execution)
+	var b strings.Builder
+	b.WriteString(`DELETE FROM "_user_identities" WHERE "__action__" IN (`)
+	for i, action := range actions {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strconv.Itoa(action))
+	}
+	b.WriteByte(')')
+	if execution != 0 {
+		b.WriteString(` AND "__execution__" != `)
+		b.WriteString(strconv.Itoa(execution))
+	}
+	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}

@@ -12,6 +12,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -449,6 +450,7 @@ type Workspace struct {
 	Identifiers         []string
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
+	actionsToPurge      []int
 }
 
 // Account returns the account with identifier id. The boolean return value
@@ -475,6 +477,17 @@ func (workspace *Workspace) AccountByCode(code string) (*Account, bool) {
 	return a, a != nil
 }
 
+// ActionsToPurge returns the identifiers of actions that require purging,
+// specifically those that have been deleted but still have user identifiers to
+// be purged from the data warehouse. Returns nil if the data warehouse is not
+// connected.
+func (workspace *Workspace) ActionsToPurge() []int {
+	workspace.mu.Lock()
+	actions := workspace.actionsToPurge
+	workspace.mu.Unlock()
+	return slices.Clone(actions)
+}
+
 // Connection returns the connection of the workspace with identifier id.
 // The boolean return value reports whether the connection exists.
 func (workspace *Workspace) Connection(id int) (*Connection, bool) {
@@ -497,12 +510,21 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
+// NumActionsToPurge returns the number of actions to purge for the workspace.
+func (workspace *Workspace) NumActionsToPurge() int {
+	workspace.mu.Lock()
+	n := len(workspace.actionsToPurge)
+	workspace.mu.Unlock()
+	return n
+}
+
 // Organization returns the organization of the workspace.
 func (workspace *Workspace) Organization() *Organization {
 	workspace.mu.Lock()
 	organization := workspace.organization
 	workspace.mu.Unlock()
 	return organization
+
 }
 
 // PrivacyRegion represents a privacy region.

@@ -24,7 +24,3 @@ You can create a source in the "connections" page of a workspace clicking on the
 A destination connection enables you to send customer data, consolidated in your data warehouse, and collected events, possibly after transforming them, to an external location. Chichi allows you to add various destinations to which you can send data and events.
 
 You can create a destination in the "connections" page of a workspace clicking on the **Add new destination ⊕** button.
-
-### Deleting a connection
-
-When deleting a source connection, the users imported from it are kept within the table `user_identities`, as well as in the table `users`, until the next [Identity Resolution](./identity-resolution.md) is executed.

@@ -852,8 +852,8 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_mode = $2, warehouse_settings = $3"+
-			"  WHERE id = $4 AND warehouse_type IS NULL",
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_mode = $2, warehouse_settings = $3, "+
+			"actions_to_purge = '{}'\nWHERE id = $4 AND warehouse_type IS NULL",
 			n.Warehouse.Type, n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace)
 		if err != nil {
 			return err
@@ -936,7 +936,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_mode = NULL, warehouse_settings = '' WHERE id = $1", n.Workspace)
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_mode = NULL, warehouse_settings = '', actions_to_purge = NULL WHERE id = $1", n.Workspace)
 		if err != nil {
 			return err
 		}

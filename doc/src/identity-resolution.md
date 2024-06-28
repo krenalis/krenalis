@@ -7,7 +7,6 @@ In particular, it performs these operations (not necessarily in this order):
 
 * recreates the contents of the `users` table starting from the identities within `user_identities`
 * updates the association between the events within the `events` table and the users within `users`
-* deletes the users within `user_identities` and `users` which no longer belong to any connection (i.e. connections that have been deleted).
 
 ## When It Is Executed
 

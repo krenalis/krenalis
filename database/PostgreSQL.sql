@@ -30,6 +30,7 @@ CREATE TABLE workspaces (
     displayed_first_name varchar(100) NOT NULL DEFAULT '',
     displayed_last_name varchar(100) NOT NULL DEFAULT '',
     displayed_information varchar(100) NOT NULL DEFAULT '',
+    actions_to_purge int[] DEFAULT NULL,
     PRIMARY KEY (id)
 );
 

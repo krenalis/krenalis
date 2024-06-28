@@ -74,6 +74,8 @@ func (state *State) keepState() {
 			state.executeAction(n)
 		case "LoadState":
 			state.loadState(n)
+		case "PurgeActions":
+			state.purgeActions(n)
 		case "RemoveEventConnection":
 			state.removeEventConnection(n)
 		case "RenameConnection":
@@ -525,6 +527,13 @@ func (state *State) deleteAction(n notification) {
 	c.mu.Lock()
 	delete(c.actions, e.ID)
 	c.mu.Unlock()
+	ws := c.workspace
+	if ws.actionsToPurge != nil && c.Role == Source && e.action.Target == Users {
+		actionsToPurge := append(ws.actionsToPurge, e.ID)
+		ws.mu.Lock()
+		ws.actionsToPurge = actionsToPurge
+		ws.mu.Unlock()
+	}
 	dispatchNotification(e, state.listeners.DeleteAction)
 }
 
@@ -554,6 +563,15 @@ func (state *State) deleteConnection(n notification) {
 	state.mu.Unlock()
 	// Update the workspace.
 	ws := e.connection.workspace
+	var actionsToPurge []int
+	if ws.actionsToPurge != nil && e.connection.Role == Source {
+		actionsToPurge = ws.actionsToPurge
+		for _, action := range e.connection.actions {
+			if action.Target == Users {
+				actionsToPurge = append(actionsToPurge, action.ID)
+			}
+		}
+	}
 	ws.mu.Lock()
 	delete(ws.connections, e.ID)
 	var found bool
@@ -562,6 +580,9 @@ func (state *State) deleteConnection(n notification) {
 			found = true
 			break
 		}
+	}
+	if actionsToPurge != nil {
+		ws.actionsToPurge = actionsToPurge
 	}
 	ws.mu.Unlock()
 	if found {
@@ -728,6 +749,24 @@ func (state *State) loadState(n notification) {
 		state.mu.Unlock()
 		go state.keepElections()
 	}
+}
+
+// PurgeActions is the event sent when actions of a workspace are purged.
+type PurgeActions struct {
+	Workspace      int
+	ActionsToPurge []int // remaining actions to purge.
+}
+
+// purgeActions purges actions of a workspace.
+func (state *State) purgeActions(n notification) {
+	e := PurgeActions{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	ws, _ := state.Workspace(e.Workspace)
+	ws.mu.Lock()
+	ws.actionsToPurge = e.ActionsToPurge
+	ws.mu.Unlock()
 }
 
 // RemoveEventConnection is the event sent when a connection is removed as event
@@ -1047,6 +1086,11 @@ func (state *State) setWarehouse(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = e.Warehouse
+		if w.Warehouse == nil {
+			w.actionsToPurge = nil
+		} else if w.actionsToPurge == nil {
+			w.actionsToPurge = []int{}
+		}
 	})
 	dispatchNotification(e, state.listeners.SetWarehouse)
 }

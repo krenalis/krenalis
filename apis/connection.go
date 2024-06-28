@@ -814,12 +814,22 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 // anymore.
 func (this *Connection) Delete(ctx context.Context) error {
 	this.apis.mustBeOpen()
+	c := this.connection
 	n := state.DeleteConnection{
-		ID: this.connection.ID,
+		ID: c.ID,
 	}
-	connector := this.connection.Connector()
-	workspace := this.connection.Workspace()
+	connector := c.Connector()
+	workspace := c.Workspace()
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		if c.Role == state.Source {
+			// Mark the connection's actions on Users as deleted.
+			_, err := tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_cat(actions_to_purge, (\n"+
+				"\tSELECT array_agg(a.id) FROM actions a WHERE a.connection = $1 AND a.target = 'Users'\n"+
+				"))\nWHERE id = $2 AND actions_to_purge IS NOT NULL", n.ID, workspace.ID)
+			if err != nil {
+				return err
+			}
+		}
 		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -828,7 +838,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 			return errors.NotFound("connection %d does not exist", n.ID)
 		}
 		role := "Source"
-		if this.connection.Role == state.Source {
+		if c.Role == state.Source {
 			role = "Destination"
 		}
 		// Remove the connection from the event connections.

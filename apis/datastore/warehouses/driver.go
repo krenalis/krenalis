@@ -183,16 +183,13 @@ type Warehouse interface {
 	// active and, if necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
-	// PurgeIdentities purges identities associated with the provided action that
-	// do not match the specified execution. If an error occurs with the data
+	// PurgeIdentities purges identities associated with the provided actions. If
+	// execution is non-zero, it purges only the identities of the provided actions
+	// that do not match the specified execution. If an error occurs with the data
 	// warehouse, it returns a *DataWarehouseError error.
-	PurgeIdentities(ctx context.Context, action, execution int) error
+	PurgeIdentities(ctx context.Context, actions []int, execution int) error
 
 	// RunIdentityResolution runs the Identity Resolution.
-	//
-	// connections holds the identifiers of the connections of the workspace and
-	// may be empty to indicate that no connections are present in the
-	// workspace.
 	//
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
@@ -203,7 +200,7 @@ type Warehouse interface {
 	// userPrimarySources is a mapping between user column names (for which a
 	// primary source connection have have been set) and the ID of primary source
 	// connections.
-	RunIdentityResolution(ctx context.Context, connections []int, identifiers, userColumns []Column, userPrimarySources map[string]int) error
+	RunIdentityResolution(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// SetDestinationUser sets the destination user for an action.
 	//
