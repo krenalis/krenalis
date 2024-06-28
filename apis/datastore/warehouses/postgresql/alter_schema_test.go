@@ -7,6 +7,8 @@ package postgresql
 
 import (
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
@@ -305,9 +307,11 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, userColumns...)
 			gotQueries, gotErr := alterSchemaQueries(userColumns, test.ops)
-			if len(gotQueries) > 2 {
-				gotQueries = gotQueries[2 : len(gotQueries)-2]
-			}
+			// Exclude from the test the queries that drop or create views.
+			gotQueries = slices.DeleteFunc(gotQueries, func(query string) bool {
+				return strings.HasPrefix(query, "DROP VIEW") ||
+					strings.HasPrefix(query, "CREATE VIEW")
+			})
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()
