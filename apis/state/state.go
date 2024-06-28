@@ -33,20 +33,22 @@ type election struct {
 
 // State represents the application state.
 type State struct {
-	id               uuid.UUID
-	mu               *sync.Mutex
-	db               *postgres.DB
-	syncing          bool // reports whether the keeper has started synchronizing the state.
-	changing         *sync.RWMutex
-	election         election
-	organizations    map[int]*Organization
-	connectors       map[string]*Connector
-	workspaces       map[int]*Workspace
-	connections      map[int]*Connection
-	connectionsByKey map[string]*Connection
-	actions          map[int]*Action
-	accounts         map[int]*Account
-	notifications    struct {
+	id         uuid.UUID
+	db         *postgres.DB
+	syncing    bool // reports whether the keeper has started synchronizing the state.
+	changing   *sync.RWMutex
+	connectors map[string]*Connector
+
+	mu               *sync.Mutex            // for the 'actions', 'accounts', 'connections', 'connectionsByKey', 'election', 'organizations', and 'workspaces' fields
+	actions          map[int]*Action        // protected by mu
+	accounts         map[int]*Account       // protected by mu
+	connections      map[int]*Connection    // protected by mu
+	connectionsByKey map[string]*Connection // protected by mu
+	election         election               // protected by mu
+	organizations    map[int]*Organization  // protected by mu
+	workspaces       map[int]*Workspace     // protected by mu
+
+	notifications struct {
 		channel <-chan notification
 		acks    *acks
 		stop    func()
