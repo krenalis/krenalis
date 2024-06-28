@@ -16,7 +16,7 @@
   - [6. Connect the data warehouse](#6-connect-the-data-warehouse)
   - [7. Initialize the warehouse](#7-initialize-the-warehouse)
   - [8. Run and open the browser](#8-run-and-open-the-browser)
-  - [9. Add properties to the `users` / `user_identities` schemas](#9-add-properties-to-the-users--user_identities-schemas)
+  - [9. Add properties to the user schema](#9-add-properties-to-the-user-schema)
 - [Enable telemetry (optional)](#enable-telemetry-optional)
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
@@ -155,7 +155,7 @@ chichi-cli init-warehouse
 
 Launch the server command executing `./chichi` (or `./chichi.exe` on Windows) and visit https://localhost:9090/ui/.
 
-### 9. Add properties to the `users` / `user_identities` schemas
+### 9. Add properties to the user schema
 
 Within the root of the repository, run:
 
