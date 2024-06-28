@@ -62,7 +62,7 @@ type APIs struct {
 	}
 	transformerProvider transformers.Provider
 	mu                  sync.Mutex // for the scheduler field
-	scheduler           *scheduler
+	scheduler           *schedulerManager
 	smtp                *SMTPConfig
 	close               struct {
 		ctx       context.Context
@@ -179,7 +179,6 @@ func New(conf *Config) (*APIs, error) {
 
 	// Listen to state changes.
 	apis.state.AddListener(apis.onDeleteAction)
-	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
 
 	// Init the datastore.
@@ -206,6 +205,9 @@ func New(conf *Config) (*APIs, error) {
 		return nil, err
 	}
 	apis.events.observer = apis.events.collector.Observer()
+
+	// Create the scheduler manager.
+	apis.scheduler = newSchedulerManager(apis)
 
 	// Keep the state updated.
 	apis.state.Keep()
@@ -699,26 +701,6 @@ func (apis *APIs) ValidateExpression(expression string, properties []types.Prope
 func (apis *APIs) mustBeOpen() {
 	if apis.closed.Load() {
 		panic("apis is closed")
-	}
-}
-
-// onElectLeader is called when a new leader is elected.
-func (apis *APIs) onElectLeader(n state.ElectLeader) func() {
-	return func() {
-		if apis.state.IsLeader() {
-			s := newScheduler(apis)
-			apis.mu.Lock()
-			apis.scheduler = s
-			apis.mu.Unlock()
-			return
-		}
-		apis.mu.Lock()
-		s := apis.scheduler
-		apis.scheduler = nil
-		apis.mu.Unlock()
-		if s != nil {
-			go s.Shutdown(apis.close.ctx)
-		}
 	}
 }
 
