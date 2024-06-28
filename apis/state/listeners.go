@@ -8,60 +8,60 @@
 package state
 
 import (
-	"math"
+	"fmt"
 	"sync"
 )
 
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
-// AddListener adds a notification listener and returns its identifier.
+// AddListener adds a notification listener.
 // It must be called when the state is frozen, i.e., before Keep is called,
 // during a listener execution, or between calls to Freeze and Unfreeze.
-func (state *State) AddListener(listener any) uint8 {
-	if len(state.listeners) == math.MaxUint8-1 {
-		panic("state: too many listeners")
+func (state *State) AddListener(listener any) {
+	switch l := listener.(type) {
+	case func(AddAction) func():
+		state.listeners.AddAction = append(state.listeners.AddAction, l)
+	case func(AddConnection) func():
+		state.listeners.AddConnection = append(state.listeners.AddConnection, l)
+	case func(DeleteAction) func():
+		state.listeners.DeleteAction = append(state.listeners.DeleteAction, l)
+	case func(DeleteConnection) func():
+		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
+	case func(DeleteWorkspace) func():
+		state.listeners.DeleteWorkspace = append(state.listeners.DeleteWorkspace, l)
+	case func(ElectLeader) func():
+		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
+	case func(ExecuteAction) func():
+		state.listeners.ExecuteAction = append(state.listeners.ExecuteAction, l)
+	case func(SetAction) func():
+		state.listeners.SetAction = append(state.listeners.SetAction, l)
+	case func(SetActionSchedulePeriod) func():
+		state.listeners.SetActionSchedulePeriod = append(state.listeners.SetActionSchedulePeriod, l)
+	case func(SetConnection) func():
+		state.listeners.SetConnection = append(state.listeners.SetConnection, l)
+	case func(SetConnectionSettings) func():
+		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
+	case func(SetWarehouse) func():
+		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
+	case func(SetWarehouseMode) func():
+		state.listeners.SetWarehouseMode = append(state.listeners.SetWarehouseMode, l)
+	case func(SetWorkspace) func():
+		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
+	case func(schema SetWorkspaceUserSchema) func():
+		state.listeners.SetWorkspaceUserSchema = append(state.listeners.SetWorkspaceUserSchema, l)
+	default:
+		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
 	}
-	var ok bool
-	id := state.lastListenerID
-	for {
-		id++
-		if id == 0 {
-			id = 1
-		}
-		_, ok = state.listeners[id]
-		if !ok {
-			break
-		}
-	}
-	state.lastListenerID = id
-	state.listeners[id] = listener
-	return id
 }
 
-// RemoveListeners removes the listeners with the provided identifiers.
-// It must be called when the state is frozen, i.e., before Keep is called,
-// during a listener execution, or between calls to Freeze and Unfreeze.
-func (state *State) RemoveListeners(ids []uint8) {
-	for _, id := range ids {
-		if _, ok := state.listeners[id]; !ok {
-			panic("state: listener to remove not found")
-		}
-		delete(state.listeners, id)
-	}
-}
-
-// dispatchNotification dispatches a notification to the provided listeners.
-func dispatchNotification[N any](notification N, listeners map[uint8]any) {
+// dispatchNotification dispatches a notification to its listeners.
+func dispatchNotification[T func(N) func(), N any](notification N, listeners []T) {
 	if len(listeners) == 0 {
 		return
 	}
-	var wg sync.WaitGroup
+	wg := sync.WaitGroup{}
 	for _, listener := range listeners {
-		listener, ok := listener.(func(N) func())
-		if !ok {
-			continue
-		}
 		if f := listener(notification); f != nil {
 			wg.Add(1)
 			go func() {

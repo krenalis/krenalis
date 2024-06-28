@@ -53,9 +53,24 @@ type State struct {
 		acks    *acks
 		stop    func()
 	}
-	listeners      map[uint8]any
-	lastListenerID uint8
-	close          struct {
+	listeners struct {
+		AddAction               []func(AddAction) func()
+		AddConnection           []func(AddConnection) func()
+		DeleteAction            []func(DeleteAction) func()
+		DeleteConnection        []func(DeleteConnection) func()
+		DeleteWorkspace         []func(DeleteWorkspace) func()
+		ElectLeader             []func(ElectLeader) func()
+		ExecuteAction           []func(ExecuteAction) func()
+		SetAction               []func(SetAction) func()
+		SetActionSchedulePeriod []func(SetActionSchedulePeriod) func()
+		SetConnection           []func(SetConnection) func()
+		SetConnectionSettings   []func(SetConnectionSettings) func()
+		SetWarehouse            []func(SetWarehouse) func()
+		SetWarehouseMode        []func(SetWarehouseMode) func()
+		SetWorkspace            []func(SetWorkspace) func()
+		SetWorkspaceUserSchema  []func(SetWorkspaceUserSchema) func()
+	}
+	close struct {
 		ctx       context.Context
 		CancelCtx context.CancelFunc
 		sync.WaitGroup
@@ -87,7 +102,6 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 		workspaces:       map[int]*Workspace{},
 		connections:      map[int]*Connection{},
 		connectionsByKey: map[string]*Connection{},
-		listeners:        map[uint8]any{},
 		actions:          map[int]*Action{},
 		accounts:         map[int]*Account{},
 	}

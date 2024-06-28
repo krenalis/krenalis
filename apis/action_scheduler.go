@@ -38,12 +38,11 @@ func periodIndex(period int16) int8 {
 
 // scheduler is the action scheduler.
 type scheduler struct {
-	apis      *APIs
-	mu        sync.Mutex // for the actions and indexes fields.
-	actions   [numPeriods]map[int16][]*state.Action
-	indexes   map[int]scIndex
-	listeners []uint8
-	close     struct {
+	apis    *APIs
+	mu      sync.Mutex // for the actions and indexes fields.
+	actions [numPeriods]map[int16][]*state.Action
+	indexes map[int]scIndex
+	close   struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		shutdown  chan struct{}
@@ -78,13 +77,11 @@ func newScheduler(apis *APIs) *scheduler {
 		}
 	}
 
-	sc.listeners = []uint8{
-		apis.state.AddListener(sc.onAddAction),
-		apis.state.AddListener(sc.onDeleteAction),
-		apis.state.AddListener(sc.onDeleteConnection),
-		apis.state.AddListener(sc.onDeleteWorkspace),
-		apis.state.AddListener(sc.onSetActionSchedulePeriod),
-	}
+	apis.state.AddListener(sc.onAddAction)
+	apis.state.AddListener(sc.onDeleteAction)
+	apis.state.AddListener(sc.onDeleteConnection)
+	apis.state.AddListener(sc.onDeleteWorkspace)
+	apis.state.AddListener(sc.onSetActionSchedulePeriod)
 
 	go func() {
 
@@ -139,7 +136,6 @@ func (sc *scheduler) Close() {
 	close(sc.close.shutdown)
 	sc.close.cancelCtx()
 	sc.close.Wait()
-	sc.apis.state.RemoveListeners(sc.listeners)
 }
 
 // Shutdown gracefully shuts down the scheduler without interrupting any action
@@ -150,7 +146,6 @@ func (sc *scheduler) Shutdown(ctx context.Context) {
 	stop := context.AfterFunc(ctx, func() { sc.close.cancelCtx() })
 	defer stop()
 	sc.close.Wait()
-	sc.apis.state.RemoveListeners(sc.listeners)
 }
 
 // onAddAction is called when an action is added to the state.
