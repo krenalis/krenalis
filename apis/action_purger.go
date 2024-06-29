@@ -29,7 +29,6 @@ const backoffBase = 1000
 type actionPurger struct {
 	state     *state.State
 	datastore *datastore.Datastore
-	listeners []uint8
 	close     struct {
 		ctx    context.Context
 		cancel context.CancelFunc
