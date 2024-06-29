@@ -36,26 +36,18 @@ func periodIndex(period int16) int8 {
 	panic("invalid period")
 }
 
-// schedulerManager is the action scheduler manager.
-type schedulerManager struct {
-	apis      *APIs
-	scheduler *scheduler
-	ctx       context.Context    // context passes to the action executions.
-	cancel    context.CancelFunc // function to cancel the action executions.
-	wg        sync.WaitGroup     // waiting group that includes the schedulers and action executions.
+// actionScheduler is the action scheduler.
+type actionScheduler struct {
+	apis     *APIs
+	executor *actionSchedulerExecutor
+	ctx      context.Context    // context passes to the action executions.
+	cancel   context.CancelFunc // function to cancel the action executions.
+	wg       sync.WaitGroup     // waiting group that includes the schedulers and action executions.
 }
 
-type scheduler struct {
-	apis    *APIs
-	mu      sync.Mutex // for the actions and indexes fields.
-	actions [numPeriods]map[int16][]*state.Action
-	indexes map[int]scIndex
-	close   chan struct{}
-}
-
-// newSchedulerManager returns a new scheduler manager.
-func newSchedulerManager(apis *APIs) *schedulerManager {
-	sc := &schedulerManager{
+// newActionScheduler returns a new action scheduler.
+func newActionScheduler(apis *APIs) *actionScheduler {
+	sc := &actionScheduler{
 		apis: apis,
 	}
 	apis.state.AddListener(sc.onAddAction)
@@ -68,43 +60,44 @@ func newSchedulerManager(apis *APIs) *schedulerManager {
 	return sc
 }
 
-// Close closes the scheduler interrupting action executions.
-func (sm *schedulerManager) Close() {
-	if sm.scheduler != nil {
-		sm.scheduler.Close()
+// Close closes the action scheduler closing the executors and interrupting
+// action executions.
+func (as *actionScheduler) Close() {
+	if as.executor != nil {
+		as.executor.Close()
 	}
-	sm.cancel()
-	sm.wg.Wait()
+	as.cancel()
+	as.wg.Wait()
 }
 
 // onAddAction is called when an action is added to the state.
-func (sm *schedulerManager) onAddAction(n state.AddAction) func() {
-	if sm.scheduler == nil {
+func (as *actionScheduler) onAddAction(n state.AddAction) func() {
+	if as.executor == nil {
 		return nil
 	}
-	action, _ := sm.apis.state.Action(n.ID)
+	action, _ := as.apis.state.Action(n.ID)
 	if !toSchedule(action) {
 		return nil
 	}
 	return func() {
-		sm.scheduler.AddAction(action)
+		as.executor.AddAction(action)
 	}
 }
 
 // onDeleteAction is called when an action is deleted from the state.
-func (sm *schedulerManager) onDeleteAction(n state.DeleteAction) func() {
-	if sm.scheduler == nil {
+func (as *actionScheduler) onDeleteAction(n state.DeleteAction) func() {
+	if as.executor == nil {
 		return nil
 	}
 	go func() {
-		sm.scheduler.RemoveAction(n.ID)
+		as.executor.RemoveAction(n.ID)
 	}()
 	return nil
 }
 
 // onDeleteConnection is called when a connection is deleted from the state.
-func (sm *schedulerManager) onDeleteConnection(n state.DeleteConnection) func() {
-	if sm.scheduler == nil {
+func (as *actionScheduler) onDeleteConnection(n state.DeleteConnection) func() {
+	if as.executor == nil {
 		return nil
 	}
 	var actions []int
@@ -118,15 +111,15 @@ func (sm *schedulerManager) onDeleteConnection(n state.DeleteConnection) func() 
 	}
 	go func() {
 		for _, action := range actions {
-			sm.scheduler.RemoveAction(action)
+			as.executor.RemoveAction(action)
 		}
 	}()
 	return nil
 }
 
 // onDeleteWorkspace is called when a workspace is deleted from the state.
-func (sm *schedulerManager) onDeleteWorkspace(n state.DeleteWorkspace) func() {
-	if sm.scheduler == nil {
+func (as *actionScheduler) onDeleteWorkspace(n state.DeleteWorkspace) func() {
+	if as.executor == nil {
 		return nil
 	}
 	var actions []int
@@ -142,62 +135,73 @@ func (sm *schedulerManager) onDeleteWorkspace(n state.DeleteWorkspace) func() {
 	}
 	go func() {
 		for _, action := range actions {
-			sm.scheduler.RemoveAction(action)
+			as.executor.RemoveAction(action)
 		}
 	}()
 	return nil
 }
 
 // ElectLeader is called when a leader is elected.
-func (sm *schedulerManager) onElectLeader(n state.ElectLeader) func() {
-	if sm.scheduler != nil {
-		if !sm.apis.state.IsLeader() {
-			go sm.scheduler.Close()
+func (as *actionScheduler) onElectLeader(n state.ElectLeader) func() {
+	if as.executor != nil {
+		if !as.apis.state.IsLeader() {
+			go as.executor.Close()
 		}
 		return nil
 	}
-	if !sm.apis.state.IsLeader() {
+	if !as.apis.state.IsLeader() {
 		return nil
 	}
 	return func() {
-		sm.scheduler = newScheduler(sm.apis, &sm.wg, sm.ctx)
+		as.executor = newActionSchedulerExecutor(as.apis, &as.wg, as.ctx)
 	}
 }
 
 // onSetActionSchedulePeriod is called when the schedule period of an action is
 // set.
-func (sm *schedulerManager) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) func() {
-	if sm.scheduler != nil {
+func (as *actionScheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) func() {
+	if as.executor != nil {
 		return nil
 	}
-	action, _ := sm.apis.state.Action(n.ID)
+	action, _ := as.apis.state.Action(n.ID)
 	if !toSchedule(action) {
 		return nil
 	}
 	return func() {
-		sm.scheduler.SetPeriod(action)
+		as.executor.SetPeriod(action)
 	}
 }
 
-// newScheduler returns a new action scheduler. wg is the wait group that
-// includes both the scheduler and all action executions. ctx is the context
-// to pass to the action executions.
-func newScheduler(apis *APIs, wg *sync.WaitGroup, ctx context.Context) *scheduler {
+// actionSchedulerExecutor represents an executor for an action scheduler. When
+// a node becomes the leader, it starts an executor, and the previous leader
+// closes its executor.
+type actionSchedulerExecutor struct {
+	apis    *APIs
+	mu      sync.Mutex // for the actions and indexes fields.
+	actions [numPeriods]map[int16][]*state.Action
+	indexes map[int]scIndex
+	close   chan struct{}
+}
 
-	sc := &scheduler{
+// newActionSchedulerExecutor returns a new action scheduler executor. wg is the
+// wait group that coordinates goroutines for the executor and action
+// executions. ctx is the context to pass to the action executions.
+func newActionSchedulerExecutor(apis *APIs, wg *sync.WaitGroup, ctx context.Context) *actionSchedulerExecutor {
+
+	se := &actionSchedulerExecutor{
 		apis:    apis,
 		indexes: map[int]scIndex{},
 		close:   make(chan struct{}),
 	}
-	for i := range len(sc.actions) {
-		sc.actions[i] = map[int16][]*state.Action{}
+	for i := range len(se.actions) {
+		se.actions[i] = map[int16][]*state.Action{}
 	}
-	for _, action := range sc.apis.state.Actions() {
+	for _, action := range se.apis.state.Actions() {
 		if toSchedule(action) {
 			i := periodIndex(action.SchedulePeriod)
 			j := action.ScheduleStart % action.SchedulePeriod
-			sc.actions[i][j] = append(sc.actions[i][j], action)
-			sc.indexes[action.ID] = scIndex{i, j}
+			se.actions[i][j] = append(se.actions[i][j], action)
+			se.indexes[action.ID] = scIndex{i, j}
 		}
 	}
 
@@ -211,17 +215,17 @@ func newScheduler(apis *APIs, wg *sync.WaitGroup, ctx context.Context) *schedule
 				minute := int16(t.Hour()*60 + t.Minute())
 				for i, period := range periods {
 					j := minute % period
-					sc.mu.Lock()
-					actions := sc.actions[i][j]
-					sc.mu.Unlock()
+					se.mu.Lock()
+					actions := se.actions[i][j]
+					se.mu.Unlock()
 					for _, action := range actions {
 						if !toExecute(action) {
 							continue
 						}
 						connection := action.Connection()
-						store := sc.apis.datastore.Store(connection.Workspace().ID)
-						c := &Connection{apis: sc.apis, connection: connection, store: store}
-						a := &Action{apis: sc.apis, action: action, connection: c}
+						store := se.apis.datastore.Store(connection.Workspace().ID)
+						c := &Connection{apis: se.apis, connection: connection, store: store}
+						a := &Action{apis: se.apis, action: action, connection: c}
 						wg.Add(1)
 						go func() {
 							defer wg.Done()
@@ -238,71 +242,70 @@ func newScheduler(apis *APIs, wg *sync.WaitGroup, ctx context.Context) *schedule
 						}()
 					}
 				}
-			case <-sc.close:
+			case <-se.close:
 				wg.Done()
 				return
 			}
 		}
 	}()
 
-	return sc
+	return se
 }
 
-// Close closes the scheduler but does not interrupt any executing action.
-func (sc *scheduler) Close() {
-	close(sc.close)
+// Close closes the scheduler executor but does not interrupt any action
+// execution.
+func (se *actionSchedulerExecutor) Close() {
+	close(se.close)
 }
 
-// AddAction adds action to the scheduler. It must be called when the state is
-// frozen.
-func (sc *scheduler) AddAction(action *state.Action) {
+// AddAction adds action to the scheduler executor.
+func (se *actionSchedulerExecutor) AddAction(action *state.Action) {
 	i := periodIndex(action.SchedulePeriod)
 	j := action.ScheduleStart % action.SchedulePeriod
-	sc.mu.Lock()
-	sc.actions[i][j] = append(slices.Clone(sc.actions[i][j]), action)
-	sc.indexes[action.ID] = scIndex{i, j}
-	sc.mu.Unlock()
+	se.mu.Lock()
+	se.actions[i][j] = append(slices.Clone(se.actions[i][j]), action)
+	se.indexes[action.ID] = scIndex{i, j}
+	se.mu.Unlock()
 }
 
-// RemoveAction removes the action with identifier id from the scheduler. If the
-// action does not exist it does nothing. It must be called when the state is
-// frozen.
-func (sc *scheduler) RemoveAction(id int) {
-	sc.mu.Lock()
-	index, ok := sc.indexes[id]
+// RemoveAction removes the action with identifier id from the scheduler
+// executor. If the action does not exist it does nothing.
+func (se *actionSchedulerExecutor) RemoveAction(id int) {
+	se.mu.Lock()
+	index, ok := se.indexes[id]
 	if !ok {
-		sc.mu.Unlock()
+		se.mu.Unlock()
 		return
 	}
 	i, j := index.i, index.j
-	actions := sc.actions[i][j]
+	actions := se.actions[i][j]
 	for k, action := range actions {
 		if action.ID == id {
 			actions = slices.Delete(actions, k, k+1)
 			if len(actions) == 0 {
-				delete(sc.actions[i], j)
+				delete(se.actions[i], j)
 			} else {
-				sc.actions[i][j] = actions
+				se.actions[i][j] = actions
 			}
 			break
 		}
 	}
-	sc.mu.Unlock()
+	se.mu.Unlock()
 }
 
 // SetPeriod sets the period of an action.
-func (sc *scheduler) SetPeriod(action *state.Action) {
-	sc.mu.Lock()
-	index, ok := sc.indexes[action.ID]
-	sc.mu.Unlock()
+func (se *actionSchedulerExecutor) SetPeriod(action *state.Action) {
+	se.mu.Lock()
+	index, ok := se.indexes[action.ID]
+	se.mu.Unlock()
 	if !ok {
 		return
 	}
 	if periods[index.i] == action.SchedulePeriod {
 		return
 	}
-	sc.RemoveAction(action.ID)
-	sc.AddAction(action)
+	se.RemoveAction(action.ID)
+	se.AddAction(action)
 }
 
 // toExecute reports whether action can be executed.
