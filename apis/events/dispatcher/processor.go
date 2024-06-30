@@ -13,7 +13,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/open2b/chichi/apis/connectors"
@@ -27,10 +26,9 @@ const pipeSize = 100
 // processor processes events received from source streams and sent them to
 // their data warehouses.
 type processor struct {
-	sync.Mutex // for the streams field.
-	db         *postgres.DB
-	state      *state.State
-	events     struct {
+	db     *postgres.DB
+	state  *state.State
+	events struct {
 		in  chan *dispatchingEvent
 		out chan *dispatchingEvent
 	}
