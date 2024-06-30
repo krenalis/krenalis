@@ -69,7 +69,7 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 	if workspaces != nil {
 		go func() {
 			for _, ws := range workspaces {
-				p.processWorkspace(ws, nil)
+				p.purgeWorkspace(ws, nil)
 			}
 		}()
 	}
@@ -113,7 +113,7 @@ func (p *actionPurger) onDeleteAction(n state.DeleteAction) func() {
 	if ws.Warehouse == nil || ws.Warehouse.Mode != state.Normal {
 		return nil
 	}
-	go p.processWorkspace(ws.ID, nil)
+	go p.purgeWorkspace(ws.ID, nil)
 	return nil
 }
 
@@ -129,7 +129,7 @@ func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) func() {
 	}
 	for _, action := range c.Actions() {
 		if action.Target == state.Users {
-			go p.processWorkspace(ws.ID, nil)
+			go p.purgeWorkspace(ws.ID, nil)
 			return nil
 		}
 	}
@@ -144,7 +144,7 @@ func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) func() {
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
 		return nil
 	}
-	go p.processWorkspace(n.Workspace, nil)
+	go p.purgeWorkspace(n.Workspace, nil)
 	return nil
 }
 
@@ -156,13 +156,19 @@ func (p *actionPurger) onSetWarehouseMode(n state.SetWarehouseMode) func() {
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
 		return nil
 	}
-	go p.processWorkspace(n.Workspace, nil)
+	go p.purgeWorkspace(n.Workspace, nil)
 	return nil
 }
 
-// processWorkspace processes the actions to purge of a workspace.
-// bo is non-nil only when a purge is retried.
-func (p *actionPurger) processWorkspace(id int, bo *backoff.Backoff) {
+// purgeWorkspace purges the identities associated with the delete actions of
+// a workspace. bo is non-nil only when a purge is being retried.
+func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
+
+	p.close.Add(1)
+	defer p.close.Done()
+	if p.close.closed.Load() {
+		return
+	}
 
 	p.mu.Lock()
 	if bo, ok := p.backoff[id]; ok {
@@ -195,7 +201,7 @@ func (p *actionPurger) processWorkspace(id int, bo *backoff.Backoff) {
 				bo = backoff.New(backoffBase)
 			}
 			bo.AfterFunc(p.close.ctx, func(ctx context.Context) {
-				p.processWorkspace(id, bo)
+				p.purgeWorkspace(id, bo)
 			})
 			p.backoff[id] = bo
 		}
@@ -207,12 +213,6 @@ func (p *actionPurger) processWorkspace(id int, bo *backoff.Backoff) {
 // purgeIdentities purges the identities of the provided actions from the
 // workspace's data warehouse.
 func (p *actionPurger) purgeIdentities(ws int, actions []int) error {
-
-	if p.close.closed.Load() {
-		return nil
-	}
-	p.close.Add(1)
-	defer p.close.Done()
 
 	store := p.datastore.Store(ws)
 	err := store.PurgeIdentities(p.close.ctx, actions)
