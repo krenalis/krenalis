@@ -20,15 +20,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// Keep keeps the state updated.
-func (state *State) Keep() {
-	state.close.Add(1)
-	go state.keepState()
-}
-
-// keepState keeps the state in sync with the database. It is called in its own
-// goroutine.
-func (state *State) keepState() {
+// keep keeps the state updated and in sync with the database.
+// It is called in its own goroutine.
+func (state *State) keep() {
 
 	defer state.close.Done()
 	done := state.close.ctx.Done()
@@ -315,7 +309,7 @@ func (state *State) addAction(n notification) {
 	c.mu.Lock()
 	c.actions[e.ID] = action
 	c.mu.Unlock()
-	dispatchNotification(e, state.listeners.AddAction)
+	dispatchNotification(state, e)
 
 }
 
@@ -421,7 +415,7 @@ func (state *State) addConnection(n notification) {
 			ec.EventConnections = addEventConnection(ec.EventConnections, c.ID)
 		})
 	}
-	dispatchNotification(e, state.listeners.AddConnection)
+	dispatchNotification(state, e)
 }
 
 // AddConnectionKey is the event sent when a connection key is added.
@@ -536,7 +530,7 @@ func (state *State) deleteAction(n notification) {
 		ws.actionsToPurge = actionsToPurge
 		ws.mu.Unlock()
 	}
-	dispatchNotification(e, state.listeners.DeleteAction)
+	dispatchNotification(state, e)
 }
 
 // DeleteConnection is the event sent when a connection is deleted.
@@ -610,7 +604,7 @@ func (state *State) deleteConnection(n notification) {
 			ec.EventConnections = removeEventConnection(ec.EventConnections, e.ID)
 		})
 	}
-	dispatchNotification(e, state.listeners.DeleteConnection)
+	dispatchNotification(state, e)
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
@@ -647,7 +641,7 @@ func (state *State) deleteWorkspace(n notification) {
 		delete(state.accounts, a.ID)
 	}
 	state.mu.Unlock()
-	dispatchNotification(e, state.listeners.DeleteWorkspace)
+	dispatchNotification(state, e)
 }
 
 // ElectLeader is the event sent when a leader is elected.
@@ -673,7 +667,7 @@ func (state *State) electLeader(n notification) {
 	state.election = election
 	state.mu.Unlock()
 	if e.Leader != previous {
-		dispatchNotification(e, state.listeners.ElectLeader)
+		dispatchNotification(state, e)
 	}
 }
 
@@ -730,7 +724,7 @@ func (state *State) executeAction(n notification) {
 		StartTime: e.StartTime,
 	}
 	a.mu.Unlock()
-	dispatchNotification(e, state.listeners.ExecuteAction)
+	dispatchNotification(state, e)
 }
 
 // LoadState is the event sent when a state is loaded.
@@ -953,7 +947,7 @@ func (state *State) setAction(n notification) {
 		a.MatchingProperties = e.MatchingProperties
 		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers
 	})
-	dispatchNotification(e, state.listeners.SetAction)
+	dispatchNotification(state, e)
 }
 
 // SetActionSchedulePeriod is the event sent when the schedule period of an
@@ -972,7 +966,7 @@ func (state *State) setActionSchedulePeriod(n notification) {
 	state.replaceAction(e.ID, func(a *Action) {
 		a.SchedulePeriod = e.SchedulePeriod
 	})
-	dispatchNotification(e, state.listeners.SetActionSchedulePeriod)
+	dispatchNotification(state, e)
 }
 
 // SetActionSettings is the event sent when the settings of an action is
@@ -1051,7 +1045,7 @@ func (state *State) setConnection(n notification) {
 		c.SendingMode = e.SendingMode
 		c.WebsiteHost = e.WebsiteHost
 	})
-	dispatchNotification(e, state.listeners.SetConnection)
+	dispatchNotification(state, e)
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is
@@ -1070,7 +1064,7 @@ func (state *State) setConnectionSettings(n notification) {
 	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Settings = e.Settings
 	})
-	dispatchNotification(e, state.listeners.SetConnectionSettings)
+	dispatchNotification(state, e)
 }
 
 // SetWarehouse is the event sent when the settings of a data warehouse are
@@ -1094,7 +1088,7 @@ func (state *State) setWarehouse(n notification) {
 			w.actionsToPurge = []int{}
 		}
 	})
-	dispatchNotification(e, state.listeners.SetWarehouse)
+	dispatchNotification(state, e)
 }
 
 // SetWarehouseMode is the event sent when the mode of a data warehouse is
@@ -1117,7 +1111,7 @@ func (state *State) setWarehouseMode(n notification) {
 			Settings: w.Warehouse.Settings,
 		}
 	})
-	dispatchNotification(e, state.listeners.SetWarehouseMode)
+	dispatchNotification(state, e)
 }
 
 // SetWorkspace is the event sent when the name, the privacy region and the
@@ -1140,7 +1134,7 @@ func (state *State) setWorkspace(n notification) {
 		w.PrivacyRegion = e.PrivacyRegion
 		w.DisplayedProperties = e.DisplayedProperties
 	})
-	dispatchNotification(e, state.listeners.SetWorkspace)
+	dispatchNotification(state, e)
 }
 
 // SetWorkspaceIdentifiers is the event sent when the identifiers of a workspace
@@ -1179,7 +1173,7 @@ func (state *State) setWorkspaceUserSchema(n notification) {
 		w.UserSchema = e.UserSchema
 		w.UserPrimarySources = e.PrimarySources
 	})
-	dispatchNotification(e, state.listeners.SetWorkspaceUserSchema)
+	dispatchNotification(state, e)
 }
 
 // addEventConnection adds id to connections. It returns a copy of connections

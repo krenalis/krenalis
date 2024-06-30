@@ -55,21 +55,8 @@ type State struct {
 		stop    func()
 	}
 	listeners struct {
-		AddAction               []func(AddAction) func()
-		AddConnection           []func(AddConnection) func()
-		DeleteAction            []func(DeleteAction) func()
-		DeleteConnection        []func(DeleteConnection) func()
-		DeleteWorkspace         []func(DeleteWorkspace) func()
-		ElectLeader             []func(ElectLeader) func()
-		ExecuteAction           []func(ExecuteAction) func()
-		SetAction               []func(SetAction) func()
-		SetActionSchedulePeriod []func(SetActionSchedulePeriod) func()
-		SetConnection           []func(SetConnection) func()
-		SetConnectionSettings   []func(SetConnectionSettings) func()
-		SetWarehouse            []func(SetWarehouse) func()
-		SetWarehouseMode        []func(SetWarehouseMode) func()
-		SetWorkspace            []func(SetWorkspace) func()
-		SetWorkspaceUserSchema  []func(SetWorkspaceUserSchema) func()
+		id  uint8 // last listener identifier
+		all map[uint8]any
 	}
 	close struct {
 		ctx       context.Context
@@ -84,8 +71,8 @@ type ConnectorSetting struct {
 	OAuthClientSecret string `yaml:"oauthClientSecret"`
 }
 
-// New returns a *State instance given the database and the static settings of
-// the connectors.
+// New returns a frozen state given the database and the static settings of
+// the connectors. Call Unfreeze to start updating it.
 func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*State, error) {
 
 	id, err := uuid.NewUUID()
@@ -106,6 +93,7 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 		actions:          map[int]*Action{},
 		accounts:         map[int]*Account{},
 	}
+	state.listeners.all = map[uint8]any{}
 
 	// Listen to notifications.
 	state.notifications.acks = newAcks()
@@ -118,6 +106,13 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 		state.notifications.stop()
 		return nil, err
 	}
+
+	// Freeze the state.
+	state.changing.RLock()
+
+	// Keep updating.
+	state.close.Add(1)
+	go state.keep()
 
 	return state, nil
 }

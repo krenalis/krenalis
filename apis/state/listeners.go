@@ -8,61 +8,68 @@
 package state
 
 import (
-	"fmt"
+	"math"
 	"sync"
 )
 
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
-// AddListener adds a notification listener.
-// It must be called when the state is frozen, i.e., before Keep is called,
-// during a listener execution, or between calls to Freeze and Unfreeze.
-func (state *State) AddListener(listener any) {
-	switch l := listener.(type) {
-	case func(AddAction) func():
-		state.listeners.AddAction = append(state.listeners.AddAction, l)
-	case func(AddConnection) func():
-		state.listeners.AddConnection = append(state.listeners.AddConnection, l)
-	case func(DeleteAction) func():
-		state.listeners.DeleteAction = append(state.listeners.DeleteAction, l)
-	case func(DeleteConnection) func():
-		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
-	case func(DeleteWorkspace) func():
-		state.listeners.DeleteWorkspace = append(state.listeners.DeleteWorkspace, l)
-	case func(ElectLeader) func():
-		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
-	case func(ExecuteAction) func():
-		state.listeners.ExecuteAction = append(state.listeners.ExecuteAction, l)
-	case func(SetAction) func():
-		state.listeners.SetAction = append(state.listeners.SetAction, l)
-	case func(SetActionSchedulePeriod) func():
-		state.listeners.SetActionSchedulePeriod = append(state.listeners.SetActionSchedulePeriod, l)
-	case func(SetConnection) func():
-		state.listeners.SetConnection = append(state.listeners.SetConnection, l)
-	case func(SetConnectionSettings) func():
-		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
-	case func(SetWarehouse) func():
-		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
-	case func(SetWarehouseMode) func():
-		state.listeners.SetWarehouseMode = append(state.listeners.SetWarehouseMode, l)
-	case func(SetWorkspace) func():
-		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
-	case func(schema SetWorkspaceUserSchema) func():
-		state.listeners.SetWorkspaceUserSchema = append(state.listeners.SetWorkspaceUserSchema, l)
-	default:
-		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
+// AddListener adds a notification listener and returns its identifier.
+// It must be called on a frozen state.
+func (state *State) AddListener(listener any) uint8 {
+	if state.changing.TryLock() {
+		state.changing.Unlock()
+		panic("state: AddListener called on an unfrozen state")
+	}
+	if len(state.listeners.all) == math.MaxUint8-1 {
+		panic("state: too many listeners")
+	}
+	var ok bool
+	id := state.listeners.id
+	for {
+		id++
+		if id == 0 {
+			id = 1
+		}
+		_, ok = state.listeners.all[id]
+		if !ok {
+			break
+		}
+	}
+	state.listeners.id = id
+	state.listeners.all[id] = listener
+	return id
+}
+
+// RemoveListeners removes the listeners with the provided identifiers.
+// It must be called on a frozen state.
+// It panics if a listener to remove does not exist.
+func (state *State) RemoveListeners(ids []uint8) {
+	if state.changing.TryLock() {
+		state.changing.Unlock()
+		panic("state: RemoveListeners called on an unfrozen state")
+	}
+	for _, id := range ids {
+		if _, ok := state.listeners.all[id]; !ok {
+			panic("state: listener to remove not found")
+		}
+		delete(state.listeners.all, id)
 	}
 }
 
-// dispatchNotification dispatches a notification to its listeners.
-func dispatchNotification[T func(N) func(), N any](notification N, listeners []T) {
-	if len(listeners) == 0 {
+// dispatchNotification dispatches the notification n to its listeners.
+func dispatchNotification[N any](state *State, n N) {
+	if len(state.listeners.all) == 0 {
 		return
 	}
-	wg := sync.WaitGroup{}
-	for _, listener := range listeners {
-		if f := listener(notification); f != nil {
+	var wg sync.WaitGroup
+	for _, listener := range state.listeners.all {
+		listener, ok := listener.(func(N) func())
+		if !ok {
+			continue
+		}
+		if f := listener(n); f != nil {
 			wg.Add(1)
 			go func() {
 				f()

@@ -213,8 +213,8 @@ func New(conf *Config) (*APIs, error) {
 	// Create the action scheduler.
 	apis.actionScheduler = newActionScheduler(apis)
 
-	// Keep the state updated.
-	apis.state.Keep()
+	// Unfreeze the state.
+	apis.state.Unfreeze()
 
 	apis.close.ctx, apis.close.cancelCtx = context.WithCancel(context.Background())
 
