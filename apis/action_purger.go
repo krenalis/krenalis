@@ -90,7 +90,8 @@ func (p *actionPurger) Close(ctx context.Context) {
 	}
 	p.mu.Unlock()
 	// Cancel p.close.ctx if ctx is cancelled.
-	defer context.AfterFunc(ctx, func() { p.close.cancel() })
+	stop := context.AfterFunc(ctx, func() { p.close.cancel() })
+	defer stop()
 	// Waits for the ongoing purges to finish.
 	p.close.Wait()
 }
