@@ -248,14 +248,15 @@ func New(expressions map[string]string, st, dt types.Type, layouts *state.TimeLa
 	return &Mapping{expressions: mappingExpressions}, nil
 }
 
-// Properties returns the properties found in the expressions, sorted by their
-// appearance order in the expressions. The returned properties are guaranteed
-// to be unique. If no property are present, it returns nil.
+// InProperties returns the input properties, i.e., the properties found in the
+// expressions, sorted by their appearance order in the expressions. The
+// returned properties are guaranteed to be unique. If no property are present,
+// it returns nil.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
-func (mapping *Mapping) Properties() []string {
+func (mapping *Mapping) InProperties() []string {
 	var properties []string
 	for _, expr := range mapping.expressions {
 		properties = appendProperties(properties, expr.expr.parts)
@@ -291,6 +292,16 @@ func (mapping *Mapping) Transform(value map[string]any) (map[string]any, error) 
 		}
 	}
 	return out, nil
+}
+
+// OutProperties returns the output properties sorted by path.
+func (mapping *Mapping) OutProperties() []string {
+	properties := make([]string, len(mapping.expressions))
+	for _, expr := range mapping.expressions {
+		properties = append(properties, expr.path)
+	}
+	slices.Sort(properties)
+	return properties
 }
 
 // appendProperties appends the properties from expression to properties, if

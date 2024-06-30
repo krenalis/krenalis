@@ -159,7 +159,7 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
 		// Input property paths.
-		inProps := transformer.Properties()
+		inProps := transformer.InProperties()
 		mappingInProperties = len(inProps)
 		usedInPaths = append(usedInPaths, inProps...)
 		// Output property paths.

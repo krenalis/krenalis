@@ -86,7 +86,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	// Determine the properties to select from the data warehouse.
 	var properties []string
 	if action.Transformation.Mapping != nil {
-		pp := transformer.Properties()
+		pp := transformer.InProperties()
 		if action.MatchingProperties != nil {
 			internal := action.MatchingProperties.Internal
 			if !slices.Contains(pp, internal) {

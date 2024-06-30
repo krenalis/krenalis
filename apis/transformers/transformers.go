@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/open2b/chichi/apis/state"
@@ -57,14 +58,24 @@ func New(inSchema, outSchema types.Type, transformation state.Transformation, ac
 	return &transformer
 }
 
-// Properties returns the properties in the mapping expressions. It calls the
-// Properties method of the mapping. See this method for documentation.
-// It panics if the transformation is not a mapping but a function.
-func (transformer *Transformer) Properties() []string {
-	if transformer.mapping == nil {
-		panic("cannot get properties of a function transformation")
+// InProperties returns the input properties of the transformer.
+//
+// For functions, it returns the property paths. If the transformation involves
+// dispatching events to apps, the returned slice may be empty. In all other
+// cases, it is never empty.
+//
+// For mappings, it returns the properties found in the expression, sorted by
+// their appearance order in the expressions. The returned properties are
+// guaranteed to be unique. If no property are present, it returns nil.
+//
+// If the expressions contain a map or JSON indexing, Properties does not return
+// the key. For example, for the expression x.y.z, it returns {"x"} if x is a
+// JSON object, and returns {"x.z"} if x is a map of objects.
+func (transformer *Transformer) InProperties() []string {
+	if transformer.mapping != nil {
+		return transformer.mapping.InProperties()
 	}
-	return transformer.mapping.Properties()
+	return slices.Clone(transformer.function.InProperties)
 }
 
 // Transform transforms the values and returns the result. values is expected to
@@ -146,6 +157,15 @@ func (transformer *Transformer) TransformValues(ctx context.Context, values []ma
 	}
 
 	return results, nil
+}
+
+// OutProperties returns the output properties of the transformer.
+// The properties are sorted by their path, and there is at least one property.
+func (transformer *Transformer) OutProperties() []string {
+	if transformer.mapping != nil {
+		return transformer.mapping.OutProperties()
+	}
+	return slices.Clone(transformer.function.OutProperties)
 }
 
 // schemaSubset returns a subset of schema containing only the properties
