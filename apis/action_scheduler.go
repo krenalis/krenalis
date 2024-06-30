@@ -38,31 +38,37 @@ func periodIndex(period int16) int8 {
 
 // actionScheduler is the action scheduler.
 type actionScheduler struct {
-	apis     *APIs
-	executor *actionSchedulerExecutor
-	ctx      context.Context    // context passes to the action executions.
-	cancel   context.CancelFunc // function to cancel the action executions.
-	wg       sync.WaitGroup     // waiting group that includes the schedulers and action executions.
+	apis      *APIs
+	listeners []uint8
+	executor  *actionSchedulerExecutor
+	ctx       context.Context    // context passes to the action executions.
+	cancel    context.CancelFunc // function to cancel the action executions.
+	wg        sync.WaitGroup     // waiting group that includes the schedulers and action executions.
 }
 
 // newActionScheduler returns a new action scheduler.
 func newActionScheduler(apis *APIs) *actionScheduler {
-	sc := &actionScheduler{
+	as := &actionScheduler{
 		apis: apis,
 	}
-	apis.state.AddListener(sc.onAddAction)
-	apis.state.AddListener(sc.onDeleteAction)
-	apis.state.AddListener(sc.onDeleteConnection)
-	apis.state.AddListener(sc.onDeleteWorkspace)
-	apis.state.AddListener(sc.onElectLeader)
-	apis.state.AddListener(sc.onSetActionSchedulePeriod)
-	sc.ctx, sc.cancel = context.WithCancel(context.Background())
-	return sc
+	as.listeners = []uint8{
+		apis.state.AddListener(as.onAddAction),
+		apis.state.AddListener(as.onDeleteAction),
+		apis.state.AddListener(as.onDeleteConnection),
+		apis.state.AddListener(as.onDeleteWorkspace),
+		apis.state.AddListener(as.onElectLeader),
+		apis.state.AddListener(as.onSetActionSchedulePeriod),
+	}
+	as.ctx, as.cancel = context.WithCancel(context.Background())
+	return as
 }
 
 // Close closes the action scheduler closing the executors and interrupting
 // action executions.
 func (as *actionScheduler) Close() {
+	as.apis.state.Freeze()
+	as.apis.state.RemoveListeners(as.listeners)
+	as.apis.state.Unfreeze()
 	if as.executor != nil {
 		as.executor.Close()
 	}

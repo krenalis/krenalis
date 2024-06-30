@@ -29,6 +29,7 @@ const backoffBase = 1000
 type actionPurger struct {
 	state     *state.State
 	datastore *datastore.Datastore
+	listeners []uint8
 	close     struct {
 		ctx    context.Context
 		cancel context.CancelFunc
@@ -52,10 +53,12 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 	}
 	p.close.ctx, p.close.cancel = context.WithCancel(context.Background())
 
-	state.AddListener(p.onDeleteAction)
-	state.AddListener(p.onDeleteConnection)
-	state.AddListener(p.onSetWarehouse)
-	state.AddListener(p.onSetWarehouseMode)
+	p.listeners = []uint8{
+		state.AddListener(p.onDeleteAction),
+		state.AddListener(p.onDeleteConnection),
+		state.AddListener(p.onSetWarehouse),
+		state.AddListener(p.onSetWarehouseMode),
+	}
 
 	var workspaces []int
 	for _, ws := range p.state.Workspaces() {
@@ -81,6 +84,9 @@ func (p *actionPurger) Close(ctx context.Context) {
 	if p.close.closed.Load() {
 		return
 	}
+	p.state.Freeze()
+	p.state.RemoveListeners(p.listeners)
+	p.state.Unfreeze()
 	// Signals the closure.
 	p.close.closed.Store(true)
 	// Stop the backoff.
