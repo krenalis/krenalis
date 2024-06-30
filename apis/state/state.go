@@ -161,7 +161,8 @@ func (state *State) Actions() []*Action {
 	return actions
 }
 
-// Close closes the state.
+// Close closes the state. When it is called, no calls to the State methods
+// should be in progress, and no further calls should be made.
 func (state *State) Close() {
 	state.close.CancelCtx()
 	state.close.Wait()

@@ -22,6 +22,7 @@ import (
 
 // Keep keeps the state updated.
 func (state *State) Keep() {
+	state.close.Add(1)
 	go state.keepState()
 }
 
@@ -29,9 +30,10 @@ func (state *State) Keep() {
 // goroutine.
 func (state *State) keepState() {
 
-	var n notification
-
+	defer state.close.Done()
 	done := state.close.ctx.Done()
+
+	var n notification
 
 	for {
 		select {
