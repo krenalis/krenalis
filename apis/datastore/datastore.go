@@ -49,10 +49,11 @@ func (err ConnectionFailed) Error() string {
 }
 
 type Datastore struct {
-	state  *state.State
-	mu     sync.Mutex // for the store field
-	store  map[int]*Store
-	closed atomic.Bool
+	state     *state.State
+	listeners []uint8
+	mu        sync.Mutex // for the store field
+	store     map[int]*Store
+	closed    atomic.Bool
 }
 
 // New returns a *Datastore instance.
@@ -61,15 +62,16 @@ func New(st *state.State) *Datastore {
 		state: st,
 		store: map[int]*Store{},
 	}
-
 	// Add listeners.
-	ds.state.AddListener(ds.onAddAction)
-	ds.state.AddListener(ds.onDeleteAction)
-	ds.state.AddListener(ds.onDeleteConnection)
-	ds.state.AddListener(ds.onSetAction)
-	ds.state.AddListener(ds.onSetWarehouse)
-	ds.state.AddListener(ds.onSetWarehouseMode)
-	ds.state.AddListener(ds.onSetWorkspaceUserSchema)
+	ds.listeners = []uint8{
+		ds.state.AddListener(ds.onAddAction),
+		ds.state.AddListener(ds.onDeleteAction),
+		ds.state.AddListener(ds.onDeleteConnection),
+		ds.state.AddListener(ds.onSetAction),
+		ds.state.AddListener(ds.onSetWarehouse),
+		ds.state.AddListener(ds.onSetWarehouseMode),
+		ds.state.AddListener(ds.onSetWorkspaceUserSchema),
+	}
 	for _, organization := range st.Organizations() {
 		for _, ws := range organization.Workspaces() {
 			if ws.Warehouse == nil {
@@ -93,6 +95,9 @@ func (ds *Datastore) Close() {
 	if ds.closed.Swap(true) {
 		panic("apis/datastore already closed")
 	}
+	ds.state.Freeze()
+	ds.state.RemoveListeners(ds.listeners)
+	ds.state.Unfreeze()
 	var err error
 	ds.mu.Lock()
 	for _, store := range ds.store {
