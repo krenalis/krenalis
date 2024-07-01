@@ -41,9 +41,9 @@ type actionPurger struct {
 	backoff map[int]*backoff.Backoff // backoff for workspace. access using 'mu'
 }
 
-// newActionPurger returns a new instance of the action purger. When called,
-// the state must be frozen. There is only one active action purger at a time,
-// and it exclusively runs on the leader node.
+// newActionPurger returns a new instance of the action purger. There is only
+// one active action purger at a time, and it exclusively runs on the leader
+// node.
 func newActionPurger(state *state.State, datastore *datastore.Datastore) *actionPurger {
 
 	p := &actionPurger{
@@ -53,19 +53,20 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 	}
 	p.close.ctx, p.close.cancel = context.WithCancel(context.Background())
 
+	state.Freeze()
 	p.listeners = []uint8{
 		state.AddListener(p.onDeleteAction),
 		state.AddListener(p.onDeleteConnection),
 		state.AddListener(p.onSetWarehouse),
 		state.AddListener(p.onSetWarehouseMode),
 	}
-
 	var workspaces []int
 	for _, ws := range p.state.Workspaces() {
 		if ws.NumActionsToPurge() > 0 {
 			workspaces = append(workspaces, ws.ID)
 		}
 	}
+	state.Unfreeze()
 	if workspaces != nil {
 		go func() {
 			for _, ws := range workspaces {

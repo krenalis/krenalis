@@ -71,8 +71,8 @@ type ConnectorSetting struct {
 	OAuthClientSecret string `yaml:"oauthClientSecret"`
 }
 
-// New returns a frozen state given the database and the static settings of
-// the connectors. Call Unfreeze to start updating it.
+// New returns a state given the database and the static settings of the
+// connectors.
 func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*State, error) {
 
 	id, err := uuid.NewUUID()
@@ -106,9 +106,6 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 		state.notifications.stop()
 		return nil, err
 	}
-
-	// Freeze the state.
-	state.changing.RLock()
 
 	// Keep updating.
 	state.close.Add(1)

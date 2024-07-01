@@ -51,6 +51,8 @@ func newActionScheduler(apis *APIs) *actionScheduler {
 	as := &actionScheduler{
 		apis: apis,
 	}
+	as.ctx, as.cancel = context.WithCancel(context.Background())
+	apis.state.Freeze()
 	as.listeners = []uint8{
 		apis.state.AddListener(as.onAddAction),
 		apis.state.AddListener(as.onDeleteAction),
@@ -59,7 +61,7 @@ func newActionScheduler(apis *APIs) *actionScheduler {
 		apis.state.AddListener(as.onElectLeader),
 		apis.state.AddListener(as.onSetActionSchedulePeriod),
 	}
-	as.ctx, as.cancel = context.WithCancel(context.Background())
+	apis.state.Unfreeze()
 	return as
 }
 

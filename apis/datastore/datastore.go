@@ -62,7 +62,7 @@ func New(st *state.State) *Datastore {
 		state: st,
 		store: map[int]*Store{},
 	}
-	// Add listeners.
+	st.Freeze()
 	ds.listeners = []uint8{
 		ds.state.AddListener(ds.onAddAction),
 		ds.state.AddListener(ds.onDeleteAction),
@@ -72,19 +72,18 @@ func New(st *state.State) *Datastore {
 		ds.state.AddListener(ds.onSetWarehouseMode),
 		ds.state.AddListener(ds.onSetWorkspaceUserSchema),
 	}
-	for _, organization := range st.Organizations() {
-		for _, ws := range organization.Workspaces() {
-			if ws.Warehouse == nil {
-				continue
-			}
-			store, err := newStore(ds, ws)
-			if err != nil {
-				slog.Error("cannot create a store", "err", err)
-				continue
-			}
-			ds.store[ws.ID] = store
+	for _, ws := range st.Workspaces() {
+		if ws.Warehouse == nil {
+			continue
 		}
+		store, err := newStore(ds, ws)
+		if err != nil {
+			slog.Error("cannot create a store", "err", err)
+			continue
+		}
+		ds.store[ws.ID] = store
 	}
+	st.Unfreeze()
 	return ds
 }
 

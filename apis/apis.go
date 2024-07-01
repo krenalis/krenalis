@@ -178,10 +178,6 @@ func New(conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
-	// Listen to state changes.
-	apis.state.AddListener(apis.onDeleteAction)
-	apis.state.AddListener(apis.onExecuteAction)
-
 	// Init the datastore.
 	apis.datastore = datastore.New(apis.state)
 
@@ -213,10 +209,13 @@ func New(conf *Config) (*APIs, error) {
 	// Create the action scheduler.
 	apis.actionScheduler = newActionScheduler(apis)
 
-	// Unfreeze the state.
-	apis.state.Unfreeze()
-
 	apis.close.ctx, apis.close.cancelCtx = context.WithCancel(context.Background())
+
+	// Listen to state changes.
+	apis.state.Freeze()
+	apis.state.AddListener(apis.onDeleteAction)
+	apis.state.AddListener(apis.onExecuteAction)
+	apis.state.Unfreeze()
 
 	return apis, nil
 }
