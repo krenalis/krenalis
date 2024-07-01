@@ -400,6 +400,12 @@ func Test_Unmarshal(t *testing.T) {
 			data:     `[{"value":{}},{"value":{"foo":5}}]`,
 			results:  []Result{{Value: map[string]any{}}, {Err: newErrPropertyNotExist("foo", jsTerms)}},
 		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `[{"value":{"a.b.c":5}}]`,
+			results:  []Result{{Err: newErrPropertyNotExist("a.b.c", jsTerms)}},
+		},
 	}
 
 	for _, test := range tests {
@@ -433,12 +439,12 @@ func Test_Unmarshal(t *testing.T) {
 						t.Fatalf("Unmarshal:\n\texpected error\n\tgot nil")
 					}
 					if !reflect.DeepEqual(result.Err, got[i].Err) {
-						t.Fatalf("Unmarshal:\n\texpected error %#v\n\tgot error %#v", result.Err, got[i].Err)
+						t.Fatalf("Unmarshal:\n\texpected error %q\n\tgot error %q", result.Err.Error(), got[i].Err.Error())
 					}
 					continue
 				}
 				if got[i].Err != nil {
-					t.Fatalf("Unmarshal:\n\texpected no error\n\tgot error %#v", got[i].Err)
+					t.Fatalf("Unmarshal:\n\texpected no error\n\tgot error %q", got[i].Err.Error())
 				}
 				if got[i].Value == nil {
 					t.Fatalf("Unmarshal:\n\texpected value\n\tgot no value")
