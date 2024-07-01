@@ -117,7 +117,7 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.DatabaseType,
 		},
 		{
-			name: "Source/FileStorage/Users - with",
+			name: "Source/FileStorage/Users - with mapping",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
