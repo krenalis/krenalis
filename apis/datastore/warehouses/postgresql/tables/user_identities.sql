@@ -12,17 +12,3 @@ CREATE TABLE _user_identities (
     "email" varchar(300),
     PRIMARY KEY ("__pk__")
 );
-
-CREATE VIEW "user_identities" AS
-SELECT
-    "__pk__",
-    "__action__",
-    "__is_anonymous__",
-    "__identity_id__",
-    "__connection__",
-    "__anonymous_ids__",
-    "__last_change_time__",
-    "__gid__",
-    "email"
-FROM
-    "_user_identities";

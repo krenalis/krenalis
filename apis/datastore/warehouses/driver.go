@@ -24,8 +24,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// AlterSchemaOperation represents an operation that alters the "users" (and the
-// "user_identities") schema.
+// AlterSchemaOperation represents an operation that alters the user schema.
+//
 // Every column is always nullable.
 type AlterSchemaOperation struct {
 	Operation OperationType
@@ -42,7 +42,7 @@ type MergeTable struct {
 }
 
 // OperationType represents an operation to perform on the data warehouse to
-// alter the "users" (and "user_identities") schema.
+// alter the "users" (and "_user_identities") schema.
 type OperationType int
 
 const (

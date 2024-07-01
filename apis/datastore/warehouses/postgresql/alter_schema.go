@@ -71,7 +71,6 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 
 	// DROP VIEW.
 	queries = append(queries, "DROP VIEW \"users\"")
-	queries = append(queries, "DROP VIEW \"user_identities\"")
 
 	// ALTER TABLE ... DROP COLUMN.
 	{
@@ -152,37 +151,6 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 			b.WriteRune('"')
 		}
 		b.WriteString("\n" + `FROM "_users"`)
-		queries = append(queries, b.String())
-	}
-
-	// CREATE VIEW "user_identities"
-	{
-		b := strings.Builder{}
-		b.WriteString(`CREATE VIEW "user_identities" AS SELECT` + "\n")
-		metaProps := []string{
-			"__pk__",
-			"__action__",
-			"__is_anonymous__",
-			"__identity_id__",
-			"__connection__",
-			"__anonymous_ids__",
-			"__last_change_time__",
-			"__gid__",
-		}
-		for i, p := range metaProps {
-			if i > 0 {
-				b.WriteString(",\n")
-			}
-			b.WriteString("\t\"")
-			b.WriteString(p)
-			b.WriteRune('"')
-		}
-		for _, c := range userColumns {
-			b.WriteString(",\n\t\"")
-			b.WriteString(c.Name)
-			b.WriteRune('"')
-		}
-		b.WriteString("\n" + `FROM "_user_identities"`)
 		queries = append(queries, b.String())
 	}
 

@@ -34,12 +34,12 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	}
 
 	// Determine the table name.
-	// The table "events" is the only one that doesn't have "_" as a prefix in
-	// the name (as for "users" and "user_identities", they also have the
-	// underscore; it's only the respective views that don't have it).
 	tableName := query.Table
-	if tableName != "events" {
-		tableName = "_" + tableName
+	if tableName == "users" {
+		// Change the table name from "users" to "_users" because the PostgreSQL
+		// driver has a view called "users", with columns sorted according to
+		// the schema, while the actual table is called "_users".
+		tableName = "_users"
 	}
 
 	// Build and execute the COUNT query to determine the count of records.

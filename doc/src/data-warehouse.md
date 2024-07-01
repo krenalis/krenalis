@@ -6,7 +6,7 @@ The columns created by Chichi always have a default value, that is `NULL` (in ca
 
 ## Supported types
 
-The types of Chichi supported by a certain data warehouse are those for which it is possible to define a column in the `users` (and `user_identities`) table that ensures values cannot be written (and consequently returned) that do not conform to the Chichi type.
+The types of Chichi supported by a certain data warehouse are those for which it is possible to define a column in the `users` table that ensures values cannot be written (and consequently returned) that do not conform to the Chichi type.
 
 For example, the `Text` type with a limit of 50 characters is supported in PostgreSQL because it is possible to define a `varchar(50)` column that prevents the insertion of strings longer than 50 characters, while the `Text` type with a limit of 50 bytes is not supported because it is not possible to declare a column with such a constraint.
 

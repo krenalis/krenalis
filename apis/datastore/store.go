@@ -506,7 +506,7 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 	if store.Mode() == state.Maintenance {
 		return nil, 0, ErrMaintenanceMode
 	}
-	query.table = "user_identities"
+	query.table = "_user_identities"
 	query.count = true
 	return store.query(ctx, query, store.identityColumnByProperty())
 }

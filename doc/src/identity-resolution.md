@@ -5,7 +5,7 @@ The **Identity Resolution** determines if more user identities, belonging to **a
 
 In particular, it performs these operations (not necessarily in this order):
 
-* recreates the contents of the `users` table starting from the identities within `user_identities`
+* recreates the contents of the `users` table starting from the identities within `_user_identities`
 * updates the association between the events within the `events` table and the users within `users`
 
 ## When It Is Executed
