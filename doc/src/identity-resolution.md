@@ -42,7 +42,7 @@ As a corollary of the previous definition, **if there are no identifiers defined
 
 ## Identifiers
 
-An identifier consists in **a property path** which refers to a property of the `user_identities` schema which have [an allowed type](./identity-resolution/allowed-types-for-identifiers.md).
+An identifier consists in **a property path** which refers to a property of the user schema which have [an allowed type](./identity-resolution/allowed-types-for-identifiers.md).
 
 It is possible to define zero, one, or more identifiers for the identity resolution. 
 
