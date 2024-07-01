@@ -250,6 +250,32 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.AppType,
 		},
+		{
+			name: "Destination/App/Events - with a transformation function",
+			action: ActionToSet{
+				Name:     "Dispatch events to app",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(event: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": event["traits"]["email"],`,
+							`    }`}, "\n"),
+						Language:      "Python",
+						InProperties:  []string{"traits"},
+						OutProperties: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			provider:                testProvider{},
+		},
 		// TODO(Gianluca): it's strange that in the export table there must be
 		// an "id" column, but then it is not necessary for this column to be in
 		// the action's output schema. See the issue
@@ -274,6 +300,35 @@ func Test_validateActionToSet(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.DatabaseType,
+		},
+		{
+			name: "Destination/Database/Users - with transformation function",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language:      "Python",
+						InProperties:  []string{"email_in"},
+						OutProperties: []string{"email_out"},
+					},
+				},
+				TableName: "my_users_table",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			provider:                testProvider{},
 		},
 		{
 			name: "Destination/FileStorage/Users",
