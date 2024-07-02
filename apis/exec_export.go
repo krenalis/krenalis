@@ -203,10 +203,19 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			if (mode == state.CreateOnly && existsOnApp) || (mode == state.UpdateOnly && !existsOnApp) {
 				continue
 			}
-			for _, id := range ids {
+			if existsOnApp {
+				// Update the user(s).
+				for _, id := range ids {
+					users = append(users, userToProcess{
+						GID:        user.ID.(string),
+						ID:         id,
+						Properties: user.Properties,
+					})
+				}
+			} else {
+				// Create the user.
 				users = append(users, userToProcess{
 					GID:        user.ID.(string),
-					ID:         id,
 					Properties: user.Properties,
 				})
 			}
