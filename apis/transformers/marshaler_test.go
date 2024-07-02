@@ -10,6 +10,8 @@ package transformers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -125,7 +127,7 @@ var schema = types.Object([]types.Property{
 		Type: types.JSON(),
 	},
 	{
-		Name: "JSON_nil",
+		Name: "JSON_null",
 		Type: types.JSON(),
 	},
 	{
@@ -187,7 +189,7 @@ var values = []map[string]any{
 		"JSON_Number":     json.Number("85802.7305"),
 		"JSON_slice":      []any{"foo", 3, true},
 		"JSON_map":        map[string]any{"a": 1, "b": 2},
-		"JSON_nil":        nil,
+		"JSON_null":       json.RawMessage(`null`),
 		"Inet":            "192.158.1.38",
 		"Text":            "some text",
 		"Array":           []any{"foo", "boo"},
@@ -202,12 +204,13 @@ func Test_MarshalJavaScript(t *testing.T) {
 		schema types.Type
 		values []map[string]any
 		result []byte
+		err    error
 	}{
 		{
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_nil:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
 		},
 		{
 			name:   "Empty values",
@@ -239,12 +242,110 @@ func Test_MarshalJavaScript(t *testing.T) {
 			},
 			result: []byte(`[{a:''},{a:'\u0027'},{a:'\"'},{a:'\u0026'},{a:'\u003c'},{a:'\u2028'},{a:'\u2029'}]`),
 		},
+		{
+			name: "Nullable property",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.Text(),
+					Nullable: true,
+				},
+			}),
+			values: []map[string]any{
+				{"a": nil},
+			},
+			result: []byte(`[{a:null}]`),
+		},
+		{
+			name: "Non-nullable property",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.Text(),
+					Nullable: false,
+				},
+			}),
+			values: []map[string]any{
+				{"a": nil},
+			},
+			err: errors.New("apis/transformers: null property: a"),
+		},
+		{
+			name: "JSON nil",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.JSON(),
+					Nullable: false,
+				},
+			}),
+			values: []map[string]any{
+				{"a": nil},
+			},
+			err: errors.New("apis/transformers: null property: a"),
+		},
+		{
+			name: "Missing property",
+			schema: types.Object([]types.Property{
+				{
+					Name: "a",
+					Type: types.Text(),
+				},
+				{
+					Name:     "b",
+					Type:     types.Boolean(),
+					Required: true,
+				},
+			}),
+			values: []map[string]any{
+				{"a": "foo", "b": true},
+				{"a": "foo"},
+			},
+			err: errors.New("apis/transformers: missing property: b"),
+		},
+		{
+			name: "Mix",
+			schema: types.Object([]types.Property{
+				{
+					Name: "a",
+					Type: types.Text(),
+				},
+				{
+					Name: "b",
+					Type: types.Object([]types.Property{
+						{Name: "x", Type: types.Int(32)},
+						{Name: "y", Type: types.Int(32), Required: true},
+					}),
+					Nullable: true,
+				},
+			}),
+			values: []map[string]any{
+				{},
+				{"a": "foo"},
+				{"a": "foo", "b": nil},
+				{"a": "foo", "b": map[string]any{"y": 45}},
+				{"a": "foo", "b": map[string]any{"x": 12, "y": 45}},
+			},
+			result: []byte(`[{},{a:'foo'},{a:'foo',b:null},{a:'foo',b:{y:45}},{a:'foo',b:{x:12,y:45}}]`),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := Marshal(nil, test.schema, test.values, state.JavaScript)
 			if err != nil {
-				t.Fatalf("Marshal JavaScript: unexpected error: %s", err)
+				if test.err == nil {
+					t.Fatalf("Marshal JavaScript: expected no error, got error %s", err)
+				}
+				if !reflect.DeepEqual(test.err, err) {
+					t.Fatalf("Marshal JavaScript: expected error %q, got error %q", test.err, err)
+				}
+				if got != nil {
+					t.Fatalf("Marshal JavaScript: expected nil, got %#v", got)
+				}
+				return
+			}
+			if test.err != nil {
+				t.Fatalf("Marshal JavaScript: expected error %q, got no error", test.err)
 			}
 			if !bytes.Equal(test.result, got) {
 				t.Fatalf("Marshal JavaScript: expected %s, got %s", string(test.result), string(got))
@@ -259,12 +360,24 @@ func Test_MarshalPython(t *testing.T) {
 		schema types.Type
 		values []map[string]any
 		result []byte
+		err    error
 	}{
 		{
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_nil':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
+		},
+		{
+			name:   "Empty values",
+			values: []map[string]any{{}, {}, {}},
+			result: []byte(`[{},{},{}]`),
+		},
+		{
+			name:   "Invalid schema",
+			schema: types.Type{},
+			values: []map[string]any{{"foo": 4}, {}, {"boo": true}},
+			result: []byte(`[{},{},{}]`),
 		},
 		{
 			name: "Text encoding",
@@ -285,12 +398,110 @@ func Test_MarshalPython(t *testing.T) {
 			},
 			result: []byte(`[{'a':''},{'a':'\x27'},{'a':'\"'},{'a':'\x26'},{'a':'\x3c'},{'a':'\u2028'},{'a':'\u2029'}]`),
 		},
+		{
+			name: "Nullable property",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.Text(),
+					Nullable: true,
+				},
+			}),
+			values: []map[string]any{
+				{"a": nil},
+			},
+			result: []byte(`[{'a':None}]`),
+		},
+		{
+			name: "Non-nullable property",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.Text(),
+					Nullable: false,
+				},
+			}),
+			values: []map[string]any{
+				{"a": nil},
+			},
+			err: errors.New("apis/transformers: null property: a"),
+		},
+		{
+			name: "JSON nil",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.JSON(),
+					Nullable: false,
+				},
+			}),
+			values: []map[string]any{
+				{"a": nil},
+			},
+			err: errors.New("apis/transformers: null property: a"),
+		},
+		{
+			name: "Missing property",
+			schema: types.Object([]types.Property{
+				{
+					Name: "a",
+					Type: types.Text(),
+				},
+				{
+					Name:     "b",
+					Type:     types.Boolean(),
+					Required: true,
+				},
+			}),
+			values: []map[string]any{
+				{"a": "foo", "b": true},
+				{"a": "foo"},
+			},
+			err: errors.New("apis/transformers: missing property: b"),
+		},
+		{
+			name: "Mix",
+			schema: types.Object([]types.Property{
+				{
+					Name: "a",
+					Type: types.Text(),
+				},
+				{
+					Name: "b",
+					Type: types.Object([]types.Property{
+						{Name: "x", Type: types.Int(32)},
+						{Name: "y", Type: types.Int(32), Required: true},
+					}),
+					Nullable: true,
+				},
+			}),
+			values: []map[string]any{
+				{},
+				{"a": "foo"},
+				{"a": "foo", "b": nil},
+				{"a": "foo", "b": map[string]any{"y": 45}},
+				{"a": "foo", "b": map[string]any{"x": 12, "y": 45}},
+			},
+			result: []byte(`[{},{'a':'foo'},{'a':'foo','b':None},{'a':'foo','b':{'y':45}},{'a':'foo','b':{'x':12,'y':45}}]`),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := Marshal(nil, test.schema, test.values, state.Python)
 			if err != nil {
-				t.Fatalf("Marshal Python: unexpected error: %s", err)
+				if test.err == nil {
+					t.Fatalf("Marshal Python: expected no error, got error %s", err)
+				}
+				if !reflect.DeepEqual(test.err, err) {
+					t.Fatalf("Marshal Python: expected error %q, got error %q", test.err, err)
+				}
+				if got != nil {
+					t.Fatalf("Marshal Python: expected nil, got %#v", got)
+				}
+				return
+			}
+			if test.err != nil {
+				t.Fatalf("Marshal Python: expected error %q, got no error", test.err)
 			}
 			if !bytes.Equal(test.result, got) {
 				t.Fatalf("Marshal Python: expected %s, got %s", string(test.result), string(got))

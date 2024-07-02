@@ -145,10 +145,18 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 			b = append(b, ']')
 		case types.ObjectKind:
 			b = append(b, '{')
-			for i, p := range t.Properties() {
+			i := 0
+			for _, p := range t.Properties() {
 				rv := rv.MapIndex(reflect.ValueOf(p.Name))
 				if !rv.IsValid() {
-					return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
+					if p.Required {
+						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
+					}
+					continue
+				}
+				v := rv.Interface()
+				if !p.Nullable && v == nil {
+					return nil, fmt.Errorf("apis/transformers: null property: %s", p.Name)
 				}
 				if i > 0 {
 					b = append(b, ',')
@@ -156,10 +164,11 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, p.Name...)
 				b = append(b, ':')
 				var err error
-				b, err = marshalJavaScript(b, p.Type, rv.Interface())
+				b, err = marshalJavaScript(b, p.Type, v)
 				if err != nil {
 					return nil, err
 				}
+				i++
 			}
 			b = append(b, '}')
 		case types.MapKind:
@@ -287,22 +296,31 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 			b = append(b, ']')
 		case types.ObjectKind:
 			b = append(b, '{')
-			for i, p := range t.Properties() {
+			i := 0
+			for _, p := range t.Properties() {
+				rv := rv.MapIndex(reflect.ValueOf(p.Name))
+				if !rv.IsValid() {
+					if p.Required {
+						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
+					}
+					continue
+				}
+				v := rv.Interface()
+				if !p.Nullable && v == nil {
+					return nil, fmt.Errorf("apis/transformers: null property: %s", p.Name)
+				}
 				if i > 0 {
 					b = append(b, ',')
 				}
-				rv := rv.MapIndex(reflect.ValueOf(p.Name))
-				if rv.IsValid() {
-					b = append(b, '\'')
-					b = append(b, p.Name...)
-					b = append(b, '\'', ':')
-					var err error
-					b, err = marshalPython(b, p.Type, rv.Interface())
-					if err != nil {
-						return nil, err
-					}
-					i++
+				b = append(b, '\'')
+				b = append(b, p.Name...)
+				b = append(b, '\'', ':')
+				var err error
+				b, err = marshalPython(b, p.Type, v)
+				if err != nil {
+					return nil, err
 				}
+				i++
 			}
 			b = append(b, '}')
 		case types.MapKind:
