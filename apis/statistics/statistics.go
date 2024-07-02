@@ -228,7 +228,8 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 
 	b.Reset()
 	b.WriteString("INSERT INTO actions_log (execution, timeslot, message) VALUES ")
-	for i, d := range data {
+	i := 0
+	for _, d := range data {
 		for _, msg := range d.messages {
 			if i > 0 {
 				b.WriteByte(',')
@@ -240,6 +241,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 			b.WriteByte(',')
 			b.WriteString(postgres.QuoteValue(msg))
 			b.WriteByte(')')
+			i++
 		}
 	}
 	query = b.String()
