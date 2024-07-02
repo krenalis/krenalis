@@ -273,8 +273,6 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	}
 	if p.Nullable {
 		b.WriteString(`,"nullable":true`)
-	} else {
-		b.WriteString(`,"nullable":false`)
 	}
 	b.WriteString(`,"note":`)
 	_ = marshalString(b, p.Note)
