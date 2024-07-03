@@ -274,6 +274,7 @@ type ActionCollector struct {
 
 // Failed increases the failed count for the provided step by one.
 func (stats *ActionCollector) Failed(step Step, msg string) {
+	slog.Error("action execution error", "msg", msg) // TODO(Gianluca): remove this workaround when statistics are fixed / rewritten.
 	stats.mu.Lock()
 	stats.failed[step]++
 	stats.messages = append(stats.messages, msg)
