@@ -329,8 +329,11 @@ func (r *appRecords) All(ctx context.Context) Seq[Record] {
 				for _, p := range properties {
 					v, ok := appUser.Properties[p.Name]
 					if !ok {
-						user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
-						break
+						if p.Required {
+							user.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
+							break
+						}
+						continue
 					}
 					v, err = normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
 					if err != nil {

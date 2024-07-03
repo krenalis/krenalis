@@ -71,8 +71,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 	{
 		schema := c.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: false},
-			{Name: "full_name", Type: types.Text(), Nullable: false},
+			{Name: "email", Type: types.Text(), Required: true, Nullable: false},
+			{Name: "full_name", Type: types.Text(), Required: true, Nullable: false},
 		})
 		if !types.Equal(expectedSchema, schema) {
 			t.Fatalf("\nexpecting:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))

@@ -131,6 +131,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 					columns[i].Name = name
 				}
 				columns[i].Type = types.Text()
+				columns[i].Required = true
 			}
 			err = records.Columns(columns)
 			if err != nil {

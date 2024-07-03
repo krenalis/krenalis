@@ -50,7 +50,7 @@ type Record struct {
 ```
 
 - `ID`: The record's identifier in the app. It must be a valid, non-empty UTF-8 string.
-- `Properties`: The record's properties and their values. All requested properties must be present; additional properties are not considered. The values of the requested properties should conform to their respective schema, as returned by the connector's `Schema` method.
+- `Properties`: The record's properties and their values. Additional properties not requested are not considered. The connector may omit a property for a user if that user does not have that property. This is distinct from a property with a `null` value. The values of requested properties should conform to their respective schemas, as returned by the connector's `Schema` method. If a requested property is always returned, its `Required` field in the schema must be `true`; if it may not be returned for some users, it must be `false`.
 - `LastChangeTime`:  The date and time the record was last changed. It can have any time zone. If the date is unknown, return the zero time `time.Time{}`.
 - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice.
 - `Err`: Any error that occurred while reading the record. It must be `io.EOF` if there are no more records to read beyond those returned. If `Err` is different from `nil` and is not `io.EOF`, then only the `ID` field, along with `Err`, is significant.

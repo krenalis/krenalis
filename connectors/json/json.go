@@ -135,6 +135,7 @@ Records:
 				columns = append(columns, types.Property{
 					Name:     name,
 					Type:     types.JSON(),
+					Required: true,
 					Nullable: true,
 				})
 				nameOfKey[key] = name

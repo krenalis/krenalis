@@ -93,6 +93,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		element := c.Element()
 		columns[i].Name = name
 		columns[i].Type, err = propertyType(name, element)
+		columns[i].Required = true
 		columns[i].Nullable = true
 		if err != nil {
 			return err

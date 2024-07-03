@@ -224,12 +224,12 @@ type Settings struct {
 func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
 	if target == chichi.Users {
 		return types.Object([]types.Property{
-			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
-			{Name: "email", Type: types.Text()},
-			{Name: "firstName", Type: types.Text()},
-			{Name: "fullName", Type: types.Text()},
-			{Name: "lastName", Type: types.Text()},
-			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
+			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole, Required: true},
+			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "firstName", Type: types.Text(), Required: true},
+			{Name: "fullName", Type: types.Text(), Required: true},
+			{Name: "lastName", Type: types.Text(), Required: true},
+			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Required: true},
 		}), nil
 	}
 	switch eventType {

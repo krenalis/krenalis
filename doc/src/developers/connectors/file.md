@@ -148,6 +148,8 @@ type RecordWriter interface {
 
 The `Read` method must first call the `Columns` method of `RecordWriter`, passing the columns present in the file as arguments. Then, it calls one of the methods `Record`, `RecordMap`, or `RecordString`, based on which one is most convenient, for each record in the file.
 
+For `Record` and `RecordString`, values must align with the columns' positions returned by `Columns`. Alternatively, using `RecordMap`, if a user may lack a value for a property, ensure the property is marked as `Required: false` in the schema; it may then be omitted from the map passed to `RecordMap`. This behavior is distinct from a property having a value of `nil`.
+
 If a call to any of the `RecordWriter` methods returns an error, it must halt and return the received error exactly.
 
 Once it has finished writing all the read records, it simply returns without errors.

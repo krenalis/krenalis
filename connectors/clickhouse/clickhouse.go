@@ -229,6 +229,7 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (chichi.Rows, []t
 		columns[i] = types.Property{
 			Name:     c.Name(),
 			Type:     typ,
+			Required: true,
 			Nullable: nullable,
 		}
 	}
