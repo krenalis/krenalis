@@ -7,15 +7,13 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "dummy_id",
                 "type": {
                     "name": "Text"
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "android",
@@ -26,22 +24,19 @@
                             "name": "id",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "idfa",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "push_token",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         }
                     ]
                 }
@@ -55,22 +50,19 @@
                             "name": "id",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "idfa",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "push_token",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         }
                     ]
                 }
@@ -80,23 +72,20 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "last_name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "gender",
                 "type": {
                     "name": "Text"
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "food_preferences",
@@ -107,15 +96,13 @@
                             "name": "drink",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "fruit",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         }
                     ]
                 }
@@ -128,8 +115,7 @@
                         "name": "Text",
                         "charLen": 300
                     }
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "favorite_movie",
@@ -140,16 +126,14 @@
                             "name": "title",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "length",
                             "type": {
                                 "name": "Float",
                                 "bitSize": 64
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "soundtrack",
@@ -160,30 +144,26 @@
                                         "name": "title",
                                         "type": {
                                             "name": "Text"
-                                        },
-                                        "nullable": true
+                                        }
                                     },
                                     {
                                         "name": "author",
                                         "type": {
                                             "name": "Text"
-                                        },
-                                        "nullable": true
+                                        }
                                     },
                                     {
                                         "name": "length",
                                         "type": {
                                             "name": "Float",
                                             "bitSize": 64
-                                        },
-                                        "nullable": true
+                                        }
                                     },
                                     {
                                         "name": "genre",
                                         "type": {
                                             "name": "Text"
-                                        },
-                                        "nullable": true
+                                        }
                                     }
                                 ]
                             }

@@ -65,9 +65,9 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phoneNumbers", Type: types.JSON()},
 	}
 	outSchemaProps := []types.Property{
-		{Name: "dummy_id", Type: types.Text(), Nullable: true},
-		{Name: "email", Type: types.Text(), Nullable: true},
-		{Name: "phone_numbers", Type: types.Array(types.Text()), Nullable: true},
+		{Name: "dummy_id", Type: types.Text()},
+		{Name: "email", Type: types.Text()},
+		{Name: "phone_numbers", Type: types.Array(types.Text())},
 	}
 
 	c.SetWorkspaceIdentifiers([]string{"dummy_id", "email"})

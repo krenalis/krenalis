@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/open2b/chichi/test/chichitester"
@@ -31,10 +32,10 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Add properties to the user schema.
 	schema := types.Object([]types.Property{
-		{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
-		{Name: "name", Type: types.Text(), Nullable: true},
-		{Name: "phone_numbers", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "total_orders", Type: types.Int(32), Nullable: true},
+		{Name: "email", Type: types.Text().WithCharLen(300)},
+		{Name: "name", Type: types.Text()},
+		{Name: "phone_numbers", Type: types.Array(types.Text())},
+		{Name: "total_orders", Type: types.Int(32)},
 	})
 	c.ChangeUserSchema(schema, nil, nil)
 
@@ -92,12 +93,6 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Create and execute the actions.
 
-	mapping := map[string]string{
-		"email":         "email",
-		"name":          "name",
-		"phone_numbers": "phone_numbers",
-		"total_orders":  "total_orders",
-	}
 	addJSONAction := func(source int, filename string) int {
 		return c.AddAction(source, "Users", chichitester.ActionToSet{
 			Name: "Action",
@@ -111,7 +106,18 @@ func TestIdentityResolution2(t *testing.T) {
 			}),
 			OutSchema: schema,
 			Transformation: chichitester.Transformation{
-				Mapping: mapping,
+				// This transformation functions returns the user without the
+				// properties that are "null".
+				Function: &chichitester.TransformationFunction{
+					Source: strings.Join([]string{
+						// TODO(Gianluca): 'eval' is used as workaround for the issue https://github.com/open2b/chichi/issues/877.
+						`def transform(user: dict) -> dict:`,
+						`    return {k: eval(v) for k, v in user.items() if v != "null"}`,
+					}, "\n"),
+					Language:      "Python",
+					InProperties:  []string{"email", "name", "phone_numbers", "total_orders"},
+					OutProperties: []string{"email", "name", "phone_numbers", "total_orders"},
+				},
 			},
 			IdentityProperty:       "email",
 			LastChangeTimeProperty: "last_change_time",

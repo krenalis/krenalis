@@ -31,15 +31,16 @@ type Record struct {
 // records executes a query on the data warehouse and returns an iterator to
 // iterate on the resulting records. schema is the schema of the properties in
 // Properties and Filter of query, idProperty specifies the property whose value
-// is returned as ID, and columnByProperty is the mapping from the path of a
-// property to the relative column.
-func (store *Store) records(ctx context.Context, query Query, schema types.Type, idProperty string, columnByProperty map[string]warehouses.Column) (*Records, error) {
+// is returned as ID, columnByProperty is the mapping from the path of a
+// property to the relative column, and omitNil indicates whether properties
+// with a nil value should be omitted from each record.
+func (store *Store) records(ctx context.Context, query Query, schema types.Type, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool) (*Records, error) {
 
 	if err := checkSchemaAlignment(schema, columnByProperty); err != nil {
 		return nil, err
 	}
 
-	columns, unflat := columnsFromProperties(query.Properties, columnByProperty)
+	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 	columns = append(columns, columnByProperty[idProperty])
 
 	var where warehouses.Expr

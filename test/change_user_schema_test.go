@@ -33,6 +33,9 @@ func TestChangeUserSchema(t *testing.T) {
 	if n := types.NumProperties(ws.UserSchema); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
+	if err := checkSchemaProperties(ws.UserSchema); err != nil {
+		t.Fatalf("invalid user schema: %s", err)
+	}
 
 	// Read the schema in "tests_user_schema.json".
 	f, err := os.Open("tests_user_schema.json")
@@ -63,10 +66,13 @@ func TestChangeUserSchema(t *testing.T) {
 	if n := types.NumProperties(ws.UserSchema); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
+	if err := checkSchemaProperties(ws.UserSchema); err != nil {
+		t.Fatalf("invalid user schema: %s", err)
+	}
 
 	// Add a single property.
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
-		Name: "new_prop", Type: types.Text(), Nullable: true,
+		Name: "new_prop", Type: types.Text(),
 	}))
 	queries = c.ChangeUserSchemaQueries(schema, nil)
 	expectedQueries := []string{"BEGIN;",
@@ -85,12 +91,15 @@ func TestChangeUserSchema(t *testing.T) {
 	if n := types.NumProperties(ws.UserSchema); n != 11 {
 		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
+	if err := checkSchemaProperties(ws.UserSchema); err != nil {
+		t.Fatalf("invalid user schema: %s", err)
+	}
 
 	// Create a schema with two properties that would conflict each other.
 	schema = types.Object(append(types.Properties(file.Schema),
-		types.Property{Name: "a_b", Type: types.Text(), Nullable: true},
+		types.Property{Name: "a_b", Type: types.Text()},
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text(), Nullable: true},
+			{Name: "b", Type: types.Text()},
 		})},
 	))
 	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
@@ -109,17 +118,17 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
 
-	// Create a schema with a non-null property.
+	// Create a schema with a null property.
 	schema = types.Object(append(types.Properties(file.Schema),
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text(), Nullable: false},
+			{Name: "b", Type: types.Text(), Nullable: true},
 		})},
 	))
 	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"not allowed property in schema: property with type Text must be nullable"}}`
+	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"not allowed property in schema: property cannot be 'nullable'"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -139,6 +148,9 @@ func TestChangeUserSchema(t *testing.T) {
 	ws = c.Workspace()
 	if !maps.Equal(primarySources, ws.UserPrimarySources) {
 		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.UserPrimarySources)
+	}
+	if err := checkSchemaProperties(ws.UserSchema); err != nil {
+		t.Fatalf("invalid user schema: %s", err)
 	}
 
 	// Set a primary source for a not existent property.
@@ -161,4 +173,18 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
 
+}
+
+// checkSchemaProperties is used internally by the tests and checks that the
+// users schema does not contain 'nullable' or 'required' properties.
+func checkSchemaProperties(schema types.Type) error {
+	for path, p := range types.Walk(schema) {
+		if p.Nullable {
+			return fmt.Errorf("unexpected nullable property %q", path)
+		}
+		if p.Required {
+			return fmt.Errorf("unexpected required property %q", path)
+		}
+	}
+	return nil
 }

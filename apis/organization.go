@@ -136,7 +136,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 // It must be kept in sync with the SQL script that initializes the data
 // warehouse.
 var defaultUserSchema = types.Object([]types.Property{
-	{Name: "email", Type: types.Text().WithCharLen(300), Nullable: true},
+	{Name: "email", Type: types.Text().WithCharLen(300)},
 })
 
 // AddWorkspace adds a workspace with the given name and privacy region, and

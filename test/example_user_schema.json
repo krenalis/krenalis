@@ -8,16 +8,14 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "dummy_id",
                 "label": "Dummy ID",
                 "type": {
                     "name": "Text"
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "android",
@@ -30,24 +28,21 @@
                             "label": "ID",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "idfa",
                             "label": "IDFA",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "push_token",
                             "label": "Push token",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         }
                     ]
                 }
@@ -63,24 +58,21 @@
                             "label": "ID",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "idfa",
                             "label": "IDFA",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "push_token",
                             "label": "Push token",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         }
                     ]
                 }
@@ -91,8 +83,7 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "last_name",
@@ -100,16 +91,14 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "gender",
                 "label": "Gender",
                 "type": {
                     "name": "Text"
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "food_preferences",
@@ -122,16 +111,14 @@
                             "label": "Drink",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "fruit",
                             "label": "Fruit",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         }
                     ]
                 }
@@ -145,8 +132,7 @@
                         "name": "Text",
                         "charLen": 300
                     }
-                },
-                "nullable": true
+                }
             },
             {
                 "name": "favorite_movie",
@@ -159,8 +145,7 @@
                             "label": "Title",
                             "type": {
                                 "name": "Text"
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "length",
@@ -168,8 +153,7 @@
                             "type": {
                                 "name": "Float",
                                 "bitSize": 64
-                            },
-                            "nullable": true
+                            }
                         },
                         {
                             "name": "soundtrack",
@@ -182,16 +166,14 @@
                                         "label": "Title",
                                         "type": {
                                             "name": "Text"
-                                        },
-                                        "nullable": true
+                                        }
                                     },
                                     {
                                         "name": "author",
                                         "label": "Author",
                                         "type": {
                                             "name": "Text"
-                                        },
-                                        "nullable": true
+                                        }
                                     },
                                     {
                                         "name": "length",
@@ -199,16 +181,14 @@
                                         "type": {
                                             "name": "Float",
                                             "bitSize": 64
-                                        },
-                                        "nullable": true
+                                        }
                                     },
                                     {
                                         "name": "genre",
                                         "label": "Genre",
                                         "type": {
                                             "name": "Text"
-                                        },
-                                        "nullable": true
+                                        }
                                     }
                                 ]
                             }

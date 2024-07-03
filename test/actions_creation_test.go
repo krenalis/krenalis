@@ -421,7 +421,7 @@ func TestActionsCreation(t *testing.T) {
 			action: chichitester.ActionToSet{
 				Name: "Export users to Dummy",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), Nullable: true},
+					{Name: "email", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},

@@ -35,8 +35,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "firstName", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.Text()},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{
@@ -55,7 +55,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -93,9 +93,9 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "lastName", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "first_name", Type: types.Text(), Nullable: true},
-				{Name: "last_name", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.Text()},
+				{Name: "last_name", Type: types.Text()},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{

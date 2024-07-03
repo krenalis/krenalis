@@ -31,10 +31,10 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 			{Name: "ios", Type: types.Object([]types.Property{
-				{Name: "id", Type: types.Text(), Nullable: true},
-				{Name: "idfa", Type: types.Text(), Nullable: true},
+				{Name: "id", Type: types.Text()},
+				{Name: "idfa", Type: types.Text()},
 			})},
 		}),
 		Transformation: chichitester.Transformation{
@@ -73,9 +73,10 @@ def transform(user: dict) -> dict:
 		{
 			"email": "abenois2@example.com",
 			"ios": map[string]any{
-				"id":         "abenois2@example.com-id",
-				"idfa":       "abenois2@example.com-idfa",
-				"push_token": nil},
+				"id":   "abenois2@example.com-id",
+				"idfa": "abenois2@example.com-idfa",
+				// push_token is not set, so should not be returned by the APIs.
+			},
 		},
 	}
 	if len(expectedProperties) != len(users) {

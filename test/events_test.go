@@ -39,8 +39,8 @@ func TestEvents(t *testing.T) {
 			{Name: "firstName", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "first_name", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
+			{Name: "first_name", Type: types.Text()},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
@@ -72,7 +72,7 @@ func TestEvents(t *testing.T) {
 			Enabled:  true,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.Text()},
 			}),
 			Transformation: chichitester.Transformation{
 				Mapping: map[string]string{

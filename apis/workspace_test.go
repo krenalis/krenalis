@@ -23,22 +23,22 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 		{
 			name: "No errors",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text()},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32)},
 				})},
 			}),
 		},
 		{
 			name: "Nullable Object",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text()},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32)},
 				})},
 				{Name: "billing_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.Text()},
@@ -46,42 +46,42 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32)},
 				}), Nullable: true},
 			}),
-			err: "property with type Object cannot be nullable",
+			err: "property cannot be 'nullable'",
 		},
 		{
 			name: "Array with Object item",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text()},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32)},
 				})},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32)},
 				})},
 				{Name: "data", Type: types.Array(types.Object([]types.Property{
-					{Name: "a", Type: types.Int(32), Nullable: true},
-					{Name: "b", Type: types.Text(), Nullable: true},
-				})), Nullable: true},
+					{Name: "a", Type: types.Int(32)},
+					{Name: "b", Type: types.Text()},
+				}))},
 			}),
 			err: "property with type Array cannot have element with type Object",
 		},
 		{
 			name: "Property with a placeholder",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), Nullable: true},
+				{Name: "first_name", Type: types.Text()},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32)},
 				})},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Placeholder: "1234", Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32), Placeholder: "1234"},
 				})},
 			}),
 			err: "property cannot specify a placeholder",
@@ -89,11 +89,11 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 		{
 			name: "Meta properties",
 			schema: types.Object([]types.Property{
-				{Name: "__id__", Type: types.Text(), Nullable: true},
+				{Name: "__id__", Type: types.Text()},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), Nullable: true},
-					{Name: "street2", Type: types.Text(), Nullable: true},
-					{Name: "number", Type: types.Int(32), Nullable: true},
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+					{Name: "number", Type: types.Int(32)},
 				})},
 			}),
 			err: "property cannot be a meta property",

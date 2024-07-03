@@ -38,8 +38,8 @@ func TestExportZeroUsers(t *testing.T) {
 		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "last_name", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.Text()},
+				{Name: "last_name", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -90,10 +90,10 @@ func TestExportZeroUsers(t *testing.T) {
 			Name: "Export users to the CSV on Filesystem",
 			Path: exportedFilename,
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "first_name", Type: types.Text(), Nullable: true},
-				{Name: "last_name", Type: types.Text(), Nullable: true},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
+				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.Text()},
+				{Name: "last_name", Type: types.Text()},
+				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
 			Connector: "CSV",
 			UIValues: chichitester.JSONEncodeUIValues(map[string]any{

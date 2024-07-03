@@ -1162,6 +1162,104 @@ func Test_validateActionToSet(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			err:                     "input schema, if provided, must be an object",
 		},
+		{
+			name: "BAD: Source/App/Users - output schema contains a nullable property",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "x", Type: types.Object([]types.Property{
+						{Name: "email", Type: types.Text(), Nullable: true},
+					})},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"x.email": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "property \"x.email\" in output schema cannot be nullable",
+		},
+		{
+			name: "BAD: Source/App/Users - output schema contains a required property",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "property \"email_out\" in output schema cannot be required",
+		},
+		{
+			name: "BAD: Destination/App/Users - input schema contains a nullable property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), Nullable: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
+				MatchingProperties: &MatchingProperties{
+					Internal: "email_in",
+					External: types.Property{Name: "email", Type: types.Text()},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			err:                     "property \"email_in\" in input schema cannot be nullable",
+		},
+		{
+			name: "BAD: Destination/App/Users - input schema contains a required property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), Required: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
+				MatchingProperties: &MatchingProperties{
+					Internal: "email_in",
+					External: types.Property{Name: "email", Type: types.Text()},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			err:                     "property \"email_in\" in input schema cannot be required",
+		},
 	}
 
 	for _, test := range tests {

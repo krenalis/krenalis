@@ -38,9 +38,9 @@ func TestImportWithTransformation(t *testing.T) {
 			{Name: "firstName", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "first_name", Type: types.Text(), Nullable: true},
-			{Name: "gender", Type: types.Text().WithValues("male", "female", "other"), Nullable: true},
+			{Name: "email", Type: types.Text()},
+			{Name: "first_name", Type: types.Text()},
+			{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 		}),
 		Transformation: chichitester.Transformation{
 			Function: &chichitester.TransformationFunction{

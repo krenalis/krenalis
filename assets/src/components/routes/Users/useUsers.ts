@@ -129,6 +129,15 @@ const useUsers = () => {
 		const users = res.users;
 		const count = res.count;
 
+		for (const user of users) {
+			const properties: Record<string, any> = {};
+			for (const name of propertiesNames) {
+				const value = user.properties[name];
+				properties[name] = value ? value : undefined;
+			}
+			user.properties = properties;
+		}
+
 		setUsers(users);
 		setUsersCount(count);
 		setPagination({ current: page, last: Math.ceil(count / lim) });

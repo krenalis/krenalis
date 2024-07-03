@@ -29,10 +29,10 @@ func TestImportFromDatabase(t *testing.T) {
 		Name: "Import users",
 		InSchema: types.Object([]types.Property{
 			{Name: "id", Type: types.Int(32)},
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{

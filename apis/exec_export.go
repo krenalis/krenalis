@@ -359,7 +359,7 @@ func (this *Action) resolveExternalIdentities(ctx context.Context, user datastor
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
 	if !ok {
-		return nil, fmt.Errorf("property %q not found", internalPropName)
+		property = nil
 	}
 	p, err := json.Marshal(property)
 	if err != nil {

@@ -124,7 +124,7 @@ const newPropertyToEdit = (parentKey: string, indentation: number, root: string)
 		indentation: indentation,
 		root: root,
 		name: '',
-		nullable: true,
+		nullable: false,
 		type: null,
 		label: '',
 		note: '',

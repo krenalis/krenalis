@@ -48,8 +48,10 @@ type unflatRowFunc func(row []any) map[string]any
 // properties paths, based on the mapping defined in columnByProperty that can
 // be used in a query to a data warehouse. Additionally, it returns a function
 // that can be used to transform a row retrieved from a data warehouse into its
-// map representation.
-func columnsFromProperties(properties []string, columnByProperty map[string]warehouses.Column) ([]warehouses.Column, unflatRowFunc) {
+// map representation. omitNil, when set to true, specifies that properties with
+// a nil value should be omitted from each record during transformation using
+// unflatRowFunc.
+func columnsFromProperties(properties []string, columnByProperty map[string]warehouses.Column, omitNil bool) ([]warehouses.Column, unflatRowFunc) {
 	pk := &propertyKey{}
 	columns := make([]warehouses.Column, 0, len(properties))
 	for _, path := range properties {
@@ -68,7 +70,7 @@ func columnsFromProperties(properties []string, columnByProperty map[string]ware
 		}
 	}
 	unflat := func(row []any) map[string]any {
-		return unflatRow(pk, row)
+		return unflatRow(pk, row, omitNil)
 	}
 	return columns, unflat
 }
@@ -102,14 +104,34 @@ Path:
 	}
 }
 
-func unflatRow(pk *propertyKey, row []any) map[string]any {
-	v := map[string]any{}
+func unflatRow(pk *propertyKey, row []any, omitNil bool) map[string]any {
+	v := unflatRowRec(pk, row, omitNil)
+	if v == nil {
+		return map[string]any{}
+	}
+	return v.(map[string]any)
+}
+
+func unflatRowRec(pk *propertyKey, row []any, omitNil bool) any {
+	var x any
+	var v map[string]any
 	for _, p := range pk.properties {
 		if p.properties == nil {
-			v[p.name] = row[p.index]
+			x = row[p.index]
+		} else {
+			x = unflatRowRec(&p, row, omitNil)
+		}
+		if omitNil && x == nil {
 			continue
 		}
-		v[p.name] = unflatRow(&p, row)
+		if v == nil {
+			v = map[string]any{p.name: x}
+		} else {
+			v[p.name] = x
+		}
+	}
+	if v == nil {
+		return nil
 	}
 	return v
 }
@@ -174,17 +196,23 @@ func exprFromFilter(filter *state.Filter, columnFromProperty map[string]warehous
 	return exp, nil
 }
 
-// columnByProperty returns a mapping from properties of the schema to their
-// respective columns. It assumes that for a property path like "a.b.c", the
-// corresponding column is named "a_b_c".
-func columnByProperty(schema types.Type) map[string]warehouses.Column {
+// userColumnByProperty returns a mapping from properties of the user schema to
+// their respective columns. It assumes that for a property path like "a.b.c",
+// the corresponding column is named "a_b_c".
+func userColumnByProperty(schema types.Type) map[string]warehouses.Column {
 	columnByProperty := map[string]warehouses.Column{}
 	for path, p := range types.Walk(schema) {
 		if p.Type.Kind() == types.ObjectKind {
 			continue
 		}
 		name := strings.ReplaceAll(path, ".", "_")
-		columnByProperty[path] = warehouses.Column{Name: name, Type: p.Type, Nullable: p.Nullable}
+		columnByProperty[path] = warehouses.Column{
+			Name: name,
+			Type: p.Type,
+			// User schema properties are always non-nullable, while user
+			// columns are always nullable.
+			Nullable: true,
+		}
 	}
 	return columnByProperty
 }

@@ -331,6 +331,30 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 		v.connection.connector.typ == state.ServerType ||
 		v.connection.connector.typ == state.WebsiteType
 
+	// Check that schemas that refer to users cannot contain "nullable" or
+	// "required" properties.
+	if target == state.Users {
+		if v.connection.role == state.Source && outSchema.Valid() {
+			for path, p := range types.Walk(outSchema) {
+				if p.Nullable {
+					return errors.BadRequest("property %q in output schema cannot be nullable", path)
+				}
+				if p.Required {
+					return errors.BadRequest("property %q in output schema cannot be required", path)
+				}
+			}
+		} else if v.connection.role == state.Destination && inSchema.Valid() {
+			for path, p := range types.Walk(inSchema) {
+				if p.Nullable {
+					return errors.BadRequest("property %q in input schema cannot be nullable", path)
+				}
+				if p.Required {
+					return errors.BadRequest("property %q in input schema cannot be required", path)
+				}
+			}
+		}
+	}
+
 	// In case of a source connection, since its actions write on the data
 	// warehouse, the output schema cannot contain meta properties because such
 	// properties are not writable by user transformations.

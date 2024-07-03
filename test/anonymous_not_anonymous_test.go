@@ -40,7 +40,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 		}),
 		Filter: &chichitester.Filter{
 			Logical: "any",
@@ -63,7 +63,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 		}),
 		Filter: &chichitester.Filter{
 			Logical: "any",

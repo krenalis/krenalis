@@ -42,7 +42,7 @@ func Test_UserIdentities(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
@@ -65,7 +65,7 @@ func Test_UserIdentities(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.Text()},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{

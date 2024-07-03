@@ -101,7 +101,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
-	store.columnByProperty.user = columnByProperty(ws.UserSchema)
+	store.columnByProperty.user = userColumnByProperty(ws.UserSchema)
 	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
@@ -341,7 +341,7 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 		return nil, ErrMaintenanceMode
 	}
 	query.table = "events"
-	records, _, err := store.query(ctx, query, eventColumnByProperty)
+	records, _, err := store.query(ctx, query, eventColumnByProperty, false)
 	return records, err
 }
 
@@ -477,7 +477,7 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 	}
 	query.table = "users"
 	query.count = true
-	return store.query(ctx, query, store.userColumnByProperty())
+	return store.query(ctx, query, store.userColumnByProperty(), true)
 }
 
 // UserRecords returns an iterator over the users, according to the provided
@@ -493,7 +493,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 		return nil, ErrMaintenanceMode
 	}
 	query.table = "users"
-	return store.records(ctx, query, schema, "__id__", store.userColumnByProperty())
+	return store.records(ctx, query, schema, "__id__", store.userColumnByProperty(), true)
 }
 
 // UserIdentities returns the user identities according to the provided query.
@@ -508,7 +508,7 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 	}
 	query.table = "_user_identities"
 	query.count = true
-	return store.query(ctx, query, store.identityColumnByProperty())
+	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
 
 // close closes the store.
@@ -612,7 +612,7 @@ func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 
 	// Update the user and the identity columns.
 	store.columnByProperty.mu.Lock()
-	store.columnByProperty.user = columnByProperty(n.UserSchema)
+	store.columnByProperty.user = userColumnByProperty(n.UserSchema)
 	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
@@ -631,12 +631,16 @@ func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 // iterator over the results and an estimated count of the rows that would be
 // returned if First and Limit of query were not provided.
 //
+// columnByProperty is the mapping from the path of a property to the relative
+// column, and omitNil indicates whether properties with a nil value should be
+// omitted from each record.
+//
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]warehouses.Column) ([]map[string]any, int, error) {
+func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]warehouses.Column, omitNil bool) ([]map[string]any, int, error) {
 
-	columns, unflat := columnsFromProperties(query.Properties, columnByProperty)
+	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
 	var where warehouses.Expr
 	if query.Filter != nil {

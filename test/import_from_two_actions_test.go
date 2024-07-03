@@ -52,8 +52,8 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "first_name", Type: types.Text(), Nullable: true},
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
@@ -79,8 +79,8 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "last_name", Type: types.Text(), Nullable: true},
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "last_name", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{

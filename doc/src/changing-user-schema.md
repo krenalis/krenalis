@@ -29,8 +29,7 @@ These are the limits imposed by Chichi:
 
 * Array types cannot have items of type Array, Object, or Map.
 * Map types cannot have values of type Array, Object, or Map.
-* Properties with type different from Object must be "nullable", as NULL is used to represent "no value" on the data warehouse.
-* Properties with type Object cannot be "nullable", as this would lead to confusion and representation issues regarding type and values in various data warehouses.
+* Properties cannot be nullable (as the NULL value of a data warehouse column represents the fact that there is no value for that column)
 * Properties cannot specify a placeholder
 * Properties cannot be required
 * Properties cannot specify a role
