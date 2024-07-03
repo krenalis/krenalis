@@ -282,10 +282,8 @@ func (r *appRecords) All(ctx context.Context) Seq[Record] {
 
 		properties := types.Properties(r.schema)
 		names := make([]string, len(properties))
-		propertyByName := make(map[string]*types.Property, len(properties))
 		for i, p := range properties {
 			names[i] = p.Name
-			propertyByName[p.Name] = &p
 		}
 
 		for {
@@ -329,27 +327,17 @@ func (r *appRecords) All(ctx context.Context) Seq[Record] {
 				// Read the properties.
 				user.Properties = make(map[string]any, len(properties))
 				for _, p := range properties {
-					value, ok := appUser.Properties[p.Name]
+					v, ok := appUser.Properties[p.Name]
 					if !ok {
 						user.Err = fmt.Errorf(`app did not return a value for the property %q`, p.Name)
 						break
 					}
-					value, err = normalize(p.Name, p.Type, value, p.Nullable, r.timeLayouts)
+					v, err = normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
 					if err != nil {
 						user.Err = err
 						break
 					}
-					user.Properties[p.Name] = value
-				}
-				if len(user.Properties) != len(properties) {
-					// Users method of the connector is permitted to return more properties
-					// than those requested, so if necessary, remove those that are not
-					// requested.
-					for name := range user.Properties {
-						if _, ok := propertyByName[name]; !ok {
-							delete(propertyByName, name)
-						}
-					}
+					user.Properties[p.Name] = v
 				}
 
 				// Read the last change time.
