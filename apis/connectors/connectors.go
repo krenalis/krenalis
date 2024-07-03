@@ -49,8 +49,7 @@ type Event = chichi.Event
 type EventType = chichi.EventType
 
 // Record represents a record. If an error occurs during the reading or
-// validation of the record, the Err field contains the specific error,
-// which type implements the ValidationError interface of apis.
+// validation of the record, the Err field contains the specific error.
 type Record struct {
 	ID             string         // Identifier.
 	Properties     map[string]any // Properties.
@@ -60,8 +59,9 @@ type Record struct {
 	// It is not significant if it is nil.
 	Associations []string
 
-	// Err reports an error that occurred while reading the record.
-	// If Err is not nil, only the ID field is significant.
+	// Err reports an error that occurred while reading the record. If Err is not
+	// nil, only the ID field is significant. For validation errors, the error type
+	// implements apis.ValidationError interface.
 	Err error
 }
 
