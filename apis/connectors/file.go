@@ -584,13 +584,16 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling RecordStrings", rw.connector)
 	}
+	if len(record) != len(rw.properties) {
+		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
+	}
 	// Get the last change time.
 	var err error
 	lastChangeTime := rw.storageLastChangeTime
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t
@@ -615,26 +618,18 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 	// Get the identity property.
 	if i := rw.identityPropertyIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[p.Name], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
 	}
 	// Get the properties.
 	if rw.record.Err == nil {
-		for _, p := range rw.properties {
+		for i, p := range rw.properties {
 			if p.Name == "" {
 				continue
 			}
-			v, ok := record[p.Name]
-			if !ok {
-				if p.Required {
-					rw.record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
-					break
-				}
-				continue
-			}
-			v, err = normalize(p.Name, p.Type, v, p.Nullable, rw.timeLayouts)
+			v, err := normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
