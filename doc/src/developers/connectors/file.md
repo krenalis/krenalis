@@ -132,21 +132,21 @@ The `Read` method takes an `io.Reader` as an argument from which to read the fil
 type RecordWriter interface {
 
 	// Columns sets the columns of the records as properties.
-	// Columns must be called before Record, RecordMap, and RecordString.
+	// Columns must be called before Record, RecordSlice, and RecordStrings.
 	Columns(columns []types.Property) error
 
-	// Record writes a record represented as a slice of any.
-	Record(record []any) error
+	// Record writes a record represented as a string to any map.
+	Record(record map[string]any) error
 
-	// RecordMap writes a record represented as a string to any map.
-	RecordMap(record map[string]any) error
+	// RecordSlice writes a record represented as a slice of any.
+	RecordSlice(record []any) error
 
-	// RecordString writes a record represented as a string slice.
-	RecordString(record []string) error
+	// RecordStrings writes a record represented as a string slice.
+	RecordStrings(record []string) error
 }
 ```
 
-The `Read` method must first call the `Columns` method of `RecordWriter`, passing the columns present in the file as arguments. Then, it calls one of the methods `Record`, `RecordMap`, or `RecordString`, based on which one is most convenient, for each record in the file.
+The `Read` method must first call the `Columns` method of `RecordWriter`, passing the columns present in the file as arguments. Then, it calls one of the methods `Record`, `RecordSlice`, or `RecordStrings`, based on which one is most convenient, for each record in the file.
 
 For `Record` and `RecordString`, values must align with the columns' positions returned by `Columns`. Alternatively, using `RecordMap`, if a user may lack a value for a property, ensure the property is marked as `Required: false` in the schema; it may then be omitted from the map passed to `RecordMap`. This behavior is distinct from a property having a value of `nil`.
 
@@ -170,14 +170,19 @@ The `Write` method takes an `io.Writer` as an argument to write the contents of 
 type RecordReader interface {
 
 	// Ack acknowledges the processing of the record with the given GID.
+	// err is the error occurred processing the record, if any.
 	Ack(gid uuid.UUID, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
-	// Record returns the next record as a slice of any with its GID.
-	Record(ctx context.Context) (gid uuid.UUID, record []any, err error)
-}
+	// Record returns the next record with its ack ID. The keys of record represent
+	// column names. A record may be empty or contain only a subset of columns.
+	// It returns "", nil, and io.EOF if there are no more records.
+	//
+	// After a record has been read and processed, the caller should call Ack
+	// to acknowledge the processing of the record.
+	Record(ctx context.Context) (ackID string, record map[string]any, err error)}
 ```
 
 The `Write` method first needs to call the `Columns` method to determine the columns of the records to be written. Then it calls the `Record` method to read each individual record. It can then either immediately write the read record to the `io.Writer` or continue reading to do so later.

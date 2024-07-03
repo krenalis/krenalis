@@ -144,7 +144,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chich
 			}
 		}
 		// Write the record.
-		err = records.RecordString(record)
+		err = records.RecordStrings(record)
 		if err != nil {
 			return err
 		}
@@ -217,8 +217,8 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records chichi.R
 		if err != nil {
 			return err
 		}
-		for i, col := range columns {
-			recordString[i] = toString(record[i], col.Type)
+		for i, c := range columns {
+			recordString[i] = toString(record[c.Name], c.Type)
 		}
 		err = v.Write(recordString)
 		if err != nil {

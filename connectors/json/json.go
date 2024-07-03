@@ -151,7 +151,7 @@ Records:
 					}
 					columns = nil
 				}
-				err = records.RecordMap(record)
+				err = records.Record(record)
 				if err != nil {
 					return err
 				}
@@ -209,7 +209,7 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.
 	s := j.settings
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
-	var record []any
+	var record map[string]any
 	var ackID string
 	var comma bool
 	b := make([]byte, 0, 4096)

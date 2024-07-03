@@ -133,7 +133,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 			}
 		}
 		// Write the record.
-		err = records.RecordMap(record)
+		err = records.Record(record)
 		if err != nil {
 			return err
 		}

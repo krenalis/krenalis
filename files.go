@@ -87,27 +87,28 @@ type RecordReader interface {
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
-	// Record returns the next record as a slice of any with its ack ID.
+	// Record returns the next record with its ack ID. The keys of record represent
+	// column names. A record may be empty or contain only a subset of columns.
 	// It returns "", nil, and io.EOF if there are no more records.
 	//
 	// After a record has been read and processed, the caller should call Ack
 	// to acknowledge the processing of the record.
-	Record(ctx context.Context) (ackID string, record []any, err error)
+	Record(ctx context.Context) (ackID string, record map[string]any, err error)
 }
 
 // A RecordWriter interface is used by file connectors to write read records.
 type RecordWriter interface {
 
 	// Columns sets the columns of the records as properties.
-	// Columns must be called before Record, RecordMap, and RecordString.
+	// Columns must be called before Record, RecordSlice, and RecordStrings.
 	Columns(columns []types.Property) error
 
-	// Record writes a record represented as a slice of any.
-	Record(record []any) error
+	// Record writes a record represented as a string to any map.
+	Record(record map[string]any) error
 
-	// RecordMap writes a record represented as a string to any map.
-	RecordMap(record map[string]any) error
+	// RecordSlice writes a record represented as a slice of any.
+	RecordSlice(record []any) error
 
-	// RecordString writes a record represented as a string slice.
-	RecordString(record []string) error
+	// RecordStrings writes a record represented as a string slice.
+	RecordStrings(record []string) error
 }

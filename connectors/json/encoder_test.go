@@ -21,14 +21,15 @@ import (
 )
 
 //go:embed test_data/expected_false_args.json
-var expectedTrue []byte
+var expectedFalse []byte
 
 //go:embed test_data/expected_true_args.json
-var expectedFalse []byte
+var expectedTrue []byte
 
 func TestEncoder(t *testing.T) {
 
 	var typ = types.Object([]types.Property{
+		{Name: "no_value_1", Type: types.Boolean()},
 		{Name: "boolean_null", Type: types.Boolean()},
 		{Name: "boolean", Type: types.Boolean()},
 		{Name: "int8", Type: types.Int(8)},
@@ -40,6 +41,7 @@ func TestEncoder(t *testing.T) {
 		{Name: "uint16", Type: types.Uint(16)},
 		{Name: "uint24", Type: types.Uint(24)},
 		{Name: "uint32", Type: types.Uint(32)},
+		{Name: "no_value_2", Type: types.Boolean()},
 		{Name: "uint64", Type: types.Uint(64)},
 		{Name: "float32", Type: types.Float(32)},
 		{Name: "float64", Type: types.Float(64)},
@@ -65,6 +67,7 @@ func TestEncoder(t *testing.T) {
 			})},
 		})},
 		{Name: "map", Type: types.Map(types.Boolean())},
+		{Name: "no_value_3", Type: types.Boolean()},
 	})
 
 	v := map[string]any{
@@ -108,14 +111,14 @@ func TestEncoder(t *testing.T) {
 
 	enc := newEncoder(false, false, false)
 	got := enc.Append(nil, typ, v)
-	if !bytes.Equal(got, expectedTrue) {
-		t.Fatalf("unexpected test false result:\ngot     : %s\nexpected: %s\n", got, expectedTrue)
+	if !bytes.Equal(got, expectedFalse) {
+		t.Fatalf("unexpected newEncoder(false, false, false) result:\ngot     : %s\nexpected: %s\n", got, expectedFalse)
 	}
 
 	enc = newEncoder(true, true, true)
 	got = enc.Append(nil, typ, v)
-	if !bytes.Equal(got, expectedFalse) {
-		t.Fatalf("unexpected test true result:\ngot     : %s\nexpected: %s\n", got, expectedFalse)
+	if !bytes.Equal(got, expectedTrue) {
+		t.Fatalf("unexpected newEncoder(true, true, true) result:\ngot     : %s\nexpected: %s\n", got, expectedTrue)
 	}
 
 }

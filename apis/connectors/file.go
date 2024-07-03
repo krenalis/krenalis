@@ -212,11 +212,8 @@ func (w *fileWriter) Write(ctx context.Context, id string, properties map[string
 		panic("connectors: Write called on a closed writer")
 	}
 	r := fileRecord{
-		record: make([]any, len(w.columns)),
+		record: properties,
 		ackID:  ackID,
-	}
-	for i, c := range w.columns {
-		r.record[i] = properties[c.Name]
 	}
 	select {
 	case w.records <- r:
@@ -321,7 +318,7 @@ func newRecordReader(columns []types.Property, records <-chan fileRecord, ack Ac
 }
 
 type fileRecord struct {
-	record []any
+	record map[string]any
 	ackID  string
 }
 
@@ -345,7 +342,7 @@ func (rr *recordReader) Columns() []types.Property {
 
 // Record returns the next record as a slice of any. It returns uuid.UUID{}, nil
 // and io.EOF if there are no more records.
-func (rr *recordReader) Record(ctx context.Context) (string, []any, error) {
+func (rr *recordReader) Record(ctx context.Context) (string, map[string]any, error) {
 	select {
 	case r, ok := <-rr.records:
 		if !ok {
@@ -399,7 +396,7 @@ type recordWriter struct {
 }
 
 // Columns sets the columns of the records as properties.
-// Columns must be called before Record, RecordMap and RecordString.
+// Columns must be called before Record, RecordSlice and RecordStrings.
 func (rw *recordWriter) Columns(columns []types.Property) error {
 	if rw.properties != nil {
 		return fmt.Errorf("connector %s has called Columns twice", rw.connector)
@@ -455,8 +452,70 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	return nil
 }
 
-// Record writes a record.
-func (rw *recordWriter) Record(record []any) error {
+// Record writes a record as a map.
+func (rw *recordWriter) Record(record map[string]any) error {
+	if rw.properties == nil {
+		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.connector)
+	}
+	// Get the last change time.
+	var err error
+	lastChangeTime := rw.storageLastChangeTime
+	if i := rw.lastChangeTimeIndex; i >= 0 {
+		p := rw.properties[i]
+		var t time.Time
+		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
+		if err == nil {
+			if !t.IsZero() {
+				lastChangeTime = t
+			}
+			if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+				// Skip the record because it is older than the specified starting time.
+				return nil
+			}
+		}
+	}
+	// Call the yield function passing the previous record.
+	if rw.record.Properties != nil || rw.record.Err != nil {
+		if !rw.yield(rw.record) {
+			return errRecordStop
+		}
+	}
+	rw.record = Record{
+		Properties:     make(map[string]any, rw.numPropertiesPerRecord),
+		LastChangeTime: lastChangeTime,
+		Err:            err,
+	}
+	// Get the identity property.
+	if i := rw.identityPropertyIndex; i >= 0 {
+		p := rw.properties[i]
+		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[p.Name], rw.timeLayouts)
+		if err != nil {
+			rw.record.Err = err
+		}
+	}
+	// Get the properties.
+	if rw.record.Err == nil {
+		for _, p := range rw.properties {
+			if p.Name == "" {
+				continue
+			}
+			v, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
+			if err != nil {
+				rw.record.Err = err
+				break
+			}
+			rw.record.Properties[p.Name] = v
+		}
+	}
+	rw.limit--
+	if rw.limit == 0 {
+		return errRecordStop
+	}
+	return nil
+}
+
+// RecordSlice writes a record.
+func (rw *recordWriter) RecordSlice(record []any) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling Record", rw.connector)
 	}
@@ -520,10 +579,10 @@ func (rw *recordWriter) Record(record []any) error {
 	return nil
 }
 
-// RecordMap writes a record as a map.
-func (rw *recordWriter) RecordMap(record map[string]any) error {
+// RecordStrings writes a record as a string slice.
+func (rw *recordWriter) RecordStrings(record []string) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling RecordStrings", rw.connector)
 	}
 	// Get the last change time.
 	var err error
@@ -590,71 +649,6 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	return nil
 }
 
-// RecordString writes a record as a string slice.
-func (rw *recordWriter) RecordString(record []string) error {
-	if rw.properties == nil {
-		return fmt.Errorf("connector %s did not call the Columns method before calling RecordString", rw.connector)
-	}
-	if len(record) != len(rw.properties) {
-		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
-	}
-	// Get the last change time.
-	var err error
-	lastChangeTime := rw.storageLastChangeTime
-	if i := rw.lastChangeTimeIndex; i >= 0 {
-		p := rw.properties[i]
-		var t time.Time
-		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
-		if err == nil {
-			if !t.IsZero() {
-				lastChangeTime = t
-			}
-			if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
-				// Skip the record because it is older than the specified starting time.
-				return nil
-			}
-		}
-	}
-	// Call the yield function passing the previous record.
-	if rw.record.Properties != nil || rw.record.Err != nil {
-		if !rw.yield(rw.record) {
-			return errRecordStop
-		}
-	}
-	rw.record = Record{
-		Properties:     make(map[string]any, rw.numPropertiesPerRecord),
-		LastChangeTime: lastChangeTime,
-		Err:            err,
-	}
-	// Get the identity property.
-	if i := rw.identityPropertyIndex; i >= 0 {
-		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[i], rw.timeLayouts)
-		if err != nil {
-			rw.record.Err = err
-		}
-	}
-	// Get the properties.
-	if rw.record.Err == nil {
-		for i, p := range rw.properties {
-			if p.Name == "" {
-				continue
-			}
-			v, err := normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
-			if err != nil {
-				rw.record.Err = err
-				break
-			}
-			rw.record.Properties[p.Name] = v
-		}
-	}
-	rw.limit--
-	if rw.limit == 0 {
-		return errRecordStop
-	}
-	return nil
-}
-
 // close closes the record writer. It should be called when there are no more
 // records to write. If there is a last record, it calls the yield function with
 // that record. After close is called, no other methods of the record writer
@@ -676,8 +670,8 @@ func (rw *recordWriter) last() bool {
 }
 
 // setYieldFunc sets the yield function that will be called for each written
-// record. setYieldFunc must be set before calling the Record, RecordMap, and
-// RecordString methods.
+// record. setYieldFunc must be set before calling the Record, RecordSlice, and
+// RecordStrings methods.
 func (rw *recordWriter) setYieldFunc(yield func(Record) bool) {
 	rw.yield = yield
 }

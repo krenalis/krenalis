@@ -152,7 +152,12 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 				b = enc.Append(b, p.Type, v[i])
 			}
 		case map[string]any:
-			for i, p := range t.Properties() {
+			var i int
+			for _, p := range t.Properties() {
+				x, ok := v[p.Name]
+				if !ok {
+					continue
+				}
 				if i > 0 {
 					b = append(b, ',')
 				}
@@ -165,7 +170,8 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 				if enc.indent {
 					b = append(b, ' ')
 				}
-				b = enc.Append(b, p.Type, v[p.Name])
+				b = enc.Append(b, p.Type, x)
+				i++
 			}
 		}
 		enc.depth--

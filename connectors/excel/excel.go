@@ -18,10 +18,10 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/xuri/excelize/v2"
-
 	"github.com/open2b/chichi"
 	"github.com/open2b/chichi/types"
+
+	"github.com/xuri/excelize/v2"
 )
 
 // Connector icon.
@@ -143,7 +143,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 			}
 		}
 		// Write the record.
-		err = records.RecordString(record)
+		err = records.RecordStrings(record)
 		if err != nil {
 			return err
 		}
@@ -218,6 +218,7 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 	}
 
 	// Write the records.
+	values := make([]any, len(columns))
 	for i := 2; ; i++ {
 		ackID, record, err := records.Record(ctx)
 		if err != nil {
@@ -227,7 +228,10 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 			return err
 		}
 		axis := "A" + strconv.Itoa(i)
-		err = sw.SetRow(axis, record)
+		for i, c := range columns {
+			values[i] = record[c.Name]
+		}
+		err = sw.SetRow(axis, values)
 		if err != nil {
 			return err
 		}
