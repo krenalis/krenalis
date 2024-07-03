@@ -137,7 +137,7 @@ var schema = types.Object([]types.Property{
 		Type: types.JSON(),
 	},
 	{
-		Name: "JSON_nil",
+		Name: "JSON_null",
 		Type: types.JSON(),
 	},
 	{
@@ -201,7 +201,7 @@ var value = map[string]any{
 	"JSON_Number":               json.Number("85802.7305"),
 	"JSON_slice":                []any{"foo", 3, true},
 	"JSON_map":                  map[string]any{"a": 1, "b": 2},
-	"JSON_nil":                  nil,
+	"JSON_null":                 json.RawMessage(`null`),
 	"Inet":                      "192.158.1.38",
 	"Text":                      "some text",
 	"Array":                     []any{"foo", "boo"},
@@ -220,13 +220,25 @@ func Test_Marshal(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			value:  value,
-			result: []byte(`{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON_RawMessage":"{\"foo\":5,\"boo\":true}","JSON_bool":"true","JSON_string":"\"foo & boo \\\\u\"","JSON_float64":"23.871","JSON_Number":"85802.7305","JSON_slice":"[\"foo\",3,true]","JSON_map":"{\"a\":1,\"b\":2}","JSON_nil":"null","Inet":"192.158.1.38","Text":"some text","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
+			result: []byte(`{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON_RawMessage":"{\"foo\":5,\"boo\":true}","JSON_bool":"true","JSON_string":"\"foo & boo \\\\u\"","JSON_float64":"23.871","JSON_Number":"85802.7305","JSON_slice":"[\"foo\",3,true]","JSON_map":"{\"a\":1,\"b\":2}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
 		},
 		{
 			name:   "Empty",
 			schema: schema,
 			value:  map[string]any{},
 			result: []byte(`{}`),
+		},
+		{
+			name: "JSON nil",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.JSON(),
+					Nullable: true,
+				},
+			}),
+			value:  map[string]any{"a": nil},
+			result: []byte(`{"a":null}`),
 		},
 	}
 	for _, test := range tests {
@@ -278,6 +290,51 @@ func Test_MarshalSlice(t *testing.T) {
 				{"a": `"`},
 			},
 			result: []byte(`[{"a":""},{"a":"'"},{"a":"\""}]`),
+		},
+		{
+			name: "Non-required property",
+			schema: types.Object([]types.Property{
+				{
+					Name:     "a",
+					Type:     types.Text(),
+					Required: true,
+				},
+				{
+					Name:     "b",
+					Type:     types.Boolean(),
+					Required: false,
+				},
+			}),
+			values: []map[string]any{
+				{"a": "foo", "b": true},
+				{"a": "foo"},
+			},
+			result: []byte(`[{"a":"foo","b":true},{"a":"foo"}]`),
+		},
+		{
+			name: "Mix",
+			schema: types.Object([]types.Property{
+				{
+					Name: "a",
+					Type: types.Text(),
+				},
+				{
+					Name: "b",
+					Type: types.Object([]types.Property{
+						{Name: "x", Type: types.Int(32)},
+						{Name: "y", Type: types.Int(32), Required: true},
+					}),
+					Nullable: true,
+				},
+			}),
+			values: []map[string]any{
+				{},
+				{"a": "foo"},
+				{"a": "foo", "b": nil},
+				{"a": "foo", "b": map[string]any{"y": 45}},
+				{"a": "foo", "b": map[string]any{"x": 12, "y": 45}},
+			},
+			result: []byte(`[{},{"a":"foo"},{"a":"foo","b":null},{"a":"foo","b":{"y":45}},{"a":"foo","b":{"x":12,"y":45}}]`),
 		},
 	}
 	for _, test := range tests {

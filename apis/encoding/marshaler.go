@@ -55,6 +55,9 @@ func MarshalSlice(schema types.Type, values []map[string]any) ([]byte, error) {
 
 // marshal marshals v as a JSON value and appends it to b.
 func marshal(b []byte, t types.Type, v any) ([]byte, error) {
+	if v == nil {
+		return append(b, "null"...), nil
+	}
 	if t.Kind() == types.JSONKind {
 		var buf strings.Builder
 		enc := json.NewEncoder(&buf)
@@ -72,8 +75,6 @@ func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 		return b, nil
 	}
 	switch v := v.(type) {
-	case nil:
-		b = append(b, "null"...)
 	case bool:
 		if v {
 			b = append(b, "true"...)
