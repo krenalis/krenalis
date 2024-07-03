@@ -25,7 +25,9 @@
 Note: keep this table in sync with the `convertMatrix` global variable in this package,
 which holds information about valid conversions.
 
-# From nil
+## Handling of `nil`
+
+### From `nil`
 
 If the destination property is nullable, `nil` is converted to `nil`; otherwise:
 
@@ -33,7 +35,7 @@ If the destination property is nullable, `nil` is converted to `nil`; otherwise:
 * if the destination type is **JSON**, `nil` is converted to **JSON** `null`
 * in all other cases, it cannot be converted.
 
-## To nil
+### To `nil`
 
 A value `v` is converted to `nil` if the destination property is nullable and one of the following conditions is true:
 
