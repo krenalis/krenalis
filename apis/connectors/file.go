@@ -499,7 +499,15 @@ func (rw *recordWriter) Record(record map[string]any) error {
 			if p.Name == "" {
 				continue
 			}
-			v, err := normalize(p.Name, p.Type, record[p.Name], p.Nullable, rw.timeLayouts)
+			v, ok := record[p.Name]
+			if !ok {
+				if p.Required {
+					rw.record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
+					break
+				}
+				continue
+			}
+			v, err = normalize(p.Name, p.Type, v, p.Nullable, rw.timeLayouts)
 			if err != nil {
 				rw.record.Err = err
 				break
