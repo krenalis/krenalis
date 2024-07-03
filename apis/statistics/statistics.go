@@ -231,6 +231,7 @@ func (c *Collector) saveStats(timeslot int64, data []collectedStats) {
 	i := 0
 	for _, d := range data {
 		for _, msg := range d.messages {
+			slog.Error("an error occurred when running action", "message", msg) // TODO(Gianluca): remove this when https://github.com/open2b/chichi/issues/868 is fixed.
 			if i > 0 {
 				b.WriteByte(',')
 			}
