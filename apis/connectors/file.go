@@ -72,9 +72,8 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // record will contain, in the Properties field, the properties of the input
 // schema of the action passed to the constructor of File, with the same types.
 //
-// If the schema of the action of the File (that must be valid) does not conform
-// with the schema read from the file, the iterator will return a *SchemaError
-// error.
+// If the schema of the action of the File does not conform with the schema read
+// from the file, the iterator will return a *SchemaError error.
 //
 // If the identity property specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
@@ -90,9 +89,6 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 func (file *File) Records(ctx context.Context, startTime time.Time) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
-	}
-	if !file.action.InSchema.Valid() {
-		return nil, fmt.Errorf("action input schema is not valid")
 	}
 	if !startTime.IsZero() && file.action.LastChangeTimeProperty == "" {
 		return nil, fmt.Errorf("a start time has been provided, but the action does not have the last change property")
