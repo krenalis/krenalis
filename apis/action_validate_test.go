@@ -1310,6 +1310,78 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.FileStorageType,
 			err:                     "action with target 'Events' not allowed for destination FileStorage connections",
 		},
+		{
+			name: "GOOD: Source/App/Users - input schema can contain meta properties",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "__id__", Type: types.Int(32)},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in __id__",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+		},
+		{
+			name: "BAD: Source/App/Users - output schema cannot contain meta properties",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "__id__", Type: types.Int(32)},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+						"__id__":    "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "output schema cannot contain meta properties",
+		},
+		{
+			name: "BAD: Destination/App/Users -  input schema cannot contain meta properties",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "__id__", Type: types.Int(32)},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in __id__",
+					},
+				},
+				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
+				MatchingProperties: &MatchingProperties{
+					Internal: "email_in",
+					External: types.Property{Name: "email", Type: types.Text()},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			err:                     "input schema cannot contain meta properties",
+		},
 	}
 
 	for _, test := range tests {

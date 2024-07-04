@@ -354,11 +354,14 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		v.connection.connector.typ == state.ServerType ||
 		v.connection.connector.typ == state.WebsiteType
 
-	// Check that schemas that refer to users cannot contain "nullable" or
-	// "required" properties.
+	// Check that schemas that refer to users cannot contain "nullable",
+	// "required" or meta properties.
 	if target == state.Users {
 		if v.connection.role == state.Source && outSchema.Valid() {
 			for path, p := range types.Walk(outSchema) {
+				if isMetaProperty(path) {
+					return errors.BadRequest("output schema cannot contain meta properties")
+				}
 				if p.Nullable {
 					return errors.BadRequest("property %q in output schema cannot be nullable", path)
 				}
@@ -368,23 +371,15 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			}
 		} else if v.connection.role == state.Destination && inSchema.Valid() {
 			for path, p := range types.Walk(inSchema) {
+				if isMetaProperty(path) {
+					return errors.BadRequest("input schema cannot contain meta properties")
+				}
 				if p.Nullable {
 					return errors.BadRequest("property %q in input schema cannot be nullable", path)
 				}
 				if p.Required {
 					return errors.BadRequest("property %q in input schema cannot be required", path)
 				}
-			}
-		}
-	}
-
-	// In case of a source connection, since its actions write on the data
-	// warehouse, the output schema cannot contain meta properties because such
-	// properties are not writable by user transformations.
-	if v.connection.role == state.Source && outSchema.Valid() {
-		for _, p := range outSchema.Properties() {
-			if isMetaProperty(p.Name) {
-				return errors.BadRequest("output schema cannot contain meta properties")
 			}
 		}
 	}
