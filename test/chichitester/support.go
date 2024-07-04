@@ -499,6 +499,22 @@ func (c *Chichi) Workspace() Workspace {
 	return ws
 }
 
+func UIJSONProperties(properties map[string]bool) []byte {
+	var uiValues = struct {
+		Properties map[string]string
+	}{
+		Properties: map[string]string{},
+	}
+	for name, required := range properties {
+		if required {
+			uiValues.Properties[name] = "t"
+		} else {
+			uiValues.Properties[name] = "f"
+		}
+	}
+	return JSONEncodeUIValues(uiValues)
+}
+
 func JSONEncodeUIValues(values any) []byte {
 	data, err := json.Marshal(values)
 	if err != nil {

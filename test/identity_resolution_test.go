@@ -59,6 +59,12 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the Filesystem connection.
 	fsID := c.AddSourceFilesystem(storageDir)
 
+	properties := map[string]bool{
+		"dummyId":      true,
+		"email":        true,
+		"phoneNumbers": true,
+	}
+
 	inSchemaProps := []types.Property{
 		{Name: "dummyId", Type: types.JSON()},
 		{Name: "email", Type: types.JSON()},
@@ -90,7 +96,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 		IdentityProperty: "dummyId",
 		Connector:        "JSON",
-		UIValues:         []byte("{}"),
+		UIValues:         chichitester.UIJSONProperties(properties),
 	})
 
 	// Add the action B.
@@ -104,7 +110,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 		IdentityProperty: "dummyId",
 		Connector:        "JSON",
-		UIValues:         []byte("{}"),
+		UIValues:         chichitester.UIJSONProperties(properties),
 	})
 
 	// Define a function "expectUsers" which checks if the expected user

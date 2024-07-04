@@ -67,6 +67,14 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Logf("file %q written", absPath)
 	}
 
+	properties := map[string]bool{
+		"email":            true,
+		"name":             true,
+		"phone_numbers":    true,
+		"total_orders":     true,
+		"last_change_time": true,
+	}
+
 	writeUser("A.json", map[string]any{
 		"email":            "a@b",
 		"name":             "John",
@@ -93,7 +101,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Create and execute the actions.
 
-	addJSONAction := func(source int, filename string) int {
+	addJSONAction := func(source int, filename string, properties map[string]bool) int {
 		return c.AddAction(source, "Users", chichitester.ActionToSet{
 			Name: "Action",
 			Path: filename,
@@ -123,13 +131,13 @@ func TestIdentityResolution2(t *testing.T) {
 			LastChangeTimeProperty: "last_change_time",
 			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 			Connector:              "JSON",
-			UIValues:               []byte("{}"),
+			UIValues:               chichitester.UIJSONProperties(properties),
 		})
 	}
 
-	actionA := addJSONAction(sourceA, "A.json")
-	actionB := addJSONAction(sourceB, "B.json")
-	actionC := addJSONAction(sourceC, "C.json")
+	actionA := addJSONAction(sourceA, "A.json", properties)
+	actionB := addJSONAction(sourceB, "B.json", properties)
+	actionC := addJSONAction(sourceC, "C.json", properties)
 
 	c.ExecuteAction(sourceA, actionA, true)
 	c.ExecuteAction(sourceB, actionB, true)

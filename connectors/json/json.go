@@ -56,6 +56,7 @@ type JSON struct {
 }
 
 type Settings struct {
+	Properties         map[string]string `json:",omitempty"`
 	Indent             bool
 	GenerateASCII      bool
 	AllowSpecialFloats bool
@@ -69,9 +70,23 @@ func (j *JSON) ContentType(ctx context.Context) string {
 // Read reads the records from r and writes them to records.
 func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
 
-	var err error
-	var tok json.Token
+	columns := make([]types.Property, 0, len(j.settings.Properties))
+	for name, required := range j.settings.Properties {
+		c := types.Property{
+			Name: name,
+			Type: types.JSON(),
+		}
+		if required == "t" {
+			c.Required = true
+		}
+		columns = append(columns, c)
+	}
+	err := records.Columns(columns)
+	if err != nil {
+		return err
+	}
 
+	var tok json.Token
 	dec := json.NewDecoder(r)
 
 	// Read "[{".
@@ -95,8 +110,6 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records chichi.R
 	}
 
 	// Read the records.
-	nameOfKey := map[string]string{}
-	columns := make([]types.Property, 0, 10)
 	record := map[string]any{}
 Records:
 	for {
@@ -115,44 +128,10 @@ Records:
 			if value == nil {
 				value = json.RawMessage("null")
 			}
-			var name string
-			if columns == nil {
-				var ok bool
-				name, ok = nameOfKey[key]
-				if !ok {
-					return fmt.Errorf("key %q does not exist for the first object", key)
-				}
-			} else {
-				name = chichi.SuggestPropertyName(key)
-				if name == "" {
-					return fmt.Errorf("key %q cannot be converted to a valid property name", key)
-				}
-				for n, k := range nameOfKey {
-					if name == n {
-						if key == k {
-							return fmt.Errorf("key %q is repeated", key)
-						}
-						return fmt.Errorf("keys %q and %q cannot be converted into two different property names", key, k)
-					}
-				}
-				columns = append(columns, types.Property{
-					Name:     name,
-					Type:     types.JSON(),
-					Required: true,
-				})
-				nameOfKey[key] = name
-			}
-			record[name] = value
+			record[key] = value
 		case json.Delim:
 			switch tok {
 			case '}':
-				if columns != nil {
-					err = records.Columns(columns)
-					if err != nil {
-						return err
-					}
-					columns = nil
-				}
 				err = records.Record(record)
 				if err != nil {
 					return err
@@ -189,13 +168,22 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role ch
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		return nil, j.saveValues(ctx, values)
+		return nil, j.saveValues(ctx, values, role)
 	default:
 		return nil, chichi.ErrUIEventNotExist
 	}
 
 	ui := &chichi.UI{
 		Fields: []chichi.Component{
+			&chichi.KeyValue{
+				Name:           "Properties",
+				Label:          "Properties",
+				KeyLabel:       "Name",
+				ValueLabel:     "Required",
+				KeyComponent:   &chichi.Input{Name: "Name", Placeholder: "Name", Rows: 1},
+				ValueComponent: &chichi.Select{Name: "Required", Label: "Required", Options: []chichi.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
+				Role:           chichi.Source,
+			},
 			&chichi.Switch{Name: "Indent", Label: "Indent the generated output", Role: chichi.Destination},
 			&chichi.Switch{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: chichi.Destination},
 			&chichi.Switch{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: chichi.Destination},
@@ -258,11 +246,36 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.
 }
 
 // saveValues saves the user-entered values as settings.
-func (j *JSON) saveValues(ctx context.Context, values []byte) error {
+func (j *JSON) saveValues(ctx context.Context, values []byte, role chichi.Role) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return err
+	}
+	// Validate Properties.
+	if role == chichi.Source {
+		if len(s.Properties) == 0 {
+			return chichi.NewInvalidUIValuesError("must have at least one property")
+		}
+		hasName := map[string]struct{}{}
+		for name, required := range s.Properties {
+			if _, ok := hasName[name]; ok {
+				return chichi.NewInvalidUIValuesError(fmt.Sprintf("property name %q is repeated", name))
+			}
+			if name == "" {
+				return chichi.NewInvalidUIValuesError("a property name is empty")
+			}
+			if !types.IsValidPropertyName(name) {
+				return chichi.NewInvalidUIValuesError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
+					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", name))
+			}
+			if required != "f" && required != "t" {
+				return chichi.NewInvalidUIValuesError("required is not valid")
+			}
+			hasName[name] = struct{}{}
+		}
+	} else {
+		s.Properties = nil
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
