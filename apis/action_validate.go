@@ -53,7 +53,8 @@ type validationState struct {
 	provider transformers.Provider
 }
 
-// validateAction validates action in the context of the given validation state.
+// validateAction validates action and target, in the context of the given
+// validation state.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -64,6 +65,30 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
+
+	// Check if the target is allowed.
+	var targetIsAllowed bool
+	switch v.connection.role {
+	case state.Source:
+		switch v.connection.connector.typ {
+		case state.AppType, state.DatabaseType, state.FileStorageType:
+			targetIsAllowed = target == state.Users || target == state.Groups
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			targetIsAllowed = true
+		}
+	case state.Destination:
+		switch v.connection.connector.typ {
+		case state.AppType:
+			targetIsAllowed = true
+		case state.DatabaseType, state.FileStorageType:
+			targetIsAllowed = target == state.Users || target == state.Groups
+		}
+	}
+	if !targetIsAllowed {
+		role := strings.ToLower(v.connection.role.String())
+		typ := v.connection.connector.typ.String()
+		return errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
+	}
 
 	dispatchEventsToApps := dispatchesEventsToApps(v.connection.connector.typ, v.connection.role, target)
 	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)

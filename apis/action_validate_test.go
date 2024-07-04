@@ -1260,6 +1260,56 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			err:                     "property \"email_in\" in input schema cannot be required",
 		},
+		{
+			name: "BAD: Source/App/Events - bad target for connection",
+			action: ActionToSet{
+				Name: "Import events",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "action with target 'Events' not allowed for source App connections",
+		},
+		{
+			name: "BAD: Source/Database/Events - bad target for connection",
+			action: ActionToSet{
+				Name: "Import events",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "action with target 'Events' not allowed for source Database connections",
+		},
+		{
+			name: "BAD: Source/FileStorage/Events - bad target for connection",
+			action: ActionToSet{
+				Name: "Import events",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorageType,
+			err:                     "action with target 'Events' not allowed for source FileStorage connections",
+		},
+		{
+			name: "BAD: Destination/Database/Events - bad target for connection",
+			action: ActionToSet{
+				Name: "Import events",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "action with target 'Events' not allowed for destination Database connections",
+		},
+		{
+			name: "BAD: Destination/FileStorage/Events - bad target for connection",
+			action: ActionToSet{
+				Name: "Import events",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorageType,
+			err:                     "action with target 'Events' not allowed for destination FileStorage connections",
+		},
 	}
 
 	for _, test := range tests {
