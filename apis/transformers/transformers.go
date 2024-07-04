@@ -184,8 +184,8 @@ func schemaSubset(schema types.Type, properties []string) types.Type {
 	})
 }
 
-// transformationFunctionName returns the name the transformation function for
-// an action in the specified language.
+// transformationFunctionName returns the name of the transformation function
+// for an action in the specified language.
 //
 // Keep in sync with the function having the same name in the apis package.
 func transformationFunctionName(action int, language state.Language) string {
