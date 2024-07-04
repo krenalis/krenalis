@@ -589,9 +589,6 @@ func validateActionToSet(action ActionToSet, target state.Target, v validationSt
 	// Transformations must have at least one property in the input schema,
 	// except when importing identities from events and when dispatching events
 	// to apps, where "constant" transformation functions are supported.
-	//
-	// TODO(Gianluca): there may be some inconsistencies in this part, regarding
-	// UI, documentation and APIs. This still needs to be made consistent.
 	if !importUserIdentitiesFromEvents && !dispatchEventsToApps {
 		if action.Transformation.Mapping != nil && mappingInProperties == 0 {
 			return errors.BadRequest("transformation must map at least one property")
