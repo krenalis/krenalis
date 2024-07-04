@@ -971,10 +971,10 @@ func jsonToMap(v any) (map[string]any, error) {
 	case json.RawMessage:
 		enc := json.NewDecoder(bytes.NewReader(v))
 		enc.UseNumber()
-		var s map[string]any
+		var s any
 		err := enc.Decode(&s)
 		if err == nil {
-			return s, nil
+			return jsonToMap(s)
 		}
 	}
 	return nil, errInvalidConversion
