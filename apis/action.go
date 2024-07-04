@@ -371,7 +371,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		v.connector.hasUI = fileConnector.HasUI
 	}
 	v.provider = this.apis.transformerProvider
-	err := validateActionToSet(action, this.action.Target, v)
+	err := validateAction(action, this.action.Target, v)
 	if err != nil {
 		return err
 	}

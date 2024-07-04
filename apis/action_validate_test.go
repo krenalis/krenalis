@@ -23,7 +23,7 @@ import (
 
 var testName = regexp.MustCompile(`(?m)^(GOOD: |BAD: )(\w+)/(\w+)/(\w+) - (.+)$`)
 
-func Test_validateActionToSet(t *testing.T) {
+func Test_validateAction(t *testing.T) {
 
 	tests := []struct {
 		// name is the name of the test.
@@ -1274,7 +1274,7 @@ func Test_validateActionToSet(t *testing.T) {
 			v.connector.hasSheets = test.connectorHasSheets
 			v.connector.hasUI = test.connectorHasUI
 			v.provider = test.provider
-			err := validateActionToSet(test.action, test.target, v)
+			err := validateAction(test.action, test.target, v)
 			var gotErr string
 			if err != nil {
 				gotErr = err.Error()

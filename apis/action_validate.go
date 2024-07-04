@@ -53,16 +53,14 @@ type validationState struct {
 	provider transformers.Provider
 }
 
-// validateActionToSet validates an ActionToSet (both in case when adding a new
-// action or setting an existing action), for the given target and in the
-// context of the given validation state.
+// validateAction validates action in the context of the given validation state.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - ConnectorNotExist, if the action is on file and the specified file
 //     connector does not exist.
-func validateActionToSet(action ActionToSet, target state.Target, v validationState) error {
+func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema

@@ -461,7 +461,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		v.connector.hasUI = fileConnector.HasUI
 	}
 	v.provider = this.apis.transformerProvider
-	err := validateActionToSet(action, state.Target(target), v)
+	err := validateAction(action, state.Target(target), v)
 	if err != nil {
 		return 0, err
 	}
