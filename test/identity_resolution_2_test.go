@@ -118,9 +118,12 @@ func TestIdentityResolution2(t *testing.T) {
 				// properties that are "null".
 				Function: &chichitester.TransformationFunction{
 					Source: strings.Join([]string{
-						// TODO(Gianluca): 'eval' is used as workaround for the issue https://github.com/open2b/chichi/issues/877.
+						// TODO(Gianluca): if the proposal
+						// https://github.com/open2b/chichi/issues/877 is
+						// implemented, remove the call to 'json.loads'.
+						`import json`,
 						`def transform(user: dict) -> dict:`,
-						`    return {k: eval(v) for k, v in user.items() if v != "null"}`,
+						`    return {k: json.loads(v) for k, v in user.items() if v != "null"}`,
 					}, "\n"),
 					Language:      "Python",
 					InProperties:  []string{"email", "name", "phone_numbers", "total_orders"},
