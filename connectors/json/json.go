@@ -112,6 +112,9 @@ Records:
 			if err != nil {
 				break Records
 			}
+			if value == nil {
+				value = json.RawMessage("null")
+			}
 			var name string
 			if columns == nil {
 				var ok bool
@@ -136,7 +139,6 @@ Records:
 					Name:     name,
 					Type:     types.JSON(),
 					Required: true,
-					Nullable: true,
 				})
 				nameOfKey[key] = name
 			}
