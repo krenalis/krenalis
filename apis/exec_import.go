@@ -29,6 +29,10 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	connector := connection.Connector()
 	execution, _ := action.Execution()
 
+	// purge specifies whether identities should be purged from the
+	// data warehouse after all identities have been written.
+	purge := true
+
 	transformer := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
 		this.apis.transformerProvider, nil)
 
@@ -41,6 +45,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		if !execution.Reimport {
 			lastChangeTime = action.UserCursor
 		}
+		purge = lastChangeTime.IsZero()
 		records, err = this.app().Users(ctx, action.InSchema, lastChangeTime)
 	case state.DatabaseType:
 		database := this.database()
@@ -52,6 +57,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 				if execution.Reimport {
 					v, _ = database.LastChangeTimeCondition(nil)
 				} else {
+					purge = action.UserCursor.IsZero()
 					v, _ = database.LastChangeTimeCondition(action)
 				}
 				return v, true
@@ -66,6 +72,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		if !execution.Reimport && action.LastChangeTimeProperty != "" {
 			lastChangeTime = action.UserCursor
 		}
+		purge = lastChangeTime.IsZero()
 		records, err = this.file().Records(ctx, lastChangeTime)
 	default:
 		return fmt.Errorf("invalid connector type %s", connector.Type)
@@ -79,7 +86,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.BatchIdentityWriter(action, func(ids []string, err error) {
+	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
 			stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
 			return

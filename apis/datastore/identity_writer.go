@@ -58,7 +58,7 @@ type BatchIdentityWriter struct {
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.
 //
-// In case of reimports, it purges all identities of the action for which
+// If purge needs to be done, it purges all identities of the action for which
 // neither the Write method nor the Keep method has been called.
 //
 // In case an error occurs with the data warehouse, a DataWarehouseError error

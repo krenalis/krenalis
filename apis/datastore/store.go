@@ -184,13 +184,15 @@ func (store *Store) AddEvents(events [][]any) error {
 
 // BatchIdentityWriter returns an identity writer for writing user identities in
 // batch, relative to the given action (which must be in execution) on the data
-// warehouse. The ack parameter is the acknowledgment function.
+// warehouse. purge reports whether identities should be purged from the data
+// warehouse after all identities have been written. The ack parameter is the
+// acknowledgment function.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
 // It panics if the ack function is nil.
-func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
 	if ack == nil {
 		panic("nil ack function")
@@ -214,7 +216,7 @@ func (store *Store) BatchIdentityWriter(action *state.Action, ack IdentityWriter
 		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
 		index:      map[identityKey]int{},
 		ack:        ack,
-		purge:      execution.Reimport,
+		purge:      purge,
 		columns:    map[string]warehouses.Column{},
 	}
 	return &iw, nil

@@ -186,20 +186,18 @@ func TestIdentityResolution(t *testing.T) {
 
 	importUser(actionA, map[string]any{"dummyId": "BBB", "email": "", "phoneNumbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
 		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionB, map[string]any{"dummyId": "BBB", "email": "a@b", "phoneNumbers": []any{"333"}})
+	importUser(actionB, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"333"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
-		{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"333"}},
+		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333"}},
+		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionB, map[string]any{"dummyId": "BBB", "email": "a@b", "phoneNumbers": []any{"444"}})
+	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"444"}})
 	expectUsers([]map[string]any{
-		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
-		{"dummy_id": "BBB", "email": "a@b", "phone_numbers": []any{"333", "444"}},
+		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333", "444"}},
 	})
 
 	// -------------------------------------------------------------------------
