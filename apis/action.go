@@ -956,9 +956,6 @@ func shouldResetCursor(a *state.Action, n *state.SetAction) bool {
 	if a.IdentityProperty != n.IdentityProperty {
 		return true
 	}
-	if a.IdentityProperty != n.IdentityProperty {
-		return true
-	}
 	if a.LastChangeTimeProperty != n.LastChangeTimeProperty {
 		return true
 	}
