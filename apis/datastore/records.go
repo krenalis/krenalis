@@ -44,9 +44,9 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 	columns = append(columns, columnByProperty[idProperty])
 
 	var where warehouses.Expr
-	if query.Filter != nil {
+	if query.Where != nil {
 		var err error
-		where, err = exprFromFilter(query.Filter, columnByProperty)
+		where, err = exprFromWhere(query.Where, columnByProperty)
 		if err != nil {
 			return nil, err
 		}

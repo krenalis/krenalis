@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/types"
 
 	"github.com/shopspring/decimal"
@@ -136,15 +135,14 @@ func unflatRowRec(pk *propertyKey, row []any, omitNil bool) any {
 	return v
 }
 
-// exprFromFilter returns a warehouses.Expr expression from a filter.
-// columnFromProperty maps each non-Object property with its column.
-func exprFromFilter(filter *state.Filter, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
+// exprFromWhere returns a warehouses.Expr expression from a where.
+func exprFromWhere(where *Where, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 	op := warehouses.LogicalOperatorAnd
-	if filter.Logical == "any" {
+	if where.Logical == "any" {
 		op = warehouses.LogicalOperatorOr
 	}
-	exp := warehouses.NewMultiExpr(op, make([]warehouses.Expr, len(filter.Conditions)))
-	for i, cond := range filter.Conditions {
+	exp := warehouses.NewMultiExpr(op, make([]warehouses.Expr, len(where.Conditions)))
+	for i, cond := range where.Conditions {
 		column, ok := columnFromProperty[cond.Property]
 		if !ok {
 			return nil, fmt.Errorf("property path %s does not exist", cond.Property)

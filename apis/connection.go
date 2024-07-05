@@ -1041,12 +1041,12 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 		store:     this.store,
 		workspace: ws,
 	}
-	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 		Property: "__connection__",
 		Operator: "is",
 		Value:    strconv.Itoa(this.connection.ID),
 	}}}
-	identities, count, err := apisWs.userIdentities(ctx, filter, first, limit)
+	identities, count, err := apisWs.userIdentities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}

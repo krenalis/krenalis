@@ -46,8 +46,9 @@ type Query struct {
 	// and cannot contain overlapped paths.
 	Properties []string
 
-	// Filter, when not nil, filters the records to return.
-	Filter *state.Filter
+	// Where, when not nil, represents the condition that the returned records
+	// must satisfy.
+	Where *Where
 
 	// OrderBy, when non-empty, is the path of property for which the returned
 	// rows are ordered.
@@ -645,9 +646,9 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
 	var where warehouses.Expr
-	if query.Filter != nil {
+	if query.Where != nil {
 		var err error
-		where, err = exprFromFilter(query.Filter, columnByProperty)
+		where, err = exprFromWhere(query.Where, columnByProperty)
 		if err != nil {
 			return nil, 0, err
 		}

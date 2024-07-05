@@ -56,7 +56,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	// Retrieve the events records.
 	evs, err := this.store.Events(ctx, datastore.Query{
 		Properties: types.PropertyNames(events.Schema),
-		Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+		Where: &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 			Property: "user",
 			Operator: "is",
 			Value:    this.id.String(),
@@ -75,7 +75,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		// Verify that the user exists.
 		_, count, err := this.store.Users(ctx, datastore.Query{
 			Properties: []string{"__id__"},
-			Filter: &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+			Where: &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 				Property: "__id__",
 				Operator: "is",
 				Value:    this.id.String(),
@@ -116,7 +116,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdent
 	if this.store == nil {
 		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
-	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 		Property: "__gid__",
 		Operator: "is",
 		Value:    this.id.String(),
@@ -126,7 +126,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdent
 		store:     this.store,
 		workspace: this.workspace,
 	}
-	identities, count, err := ws.userIdentities(ctx, filter, first, limit)
+	identities, count, err := ws.userIdentities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -156,7 +156,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	}
 
 	properties := types.PropertyNames(this.workspace.UserSchema)
-	filter := &state.Filter{Logical: "all", Conditions: []state.FilterCondition{{
+	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 		Property: "__id__",
 		Operator: "is",
 		Value:    this.id.String(),
@@ -165,7 +165,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	// Retrieve the user traits.
 	records, _, err := this.store.Users(ctx, datastore.Query{
 		Properties: properties,
-		Filter:     filter,
+		Where:      where,
 		Limit:      1,
 	})
 	if err != nil {

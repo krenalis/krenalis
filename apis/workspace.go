@@ -1433,7 +1433,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
-	var stateFilter *state.Filter
+	var where *datastore.Where
 	if filter != nil {
 		_, err := validateFilter(filter, userSchema)
 		if err != nil {
@@ -1442,12 +1442,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			}
 			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
 		}
-		stateFilter = &state.Filter{
-			Logical:    state.FilterLogical(filter.Logical),
-			Conditions: make([]state.FilterCondition, len(filter.Conditions)),
+		where = &datastore.Where{
+			Logical:    datastore.WhereLogical(filter.Logical),
+			Conditions: make([]datastore.WhereCondition, len(filter.Conditions)),
 		}
 		for i, condition := range filter.Conditions {
-			stateFilter.Conditions[i] = (state.FilterCondition)(condition)
+			where.Conditions[i] = (datastore.WhereCondition)(condition)
 		}
 	}
 	if order != "" {
@@ -1481,7 +1481,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	// Read the users.
 	users, count, err := this.store.Users(ctx, datastore.Query{
 		Properties: append([]string{"__id__", "__last_change_time__"}, properties...),
-		Filter:     stateFilter,
+		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
 		First:      first,
@@ -1759,8 +1759,8 @@ type UserIdentity struct {
 	LastChangeTime time.Time `json:"lastChangeTime"`
 }
 
-// userIdentities returns the user identities matching the provided filter and
-// an estimate of their count without applying first and limit.
+// userIdentities returns the user identities matching the provided where
+// condition and an estimate of their count without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
@@ -1771,7 +1771,7 @@ type UserIdentity struct {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter, first, limit int) ([]UserIdentity, int, error) {
+func (this *Workspace) userIdentities(ctx context.Context, where *datastore.Where, first, limit int) ([]UserIdentity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
@@ -1783,7 +1783,7 @@ func (this *Workspace) userIdentities(ctx context.Context, filter *state.Filter,
 			"__anonymous_ids__",
 			"__last_change_time__",
 		},
-		Filter:  filter,
+		Where:   where,
 		OrderBy: "__pk__",
 		First:   first,
 		Limit:   limit,
