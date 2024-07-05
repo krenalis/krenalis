@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"slices"
 	"time"
 
@@ -338,24 +339,6 @@ func (rs *Rows) Scan() (map[string]any, error) {
 	return row, nil
 }
 
-// queryScanValue implements the sql.Scanner interface to read the database
-// values from a database connector.
-type queryScanValue struct {
-	column      types.Property
-	row         map[string]any
-	timeLayouts *state.TimeLayouts
-}
-
-func (sv queryScanValue) Scan(src any) error {
-	c := sv.column
-	value, err := normalize(c.Name, c.Type, src, c.Nullable, sv.timeLayouts)
-	if err != nil {
-		return err
-	}
-	sv.row[c.Name] = value
-	return nil
-}
-
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
 	rows        chichi.Rows
@@ -377,7 +360,7 @@ func newDatabaseRecords(rows chichi.Rows, columns []types.Property, action *stat
 	return &records
 }
 
-func (r *databaseRecords) All(ctx context.Context) Seq[Record] {
+func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
 			return
@@ -509,6 +492,24 @@ func (r *databaseRecords) Err() error {
 
 func (r *databaseRecords) Last() bool {
 	return r.last
+}
+
+// queryScanValue implements the sql.Scanner interface to read the database
+// values from a database connector.
+type queryScanValue struct {
+	column      types.Property
+	row         map[string]any
+	timeLayouts *state.TimeLayouts
+}
+
+func (sv queryScanValue) Scan(src any) error {
+	c := sv.column
+	value, err := normalize(c.Name, c.Type, src, c.Nullable, sv.timeLayouts)
+	if err != nil {
+		return err
+	}
+	sv.row[c.Name] = value
+	return nil
 }
 
 // scanner implements the sql.Scanner interface to read the database values from

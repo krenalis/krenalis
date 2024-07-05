@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"log/slog"
 	"math"
 	"os"
@@ -170,6 +171,218 @@ func (file *File) Writer(ctx context.Context, schema types.Type, ack AckFunc, pa
 	return fw, nil
 }
 
+// storage returns the inner storage connection of the file.
+func (file *File) storage() (chichi.FileStorage, error) {
+	conn := file.action.Connection()
+	connector := file.action.Connection().Connector()
+	return chichi.RegisteredFileStorage(connector.Name).New(&chichi.FileStorageConfig{
+		Settings:    conn.Settings,
+		SetSettings: setConnectionSettingsFunc(file.state, conn),
+	})
+}
+
+// IsValidSheetName reports whether name is a valid sheet name.
+func IsValidSheetName(name string) bool {
+	const maxLength = 31
+	if !utf8.ValidString(name) {
+		return false
+	}
+	if length := utf8.RuneCountInString(name); length < 1 || length > maxLength {
+		return false
+	}
+	if name[0] == '\'' || name[len(name)-1] == '\'' {
+		return false
+	}
+	if strings.ContainsAny(name, `*/:?[\]`) {
+		return false
+	}
+	return true
+}
+
+// compressorStorage implements a storage capable of compressing and
+// decompressing data read from or written to a FileStorage.
+type compressorStorage struct {
+	storage     chichi.FileStorage
+	compression state.Compression
+}
+
+// newCompressedStorage returns a compressor storage that wraps s and performs
+// file compression and decompression using c as the compression method.
+// If c is NoCompression, it does not perform any compression or decompression.
+func newCompressedStorage(s chichi.FileStorage, c state.Compression) *compressorStorage {
+	return &compressorStorage{s, c}
+}
+
+// Reader opens the file at the provided path name and returns an io.ReadCloser
+// from which to read the file and its last change time.
+// It is the caller's responsibility to close the returned reader.
+func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	r, t, err := cs.storage.Reader(ctx, name)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	switch cs.compression {
+	case state.ZipCompression:
+		var err error
+		var fi *os.File
+		var r2 *zip.ReadCloser
+		defer func() {
+			if err != nil {
+				if r2 != nil {
+					_ = r2.Close()
+				}
+				if fi != nil {
+					_ = removeTempFile(fi)
+				}
+				if r != nil {
+					_ = r.Close()
+				}
+			}
+		}()
+		fi, err = os.CreateTemp("", "")
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+		_, err = io.Copy(fi, r)
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+		err = r.Close()
+		r = nil
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+		_, err = fi.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+		r2, err = zip.OpenReader(fi.Name())
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+		var r3 io.ReadCloser
+		for _, file := range r2.File {
+			// Skip directories.
+			if strings.HasSuffix(file.Name, "/") {
+				continue
+			}
+			if r3 != nil {
+				return nil, time.Time{}, errors.New("the ZIP archive contains not just a single file, but multiple files")
+			}
+			r3, err = file.Open()
+			if err != nil {
+				return nil, time.Time{}, err
+			}
+			t = file.Modified
+		}
+		if r3 == nil {
+			return nil, time.Time{}, errors.New("the ZIP archive does not contain any files")
+		}
+		r = newFuncReadCloser(r3, func() error {
+			err3 := r3.Close()
+			err2 := r2.Close()
+			err := removeTempFile(fi)
+			if err3 != nil {
+				return err3
+			}
+			if err2 != nil {
+				return err2
+			}
+			return err
+		})
+	case state.GzipCompression:
+		r2, err := gzip.NewReader(r)
+		if err != nil {
+			_ = r.Close()
+			return nil, time.Time{}, err
+		}
+		r1 := r
+		r = newFuncReadCloser(r2, func() error {
+			err2 := r2.Close()
+			err := r1.Close()
+			if err2 != nil {
+				return err2
+			}
+			return err
+		})
+	case state.SnappyCompression:
+		r2 := snappy.NewReader(r)
+		r1 := r
+		r = newFuncReadCloser(r2, func() error {
+			return r1.Close()
+		})
+	}
+	return r, t, nil
+}
+
+// Writer returns a Writer that compress the data if needed, and then writes it
+// directly to the underlying storage.
+//
+// If the data should be compressed, it passes path to the underlying storage
+// with an appended extension, and an appropriate content type.
+//
+// It is the caller's responsibility to call Close on the returned Writer.
+func (cs compressorStorage) Writer(ctx context.Context, path, contentType, extension string) (*storageWriteCloser, error) {
+	pr, pw := io.Pipe()
+	var w io.WriteCloser
+	switch cs.compression {
+	case state.NoCompression:
+		w = pw
+	case state.ZipCompression:
+		z := zip.NewWriter(pw)
+		name := pathPkg.Base(path)
+		if ext := strings.ToLower(pathPkg.Ext(name)); ext == "" {
+			name += "." + extension
+		} else if ext == "." {
+			name += extension
+		} else if ext[1:] != extension {
+			name = strings.TrimSuffix(name, ext[1:]) + extension
+		}
+		zw, err := z.Create(name)
+		if err != nil {
+			_ = z.Close()
+			_ = pr.Close()
+			_ = pw.Close()
+			return nil, err
+		}
+		w = zipWriter{Writer: zw, z: z}
+	case state.GzipCompression:
+		w = gzip.NewWriter(pw)
+	case state.SnappyCompression:
+		w = snappy.NewBufferedWriter(pw)
+	}
+	path += cs.compression.Ext()
+	if ct := cs.compression.ContentType(); ct != "" {
+		contentType = ct
+	}
+	ch := make(chan error)
+	go func() {
+		ctx, cancel := context.WithCancel(ctx)
+		r := newTimeoutReader(pr, storageTimeout, cancel)
+		defer r.Close()
+		err := cs.storage.Write(ctx, r, path, contentType)
+		if err != nil {
+			_ = pr.CloseWithError(err)
+		} else {
+			// errReadStopped will be returned to the file connector only if it
+			// calls w.Write when the storage is returned.
+			_ = pr.CloseWithError(errReadStopped)
+		}
+		ch <- err
+	}()
+	wc := newFuncWriteCloser(w, func(err error) error {
+		if w != pw {
+			err2 := w.Close()
+			if err == nil {
+				err = err2
+			}
+		}
+		_ = pw.CloseWithError(err)
+		return <-ch
+	})
+	return wc, nil
+}
+
 // fileWriter implements the Writer interface for files.
 type fileWriter struct {
 	cancelWrite context.CancelFunc
@@ -230,16 +443,6 @@ func (w *fileWriter) Write(ctx context.Context, id string, properties map[string
 	}
 }
 
-// storage returns the inner storage connection of the file.
-func (file *File) storage() (chichi.FileStorage, error) {
-	conn := file.action.Connection()
-	connector := file.action.Connection().Connector()
-	return chichi.RegisteredFileStorage(connector.Name).New(&chichi.FileStorageConfig{
-		Settings:    conn.Settings,
-		SetSettings: setConnectionSettingsFunc(file.state, conn),
-	})
-}
-
 // fileRecords implements the Records interface for files.
 type fileRecords struct {
 	rw     *recordWriter
@@ -250,7 +453,7 @@ type fileRecords struct {
 	closed bool
 }
 
-func (r *fileRecords) All(ctx context.Context) Seq[Record] {
+func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
 			r.err = errors.New("connectors: For called on a closed Records")
@@ -297,6 +500,23 @@ func (r *fileRecords) Last() bool {
 	return r.rw.last()
 }
 
+// funcReadCloser wraps an io.Reader and implements io.ReadCloser. It calls a
+// specified function when Close is invoked.
+type funcReadCloser struct {
+	io.Reader
+	close func() error
+}
+
+// newFuncReadCloser returns an io.ReadCloser that wraps r and calls close when
+// Close is invoked.
+func newFuncReadCloser(r io.Reader, close func() error) io.ReadCloser {
+	return funcReadCloser{r, close}
+}
+
+func (c funcReadCloser) Close() error {
+	return c.close()
+}
+
 var (
 	// errRecordStop is returned by recordWriter methods when the maximum row
 	// limit has been reached, signaling the need to stop writing rows.
@@ -308,6 +528,12 @@ var (
 	errReadStopped = errors.New("storage abruptly stopped reading")
 )
 
+// newFuncWriteCloser returns an io.WriteCloser that wraps w and calls close
+// when Close is invoked.
+func newFuncWriteCloser(w io.Writer, close func(err error) error) *storageWriteCloser {
+	return &storageWriteCloser{w, close}
+}
+
 // newRecordReader returns a new record reader that read records.
 func newRecordReader(columns []types.Property, records <-chan fileRecord, ack AckFunc) *recordReader {
 	return &recordReader{
@@ -317,16 +543,16 @@ func newRecordReader(columns []types.Property, records <-chan fileRecord, ack Ac
 	}
 }
 
-type fileRecord struct {
-	record map[string]any
-	ackID  string
-}
-
 // recordReader implements the connector.RecordReader interface.
 type recordReader struct {
 	columns []types.Property
 	records <-chan fileRecord
 	ack     AckFunc
+}
+
+type fileRecord struct {
+	record map[string]any
+	ackID  string
 }
 
 // Ack acknowledges the processing of the record with the given ack ID.
@@ -679,233 +905,22 @@ func (rw *recordWriter) setYieldFunc(yield func(Record) bool) {
 	rw.yield = yield
 }
 
-// IsValidSheetName reports whether name is a valid sheet name.
-func IsValidSheetName(name string) bool {
-	const maxLength = 31
-	if !utf8.ValidString(name) {
-		return false
-	}
-	if length := utf8.RuneCountInString(name); length < 1 || length > maxLength {
-		return false
-	}
-	if name[0] == '\'' || name[len(name)-1] == '\'' {
-		return false
-	}
-	if strings.ContainsAny(name, `*/:?[\]`) {
-		return false
-	}
-	return true
-}
-
-// compressorStorage implements a storage capable of compressing and
-// decompressing data read from or written to a FileStorage.
-type compressorStorage struct {
-	storage     chichi.FileStorage
-	compression state.Compression
-}
-
-// newCompressedStorage returns a compressor storage that wraps s and performs
-// file compression and decompression using c as the compression method.
-// If c is NoCompression, it does not perform any compression or decompression.
-func newCompressedStorage(s chichi.FileStorage, c state.Compression) *compressorStorage {
-	return &compressorStorage{s, c}
-}
-
-// Reader opens the file at the provided path name and returns an io.ReadCloser
-// from which to read the file and its last change time.
-// It is the caller's responsibility to close the returned reader.
-func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	r, t, err := cs.storage.Reader(ctx, name)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	switch cs.compression {
-	case state.ZipCompression:
-		var err error
-		var fi *os.File
-		var r2 *zip.ReadCloser
-		defer func() {
-			if err != nil {
-				if r2 != nil {
-					_ = r2.Close()
-				}
-				if fi != nil {
-					_ = removeTempFile(fi)
-				}
-				if r != nil {
-					_ = r.Close()
-				}
-			}
-		}()
-		fi, err = os.CreateTemp("", "")
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		_, err = io.Copy(fi, r)
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		err = r.Close()
-		r = nil
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		_, err = fi.Seek(0, io.SeekStart)
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		r2, err = zip.OpenReader(fi.Name())
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		var r3 io.ReadCloser
-		for _, file := range r2.File {
-			// Skip directories.
-			if strings.HasSuffix(file.Name, "/") {
-				continue
-			}
-			if r3 != nil {
-				return nil, time.Time{}, errors.New("the ZIP archive contains not just a single file, but multiple files")
-			}
-			r3, err = file.Open()
-			if err != nil {
-				return nil, time.Time{}, err
-			}
-			t = file.Modified
-		}
-		if r3 == nil {
-			return nil, time.Time{}, errors.New("the ZIP archive does not contain any files")
-		}
-		r = newFuncReadCloser(r3, func() error {
-			err3 := r3.Close()
-			err2 := r2.Close()
-			err := removeTempFile(fi)
-			if err3 != nil {
-				return err3
-			}
-			if err2 != nil {
-				return err2
-			}
-			return err
-		})
-	case state.GzipCompression:
-		r2, err := gzip.NewReader(r)
-		if err != nil {
-			_ = r.Close()
-			return nil, time.Time{}, err
-		}
-		r1 := r
-		r = newFuncReadCloser(r2, func() error {
-			err2 := r2.Close()
-			err := r1.Close()
-			if err2 != nil {
-				return err2
-			}
-			return err
-		})
-	case state.SnappyCompression:
-		r2 := snappy.NewReader(r)
-		r1 := r
-		r = newFuncReadCloser(r2, func() error {
-			return r1.Close()
-		})
-	}
-	return r, t, nil
-}
-
-// Writer returns a Writer that compress the data if needed, and then writes it
-// directly to the underlying storage.
-//
-// If the data should be compressed, it passes path to the underlying storage
-// with an appended extension, and an appropriate content type.
-//
-// It is the caller's responsibility to call Close on the returned Writer.
-func (cs compressorStorage) Writer(ctx context.Context, path, contentType, extension string) (*storageWriteCloser, error) {
-	pr, pw := io.Pipe()
-	var w io.WriteCloser
-	switch cs.compression {
-	case state.NoCompression:
-		w = pw
-	case state.ZipCompression:
-		z := zip.NewWriter(pw)
-		name := pathPkg.Base(path)
-		if ext := strings.ToLower(pathPkg.Ext(name)); ext == "" {
-			name += "." + extension
-		} else if ext == "." {
-			name += extension
-		} else if ext[1:] != extension {
-			name = strings.TrimSuffix(name, ext[1:]) + extension
-		}
-		zw, err := z.Create(name)
-		if err != nil {
-			_ = z.Close()
-			_ = pr.Close()
-			_ = pw.Close()
-			return nil, err
-		}
-		w = zipWriter{Writer: zw, z: z}
-	case state.GzipCompression:
-		w = gzip.NewWriter(pw)
-	case state.SnappyCompression:
-		w = snappy.NewBufferedWriter(pw)
-	}
-	path += cs.compression.Ext()
-	if ct := cs.compression.ContentType(); ct != "" {
-		contentType = ct
-	}
-	ch := make(chan error)
+// newTimeoutReader returns a TimeoutReader that reads from r. If more than
+// timeout time elapses between two Read method calls, it calls the f function.
+// The caller must close the returned reader using the Close method when no
+// further calls to the Read method are expected.
+func newTimeoutReader(r io.Reader, timeout time.Duration, f func()) io.ReadCloser {
+	stop := make(chan struct{})
+	timer := time.NewTimer(timeout)
 	go func() {
-		ctx, cancel := context.WithCancel(ctx)
-		r := newTimeoutReader(pr, storageTimeout, cancel)
-		defer r.Close()
-		err := cs.storage.Write(ctx, r, path, contentType)
-		if err != nil {
-			_ = pr.CloseWithError(err)
-		} else {
-			// errReadStopped will be returned to the file connector only if it
-			// calls w.Write when the storage is returned.
-			_ = pr.CloseWithError(errReadStopped)
+		select {
+		case <-timer.C:
+			close(stop)
+			f()
+		case <-stop:
 		}
-		ch <- err
 	}()
-	wc := newFuncWriteCloser(w, func(err error) error {
-		if w != pw {
-			err2 := w.Close()
-			if err == nil {
-				err = err2
-			}
-		}
-		_ = pw.CloseWithError(err)
-		return <-ch
-	})
-	return wc, nil
-}
-
-// removeTempFile removes fi and returns the error, if any. Any error
-// encountered will be logged.
-func removeTempFile(fi *os.File) error {
-	err := fi.Close()
-	if err := os.Remove(fi.Name()); err != nil {
-		slog.Warn("cannot remove temporary file", "path", fi.Name(), "err", err)
-	}
-	return err
-}
-
-// funcReadCloser wraps an io.Reader and implements io.ReadCloser. It calls a
-// specified function when Close is invoked.
-type funcReadCloser struct {
-	io.Reader
-	close func() error
-}
-
-// newFuncReadCloser returns an io.ReadCloser that wraps r and calls close when
-// Close is invoked.
-func newFuncReadCloser(r io.Reader, close func() error) io.ReadCloser {
-	return funcReadCloser{r, close}
-}
-
-func (c funcReadCloser) Close() error {
-	return c.close()
+	return &timeoutReader{reader: r, timeout: timeout, timer: timer, f: f, stop: stop}
 }
 
 // storageWriteCloser wraps an io.Writer and implements io.WriteCloser. It calls a
@@ -913,12 +928,6 @@ func (c funcReadCloser) Close() error {
 type storageWriteCloser struct {
 	io.Writer
 	close func(err error) error
-}
-
-// newFuncWriteCloser returns an io.WriteCloser that wraps w and calls close
-// when Close is invoked.
-func newFuncWriteCloser(w io.Writer, close func(err error) error) *storageWriteCloser {
-	return &storageWriteCloser{w, close}
 }
 
 // Close closes the underlying writer. Storage will receive io.EOF from a read.
@@ -934,15 +943,14 @@ func (c storageWriteCloser) CloseWithError(err error) error {
 	return c.close(err)
 }
 
-// zipWriter wraps a Writer and implements the Close method that closes a
-// zip.Writer when called.
-type zipWriter struct {
-	z *zip.Writer
-	io.Writer
-}
-
-func (zw zipWriter) Close() error {
-	return zw.z.Close()
+// removeTempFile removes fi and returns the error, if any. Any error
+// encountered will be logged.
+func removeTempFile(fi *os.File) error {
+	err := fi.Close()
+	if err := os.Remove(fi.Name()); err != nil {
+		slog.Warn("cannot remove temporary file", "path", fi.Name(), "err", err)
+	}
+	return err
 }
 
 // timeoutReader implements an io.ReadCloser with a timeout between two
@@ -975,20 +983,13 @@ func (r *timeoutReader) Close() error {
 	return nil
 }
 
-// newTimeoutReader returns a TimeoutReader that reads from r. If more than
-// timeout time elapses between two Read method calls, it calls the f function.
-// The caller must close the returned reader using the Close method when no
-// further calls to the Read method are expected.
-func newTimeoutReader(r io.Reader, timeout time.Duration, f func()) io.ReadCloser {
-	stop := make(chan struct{})
-	timer := time.NewTimer(timeout)
-	go func() {
-		select {
-		case <-timer.C:
-			close(stop)
-			f()
-		case <-stop:
-		}
-	}()
-	return &timeoutReader{reader: r, timeout: timeout, timer: timer, f: f, stop: stop}
+// zipWriter wraps a Writer and implements the Close method that closes a
+// zip.Writer when called.
+type zipWriter struct {
+	z *zip.Writer
+	io.Writer
+}
+
+func (zw zipWriter) Close() error {
+	return zw.z.Close()
 }

@@ -22,7 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func TestNormalizeAppPropertyValue(t *testing.T) {
+func Test_normalize(t *testing.T) {
 
 	aDateTime := time.Date(2023, 5, 3, 15, 47, 22, 769802537, time.UTC)
 	aDate := time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)
@@ -143,7 +143,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 	}
 }
 
-func TestValidJSON(t *testing.T) {
+func Test_validJSON(t *testing.T) {
 
 	tests := []struct {
 		src   any

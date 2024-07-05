@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"net/http"
 	"strings"
 	"time"
@@ -255,6 +256,34 @@ func (w *appWriter) Write(ctx context.Context, id string, properties map[string]
 	return true
 }
 
+// userSchema returns the user schema with the provided role.
+func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, error) {
+	select {
+	case <-ctx.Done():
+		return types.Type{}, errors.New("canceled context")
+	case app.users.lock <- struct{}{}:
+	}
+	defer func() {
+		<-app.users.lock
+	}()
+	if schema := app.users.schemas[role]; schema.Valid() {
+		return schema, nil
+	}
+	schema, err := app.inner.Schema(ctx, chichi.Users, chichi.Role(role), "")
+	if err != nil {
+		return types.Type{}, err
+	}
+	var schemas [3]types.Type
+	for r := types.BothRole; r <= types.DestinationRole; r++ {
+		schemas[r] = schema.AsRole(r)
+		if !schemas[r].Valid() {
+			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(role.String()))
+		}
+	}
+	app.users.schemas = schemas
+	return app.users.schemas[role], nil
+}
+
 // appRecords implements the Records interface for apps.
 type appRecords struct {
 	schema         types.Type
@@ -267,7 +296,7 @@ type appRecords struct {
 	closed         bool
 }
 
-func (r *appRecords) All(ctx context.Context) Seq[Record] {
+func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 	return func(yield func(Record) bool) {
 
@@ -386,34 +415,6 @@ func (r *appRecords) Last() bool {
 type schema struct {
 	lock    chan struct{}
 	schemas [3]types.Type
-}
-
-// userSchema returns the user schema with the provided role.
-func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, error) {
-	select {
-	case <-ctx.Done():
-		return types.Type{}, errors.New("canceled context")
-	case app.users.lock <- struct{}{}:
-	}
-	defer func() {
-		<-app.users.lock
-	}()
-	if schema := app.users.schemas[role]; schema.Valid() {
-		return schema, nil
-	}
-	schema, err := app.inner.Schema(ctx, chichi.Users, chichi.Role(role), "")
-	if err != nil {
-		return types.Type{}, err
-	}
-	var schemas [3]types.Type
-	for r := types.BothRole; r <= types.DestinationRole; r++ {
-		schemas[r] = schema.AsRole(r)
-		if !schemas[r].Valid() {
-			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(role.String()))
-		}
-	}
-	app.users.schemas = schemas
-	return app.users.schemas[role], nil
 }
 
 // verifySchemaCompatibilityForSendEvents verifies whether t1 and t2 are

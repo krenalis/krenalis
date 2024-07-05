@@ -50,14 +50,6 @@ type normalizationError struct {
 	msg  string
 }
 
-func (err *normalizationError) Error() string {
-	return err.msg
-}
-
-func (err *normalizationError) PropertyPath() string {
-	return err.path
-}
-
 // newNormalizationErrorf returns a *normalizationError error based on a format
 // specifier. The error message can report the invalid value and should complete
 // the sentence "property foo ".
@@ -66,6 +58,14 @@ func newNormalizationErrorf(path string, format string, a ...any) error {
 		path: path,
 		msg:  fmt.Sprintf("property %q ", path) + fmt.Sprintf(format, a...),
 	}
+}
+
+func (err *normalizationError) Error() string {
+	return err.msg
+}
+
+func (err *normalizationError) PropertyPath() string {
+	return err.path
 }
 
 // normalize normalizes a property value, and returns its normalized value. If

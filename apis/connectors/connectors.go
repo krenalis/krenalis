@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"math"
 	"net/http"
 	"net/url"
@@ -33,8 +34,89 @@ import (
 	"github.com/relvacode/iso8601"
 )
 
-// Seq represents a sequence of V values.
-type Seq[V any] func(yield func(V) bool)
+// maxSettingsLen is the maximum length of settings in runes.
+// Keep in sync with the events.maxSettingsLen constant.
+const maxSettingsLen = 10_000
+
+// AckFunc is the function called when a write of one or more records
+// terminates. ids represents the ack identifiers, and the parameter err
+// represents the error that occurred while writing the records, if any.
+type AckFunc func(ids []string, err error)
+
+// Authorization represents a granted OAuth authorization.
+type Authorization struct {
+	AccountCode  string    // code of the account.
+	AccessToken  string    // access token.
+	RefreshToken string    // refresh token.
+	ExpiresIn    time.Time // expire time of the access token.
+}
+
+// CommittableWriter is the interface implemented by writers that support
+// committable writes.
+type CommittableWriter interface {
+
+	// Commit commits executed, ongoing, and pending write operations, ensuring
+	// their completion. If the commit fails, no records are written.
+	// Commit always closes the writer.
+	//
+	// It panics if called on a closed writer.
+	Commit(ctx context.Context) error
+}
+
+// An InvalidUIValuesError is returned by UI-related functions when the
+// user-entered values passed as an argument are not valid.
+type InvalidUIValuesError = chichi.InvalidUIValuesError
+
+var (
+	ErrEventTypeNotExist   = chichi.ErrEventTypeNotExist
+	ErrNoColumns           = errors.New("file has no columns")
+	ErrNoWebhooks          = errors.New("app has no webhooks")
+	ErrSheetNotExist       = errors.New("sheet does not exist")
+	ErrUIEventNotExist     = chichi.ErrUIEventNotExist
+	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
+)
+
+// LastChangeTimeProperty represents the lat change time property passed to the
+// (*File).ReadFunc method.
+type LastChangeTimeProperty struct {
+	Name   string
+	Format string
+}
+
+// PlaceholderError is an error representing a placeholder error.
+type PlaceholderError string
+
+// Error implements the interface "error" for PlaceholderError.
+func (e PlaceholderError) Error() string {
+	return string(e)
+}
+
+// PlaceholderReplacer is the type of functions accepted by ReplacePlaceholders,
+// where name is the name of the placeholder, and the returned values are the
+// value to replace (if any, otherwise the empty string) and a boolean
+// indicating if a placeholder with that name is allowed or not.
+type PlaceholderReplacer func(name string) (string, bool)
+
+// Records is the iterator interface used to iterate over the records read from
+// apps, databases, and files.
+type Records interface {
+
+	// All returns an iterator to iterate over the records. After All completes, it
+	// is also necessary to check the result of Err for any potential errors.
+	All(ctx context.Context) iter.Seq[Record]
+
+	// Close closes the iterator. It is automatically called by the For method
+	// before returning. Close is idempotent and does not impact the result of Err.
+	Close() error
+
+	// Err returns any error encountered during iteration, excluding errors returned
+	// by the yield function, which may have occurred after an explicit or implicit
+	// Close.
+	Err() error
+
+	// Last reports whether the last record has been read.
+	Last() bool
+}
 
 // SchemaError represents an error with a schema.
 type SchemaError struct {
@@ -65,32 +147,6 @@ type Record struct {
 	Err error
 }
 
-// Records is the iterator interface used to iterate over the records read from
-// apps, databases, and files.
-type Records interface {
-
-	// All returns an iterator to iterate over the records. After All completes, it
-	// is also necessary to check the result of Err for any potential errors.
-	All(ctx context.Context) Seq[Record]
-
-	// Close closes the iterator. It is automatically called by the For method
-	// before returning. Close is idempotent and does not impact the result of Err.
-	Close() error
-
-	// Err returns any error encountered during iteration, excluding errors returned
-	// by the yield function, which may have occurred after an explicit or implicit
-	// Close.
-	Err() error
-
-	// Last reports whether the last record has been read.
-	Last() bool
-}
-
-// AckFunc is the function called when a write of one or more records
-// terminates. ids represents the ack identifiers, and the parameter err
-// represents the error that occurred while writing the records, if any.
-type AckFunc func(ids []string, err error)
-
 // Writer is the interface implemented by app, database, and file connectors to
 // write records.
 type Writer interface {
@@ -119,38 +175,6 @@ type Writer interface {
 	Write(ctx context.Context, id string, properties map[string]any, ackID string) bool
 }
 
-// CommittableWriter is the interface implemented by writers that support
-// committable writes.
-type CommittableWriter interface {
-
-	// Commit commits executed, ongoing, and pending write operations, ensuring
-	// their completion. If the commit fails, no records are written.
-	// Commit always closes the writer.
-	//
-	// It panics if called on a closed writer.
-	Commit(ctx context.Context) error
-}
-
-// LastChangeTimeProperty represents the lat change time property passed to the
-// (*File).ReadFunc method.
-type LastChangeTimeProperty struct {
-	Name   string
-	Format string
-}
-
-// An InvalidUIValuesError is returned by UI-related functions when the
-// user-entered values passed as an argument are not valid.
-type InvalidUIValuesError = chichi.InvalidUIValuesError
-
-var (
-	ErrEventTypeNotExist   = chichi.ErrEventTypeNotExist
-	ErrNoColumns           = errors.New("file has no columns")
-	ErrNoWebhooks          = errors.New("app has no webhooks")
-	ErrSheetNotExist       = errors.New("sheet does not exist")
-	ErrUIEventNotExist     = chichi.ErrUIEventNotExist
-	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
-)
-
 // Connectors allows to interact with the apps, databases, files, file storages,
 // mobile, streams, and websites connectors.
 type Connectors struct {
@@ -163,45 +187,6 @@ func New(db *postgres.DB, state *state.State) *Connectors {
 	h := httpclient.New(db, state, http.DefaultTransport)
 	h.SetTrace(os.Stdout)
 	return &Connectors{state: state, http: h}
-}
-
-// Authorization represents a granted OAuth authorization.
-type Authorization struct {
-	AccountCode  string    // code of the account.
-	AccessToken  string    // access token.
-	RefreshToken string    // refresh token.
-	ExpiresIn    time.Time // expire time of the access token.
-}
-
-// GrantAuthorization grants an OAuth authorization from an app connector
-// provided an authorization code and a redirection URI.
-func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string, region state.PrivacyRegion) (*Authorization, error) {
-	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector.OAuth, code, redirectionURI)
-	if err != nil {
-		return nil, err
-	}
-	app, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
-		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken),
-		Region:     chichi.PrivacyRegion(region),
-	})
-	if err != nil {
-		return nil, err
-	}
-	aa, ok := app.(chichi.AppOAuth)
-	if !ok {
-		return nil, errors.New("connector does not implement the AppOAuth interface")
-	}
-	account, err := aa.OAuthAccount(ctx)
-	if err != nil {
-		return nil, err
-	}
-	authorization := &Authorization{
-		AccountCode:  account,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    expiresIn,
-	}
-	return authorization, nil
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
@@ -238,6 +223,37 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 	}
 	b.WriteString(v.Encode())
 	return b.String(), nil
+}
+
+// GrantAuthorization grants an OAuth authorization from an app connector
+// provided an authorization code and a redirection URI.
+func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string, region state.PrivacyRegion) (*Authorization, error) {
+	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector.OAuth, code, redirectionURI)
+	if err != nil {
+		return nil, err
+	}
+	app, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
+		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken),
+		Region:     chichi.PrivacyRegion(region),
+	})
+	if err != nil {
+		return nil, err
+	}
+	aa, ok := app.(chichi.AppOAuth)
+	if !ok {
+		return nil, errors.New("connector does not implement the AppOAuth interface")
+	}
+	account, err := aa.OAuthAccount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	authorization := &Authorization{
+		AccountCode:  account,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    expiresIn,
+	}
+	return authorization, nil
 }
 
 // ReceivePerAccountWebhook receives a per account webhook request and returns
@@ -343,20 +359,6 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	return nil, ErrNoWebhooks
 }
 
-// PlaceholderError is an error representing a placeholder error.
-type PlaceholderError string
-
-// Error implements the interface "error" for PlaceholderError.
-func (e PlaceholderError) Error() string {
-	return string(e)
-}
-
-// PlaceholderReplacer is the type of functions accepted by ReplacePlaceholders,
-// where name is the name of the placeholder, and the returned values are the
-// value to replace (if any, otherwise the empty string) and a boolean
-// indicating if a placeholder with that name is allowed or not.
-type PlaceholderReplacer func(name string) (string, bool)
-
 // ReplacePlaceholders replaces the placeholders in s with the values read
 // calling the f function (that must be non-nil) with the name of each
 // placeholder as argument.
@@ -454,10 +456,6 @@ func checkTypeAlignment(name string, t1, t2 types.Type) error {
 	}
 	return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
 }
-
-// maxSettingsLen is the maximum length of settings in runes.
-// Keep in sync with the events.maxSettingsLen constant.
-const maxSettingsLen = 10_000
 
 // formatLastChangeTimeProperty formats a time.Time value with the given format.
 // Excel formal is not allowed.
