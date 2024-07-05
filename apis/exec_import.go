@@ -48,7 +48,12 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		replacer := func(name string) (string, bool) {
 			switch name {
 			case "last_change_time":
-				v, _ := database.LastChangeTimeCondition(action)
+				var v string
+				if execution.Reimport {
+					v, _ = database.LastChangeTimeCondition(nil)
+				} else {
+					v, _ = database.LastChangeTimeCondition(action)
+				}
 				return v, true
 			case "limit":
 				return strconv.FormatUint(math.MaxInt64, 10), true
