@@ -6,7 +6,8 @@
             "firstName": "Kinsley",
             "lastName": "Buessen",
             "fullName": "Kinsley Buessen",
-            "favouriteDrink": "tea"
+            "favouriteDrink": "tea",
+            "favourite_movie": "Eclipse Protocol"
         }
     },
     {
@@ -26,7 +27,8 @@
             "firstName": "Ariela",
             "lastName": "Benois",
             "fullName": "Ariela Benois",
-            "favouriteDrink": "water"
+            "favouriteDrink": "water",
+            "favourite_movie": "Eclipse Protocol"
         }
     },
     {
@@ -36,7 +38,8 @@
             "firstName": "Conroy",
             "lastName": "Veschambes",
             "fullName": "Conroy Veschambes",
-            "favouriteDrink": "beer"
+            "favouriteDrink": "beer",
+            "favourite_movie": "Forgotten Kingdoms"
         }
     },
     {
@@ -46,7 +49,8 @@
             "firstName": "Kingsly",
             "lastName": "Dericut",
             "fullName": "Kingsly Dericut",
-            "favouriteDrink": "wine"
+            "favouriteDrink": "wine",
+            "favourite_movie": "The Quantum Conspiracy"
         }
     },
     {
@@ -76,7 +80,8 @@
             "firstName": "Codie",
             "lastName": "Troy",
             "fullName": "Codie Troy",
-            "favouriteDrink": "water"
+            "favouriteDrink": "water",
+            "favourite_movie": "Phantom Avenue"
         }
     },
     {
