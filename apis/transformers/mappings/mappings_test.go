@@ -238,15 +238,18 @@ func TestCompile(t *testing.T) {
 		{expr: "eq(1)", dt: types.Boolean(), compileErr: errors.New("'eq' function requires two arguments")},
 		{expr: "eq(1, 1)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
 
-		// when.
-		{expr: "when(true, 1)", dt: types.Int(32), expectedValue: 1},
-		{expr: "when(false, 1)", dt: types.Int(32), expectedValue: Void},
-		{expr: "when(false)", dt: types.Int(32), compileErr: errors.New("'when' function requires two arguments")},
-		{expr: "when(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
-		{expr: "when(false, null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
-		{expr: "when(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
-		{expr: "when(properties.foo, 'none')", dt: types.Text(), required: true, compileErr: errors.New("'when' function cannot be used in a required expression")},
-		{expr: "and(when(properties.foo, false), true)", dt: types.Text(), required: true, compileErr: errors.New("'when' function cannot be used in a required expression")},
+		// if.
+		{expr: "if(true, 1)", dt: types.Int(32), expectedValue: 1},
+		{expr: "if(false, 1)", dt: types.Int(32), expectedValue: Void},
+		{expr: "if(true, 1, 2)", dt: types.Int(32), expectedValue: 1},
+		{expr: "if(false, 1, 2)", dt: types.Int(32), expectedValue: 2},
+		{expr: "if(eq(3, 5), 1, 2)", dt: types.Int(32), expectedValue: 2},
+		{expr: "if(false)", dt: types.Int(32), compileErr: errors.New("'if' function requires either two or three arguments")},
+		{expr: "if(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
+		{expr: "if(false, null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
+		{expr: "if(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
+		{expr: "if(properties.foo, 'none')", dt: types.Text(), required: true, compileErr: errors.New("'if' function requires three arguments when used in a required expression")},
+		{expr: "and(if(properties.foo, false), true)", dt: types.Text(), required: true, compileErr: errors.New("'if' function requires three arguments when used in a required expression")},
 	}
 
 	for _, test := range tests {

@@ -91,8 +91,8 @@ func typeCheck(expr []part, schema, dt types.Type, required, nullable bool) erro
 			expr[i].typ, err = checkCoalesce(p.args, schema, typ, required, n)
 		case "eq":
 			expr[i].typ, err = checkEq(p.args, schema, typ, required, n)
-		case "when":
-			expr[i].typ, err = checkWhen(p.args, schema, typ, required, n)
+		case "if":
+			expr[i].typ, err = checkIf(p.args, schema, typ, required, n)
 		default:
 			panic(fmt.Errorf("unknown function %q", p.path[0]))
 		}

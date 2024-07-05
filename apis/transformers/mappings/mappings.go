@@ -38,8 +38,9 @@ func (err *validationError) PropertyPath() string {
 // Void represents the void value.
 var Void = struct{}{}
 
-// errVoid is returned by the 'when' function when the first argument is false,
-// and in this case the destination property is not changed.
+// errVoid is returned by the 'if' function when it has only two arguments and
+// the first argument is false. In this case, the destination property is not
+// changed.
 var errVoid = errors.New("void")
 
 // invalidConversionError is the error returned by the Eval and Transform
@@ -523,19 +524,18 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 			}
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
-	case "when":
+	case "if":
 		v0, _, err := eval(p.args[0], values, layouts)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		if !v0.(bool) {
-			return nil, types.Type{}, errVoid
+		if v0.(bool) {
+			return eval(p.args[1], values, layouts)
 		}
-		v1, t1, err := eval(p.args[1], values, layouts)
-		if err != nil {
-			return nil, types.Type{}, err
+		if len(p.args) == 3 {
+			return eval(p.args[2], values, layouts)
 		}
-		return v1, t1, nil
+		return nil, types.Type{}, errVoid
 	}
 	panic(fmt.Errorf("unknown function %q", p.path[0]))
 }

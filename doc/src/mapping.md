@@ -128,7 +128,7 @@ marital_status: "Unknown"
 
 Below is a list of available functions:
 
-#### and function
+#### **and** function
 
 The `and` function returns `true` only when all of its arguments are `true`; otherwise, it returns `false`. For example:
 ```
@@ -139,7 +139,7 @@ The `and` function returns `true` only when all of its arguments are `true`; oth
 
 The arguments for `and` should be of boolean (`Boolean` type), and the returned value is also a boolean (`Boolean` type).
 
-#### array function
+#### **array** function
 
 The `array` function returns an array with the passed arguments as elements.  For example:
 ```
@@ -150,7 +150,7 @@ The `array` function returns an array with the passed arguments as elements.  Fo
 
 The `array` function returns a value in the form of a JSON array (`Array(JSON)` type).
 
-#### coalesce function
+#### **coalesce** function
 
 The `coalesce` function returns the first non-null argument, or `null` if all arguments are `null`.  For example:
 
@@ -162,7 +162,7 @@ The `coalesce` function returns the first non-null argument, or `null` if all ar
 
 The `coalesce` function returns a value in the form of a JSON value (`JSON` type).
 
-#### eq function
+#### **eq** function
 
 The `eq` function takes two values and returns `true` if they are equal; otherwise, it returns `false`. For example:
 ```
@@ -174,13 +174,25 @@ The `eq` function takes two values and returns `true` if they are equal; otherwi
 The `eq` function returns a boolean value (`Boolean` type).
 
 
-#### when function
+#### **if** function
 
-The `when` function evaluates the first boolean argument; if it is `true`, it returns the second argument; otherwise, the output property will not have a value as if it had not been mapped. For example:
+The `if` function evaluates the first boolean argument. If it is `true`, it returns the second argument; otherwise, it returns the third argument. For example, if `hasCode` is `true`, the following evaluates to the value of `code`; otherwise, it evaluates to `null`
 ```
 ┌─────────────────────────────────┐
-│ when(hasCode, code)             │ ->  code
+│ if(hasCode, code, null)         │ ->  code
 └─────────────────────────────────┘
 ```
+
+The second or third argument is returned in the form of a JSON value (`JSON` type).
+
+The `if` function can also be called with only two arguments. In this case, if the first argument is `false`, the output property will not have a value, as if it had not been mapped.
+
+In the following example, the property will not have a value if `hasCode` is `false`
+```
+┌─────────────────────────────────┐
+│ if(hasCode, code)               │ ->  code
+└─────────────────────────────────┘
+```
+
 
 The second argument, if the first argument is `true`, is returned in the form of a JSON value (`JSON` type).
