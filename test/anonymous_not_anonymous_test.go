@@ -83,13 +83,13 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
 		MessageId:   "message1",
-		Traits:      analytics.NewTraits().SetAge(20),
+		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
 	})
 
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
 		MessageId:   "message2",
-		Traits:      analytics.NewTraits().SetAge(20),
+		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
 	})
 
 	// Wait for the 2 identities to be imported successfully.

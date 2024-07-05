@@ -55,6 +55,8 @@ func TestEval(t *testing.T) {
 			{{path: path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
 		{[]part{{value: ``, typ: types.Text()}, {path: path{"a"}, typ: types.Int(32)}}, "165", types.Text(), nil},
+		{[]part{{path: path{"x"}, typ: types.Boolean()}}, false, types.Type{}, errVoid},
+		{[]part{{path: path{"b", "x"}, typ: types.Boolean()}}, false, types.Type{}, errVoid},
 	}
 
 	for i, test := range tests {
@@ -145,12 +147,12 @@ func TestCompile(t *testing.T) {
 
 		{expr: "map['x']", dt: types.Int(32), expectedValue: 1},
 		{expr: "map.x", dt: types.Int(32), expectedValue: 1},
-		{expr: "map['not-exist']", dt: types.Int(32), evalErr: errors.New("cannot convert null to a non-nullable value")},
+		{expr: "map['not-exist']", dt: types.Int(32), expectedValue: Void},
 		{expr: "deep['a']", dt: types.JSON(), expectedValue: json.RawMessage(`{"b":{"p":{"x":1,"y":2}}}`)},
 		{expr: "deep['a']['b']", dt: types.JSON(), expectedValue: json.RawMessage(`{"p":{"x":1,"y":2}}`)},
 		{expr: "deep['a']['b'].p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
 		{expr: "deep.a.b.p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
-		{expr: "deep['a']['non-exist'].p", dt: types.JSON(), expectedValue: json.RawMessage(`null`)},
+		{expr: "deep['a']['not-exist'].p", dt: types.JSON(), expectedValue: Void},
 		{expr: "deep['a']['b'].p['x']", dt: types.Int(32), expectedValue: 1},
 
 		{expr: "properties", dt: types.JSON(), expectedValue: json.RawMessage(`{":":7,":x":8,"?":4,"[x":1,"[x]":3,"[x]?":6,"a":1,"b":{"c":[1,2]},"x?":5,"x]":2}`)},
@@ -159,7 +161,7 @@ func TestCompile(t *testing.T) {
 		{expr: "properties.a.x?", dt: types.Int(32), expectedValue: Void},
 		{expr: "properties.b.c", dt: types.Array(types.Int(32)), expectedValue: []any{1, 2}},
 		{expr: "properties.b['c']", dt: types.Array(types.Int(32)), expectedValue: []any{1, 2}},
-		{expr: "properties.b.x", dt: types.Array(types.Int(32)), evalErr: errors.New(`cannot convert null to a non-nullable value`)},
+		{expr: "properties.b.x", dt: types.Array(types.Int(32)), expectedValue: Void},
 		{expr: `properties["[x"]`, dt: types.Float(64), expectedValue: 1.0},
 		{expr: `properties["x]"]`, dt: types.Float(64), expectedValue: 2.0},
 		{expr: `properties["[x]"]`, dt: types.Float(64), expectedValue: 3.0},
@@ -442,9 +444,12 @@ func TestValueOf(t *testing.T) {
 		{path{"[a]"}, 5, nil},
 		{path{"b", "c"}, "foo", nil},
 		{path{"b", "[c]"}, "foo", nil},
+		{path{"b", "x"}, nil, errVoid},
 		{path{"b", "d", ":e"}, []any{1}, nil},
 		{path{"b", "d", ":[:e]"}, []any{2}, nil},
 		{path{"b", "d", ":[e]]"}, []any{3}, nil},
+		{path{"b", "d", ":x"}, nil, errVoid},
+		{path{"f"}, nil, nil},
 		{path{"g"}, json.Number("12.53"), nil},
 		{path{"g", ":x"}, nil, errors.New(`invalid g.x: g is not a JSON object, it is a JSON number`)},
 		{path{"g", ":[x]"}, nil, errors.New(`invalid g["x"]: g is not a JSON object, it is a JSON number`)},
@@ -459,7 +464,9 @@ func TestValueOf(t *testing.T) {
 		{path{"h", ":[i]]?"}, "zoo", nil},
 		{path{"h", ":i", ":x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
 		{path{"h", ":i", ":x?"}, nil, errVoid},
+		{path{"h", ":x"}, nil, errVoid},
 		{path{"h", ":i", ":[x]?"}, nil, errVoid},
+		{path{"x"}, nil, errVoid},
 	}
 
 	for _, test := range tests {

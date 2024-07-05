@@ -354,7 +354,11 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 		if p.value == nil {
 			if len(p.path) == 1 {
 				if p.args == nil {
-					return values[p.path[0]], p.typ, nil
+					v, ok := values[p.path[0]]
+					if !ok {
+						return nil, types.Type{}, errVoid
+					}
+					return v, p.typ, nil
 				}
 				return evalCall(p, values, layouts)
 			}
@@ -380,7 +384,7 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 		}
 		if p.args == nil {
 			v, err = valueOf(p.path, values)
-			if err != nil {
+			if err != nil && err != errVoid {
 				return nil, types.Type{}, err
 			}
 			vt = p.typ
@@ -399,8 +403,12 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 	return string(buf), types.Text(), nil
 }
 
-// valueOf returns the value at the given path in values.
-// It returns an error if the path does not exist.
+// valueOf returns the value at the specified path in values. It returns errVoid
+// if the path does not exist, including keys in a map and properties of a JSON
+// object.
+//
+// For non-object JSON values, accessing a key returns errVoid if the key is
+// followed by "?"; otherwise, it returns an error.
 func valueOf(path path, values map[string]any) (any, error) {
 	var v any
 	var ok bool
@@ -417,7 +425,7 @@ func valueOf(path path, values map[string]any) (any, error) {
 		}
 		v, ok = values[name]
 		if !ok {
-			return nil, nil
+			return nil, errVoid
 		}
 		if i != last {
 			values, ok = v.(map[string]any)
