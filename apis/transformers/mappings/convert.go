@@ -59,7 +59,6 @@ var (
 func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts) (any, error) {
 	spt := st.Kind()
 	dpt := dt.Kind()
-	// Convert between nil and other values.
 	if nullable {
 		switch {
 		case v == nil:
@@ -72,13 +71,14 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			return nil, nil
 		}
 	} else if v == nil {
-		switch dpt {
-		case types.TextKind:
-			return "", nil
-		case types.JSONKind:
+		if dpt == types.JSONKind {
 			return json.RawMessage("null"), nil
 		}
-		return nil, errInvalidConversion
+		return nil, errVoid
+	} else if spt == types.JSONKind && dpt != types.JSONKind {
+		if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
+			return nil, errVoid
+		}
 	}
 	// Convert the unparsed cases, v is not nil.
 	switch dpt {

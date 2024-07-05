@@ -169,6 +169,12 @@ func (expr *Expression) Eval(values map[string]any) (any, error) {
 	if v != nil || !expr.nullable {
 		c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts)
 		if err != nil {
+			if err == errVoid {
+				if !expr.required {
+					return Void, nil
+				}
+				err = errInvalidConversion
+			}
 			if err == errInvalidConversion {
 				err = &invalidConversionError{v, st, expr.dt}
 			}

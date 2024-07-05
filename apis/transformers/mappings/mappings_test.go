@@ -144,6 +144,9 @@ func TestCompile(t *testing.T) {
 		{expr: "revision_dates", dt: types.Array(types.Date()), expectedValue: []any{d}},
 		{expr: "map", dt: types.Map(types.Int(32)), expectedValue: map[string]any{"x": 1, "y": 2}},
 		{expr: `""`, dt: types.JSON(), expectedValue: json.RawMessage("null")},
+		{expr: "other", dt: types.Int(32), nullable: true, expectedValue: nil},
+		{expr: "other", dt: types.Int(32), expectedValue: Void},
+		{expr: "other", dt: types.Int(32), required: true, evalErr: errors.New("cannot convert null to a non-nullable value")},
 
 		{expr: "map['x']", dt: types.Int(32), expectedValue: 1},
 		{expr: "map.x", dt: types.Int(32), expectedValue: 1},

@@ -29,11 +29,7 @@ which holds information about valid conversions.
 
 ### From `nil`
 
-If the destination property is nullable, `nil` is converted to `nil`; otherwise:
-
-* if the destination type is **Text**, `nil` is converted to an empty string
-* if the destination type is **JSON**, `nil` is converted to **JSON** `null`
-* in all other cases, it cannot be converted.
+If the destination type is **JSON**, `nil` is converted to **JSON** `null`; otherwise, if the destination property is nullable, `nil` is converted to `nil`; otherwise, it is converted to `void`.
 
 ### To `nil`
 
