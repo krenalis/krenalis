@@ -216,19 +216,6 @@ func (ds *Datastore) onSetAction(n state.SetAction) func() {
 	return store.onSetAction(n)
 }
 
-// onSetWorkspaceUserSchema is called when a workspace's user schema is set.
-func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) func() {
-	ds.mu.Lock()
-	store, ok := ds.store[n.Workspace]
-	ds.mu.Unlock()
-	if !ok {
-		return nil
-	}
-	return func() {
-		store.onSetWorkspaceUserSchema(n)
-	}
-}
-
 func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 	return func() {
 		// Change the data warehouse mode of the current store.
@@ -282,21 +269,34 @@ func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) func() {
 	}
 }
 
-// openWarehouse opens a data warehouse with the given type and settings.
-// It returns a SettingsError error if the settings are not syntactically
-// valid.
-func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehouse, error) {
-	switch typ {
-	case state.BigQuery, state.Redshift:
-		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
-	case state.ClickHouse:
-		return clickhouse.Open(settings)
-	case state.PostgreSQL:
-		return postgresql.Open(settings)
-	case state.Snowflake:
-		return snowflake.Open(settings)
+// onSetWorkspaceUserSchema is called when a workspace's user schema is set.
+func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) func() {
+	ds.mu.Lock()
+	store, ok := ds.store[n.Workspace]
+	ds.mu.Unlock()
+	if !ok {
+		return nil
 	}
-	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
+	return func() {
+		store.onSetWorkspaceUserSchema(n)
+	}
+}
+
+// CanBeIdentifier reports whether a property with type t can be used as
+// identifier in the Identity Resolution.
+func CanBeIdentifier(t types.Type) bool {
+	switch t.Kind() {
+	case types.IntKind,
+		types.UintKind,
+		types.UUIDKind,
+		types.InetKind,
+		types.TextKind:
+		return true
+	case types.DecimalKind:
+		return t.Scale() == 0
+	default:
+		return false
+	}
 }
 
 // CheckConflictingProperties checks if schema contains conflicting properties,
@@ -313,4 +313,21 @@ func CheckConflictingProperties(schema types.Type) error {
 		names[c.Name] = struct{}{}
 	}
 	return nil
+}
+
+// openWarehouse opens a data warehouse with the given type and settings.
+// It returns a SettingsError error if the settings are not syntactically
+// valid.
+func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehouse, error) {
+	switch typ {
+	case state.BigQuery, state.Redshift:
+		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
+	case state.ClickHouse:
+		return clickhouse.Open(settings)
+	case state.PostgreSQL:
+		return postgresql.Open(settings)
+	case state.Snowflake:
+		return snowflake.Open(settings)
+	}
+	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
 }

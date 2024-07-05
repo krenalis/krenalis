@@ -31,41 +31,6 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
-// Query represents a query on a table of a data warehouse.
-type Query struct {
-
-	// table is the table to query.
-	table string
-
-	// count retrieves the total number of rows that match the filter,
-	// irrespective of the first and limit parameters. It is meaningful only if
-	// the method has a count return parameter.
-	count bool
-
-	// Properties are the paths of the properties to return. It cannot be empty
-	// and cannot contain overlapped paths.
-	Properties []string
-
-	// Where, when not nil, represents the condition that the returned records
-	// must satisfy.
-	Where *Where
-
-	// OrderBy, when non-empty, is the path of property for which the returned
-	// rows are ordered.
-	OrderBy string
-
-	// OrderDesc, when true and OrderBy is provided, orders the returned records
-	// in descending order instead of ascending order.
-	OrderDesc bool
-
-	// First is the index of the first returned record and must be >= 0.
-	First int
-
-	// Limit controls how many rows should be returned and must be >= 0. If 0,
-	// it means that there is no limit.
-	Limit int
-}
-
 // IdentityWriterAckFunc is the function called when a batch of user identities
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
@@ -483,6 +448,21 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 	return store.query(ctx, query, store.userColumnByProperty(), true)
 }
 
+// UserIdentities returns the user identities according to the provided query.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
+func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
+	store.mustBeOpen()
+	if store.Mode() == state.Maintenance {
+		return nil, 0, ErrMaintenanceMode
+	}
+	query.table = "_user_identities"
+	query.count = true
+	return store.query(ctx, query, store.identityColumnByProperty(), true)
+}
+
 // UserRecords returns an iterator over the users, according to the provided
 // query. schema is the expected schema of the provided properties to retrive.
 //
@@ -497,21 +477,6 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	}
 	query.table = "users"
 	return store.records(ctx, query, schema, "__id__", store.userColumnByProperty(), true)
-}
-
-// UserIdentities returns the user identities according to the provided query.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
-	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, 0, ErrMaintenanceMode
-	}
-	query.table = "_user_identities"
-	query.count = true
-	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
 
 // close closes the store.

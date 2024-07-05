@@ -11,13 +11,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 
 	"github.com/open2b/chichi/apis/datastore/warehouses"
 	"github.com/open2b/chichi/types"
 )
-
-// Seq is an iterator over sequences of individual values.
-type Seq[V any] func(yield func(V) bool)
 
 // Record represents a record.
 type Record struct {
@@ -26,6 +24,17 @@ type Record struct {
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
 	Err error
+}
+
+// Records represents records read from the data warehouse.
+type Records struct {
+	columns   []warehouses.Column
+	normalize NormalizeFunc
+	unflat    unflatRowFunc
+	rows      warehouses.Rows
+	last      bool
+	err       error
+	closed    bool
 }
 
 // records executes a query on the data warehouse and returns an iterator to
@@ -86,20 +95,9 @@ func (store *Store) records(ctx context.Context, query Query, schema types.Type,
 	return records, err
 }
 
-// Records represents records read from the data warehouse.
-type Records struct {
-	columns   []warehouses.Column
-	normalize NormalizeFunc
-	unflat    unflatRowFunc
-	rows      warehouses.Rows
-	last      bool
-	err       error
-	closed    bool
-}
-
 // All returns an iterator to iterate over the records. After All completes, it
 // is also necessary to check the result of Err for any potential errors.
-func (r *Records) All(ctx context.Context) Seq[Record] {
+func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
 			r.err = errors.New("All called on a closed Records")
@@ -144,32 +142,6 @@ func (r *Records) All(ctx context.Context) Seq[Record] {
 	}
 }
 
-// NormalizeFunc is a function type representing the normalization function
-// exposed by data warehouse drivers to normalize values returned by them.
-type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
-
-// scanValue implements the sql.Scanner interface to read the database values.
-type scanValue struct {
-	columns   []warehouses.Column
-	row       []any
-	normalize NormalizeFunc
-	index     int
-}
-
-// newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFunc) []any {
-	values := make([]any, len(columns))
-	value := &scanValue{
-		columns:   columns,
-		row:       row,
-		normalize: normalize,
-	}
-	for i := range columns {
-		values[i] = value
-	}
-	return values
-}
-
 // Close closes the iterator. It is automatically called by the For method
 // before returning. Close is idempotent and does not impact the result of Err.
 func (r *Records) Close() error {
@@ -201,6 +173,32 @@ func (sv *scanValue) Scan(src any) error {
 	sv.row[sv.index] = value
 	sv.index = (sv.index + 1) % len(sv.columns)
 	return nil
+}
+
+// NormalizeFunc is a function type representing the normalization function
+// exposed by data warehouse drivers to normalize values returned by them.
+type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
+
+// scanValue implements the sql.Scanner interface to read the database values.
+type scanValue struct {
+	columns   []warehouses.Column
+	row       []any
+	normalize NormalizeFunc
+	index     int
+}
+
+// newScanValues returns a slice containing scan values to be used to scan rows.
+func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFunc) []any {
+	values := make([]any, len(columns))
+	value := &scanValue{
+		columns:   columns,
+		row:       row,
+		normalize: normalize,
+	}
+	for i := range columns {
+		values[i] = value
+	}
+	return values
 }
 
 // SchemaError represents an error with a schema.
