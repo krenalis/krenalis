@@ -182,7 +182,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			if connector.Type == state.FileStorageType {
 				return user.Err
 			}
-			continue
+			goto Next
 		}
 
 		stats.Passed(statistics.Receiving)
@@ -201,7 +201,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			mode := *this.action.ExportMode
 			existsOnApp := len(ids) > 0
 			if (mode == state.CreateOnly && existsOnApp) || (mode == state.UpdateOnly && !existsOnApp) {
-				continue
+				goto Next
 			}
 			if existsOnApp {
 				// Update the user(s).
@@ -225,6 +225,8 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 				Properties: user.Properties,
 			})
 		}
+
+	Next:
 
 		// Does a bach processing of users.
 		if len(users) == 100 || records.Last() {

@@ -104,10 +104,10 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			if _, ok := user.Err.(ValidationError); ok {
 				stats.Passed(statistics.Receiving)
 				stats.Failed(statistics.InputValidation, user.Err.Error())
-				continue
+				goto Next
 			}
 			stats.Failed(statistics.Receiving, user.Err.Error())
-			continue
+			goto Next
 		}
 
 		stats.Passed(statistics.Receiving)
@@ -118,6 +118,8 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		}
 
 		users = append(users, user)
+
+	Next:
 
 		// Does a batch processing of users.
 		if len(users) == 100 || records.Last() {
