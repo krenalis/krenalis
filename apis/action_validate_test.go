@@ -1382,6 +1382,48 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			err:                     "input schema cannot contain meta properties",
 		},
+		{
+			name: "BAD: Destination/App/Events - input schema must be invalid",
+			action: ActionToSet{
+				Name: "Dispatch events to app",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+			},
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			err:                     "input schema must be invalid for actions that dispatch events to apps",
+		},
+		{
+			name: "BAD: Source/Website/Users - input schema must be invalid",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.WebsiteType,
+			err:                     "input schema must be invalid for actions that import user identities from events",
+		},
 	}
 
 	for _, test := range tests {
