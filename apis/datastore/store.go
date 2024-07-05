@@ -207,7 +207,7 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 	connection := action.Connection()
 	execution, ok := action.Execution()
 	if !ok {
-		return nil, fmt.Errorf("action is not not in execution")
+		return nil, fmt.Errorf("action is not in execution")
 	}
 	iw := BatchIdentityWriter{
 		store:      store,
