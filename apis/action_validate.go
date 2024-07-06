@@ -7,7 +7,7 @@
 
 package apis
 
-// This file contains the function "validateActionToSet", as well as any support
+// This file contains the function "validateAction", as well as any support
 // type, function and/or methods used exclusively by it.
 
 import (
@@ -58,9 +58,9 @@ type validationState struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - LanguageNotSupported, if the transformation language is not supported.
 //   - ConnectorNotExist, if the action is on file and the specified file
 //     connector does not exist.
+//   - LanguageNotSupported, if the transformation language is not supported.
 func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
 	inSchema := action.InSchema
