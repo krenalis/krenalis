@@ -238,7 +238,7 @@ func (apis *APIs) AcceptInvitation(ctx context.Context, token string, name strin
 	}
 	err := validateMemberToSet(m, false, true)
 	if err != nil {
-		return errors.BadRequest(err.Error())
+		return errors.BadRequest("%s", err)
 	}
 	pass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -654,10 +654,10 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	value, err = transformer.Transform(ctx, value)
 	if err != nil {
 		if err, ok := err.(transformers.FunctionExecutionError); ok {
-			return nil, errors.Unprocessable(TransformationFailed, err.Error())
+			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 		}
 		if err, ok := err.(ValidationError); ok {
-			return nil, errors.Unprocessable(TransformationFailed, err.Error())
+			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 		}
 		return nil, err
 	}

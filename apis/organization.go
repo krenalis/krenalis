@@ -95,7 +95,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	this.apis.mustBeOpen()
 	err := validateMemberEmail(email)
 	if err != nil {
-		return errors.BadRequest(err.Error())
+		return errors.BadRequest("%s", err)
 	}
 	invitationToken, err := generateInvitationToken()
 	if err != nil {
@@ -349,7 +349,7 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 	}
 	err := validateMemberToSet(member, true, false)
 	if err != nil {
-		return errors.BadRequest(err.Error())
+		return errors.BadRequest("%s", err)
 	}
 	var password []byte
 	if member.Password != "" {

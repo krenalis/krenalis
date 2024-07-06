@@ -335,7 +335,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// Validate the last change time format.
 	if action.LastChangeTimeFormat != "" {
 		if err := validateLastChangeTimeFormat(action.LastChangeTimeFormat); err != nil {
-			return errors.BadRequest(err.Error())
+			return errors.BadRequest("%s", err)
 		}
 	}
 	// Validate the file ordering property path.
