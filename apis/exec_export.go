@@ -74,8 +74,12 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 	// Get the transformer.
 	var transformer *transformers.Transformer
-	if tr := this.action.Transformation; tr.Mapping != nil || tr.Function != nil {
-		transformer = transformers.New(action.InSchema, action.OutSchema, tr, action.ID, this.apis.transformerProvider, &connector.TimeLayouts)
+	if t := this.action.Transformation; t.Mapping != nil || t.Function != nil {
+		var err error
+		transformer, err = transformers.New(action, this.apis.transformerProvider, &connector.TimeLayouts)
+		if err != nil {
+			return err
+		}
 	}
 
 	schema := action.InSchema
@@ -263,7 +267,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			for i, user := range users {
 				values[i] = user.Properties
 			}
-			results, err := transformer.TransformValues(ctx, values)
+			results, err := transformer.Transform(ctx, values)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
 					return actionExecutionError{err}

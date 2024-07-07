@@ -623,11 +623,18 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
 
+	action := &state.Action{
+		InSchema:  inSchema,
+		OutSchema: outSchema,
+		Transformation: state.Transformation{
+			Mapping: transformation.Mapping,
+		},
+	}
+
 	// Create a temporary function transformer provider.
 	var provider transformers.Provider
-	var function *state.TransformationFunction
 	if transformation.Function != nil {
-		function = &state.TransformationFunction{
+		function := &state.TransformationFunction{
 			Source:  transformation.Function.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
 		}
@@ -642,17 +649,20 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		}
 		function.InProperties = types.PropertyNames(inSchema)
 		function.OutProperties = types.PropertyNames(outSchema)
+		action.Transformation.Function = function
 		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)
 	}
 
 	// Transform the data.
-	tr := state.Transformation{
-		Mapping:  transformation.Mapping,
-		Function: function,
-	}
-	transformer := transformers.New(inSchema, outSchema, tr, 0, provider, nil)
-	value, err = transformer.Transform(ctx, value)
+	transformer, err := transformers.New(action, provider, nil)
 	if err != nil {
+		return nil, err
+	}
+	results, err := transformer.Transform(ctx, []map[string]any{value})
+	if err != nil {
+		return nil, err
+	}
+	if err = results[0].Err; err != nil {
 		if err, ok := err.(transformers.FunctionExecutionError); ok {
 			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 		}
@@ -662,7 +672,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, err
 	}
 
-	return encoding.Marshal(outSchema, value)
+	return encoding.Marshal(outSchema, results[0].Value)
 }
 
 // TransformationLanguages returns the supported transformation languages.

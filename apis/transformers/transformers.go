@@ -1,3 +1,10 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
 package transformers
 
 import (
@@ -14,48 +21,54 @@ import (
 
 // Transformer represents a transformer.
 type Transformer struct {
+	action    int
+	provider  Provider
 	inSchema  types.Type
 	outSchema types.Type
 	mapping   *mappings.Mapping
 	function  *state.TransformationFunction
-	action    int
-	provider  Provider
 }
 
-// New returns a new transformer that transforms properties from inSchema to
-// outSchema using the given transformation for the action with the provided
-// identifier. provider is the transformer provider to use for function
-// transformations and is nil for mappings. If not nil, layouts represent the
-// layouts used to format DateTime, Date, and Time values as strings.
+// New returns a new transformer that transforms values for the provided action.
+// provider is the transformer provider used for function transformations and
+// should be nil for mappings. layouts, if not nil, represents the layouts used
+// to format DateTime, Date, and Time values as strings.
+//
+// It only accesses the ID, InSchema, OutSchema, and Transformation fields of
+// action.
 //
 // For functions, only the property names listed in 'transformation.Function'
-// are processed from the given schemas.
-func New(inSchema, outSchema types.Type, transformation state.Transformation, action int, provider Provider, layouts *state.TimeLayouts) *Transformer {
+// are processed from the action's schemas.
+func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
 
-	transformer := Transformer{
-		action:   action,
-		provider: provider,
-	}
-
-	if m := transformation.Mapping; m != nil {
-		transformer.inSchema = inSchema
-		transformer.outSchema = outSchema
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, layouts)
+	if m := action.Transformation.Mapping; m != nil {
+		t := Transformer{
+			action:    action.ID,
+			inSchema:  action.InSchema,
+			outSchema: action.OutSchema,
+		}
+		var err error
+		t.mapping, err = mappings.New(m, t.inSchema, t.outSchema, layouts)
 		if err != nil {
-			panic(fmt.Sprintf("unexpected error building a mapping: %s", err))
+			return nil, err
 		}
-		transformer.mapping = mapping
-	} else if fn := transformation.Function; fn != nil {
-		transformer.function = fn
-		if len(fn.InProperties) > 0 {
-			transformer.inSchema = schemaSubset(inSchema, fn.InProperties)
-		}
-		transformer.outSchema = schemaSubset(outSchema, fn.OutProperties)
-	} else {
-		panic(errors.New("there is no transformation"))
+		return &t, nil
 	}
 
-	return &transformer
+	if f := action.Transformation.Function; f != nil {
+		t := Transformer{
+			action:    action.ID,
+			provider:  provider,
+			outSchema: schemaSubset(action.OutSchema, f.OutProperties),
+			function:  f,
+		}
+		if len(f.InProperties) > 0 {
+			t.inSchema = schemaSubset(action.InSchema, f.InProperties)
+		}
+		return &t, nil
+	}
+
+	return nil, errors.New("there is no transformation")
 }
 
 // InProperties returns the input properties of the transformer.
@@ -71,64 +84,38 @@ func New(inSchema, outSchema types.Type, transformation state.Transformation, ac
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
-func (transformer *Transformer) InProperties() []string {
-	if transformer.mapping != nil {
-		return transformer.mapping.InProperties()
+func (t *Transformer) InProperties() []string {
+	if t.mapping != nil {
+		return t.mapping.InProperties()
 	}
-	return slices.Clone(transformer.function.InProperties)
+	return slices.Clone(t.function.InProperties)
 }
 
-// Transform transforms the values and returns the result. values is expected to
-// conform to the input schema. If a validation error occurs during the
-// transformation, it returns an error implementing ValidationError of apis.
-//
-// If the evaluation of an expression results in a void value, the corresponding
-// property will not be present in the returned value. If all evaluations of the
-// expression result in a void value, an empty map is returned.
+// OutProperties returns the output properties of the transformer.
+// The properties are sorted by their path, and there is at least one property.
+func (t *Transformer) OutProperties() []string {
+	if t.mapping != nil {
+		return t.mapping.OutProperties()
+	}
+	return slices.Clone(t.function.OutProperties)
+}
+
+// Transform transforms the provided values and returns the results. The value
+// are expected to conform to the input schema. If an error occurs during the
+// transformation of a single value, the error is stored in the Err field of the
+// corresponding result. If the error is a validation error, it implements
+// apis.ValidationError; otherwise it is a FunctionExecutionError error.
 //
 // For function transformers, it returns the ErrFunctionNotExist error if the
 // function does not exist, and a FunctionExecutionError error if an error
 // occurs during function execution.
-func (transformer *Transformer) Transform(ctx context.Context, values map[string]any) (map[string]any, error) {
+func (t *Transformer) Transform(ctx context.Context, values []map[string]any) ([]Result, error) {
 
 	// Transform using the mapping.
-	if transformer.mapping != nil {
-		return transformer.mapping.Transform(values)
-	}
-
-	// Transform using a function.
-	funcName := transformationFunctionName(transformer.action, transformer.function.Language)
-	results, err := transformer.provider.Call(ctx, funcName, transformer.function.Version, transformer.inSchema, transformer.outSchema, []map[string]any{values})
-	if err != nil {
-		if err, ok := err.(FunctionExecutionError); ok {
-			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.function.Language.String(), err))
-		}
-		return nil, err
-	}
-	if err := results[0].Err; err != nil {
-		return nil, err
-	}
-	out := results[0].Value
-
-	return out, nil
-}
-
-// TransformValues transforms the provided values and returns the results. The
-// values are expected to conform to the input schema. If an error occurs during
-// the transformation of a single value, the error is stored in the Err field of
-// the corresponding result. If the error is a validation error, it implements
-// ValidationError of apis; otherwise it is a FunctionExecutionError error.
-//
-// For function transformers, it returns the ErrFunctionNotExist error if the
-// function does not exist, and a FunctionExecutionError error if an error
-// occurs during function execution.
-func (transformer *Transformer) TransformValues(ctx context.Context, values []map[string]any) ([]Result, error) {
-
-	// Transform using the mapping.
-	if transformer.mapping != nil {
+	if t.mapping != nil {
 		results := make([]Result, len(values))
 		for i, value := range values {
-			value, err := transformer.mapping.Transform(value)
+			value, err := t.mapping.Transform(value)
 			if err != nil {
 				results[i].Err = err
 				continue
@@ -146,26 +133,17 @@ func (transformer *Transformer) TransformValues(ctx context.Context, values []ma
 		return results, nil
 	}
 
-	// Transform using a function.
-	funcName := transformationFunctionName(transformer.action, transformer.function.Language)
-	results, err := transformer.provider.Call(ctx, funcName, transformer.function.Version, transformer.inSchema, transformer.outSchema, values)
+	// Transform using the function.
+	funcName := transformationFunctionName(t.action, t.function.Language)
+	results, err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, values)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
-			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", transformer.function.Language.String(), err))
+			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", t.function.Language.String(), err))
 		}
 		return nil, err
 	}
 
 	return results, nil
-}
-
-// OutProperties returns the output properties of the transformer.
-// The properties are sorted by their path, and there is at least one property.
-func (transformer *Transformer) OutProperties() []string {
-	if transformer.mapping != nil {
-		return transformer.mapping.OutProperties()
-	}
-	return slices.Clone(transformer.function.OutProperties)
 }
 
 // schemaSubset returns a subset of schema containing only the properties

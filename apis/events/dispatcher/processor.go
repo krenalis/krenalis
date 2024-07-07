@@ -80,14 +80,22 @@ func (processor *processor) worker() {
 			// Transform the event.
 			action := event.action
 			var extra map[string]any
-			if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
-				transformer := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, processor.transformerProvider, nil)
-				var err error
-				extra, err = transformer.Transform(ctx, event.ToMap())
+			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
+				transformer, err := transformers.New(action, processor.transformerProvider, nil)
 				if err != nil {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue
 				}
+				results, err := transformer.Transform(ctx, []map[string]any{event.ToMap()})
+				if err != nil {
+					processor.setEventWithError(event.Id, action.ID, err)
+					continue
+				}
+				if err = results[0].Err; err != nil {
+					processor.setEventWithError(event.Id, action.ID, err)
+					continue
+				}
+				extra = results[0].Value
 			}
 
 			// Make the event request.

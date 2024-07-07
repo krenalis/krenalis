@@ -33,10 +33,11 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	// data warehouse after all identities have been written.
 	purge := true
 
-	transformer := transformers.New(action.InSchema, action.OutSchema, action.Transformation, action.ID,
-		this.apis.transformerProvider, nil)
+	transformer, err := transformers.New(action, this.apis.transformerProvider, nil)
+	if err != nil {
+		return err
+	}
 
-	var err error
 	var records connectors.Records
 
 	switch connector.Type {
@@ -141,7 +142,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			for i, user := range users {
 				values[i] = user.Properties
 			}
-			results, err := transformer.TransformValues(ctx, values)
+			results, err := transformer.Transform(ctx, values)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
 					return actionExecutionError{err}

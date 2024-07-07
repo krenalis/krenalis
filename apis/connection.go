@@ -1478,6 +1478,14 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			return nil, errors.BadRequest("mapping (or transformation) is required")
 		}
 
+		action := &state.Action{
+			InSchema:  inSchema,
+			OutSchema: outSchema,
+			Transformation: state.Transformation{
+				Mapping: transformation.Mapping,
+			},
+		}
+
 		// Create a temporary function transformer provider.
 		var provider transformers.Provider
 		var function *state.TransformationFunction
@@ -1497,17 +1505,20 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			}
 			function.InProperties = types.PropertyNames(inSchema)
 			function.OutProperties = types.PropertyNames(outSchema)
+			action.Transformation.Function = function
 			provider = newTempTransformerProvider(name, transformation.Function.Source, this.apis.transformerProvider)
 		}
 
 		// Transform the values.
-		tr := state.Transformation{
-			Mapping:  transformation.Mapping,
-			Function: function,
-		}
-		transformer := transformers.New(inSchema, outSchema, tr, 0, provider, nil)
-		extra, err = transformer.Transform(ctx, ev.ToMap())
+		transformer, err := transformers.New(action, provider, nil)
 		if err != nil {
+			return nil, err
+		}
+		results, err := transformer.Transform(ctx, []map[string]any{ev.ToMap()})
+		if err != nil {
+			return nil, err
+		}
+		if err = results[0].Err; err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
 			}
@@ -1516,6 +1527,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			}
 			return nil, err
 		}
+		extra = results[0].Value
 
 	} else {
 

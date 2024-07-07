@@ -319,10 +319,17 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			var properties map[string]any
 			// If the action has a transformation, apply it to the event and
 			// obtain the properties.
-			if tr := action.Transformation; tr.Mapping != nil || tr.Function != nil {
-				transformer := transformers.New(action.InSchema, action.OutSchema, tr, action.ID, c.transformerProvider, nil)
-				properties, err = transformer.Transform(ctx, mapEvent)
+			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
+				transformer, err := transformers.New(action, c.transformerProvider, nil)
 				if err != nil {
+					return err
+				}
+				results, err := transformer.Transform(ctx, []map[string]any{mapEvent})
+				if err != nil {
+					slog.Error("error occurred transforming event", "err", err)
+					continue
+				}
+				if err = results[0].Err; err != nil {
 					if _, ok := err.(ValidationError); ok {
 						stats.Passed(statistics.Transformation)
 						stats.Failed(statistics.OutputValidation, err.Error())
@@ -331,6 +338,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 					stats.Failed(statistics.Transformation, err.Error())
 					continue
 				}
+				properties = results[0].Value
 				stats.Passed(statistics.Transformation)
 				stats.Passed(statistics.OutputValidation)
 			}
