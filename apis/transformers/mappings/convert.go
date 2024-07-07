@@ -51,7 +51,7 @@ var (
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
 //
-// layouts represents, if not null, the layouts used to format DateTime, Date,
+// layouts represents, if not nil, the layouts used to format DateTime, Date,
 // and Time values as strings.
 //
 // For Array, Object, and Map values, it can modify the argument v. It returns
@@ -644,49 +644,125 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 	return nil, errInvalidConversion
 }
 
-// appendAsString appends v to b after converting it to a string.
-// Calling appendAsString(b, v, t) is the same of calling
-// convert(v, t, types.Text(), false, false) and appending the result to b.
-func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
-	if v == nil {
-		return b, nil
+func convertTextToDate(s string) (time.Time, error) {
+	month, day, year := -1, -1, -1
+	if len(s) == 10 {
+		if s[4] == '-' && s[7] == '-' {
+			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
+		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
+			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
+		}
+	} else if len(s) == 8 {
+		if s[2] == '-' && s[5] == '-' {
+			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
+		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
+			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
+		}
+	} else if isSimpleFloat(s) {
+		// Parse as Excel serial date-time.
+		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
+		days, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return time.Time{}, errInvalidConversion
+		}
+		if days == 60 {
+			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
+			return time.Time{}, errInvalidConversion
+		}
+		if days > 60 {
+			days--
+		}
+		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
 	}
-	if s, ok := v.(string); ok {
-		return append(b, s...), nil
+	if year < 0 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 {
+		return time.Time{}, errInvalidConversion
 	}
-	switch t.Kind() {
-	case types.BooleanKind:
-		strconv.AppendBool(b, v.(bool))
-	case types.IntKind, types.YearKind:
-		return strconv.AppendInt(b, int64(v.(int)), 10), nil
-	case types.UintKind:
-		return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
-	case types.FloatKind:
-		return strconv.AppendFloat(b, v.(float64), 'g', -1, t.BitSize()), nil
-	case types.DecimalKind:
-		return append(b, v.(decimal.Decimal).String()...), nil
-	case types.DateTimeKind:
-		return v.(time.Time).AppendFormat(b, time.RFC3339Nano), nil
-	case types.DateKind:
-		return v.(time.Time).AppendFormat(b, time.DateOnly), nil
-	case types.TimeKind:
-		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
-	case types.JSONKind:
-		switch v := v.(type) {
-		case float64:
-			return strconv.AppendFloat(b, v, 'g', -1, 64), nil
-		case json.Number:
-			return append(b, v...), nil
-		case bool:
-			strconv.AppendBool(b, v)
-		case json.RawMessage:
-			s, err := jsonToText(v)
-			if err == nil {
-				return append(b, s...), nil
+	t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	if t.Year() != year || int(t.Month()) != month || t.Day() != day {
+		return time.Time{}, errInvalidConversion
+	}
+	return t, nil
+}
+
+func decimalToInt(n decimal.Decimal) (int, error) {
+	if !n.IsInteger() {
+		return 0, errInvalidConversion
+	}
+	if n.LessThan(minIntDecimal) {
+		return 0, errInvalidConversion
+	}
+	if n.GreaterThan(maxIntDecimal) {
+		return 0, errInvalidConversion
+	}
+	return int(n.IntPart()), nil
+}
+
+func decimalToUint(n decimal.Decimal) (uint, error) {
+	if !n.IsInteger() || n.IsNegative() || n.GreaterThan(maxUintDecimal) {
+		return 0, errInvalidConversion
+	}
+	if n.LessThanOrEqual(maxIntDecimal) {
+		return uint(n.IntPart()), nil
+	}
+	u, err := strconv.ParseUint(n.String(), 10, 64)
+	if err != nil {
+		return 0, errInvalidConversion
+	}
+	return uint(u), nil
+}
+
+func floatToInt(n float64) (int, error) {
+	if math.IsNaN(n) || n < minFloatConvertibleToInt64 || n > maxFloatConvertibleToInt64 {
+		return 0, errInvalidConversion
+	}
+	return int(math.Round(n)), nil
+}
+
+func floatToUint(n float64) (uint, error) {
+	if math.IsNaN(n) || n < 0 || n > maxFloatConvertibleToUint64 {
+		return 0, errInvalidConversion
+	}
+	return uint(math.Round(n)), nil
+}
+
+func isSimpleFloat(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+	var dot bool
+	for i, c := range []byte(s) {
+		if c == '.' {
+			if dot || i == 0 || i == len(s)-1 {
+				return false
 			}
+			dot = true
+			continue
+		}
+		if c < '0' || c > '9' {
+			return false
 		}
 	}
-	return b, errInvalidConversion
+	return true
+}
+
+// jsonToArray converts v of type JSON to Array.
+func jsonToArray(v any) ([]any, error) {
+	switch v := v.(type) {
+	case bool, string, float64, json.Number:
+		return []any{v}, nil
+	case []any:
+		return v, nil
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		enc.UseNumber()
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToArray(s)
+		}
+	}
+	return nil, errInvalidConversion
 }
 
 // jsonToBoolean converts v of type JSON to Boolean.
@@ -703,6 +779,71 @@ func jsonToBoolean(v any) (bool, error) {
 		}
 	}
 	return false, errInvalidConversion
+}
+
+// jsonToDateTime converts v of type JSON to DateTime.
+func jsonToDateTime(v any) (time.Time, error) {
+	switch v := v.(type) {
+	case string:
+		t, err := iso8601.ParseString(v)
+		if err == nil {
+			t = t.UTC()
+			if y := t.Year(); 1 <= y && y <= 9999 {
+				return t, nil
+			}
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToDateTime(s)
+		}
+	}
+	return time.Time{}, errInvalidConversion
+}
+
+// jsonToDecimal converts v of type JSON to Decimal.
+func jsonToDecimal(v any) (decimal.Decimal, error) {
+	switch v := v.(type) {
+	case float64:
+		if !math.IsNaN(v) && !math.IsInf(v, 0) {
+			return decimal.NewFromFloat(v), nil
+		}
+	case json.Number:
+		return decimal.NewFromString(string(v))
+	case json.RawMessage:
+		return decimal.NewFromString(string(v))
+	}
+	return decimal.Decimal{}, errInvalidConversion
+}
+
+// jsonToFloat converts v of type JSON to Float with the provided bit size that
+// can be 32 or 64.
+func jsonToFloat(v any, bitSize int) (float64, error) {
+	switch v := v.(type) {
+	case float64:
+		if bitSize == 32 {
+			return float64(float32(v)), nil
+		}
+		return v, nil
+	case json.Number:
+		n, err := strconv.ParseFloat(string(v), bitSize)
+		if err == nil {
+			return n, nil
+		}
+		d, err := decimal.NewFromString(string(v))
+		if err == nil {
+			n, _ = d.Float64()
+			if bitSize == 32 {
+				n = float64(float32(n))
+			}
+			return n, nil
+		}
+	case json.RawMessage:
+		return jsonToFloat(json.Number(v), bitSize)
+	}
+	return 0, errInvalidConversion
 }
 
 // jsonToInt converts v of type JSON to Int.
@@ -751,71 +892,6 @@ func jsonToUint(v any) (uint, error) {
 	return 0, errInvalidConversion
 }
 
-// jsonToFloat converts v of type JSON to Float with the provided bit size that
-// can be 32 or 64.
-func jsonToFloat(v any, bitSize int) (float64, error) {
-	switch v := v.(type) {
-	case float64:
-		if bitSize == 32 {
-			return float64(float32(v)), nil
-		}
-		return v, nil
-	case json.Number:
-		n, err := strconv.ParseFloat(string(v), bitSize)
-		if err == nil {
-			return n, nil
-		}
-		d, err := decimal.NewFromString(string(v))
-		if err == nil {
-			n, _ = d.Float64()
-			if bitSize == 32 {
-				n = float64(float32(n))
-			}
-			return n, nil
-		}
-	case json.RawMessage:
-		return jsonToFloat(json.Number(v), bitSize)
-	}
-	return 0, errInvalidConversion
-}
-
-// jsonToDecimal converts v of type JSON to Decimal.
-func jsonToDecimal(v any) (decimal.Decimal, error) {
-	switch v := v.(type) {
-	case float64:
-		if !math.IsNaN(v) && !math.IsInf(v, 0) {
-			return decimal.NewFromFloat(v), nil
-		}
-	case json.Number:
-		return decimal.NewFromString(string(v))
-	case json.RawMessage:
-		return decimal.NewFromString(string(v))
-	}
-	return decimal.Decimal{}, errInvalidConversion
-}
-
-// jsonToDateTime converts v of type JSON to DateTime.
-func jsonToDateTime(v any) (time.Time, error) {
-	switch v := v.(type) {
-	case string:
-		t, err := iso8601.ParseString(v)
-		if err == nil {
-			t = t.UTC()
-			if y := t.Year(); 1 <= y && y <= 9999 {
-				return t, nil
-			}
-		}
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToDateTime(s)
-		}
-	}
-	return time.Time{}, errInvalidConversion
-}
-
 // jsonToDate converts v of type JSON to Date.
 func jsonToDate(v any) (time.Time, error) {
 	switch v := v.(type) {
@@ -838,45 +914,39 @@ func jsonToDate(v any) (time.Time, error) {
 	return time.Time{}, errInvalidConversion
 }
 
-// jsonToTime converts v of type JSON to Time.
-func jsonToTime(v any) (time.Time, error) {
+// jsonToInet converts v of type JSON to Inet.
+func jsonToInet(v any) (string, error) {
 	switch v := v.(type) {
 	case string:
-		t, ok := parseTime(v)
-		if ok {
-			return t, nil
+		if ip, err := netip.ParseAddr(v); err == nil {
+			return ip.String(), nil
 		}
 	case json.RawMessage:
 		enc := json.NewDecoder(bytes.NewReader(v))
+		var s string
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToInet(s)
+		}
+	}
+	return "", errInvalidConversion
+}
+
+// jsonToMap converts v of type JSON to Object/Map.
+func jsonToMap(v any) (map[string]any, error) {
+	switch v := v.(type) {
+	case map[string]any:
+		return v, nil
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		enc.UseNumber()
 		var s any
 		err := enc.Decode(&s)
 		if err == nil {
-			return jsonToTime(s)
+			return jsonToMap(s)
 		}
 	}
-	return time.Time{}, errInvalidConversion
-}
-
-// jsonToYear converts v of type JSON to Year.
-func jsonToYear(v any) (int, error) {
-	switch v := v.(type) {
-	case float64:
-		if 1 <= v && v <= 9999 {
-			return int(math.Round(v)), nil
-		}
-	case json.Number:
-		n, err := strconv.Atoi(string(v))
-		if err == nil {
-			return n, nil
-		}
-		f, err := strconv.ParseFloat(string(v), 64)
-		if err == nil && 1 <= f && f <= 9999 {
-			return int(math.Round(f)), nil
-		}
-	case json.RawMessage:
-		return jsonToYear(json.Number(v))
-	}
-	return 0, errInvalidConversion
+	return nil, errInvalidConversion
 }
 
 // jsonToText converts v of type JSON to Text.
@@ -908,6 +978,25 @@ func jsonToText(v any) (string, error) {
 	return "", errInvalidConversion
 }
 
+// jsonToTime converts v of type JSON to Time.
+func jsonToTime(v any) (time.Time, error) {
+	switch v := v.(type) {
+	case string:
+		t, ok := parseTime(v)
+		if ok {
+			return t, nil
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToTime(s)
+		}
+	}
+	return time.Time{}, errInvalidConversion
+}
+
 // jsonToUUID converts v of type JSON to UUID.
 func jsonToUUID(v any) (string, error) {
 	switch v := v.(type) {
@@ -926,175 +1015,26 @@ func jsonToUUID(v any) (string, error) {
 	return "", errInvalidConversion
 }
 
-// jsonToInet converts v of type JSON to Inet.
-func jsonToInet(v any) (string, error) {
+// jsonToYear converts v of type JSON to Year.
+func jsonToYear(v any) (int, error) {
 	switch v := v.(type) {
-	case string:
-		if ip, err := netip.ParseAddr(v); err == nil {
-			return ip.String(), nil
+	case float64:
+		if 1 <= v && v <= 9999 {
+			return int(math.Round(v)), nil
+		}
+	case json.Number:
+		n, err := strconv.Atoi(string(v))
+		if err == nil {
+			return n, nil
+		}
+		f, err := strconv.ParseFloat(string(v), 64)
+		if err == nil && 1 <= f && f <= 9999 {
+			return int(math.Round(f)), nil
 		}
 	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s string
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToInet(s)
-		}
+		return jsonToYear(json.Number(v))
 	}
-	return "", errInvalidConversion
-}
-
-// jsonToArray converts v of type JSON to Array.
-func jsonToArray(v any) ([]any, error) {
-	switch v := v.(type) {
-	case bool, string, float64, json.Number:
-		return []any{v}, nil
-	case []any:
-		return v, nil
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		enc.UseNumber()
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToArray(s)
-		}
-	}
-	return nil, errInvalidConversion
-}
-
-// jsonToMap converts v of type JSON to Object/Map.
-func jsonToMap(v any) (map[string]any, error) {
-	switch v := v.(type) {
-	case map[string]any:
-		return v, nil
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		enc.UseNumber()
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToMap(s)
-		}
-	}
-	return nil, errInvalidConversion
-}
-
-func decimalToInt(n decimal.Decimal) (int, error) {
-	if !n.IsInteger() {
-		return 0, errInvalidConversion
-	}
-	if n.LessThan(minIntDecimal) {
-		return 0, errInvalidConversion
-	}
-	if n.GreaterThan(maxIntDecimal) {
-		return 0, errInvalidConversion
-	}
-	return int(n.IntPart()), nil
-}
-
-func decimalToUint(n decimal.Decimal) (uint, error) {
-	if !n.IsInteger() || n.IsNegative() || n.GreaterThan(maxUintDecimal) {
-		return 0, errInvalidConversion
-	}
-	if n.LessThanOrEqual(maxIntDecimal) {
-		return uint(n.IntPart()), nil
-	}
-	u, err := strconv.ParseUint(n.String(), 10, 64)
-	if err != nil {
-		return 0, errInvalidConversion
-	}
-	return uint(u), nil
-}
-
-func floatToInt(n float64) (int, error) {
-	if math.IsNaN(n) || n < minFloatConvertibleToInt64 || n > maxFloatConvertibleToInt64 {
-		return 0, errInvalidConversion
-	}
-	return int(math.Round(n)), nil
-}
-
-func floatToUint(n float64) (uint, error) {
-	if math.IsNaN(n) || n < 0 || n > maxFloatConvertibleToUint64 {
-		return 0, errInvalidConversion
-	}
-	return uint(math.Round(n)), nil
-}
-
-func parseUint(s string) int {
-	var n int
-	for _, c := range []byte(s) {
-		if c < '0' || c > '9' {
-			return -1
-		}
-		n = n*10 + int(c-'0')
-		if n < 0 {
-			return -1 // overflow
-		}
-	}
-	return n
-}
-
-func isSimpleFloat(s string) bool {
-	// NOTE: keep in sync with the function within 'apis/connectors'.
-	if len(s) < 3 {
-		return false
-	}
-	var dot bool
-	for i, c := range []byte(s) {
-		if c == '.' {
-			if dot || i == 0 || i == len(s)-1 {
-				return false
-			}
-			dot = true
-			continue
-		}
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-func convertTextToDate(s string) (time.Time, error) {
-	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
-		}
-	} else if isSimpleFloat(s) {
-		// Parse as Excel serial date-time.
-		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
-		days, err := strconv.ParseFloat(s, 64)
-		if err != nil {
-			return time.Time{}, errInvalidConversion
-		}
-		if days == 60 {
-			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
-			return time.Time{}, errInvalidConversion
-		}
-		if days > 60 {
-			days--
-		}
-		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
-		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
-	}
-	if year < 0 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 {
-		return time.Time{}, errInvalidConversion
-	}
-	t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-	if t.Year() != year || int(t.Month()) != month || t.Day() != day {
-		return time.Time{}, errInvalidConversion
-	}
-	return t, nil
+	return 0, errInvalidConversion
 }
 
 // parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as
@@ -1132,4 +1072,18 @@ func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 		}
 	}
 	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
+}
+
+func parseUint(s string) int {
+	var n int
+	for _, c := range []byte(s) {
+		if c < '0' || c > '9' {
+			return -1
+		}
+		n = n*10 + int(c-'0')
+		if n < 0 {
+			return -1 // overflow
+		}
+	}
+	return n
 }

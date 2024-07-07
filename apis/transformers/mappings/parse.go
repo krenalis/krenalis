@@ -29,11 +29,112 @@ var (
 	errZeroByteInString   = errors.New("character 0x00 is not allowed in strings")
 )
 
-// parseExpression parses an expression from the provided source string and
-// returns the parsed expression along with the remaining unparsed source.
-// If no expression is found, it returns nil. Leading and trailing spaces are
-// trimmed, except when they occur within a string.
-func parseExpression(src string) ([]part, string, error) {
+// numArguments reports the number of arguments for each expression function.
+// It is used to initialize the slice of arguments before parsing them.
+var numArguments = map[string]int{
+	"and":      2,
+	"array":    2,
+	"coalesce": 2,
+	"eq":       2,
+	"if":       3,
+}
+
+// path represents a property path or a function name.
+// See 'part.path' for documentation.
+type path []string
+
+// part represents an expression part within an Expression. An expression part
+// can take different forms:
+//
+//   - value             example: "foo"
+//   - path              example: x
+//   - path(args)        example: add(x, 5)
+//   - value path        example: 5 a.b
+//   - value path(args)  example: "foo" coalesce(a.b, c)
+//
+// For instance, the Expression `"foo" x " " true a.b` is parsed as `"foo" x`,
+// `" true" a.b`.
+type part struct {
+	// Value. If there is a path, value, if present, can only be of type Text.
+	value any
+
+	// Path or function name.
+	// If it represents a function name, it consists of only the function name.
+	// Otherwise, path elements follow these rules:
+	//   - If it represents a map or JSON key, it starts with ':'.
+	//   - If it was denoted with an indexing (e.g., a["b"]), it is enclosed in '[' and ']'.
+	//   - If it was denoted by '?', it ends with '?'.
+	// Examples of path elements: "x", "[x]" ":x", ":[$a]", ":x?", ":[x]?".
+	path path
+
+	// Function call arguments.
+	args [][]part
+
+	// If there is a path, it represents the type of the property or the type of the function call.
+	// Otherwise, it represents the type of the value. For some function calls, as coalesce, it is
+	// the invalid type, indicating that the call can return different types.
+	typ types.Type
+}
+
+// appendValue appends v to p.value, converting it to type Text is necessary,
+// and returns the appended value and its new type.
+// multipart reports whether p is a part of a multipart expression.
+func (p part) appendValue(v any, multipart bool) (any, types.Type) {
+	// If a value is not already present, it sets it.
+	if !multipart && p.typ.Kind() == types.InvalidKind {
+		switch v := v.(type) {
+		case nil:
+			return nil, types.JSON()
+		case string:
+			return v, types.Text()
+		case decimal.Decimal:
+			i, err := decimalToInt(v)
+			if err != nil {
+				return v, types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+			}
+			return i, types.Int(32)
+		case bool:
+			return v, types.Boolean()
+		}
+		panic("unexpected value type")
+	}
+	// Convert the value to Text.
+	var s string
+	switch v := v.(type) {
+	case string:
+		s = v
+	case bool:
+		s = strconv.FormatBool(v)
+	case decimal.Decimal:
+		s = v.String()
+	}
+	// Append the value.
+	t := types.Text()
+	switch p.typ.Kind() {
+	case types.InvalidKind:
+		return s, t
+	case types.BooleanKind:
+		return strconv.FormatBool(p.value.(bool)) + s, t
+	case types.IntKind:
+		return strconv.Itoa(p.value.(int)) + s, t
+	case types.DecimalKind:
+		return p.value.(decimal.Decimal).String() + s, t
+	case types.TextKind:
+		return p.value.(string) + s, t
+	}
+	panic("unexpected value type")
+}
+
+// isPathByte reports whether c is 'a'-'z', 'A-Z', '0'-'9', or '_'.
+func isPathByte(c byte) bool {
+	return 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9'
+}
+
+// parse parses an expression from the provided source string and returns the
+// parsed expression along with the remaining unparsed source. If no expression
+// is found, it returns nil. Leading and trailing spaces are trimmed, except
+// when they occur within a string.
+func parse(src string) ([]part, string, error) {
 	var expr []part
 	var err error
 	var dot bool
@@ -120,7 +221,7 @@ Expression:
 						break
 					}
 					var arg []part
-					arg, src, err = parseExpression(src)
+					arg, src, err = parse(src)
 					if err != nil {
 						return nil, "", err
 					}
@@ -145,53 +246,98 @@ Expression:
 	return expr, src, nil
 }
 
-// appendValue appends v to p.value, converting it to type Text is necessary,
-// and returns the appended value and its new type.
-// multipart reports whether p is a part of a multipart expression.
-func (p part) appendValue(v any, multipart bool) (any, types.Type) {
-	// If a value is not already present, it sets it.
-	if !multipart && p.typ.Kind() == types.InvalidKind {
-		switch v := v.(type) {
-		case nil:
-			return nil, types.JSON()
-		case string:
-			return v, types.Text()
-		case decimal.Decimal:
-			i, err := decimalToInt(v)
-			if err != nil {
-				return v, types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+// parseNumber parses a number and returns the parsed number and the remaining
+// unparsed source. It expects that src starts with '0'-'9', '-', or '.'.
+func parseNumber(src string) (decimal.Decimal, string, error) {
+	var i int
+Number:
+	for i < len(src) {
+		switch c := src[i]; c {
+		case '-':
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '.':
+		case 'e', 'E':
+		default:
+			if isPathByte(c) {
+				return decimal.Decimal{}, "", errInvalidNumber
 			}
-			return i, types.Int(32)
-		case bool:
-			return v, types.Boolean()
+			break Number
 		}
-		panic("unexpected value type")
+		i++
 	}
-	// Convert the value to Text.
-	var s string
-	switch v := v.(type) {
-	case string:
-		s = v
-	case bool:
-		s = strconv.FormatBool(v)
-	case decimal.Decimal:
-		s = v.String()
+	n, err := decimal.NewFromString(src[:i])
+	if err != nil {
+		return decimal.Decimal{}, "", errInvalidNumber
 	}
-	// Append the value.
-	t := types.Text()
-	switch p.typ.Kind() {
-	case types.InvalidKind:
-		return s, t
-	case types.BooleanKind:
-		return strconv.FormatBool(p.value.(bool)) + s, t
-	case types.IntKind:
-		return strconv.Itoa(p.value.(int)) + s, t
-	case types.DecimalKind:
-		return p.value.(decimal.Decimal).String() + s, t
-	case types.TextKind:
-		return p.value.(string) + s, t
+	return n, src[i:], nil
+}
+
+// parsePath parses a path and returns the parsed path and the remaining
+// unparsed source. It expects that src starts with 'a'-'z', 'A'-'Z', or '_'.
+func parsePath(src string) (path, string, error) {
+	path := make(path, 0, 1)
+	s := 0
+	i := 1
+	for ; i < len(src); i++ {
+		c := src[i]
+		if 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' {
+			continue
+		}
+		if s == i {
+			return nil, "", errUnexpectedPeriod
+		}
+		if c == '?' {
+			i++
+			if i == len(src) {
+				break
+			}
+			c = src[i]
+		}
+		path = append(path, src[s:i])
+		for c == '[' {
+			src = skipSpaces(src[i+1:])
+			if len(src) == 0 {
+				return nil, "", errUnterminatedPath
+			}
+			if src[0] != '"' && src[0] != '\'' {
+				return nil, "", errNoStringMapKey
+			}
+			key, src2, err := parseString(src)
+			if err != nil {
+				return nil, "", err
+			}
+			key = "[" + key + "]"
+			path = append(path, key)
+			src = skipSpaces(src2)
+			if len(src) == 0 || src[0] != ']' {
+				return nil, "", errUnterminatedPath
+			}
+			i, s = 1, 1
+			if i == len(src) {
+				break
+			}
+			c = src[i]
+			if c == '?' {
+				path[len(path)-1] = key + "?"
+				i++
+				if i == len(src) {
+					break
+				}
+				c = src[i]
+			}
+		}
+		s = i + 1
+		if c != '.' {
+			break
+		}
 	}
-	panic("unexpected value type")
+	if i == len(src) && src[i-1] == '.' {
+		return nil, "", errUnterminatedPath
+	}
+	if s < i {
+		path = append(path, src[s:i])
+	}
+	return path, src[i:], nil
 }
 
 // parsePredeclaredIdentifier parses the predeclared identifiers true, false,
@@ -209,23 +355,6 @@ func parsePredeclaredIdentifier(src string) (any, types.Type, string) {
 		return nil, types.JSON(), src[n:]
 	}
 	return nil, types.Type{}, src
-}
-
-// isPathByte reports whether c is 'a'-'z', 'A-Z', '0'-'9', or '_'.
-func isPathByte(c byte) bool {
-	return 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9'
-}
-
-// skipSpaces skips the leading spaces in src and returns the remaining string.
-func skipSpaces(src string) string {
-	for i := 0; i < len(src); i++ {
-		switch src[i] {
-		case ' ', '\t', '\n', '\r':
-		default:
-			return src[i:]
-		}
-	}
-	return ""
 }
 
 // parseString parses a string and returns the parsed string and the remaining
@@ -326,96 +455,37 @@ LOOP:
 	return b.String(), src[p+1:], nil
 }
 
-// parseNumber parses a number and returns the parsed number and the remaining
-// unparsed source. It expects that src starts with '0'-'9', '-', or '.'.
-func parseNumber(src string) (decimal.Decimal, string, error) {
-	var i int
-Number:
-	for i < len(src) {
-		switch c := src[i]; c {
-		case '-':
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		case '.':
-		case 'e', 'E':
+// skipSpaces skips the leading spaces in src and returns the remaining string.
+func skipSpaces(src string) string {
+	for i := 0; i < len(src); i++ {
+		switch src[i] {
+		case ' ', '\t', '\n', '\r':
 		default:
-			if isPathByte(c) {
-				return decimal.Decimal{}, "", errInvalidNumber
-			}
-			break Number
+			return src[i:]
 		}
-		i++
 	}
-	n, err := decimal.NewFromString(src[:i])
-	if err != nil {
-		return decimal.Decimal{}, "", errInvalidNumber
-	}
-	return n, src[i:], nil
+	return ""
 }
 
-// parsePath parses a path and returns the parsed path and the remaining
-// unparsed source. It expects that src starts with 'a'-'z', 'A'-'Z', or '_'.
-func parsePath(src string) (path, string, error) {
-	path := make(path, 0, 1)
-	s := 0
-	i := 1
-	for ; i < len(src); i++ {
-		c := src[i]
-		if 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' {
-			continue
+// stringifyPath returns path as a string.
+func stringifyPath(path []string) string {
+	s := path[0]
+	for _, name := range path[1:] {
+		if name[0] == ':' {
+			name = name[1:]
 		}
-		if s == i {
-			return nil, "", errUnexpectedPeriod
+		question := name[len(name)-1] == '?'
+		if question {
+			name = name[:len(name)-1]
 		}
-		if c == '?' {
-			i++
-			if i == len(src) {
-				break
-			}
-			c = src[i]
+		if name[0] == '[' {
+			s += "[" + strconv.Quote(name[1:len(name)-1]) + "]"
+		} else {
+			s += "." + name
 		}
-		path = append(path, src[s:i])
-		for c == '[' {
-			src = skipSpaces(src[i+1:])
-			if len(src) == 0 {
-				return nil, "", errUnterminatedPath
-			}
-			if src[0] != '"' && src[0] != '\'' {
-				return nil, "", errNoStringMapKey
-			}
-			key, src2, err := parseString(src)
-			if err != nil {
-				return nil, "", err
-			}
-			key = "[" + key + "]"
-			path = append(path, key)
-			src = skipSpaces(src2)
-			if len(src) == 0 || src[0] != ']' {
-				return nil, "", errUnterminatedPath
-			}
-			i, s = 1, 1
-			if i == len(src) {
-				break
-			}
-			c = src[i]
-			if c == '?' {
-				path[len(path)-1] = key + "?"
-				i++
-				if i == len(src) {
-					break
-				}
-				c = src[i]
-			}
-		}
-		s = i + 1
-		if c != '.' {
-			break
+		if question {
+			s += "?"
 		}
 	}
-	if i == len(src) && src[i-1] == '.' {
-		return nil, "", errUnterminatedPath
-	}
-	if s < i {
-		path = append(path, src[s:i])
-	}
-	return path, src[i:], nil
+	return s
 }
