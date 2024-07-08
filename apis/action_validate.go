@@ -293,7 +293,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !ok {
 			return errors.BadRequest("internal matching property %q not found within the input schema", props.Internal)
 		}
-		if !canBeUsedAsAsMatchingProp(internal.Type.Kind()) {
+		if !canBeUsedAsMatchingProp(internal.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", internal.Type)
 		}
 		usedInPaths = append(usedInPaths, props.Internal)
@@ -304,7 +304,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !props.External.Type.Valid() {
 			return errors.BadRequest("external matching property type is not valid")
 		}
-		if !canBeUsedAsAsMatchingProp(props.External.Type.Kind()) {
+		if !canBeUsedAsMatchingProp(props.External.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
 	}

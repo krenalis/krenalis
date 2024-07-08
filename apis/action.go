@@ -897,9 +897,9 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// canBeUsedAsAsMatchingProp reports whether a type with kind k can be used as a
+// canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property for the export.
-func canBeUsedAsAsMatchingProp(k types.Kind) bool {
+func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
@@ -931,7 +931,7 @@ func dispatchesEventsToApps(connectorType state.ConnectorType, role state.Role, 
 // used.
 func onlyForMatching(schema types.Type) types.Type {
 	return types.SubsetFunc(schema, func(p types.Property) bool {
-		return canBeUsedAsAsMatchingProp(p.Type.Kind())
+		return canBeUsedAsMatchingProp(p.Type.Kind())
 	})
 }
 
