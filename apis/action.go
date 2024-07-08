@@ -897,13 +897,6 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
-// matching property when exporting users to an app.
-func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only integers, UUIDs and texts are allowed.
-	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
-}
-
 // importsUserIdentitiesFromEvents reports whether a connector with the given
 // type, on a connection with the given role, with an action with the given
 // target, imports user identities from events.
