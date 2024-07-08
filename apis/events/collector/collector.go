@@ -438,14 +438,10 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	w.Header().Set("Access-Control-Allow-Origin", origin)
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
-	keyName, ok := os.LookupEnv("CHICHI_EVENT_SETTINGS_NAME")
-	if !ok {
-		keyName = "Chichi"
-	}
 	_ = enc.Encode(map[string]any{
 		"strategy": strategy,
 		"integrations": map[string]any{
-			keyName: map[string]any{
+			"Chichi": map[string]any{
 				"apiKey": writeKey,
 			},
 		},
