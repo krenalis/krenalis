@@ -898,7 +898,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 }
 
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
-// matching property for the export.
+// matching property when exporting users to an app.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
