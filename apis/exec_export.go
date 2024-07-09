@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -82,29 +81,6 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		}
 	}
 
-	schema := action.InSchema
-	if connector.Type == state.FileStorageType {
-		schema = action.OutSchema
-	}
-
-	// Determine the properties to select from the data warehouse.
-	var properties []string
-	if action.Transformation.Mapping != nil {
-		pp := transformer.InProperties()
-		if action.MatchingProperties != nil {
-			internal := action.MatchingProperties.Internal
-			if !slices.Contains(pp, internal) {
-				pp = append(pp, internal)
-			}
-		}
-		properties = make([]string, len(pp))
-		for i, p := range pp {
-			properties[i] = p
-		}
-	} else {
-		properties = types.PropertyNames(schema)
-	}
-
 	// Determine the "order by" property.
 	var orderBy string
 	if action.Connection().Connector().Type == state.FileStorageType {
@@ -126,9 +102,14 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		}
 	}
 
+	schema := action.InSchema
+	if connector.Type == state.FileStorageType {
+		schema = action.OutSchema
+	}
+
 	// Read the users.
 	records, err := store.UserRecords(ctx, datastore.Query{
-		Properties: properties,
+		Properties: types.PropertyNames(schema),
 		Where:      where,
 		OrderBy:    orderBy,
 	}, action.Connection().Workspace().UserSchema)
