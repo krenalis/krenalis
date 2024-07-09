@@ -114,6 +114,40 @@ func Properties(t Type) []Property {
 	return slices.Clone(t.vl.([]Property))
 }
 
+// PropertyByPath returns the property with the given path in the Object t, or
+// a PathNotExistError if the property does not exist.
+// It panics if t is not of type Object or if path is not a valid path.
+func PropertyByPath(t Type, path string) (Property, error) {
+	if t.kind != ObjectKind {
+		panic("cannot get the properties of a non-Object type")
+	}
+	name, rest := "", path
+Rest:
+	for {
+		name, rest, _ = strings.Cut(rest, ".")
+		if t.kind != ObjectKind {
+			break
+		}
+		properties := t.vl.([]Property)
+		for j := 0; j < len(properties); j++ {
+			if properties[j].Name != name {
+				continue
+			}
+			if rest == "" {
+				return properties[j], nil
+			}
+			t = properties[j].Type
+			continue Rest
+		}
+		break
+	}
+	if !IsValidPropertyPath(path) {
+		panic("invalid property path")
+	}
+	path = strings.TrimSuffix(strings.TrimSuffix(path, rest), ".")
+	return Property{}, PathNotExistError{path}
+}
+
 // PropertyNames returns the names of the properties of the Object t.
 // Panics if t is not an Object type.
 func PropertyNames(t Type) []string {

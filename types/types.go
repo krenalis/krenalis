@@ -15,7 +15,6 @@ import (
 	"math"
 	"regexp"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
@@ -993,40 +992,6 @@ func (t Type) WithUnique() Type {
 	}
 	t.unique = true
 	return t
-}
-
-// PropertyByPath returns the property with the given path, or a
-// PathNotExistError error if the property does not exist.
-// Panics if t is not an Object type or path is not a valid path.
-func (t Type) PropertyByPath(path string) (Property, error) {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
-	}
-	name, rest := "", path
-Rest:
-	for {
-		name, rest, _ = strings.Cut(rest, ".")
-		if t.kind != ObjectKind {
-			break
-		}
-		properties := t.vl.([]Property)
-		for j := 0; j < len(properties); j++ {
-			if properties[j].Name != name {
-				continue
-			}
-			if rest == "" {
-				return properties[j], nil
-			}
-			t = properties[j].Type
-			continue Rest
-		}
-		break
-	}
-	if !IsValidPropertyPath(path) {
-		panic("invalid property path")
-	}
-	path = strings.TrimSuffix(strings.TrimSuffix(path, rest), ".")
-	return Property{}, PathNotExistError{path}
 }
 
 // Property returns the property with the given name and a boolean value

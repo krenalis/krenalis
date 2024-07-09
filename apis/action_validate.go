@@ -535,7 +535,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if action.FileOrderingPropertyPath == "" {
 			return errors.BadRequest("file ordering property path cannot be empty when exporting users to file")
 		}
-		p, err := outSchema.PropertyByPath(action.FileOrderingPropertyPath)
+		p, err := types.PropertyByPath(outSchema, action.FileOrderingPropertyPath)
 		if err != nil {
 			return errors.BadRequest("file ordering property path cannot be found in action's output schema: %s", err)
 		}

@@ -389,7 +389,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	// Determine the identifiers columns.
 	identifiers := make([]warehouses.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
-		identifier, err := ws.UserSchema.PropertyByPath(ident)
+		identifier, err := types.PropertyByPath(ws.UserSchema, ident)
 		if err != nil {
 			return err
 		}

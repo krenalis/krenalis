@@ -585,7 +585,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			if !types.IsValidPropertyPath(path) {
 				return nil, errors.BadRequest("output mapped property %q is not valid", path)
 			}
-			p, err := outSchema.PropertyByPath(path)
+			p, err := types.PropertyByPath(outSchema, path)
 			if err != nil {
 				err := err.(types.PathNotExistError)
 				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)

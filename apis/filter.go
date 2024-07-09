@@ -57,7 +57,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 		if !types.IsValidPropertyPath(cond.Property) {
 			return nil, errors.New("property path is not valid")
 		}
-		property, err := schema.PropertyByPath(cond.Property)
+		property, err := types.PropertyByPath(schema, cond.Property)
 		if err != nil {
 			return nil, err
 		}

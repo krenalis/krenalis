@@ -8,6 +8,7 @@
 package types
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -60,6 +61,131 @@ func Test_Properties_Func(t *testing.T) {
 			t.Fatal(err)
 		}
 		i++
+	}
+}
+
+func Test_PropertyByPath(t *testing.T) {
+	cases := []struct {
+		name     string
+		t        Type
+		path     string
+		expected Property
+		err      error
+	}{
+		{
+			name: "path with single component - property (of type Text) exists",
+			t: Object([]Property{
+				{Name: "first_name", Type: Text()},
+			}),
+			path:     "first_name",
+			expected: Property{Name: "first_name", Type: Text()},
+			err:      nil,
+		},
+		{
+			name: "path with single component - property does not exist",
+			t: Object([]Property{
+				{Name: "first_name", Type: Text()},
+			}),
+			path:     "email",
+			expected: Property{},
+			err:      errors.New("property path \"email\" does not exist"),
+		},
+		{
+			name: "path with single component - property (of type Object) exists",
+			t: Object([]Property{
+				{Name: "billing_address", Type: Object([]Property{
+					{Name: "street", Type: Text()},
+				})},
+			}),
+			path: "billing_address",
+			expected: Property{
+				Name: "billing_address", Type: Object([]Property{
+					{Name: "street", Type: Text()},
+				})},
+			err: nil,
+		},
+		{
+			name: "path with two components - property (of type Text) exists",
+			t: Object([]Property{
+				{Name: "billing_address", Type: Object([]Property{
+					{Name: "street", Type: Text()},
+				})},
+			}),
+			path:     "billing_address.street",
+			expected: Property{Name: "street", Type: Text()},
+			err:      nil,
+		},
+		{
+			name: "path with two components - property does not exist",
+			t: Object([]Property{
+				{Name: "billing_address", Type: Object([]Property{
+					{Name: "street", Type: Text()},
+				})},
+			}),
+			path:     "billing_address.city",
+			expected: Property{},
+			err:      errors.New("property path \"billing_address.city\" does not exist"),
+		},
+		{
+			name: "path with three components - property (Text within an Object within an Object) exists",
+			t: Object([]Property{
+				{Name: "movie", Type: Object([]Property{
+					{Name: "director", Type: Object([]Property{
+						{Name: "name", Type: Text()},
+						{Name: "last_name", Type: Text()},
+					})},
+				})},
+			}),
+			path:     "movie.director.last_name",
+			expected: Property{Name: "last_name", Type: Text()},
+			err:      nil,
+		},
+		{
+			name: "path with four components - second component of path is not an Object",
+			t: Object([]Property{
+				{Name: "movie", Type: Object([]Property{
+					{Name: "writer", Type: Text()},
+				})},
+			}),
+			path:     "movie.writer.address.last_name",
+			expected: Property{},
+			err:      errors.New("property path \"movie.writer.address\" does not exist"),
+		},
+		{
+			name: "path with three components - second component of path is not an Object",
+			t: Object([]Property{
+				{Name: "movie", Type: Object([]Property{
+					{Name: "director", Type: Object([]Property{
+						{Name: "name", Type: Text()},
+						{Name: "last_name", Type: Text()},
+					})},
+					{Name: "writer", Type: Text()},
+				})},
+			}),
+			path:     "movie.writer.last_name",
+			expected: Property{},
+			err:      errors.New("property path \"movie.writer.last_name\" does not exist"),
+		},
+	}
+	for _, cas := range cases {
+		t.Run(cas.name, func(t *testing.T) {
+			got, err := PropertyByPath(cas.t, cas.path)
+			if err != nil {
+				if cas.err == nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if err.Error() != cas.err.Error() {
+					t.Fatalf("expected error %q, got error %q", cas.err.Error(), err.Error())
+				}
+				return
+			}
+			if cas.err != nil {
+				t.Fatalf("expected error %q, got no error", cas.err)
+			}
+			if err := sameProperty(cas.expected, got); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
