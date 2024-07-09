@@ -123,7 +123,7 @@ const FileConnector = () => {
 								}
 							/>
 							<ListTile
-								key={'gropus-action-type'}
+								key={'groups-action-type'}
 								icon={getConnectorLogo(file.icon)}
 								name='Import groups'
 								description={`Import the groups from ${file.name}`}
