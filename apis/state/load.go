@@ -9,6 +9,7 @@ package state
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -49,6 +50,10 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.Name = connector.Name
 				c.Type = AppType
 				c.Targets = ConnectorTargets(connector.Targets)
+				if c.Targets.Contains(Groups) {
+					// TODO(Gianluca): https://github.com/open2b/chichi/issues/895.
+					return errors.New("target Groups is not supported by this installation of Chichi")
+				}
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = connector.TermForUsers
@@ -83,7 +88,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			case chichi.DatabaseInfo:
 				c.Name = connector.Name
 				c.Type = DatabaseType
-				c.Targets = UsersFlag | GroupsFlag
+				c.Targets = UsersFlag
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.SampleQuery = connector.SampleQuery
 				c.Icon = connector.Icon
@@ -99,7 +104,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			case chichi.FileStorageInfo:
 				c.Name = connector.Name
 				c.Type = FileStorageType
-				c.Targets = UsersFlag | GroupsFlag
+				c.Targets = UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 			case chichi.MobileInfo:
@@ -109,7 +114,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
-				c.Targets = EventsFlag | UsersFlag | GroupsFlag
+				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 			case chichi.ServerInfo:
@@ -119,7 +124,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
-				c.Targets = EventsFlag | UsersFlag | GroupsFlag
+				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 			case chichi.StreamInfo:
@@ -137,7 +142,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
-				c.Targets = EventsFlag | UsersFlag | GroupsFlag
+				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 			}

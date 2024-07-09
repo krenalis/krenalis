@@ -1724,6 +1724,27 @@ func Test_validateAction(t *testing.T) {
 			provider:                testProvider{},
 			err:                     "output schema contains unused properties: last_name",
 		},
+		{
+			name: "BAD: Source/App/Groups - target Groups is not supported",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Groups,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "target Groups is not supported by this installation of Chichi",
+		},
 	}
 
 	for _, test := range tests {

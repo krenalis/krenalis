@@ -122,6 +122,7 @@ const FileConnector = () => {
 									</SlButton>
 								}
 							/>
+							{/* // TODO(Gianluca: https://github.com/open2b/chichi/issues/895
 							<ListTile
 								key={'groups-action-type'}
 								icon={getConnectorLogo(file.icon)}
@@ -139,7 +140,7 @@ const FileConnector = () => {
 										Add
 									</SlButton>
 								}
-							/>
+							/> */}
 						</div>
 					)}
 				</div>

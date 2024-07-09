@@ -63,6 +63,11 @@ type validationState struct {
 //   - LanguageNotSupported, if the transformation language is not supported.
 func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
+	if target == state.Groups {
+		// TODO(Gianluca): https://github.com/open2b/chichi/issues/895.
+		return errors.BadRequest("target Groups is not supported by this installation of Chichi")
+	}
+
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 

@@ -33,8 +33,6 @@ var (
 	createDestinationUsersTable string
 	//go:embed tables/events.sql
 	createEventsTable string
-	//go:embed tables/groups.sql
-	createGroupsTable string
 	//go:embed tables/users.sql
 	createUsersTable string
 )
@@ -126,7 +124,6 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	tables := []string{
 		createDestinationUsersTable,
 		createEventsTable,
-		createGroupsTable,
 		createUsersTable,
 	}
 	for _, table := range tables {

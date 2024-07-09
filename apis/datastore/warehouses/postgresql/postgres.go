@@ -31,10 +31,6 @@ var (
 	createDestinationUsersTable string
 	//go:embed tables/events.sql
 	createEventsTable string
-	//go:embed tables/groups_identities.sql
-	createGroupsIdentitiesTable string
-	//go:embed tables/groups.sql
-	createGroupsTable string
 	//go:embed tables/user_identities.sql
 	createUserIdentitiesTable string
 	//go:embed tables/users.sql
@@ -220,8 +216,6 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	tables := []string{
 		createDestinationUsersTable,
 		createEventsTable,
-		createGroupsIdentitiesTable,
-		createGroupsTable,
 		createUserIdentitiesTable,
 		createUsersTable,
 	}
