@@ -159,6 +159,10 @@ var schema = types.Object([]types.Property{
 		Name: "Map",
 		Type: types.Map(types.Int(32)),
 	},
+	{
+		Name: "MapArray",
+		Type: types.Map(types.Array(types.Text())),
+	},
 })
 
 var values = []map[string]any{
@@ -194,23 +198,49 @@ var values = []map[string]any{
 		"Text":            "some text",
 		"Array":           []any{"foo", "boo"},
 		"Object":          map[string]any{"a": 9, "b": false},
-		"Map":             map[string]any{"a": 1, "b": 2, "c": 3},
+		"Map":             map[string]any{},
 	},
 }
 
+var mapValue = map[string]any{"Map": map[string]any{"a": 1, "b": 2, "c": 3}}
+var mapArrayValue = map[string]any{"MapArray": map[string]any{"x": []any{"boo", "foo"}, "y": []any{}}}
+
 func Test_MarshalJavaScript(t *testing.T) {
 	tests := []struct {
-		name   string
-		schema types.Type
-		values []map[string]any
-		result []byte
-		err    error
+		name    string
+		schema  types.Type
+		values  []map[string]any
+		result  []byte
+		results [][]byte
+		err     error
 	}{
 		{
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+		},
+		{
+			name:   "Map",
+			schema: schema,
+			values: []map[string]any{mapValue},
+			results: [][]byte{
+				[]byte(`[{Map:{'a':1,'b':2,'c':3}}]`),
+				[]byte(`[{Map:{'a':1,'c':3,'b':1}}]`),
+				[]byte(`[{Map:{'b':2,'a':1,'c':3}}]`),
+				[]byte(`[{Map:{'b':2,'c':3,'a':1}}]`),
+				[]byte(`[{Map:{'c':3,'a':1,'b':2}}]`),
+				[]byte(`[{Map:{'c':3,'b':2,'a':1}]]`),
+			},
+		},
+		{
+			name:   "MapArray",
+			schema: schema,
+			values: []map[string]any{mapArrayValue},
+			results: [][]byte{
+				[]byte(`[{MapArray:{'x':['boo','foo'],'y':[]}}]`),
+				[]byte(`[{MapArray:{'y':[],'x':['boo','foo']}}]`),
+			},
 		},
 		{
 			name:   "Empty values",
@@ -347,26 +377,58 @@ func Test_MarshalJavaScript(t *testing.T) {
 			if test.err != nil {
 				t.Fatalf("Marshal JavaScript: expected error %q, got no error", test.err)
 			}
-			if !bytes.Equal(test.result, got) {
-				t.Fatalf("Marshal JavaScript: expected %s, got %s", string(test.result), string(got))
+			if test.result != nil {
+				if !bytes.Equal(test.result, got) {
+					t.Fatalf("Marshal JavaScript: expected %s, got %s", string(test.result), string(got))
+				}
+				return
 			}
+			for _, result := range test.results {
+				if bytes.Equal(result, got) {
+					return
+				}
+			}
+			t.Fatalf("Marshal JavaScript: expected %s (ignoring key order), got %s", string(test.results[0]), string(got))
 		})
 	}
 }
 
 func Test_MarshalPython(t *testing.T) {
 	tests := []struct {
-		name   string
-		schema types.Type
-		values []map[string]any
-		result []byte
-		err    error
+		name    string
+		schema  types.Type
+		values  []map[string]any
+		result  []byte
+		results [][]byte
+		err     error
 	}{
 		{
 			name:   "Types",
 			schema: schema,
 			values: values,
-			result: []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{'a':1,'b':2,'c':3}}]`),
+			result: []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+		},
+		{
+			name:   "Map",
+			schema: schema,
+			values: []map[string]any{mapValue},
+			results: [][]byte{
+				[]byte(`[{'Map':{'a':1,'b':2,'c':3}}]`),
+				[]byte(`[{'Map':{'a':1,'c':3,'b':1}}]`),
+				[]byte(`[{'Map':{'b':2,'a':1,'c':3}}]`),
+				[]byte(`[{'Map':{'b':2,'c':3,'a':1}}]`),
+				[]byte(`[{'Map':{'c':3,'a':1,'b':2}}]`),
+				[]byte(`[{'Map':{'c':3,'b':2,'a':1}]]`),
+			},
+		},
+		{
+			name:   "MapArray",
+			schema: schema,
+			values: []map[string]any{mapArrayValue},
+			results: [][]byte{
+				[]byte(`[{'MapArray':{'x':['boo','foo'],'y':[]}}]`),
+				[]byte(`[{'MapArray':{'y':[],'x':['boo','foo']}}]`),
+			},
 		},
 		{
 			name:   "Empty values",
@@ -503,9 +565,18 @@ func Test_MarshalPython(t *testing.T) {
 			if test.err != nil {
 				t.Fatalf("Marshal Python: expected error %q, got no error", test.err)
 			}
-			if !bytes.Equal(test.result, got) {
-				t.Fatalf("Marshal Python: expected %s, got %s", string(test.result), string(got))
+			if test.result != nil {
+				if !bytes.Equal(test.result, got) {
+					t.Fatalf("Marshal Python: expected %s, got %s", string(test.result), string(got))
+				}
+				return
 			}
+			for _, result := range test.results {
+				if bytes.Equal(result, got) {
+					return
+				}
+			}
+			t.Fatalf("Marshal Python: expected %s (ignoring key order), got %s", string(test.results[0]), string(got))
 		})
 	}
 }

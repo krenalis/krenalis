@@ -12,8 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -125,37 +123,35 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		b = append(b, '\'')
 		b = jsStringEscape(b, v)
 		b = append(b, '\'')
-	default:
-		rv := reflect.ValueOf(v)
-		switch t.Kind() {
-		case types.ArrayKind:
-			b = append(b, '[')
-			n := rv.Len()
-			for i := 0; i < n; i++ {
-				if i > 0 {
-					b = append(b, ',')
-				}
-				item := rv.Index(i).Interface()
-				var err error
-				b, err = marshalJavaScript(b, t.Elem(), item)
-				if err != nil {
-					return nil, err
-				}
+	case []any:
+		b = append(b, '[')
+		elem := t.Elem()
+		n := len(v)
+		var err error
+		for i := 0; i < n; i++ {
+			if i > 0 {
+				b = append(b, ',')
 			}
-			b = append(b, ']')
-		case types.ObjectKind:
-			b = append(b, '{')
-			i := 0
+			b, err = marshalJavaScript(b, elem, v[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+		b = append(b, ']')
+	case map[string]any:
+		b = append(b, '{')
+		var err error
+		i := 0
+		if t.Kind() == types.ObjectKind {
 			for _, p := range t.Properties() {
-				rv := rv.MapIndex(reflect.ValueOf(p.Name))
-				if !rv.IsValid() {
+				e, ok := v[p.Name]
+				if !ok {
 					if p.Required {
 						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
 					}
 					continue
 				}
-				v := rv.Interface()
-				if !p.Nullable && v == nil {
+				if !p.Nullable && e == nil {
 					return nil, fmt.Errorf("apis/transformers: null property: %s", p.Name)
 				}
 				if i > 0 {
@@ -163,49 +159,31 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 				b = append(b, p.Name...)
 				b = append(b, ':')
-				var err error
-				b, err = marshalJavaScript(b, p.Type, v)
+				b, err = marshalJavaScript(b, p.Type, e)
 				if err != nil {
 					return nil, err
 				}
 				i++
 			}
-			b = append(b, '}')
-		case types.MapKind:
-			type entry struct {
-				k string
-				v any
-			}
-			s := make([]entry, rv.Len())
-			iter := rv.MapRange()
-			i := 0
-			for iter.Next() {
-				s[i].k = iter.Key().String()
-				s[i].v = iter.Value().Interface()
-				i++
-			}
-			slices.SortFunc(s, func(a, b entry) int {
-				return strings.Compare(a.k, b.k)
-			})
-			vt := t.Elem()
-			b = append(b, '{')
-			for i, e := range s {
+		} else {
+			elem := t.Elem()
+			for k, e := range v {
 				if i > 0 {
 					b = append(b, ',')
 				}
 				b = append(b, '\'')
-				b = jsStringEscape(b, e.k)
+				b = jsStringEscape(b, k)
 				b = append(b, '\'', ':')
-				var err error
-				b, err = marshalJavaScript(b, vt, e.v)
+				b, err = marshalJavaScript(b, elem, e)
 				if err != nil {
 					return nil, err
 				}
+				i++
 			}
-			b = append(b, '}')
-		default:
-			return nil, fmt.Errorf("apis/transformers: unexpected type %s", t)
 		}
+		b = append(b, '}')
+	default:
+		return nil, fmt.Errorf("apis/transformers: unexpected type %s", t)
 	}
 	return b, nil
 }
@@ -276,37 +254,35 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 			b = pyStringEscape(b, v)
 			b = append(b, '\'')
 		}
-	default:
-		rv := reflect.ValueOf(v)
-		switch k {
-		case types.ArrayKind:
-			b = append(b, '[')
-			n := rv.Len()
-			for i := 0; i < n; i++ {
-				if i > 0 {
-					b = append(b, ',')
-				}
-				item := rv.Index(i).Interface()
-				var err error
-				b, err = marshalPython(b, t.Elem(), item)
-				if err != nil {
-					return nil, err
-				}
+	case []any:
+		b = append(b, '[')
+		elem := t.Elem()
+		var err error
+		n := len(v)
+		for i := 0; i < n; i++ {
+			if i > 0 {
+				b = append(b, ',')
 			}
-			b = append(b, ']')
-		case types.ObjectKind:
-			b = append(b, '{')
-			i := 0
+
+			b, err = marshalPython(b, elem, v[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+		b = append(b, ']')
+	case map[string]any:
+		b = append(b, '{')
+		i := 0
+		if t.Kind() == types.ObjectKind {
 			for _, p := range t.Properties() {
-				rv := rv.MapIndex(reflect.ValueOf(p.Name))
-				if !rv.IsValid() {
+				e, ok := v[p.Name]
+				if !ok {
 					if p.Required {
 						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
 					}
 					continue
 				}
-				v := rv.Interface()
-				if !p.Nullable && v == nil {
+				if !p.Nullable && e == nil {
 					return nil, fmt.Errorf("apis/transformers: null property: %s", p.Name)
 				}
 				if i > 0 {
@@ -316,48 +292,32 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, p.Name...)
 				b = append(b, '\'', ':')
 				var err error
-				b, err = marshalPython(b, p.Type, v)
+				b, err = marshalPython(b, p.Type, e)
 				if err != nil {
 					return nil, err
 				}
 				i++
 			}
-			b = append(b, '}')
-		case types.MapKind:
-			type entry struct {
-				k string
-				v any
-			}
-			s := make([]entry, rv.Len())
-			iter := rv.MapRange()
-			i := 0
-			for iter.Next() {
-				s[i].k = iter.Key().String()
-				s[i].v = iter.Value().Interface()
-				i++
-			}
-			slices.SortFunc(s, func(a, b entry) int {
-				return strings.Compare(a.k, b.k)
-			})
-			vt := t.Elem()
-			b = append(b, '{')
-			for i, e := range s {
+		} else {
+			elem := t.Elem()
+			for k, e := range v {
 				if i > 0 {
 					b = append(b, ',')
 				}
 				b = append(b, '\'')
-				b = pyStringEscape(b, e.k)
+				b = pyStringEscape(b, k)
 				b = append(b, '\'', ':')
 				var err error
-				b, err = marshalPython(b, vt, e.v)
+				b, err = marshalPython(b, elem, e)
 				if err != nil {
 					return nil, err
 				}
+				i++
 			}
-			b = append(b, '}')
-		default:
-			return nil, fmt.Errorf("apis/transformers: unexpected type %s", k)
 		}
+		b = append(b, '}')
+	default:
+		return nil, fmt.Errorf("apis/transformers: unexpected type %s", k)
 	}
 	return b, nil
 }
