@@ -55,9 +55,9 @@ When exporting users to a file, the order of the users is indicated through an a
 
 This property must have one of these types:
 
-* `Int(n)`       
-* `UInt(n)`      
+* `Int(n)`
+* `UInt(n)`
 * `Decimal(p,s)`, but only if scale `s` is 0
-* `UUID`         
-* `Inet`         
-* `Text`         
+* `UUID`
+* `Inet`
+* `Text`
