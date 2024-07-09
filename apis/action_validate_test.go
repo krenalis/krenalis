@@ -1355,7 +1355,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "output schema cannot contain meta properties",
 		},
 		{
-			name: "BAD: Destination/App/Users -  input schema cannot contain meta properties",
+			name: "BAD: Destination/App/Users - input schema cannot contain meta properties",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
