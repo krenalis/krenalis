@@ -93,6 +93,12 @@ func TestEvents(t *testing.T) {
 		},
 	})
 
+	// Make a Group call.
+	c.SendEvent(javaScriptKey, analytics.Group{
+		UserId:  "f4ca124298",
+		GroupId: "uy55IELNg",
+	})
+
 	// Send 3 events.
 	for i := 0; i < 3; i++ {
 		c.SendEvent(javaScriptKey, analytics.Track{
@@ -113,7 +119,7 @@ func TestEvents(t *testing.T) {
 
 	ctx := context.Background()
 
-	const expectedEventsCount = 4
+	const expectedEventsCount = 5
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
@@ -147,7 +153,7 @@ func TestEvents(t *testing.T) {
 	}
 	event = events[0] // most recent event.
 
-	// Validate some fields of the event.
+	// Validate some fields of the first event.
 	{
 		const (
 			expectedAnonymousId = "baeeb556-96f3-4631-a22d-928431af8bf6"
@@ -186,6 +192,24 @@ func TestEvents(t *testing.T) {
 		if event["userId"] != expectedUserId {
 			t.Fatalf("expected user ID %q, got %#v", expectedUserId, event["userId"])
 		}
+	}
+
+	// Validate some fields of the Group call event.
+	var groupEvent map[string]any
+	for _, event := range events {
+		if event["type"] == "group" {
+			groupEvent = event
+			break
+		}
+	}
+	if groupEvent == nil {
+		t.Fatalf("event corresponding to the Group call not found")
+	}
+	if groupEvent["userId"] != "f4ca124298" {
+		t.Fatalf("expected a userId = %q, got %q", "f4ca124298", groupEvent["userId"])
+	}
+	if groupEvent["groupId"] != "uy55IELNg" {
+		t.Fatalf("expected a groupId = %q, got %q", "uy55IELNg", groupEvent["groupId"])
 	}
 
 	// Test importing a user identity with an action that has no mapping.
