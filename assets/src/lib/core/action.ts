@@ -101,6 +101,7 @@ interface TransformedAction {
 	Query?: string | null;
 	Path?: string | null;
 	Table?: string | null;
+	TableKeyProperty?: string | null;
 	Sheet?: string | null;
 	IdentityProperty?: string | null;
 	LastChangeTimeProperty?: string | null;
@@ -370,6 +371,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		Query: action.Query,
 		Path: action.Path,
 		Table: action.Table,
+		TableKeyProperty: action.TableKeyProperty,
 		Sheet: action.Sheet,
 		IdentityProperty: action.IdentityProperty,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
@@ -590,6 +592,7 @@ const transformInActionToSet = async (
 		query: query!,
 		path: action.Path,
 		tableName: action.Table,
+		tableKeyProperty: action.TableKeyProperty,
 		sheet: action.Sheet,
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		exportMode: action.ExportMode,
@@ -647,6 +650,7 @@ const computeDefaultAction = (
 	}
 	if (fields.includes('Table')) {
 		action.Table = '';
+		action.TableKeyProperty = '';
 	}
 	if (fields.includes('ExportMode')) {
 		action.ExportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;

@@ -47,6 +47,21 @@ Even if the types of the two properties are different, the two values represente
 
 And this determines the fact that, in the example, the Chichi user matches with the user on the app.
 
+## Exporting Users To Databases
+
+When exporting users to a database, both a **table name** and a **table key property** must be specified.
+
+The table key property must be a property of the table, and it will be used as key for the insert / update queries on the database. It must have one of the following types:
+
+* `Int(n)`
+* `UInt(n)`
+* `UUID`
+* `Text`
+
+A value for the table key property must be returned by the transformation, as, otherwise, would be impossible to match the user with the users on the database's table.
+
+> Note that for some database connectors, for example, MySQL, it is the user's responsibility to choose the primary key of the table as the table key property, otherwise the export won't behave consistently. In this regard, refer to the specific documentation for each database.
+
 ## Exporting Users To Files
 
 ### Ordering

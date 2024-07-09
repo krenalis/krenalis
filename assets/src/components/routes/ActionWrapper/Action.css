@@ -151,6 +151,16 @@
 	margin-left: -15px;
 }
 
+.action__table_key_property {
+	display: flex;
+	align-items: center;
+	gap: 30px;
+}
+
+.action__table_key_property .popover {
+	margin-left: -15px;
+}
+
 .action__transformation-identity-property {
 	margin-bottom: 30px;
 }

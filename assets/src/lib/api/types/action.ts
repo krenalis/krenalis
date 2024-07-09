@@ -49,6 +49,7 @@ interface Action {
 	Query: string | null;
 	Path: string | null;
 	Table: string | null;
+	TableKeyProperty: string | null;
 	Sheet: string | null;
 	IdentityProperty: string | null;
 	LastChangeTimeProperty: string | null;
@@ -78,6 +79,7 @@ interface ActionToSet {
 	query?: string;
 	path?: string | null;
 	tableName?: string | null;
+	tableKeyProperty?: string | null;
 	sheet?: string | null;
 	IdentityProperty?: string | null;
 	LastChangeTimeProperty?: string | null;

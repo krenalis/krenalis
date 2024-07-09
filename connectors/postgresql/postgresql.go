@@ -190,7 +190,7 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte, 
 }
 
 // Upsert creates or updates the provided rows in the specified table.
-func (ps *PostgreSQL) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (ps *PostgreSQL) Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error {
 
 	var b strings.Builder
 	b.WriteString("INSERT INTO ")
@@ -222,10 +222,10 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table string, rows []map[strin
 		}
 		b.WriteByte(')')
 	}
-	b.WriteString(` ON CONFLICT ("id") DO UPDATE SET `)
+	b.WriteString(` ON CONFLICT (` + quoteColumn(key) + `) DO UPDATE SET `)
 	i := 0
 	for _, column := range columns {
-		if column.Name == "id" {
+		if column.Name == key {
 			continue
 		}
 		if i > 0 {

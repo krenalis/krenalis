@@ -53,6 +53,7 @@ type Action struct {
 	Sheet                    *string
 	Compression              Compression
 	Table                    *string
+	TableKeyProperty         *string
 	IdentityProperty         *string
 	LastChangeTimeProperty   *string
 	LastChangeTimeFormat     *string
@@ -155,6 +156,10 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	if action.TableName != "" {
 		table := action.TableName
 		this.Table = &table
+	}
+	if action.TableKeyProperty != "" {
+		key := action.TableKeyProperty
+		this.TableKeyProperty = &key
 	}
 	if action.IdentityProperty != "" {
 		p := action.IdentityProperty
@@ -403,6 +408,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Sheet:                    action.Sheet,
 		Compression:              state.Compression(action.Compression),
 		TableName:                action.TableName,
+		TableKeyProperty:         action.TableKeyProperty,
 		IdentityProperty:         action.IdentityProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
@@ -543,14 +549,14 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, transformation_in_properties = $10, transformation_out_properties = $11,"+
 			"query = $12, connector = $13, path = $14, sheet = $15, compression = $16, settings = $17,"+
-			"table_name = $18, identity_property = $19, user_cursor = CASE WHEN $20 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
-			"last_change_time_property = $21, last_change_time_format = $22, file_ordering_property_path = $23,"+
-			"export_mode = $24, matching_properties_internal = $25, matching_properties_external = $26,"+
-			"export_on_duplicated_users = $27\nWHERE id = $28",
+			"table_name = $18, table_key_property = $19, identity_property = $20, user_cursor = CASE WHEN $21 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
+			"last_change_time_property = $22, last_change_time_format = $23, file_ordering_property_path = $24,"+
+			"export_mode = $25, matching_properties_internal = $26, matching_properties_external = $27,"+
+			"export_on_duplicated_users = $28\nWHERE id = $29",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, function.InProperties,
 			function.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression,
-			string(n.Settings), n.TableName, n.IdentityProperty, n.ResetUserCursor,
+			string(n.Settings), n.TableName, n.TableKeyProperty, n.IdentityProperty, n.ResetUserCursor,
 			n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath,
 			n.ExportMode, string(matchPropInternal), string(matchPropExternal),
 			n.ExportOnDuplicatedUsers, n.ID,
@@ -755,6 +761,11 @@ type ActionToSet struct {
 	// destination database-actions; in any other case, it is the empty string.
 	// It cannot be longer than 1024 runes.
 	TableName string
+
+	// TableKeyProperty is the name of the property used as table key when
+	// exporting users to databases.
+	// It is the empty string for any other type of action.
+	TableKeyProperty string
 
 	// IdentityProperty is the property name used as identity when importing
 	// from a file or from a database.

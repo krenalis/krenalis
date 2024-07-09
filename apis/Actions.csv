@@ -6,5 +6,5 @@ Source,Mobile/Server/Website,Users,Yes,Event,User,Event schema properties,Transf
 Source,Mobile/Server/Website,Events,?,(none),(none),(none),(none),No,-,-,No,No,No (it’s event based),-
 Destination,App,Users,Yes,User,App user (destination),Transformed properties + internal matching property,Transformed properties,Required,Both supported,No,No,No,Yes (it’s batch),"Export mode, matching properties, settings about duplicated users"
 Destination,App,Events,Yes,Event,Event Type (which may be invalid),Transformed properties,Transformed properties,Optional,Both supported,Yes,No,No,No (it’s event based),-
-Destination,Database,Users,Yes,User,Table,Transformed properties,Transformed properties,Required,Both supported,No,No,No,Yes (it’s batch),Table name
+Destination,Database,Users,Yes,User,Table,Transformed properties,Transformed properties + table key property,Required,Both supported,No,No,No,Yes (it’s batch),"Table name and table key property"
 Destination,FileStorage,Users,Yes,User,(none),(none),User schema properties,No,-,-,No,"Yes, with Path, Sheet and UI Values",Yes (it’s batch),Ordering property path

@@ -40,6 +40,7 @@ type Action struct {
 	Sheet                    *string
 	Compression              Compression
 	Table                    *string
+	TableKeyProperty         *string
 	IdentityProperty         *string
 	LastChangeTimeProperty   *string
 	LastChangeTimeFormat     *string
@@ -63,6 +64,7 @@ type ActionToSet struct {
 	Compression              Compression
 	UIValues                 json.RawMessage `json:",omitempty"`
 	TableName                string
+	TableKeyProperty         string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string

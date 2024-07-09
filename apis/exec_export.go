@@ -164,7 +164,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	case state.AppType:
 		writer, err = this.app().Writer(state.Users, ack)
 	case state.DatabaseType:
-		writer, err = this.database().Writer(action.TableName, action.OutSchema, ack)
+		writer, err = this.database().Writer(action.TableName, action.TableKeyProperty, action.OutSchema, ack)
 	case state.FileStorageType:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
 		writer, err = this.file().Writer(ctx, schema, ack, replacer)

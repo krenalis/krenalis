@@ -289,10 +289,6 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			provider:                testProvider{},
 		},
-		// TODO(Gianluca): it's strange that in the export table there must be
-		// an "id" column, but then it is not necessary for this column to be in
-		// the action's output schema. See the issue
-		// https://github.com/open2b/chichi/issues/807.
 		{
 			name: "GOOD: Destination/Database/Users - with mapping",
 			action: ActionToSet{
@@ -301,14 +297,15 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
 						"email_out": "email_in",
 					},
 				},
-				TableName: "my_users_table",
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -322,7 +319,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Function: &TransformationFunction{
@@ -336,7 +333,8 @@ func Test_validateAction(t *testing.T) {
 						OutProperties: []string{"email_out"},
 					},
 				},
-				TableName: "my_users_table",
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -1423,6 +1421,248 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.WebsiteType,
 			err:                     "input schema must be invalid for actions that import user identities from events",
+		},
+		{
+			name: "BAD: Destination/Database/Users - missing database table key property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName: "my_users_table",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "table key property cannot be empty for destination database actions",
+		},
+		{
+			name: "BAD: Destination/Database/Users - table key property not in schema",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "some_property",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "table key property \"some_property\" not found within output schema",
+		},
+		{
+			name: "BAD: Destination/Database/Users - table key property has wrong type",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "my_array_prop", Type: types.Array(types.Text())},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "my_array_prop",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "type Array cannot be used as table key property",
+		},
+		{
+			name: "BAD: Destination/Database/Users - unmapped property in input schema",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "a", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "input schema contains unused properties: a",
+		},
+		{
+			name: "BAD: Destination/Database/Users - unused property in output schema",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: true},
+					{Name: "x", Type: types.Text(), Required: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "output schema contains unused properties: x",
+		},
+		{
+			name: "BAD: Destination/Database/Users - table key property must be required",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: false},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "the table key property must be 'required' in the output schema",
+		},
+		{
+			name: "BAD: Destination/Database/Users - table key property is not a valid property name",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "some-invalid-property-name",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "table key property is not a valid property name",
+		},
+		{
+			name: "BAD: Destination/Database/Users - an expression must be mapped to the table key property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "a", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: true},
+					{Name: "b", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"b": "a",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			err:                     "an expression must be mapped to the table key property",
+		},
+		{
+			name: "BAD: Destination/Database/Users - transformation function does not transform to the table key property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Required: true},
+					{Name: "my_key", Type: types.Text(), Required: true},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language:      "Python",
+						InProperties:  []string{"email_in"},
+						OutProperties: []string{"email_out"},
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "my_key",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.DatabaseType,
+			provider:                testProvider{},
+			err:                     "the out properties of the transformation function must contain the table key property",
+		},
+		{
+			name: "BAD: Source/App/Users - table key property cannot be specified",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "table key property is not allowed",
 		},
 	}
 

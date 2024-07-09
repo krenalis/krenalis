@@ -51,6 +51,13 @@ const ActionTable = () => {
 		setAction(a);
 	};
 
+	const onUpdateTableKeyProperty = (e) => {
+		const value = e.target.value;
+		const a = { ...action };
+		a.TableKeyProperty = value;
+		setAction(a);
+	};
+
 	const onConfirmTable = async () => {
 		tableConfirmationButtonRef.current!.load();
 		let schema: ObjectType;
@@ -83,24 +90,31 @@ const ActionTable = () => {
 	};
 
 	return (
-		<Section title='Table' description='The name of the table of the database'>
-			<div className='action__table'>
-				<SlInput value={action.Table} onSlInput={onUpdateTable} />
-				<FeedbackButton
-					ref={tableConfirmationButtonRef}
-					variant='success'
-					size='small'
-					onClick={onConfirmTable}
-					animationDuration={CONFIRM_ANIMATION_DURATION}
-				>
-					Confirm
-				</FeedbackButton>
-				<Popover
-					isOpen={isTransformationDisabled}
-					content='Confirm when you have finished editing the table name.'
-				/>
-			</div>
-		</Section>
+		<>
+			<Section title='Table' description='The name of the table of the database'>
+				<div className='action__table'>
+					<SlInput value={action.Table} onSlInput={onUpdateTable} />
+					<FeedbackButton
+						ref={tableConfirmationButtonRef}
+						variant='success'
+						size='small'
+						onClick={onConfirmTable}
+						animationDuration={CONFIRM_ANIMATION_DURATION}
+					>
+						Confirm
+					</FeedbackButton>
+					<Popover
+						isOpen={isTransformationDisabled}
+						content='Confirm when you have finished editing the table name.'
+					/>
+				</div>
+			</Section>
+			<Section title='Table key' description='The property of the table that is used as key in export queries'>
+				<div className='action__table_key_property'>
+					<SlInput value={action.TableKeyProperty} onSlInput={onUpdateTableKeyProperty} />
+				</div>
+			</Section>
+		</>
 	);
 };
 

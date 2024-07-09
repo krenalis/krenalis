@@ -256,6 +256,7 @@ type AddAction struct {
 	Compression              Compression
 	Settings                 []byte
 	TableName                string
+	TableKeyProperty         string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
@@ -294,6 +295,7 @@ func (state *State) addAction(n notification) {
 		Compression:              e.Compression,
 		Settings:                 e.Settings,
 		TableName:                e.TableName,
+		TableKeyProperty:         e.TableKeyProperty,
 		IdentityProperty:         e.IdentityProperty,
 		LastChangeTimeProperty:   e.LastChangeTimeProperty,
 		LastChangeTimeFormat:     e.LastChangeTimeFormat,
@@ -905,6 +907,7 @@ type SetAction struct {
 	Compression              Compression
 	Settings                 []byte
 	TableName                string
+	TableKeyProperty         string
 	IdentityProperty         string
 	ResetUserCursor          bool
 	LastChangeTimeProperty   string
@@ -936,6 +939,7 @@ func (state *State) setAction(n notification) {
 		a.Compression = e.Compression
 		a.Settings = e.Settings
 		a.TableName = e.TableName
+		a.TableKeyProperty = e.TableKeyProperty
 		a.IdentityProperty = e.IdentityProperty
 		if e.ResetUserCursor {
 			a.UserCursor = time.Time{}

@@ -499,6 +499,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Sheet:                    action.Sheet,
 		Compression:              state.Compression(action.Compression),
 		TableName:                action.TableName,
+		TableKeyProperty:         action.TableKeyProperty,
 		IdentityProperty:         action.IdentityProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
@@ -626,16 +627,16 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, transformation_in_properties,\n" +
-			"transformation_out_properties, query, connector, path, sheet, compression, settings, table_name," +
+			"transformation_out_properties, query, connector, path, sheet, compression, settings, table_name, table_key_property,\n" +
 			"identity_property, last_change_time_property, last_change_time_format, file_ordering_property_path," +
 			"export_mode, matching_properties_internal, matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
-			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)"
+			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(filter), mapping, function.Source, function.Language, function.Version, function.InProperties,
 			function.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
-			n.TableName, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
 			n.ExportOnDuplicatedUsers)
 		if err != nil {
@@ -1823,22 +1824,8 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if err != nil {
 		return types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
 	}
-	var hasID bool
-	for i, column := range columns {
-		if column.Name == "id" {
-			if column.Type.Kind() != types.UUIDKind {
-				return types.Type{}, errors.Unprocessable(InvalidTable, "column \"id\" of table %q is not a UUID", table)
-			}
-			columns = slices.Delete(columns, i, i+1)
-			hasID = true
-			break
-		}
-	}
-	if !hasID {
-		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q does not have a UUID column named \"id\"", table)
-	}
 	if len(columns) == 0 {
-		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q only has the \"id\" column and no additional columns", table)
+		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q has no columns", table)
 	}
 	schema, err := types.ObjectOf(columns)
 	if err != nil {

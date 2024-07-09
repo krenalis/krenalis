@@ -78,9 +78,9 @@ type Database interface {
 
 	// Upsert creates or updates the provided rows in the specified table.
 	// The columns parameter specifies the columns of the rows, including a column
-	// named "id" that serves as the table's key. If a column's value is not
-	// specified in a row, the default column value is used.
-	Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error
+	// key that serves as the table's key. If a column's value is not specified in a
+	// row, the default column value is used.
+	Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

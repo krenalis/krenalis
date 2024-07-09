@@ -149,7 +149,7 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role 
 }
 
 // Upsert creates or updates the provided rows in the specified table.
-func (my *MySQL) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (my *MySQL) Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error {
 
 	var err error
 	table, err = quoteTable(table)
@@ -189,7 +189,7 @@ func (my *MySQL) Upsert(ctx context.Context, table string, rows []map[string]any
 	b.WriteString(` ON DUPLICATE KEY UPDATE `)
 	i := 0
 	for _, column := range columns {
-		if column.Name == "id" {
+		if column.Name == key {
 			continue
 		}
 		if i > 0 {

@@ -95,6 +95,7 @@ CREATE TABLE actions (
     compression compression NOT NULL DEFAULT '',
     settings varchar(65535),
     table_name varchar(1024) NOT NULL DEFAULT '',
+    table_key_property text NOT NULL,
     identity_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',

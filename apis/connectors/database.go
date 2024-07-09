@@ -208,23 +208,19 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 }
 
 // Writer returns a Writer to create and update users.
-func (database *Database) Writer(table string, schema types.Type, ack AckFunc) (Writer, error) {
+func (database *Database) Writer(table, key string, schema types.Type, ack AckFunc) (Writer, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	columns := make([]types.Property, 1+types.NumProperties(schema))
-	columns[0] = types.Property{Name: "id", Type: types.Int(32)}
-	for i, p := range schema.Properties() {
-		columns[i+1] = p
-	}
 	w := databaseWriter{
 		ack:     ack,
 		table:   table,
+		key:     key,
 		schema:  schema,
-		columns: columns,
+		columns: types.Properties(schema),
 		inner:   database.inner,
 	}
 	return &w, nil
@@ -234,9 +230,11 @@ func (database *Database) Writer(table string, schema types.Type, ack AckFunc) (
 type databaseWriter struct {
 	ack     AckFunc
 	table   string
+	key     string
 	schema  types.Type
 	columns []types.Property
 	rows    []map[string]any
+	ackIDs  []string
 	inner   chichi.Database
 	closed  bool
 }
@@ -256,9 +254,9 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
-	properties["id"] = ackID // see issue https://github.com/open2b/chichi/issues/731
-	// Append the row.
+	// Append the row and the ack ids.
 	w.rows = append(w.rows, properties)
+	w.ackIDs = append(w.ackIDs, ackID)
 	// Upsert the rows.
 	if len(w.rows) == 100 {
 		w.upsert(ctx)
@@ -269,13 +267,10 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 // upsert calls the Upsert method of the database connector with the collected
 // records.
 func (w *databaseWriter) upsert(ctx context.Context) {
-	err := w.inner.Upsert(ctx, w.table, w.rows, w.columns)
-	ackIDs := make([]string, len(w.rows))
-	for i, row := range w.rows {
-		ackIDs[i] = row["id"].(string) // see issue https://github.com/open2b/chichi/issues/731
-	}
-	w.ack(ackIDs, err)
+	err := w.inner.Upsert(ctx, w.table, w.key, w.rows, w.columns)
+	w.ack(w.ackIDs, err)
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
+	w.ackIDs = slices.Delete(w.ackIDs, 0, len(w.ackIDs))
 }
 
 // Rows is the result of a query.

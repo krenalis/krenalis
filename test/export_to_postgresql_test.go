@@ -58,10 +58,9 @@ func TestExportToPostgreSQL(t *testing.T) {
 	c.ExecQueryTestDatabase(ctx, `
 		CREATE TABLE test_export_to_db
 			(
-				id uuid,
 				email text NOT NULL DEFAULT '',
 				full_name text NOT NULL DEFAULT '',
-				PRIMARY KEY (id)
+				PRIMARY KEY (email)
 			)
 		`)
 
@@ -81,16 +80,17 @@ func TestExportToPostgreSQL(t *testing.T) {
 
 	// Export to PostgreSQL.
 	exportAction := c.AddAction(pgsql, "Users", chichitester.ActionToSet{
-		Name:      "Export users to PostgreSQL",
-		TableName: "test_export_to_db",
+		Name:             "Export users to PostgreSQL",
+		TableName:        "test_export_to_db",
+		TableKeyProperty: "email",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 			{Name: "first_name", Type: types.Text()},
 			{Name: "last_name", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "full_name", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "full_name", Type: types.Text(), Required: true},
 		}),
 		Transformation: chichitester.Transformation{
 			Mapping: map[string]string{
@@ -107,6 +107,36 @@ func TestExportToPostgreSQL(t *testing.T) {
 	var count int
 	c.QueryRowTestDatabase(ctx, &count,
 		`SELECT COUNT(*) FROM test_export_to_db WHERE email <> '' AND full_name <> ''`,
+	)
+	if expectedCount != count {
+		t.Fatalf("expecting count %d, got %d", expectedCount, count)
+	}
+
+	// Change the action to export the empty string for full_name.
+	c.SetAction(pgsql, exportAction, chichitester.ActionToSet{
+		Name:             "Export users to PostgreSQL",
+		TableName:        "test_export_to_db",
+		TableKeyProperty: "email",
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "full_name", Type: types.Text(), Required: true},
+		}),
+		Transformation: chichitester.Transformation{
+			Mapping: map[string]string{
+				"email":     "email",
+				"full_name": `""`,
+			},
+		},
+	})
+	c.ExecuteAction(pgsql, exportAction, false)
+	c.WaitActionsToFinish(pgsql)
+
+	// Check if the export completed successfully.
+	c.QueryRowTestDatabase(ctx, &count,
+		`SELECT COUNT(*) FROM test_export_to_db WHERE email <> '' AND full_name = ''`,
 	)
 	if expectedCount != count {
 		t.Fatalf("expecting count %d, got %d", expectedCount, count)

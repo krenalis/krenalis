@@ -149,7 +149,7 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte, 
 }
 
 // Upsert creates or updates the provided rows in the specified table.
-func (ch *ClickHouse) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+func (ch *ClickHouse) Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error {
 
 	var err error
 	table, err = quoteTable(table)

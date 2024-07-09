@@ -1091,6 +1091,7 @@ type Action struct {
 	Compression              Compression
 	Settings                 []byte
 	TableName                string
+	TableKeyProperty         string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
