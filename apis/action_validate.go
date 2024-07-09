@@ -653,11 +653,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).
-	if action.Transformation.Function != nil {
-		// The action has a transformation function, so we do not know which
-		// properties are used; consequently, this check would always pass
-		// because we would consider every property of the schema as used.
-	} else if importUserIdentitiesFromEvents || dispatchEventsToApps {
+	if importUserIdentitiesFromEvents || dispatchEventsToApps {
 		// In these cases the input schema is the full schema of the events,
 		// both in case of mappings and transformation, so we cannot return the
 		// error about unused properties in input schema because just a minor

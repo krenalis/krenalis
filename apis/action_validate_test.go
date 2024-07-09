@@ -1664,6 +1664,66 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.AppType,
 			err:                     "table key property is not allowed",
 		},
+		{
+			name: "BAD: Source/App/Users - transformation function with unused property in input schema",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "tax_code", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language:      "Python",
+						InProperties:  []string{"email_in"},
+						OutProperties: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			provider:                testProvider{},
+			err:                     "input schema contains unused properties: tax_code",
+		},
+		{
+			name: "BAD: Source/App/Users - transformation function with unused property in output schema",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "last_name", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language:      "Python",
+						InProperties:  []string{"email_in"},
+						OutProperties: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			provider:                testProvider{},
+			err:                     "output schema contains unused properties: last_name",
+		},
 	}
 
 	for _, test := range tests {
