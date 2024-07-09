@@ -691,6 +691,10 @@ type ActionToSet struct {
 	Name string
 
 	// Enabled indicates whether the action is enabled or not.
+	//
+	// Depending on the type of the action, this flag controls the enabling of
+	// scheduling of action execution - for batch actions - or the enabling of
+	// events receive/dispatching - for event based actions.
 	Enabled bool
 
 	// Filter is the filter of the action, if it has one, otherwise is nil.
