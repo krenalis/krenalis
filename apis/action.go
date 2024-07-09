@@ -702,35 +702,24 @@ type ActionToSet struct {
 
 	// InSchema is the input schema of the action.
 	//
-	// It must contain exclusively:
-	//
-	// - the input properties used in the transformation, if this action has a
-	//   transformation.
-	// - the internal matching property, if this action has matching
-	//   properties.
-	// - the properties referred in the filters, if this action has filters.
-	// - the identity and the last change time properties, if this action
-	//   specifies them.
+	// Please refer to the 'Actions.csv' file for a complete list of properties
+	// that must be inside this schema, based on the connection and action type.
 	InSchema types.Type
 
 	// OutSchema is the output schema of the action.
 	//
-	// It must contain exclusively:
-	//
-	// - the output properties used in the transformation, if this action has a
-	//   transformation.
-	// - the schema of the users that will be exported to a file, it this action
-	//   exports users to a file.
+	// Please refer to the 'Actions.csv' file for a complete list of properties
+	// that must be inside this schema, based on the connection and action type.
 	OutSchema types.Type
 
 	// Transformation is the mapping or function transformation, if it has one.
 	//
-	// Every action that supports transformations may have an associated
-	// mapping or function, which are mutually exclusive.
+	// Every action that supports transformations may have an associated mapping
+	// or function, which are mutually exclusive.
 	//
-	// If it has a mapping, the names of the properties in which the values are
-	// mapped (the keys of the map) must be present in the output schema of the
-	// action, while the values of the map must be valid mapping expressions.
+	// Please refer to the 'Actions.csv' file for details about this
+	// transformation and the properties it eventually operates on, based on the
+	// connection and the action type.
 	Transformation Transformation
 
 	// Query is the query of the action, if it has one, otherwise it is the
