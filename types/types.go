@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"math"
 	"regexp"
 	"slices"
@@ -21,9 +22,6 @@ import (
 	"github.com/shopspring/decimal"
 	"golang.org/x/text/unicode/norm"
 )
-
-// Seq2 represents a sequence of K and V values.
-type Seq2[K, V any] func(yield func(K, V) bool)
 
 // InvalidPropertyNameError is returned by ObjectOf when a property name is not
 // valid.
@@ -1088,7 +1086,7 @@ func (t Type) Property(name string) (Property, bool) {
 
 // Properties returns an iterator over the properties of t.
 // It panics if t is not an Object.
-func (t Type) Properties() Seq2[int, Property] {
+func (t Type) Properties() iter.Seq2[int, Property] {
 	if t.kind != ObjectKind {
 		panic("cannot iterate over a non-Object type")
 	}
@@ -1234,7 +1232,7 @@ func SubsetFunc(t Type, f func(p Property) bool) Type {
 // the property "y", its path is "x.y".
 //
 // It panics if t is not an Object.
-func Walk(t Type) Seq2[string, Property] {
+func Walk(t Type) iter.Seq2[string, Property] {
 	if t.kind != ObjectKind {
 		panic("cannot iterate over a non-Object type")
 	}
