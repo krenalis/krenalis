@@ -12,6 +12,169 @@ import (
 	"testing"
 )
 
+func Test_AsRole(t *testing.T) {
+	cases := []struct {
+		object   Type
+		role     Role
+		expected Type
+	}{
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+			role: BothRole,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+			role: SourceRole,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+			role: DestinationRole,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+					Role: SourceRole,
+				},
+			}),
+			role:     DestinationRole,
+			expected: Type{},
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+					Role: DestinationRole,
+				},
+			}),
+			role:     SourceRole,
+			expected: Type{},
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+					Role: SourceRole,
+				},
+				{
+					Name: "LastName",
+					Type: Text(),
+					Role: SourceRole,
+				},
+			}),
+			role:     DestinationRole,
+			expected: Type{},
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+					Role: BothRole,
+				},
+				{
+					Name: "LastName",
+					Type: Text(),
+					Role: SourceRole,
+				},
+			}),
+			role: DestinationRole,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+					Role: BothRole,
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "ID",
+					Type: Text(),
+					Role: SourceRole,
+				},
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+				{
+					Name: "LastName",
+					Type: Text(),
+				},
+			}),
+			role: DestinationRole,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+				{
+					Name: "LastName",
+					Type: Text(),
+				},
+			}),
+		},
+	}
+	for _, cas := range cases {
+		t.Run("", func(t *testing.T) {
+			got := AsRole(cas.object, cas.role)
+			gotValid := got.Valid()
+			expectedValid := cas.expected.Valid()
+			if !expectedValid && !gotValid {
+				// Ok.
+				return
+			}
+			if expectedValid && !gotValid {
+				t.Fatal("unexpected invalid schema")
+			}
+			if !expectedValid && gotValid {
+				t.Fatalf("expecting an invalid schema, got %v", got)
+			}
+			if !Equal(cas.expected, got) {
+				t.Fatalf("expected schema %v != got %v", cas.expected, got)
+			}
+		})
+	}
+
+}
+
 func Test_IsValidPropertyPath(t *testing.T) {
 	tests := []struct {
 		path     string

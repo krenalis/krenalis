@@ -447,49 +447,6 @@ func ObjectOf(properties []Property) (Type, error) {
 	return Type{kind: ObjectKind, vl: ps}, nil
 }
 
-// AsRole returns an object type with the properties of typ but that are
-// compatible with role. It returns typ if all properties are compatible and
-// an invalid type if there are no compatible properties.
-//
-// Panics if typ or role are not valid, or typ is not an object type or role is
-// Both.
-func (t Type) AsRole(role Role) Type {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	if t.kind != ObjectKind {
-		panic("cannot return type as role for non-Object type")
-	}
-	if role < BothRole || role > DestinationRole {
-		panic("role is not valid")
-	}
-	if role == BothRole {
-		return t
-	}
-	last := 0
-	var roleProperties []Property
-	properties := t.vl.([]Property)
-	for i, p := range properties {
-		if p.Role == BothRole || p.Role == role {
-			continue
-		}
-		if last < i {
-			roleProperties = append(roleProperties, properties[last:i]...)
-		}
-		last = i + 1
-	}
-	if last == 0 {
-		return t
-	}
-	if last < len(properties) {
-		roleProperties = append(roleProperties, properties[last:]...)
-	}
-	if roleProperties == nil {
-		return Type{}
-	}
-	return Type{kind: ObjectKind, vl: roleProperties}
-}
-
 // AsReal returns t but as a real number. As a real number, t does not allow
 // NaN, +Inf and -Inf values. t must be a Float type. t cannot be already real
 // and cannot have a range. It panics if previous restrictions are not met.

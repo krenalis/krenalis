@@ -14,6 +14,49 @@ import (
 	"strings"
 )
 
+// AsRole returns a new type with properties of t that are compatible with role.
+// If all properties of t are compatible with role, it returns t. If no
+// properties of t are compatible with role, it returns an invalid type.
+//
+// It panics if t or role are not valid types, or if t is not an object type or
+// role is 'Both'.
+func AsRole(t Type, role Role) Type {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	if t.kind != ObjectKind {
+		panic("cannot return type as role for non-Object type")
+	}
+	if role < BothRole || role > DestinationRole {
+		panic("role is not valid")
+	}
+	if role == BothRole {
+		return t
+	}
+	last := 0
+	var roleProperties []Property
+	properties := t.vl.([]Property)
+	for i, p := range properties {
+		if p.Role == BothRole || p.Role == role {
+			continue
+		}
+		if last < i {
+			roleProperties = append(roleProperties, properties[last:i]...)
+		}
+		last = i + 1
+	}
+	if last == 0 {
+		return t
+	}
+	if last < len(properties) {
+		roleProperties = append(roleProperties, properties[last:]...)
+	}
+	if roleProperties == nil {
+		return Type{}
+	}
+	return Type{kind: ObjectKind, vl: roleProperties}
+}
+
 // Equal reports whether two types are equal.
 func Equal(t1, t2 Type) bool {
 	almostEqual := t1.kind == t2.kind && t1.size == t2.size && t1.unique == t2.unique && t1.real == t2.real && t1.p == t2.p && t1.s == t2.s

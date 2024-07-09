@@ -149,7 +149,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if !schema.Valid() {
 			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.name)
 		}
-		schema = schema.AsRole(types.Role(role))
+		schema = types.AsRole(schema, types.Role(role))
 		if !schema.Valid() {
 			return types.Type{}, fmt.Errorf("connector has returned a schema without %s properties", strings.ToLower(role.String()))
 		}
@@ -275,7 +275,7 @@ func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, er
 	}
 	var schemas [3]types.Type
 	for r := types.BothRole; r <= types.DestinationRole; r++ {
-		schemas[r] = schema.AsRole(r)
+		schemas[r] = types.AsRole(schema, r)
 		if !schemas[r].Valid() {
 			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(role.String()))
 		}
