@@ -109,9 +109,9 @@ func Test_validateAction(t *testing.T) {
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32)},
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "id", Type: types.Int(32), Required: true},
+					{Name: "timestamp", Type: types.DateTime(), Required: true},
+					{Name: "email_in", Type: types.Text(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -749,9 +749,9 @@ func Test_validateAction(t *testing.T) {
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32)},
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "id", Type: types.Int(32), Required: true},
+					{Name: "timestamp", Type: types.DateTime(), Required: true},
+					{Name: "email_in", Type: types.Text(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -774,8 +774,8 @@ func Test_validateAction(t *testing.T) {
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime(), Required: true},
+					{Name: "email_in", Type: types.Text(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -799,9 +799,9 @@ func Test_validateAction(t *testing.T) {
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Array(types.Text())},
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "id", Type: types.Array(types.Text()), Required: true},
+					{Name: "timestamp", Type: types.DateTime(), Required: true},
+					{Name: "email_in", Type: types.Text(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -1042,7 +1042,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1064,7 +1064,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1109,7 +1109,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1430,7 +1430,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1452,7 +1452,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1475,8 +1475,8 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "my_array_prop", Type: types.Array(types.Text())},
+					{Name: "email_out", Type: types.Text(), Required: true},
+					{Name: "my_array_prop", Type: types.Array(types.Text()), Required: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
