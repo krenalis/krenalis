@@ -4,7 +4,7 @@ Source,Database,Users,No,Query,User,Transformed properties + identity property +
 Source,FileStorage,Users,No,File,User,Transformed properties + identity property + last change time property,Transformed properties,Required,Both supported,No,Required,"Yes, with Path, Sheet and UI Values",Yes (it’s batch),-
 Source,Mobile/Server/Website,Users,Yes,Event,User,Event schema properties,Transformed properties,Optional,Both supported,Yes,No,No,No (it’s event based),-
 Source,Mobile/Server/Website,Events,?,(none),(none),(none),(none),No,-,-,No,No,No (it’s event based),-
-Destination,App,Users,Yes,User,App user (destination),Transformed properties + internal matching property,Transformed properties,Required,Both supported,No,No,No,Yes (it’s batch),"Export mode, matching properties, settings about duplicated users"
-Destination,App,Events,Yes,Event,"Event Type (none, if Event Type hasn’t one)",Transformed properties,Transformed properties,"Optional, if Event Type has schema, no otherwise",Both supported,Yes,No,No,No (it’s event based),-
-Destination,Database,Users,Yes,User,Table,Transformed properties,Transformed properties + table key property,Required,Both supported,No,No,No,Yes (it’s batch),Table name and table key property
+Destination,App,Users,Yes,User,App user (destination),Filter properties + Transformed properties + internal matching property,Transformed properties,Required,Both supported,No,No,No,Yes (it’s batch),"Export mode, matching properties, settings about duplicated users"
+Destination,App,Events,Yes,Event,"Event Type (none, if Event Type hasn’t one)",Event schema properties,Transformed properties,"Optional, if Event Type has schema, no otherwise",Both supported,Yes,No,No,No (it’s event based),-
+Destination,Database,Users,Yes,User,Table,Filter properties + Transformed properties,Transformed properties + table key property,Required,Both supported,No,No,No,Yes (it’s batch),Table name and table key property
 Destination,FileStorage,Users,Yes,User,(none),(none),User schema properties,No,-,-,No,"Yes, with Path, Sheet and UI Values",Yes (it’s batch),Ordering property path
