@@ -47,7 +47,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		Name: "Import users' email and name from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text()},
+			{Name: "identity", Type: types.Text(), Required: true},
 			{Name: "name", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
@@ -74,7 +74,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		Name: "Import users' email and lastName from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text()},
+			{Name: "identity", Type: types.Text(), Required: true},
 			{Name: "lastname", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),

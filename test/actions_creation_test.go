@@ -61,7 +61,7 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from a CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text()},
+					{Name: "identity", Type: types.Text(), Required: true},
 					{Name: "Email", Type: types.Text()},
 					{Name: "timestamp", Type: types.Text()},
 				}),
@@ -139,7 +139,7 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text()},
+					{Name: "identity", Type: types.Text(), Required: true},
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.Text()},
 				}),
@@ -226,7 +226,7 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), Required: true},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
@@ -268,7 +268,7 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), Required: true},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
@@ -318,9 +318,9 @@ func TestActionsCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32)},
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "id", Type: types.Int(32), Required: true},
+					{Name: "email", Type: types.Text(), Required: true},
+					{Name: "timestamp", Type: types.DateTime(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -340,9 +340,9 @@ func TestActionsCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32)},
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "id", Type: types.Int(32), Required: true},
+					{Name: "email", Type: types.Text(), Required: true},
+					{Name: "timestamp", Type: types.Text(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -363,9 +363,9 @@ func TestActionsCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "my_last_change_time" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32)},
-					{Name: "email", Type: types.Text()},
-					{Name: "my_last_change_time", Type: types.DateTime()},
+					{Name: "id", Type: types.Int(32), Required: true},
+					{Name: "email", Type: types.Text(), Required: true},
+					{Name: "my_last_change_time", Type: types.DateTime(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},

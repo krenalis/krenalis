@@ -106,7 +106,7 @@ func TestIdentityResolution2(t *testing.T) {
 			Name: "Action",
 			Path: filename,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.JSON(), Nullable: true},
+				{Name: "email", Type: types.JSON(), Nullable: true, Required: true},
 				{Name: "name", Type: types.JSON(), Nullable: true},
 				{Name: "phone_numbers", Type: types.JSON(), Nullable: true},
 				{Name: "total_orders", Type: types.JSON(), Nullable: true},

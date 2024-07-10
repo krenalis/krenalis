@@ -134,9 +134,9 @@ func Test_validateAction(t *testing.T) {
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32)},
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "id", Type: types.Int(32), Required: true},
+					{Name: "timestamp", Type: types.DateTime(), Required: true},
+					{Name: "email_in", Type: types.Text(), Required: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},

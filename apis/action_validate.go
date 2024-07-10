@@ -310,6 +310,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !props.External.Type.Valid() {
 			return errors.BadRequest("external matching property type is not valid")
 		}
+		if props.External.Placeholder != "" {
+			return errors.BadRequest("external matching property cannot specify a placeholder")
+		}
+		if props.External.Role != types.BothRole {
+			return errors.BadRequest("external matching property cannot specify a role")
+		}
 		if !canBeUsedAsMatchingProp(props.External.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
@@ -468,6 +474,9 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
 			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
+		}
+		if !identityProperty.Required {
+			return errors.BadRequest("identity property must be required")
 		}
 		usedInPaths = append(usedInPaths, action.IdentityProperty)
 		// Validate the last change time property and format.

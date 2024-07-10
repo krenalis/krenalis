@@ -48,7 +48,7 @@ func TestImportUsersFromFile(t *testing.T) {
 		Name: "Import users from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text()},
+			{Name: "identity", Type: types.Text(), Required: true},
 			{Name: "name", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),

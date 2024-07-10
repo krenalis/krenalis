@@ -90,7 +90,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
 			InSchema: types.Object([]types.Property{
-				{Name: "csv_id", Type: types.Text()},
+				{Name: "csv_id", Type: types.Text(), Required: true},
 				{Name: "email", Type: types.Text()},
 				{Name: "gender", Type: types.Text()},
 				{Name: "timestamp", Type: types.Text()},

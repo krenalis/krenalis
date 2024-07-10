@@ -66,7 +66,7 @@ func TestIdentityResolution(t *testing.T) {
 	}
 
 	inSchemaProps := []types.Property{
-		{Name: "dummyId", Type: types.JSON()},
+		{Name: "dummyId", Type: types.JSON(), Required: true},
 		{Name: "email", Type: types.JSON()},
 		{Name: "phoneNumbers", Type: types.JSON()},
 	}

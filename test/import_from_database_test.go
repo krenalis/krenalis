@@ -28,8 +28,8 @@ func TestImportFromDatabase(t *testing.T) {
 	importUsers := c.AddAction(pgSQL, "Users", chichitester.ActionToSet{
 		Name: "Import users",
 		InSchema: types.Object([]types.Property{
-			{Name: "id", Type: types.Int(32)},
-			{Name: "email", Type: types.Text()},
+			{Name: "id", Type: types.Int(32), Required: true},
+			{Name: "email", Type: types.Text(), Required: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
