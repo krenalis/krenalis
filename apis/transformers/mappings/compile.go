@@ -40,7 +40,7 @@ type Expression struct {
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (expr *Expression) Properties() []string {
-	return expr.properties
+	return slices.Clone(expr.properties)
 }
 
 // Compile parses an expression and returns an Expression value that can be used
