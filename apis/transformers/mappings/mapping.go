@@ -99,10 +99,22 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (mapping *Mapping) InProperties() []string {
-	var properties []string
+	p := map[string]struct{}{}
 	for _, expr := range mapping.expressions {
-		properties = appendProperties(properties, expr.expr.parts)
+		for _, name := range expr.expr.properties {
+			p[name] = struct{}{}
+		}
 	}
+	if len(p) == 0 {
+		return nil
+	}
+	properties := make([]string, len(p))
+	i := 0
+	for name := range p {
+		properties[i] = name
+		i++
+	}
+	slices.Sort(properties)
 	return properties
 }
 
