@@ -77,9 +77,9 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 // dispatching events to apps, the returned slice may be empty. In all other
 // cases, it is never empty.
 //
-// For mappings, it returns the properties found in the expression, sorted by
-// their appearance order in the expressions. The returned properties are
-// guaranteed to be unique. If no property are present, it returns nil.
+// For mappings, it returns the properties found in the expression, sorted
+// alphabetically. The returned properties are guaranteed to be unique. If no
+// property are present, it returns nil.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a

@@ -91,9 +91,8 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 }
 
 // InProperties returns the input properties, i.e., the properties found in the
-// expressions, sorted by their appearance order in the expressions. The
-// returned properties are guaranteed to be unique. If no property are present,
-// it returns nil.
+// expressions, sorted alphabetically. The returned properties are guaranteed to
+// be unique. If no property are present, it returns nil.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
@@ -120,7 +119,7 @@ func (mapping *Mapping) InProperties() []string {
 
 // OutProperties returns the output properties sorted by path.
 func (mapping *Mapping) OutProperties() []string {
-	properties := make([]string, len(mapping.expressions))
+	properties := make([]string, 0, len(mapping.expressions))
 	for _, expr := range mapping.expressions {
 		properties = append(properties, expr.path)
 	}
