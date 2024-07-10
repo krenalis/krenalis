@@ -231,6 +231,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chic
 			{Name: "lastName", Type: types.Text(), Required: true},
 			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Required: true},
 			{Name: "favourite_movie", Type: types.Text(), Required: false},
+			{Name: "additionalProperties", Type: types.Map(types.Text()), Role: types.DestinationRole},
 		}), nil
 	}
 	switch eventType {
