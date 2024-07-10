@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/open2b/chichi/apis/connectors"
+	"github.com/open2b/chichi/apis/datastore"
 	"github.com/open2b/chichi/apis/errors"
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
@@ -146,7 +147,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	if n := utf8.RuneCountInString(action.Name); n > 60 {
 		return errors.BadRequest("name is longer than 60 runes")
 	}
-	// Validate the schemas.
+	// Check that, if the schemas are valid, they have type Object.
 	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("input schema, if provided, must be an object")
 	}
@@ -359,33 +360,18 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		v.connection.connector.typ == state.ServerType ||
 		v.connection.connector.typ == state.WebsiteType
 
-	// Check that schemas that refer to users cannot contain "nullable",
-	// "required" or meta properties.
-	if target == state.Users {
-		if v.connection.role == state.Source && outSchema.Valid() {
-			for path, p := range types.Walk(outSchema) {
-				if isMetaProperty(path) {
-					return errors.BadRequest("output schema cannot contain meta properties")
-				}
-				if p.Nullable {
-					return errors.BadRequest("property %q in output schema cannot be nullable", path)
-				}
-				if p.Required {
-					return errors.BadRequest("property %q in output schema cannot be required", path)
-				}
-			}
-		} else if v.connection.role == state.Destination && inSchema.Valid() {
-			for path, p := range types.Walk(inSchema) {
-				if isMetaProperty(path) {
-					return errors.BadRequest("input schema cannot contain meta properties")
-				}
-				if p.Nullable {
-					return errors.BadRequest("property %q in input schema cannot be nullable", path)
-				}
-				if p.Required {
-					return errors.BadRequest("property %q in input schema cannot be required", path)
-				}
-			}
+	importingUsers := v.connection.role == state.Source && target == state.Users
+	exportingUsers := v.connection.role == state.Destination && target == state.Users
+
+	// Do some validations on the input and the output schemas.
+	if inSchema.Valid() {
+		if err := validateActionSchema(inSchema, exportingUsers); err != nil {
+			return errors.BadRequest("input schema is not valid: %s", err)
+		}
+	}
+	if outSchema.Valid() {
+		if err := validateActionSchema(outSchema, importingUsers); err != nil {
+			return errors.BadRequest("output schema is not valid: %s", err)
 		}
 	}
 
@@ -719,6 +705,46 @@ func unusedProperties(schema types.Type, used []string) []string {
 	}
 	slices.Sort(unused)
 	return unused
+}
+
+// validateActionSchema validates the given action schema.
+// isUserSchema indicates if schema is the user schema within an action, and
+// therefore should be validated against the constraints imposed on the user
+// schema.
+// In case the schema is not valid, this function returns a generic 'error'
+// value, which can then be wrapped within errors.BadRequest by the caller.
+func validateActionSchema(schema types.Type, isUserSchema bool) error {
+	for path, p := range types.Walk(schema) {
+		if p.Placeholder != "" {
+			return fmt.Errorf("property %q cannot specify a placeholder", path)
+		}
+		if p.Role != types.BothRole {
+			return fmt.Errorf("property %q cannot specify a role", path)
+		}
+		if isUserSchema {
+			if isMetaProperty(path) {
+				return fmt.Errorf("schema cannot contain meta properties")
+			}
+			if p.Required {
+				return fmt.Errorf("property %q cannot be required", path)
+			}
+			if p.Nullable {
+				return fmt.Errorf("property %q cannot be nullable", path)
+			}
+			if k := p.Type.Kind(); k == types.ArrayKind || k == types.MapKind {
+				elemK := p.Type.Elem().Kind()
+				if elemK == types.ArrayKind || elemK == types.ObjectKind || elemK == types.MapKind {
+					return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), elemK)
+				}
+			}
+		}
+	}
+	if isUserSchema {
+		if err := datastore.CheckConflictingProperties(schema); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // validateLastChangeTimeFormat validates the given last change time format for

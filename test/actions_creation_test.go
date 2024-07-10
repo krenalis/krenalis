@@ -114,7 +114,7 @@ func TestActionsCreation(t *testing.T) {
 					"HasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema cannot contain meta properties"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output schema is not valid: schema cannot contain meta properties"}}`,
 		},
 		{
 			conn: dstFsID,

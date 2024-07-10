@@ -1181,7 +1181,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
-			err:                     "property \"x.email\" in output schema cannot be nullable",
+			err:                     "output schema is not valid: property \"x.email\" cannot be nullable",
 		},
 		{
 			name: "BAD: Source/App/Users - output schema contains a required property",
@@ -1202,7 +1202,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
-			err:                     "property \"email_out\" in output schema cannot be required",
+			err:                     "output schema is not valid: property \"email_out\" cannot be required",
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema contains a nullable property",
@@ -1229,7 +1229,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.AppType,
-			err:                     "property \"email_in\" in input schema cannot be nullable",
+			err:                     "input schema is not valid: property \"email_in\" cannot be nullable",
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema contains a required property",
@@ -1256,7 +1256,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.AppType,
-			err:                     "property \"email_in\" in input schema cannot be required",
+			err:                     "input schema is not valid: property \"email_in\" cannot be required",
 		},
 		{
 			name: "BAD: Source/App/Events - bad target for connection",
@@ -1350,7 +1350,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
-			err:                     "output schema cannot contain meta properties",
+			err:                     "output schema is not valid: schema cannot contain meta properties",
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema cannot contain meta properties",
@@ -1378,7 +1378,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.AppType,
-			err:                     "input schema cannot contain meta properties",
+			err:                     "input schema is not valid: schema cannot contain meta properties",
 		},
 		{
 			name: "BAD: Destination/App/Events - input schema must be invalid",
@@ -1744,6 +1744,122 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
 			err:                     "target Groups is not supported by this installation of Chichi",
+		},
+		{
+			name: "BAD: Source/App/Users - input schema cannot contain a property with a placeholder",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), Placeholder: "Your Email"},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "input schema is not valid: property \"email_in\" cannot specify a placeholder",
+		},
+		{
+			name: "BAD: Source/App/Users - output schema cannot contain a property with a placeholder",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), Placeholder: "Your Email"},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "output schema is not valid: property \"email_out\" cannot specify a placeholder",
+		},
+		{
+			name: "BAD: Source/App/Users - output schema - which refers to users - cannot contain conflicting properties",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "email", Type: types.Object([]types.Property{
+						{Name: "out", Type: types.Text()},
+					})},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+						"email.out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "output schema is not valid: two or more properties cannot have the same representation as column \"email_out\"",
+		},
+		{
+			name: "BAD: Source/App/Users - schema properties cannot specify a role",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), Role: types.DestinationRole},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "input schema is not valid: property \"email_in\" cannot specify a role",
+		},
+		{
+			name: "BAD: Source/App/Users - output schema - which refers to users - cannot have a property with type Array(Object)",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "many_values_in", Type: types.Array(types.Object([]types.Property{
+						{Name: "a", Type: types.Text()},
+					}))},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "many_values_out", Type: types.Array(types.Object([]types.Property{
+						{Name: "a", Type: types.Text()},
+					}))},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out":       "email_in",
+						"many_values_out": "many_values_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.AppType,
+			err:                     "output schema is not valid: property with type Array cannot have element with type Object",
 		},
 	}
 
