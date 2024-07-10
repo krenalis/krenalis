@@ -86,7 +86,7 @@ func Test_UserIdentities(t *testing.T) {
 	c.WaitActionsToFinish(fs1)
 	c.WaitActionsToFinish(fs2)
 
-	users, _, count := c.Users([]string{"email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 
 	const expectedCount = 4
 	if expectedCount != count {

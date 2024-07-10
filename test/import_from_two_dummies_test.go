@@ -83,7 +83,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Since the users have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 users, even if they have the same properties.
-	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "__id__", 0, 100)
+	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedCount := 20
 	if expectedCount != count {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
@@ -108,7 +108,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	c.RunIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
-	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "__id__", 0, 100)
+	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedCount = 10
 	if expectedCount != count {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)

@@ -81,7 +81,7 @@ func TestImportUsersFromFile(t *testing.T) {
 		expectedCount    = 2
 		expectedUsersLen = 2
 	)
-	users, _, count := c.Users([]string{"email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 	usersLen := len(users)
 	if usersLen != expectedUsersLen {
 		t.Fatalf("expecting %d users, got %d", expectedUsersLen, usersLen)

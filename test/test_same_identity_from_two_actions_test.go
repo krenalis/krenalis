@@ -64,7 +64,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	c.WaitActionsToFinish(dummy)
 
 	// Check that there are 10 users.
-	users, _, count := c.Users([]string{"first_name", "last_name"}, "first_name", 0, 100)
+	users, _, count := c.Users([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d", count)
 	}

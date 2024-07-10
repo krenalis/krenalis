@@ -101,7 +101,7 @@ const useUsers = () => {
 		const cursor = page * lim - lim;
 		let res: FindUsersResponse;
 		try {
-			res = await api.workspaces.users.find(propertiesNames, null, cursor, lim);
+			res = await api.workspaces.users.find(propertiesNames, null, '', true, cursor, lim);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);

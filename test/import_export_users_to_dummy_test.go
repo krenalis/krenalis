@@ -107,7 +107,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		})
 		c.ExecuteAction(dummySrc, importUsersID, true)
 		c.WaitActionsToFinish(dummySrc)
-		users, _, _ := c.Users([]string{"email", "first_name", "last_name"}, "", 0, 100)
+		users, _, _ := c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(users) == 0 {
 			t.Fatal("no users re-imported from Dummy")
 		}

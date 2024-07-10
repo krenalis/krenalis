@@ -64,7 +64,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 10 users.
-	_, _, count := c.Users([]string{"email"}, "", 0, 1000)
+	_, _, count := c.Users([]string{"email"}, "", false, 0, 1000)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d", count)
 	}
@@ -119,7 +119,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 13 users (10 from Dummy + 3 from CSV).
-	_, _, count = c.Users([]string{"email"}, "", 0, 1000)
+	_, _, count = c.Users([]string{"email"}, "", false, 0, 1000)
 	if count != 13 {
 		t.Fatalf("expected 13 users, got %d", count)
 	}
@@ -170,7 +170,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 14 users (10 from Dummy + 3 from CSV + 1 from event).
-	_, _, count = c.Users([]string{"email"}, "", 0, 1000)
+	_, _, count = c.Users([]string{"email"}, "", false, 0, 1000)
 	if count != 14 {
 		t.Fatalf("expected 14 users, got %d", count)
 	}
@@ -180,7 +180,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	c.RunIdentityResolution()
 
 	// Ensure that there are 10 users.
-	users, _, count := c.Users([]string{"email"}, "", 0, 1000)
+	users, _, count := c.Users([]string{"email"}, "", false, 0, 1000)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d", count)
 	}

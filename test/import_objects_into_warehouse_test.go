@@ -60,7 +60,7 @@ def transform(user: dict) -> dict:
 
 	// Check if the users have been imported - and then returned - correctly.
 
-	users, _, count := c.Users([]string{"email", "ios"}, "email", 0, 1)
+	users, _, count := c.Users([]string{"email", "ios"}, "email", false, 0, 1)
 
 	// Validate the users count.
 	const expectedTotalCount = 10

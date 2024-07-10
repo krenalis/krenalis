@@ -51,7 +51,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 	// Test that the "favorite_movie.title" property, which has been imported
 	// from a not required property in Dummy, has been imported just for some
 	// users.
-	users, _, count := c.Users([]string{"email", "favorite_movie"}, "email", 0, 100)
+	users, _, count := c.Users([]string{"email", "favorite_movie"}, "email", false, 0, 100)
 	if count != 10 {
 		t.Fatalf("expected 10 users, got %d instead", count)
 	}

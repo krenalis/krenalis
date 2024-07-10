@@ -66,7 +66,7 @@ def transform(user: dict) -> dict:
 
 	// Retrieve the users.
 	const expectedTotalCount = 10
-	users, _, count := c.Users([]string{"email", "first_name", "gender"}, "email", 0, expectedTotalCount)
+	users, _, count := c.Users([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotalCount)
 
 	// Validate the users count.
 	if count != expectedTotalCount {

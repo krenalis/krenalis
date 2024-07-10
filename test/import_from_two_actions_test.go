@@ -108,7 +108,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedCount = 2
-	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "email", 0, 2)
+	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
@@ -125,7 +125,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	c.WaitActionsToFinish(fsID)
 
 	// Check the users.
-	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", 0, 2)
+	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if count != expectedCount {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}

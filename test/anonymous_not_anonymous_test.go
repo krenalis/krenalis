@@ -178,7 +178,7 @@ waitLoop:
 	c.RunIdentityResolution()
 
 	// Check that there is actually only one user in the workspace.
-	_, _, count = c.Users([]string{"email"}, "", 0, 100)
+	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 1 {
 		t.Fatalf("expecting only one user in the workspace, got %d instead", count)
 	}

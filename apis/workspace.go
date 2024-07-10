@@ -1378,7 +1378,8 @@ func (this *Workspace) User(id uuid.UUID) (*User, error) {
 // be empty and cannot contain meta properties.
 //
 // order is the property by which to sort the returned users and cannot have
-// type JSON, Array, Object, or Map; it defaults to the "__id__" property.
+// type JSON, Array, Object, or Map; when not provided, the users are ordered by
+// their last change time.
 //
 // orderDesc control whether the returned users should be ordered in descending
 // order instead of ascending, which is the default.
@@ -1454,6 +1455,9 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		if !types.IsValidPropertyName(order) {
 			return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
 		}
+		if isMetaProperty(order) {
+			return nil, types.Type{}, 0, errors.BadRequest("order %q cannot be a meta property", order)
+		}
 		orderProperty, ok := propertyByName[order]
 		if !ok {
 			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
@@ -1464,7 +1468,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		order = "__id__"
+		order = "__last_change_time__"
 	}
 	if first < 0 || first > maxInt32 {
 		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)

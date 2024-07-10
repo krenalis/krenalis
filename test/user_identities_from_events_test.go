@@ -64,7 +64,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 
 	// Retrieve the user imported from the event.
-	users, _, count := c.Users([]string{"email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 	if 1 != count {
 		t.Fatalf("expecting one user, got %d", count)
 	}
@@ -106,7 +106,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
 
 	// Check that the user has been created.
-	users, _, count = c.Users([]string{"email"}, "", 0, 100)
+	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 2 {
 		t.Fatalf("expecting 2 users, got %d", count)
 	}
@@ -145,7 +145,7 @@ def transform(event: dict) -> dict:
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
 
 	// Check that the user has been created.
-	users, _, count = c.Users([]string{"email"}, "", 0, 100)
+	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 3 {
 		t.Fatalf("expecting 2 users, got %d", count)
 	}

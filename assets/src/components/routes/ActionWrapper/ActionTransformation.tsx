@@ -958,7 +958,7 @@ const FullscreenTransformation = ({
 					}
 					let res: FindUsersResponse;
 					try {
-						res = await api.workspaces.users.find(properties, null, 0, 20);
+						res = await api.workspaces.users.find(properties, null, '', true, 0, 20);
 					} catch (err) {
 						handleError(err);
 						return;

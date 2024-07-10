@@ -452,10 +452,19 @@ class Users {
 		this.apiURL = url;
 	}
 
-	find = async (properties: string[], filter: Filter, first: number, limit: number): Promise<FindUsersResponse> => {
+	find = async (
+		properties: string[],
+		filter: Filter,
+		order: string,
+		orderDesc: boolean,
+		first: number,
+		limit: number,
+	): Promise<FindUsersResponse> => {
 		return await call(`${this.apiURL}/users`, http.POST, {
 			properties: properties,
 			filter: filter,
+			order: order,
+			orderDesc: orderDesc,
 			first: first,
 			limit: limit,
 		});

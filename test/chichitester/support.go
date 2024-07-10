@@ -427,10 +427,11 @@ func (c *Chichi) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 	return response.Identities, response.Count
 }
 
-func (c *Chichi) Users(properties []string, order string, first, limit int) (users []User, schema types.Type, count int) {
+func (c *Chichi) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, count int) {
 	req := map[string]any{
 		"Properties": properties,
 		"Order":      order,
+		"OrderDesc":  orderDesc,
 		"First":      first,
 		"Limit":      limit,
 	}

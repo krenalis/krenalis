@@ -127,7 +127,7 @@ func TestEvents(t *testing.T) {
 	c.RunIdentityResolution()
 
 	// Retrieve the user imported from the event.
-	users, _, count := c.Users([]string{"email"}, "", 0, 100)
+	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedUsersCount != count {
 		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)

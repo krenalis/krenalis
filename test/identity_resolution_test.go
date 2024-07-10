@@ -118,7 +118,7 @@ func TestIdentityResolution(t *testing.T) {
 	expectUsers := func(expectedUsers []map[string]any) {
 
 		// Retrieve the users from the APIs.
-		users, _, _ := c.Users([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", 0, 1000)
+		users, _, _ := c.Users([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
 
 		// Check if the users are equal to the expected or not.
 		if len(expectedUsers) != len(users) {
