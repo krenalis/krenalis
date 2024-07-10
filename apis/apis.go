@@ -581,19 +581,9 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 	switch {
 	case transformation.Mapping != nil:
-		for path, expr := range transformation.Mapping {
-			if !types.IsValidPropertyPath(path) {
-				return nil, errors.BadRequest("output mapped property %q is not valid", path)
-			}
-			p, err := types.PropertyByPath(outSchema, path)
-			if err != nil {
-				err := err.(types.PathNotExistError)
-				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
-			}
-			_, err = mappings.Compile(expr, inSchema, p.Type, p.Required, p.Nullable, nil)
-			if err != nil {
-				return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
-			}
+		_, err := mappings.New(transformation.Mapping, inSchema, outSchema, nil)
+		if err != nil {
+			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
 	case transformation.Function != nil:
 		function := transformation.Function
