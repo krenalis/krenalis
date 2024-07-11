@@ -13,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.55.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.56.1
 	github.com/aws/smithy-go v1.20.2
-	github.com/evanw/esbuild v0.21.1
+	github.com/evanw/esbuild v0.23.0
 	github.com/fraugster/parquet-go v0.12.0
 	github.com/go-json-experiment/json v0.0.0-20240418180308-af2d5061e6c2
 	github.com/go-sql-driver/mysql v1.8.1
