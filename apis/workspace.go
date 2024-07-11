@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"slices"
 	"sort"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
-	"golang.org/x/exp/maps"
 )
 
 const (

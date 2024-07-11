@@ -10,14 +10,13 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"testing"
 
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
-
-	"golang.org/x/exp/maps"
 )
 
 func TestChangeUserSchema(t *testing.T) {

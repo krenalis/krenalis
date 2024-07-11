@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
-	"golang.org/x/exp/maps"
 )
 
 // election represents a leader election.
@@ -181,8 +180,13 @@ func (state *State) ConnectionByKey(key string) (*Connection, bool) {
 
 // Connections returns all connections.
 func (state *State) Connections() []*Connection {
+	i := 0
 	state.mu.Lock()
-	connections := maps.Values(state.connections)
+	connections := make([]*Connection, len(state.connections))
+	for _, c := range state.connections {
+		connections[i] = c
+		i++
+	}
 	state.mu.Unlock()
 	return connections
 }
@@ -269,8 +273,13 @@ func (state *State) Workspace(id int) (*Workspace, bool) {
 
 // Workspaces returns all the workspaces.
 func (state *State) Workspaces() []*Workspace {
+	i := 0
 	state.mu.Lock()
-	workspaces := maps.Values(state.workspaces)
+	workspaces := make([]*Workspace, len(state.workspaces))
+	for _, ws := range state.workspaces {
+		workspaces[i] = ws
+		i++
+	}
 	state.mu.Unlock()
 	return workspaces
 }

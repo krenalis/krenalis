@@ -16,6 +16,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"html"
+	"maps"
 	"math"
 	"math/big"
 	"net/smtp"
@@ -33,7 +34,6 @@ import (
 
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/exp/maps"
 )
 
 var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`)

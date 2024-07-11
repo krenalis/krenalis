@@ -8,6 +8,7 @@
 package datastore
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"slices"
@@ -18,8 +19,6 @@ import (
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
-
-	"golang.org/x/exp/maps"
 )
 
 // Identity is an identity
@@ -430,10 +429,13 @@ func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses
 	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
 	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32)}
-	columnsNames := maps.Keys(iwColumns)
-	slices.Sort(columnsNames)
-	for i, name := range columnsNames {
-		columns[i+7] = iwColumns[name]
+	i := 7
+	for name := range iwColumns {
+		columns[i] = iwColumns[name]
+		i++
 	}
+	slices.SortFunc(columns[7:], func(a, b warehouses.Column) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
 	return columns
 }

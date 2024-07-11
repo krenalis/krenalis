@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"reflect"
 	"regexp"
@@ -23,7 +24,6 @@ import (
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
-	"golang.org/x/exp/maps"
 )
 
 func Test_Unmarshal(t *testing.T) {
@@ -580,7 +580,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			delete(unexpected, p.Name)
 		}
 		if len(unexpected) > 0 {
-			keys := maps.Keys(unexpected)
+			keys := slices.Collect(maps.Keys(unexpected))
 			slices.Sort(keys)
 			return fmt.Errorf("unexpected property %q", keys[0])
 		}
@@ -591,7 +591,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
-		names := maps.Keys(m2)
+		names := slices.Collect(maps.Keys(m2))
 		slices.Sort(names)
 		if len(m1) != len(m2) {
 			for _, name := range names {

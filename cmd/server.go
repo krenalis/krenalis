@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,8 +25,6 @@ import (
 	"github.com/meergo/meergo/apis"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/telemetry"
-
-	"golang.org/x/exp/maps"
 )
 
 type Settings struct {

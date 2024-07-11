@@ -24,8 +24,6 @@ import (
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/apis/transformers/mappings"
 	"github.com/meergo/meergo/types"
-
-	"golang.org/x/exp/maps"
 )
 
 // validationState is a state for the validation of an action.
@@ -192,7 +190,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		mappingInProperties = len(inProps)
 		usedInPaths = append(usedInPaths, inProps...)
 		// Output property paths.
-		usedOutPaths = maps.Keys(mapping)
+		usedOutPaths = transformer.OutProperties()
 	}
 	// Validate the transformation.
 	if function := action.Transformation.Function; function != nil {

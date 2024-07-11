@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,8 +27,6 @@ import (
 	"github.com/meergo/meergo/apis/transformers/mappings"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
-
-	"golang.org/x/exp/maps"
 )
 
 // Action represents an action of a connection.
