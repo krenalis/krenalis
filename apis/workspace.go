@@ -1410,17 +1410,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 	}
 
-	userSchema := ws.UserSchema
-
-	// Add the "__id__" and "__last_change_time__" meta properties to the user
-	// schema.
-	userSchema = types.Object(append([]types.Property{
-		{Name: "__id__", Type: types.UUID()},
-		{Name: "__last_change_time__", Type: types.DateTime()},
-	}, types.Properties(userSchema)...))
-
 	propertyByName := map[string]types.Property{}
-	for _, p := range userSchema.Properties() {
+	for _, p := range ws.UserSchema.Properties() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {
@@ -1436,7 +1427,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	var where *datastore.Where
 	if filter != nil {
-		_, err := validateFilter(filter, userSchema)
+		_, err := validateFilter(filter, ws.UserSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
@@ -1504,9 +1495,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Create the schema to return, with only the requested properties.
-	requestedProperties := make([]types.Property, len(properties))
+	requestedProperties := make([]types.Property, len(properties)+2)
+	requestedProperties[0] = types.Property{Name: "__id__", Type: types.UUID()}
+	requestedProperties[1] = types.Property{Name: "__last_change_time__", Type: types.DateTime()}
 	for i, name := range properties {
-		requestedProperties[i] = propertyByName[name]
+		requestedProperties[i+2] = propertyByName[name]
 	}
 	schema := types.Object(requestedProperties)
 
