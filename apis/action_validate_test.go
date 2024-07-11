@@ -246,6 +246,42 @@ func Test_validateAction(t *testing.T) {
 			provider:                testProvider{},
 		},
 		{
+			name: "GOOD: Destination/App/Users - with mapping and filters",
+			action: ActionToSet{
+				Name: "Export users",
+				Filter: &Filter{
+					Logical: "all",
+					Conditions: []FilterCondition{
+						{
+							Property: "email_in",
+							Operator: "is not",
+							Value:    "a@b",
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
+				MatchingProperties: &MatchingProperties{
+					Internal: "email_in",
+					External: types.Property{Name: "email", Type: types.Text()},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+		},
+		{
 			name: "GOOD: Destination/App/Events - with a mapping",
 			action: ActionToSet{
 				Name:     "Dispatch events to app",
@@ -1860,6 +1896,81 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
 			err:                     "output schema is not valid: property with type Array cannot have element with type Object",
+		},
+		{
+			name: "BAD: Destination/App/Users - filter refers to a property not in input schema",
+			action: ActionToSet{
+				Name: "Export users",
+				Filter: &Filter{
+					Logical: "all",
+					Conditions: []FilterCondition{
+						{
+							Property: "__id__",
+							Operator: "is not",
+							Value:    "a@b",
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
+				MatchingProperties: &MatchingProperties{
+					Internal: "email_in",
+					External: types.Property{Name: "email", Type: types.Text()},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			err:                     "filter is not valid: property path \"__id__\" does not exist",
+		},
+		{
+			name: "BAD: Destination/App/Users - filter refers to a meta property in input schema",
+			action: ActionToSet{
+				Name: "Export users",
+				Filter: &Filter{
+					Logical: "all",
+					Conditions: []FilterCondition{
+						{
+							Property: "__id__",
+							Operator: "is not",
+							Value:    "a@b",
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "__id__", Type: types.Text()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
+				MatchingProperties: &MatchingProperties{
+					Internal: "email_in",
+					External: types.Property{Name: "email", Type: types.Text()},
+				},
+				ExportOnDuplicatedUsers: &[]bool{false}[0],
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.AppType,
+			err:                     "input schema is not valid: schema cannot contain meta properties",
 		},
 	}
 
