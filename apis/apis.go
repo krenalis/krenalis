@@ -579,12 +579,23 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	if transformation.Mapping != nil && transformation.Function != nil {
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
+
+	action := &state.Action{
+		InSchema:  inSchema,
+		OutSchema: outSchema,
+		Transformation: state.Transformation{
+			Mapping: transformation.Mapping,
+		},
+	}
+
 	switch {
 	case transformation.Mapping != nil:
-		_, err := mappings.New(transformation.Mapping, inSchema, outSchema, nil)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, nil)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
+		action.Transformation.InProperties = mapping.InProperties()
+		action.Transformation.OutProperties = mapping.OutProperties()
 	case transformation.Function != nil:
 		function := transformation.Function
 		if function.Source == "" {
@@ -605,20 +616,14 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		default:
 			return nil, errors.BadRequest("transformation language %q is not valid", function.Language)
 		}
+		action.Transformation.InProperties = types.PropertyNames(action.InSchema)
+		action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
 	value, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
-	}
-
-	action := &state.Action{
-		InSchema:  inSchema,
-		OutSchema: outSchema,
-		Transformation: state.Transformation{
-			Mapping: transformation.Mapping,
-		},
 	}
 
 	// Create a temporary function transformer provider.
@@ -637,8 +642,6 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			name += ".py"
 			function.Language = state.Python
 		}
-		function.InProperties = types.PropertyNames(inSchema)
-		function.OutProperties = types.PropertyNames(outSchema)
 		action.Transformation.Function = function
 		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)
 	}

@@ -21,12 +21,14 @@ import (
 
 // Transformer represents a transformer.
 type Transformer struct {
-	action    int
-	provider  Provider
-	inSchema  types.Type
-	outSchema types.Type
-	mapping   *mappings.Mapping
-	function  *state.TransformationFunction
+	action        int
+	provider      Provider
+	inSchema      types.Type
+	outSchema     types.Type
+	mapping       *mappings.Mapping
+	function      *state.TransformationFunction
+	inProperties  []string
+	outProperties []string
 }
 
 // New returns a new transformer that transforms values for the provided action.
@@ -43,9 +45,11 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 
 	if m := action.Transformation.Mapping; m != nil {
 		t := Transformer{
-			action:    action.ID,
-			inSchema:  action.InSchema,
-			outSchema: action.OutSchema,
+			action:        action.ID,
+			inSchema:      action.InSchema,
+			outSchema:     action.OutSchema,
+			inProperties:  action.Transformation.InProperties,
+			outProperties: action.Transformation.OutProperties,
 		}
 		var err error
 		t.mapping, err = mappings.New(m, t.inSchema, t.outSchema, layouts)
@@ -57,13 +61,15 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 
 	if f := action.Transformation.Function; f != nil {
 		t := Transformer{
-			action:    action.ID,
-			provider:  provider,
-			outSchema: schemaSubset(action.OutSchema, f.OutProperties),
-			function:  f,
+			action:        action.ID,
+			provider:      provider,
+			outSchema:     schemaSubset(action.OutSchema, action.Transformation.OutProperties),
+			function:      f,
+			inProperties:  action.Transformation.InProperties,
+			outProperties: action.Transformation.OutProperties,
 		}
-		if len(f.InProperties) > 0 {
-			t.inSchema = schemaSubset(action.InSchema, f.InProperties)
+		if len(t.inProperties) > 0 {
+			t.inSchema = schemaSubset(action.InSchema, t.inProperties)
 		}
 		return &t, nil
 	}
@@ -79,25 +85,19 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 //
 // For mappings, it returns the properties found in the expression, sorted
 // alphabetically. The returned properties are guaranteed to be unique. If no
-// property are present, it returns nil.
+// property are present, it returns an empty slice.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (t *Transformer) InProperties() []string {
-	if t.mapping != nil {
-		return t.mapping.InProperties()
-	}
-	return slices.Clone(t.function.InProperties)
+	return slices.Clone(t.inProperties)
 }
 
 // OutProperties returns the output properties of the transformer.
 // The properties are sorted by their path, and there is at least one property.
 func (t *Transformer) OutProperties() []string {
-	if t.mapping != nil {
-		return t.mapping.OutProperties()
-	}
-	return slices.Clone(t.function.OutProperties)
+	return slices.Clone(t.outProperties)
 }
 
 // Transform transforms the provided values and returns the results. The value

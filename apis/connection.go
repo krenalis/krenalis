@@ -507,6 +507,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
+	if m := action.Transformation.Mapping; m != nil {
+		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, nil)
+		n.Transformation.InProperties = m.InProperties()
+		n.Transformation.OutProperties = m.OutProperties()
+	}
 
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -634,8 +639,8 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-			string(filter), mapping, function.Source, function.Language, function.Version, function.InProperties,
-			function.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
+			string(filter), mapping, function.Source, function.Language, function.Version, n.Transformation.InProperties,
+			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
 			n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
 			n.ExportOnDuplicatedUsers)
@@ -1433,19 +1438,23 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			return nil, errors.BadRequest("out schema is not an Object")
 		}
 
-		// Use the schema without GID since events sent to the apps do not have
-		// the GID, as they are sent as they are after enrichment; the GID is
-		// added by the identity resolution directly to the data warehouse,
-		// without affecting the events sent to the apps.
-		inSchema := events.Schema
+		action := &state.Action{
+			InSchema:  events.Schema,
+			OutSchema: outSchema,
+			Transformation: state.Transformation{
+				Mapping: transformation.Mapping,
+			},
+		}
 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			_, err := mappings.New(transformation.Mapping, inSchema, outSchema, nil)
+			mapping, err := mappings.New(transformation.Mapping, events.Schema, outSchema, nil)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}
+			action.Transformation.InProperties = mapping.InProperties()
+			action.Transformation.OutProperties = mapping.OutProperties()
 		case transformation.Function != nil:
 			if transformation.Function.Source == "" {
 				return nil, errors.BadRequest("transformation source is empty")
@@ -1465,16 +1474,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			default:
 				return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
 			}
+			action.Transformation.InProperties = types.PropertyNames(action.InSchema)
+			action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 		default:
 			return nil, errors.BadRequest("mapping (or transformation) is required")
-		}
-
-		action := &state.Action{
-			InSchema:  inSchema,
-			OutSchema: outSchema,
-			Transformation: state.Transformation{
-				Mapping: transformation.Mapping,
-			},
 		}
 
 		// Create a temporary function transformer provider.
@@ -1494,8 +1497,6 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				name += ".py"
 				function.Language = state.Python
 			}
-			function.InProperties = types.PropertyNames(inSchema)
-			function.OutProperties = types.PropertyNames(outSchema)
 			action.Transformation.Function = function
 			provider = newTempTransformerProvider(name, transformation.Function.Source, this.apis.transformerProvider)
 		}

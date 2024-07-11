@@ -1140,17 +1140,17 @@ func (lang Language) String() string {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Mapping  map[string]string
-	Function *TransformationFunction
+	Mapping       map[string]string
+	Function      *TransformationFunction
+	InProperties  []string
+	OutProperties []string
 }
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source        string
-	Language      Language
-	Version       string
-	InProperties  []string
-	OutProperties []string
+	Source   string
+	Language Language
+	Version  string
 }
 
 // ExportMode represents one of the three export modes.

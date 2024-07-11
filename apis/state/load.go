@@ -342,8 +342,8 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
-						&filter, &mapping, &function.Source, &function.Language, &function.Version, &function.InProperties,
-						&function.OutProperties, &action.Query, &connector, &action.Path, &action.Sheet, &action.Compression,
+						&filter, &mapping, &function.Source, &function.Language, &function.Version, &action.Transformation.InProperties,
+						&action.Transformation.OutProperties, &action.Query, &connector, &action.Path, &action.Sheet, &action.Compression,
 						&action.Settings, &action.TableName, &action.TableKeyProperty, &action.IdentityProperty, &action.LastChangeTimeProperty,
 						&action.LastChangeTimeFormat, &action.UserCursor, &action.Health, &action.FileOrderingPropertyPath,
 						&action.ExportMode, &matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)

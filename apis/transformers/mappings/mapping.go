@@ -92,7 +92,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 
 // InProperties returns the input properties, i.e., the properties found in the
 // expressions, sorted alphabetically. The returned properties are guaranteed to
-// be unique. If no property are present, it returns nil.
+// be unique. If no property are present, it returns an empty slice.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
@@ -105,7 +105,7 @@ func (mapping *Mapping) InProperties() []string {
 		}
 	}
 	if len(p) == 0 {
-		return nil
+		return []string{}
 	}
 	properties := make([]string, len(p))
 	i := 0

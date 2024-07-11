@@ -47,7 +47,7 @@ func TestInOutProperties(t *testing.T) {
 				"foo": "'a'",
 				"boo": "5",
 			},
-			inProperties:  nil,
+			inProperties:  []string{},
 			outProperties: []string{"boo", "foo"},
 		},
 		{
@@ -82,11 +82,11 @@ func TestInOutProperties(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			got := mapping.InProperties()
-			if (got == nil) != (test.inProperties == nil) || !slices.Equal(test.inProperties, got) {
+			if got == nil || !slices.Equal(test.inProperties, got) {
 				t.Fatalf("expecting input properties %#v, got %#v", test.inProperties, got)
 			}
 			got = mapping.OutProperties()
-			if (got == nil) != (test.outProperties == nil) || !slices.Equal(test.outProperties, got) {
+			if got == nil || !slices.Equal(test.outProperties, got) {
 				t.Fatalf("expecting output properties %#v, got %#v", test.outProperties, got)
 			}
 		})

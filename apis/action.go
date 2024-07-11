@@ -23,6 +23,7 @@ import (
 	"github.com/open2b/chichi/apis/events"
 	"github.com/open2b/chichi/apis/state"
 	"github.com/open2b/chichi/apis/transformers"
+	"github.com/open2b/chichi/apis/transformers/mappings"
 	"github.com/open2b/chichi/telemetry"
 	"github.com/open2b/chichi/types"
 
@@ -133,8 +134,8 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.Transformation.Function = &TransformationFunction{
 			Source:        function.Source,
 			Language:      Language(function.Language.String()),
-			InProperties:  slices.Clone(function.InProperties),
-			OutProperties: slices.Clone(function.OutProperties),
+			InProperties:  slices.Clone(action.Transformation.InProperties),
+			OutProperties: slices.Clone(action.Transformation.OutProperties),
 		}
 	}
 	if action.Query != "" {
@@ -416,6 +417,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
+	if m := action.Transformation.Mapping; m != nil {
+		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, nil)
+		n.Transformation.InProperties = m.InProperties()
+		n.Transformation.OutProperties = m.OutProperties()
+	}
 
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -554,8 +560,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"export_mode = $25, matching_properties_internal = $26, matching_properties_external = $27,"+
 			"export_on_duplicated_users = $28\nWHERE id = $29",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
-			function.Source, function.Language, function.Version, function.InProperties,
-			function.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression,
+			function.Source, function.Language, function.Version, n.Transformation.InProperties,
+			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression,
 			string(n.Settings), n.TableName, n.TableKeyProperty, n.IdentityProperty, n.ResetUserCursor,
 			n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath,
 			n.ExportMode, string(matchPropInternal), string(matchPropExternal),
@@ -987,12 +993,12 @@ func shouldResetCursor(a *state.Action, n *state.SetAction) bool {
 		if f1.Language != f2.Language {
 			return true
 		}
-		if !slices.Equal(f1.InProperties, f2.InProperties) {
-			return true
-		}
-		if !slices.Equal(f1.OutProperties, f2.OutProperties) {
-			return true
-		}
+	}
+	if !slices.Equal(t1.InProperties, t2.InProperties) {
+		return true
+	}
+	if !slices.Equal(t1.OutProperties, t2.OutProperties) {
+		return true
 	}
 	// Check the schemas.
 	if !types.Equal(a.InSchema, n.InSchema) {
@@ -1005,7 +1011,8 @@ func shouldResetCursor(a *state.Action, n *state.SetAction) bool {
 }
 
 // toStateTransformation converts a transformation to a state.Transformation
-// value. It does not perform a deep copy and may modify the passed
+// value. It does not populate the input and output properties in case of
+// mapping. It does not perform a deep copy and may modify the passed
 // transformation.
 func toStateTransformation(transformation Transformation) state.Transformation {
 	var tr state.Transformation
@@ -1013,9 +1020,7 @@ func toStateTransformation(transformation Transformation) state.Transformation {
 		slices.Sort(function.InProperties)
 		slices.Sort(function.OutProperties)
 		tr.Function = &state.TransformationFunction{
-			Source:        function.Source,
-			InProperties:  function.InProperties,
-			OutProperties: function.OutProperties,
+			Source: function.Source,
 		}
 		switch function.Language {
 		case "JavaScript":
@@ -1023,6 +1028,8 @@ func toStateTransformation(transformation Transformation) state.Transformation {
 		case "Python":
 			tr.Function.Language = state.Python
 		}
+		tr.InProperties = function.InProperties
+		tr.OutProperties = function.OutProperties
 	} else {
 		tr.Mapping = transformation.Mapping
 	}
