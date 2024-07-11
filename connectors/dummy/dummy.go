@@ -117,7 +117,7 @@ func (dummy *Dummy) Create(ctx context.Context, target chichi.Targets, propertie
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (dummy *Dummy) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
+func (dummy *Dummy) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
 	url := "https://example.com/"
 	if dummy.settings.URLForDispatchingEvents != "" {
 		url = dummy.settings.URLForDispatchingEvents
@@ -130,7 +130,7 @@ func (dummy *Dummy) EventRequest(ctx context.Context, typ string, event *chichi.
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	var err error
-	req.Body, err = json.Marshal(extra)
+	req.Body, err = json.Marshal(properties)
 	if err != nil {
 		return nil, err
 	}

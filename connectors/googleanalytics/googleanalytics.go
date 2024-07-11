@@ -72,7 +72,7 @@ type Settings struct {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ga *Analytics) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
+func (ga *Analytics) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
 	req := &chichi.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
@@ -88,7 +88,7 @@ func (ga *Analytics) EventRequest(ctx context.Context, typ string, event *chichi
 	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(ga.settings.MeasurementID)
 	req.Header.Set("Content-Type", "application/json")
 	var ev map[string]any
-	switch typ {
+	switch eventType {
 	case "page_view":
 		ev = map[string]any{
 			"page_location": event.Context.Page.URL,
@@ -97,13 +97,13 @@ func (ga *Analytics) EventRequest(ctx context.Context, typ string, event *chichi
 		}
 	case "share":
 		ev = map[string]any{}
-		if method, ok := extra["method"].(string); ok {
+		if method, ok := properties["method"].(string); ok {
 			ev["method"] = method
 		}
-		if contentType, ok := extra["content_type"].(string); ok {
+		if contentType, ok := properties["content_type"].(string); ok {
 			ev["content_type"] = contentType
 		}
-		if itemID, ok := extra["item_id"].(string); ok {
+		if itemID, ok := properties["item_id"].(string); ok {
 			ev["item_id"] = itemID
 		}
 	}

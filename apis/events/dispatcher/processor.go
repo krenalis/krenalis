@@ -79,7 +79,7 @@ func (processor *processor) worker() {
 
 			// Transform the event.
 			action := event.action
-			var extra map[string]any
+			var properties map[string]any
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
 				transformer, err := transformers.New(action, processor.transformerProvider, nil)
 				if err != nil {
@@ -95,13 +95,13 @@ func (processor *processor) worker() {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue
 				}
-				extra = results[0].Value
+				properties = results[0].Value
 			}
 
 			// Make the event request.
 			var err error
 			app := processor.connectors.App(connection)
-			event.request, err = app.EventRequest(ctx, event.action.EventType, event.ToConnectorEvent(), extra, event.action.OutSchema, false)
+			event.request, err = app.EventRequest(ctx, event.ToConnectorEvent(), event.action.EventType, event.action.OutSchema, properties, false)
 			if err != nil {
 				processor.setEventWithError(event.Id, action.ID, err)
 				continue

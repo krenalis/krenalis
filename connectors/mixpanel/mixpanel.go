@@ -71,9 +71,9 @@ func New(conf *chichi.AppConfig) (*Mixpanel, error) {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (mp *Mixpanel) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
+func (mp *Mixpanel) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
 
-	if extra["event"].(string) == "" {
+	if properties["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
 	}
 
@@ -95,7 +95,7 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, typ string, event *chichi.
 	}
 	req.Header.Set("Authorization", authorization)
 
-	body := extra["properties"].(map[string]any)
+	body := properties["properties"].(map[string]any)
 	body["$insert_id"] = event.MessageId
 	body["time"] = formatTimestamp(event.Timestamp)
 	distinctID := event.AnonymousId

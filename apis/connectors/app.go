@@ -73,21 +73,22 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 	return app
 }
 
-// EventRequest returns a request to dispatch an event to the app. typ specifies
-// the type of event to send, event is the received event, extra contains the
-// extra information conforming to the schema of the event type, extraSchema is
-// the schema of the event type, and redacted indicates whether authentication
-// data must be redacted in the returned request.
+// EventRequest returns a request to dispatch an event to the app. event is the
+// event to dispatch, eventType is the type of event to dispatch, schema is its
+// schema, properties are the property values conforming to the schema, and
+// redacted indicates whether authentication data must be redacted in the
+// returned request.
 //
-// If extra is nil, extraSchema should the invalid schema and vice versa.
+// If the event type does not have a schema, schema is the invalid schema and
+// properties is nil.
 //
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
-// If the schema of values is incompatible with the event type's schema, it
-// returns a *SchemaError error.
+// If the schema is not aligned to the event type's schema, it returns a
+// *SchemaError error.
 //
-// It panics if the app does not support the Events target, or if extraSchema is
+// It panics if the app does not support the Events target, or if schema is
 // valid but not an Object.
-func (app *App) EventRequest(ctx context.Context, typ string, event *Event, extra map[string]any, extraSchema types.Type, redacted bool) (*EventRequest, error) {
+func (app *App) EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -95,16 +96,16 @@ func (app *App) EventRequest(ctx context.Context, typ string, event *Event, extr
 	if !ok {
 		panic("app does not support the Events target")
 	}
-	schema, err := app.inner.Schema(ctx, chichi.Events, chichi.Destination, typ)
+	s, err := app.inner.Schema(ctx, chichi.Events, chichi.Destination, eventType)
 	if err != nil {
 		return nil, err
 	}
-	// Check compatibility between the schema of the extra information and the schema of the event type.
-	if err = verifySchemaCompatibilityForSendEvents(extraSchema, schema); err != nil {
+	// Check compatibility between the schema of the properties and the schema of the event type.
+	if err = verifySchemaCompatibilityForSendEvents(schema, s); err != nil {
 		return nil, err
 	}
 	// Return the event request.
-	return appEvents.EventRequest(ctx, typ, event, extra, extraSchema, redacted)
+	return appEvents.EventRequest(ctx, event, eventType, schema, properties, redacted)
 }
 
 // EventTypes returns the app's event types.

@@ -132,11 +132,11 @@ type App interface {
 	// respective schemas. For Events, role is Destination, and it returns the
 	// schema of the specified event type.
 	//
-	// For events, the returned schema describes extra information required by the
-	// connector to send an event of this type. Actions based on the specified event
-	// type will have a transformation that, given the received event, provides the
-	// extra information required by the connector. This information, along with the
-	// received event, is passed to the connector's EventRequest method.
+	// For events, the returned schema describes properties required by the
+	// connector to dispatch an event of this type. Actions based on the specified
+	// event type will have a transformation that, given the received event,
+	// provides the properties required by the connector. These properties, along
+	// with the received event, are passed to the connector's EventRequest method.
 	//
 	// If no extra information is needed for the event type, the returned schema is
 	// the invalid schema. If the event type does not exist, it returns the
@@ -165,18 +165,19 @@ type EventType struct {
 type AppEvents interface {
 	App
 
-	// EventRequest returns a request to dispatch an event to the app. typ specifies
-	// the type of event to send, event is the received event, extra contains the
-	// extra information, schema is the schema of the extra information (that is the
-	// schema for the event type), and redacted indicates whether authentication
-	// data must be redacted in the returned request.
+	// EventRequest returns a request to dispatch an event to the app. event is the
+	// event to dispatch, eventType is the type of event to dispatch, schema is its
+	// schema, properties are the property values conforming to the schema, and
+	// redacted indicates whether authentication data must be redacted in the
+	// returned request.
 	//
-	// schema is the invalid schema if extra is nil and vice versa.
+	// If the event type does not have a schema, schema is the invalid schema and
+	// properties is nil.
 	//
 	// This method is safe for concurrent use by multiple goroutines. If the
 	// specified event type does not exist, it returns the ErrEventTypeNotExist
 	// error.
-	EventRequest(ctx context.Context, typ string, event *Event, extra map[string]any, schema types.Type, redacted bool) (*EventRequest, error)
+	EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 
 	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)

@@ -1371,19 +1371,20 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	return err
 }
 
-// PreviewSendEvent returns a preview of an event as it would be sent to an app.
-// The connection must be a destination app connection, and it is expected to
-// have an event type named typ. If there is a transformation, outSchema is the
-// out schema of the transformation, and it must be a valid.
+// PreviewSendEvent returns a preview of an event as it would be dispatches to
+// an app. The connection must be a destination app connection, and it is
+// expected to have an event type with identifier eventType. If there is a
+// transformation, outSchema is the output schema of the transformation, and it
+// must be a valid.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - LanguageNotSupported, if the transformation language is not supported.
-//   - NotCompatibleSchema, if the out schema is not compatible with the event
-//     type's schema.
+//   - NotCompatibleSchema, if the output schema is not compatible with the
+//     event type's schema.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event *ObservedEvent, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1398,7 +1399,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	if !c.Connector().Targets.Contains(state.Events) {
 		return nil, errors.BadRequest("connection %d does not support events", c.ID)
 	}
-	if typ == "" {
+	if eventType == "" {
 		return nil, errors.BadRequest("eventType is empty")
 	}
 	if event == nil {
@@ -1427,7 +1428,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	var extra map[string]any
+	var properties map[string]any
 
 	if transformation.Mapping != nil || transformation.Function != nil {
 
@@ -1477,7 +1478,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			action.Transformation.InProperties = types.PropertyNames(action.InSchema)
 			action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 		default:
-			return nil, errors.BadRequest("mapping (or transformation) is required")
+			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
 		// Create a temporary function transformer provider.
@@ -1519,22 +1520,22 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			}
 			return nil, err
 		}
-		extra = results[0].Value
+		properties = results[0].Value
 
 	} else {
 
 		if outSchema.Valid() {
-			return nil, errors.BadRequest("out schema is a valid schema, but no transformation has been provided")
+			return nil, errors.BadRequest("output schema is a valid schema, but no transformation has been provided")
 		}
 
 	}
 
-	req, err := this.app().EventRequest(ctx, typ, ev.ToConnectorEvent(), extra, outSchema, true)
+	req, err := this.app().EventRequest(ctx, ev.ToConnectorEvent(), eventType, outSchema, properties, true)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
-			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
+			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 		} else if err2, ok := err.(*connectors.SchemaError); ok {
-			err = errors.Unprocessable(NotCompatibleSchema, "out schema is not compatible with the event type's schema: %w", err2)
+			err = errors.Unprocessable(NotCompatibleSchema, "output schema is not compatible with the event type's schema: %w", err2)
 		}
 		return nil, err
 	}

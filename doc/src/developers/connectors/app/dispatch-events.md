@@ -92,15 +92,15 @@ Now, let's move on to dispatching events to the app using the `EventRequest` met
 Finally, to actually dispatch an event to the app, the `EventRequest` method prepares an HTTP request with all the needed details:
 
 ```go
-EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error)
+EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 ```
 
 Given the event, `EventRequest` returns an HTTP request used to dispatch the event to the destination. The parameters are:
 
-- `typ`: The type of the event, one of the types returned by the connector's `EventTypes` method.
 - `event`: The event to be dispatched.
-- `extra`: Extra information required to prepare the request, conforming to the schema of the event type. It's `nil` if the event type doesn't have a schema.
-- `schema`: The schema of the extra information. It's the invalid schema if the event type doesn't have a schema.
+- `eventType`: The identifier of the event type, one of the types returned by the connector's `EventTypes` method.
+- `schema`: The schema of the event type. It is the invalid schema if the event type does not have a schema.
+- `properties`: The values for the properties of the event type, required to prepare the request. These values conform to the schema of the event type. It is `nil` if the event type does not have a schema.
 - `redacted`: Reports whether authentication data in the returned request must be redacted. It's `true` when the returned request is previewed.
 
 `EventRequest` returns the HTTP request to be sent to the app:
